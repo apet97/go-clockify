@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -167,6 +168,9 @@ func intArg(args map[string]any, key string, fallback int) int {
 	case int64:
 		return int(x)
 	case float64:
+		if math.IsNaN(x) || math.IsInf(x, 0) || x < math.MinInt || x > math.MaxInt {
+			return fallback
+		}
 		return int(x)
 	default:
 		return fallback

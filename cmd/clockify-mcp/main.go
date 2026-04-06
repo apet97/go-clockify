@@ -39,7 +39,11 @@ func main() {
 	}
 
 	// Configure log level
-	logLevel := parseLogLevel(os.Getenv("MCP_LOG_LEVEL"))
+	rawLevel := os.Getenv("MCP_LOG_LEVEL")
+	logLevel := parseLogLevel(rawLevel)
+	if rawLevel != "" && !isKnownLogLevel(rawLevel) {
+		fmt.Fprintf(os.Stderr, "warning: unknown MCP_LOG_LEVEL %q, defaulting to info\n", rawLevel)
+	}
 
 	// Configure slog to stderr
 	var logHandler slog.Handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
@@ -177,6 +181,14 @@ func parseLogLevel(s string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
+}
+
+func isKnownLogLevel(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug", "info", "warn", "warning", "error":
+		return true
+	}
+	return false
 }
 
 func printHelp() {

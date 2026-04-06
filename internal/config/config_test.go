@@ -87,6 +87,7 @@ func TestLoadTransportHTTP(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 		"MCP_TRANSPORT":    "http",
+		"MCP_BEARER_TOKEN": "tok",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -223,5 +224,147 @@ func TestLoadMaxBodySizeZeroReturnsError(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for zero MCP_HTTP_MAX_BODY")
+	}
+}
+
+// --- ReportsURL validation tests ---
+
+func TestLoadReportsURLHTTPSValid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_REPORTS_URL": "https://reports.clockify.me/v1",
+	})
+	_, err := Load()
+	if err != nil {
+		t.Fatalf("valid HTTPS reports URL should pass: %v", err)
+	}
+}
+
+func TestLoadReportsURLHTTPBlockedOnRemote(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_REPORTS_URL": "http://169.254.169.254/metadata",
+	})
+	os.Unsetenv("CLOCKIFY_INSECURE")
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for HTTP reports URL on non-loopback host")
+	}
+}
+
+func TestLoadReportsURLHTTPLoopbackOK(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_REPORTS_URL": "http://localhost:9090/v1",
+	})
+	_, err := Load()
+	if err != nil {
+		t.Fatalf("HTTP loopback reports URL should be allowed: %v", err)
+	}
+}
+
+func TestLoadReportsURLInsecureOverride(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_REPORTS_URL": "http://example.com/reports",
+		"CLOCKIFY_INSECURE":    "1",
+	})
+	_, err := Load()
+	if err != nil {
+		t.Fatalf("insecure flag should allow HTTP reports URL: %v", err)
+	}
+}
+
+func TestLoadReportsURLEmptyPassthrough(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("CLOCKIFY_REPORTS_URL")
+	_, err := Load()
+	if err != nil {
+		t.Fatalf("empty reports URL should pass: %v", err)
+	}
+}
+
+// --- Transport validation tests ---
+
+func TestLoadTransportInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid transport value")
+	}
+}
+
+func TestLoadTransportStdioExplicit(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "stdio",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("explicit stdio should pass: %v", err)
+	}
+	if cfg.Transport != "stdio" {
+		t.Fatalf("expected stdio, got %q", cfg.Transport)
+	}
+}
+
+// --- Timezone validation tests ---
+
+func TestLoadTimezoneInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"CLOCKIFY_TIMEZONE": "US/Eastrn",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid timezone")
+	}
+}
+
+func TestLoadTimezoneEmpty(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("CLOCKIFY_TIMEZONE")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("empty timezone should pass: %v", err)
+	}
+	if cfg.Timezone != "" {
+		t.Fatalf("expected empty timezone, got %q", cfg.Timezone)
+	}
+}
+
+// --- HTTP bearer token fail-fast tests ---
+
+func TestLoadHTTPTransportRequiresBearerToken(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "http",
+	})
+	os.Unsetenv("MCP_BEARER_TOKEN")
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for HTTP transport without bearer token")
+	}
+}
+
+func TestLoadHTTPTransportWithBearerToken(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "http",
+		"MCP_BEARER_TOKEN": "my-secret",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("HTTP with bearer token should pass: %v", err)
+	}
+	if cfg.BearerToken != "my-secret" {
+		t.Fatalf("expected my-secret, got %q", cfg.BearerToken)
 	}
 }

@@ -175,3 +175,30 @@ func TestZeroWindowDisablesWindowLayer(t *testing.T) {
 	}
 	release()
 }
+
+func TestAcquireRespectsContextCancellation(t *testing.T) {
+	rl := New(1, 100, 60000) // 1 concurrent slot
+
+	// Occupy the single slot.
+	rel, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("first Acquire failed: %v", err)
+	}
+	defer rel()
+
+	// Create a context that cancels after 20ms.
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	_, err = rl.Acquire(ctx)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+	// Should return before the 100ms semaphore timeout.
+	if elapsed >= 80*time.Millisecond {
+		t.Errorf("expected cancellation before 80ms, took %v", elapsed)
+	}
+}

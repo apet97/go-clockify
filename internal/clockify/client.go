@@ -39,7 +39,7 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		httpClient: &http.Client{Timeout: timeout},
 		maxRetries: maxRetries,
-		userAgent:  "clockify-mcp-go/0.2.0",
+		userAgent:  "clockify-mcp-go/dev",
 	}
 }
 

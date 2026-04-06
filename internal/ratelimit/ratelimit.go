@@ -94,6 +94,8 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 		select {
 		case rl.semaphore <- struct{}{}:
 			// Slot acquired.
+		case <-ctx.Done():
+			return nil, fmt.Errorf("concurrency limit: context cancelled: %w", ctx.Err())
 		case <-time.After(100 * time.Millisecond):
 			return nil, fmt.Errorf("concurrency limit exceeded: %d concurrent calls",
 				rl.maxConcurrent)

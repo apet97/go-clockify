@@ -37,6 +37,9 @@ func TestHealthEndpoint(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("expected status ok, got %q", body["status"])
 	}
+	if body["version"] != "test" {
+		t.Fatalf("expected version test, got %q", body["version"])
+	}
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("expected Cache-Control no-store, got %q", got)
 	}
@@ -182,6 +185,43 @@ func TestMCPMethodNotAllowed(t *testing.T) {
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestMCPCORSPreflight(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	req.Header.Set("Origin", "https://allowed.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rec.Code)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Methods"); got != "POST" {
+		t.Fatalf("expected Allow-Methods POST, got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Headers"); got != "Content-Type, Authorization" {
+		t.Fatalf("expected Allow-Headers 'Content-Type, Authorization', got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://allowed.example.com" {
+		t.Fatalf("expected CORS origin header, got %q", got)
+	}
+}
+
+func TestMCPCORSPreflightBlocked(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	req.Header.Set("Origin", "https://evil.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for blocked origin preflight, got %d", rec.Code)
 	}
 }
 

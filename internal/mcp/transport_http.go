@@ -75,7 +75,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
-	w.Write([]byte(`{"status":"ok"}`))
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ok",
+		"version": s.Version,
+	})
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {

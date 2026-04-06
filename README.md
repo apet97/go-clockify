@@ -169,9 +169,9 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `CLOCKIFY_API_KEY` | — | API key (**required**) |
 | `CLOCKIFY_WORKSPACE_ID` | auto | Workspace ID (auto-detected if only one) |
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | API base URL |
-| `CLOCKIFY_REPORTS_URL` | — | Reports API URL |
-| `CLOCKIFY_TIMEZONE` | system | IANA timezone for time parsing |
-| `CLOCKIFY_INSECURE` | — | Set to `1` to allow non-HTTPS base URLs (loopback exempt) |
+| `CLOCKIFY_REPORTS_URL` | — | Reports API URL (HTTPS enforced, same rules as base URL) |
+| `CLOCKIFY_TIMEZONE` | system | IANA timezone for time parsing (validated at startup) |
+| `CLOCKIFY_INSECURE` | — | Set to `1` to allow non-HTTPS base/reports URLs (loopback exempt) |
 
 ### Safety
 
@@ -205,9 +205,9 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `MCP_TRANSPORT` | `stdio` | `stdio` or `http` (validated at startup) |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
-| `MCP_BEARER_TOKEN` | — | Required for HTTP mode; clients must send `Authorization: Bearer <token>` |
+| `MCP_BEARER_TOKEN` | — | Required for HTTP mode (validated at startup); clients send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
@@ -276,6 +276,20 @@ This starts the MCP server on port 8080 with a Caddy reverse proxy on port 443 f
 See [docs/http-transport.md](docs/http-transport.md) for the full HTTP transport guide.
 
 ## Build / Test / Run
+
+A `Makefile` is provided for common operations:
+
+```bash
+make build       # Build binary with version from git tags
+make test        # Run all tests with race detector
+make cover       # Run tests with coverage report
+make fmt         # Check formatting
+make vet         # Run go vet
+make check       # fmt + vet + test (CI equivalent)
+make clean       # Remove build artifacts
+```
+
+Or use Go commands directly:
 
 ```bash
 # Build

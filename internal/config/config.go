@@ -54,14 +54,30 @@ func Load() (Config, error) {
 
 	// Reports URL
 	cfg.ReportsURL = strings.TrimRight(os.Getenv("CLOCKIFY_REPORTS_URL"), "/")
+	if cfg.ReportsURL != "" {
+		if err := validateBaseURL(cfg.ReportsURL, cfg.Insecure); err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_REPORTS_URL: %w", err)
+		}
+	}
 
 	// Timezone
 	cfg.Timezone = os.Getenv("CLOCKIFY_TIMEZONE")
+	if cfg.Timezone != "" {
+		if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_TIMEZONE %q: %w", cfg.Timezone, err)
+		}
+	}
 
 	// MCP transport settings
 	cfg.Transport = os.Getenv("MCP_TRANSPORT")
 	if cfg.Transport == "" {
 		cfg.Transport = "stdio"
+	}
+	switch cfg.Transport {
+	case "stdio", "http":
+		// valid
+	default:
+		return Config{}, fmt.Errorf("invalid MCP_TRANSPORT %q: must be \"stdio\" or \"http\"", cfg.Transport)
 	}
 
 	cfg.HTTPBind = os.Getenv("MCP_HTTP_BIND")
@@ -70,6 +86,9 @@ func Load() (Config, error) {
 	}
 
 	cfg.BearerToken = os.Getenv("MCP_BEARER_TOKEN")
+	if cfg.Transport == "http" && cfg.BearerToken == "" {
+		return Config{}, fmt.Errorf("MCP_BEARER_TOKEN is required when MCP_TRANSPORT=http")
+	}
 
 	if origins := os.Getenv("MCP_ALLOWED_ORIGINS"); origins != "" {
 		parts := strings.Split(origins, ",")
