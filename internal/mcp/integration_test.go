@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -13,12 +14,75 @@ import (
 	"github.com/apet97/go-clockify/internal/truncate"
 )
 
+// testEnforcement is a minimal Enforcement implementation for tests.
+type testEnforcement struct {
+	policy     *policy.Policy
+	bootstrap  *bootstrap.Config
+	truncation truncate.Config
+	dryRun     dryrun.Config
+}
+
+func (e *testEnforcement) FilterTool(name string, hints ToolHints) bool {
+	if e.bootstrap != nil && !e.bootstrap.IsVisible(name) {
+		return false
+	}
+	if e.policy != nil && !e.policy.IsAllowed(name, hints.ReadOnly) {
+		return false
+	}
+	return true
+}
+
+func (e *testEnforcement) BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, lookup func(string) (ToolHandler, bool)) (any, func(), error) {
+	if e.policy != nil && !e.policy.IsAllowed(name, hints.ReadOnly) {
+		return nil, nil, fmt.Errorf("tool blocked by policy: %s", e.policy.BlockReason(name, hints.ReadOnly))
+	}
+	if e.dryRun.Enabled {
+		action, isDryRun := dryrun.CheckDryRun(name, args, hints.Destructive)
+		if isDryRun {
+			switch action {
+			case dryrun.NotDestructive:
+				return nil, nil, dryrun.NotDestructiveError(name)
+			default:
+				return dryrun.MinimalResult(name, args), nil, nil
+			}
+		}
+	}
+	return nil, nil, nil
+}
+
+func (e *testEnforcement) AfterCall(result any) (any, error) {
+	if e.truncation.Enabled {
+		truncated, _ := e.truncation.Truncate(result)
+		return truncated, nil
+	}
+	return result, nil
+}
+
+// testActivator is a minimal Activator implementation for tests.
+type testActivator struct {
+	policy    *policy.Policy
+	bootstrap *bootstrap.Config
+}
+
+func (a *testActivator) IsGroupAllowed(group string) bool {
+	if a.policy != nil {
+		return a.policy.IsGroupAllowed(group)
+	}
+	return true
+}
+
+func (a *testActivator) OnActivate(names []string) {
+	if a.bootstrap != nil {
+		a.bootstrap.ActivateTools(names)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // 1. Full MCP handshake: initialize -> tools/list -> tools/call -> ping
 // ---------------------------------------------------------------------------
 
 func TestFullMCPHandshake(t *testing.T) {
-	server := NewServer("test", nil, []ToolDescriptor{
+	server := NewServer("test", []ToolDescriptor{
 		{
 			Tool: Tool{
 				Name:        "test_tool",
@@ -31,7 +95,7 @@ func TestFullMCPHandshake(t *testing.T) {
 			},
 			ReadOnlyHint: true,
 		},
-	}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	}, nil, nil)
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
@@ -112,7 +176,7 @@ func TestFullMCPHandshake(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestUnknownMethodReturnsError(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	input := `{"jsonrpc":"2.0","id":1,"method":"bogus/method","params":{}}`
 
 	var out strings.Builder
@@ -137,7 +201,7 @@ func TestUnknownMethodReturnsError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestUnknownToolReturnsError(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	server.initialized.Store(true) // skip init guard — we're testing tool dispatch
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"nonexistent","arguments":{}}}`
 
@@ -175,7 +239,7 @@ func TestUnknownToolReturnsError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestToolCallBeforeInitialize(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	// Do NOT set server.initialized — test the guard
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"any","arguments":{}}}`
 
@@ -204,7 +268,7 @@ func TestToolCallBeforeInitialize(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInvalidJSONReturnsParseError(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	input := `{not valid json}`
 
 	var out strings.Builder
@@ -252,7 +316,7 @@ func TestPolicyFilteringReadOnly(t *testing.T) {
 		ReadOnlyHint: false,
 	}
 
-	server := NewServer("test", pol, []ToolDescriptor{readTool, writeTool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{readTool, writeTool}, &testEnforcement{policy: pol}, nil)
 	tools := server.listTools()
 
 	if len(tools) != 1 {
@@ -294,7 +358,7 @@ func TestPolicyDeniedToolIsBlocked(t *testing.T) {
 		ReadOnlyHint: true,
 	}
 
-	server := NewServer("test", pol, []ToolDescriptor{blockedTool, allowedTool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{blockedTool, allowedTool}, &testEnforcement{policy: pol}, nil)
 	tools := server.listTools()
 
 	if len(tools) != 1 {
@@ -325,7 +389,7 @@ func TestPolicyBlocksToolCallExecution(t *testing.T) {
 		ReadOnlyHint: false,
 	}
 
-	server := NewServer("test", pol, []ToolDescriptor{writeTool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{writeTool}, &testEnforcement{policy: pol}, nil)
 	server.initialized.Store(true) // skip init guard — we're testing policy enforcement
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
 
@@ -398,7 +462,7 @@ func TestSafeCorePolicy(t *testing.T) {
 		ReadOnlyHint: true,
 	}
 
-	server := NewServer("test", pol, []ToolDescriptor{safeTool, unsafeTool, readTool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{safeTool, unsafeTool, readTool}, &testEnforcement{policy: pol}, nil)
 	tools := server.listTools()
 
 	names := map[string]bool{}
@@ -438,7 +502,7 @@ func TestBootstrapMinimalFiltering(t *testing.T) {
 		{Tool: Tool{Name: "clockify_detailed_report", Description: "report", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
 	}
 
-	server := NewServer("test", nil, tools, nil, truncate.Config{}, dryrun.Config{}, bc)
+	server := NewServer("test", tools, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
 	visible := server.listTools()
 
 	visibleNames := map[string]bool{}
@@ -483,7 +547,7 @@ func TestBootstrapFullTier1Filtering(t *testing.T) {
 		{Tool: Tool{Name: "clockify_list_projects", Description: "list", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
 	}
 
-	server := NewServer("test", nil, tools, nil, truncate.Config{}, dryrun.Config{}, bc)
+	server := NewServer("test", tools, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
 	visible := server.listTools()
 
 	if len(visible) != 3 {
@@ -513,7 +577,7 @@ func TestBootstrapCustomFiltering(t *testing.T) {
 		{Tool: Tool{Name: "clockify_detailed_report", Description: "report", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
 	}
 
-	server := NewServer("test", nil, tools, nil, truncate.Config{}, dryrun.Config{}, bc)
+	server := NewServer("test", tools, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
 	visible := server.listTools()
 
 	visibleNames := map[string]bool{}
@@ -553,7 +617,7 @@ func TestCombinedPolicyAndBootstrap(t *testing.T) {
 		{Tool: Tool{Name: "clockify_start_timer", Description: "start", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": false}}, ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
 	}
 
-	server := NewServer("test", pol, tools, nil, truncate.Config{}, dryrun.Config{}, bc)
+	server := NewServer("test", tools, &testEnforcement{policy: pol, bootstrap: bc}, &testActivator{policy: pol, bootstrap: bc})
 	visible := server.listTools()
 
 	// Bootstrap allows both, but policy is read_only so start_timer (write) is hidden
@@ -576,7 +640,7 @@ func TestCombinedPolicyAndBootstrap(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNotificationsInitializedNoResponse(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	input := `{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}`
 
 	var out strings.Builder
@@ -595,7 +659,7 @@ func TestNotificationsInitializedNoResponse(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestActivateGroupAddsTools(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 
 	newTools := []ToolDescriptor{
 		{
@@ -636,7 +700,7 @@ func TestActivateGroupAddsTools(t *testing.T) {
 
 func TestActivateGroupBlockedByPolicy(t *testing.T) {
 	pol := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}}
-	server := NewServer("test", pol, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, &testEnforcement{policy: pol}, &testActivator{policy: pol})
 
 	err := server.ActivateGroup("some_group", []ToolDescriptor{})
 	if err == nil {
@@ -652,7 +716,7 @@ func TestActivateGroupBlockedByPolicy(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestEmptyLinesSkipped(t *testing.T) {
-	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", nil, nil, nil)
 	input := "\n\n" + `{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n\n"
 
 	var out strings.Builder
@@ -685,7 +749,7 @@ func TestToolsListReturnsSorted(t *testing.T) {
 		{Tool: Tool{Name: "m_tool", Description: "m", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
 	}
 
-	server := NewServer("test", nil, tools, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", tools, nil, nil)
 	listed := server.listTools()
 
 	if len(listed) != 3 {
@@ -721,7 +785,7 @@ func TestTruncationApplied(t *testing.T) {
 	}
 
 	tc := truncate.Config{TokenBudget: 100, Enabled: true}
-	server := NewServer("test", nil, []ToolDescriptor{bigTool}, nil, tc, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{bigTool}, &testEnforcement{truncation: tc}, nil)
 	server.initialized.Store(true) // skip init guard — we're testing truncation
 
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"big_tool","arguments":{}}}`
@@ -776,7 +840,7 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 		DestructiveHint: false,
 	}
 
-	server := NewServer("test", nil, []ToolDescriptor{readTool}, nil, truncate.Config{}, dryrun.Config{Enabled: true}, nil)
+	server := NewServer("test", []ToolDescriptor{readTool}, &testEnforcement{dryRun: dryrun.Config{Enabled: true}}, nil)
 	server.initialized.Store(true) // skip init guard — we're testing dry-run
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"safe_read","arguments":{"dry_run":true}}}`
 
@@ -829,7 +893,7 @@ func TestMultipleSequentialRequests(t *testing.T) {
 		ReadOnlyHint: true,
 	}
 
-	server := NewServer("test", nil, []ToolDescriptor{tool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server := NewServer("test", []ToolDescriptor{tool}, nil, nil)
 	server.initialized.Store(true) // skip init guard — we're testing sequential dispatch
 
 	var requests []string

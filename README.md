@@ -93,6 +93,7 @@ A valid JSON-RPC response confirms the server is working. If your API key only h
 cmd/clockify-mcp/main.go           Entrypoint — wires 8 subsystems, transport selection
 internal/
   config/         Config from env vars, URL validation
+  enforcement/    Concrete Enforcement + Activator (composes policy, rate limit, dry-run, truncation)
   clockify/       HTTP client (retry/backoff, pagination, typed errors), entity models
   mcp/
     server.go       Stdio JSON-RPC server with enforcement pipeline (context-aware shutdown)

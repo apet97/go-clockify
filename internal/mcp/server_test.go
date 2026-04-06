@@ -4,16 +4,13 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/apet97/go-clockify/internal/dryrun"
-	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 func TestInitializeAndToolsList(t *testing.T) {
-	server := NewServer("test", nil, []ToolDescriptor{{
+	server := NewServer("test", []ToolDescriptor{{
 		Tool:    Tool{Name: "demo_tool", Description: "demo"},
 		Handler: func(context.Context, map[string]any) (any, error) { return map[string]any{"ok": true}, nil },
-	}}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	}}, nil, nil)
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,

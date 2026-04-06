@@ -12,12 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/bootstrap"
-	"github.com/apet97/go-clockify/internal/dryrun"
-	"github.com/apet97/go-clockify/internal/policy"
-	"github.com/apet97/go-clockify/internal/ratelimit"
-	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
@@ -31,12 +25,9 @@ type ToolDescriptor struct {
 }
 
 type Server struct {
-	Version    string
-	Policy     *policy.Policy
-	Bootstrap  *bootstrap.Config
-	RateLimit  *ratelimit.RateLimiter
-	Truncation truncate.Config
-	DryRun     dryrun.Config
+	Version     string
+	Enforcement Enforcement // nil = no filtering or enforcement
+	Activator   Activator   // nil = activation unrestricted
 
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
@@ -46,20 +37,16 @@ type Server struct {
 	requestSeq  atomic.Int64  // monotonic request ID for log correlation
 }
 
-func NewServer(version string, pol *policy.Policy, descriptors []ToolDescriptor,
-	rl *ratelimit.RateLimiter, tc truncate.Config, dc dryrun.Config, bc *bootstrap.Config) *Server {
+func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {
 		toolMap[d.Tool.Name] = d
 	}
 	return &Server{
-		Version:    version,
-		Policy:     pol,
-		Bootstrap:  bc,
-		RateLimit:  rl,
-		Truncation: tc,
-		DryRun:     dc,
-		tools:      toolMap,
+		Version:     version,
+		Enforcement: enforcement,
+		Activator:   activator,
+		tools:       toolMap,
 	}
 }
 
@@ -220,12 +207,11 @@ func (s *Server) listTools() []Tool {
 	tools := make([]Tool, 0, len(keys))
 	for _, key := range keys {
 		d := s.tools[key]
-		// Bootstrap filter
-		if s.Bootstrap != nil && !s.Bootstrap.IsVisible(key) {
-			continue
-		}
-		// Policy filter
-		if s.Policy != nil && !s.Policy.IsAllowed(d.Tool.Name, d.ReadOnlyHint) {
+		if s.Enforcement != nil && !s.Enforcement.FilterTool(key, ToolHints{
+			ReadOnly:    d.ReadOnlyHint,
+			Destructive: d.DestructiveHint,
+			Idempotent:  d.IdempotentHint,
+		}) {
 			continue
 		}
 		tools = append(tools, d.Tool)
@@ -243,42 +229,51 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
 
-	// 1. Policy check
-	if s.Policy != nil && !s.Policy.IsAllowed(d.Tool.Name, d.ReadOnlyHint) {
-		reason := "blocked by policy"
-		if s.Policy != nil {
-			reason = s.Policy.BlockReason(d.Tool.Name, d.ReadOnlyHint)
-		}
-		return nil, fmt.Errorf("tool blocked by policy: %s", reason)
-	}
-
-	// 2. Rate limit
-	if s.RateLimit != nil {
-		release, err := s.RateLimit.Acquire(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("rate limited: %s", err)
-		}
-		defer release()
-	}
-
-	// 3. Dry-run intercept
 	if params.Arguments == nil {
 		params.Arguments = map[string]any{}
 	}
-	if action, isDryRun := dryrun.CheckDryRun(params.Name, params.Arguments, d.DestructiveHint); isDryRun {
-		return s.handleDryRun(ctx, action, params, d)
+
+	hints := ToolHints{
+		ReadOnly:    d.ReadOnlyHint,
+		Destructive: d.DestructiveHint,
+		Idempotent:  d.IdempotentHint,
 	}
 
-	// 4. Dispatch
-	start := time.Now()
+	// Enforcement: policy gate, rate limit, dry-run intercept
+	var release func()
+	if s.Enforcement != nil {
+		lookup := func(name string) (ToolHandler, bool) {
+			s.mu.RLock()
+			td, found := s.tools[name]
+			s.mu.RUnlock()
+			if !found {
+				return nil, false
+			}
+			return td.Handler, true
+		}
+		result, rel, err := s.Enforcement.BeforeCall(ctx, params.Name, params.Arguments, hints, lookup)
+		if rel != nil {
+			release = rel
+			defer release()
+		}
+		if err != nil {
+			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
+			return nil, err
+		}
+		if result != nil {
+			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
+			return result, nil
+		}
+	}
 
+	// Dispatch
+	start := time.Now()
 	callCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
 
 	result, err := d.Handler(callCtx, params.Arguments)
 	duration := time.Since(start)
 
-	// 5. Log with request ID for correlation
 	if err != nil {
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
@@ -288,54 +283,18 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
 	}
 
-	// 6. Truncation
-	if s.Truncation.Enabled {
-		result, _ = s.Truncation.Truncate(result)
+	// Post-processing (truncation)
+	if s.Enforcement != nil {
+		result, _ = s.Enforcement.AfterCall(result)
 	}
 
 	return result, nil
 }
 
-func (s *Server) handleDryRun(ctx context.Context, action dryrun.Action, params ToolCallParams, d ToolDescriptor) (any, error) {
-	switch action {
-	case dryrun.NotDestructive:
-		return nil, dryrun.NotDestructiveError(params.Name)
-	case dryrun.ConfirmPattern:
-		// Remove confirm flag and call handler normally for preview
-		delete(params.Arguments, "confirm")
-		result, err := d.Handler(ctx, params.Arguments)
-		if err != nil {
-			return nil, err
-		}
-		return dryrun.WrapResult(result, params.Name), nil
-	case dryrun.PreviewTool:
-		previewTool, ok := dryrun.PreviewToolFor(params.Name)
-		if !ok {
-			return dryrun.MinimalResult(params.Name, params.Arguments), nil
-		}
-		s.mu.RLock()
-		previewD, exists := s.tools[previewTool]
-		s.mu.RUnlock()
-		if !exists {
-			return dryrun.MinimalResult(params.Name, params.Arguments), nil
-		}
-		previewArgs := dryrun.BuildPreviewArgs(params.Arguments)
-		result, err := previewD.Handler(ctx, previewArgs)
-		if err != nil {
-			return nil, err
-		}
-		return dryrun.WrapResult(result, params.Name), nil
-	case dryrun.MinimalFallback:
-		return dryrun.MinimalResult(params.Name, params.Arguments), nil
-	default:
-		return dryrun.MinimalResult(params.Name, params.Arguments), nil
-	}
-}
-
 // ActivateGroup registers a group of tool descriptors dynamically and
 // sends a tools/list_changed notification to the client.
 func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) error {
-	if s.Policy != nil && !s.Policy.IsGroupAllowed(groupName) {
+	if s.Activator != nil && !s.Activator.IsGroupAllowed(groupName) {
 		return fmt.Errorf("group '%s' is blocked by policy", groupName)
 	}
 	s.mu.Lock()
@@ -344,11 +303,10 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 		s.tools[d.Tool.Name] = d
 		activatedNames = append(activatedNames, d.Tool.Name)
 	}
-	if s.Bootstrap != nil {
-		s.Bootstrap.ActivateTools(activatedNames)
-	}
 	s.mu.Unlock()
-	// Send tools/list_changed notification
+	if s.Activator != nil {
+		s.Activator.OnActivate(activatedNames)
+	}
 	s.notifyToolsChanged()
 	slog.Info("group_activated", "group", groupName, "tools_added", len(descriptors))
 	return nil
@@ -361,10 +319,10 @@ func (s *Server) ActivateTier1Tool(name string) error {
 		s.mu.Unlock()
 		return fmt.Errorf("unknown tool: %s", name)
 	}
-	if s.Bootstrap != nil {
-		s.Bootstrap.ActivateTool(name)
-	}
 	s.mu.Unlock()
+	if s.Activator != nil {
+		s.Activator.OnActivate([]string{name})
+	}
 	s.notifyToolsChanged()
 	slog.Info("tier1_tool_activated", "tool", name)
 	return nil

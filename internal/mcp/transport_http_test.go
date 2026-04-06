@@ -7,18 +7,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/apet97/go-clockify/internal/dryrun"
-	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 const testBearerToken = "test-secret-token"
 
 func newTestServer() *Server {
-	return NewServer("test", nil, []ToolDescriptor{{
+	return NewServer("test", []ToolDescriptor{{
 		Tool:    Tool{Name: "echo", Description: "echoes input"},
 		Handler: func(_ context.Context, args map[string]any) (any, error) { return args, nil },
-	}}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	}}, nil, nil)
 }
 
 func TestHealthEndpoint(t *testing.T) {

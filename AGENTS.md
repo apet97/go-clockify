@@ -91,6 +91,7 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 cmd/clockify-mcp/main.go           Entrypoint — wires 8 subsystems, transport selection
 internal/
   config/         Config from env vars, URL validation
+  enforcement/    Concrete Enforcement + Activator implementations (composes safety subsystems)
   clockify/       HTTP client (Retry-After backoff, generic pagination, typed errors), entity models
   mcp/
     server.go       Stdio JSON-RPC server with enforcement pipeline (async tools/call dispatch)

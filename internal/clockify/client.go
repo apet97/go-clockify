@@ -34,13 +34,27 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 	if maxRetries < 0 {
 		maxRetries = 0
 	}
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		MaxConnsPerHost:     20,
+		IdleConnTimeout:     90 * time.Second,
+	}
 	return &Client{
-		apiKey:     apiKey,
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		httpClient: &http.Client{Timeout: timeout},
+		apiKey:  apiKey,
+		baseURL: strings.TrimRight(baseURL, "/"),
+		httpClient: &http.Client{
+			Timeout:   timeout,
+			Transport: transport,
+		},
 		maxRetries: maxRetries,
 		userAgent:  "clockify-mcp-go/dev",
 	}
+}
+
+// Close releases idle connections held by the client.
+func (c *Client) Close() {
+	c.httpClient.CloseIdleConnections()
 }
 
 // SetUserAgent sets the User-Agent string sent with every request.
@@ -173,13 +187,12 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 	}
 	defer resp.Body.Close()
 
-	// Limit body reads to prevent OOM on oversized responses.
-	limitedBody := io.LimitReader(resp.Body, maxResponseBody)
-
 	if resp.StatusCode >= 400 {
-		// Limit error body read to 64KB for error messages
+		// Read error body (limited to 64KB) before any other reads.
 		errorReader := io.LimitReader(resp.Body, 64*1024)
 		bodyBytes, _ := io.ReadAll(errorReader)
+		// Drain remaining body to allow connection reuse.
+		_, _ = io.Copy(io.Discard, resp.Body)
 
 		var retryAfter time.Duration
 		if ra := resp.Header.Get("Retry-After"); ra != "" {
@@ -204,15 +217,14 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return json.NewDecoder(limitedBody).Decode(out)
+	return json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(out)
 }
 
 func isRetryableStatus(code int) bool {
 	return code == http.StatusTooManyRequests ||
 		code == http.StatusBadGateway ||
 		code == http.StatusServiceUnavailable ||
-		code == http.StatusGatewayTimeout ||
-		(code >= 500 && code <= 599)
+		code == http.StatusGatewayTimeout
 }
 
 func backoff(attempt int) time.Duration {

@@ -14,6 +14,7 @@ import (
 	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/enforcement"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
@@ -99,7 +100,18 @@ func run() error {
 	pol.SetTier1Tools(tier1Names)
 	bc.SetTier1Tools(tier1Names)
 
-	server := mcp.NewServer(version, pol, registry, rl, tc, dc, &bc)
+	pipeline := &enforcement.Pipeline{
+		Policy:     pol,
+		Bootstrap:  &bc,
+		RateLimit:  rl,
+		DryRun:     dc,
+		Truncation: tc,
+	}
+	gate := &enforcement.Gate{
+		Policy:    pol,
+		Bootstrap: &bc,
+	}
+	server := mcp.NewServer(version, registry, pipeline, gate)
 
 	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)

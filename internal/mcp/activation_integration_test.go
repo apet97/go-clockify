@@ -10,10 +10,9 @@ import (
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/enforcement"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/tools"
-	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 func TestSearchToolsActivateGroupViaMCP(t *testing.T) {
@@ -29,7 +28,9 @@ func TestSearchToolsActivateGroupViaMCP(t *testing.T) {
 	bc := bootstrap.Config{Mode: bootstrap.Minimal}
 	bc.SetTier1Tools(tier1Names)
 
-	server := mcp.NewServer("test", nil, registry, nil, truncate.Config{}, dryrun.Config{}, &bc)
+	pipeline := &enforcement.Pipeline{Bootstrap: &bc}
+	gate := &enforcement.Gate{Bootstrap: &bc}
+	server := mcp.NewServer("test", registry, pipeline, gate)
 	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)
 		if !ok {
