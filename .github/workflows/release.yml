@@ -42,8 +42,8 @@ jobs:
             platform: windows-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.0"
       - name: Build binary
@@ -84,12 +84,12 @@ jobs:
           output-file: clockify-mcp-${{ matrix.platform }}.spdx.json
           format: spdx-json
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.platform }}
           path: clockify-mcp-${{ matrix.platform }}*
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ matrix.platform }}
           path: clockify-mcp-${{ matrix.platform }}.spdx.json
@@ -99,11 +99,11 @@ jobs:
     needs: build-binaries
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts/
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           registry-url: https://registry.npmjs.org
@@ -160,8 +160,8 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts/
       - name: Install cosign
