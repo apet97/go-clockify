@@ -271,7 +271,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 
 	// 4. Dispatch
 	start := time.Now()
-	
+
 	callCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
 
