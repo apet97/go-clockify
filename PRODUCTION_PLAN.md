@@ -85,7 +85,7 @@ It currently has:
 - context-aware graceful shutdown (stdio and HTTP)
 - structured logging with configurable level and request ID correlation
 - `--help` and `--version` flags
-- 265 tests across 13 packages (unit, integration, golden, HTTP transport)
+- 268 tests across 13 packages (unit, integration, golden, HTTP transport)
 - CI/CD pipeline (GitHub Actions: format, vet, build, test, multi-platform release)
 - Docker deployment (distroless), npm distribution, cosign signing, SBOMs
 - comprehensive documentation (README, CLAUDE.md, CHANGELOG, SECURITY, CONTRIBUTING, docs/)

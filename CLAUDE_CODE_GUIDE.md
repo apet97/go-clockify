@@ -41,7 +41,7 @@ The following production features are already implemented—**do not regress the
 
 ### Testing Standards
 
-- **Maintain 265+ tests.**
+- **Maintain 268+ tests.**
 - **Integration Tests**: `internal/mcp/integration_test.go` verifies the full protocol handshake.
 - **Golden Tests**: `internal/tools/golden_test.go` verifies tool schemas and Tier 2 catalogs.
 - **Race Safety**: All shared state must be protected by atomics or mutexes.

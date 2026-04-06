@@ -12,7 +12,7 @@ GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockif
 # Build
 go build ./...
 
-# Run all tests (265 tests across 13 packages)
+# Run all tests (268 tests across 13 packages)
 go test ./...
 
 # Run with race detector
@@ -154,7 +154,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ## Testing
 
-265 tests across 13 packages. Patterns:
+268 tests across 13 packages. Patterns:
 
 ```go
 // Mock Clockify API via httptest

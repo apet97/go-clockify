@@ -281,7 +281,7 @@ See [docs/http-transport.md](docs/http-transport.md) for the full HTTP transport
 # Build
 go build ./...
 
-# Run all tests (265 tests across 13 packages)
+# Run all tests (268 tests across 13 packages)
 go test ./...
 
 # Run with race detector

@@ -13,7 +13,7 @@ Requires Go 1.25.0+. No external dependencies. Module path: `github.com/apet97/g
 ## Running Tests
 
 ```sh
-# All tests (265 tests across 13 packages)
+# All tests (268 tests across 13 packages)
 go test ./...
 
 # With race detector (highly recommended)

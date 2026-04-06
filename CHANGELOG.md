@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Live End-to-End Testing**: Integrated `tests/e2e_live_test.go` verifying read/write/error behaviors sequentially and safely against the live Clockify API.
 - **Client Reliability**: Clockify API client now accurately listens to `Retry-After` HTTP headers on 429 errors.
 - **Server Concurrency**: Asynchronous multiplexing inside `stdio` transport using goroutines for `tools/call` requests.
 - **Generic Pagination**: Cleanly typed internal API pagination (`ListAll[T any]`) instead of vulnerable map casts.
 - **Data Safety**: `server.initialized` is now safeguarded with `atomic.Bool` to prevent read/write lifecycle panics.
+
+### Fixed
+- **Timer Management**: Fixed `clockify_stop_timer` using `http.MethodPost` instead of the required `http.MethodPatch`, ensuring active timers end properly via standards-compliant requests.
 
 ## [0.3.0] - 2026-04-06
 
