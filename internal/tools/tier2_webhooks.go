@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/netip"
+	neturl "net/url"
 	"strconv"
 	"strings"
 
@@ -137,30 +139,65 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 // validateWebhookURL checks that a webhook URL uses HTTPS and doesn't target
 // private or loopback addresses.
 func validateWebhookURL(url string) error {
-	if !strings.HasPrefix(url, "https://") {
+	parsed, err := neturl.Parse(url)
+	if err != nil {
+		return fmt.Errorf("invalid webhook URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
 		return fmt.Errorf("webhook URL must use HTTPS")
 	}
-	host := strings.TrimPrefix(url, "https://")
-	host = strings.Split(host, "/")[0]
-	host = strings.Split(host, ":")[0]
-
-	blocked := []string{"localhost", "127.0.0.1", "10.", "192.168.", "0.0.0.0"}
-	for _, b := range blocked {
-		if strings.HasPrefix(host, b) || host == b {
-			return fmt.Errorf("webhook URL cannot target private/loopback addresses")
-		}
+	if parsed.Host == "" {
+		return fmt.Errorf("webhook URL must include a host")
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("webhook URL must not contain embedded credentials")
 	}
 
-	// Check 172.16-31.x.x range
-	if strings.HasPrefix(host, "172.") {
-		parts := strings.Split(host, ".")
-		if len(parts) >= 2 {
-			if n, err := strconv.Atoi(parts[1]); err == nil && n >= 16 && n <= 31 {
-				return fmt.Errorf("webhook URL cannot target private addresses")
-			}
-		}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return fmt.Errorf("webhook URL cannot target private/loopback addresses")
+	}
+	if addr, err := netip.ParseAddr(host); err == nil && !isPublicWebhookAddr(addr) {
+		return fmt.Errorf("webhook URL cannot target private, loopback, link-local, or reserved addresses")
 	}
 	return nil
+}
+
+func isPublicWebhookAddr(addr netip.Addr) bool {
+	addr = addr.Unmap()
+	if !addr.IsValid() || !addr.IsGlobalUnicast() {
+		return false
+	}
+	if addr.IsPrivate() || addr.IsLoopback() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsUnspecified() {
+		return false
+	}
+
+	blockedPrefixes := []string{
+		"0.0.0.0/8",
+		"100.64.0.0/10",
+		"169.254.0.0/16",
+		"192.0.0.0/24",
+		"192.0.2.0/24",
+		"198.18.0.0/15",
+		"198.51.100.0/24",
+		"203.0.113.0/24",
+		"224.0.0.0/4",
+		"240.0.0.0/4",
+		"::/128",
+		"::1/128",
+		"fe80::/10",
+		"fc00::/7",
+		"ff00::/8",
+		"2001:db8::/32",
+	}
+	for _, prefix := range blockedPrefixes {
+		p := netip.MustParsePrefix(prefix)
+		if p.Contains(addr) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // stringSliceArg extracts a []string from args. Handles both []string and

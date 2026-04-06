@@ -204,16 +204,24 @@ func TestLoadMaxBodySizeCustom(t *testing.T) {
 	}
 }
 
-func TestLoadMaxBodySizeInvalidFallsBackToDefault(t *testing.T) {
+func TestLoadMaxBodySizeInvalidReturnsError(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":  "test-key",
 		"MCP_HTTP_MAX_BODY": "not-a-number",
 	})
-	cfg, err := Load()
-	if err != nil {
-		t.Fatal(err)
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid MCP_HTTP_MAX_BODY")
 	}
-	if cfg.MaxBodySize != 2097152 {
-		t.Fatalf("expected default 2097152 on invalid input, got %d", cfg.MaxBodySize)
+}
+
+func TestLoadMaxBodySizeZeroReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "0",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for zero MCP_HTTP_MAX_BODY")
 	}
 }

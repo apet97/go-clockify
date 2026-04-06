@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {
@@ -123,8 +124,8 @@ func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any)
 
 func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	approvalID := stringArg(args, "approval_id")
-	if approvalID == "" {
-		return ResultEnvelope{}, fmt.Errorf("approval_id is required")
+	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -163,8 +164,8 @@ func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (R
 
 func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	approvalID := stringArg(args, "approval_id")
-	if approvalID == "" {
-		return ResultEnvelope{}, fmt.Errorf("approval_id is required")
+	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -195,8 +196,8 @@ func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (Re
 
 func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	approvalID := stringArg(args, "approval_id")
-	if approvalID == "" {
-		return ResultEnvelope{}, fmt.Errorf("approval_id is required")
+	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -231,8 +232,8 @@ func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (Res
 
 func (s *Service) withdrawApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	approvalID := stringArg(args, "approval_id")
-	if approvalID == "" {
-		return ResultEnvelope{}, fmt.Errorf("approval_id is required")
+	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

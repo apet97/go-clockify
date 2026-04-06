@@ -85,9 +85,14 @@ func Load() (Config, error) {
 
 	cfg.MaxBodySize = 2097152 // 2 MB default
 	if mbs := os.Getenv("MCP_HTTP_MAX_BODY"); mbs != "" {
-		if v, err := strconv.ParseInt(mbs, 10, 64); err == nil {
-			cfg.MaxBodySize = v
+		v, err := strconv.ParseInt(mbs, 10, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_HTTP_MAX_BODY: %w", err)
 		}
+		if v <= 0 {
+			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be greater than 0")
+		}
+		cfg.MaxBodySize = v
 	}
 
 	return cfg, nil

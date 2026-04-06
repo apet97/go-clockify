@@ -143,3 +143,35 @@ func TestFailedConcurrencyDoesntBurnWindow(t *testing.T) {
 
 	rel()
 }
+
+func TestZeroConcurrentDisablesConcurrencyLayer(t *testing.T) {
+	rl := New(0, 3, 60000)
+
+	release1, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("first acquire failed: %v", err)
+	}
+	release2, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("second acquire failed: %v", err)
+	}
+
+	release1()
+	release2()
+}
+
+func TestZeroWindowDisablesWindowLayer(t *testing.T) {
+	rl := New(1, 0, 60000)
+
+	release, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("first acquire failed: %v", err)
+	}
+	release()
+
+	release, err = rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("second acquire failed with window disabled: %v", err)
+	}
+	release()
+}

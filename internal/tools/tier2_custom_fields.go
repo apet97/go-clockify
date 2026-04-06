@@ -8,6 +8,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {
@@ -157,8 +158,8 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 
 func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	fieldID := stringArg(args, "field_id")
-	if fieldID == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_id is required")
+	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -207,8 +208,8 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 
 func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	fieldID := stringArg(args, "field_id")
-	if fieldID == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_id is required")
+	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -235,8 +236,8 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 
 func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	fieldID := stringArg(args, "field_id")
-	if fieldID == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_id is required")
+	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -268,8 +269,8 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 
 func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	fieldID := stringArg(args, "field_id")
-	if fieldID == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_id is required")
+	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	value := args["value"]
 	if value == nil {
@@ -280,6 +281,16 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 	entryID := stringArg(args, "entry_id")
 	if projectID == "" && entryID == "" {
 		return ResultEnvelope{}, fmt.Errorf("either project_id or entry_id is required")
+	}
+	if projectID != "" {
+		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+			return ResultEnvelope{}, err
+		}
+	}
+	if entryID != "" {
+		if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)

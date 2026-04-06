@@ -74,12 +74,14 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store")
 	if !s.initialized.Load() {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"status":"not_ready"}`))
@@ -126,6 +128,11 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 
 		// 2. Bearer auth — constant-time comparison
 		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, "Bearer ") {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "reason", "missing_bearer_prefix", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
+			return
+		}
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if subtle.ConstantTimeCompare([]byte(token), []byte(bearerToken)) != 1 {
 			writeJSONError(w, http.StatusUnauthorized, "unauthorized")

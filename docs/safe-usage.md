@@ -151,10 +151,10 @@ The server resolves human-readable names to Clockify IDs:
 
 ## Audit Logging
 
-All write operations emit structured audit events to stderr:
+All write-capable tool calls emit structured audit events to stderr:
 
 ```
-level=INFO msg=audit action=create resource_type=entry tool=clockify_add_entry
+level=INFO msg=audit tool=clockify_add_entry destructive=false req_id=42
 ```
 
 Set `MCP_LOG_LEVEL=debug` for verbose logging including API request/response details.
@@ -172,6 +172,8 @@ Set `MCP_LOG_LEVEL=debug` for verbose logging including API request/response det
 ```
 
 The server requires an `initialize` handshake before accepting `tools/call` requests.
+
+`clockify_search_tools` remains read-only with respect to Clockify data, but it can activate additional MCP tool descriptors at runtime.
 
 ## Recommended Production Setup
 

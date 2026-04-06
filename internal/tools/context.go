@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
@@ -73,19 +74,91 @@ func (s *Service) PolicyInfo(ctx context.Context) (ResultEnvelope, error) {
 func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	activateGroup := stringArg(args, "activate_group")
 	activateTool := stringArg(args, "activate_tool")
-	if activateGroup != "" || activateTool != "" {
+	if activateGroup != "" {
+		if s.ActivateGroup == nil {
+			return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
+		}
+		result, err := s.ActivateGroup(activateGroup)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 		return ok("clockify_search_tools", map[string]any{
-			"message": "Tool activation will be available after server pipeline wiring.",
+			"activated":          result.Name,
+			"activation_type":    result.Kind,
+			"group":              result.Group,
+			"tool_count":         result.ToolCount,
+			"activation_message": fmt.Sprintf("Activated %d tools from group %q", result.ToolCount, result.Group),
+		}, nil), nil
+	}
+	if activateTool != "" {
+		if s.ActivateTool == nil {
+			return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
+		}
+		result, err := s.ActivateTool(activateTool)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		message := fmt.Sprintf("Activated tool %q", result.Name)
+		if result.Group != "" {
+			message = fmt.Sprintf("Activated tool %q via group %q (%d tools now available)", result.Name, result.Group, result.ToolCount)
+		}
+		return ok("clockify_search_tools", map[string]any{
+			"activated":          result.Name,
+			"activation_type":    result.Kind,
+			"group":              result.Group,
+			"tool_count":         result.ToolCount,
+			"activation_message": message,
 		}, nil), nil
 	}
 
 	query := stringArg(args, "query")
-	results := bootstrap.SearchCatalog(query)
+	results := make([]map[string]any, 0)
+	for _, entry := range bootstrap.SearchCatalog(query) {
+		results = append(results, map[string]any{
+			"type":         "tool",
+			"name":         entry.Name,
+			"domain":       entry.Domain,
+			"description":  entry.Description,
+			"keywords":     entry.Keywords,
+			"availability": "tier1",
+		})
+	}
+
+	tier2Names := make([]string, 0, len(Tier2Groups))
+	for name := range Tier2Groups {
+		tier2Names = append(tier2Names, name)
+	}
+	sort.Strings(tier2Names)
+	q := strings.ToLower(strings.TrimSpace(query))
+	for _, name := range tier2Names {
+		group := Tier2Groups[name]
+		if q != "" &&
+			!strings.Contains(strings.ToLower(group.Name), q) &&
+			!strings.Contains(strings.ToLower(group.Description), q) &&
+			!containsKeyword(group.Keywords, q) {
+			continue
+		}
+		descriptors, ok := s.Tier2Handlers(name)
+		toolCount := 0
+		if ok {
+			toolCount = len(descriptors)
+		}
+		results = append(results, map[string]any{
+			"type":         "group",
+			"name":         group.Name,
+			"domain":       group.Name,
+			"description":  group.Description,
+			"keywords":     group.Keywords,
+			"availability": "tier2",
+			"tool_count":   toolCount,
+		})
+	}
 
 	// Group results by domain.
-	grouped := map[string][]bootstrap.CatalogEntry{}
+	grouped := map[string][]map[string]any{}
 	for _, entry := range results {
-		grouped[entry.Domain] = append(grouped[entry.Domain], entry)
+		domain, _ := entry["domain"].(string)
+		grouped[domain] = append(grouped[domain], entry)
 	}
 
 	return ok("clockify_search_tools", map[string]any{
@@ -94,4 +167,13 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		"by_domain":   grouped,
 		"all_results": results,
 	}, nil), nil
+}
+
+func containsKeyword(keywords []string, query string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(strings.ToLower(keyword), query) {
+			return true
+		}
+	}
+	return false
 }

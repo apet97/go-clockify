@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Live End-to-End Testing**: Integrated `tests/e2e_live_test.go` verifying read/write/error behaviors sequentially and safely against the live Clockify API.
+- **Opt-in live end-to-end testing**: `tests/e2e_live_test.go` is now gated behind the `livee2e` build tag and `CLOCKIFY_RUN_LIVE_E2E=1`, with cleanup for created resources.
 - **Client Reliability**: Clockify API client now accurately listens to `Retry-After` HTTP headers on 429 errors.
 - **Server Concurrency**: Asynchronous multiplexing inside `stdio` transport using goroutines for `tools/call` requests.
 - **Generic Pagination**: Cleanly typed internal API pagination (`ListAll[T any]`) instead of vulnerable map casts.
@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Timer Management**: Fixed `clockify_stop_timer` using `http.MethodPost` instead of the required `http.MethodPatch`, ensuring active timers end properly via standards-compliant requests.
+- **Tier 2 activation**: `clockify_search_tools` now activates Tier 2 groups and hidden tools through the actual MCP request path and emits `tools/list_changed`.
+- **Release packaging**: npm base-package publishing now rewrites `optionalDependencies` to the release version before publish.
+- **Validation hardening**: additional path-building handlers now validate external IDs, and webhook URL validation now rejects reserved IP literals and embedded credentials.
+- **Runtime controls**: `CLOCKIFY_MAX_CONCURRENT=0` and `CLOCKIFY_RATE_LIMIT=0` now disable only their intended limiter layers.
 
 ## [0.3.0] - 2026-04-06
 
@@ -92,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 124 tools across 12 domain groups (33 Tier 1 + 91 Tier 2)
+- 124 tools across 11 domain groups (33 Tier 1 + 91 Tier 2)
 - Tiered tool loading: core tools at startup, domain groups on demand via `clockify_search_tools`
 - Policy modes: `read_only`, `safe_core`, `standard`, `full`
 - Dry-run support for destructive tools (3 strategies: confirm, preview, minimal)

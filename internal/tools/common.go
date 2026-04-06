@@ -2,7 +2,6 @@ package tools
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -17,9 +16,18 @@ type Service struct {
 	WorkspaceID    string
 	DedupeConfig   *dedupe.Config        // optional, set during wiring
 	PolicyDescribe func() map[string]any // set during wiring; returns policy description
+	ActivateGroup  func(string) (ActivationResult, error)
+	ActivateTool   func(string) (ActivationResult, error)
 	mu             sync.Mutex
 	cachedUser     *clockify.User
 	cachedWSID     string
+}
+
+type ActivationResult struct {
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Group     string `json:"group,omitempty"`
+	ToolCount int    `json:"toolCount"`
 }
 
 type ResultEnvelope struct {
@@ -118,15 +126,6 @@ type findAndUpdateArgs struct {
 
 func New(client *clockify.Client, workspaceID string) *Service {
 	return &Service{Client: client, WorkspaceID: workspaceID}
-}
-
-// auditLog emits a structured audit event for write operations.
-func auditLog(action, resourceType, toolName string) {
-	slog.Info("audit",
-		"action", action,
-		"resource_type", resourceType,
-		"tool", toolName,
-	)
 }
 
 func toolRO(name, desc string, schema map[string]any) mcp.Tool {

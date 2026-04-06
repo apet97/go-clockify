@@ -7,6 +7,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {
@@ -164,8 +165,8 @@ func (s *Service) ListUserGroupsAdmin(ctx context.Context) (ResultEnvelope, erro
 
 func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	groupID := stringArg(args, "group_id")
-	if groupID == "" {
-		return ResultEnvelope{}, fmt.Errorf("group_id is required")
+	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -203,8 +204,8 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 
 func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	groupID := stringArg(args, "group_id")
-	if groupID == "" {
-		return ResultEnvelope{}, fmt.Errorf("group_id is required")
+	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -228,8 +229,8 @@ func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any)
 
 func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	groupID := stringArg(args, "group_id")
-	if groupID == "" {
-		return ResultEnvelope{}, fmt.Errorf("group_id is required")
+	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -306,8 +307,8 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 
 func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	holidayID := stringArg(args, "holiday_id")
-	if holidayID == "" {
-		return ResultEnvelope{}, fmt.Errorf("holiday_id is required")
+	if err := resolve.ValidateID(holidayID, "holiday_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

@@ -13,7 +13,7 @@ Requires Go 1.25.0+. No external dependencies. Module path: `github.com/apet97/g
 ## Running Tests
 
 ```sh
-# All tests (268 tests across 13 packages)
+# All tests
 go test ./...
 
 # With race detector (highly recommended)
@@ -33,7 +33,7 @@ Before submitting a PR, ensure:
 
 ```sh
 # Format
-gofmt -w ./cmd ./internal
+gofmt -w ./cmd ./internal ./tests
 
 # Vet
 go vet ./...

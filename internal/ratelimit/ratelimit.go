@@ -45,8 +45,12 @@ func FromEnv() *RateLimiter {
 //	maxPerWindow  – maximum calls allowed within each rolling window
 //	windowMillis  – window length in milliseconds
 func New(maxConcurrent int, maxPerWindow int64, windowMillis int64) *RateLimiter {
+	var semaphore chan struct{}
+	if maxConcurrent > 0 {
+		semaphore = make(chan struct{}, maxConcurrent)
+	}
 	rl := &RateLimiter{
-		semaphore:     make(chan struct{}, maxConcurrent),
+		semaphore:     semaphore,
 		maxConcurrent: maxConcurrent,
 		maxPerWindow:  maxPerWindow,
 		windowMillis:  windowMillis,
@@ -66,41 +70,53 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 	// Atomically reset the window if it has expired.
 	// Using a mutex to prevent the race where two goroutines both
 	// see an expired window and both reset, losing one's increment.
-	now := time.Now().UnixMilli()
-	if now-rl.windowStart.Load() > rl.windowMillis {
-		rl.windowMu.Lock()
-		// Double-check after acquiring the lock.
-		if time.Now().UnixMilli()-rl.windowStart.Load() > rl.windowMillis {
-			rl.windowStart.Store(time.Now().UnixMilli())
-			rl.windowCount.Store(0)
+	if rl.maxPerWindow > 0 {
+		now := time.Now().UnixMilli()
+		if now-rl.windowStart.Load() > rl.windowMillis {
+			rl.windowMu.Lock()
+			// Double-check after acquiring the lock.
+			if time.Now().UnixMilli()-rl.windowStart.Load() > rl.windowMillis {
+				rl.windowStart.Store(time.Now().UnixMilli())
+				rl.windowCount.Store(0)
+			}
+			rl.windowMu.Unlock()
 		}
-		rl.windowMu.Unlock()
-	}
 
-	// Pre-check: bail early when the window is already exhausted.
-	if rl.windowCount.Load() >= rl.maxPerWindow {
-		return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
-			rl.maxPerWindow, rl.windowMillis/1000)
+		// Pre-check: bail early when the window is already exhausted.
+		if rl.windowCount.Load() >= rl.maxPerWindow {
+			return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
+				rl.maxPerWindow, rl.windowMillis/1000)
+		}
 	}
 
 	// Try to acquire a concurrency slot.
-	select {
-	case rl.semaphore <- struct{}{}:
-		// Slot acquired.
-	case <-time.After(100 * time.Millisecond):
-		return nil, fmt.Errorf("concurrency limit exceeded: %d concurrent calls",
-			rl.maxConcurrent)
+	if rl.maxConcurrent > 0 {
+		select {
+		case rl.semaphore <- struct{}{}:
+			// Slot acquired.
+		case <-time.After(100 * time.Millisecond):
+			return nil, fmt.Errorf("concurrency limit exceeded: %d concurrent calls",
+				rl.maxConcurrent)
+		}
 	}
 
 	// Increment the window counter and verify we haven't raced past the cap.
-	cnt := rl.windowCount.Add(1)
-	if cnt > rl.maxPerWindow {
-		<-rl.semaphore // release slot — this call won't proceed
-		return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
-			rl.maxPerWindow, rl.windowMillis/1000)
+	if rl.maxPerWindow > 0 {
+		cnt := rl.windowCount.Add(1)
+		if cnt > rl.maxPerWindow {
+			if rl.maxConcurrent > 0 {
+				<-rl.semaphore // release slot — this call won't proceed
+			}
+			return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
+				rl.maxPerWindow, rl.windowMillis/1000)
+		}
 	}
 
-	return func() { <-rl.semaphore }, nil
+	return func() {
+		if rl.maxConcurrent > 0 {
+			<-rl.semaphore
+		}
+	}, nil
 }
 
 // String returns a human-readable description of the limiter's configuration.

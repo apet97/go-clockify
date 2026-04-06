@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {
@@ -136,8 +137,8 @@ func (s *Service) ListProjectTemplates(ctx context.Context) (ResultEnvelope, err
 
 func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	projectID := stringArg(args, "project_id")
-	if projectID == "" {
-		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -175,6 +176,9 @@ func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any
 		body["isPublic"] = isPublic
 	}
 	if clientID := stringArg(args, "client_id"); clientID != "" {
+		if err := resolve.ValidateID(clientID, "client_id"); err != nil {
+			return ResultEnvelope{}, err
+		}
 		body["clientId"] = clientID
 	}
 
@@ -187,8 +191,8 @@ func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any
 
 func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	projectID := stringArg(args, "project_id")
-	if projectID == "" {
-		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	estType := stringArg(args, "estimate_type")
 	if estType == "" {
@@ -222,8 +226,8 @@ func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any
 
 func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	projectID := stringArg(args, "project_id")
-	if projectID == "" {
-		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 
 	rawIDs, rawOk := args["user_ids"].([]any)
@@ -239,8 +243,11 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 	memberships := make([]map[string]any, 0, len(rawIDs))
 	for _, raw := range rawIDs {
 		uid, isStr := raw.(string)
-		if !isStr || uid == "" {
-			continue
+		if !isStr {
+			return ResultEnvelope{}, fmt.Errorf("user_ids must contain only strings")
+		}
+		if err := resolve.ValidateID(uid, "user_id"); err != nil {
+			return ResultEnvelope{}, err
 		}
 		m := map[string]any{"userId": uid}
 		if rate, rateOk := args["hourly_rate"].(float64); rateOk {
@@ -275,8 +282,11 @@ func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (Res
 	results := make([]map[string]any, 0, len(rawIDs))
 	for _, raw := range rawIDs {
 		pid, isStr := raw.(string)
-		if !isStr || pid == "" {
-			continue
+		if !isStr {
+			return ResultEnvelope{}, fmt.Errorf("project_ids must contain only strings")
+		}
+		if err := resolve.ValidateID(pid, "project_id"); err != nil {
+			return ResultEnvelope{}, err
 		}
 
 		body := map[string]any{"archived": true}

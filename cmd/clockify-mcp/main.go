@@ -97,6 +97,56 @@ func run() error {
 
 	server := mcp.NewServer(version, pol, registry, rl, tc, dc, &bc)
 
+	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
+		descriptors, ok := service.Tier2Handlers(group)
+		if !ok {
+			return tools.ActivationResult{}, fmt.Errorf("unknown group: %s", group)
+		}
+		if err := server.ActivateGroup(group, descriptors); err != nil {
+			return tools.ActivationResult{}, err
+		}
+		return tools.ActivationResult{
+			Kind:      "group",
+			Name:      group,
+			Group:     group,
+			ToolCount: len(descriptors),
+		}, nil
+	}
+
+	service.ActivateTool = func(name string) (tools.ActivationResult, error) {
+		if tier1Names[name] {
+			if err := server.ActivateTier1Tool(name); err != nil {
+				return tools.ActivationResult{}, err
+			}
+			return tools.ActivationResult{
+				Kind:      "tool",
+				Name:      name,
+				ToolCount: 1,
+			}, nil
+		}
+		for groupName := range tools.Tier2Groups {
+			descriptors, ok := service.Tier2Handlers(groupName)
+			if !ok {
+				continue
+			}
+			for _, d := range descriptors {
+				if d.Tool.Name != name {
+					continue
+				}
+				if err := server.ActivateGroup(groupName, descriptors); err != nil {
+					return tools.ActivationResult{}, err
+				}
+				return tools.ActivationResult{
+					Kind:      "tool",
+					Name:      name,
+					Group:     groupName,
+					ToolCount: len(descriptors),
+				}, nil
+			}
+		}
+		return tools.ActivationResult{}, fmt.Errorf("unknown tool: %s", name)
+	}
+
 	slog.Info("server_start",
 		"version", version,
 		"tools", len(registry),
@@ -154,8 +204,8 @@ Environment Variables:
     CLOCKIFY_OVERLAP_CHECK    Overlapping entry detection (default: true)
 
   Performance:
-    CLOCKIFY_MAX_CONCURRENT   Concurrent tool call limit (default: 10)
-    CLOCKIFY_RATE_LIMIT       Tool calls per minute (default: 120)
+    CLOCKIFY_MAX_CONCURRENT   Concurrent tool call limit, 0=off (default: 10)
+    CLOCKIFY_RATE_LIMIT       Tool calls per minute, 0=off (default: 120)
     CLOCKIFY_TOKEN_BUDGET     Response token budget, 0=off (default: 8000)
 
   Bootstrap:
@@ -165,10 +215,10 @@ Environment Variables:
   Transport:
     MCP_TRANSPORT             stdio (default) or http
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
-    MCP_BEARER_TOKEN          Required for HTTP mode
+    MCP_BEARER_TOKEN          Required for HTTP mode; send as Authorization: Bearer <token>
     MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
     MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
-    MCP_HTTP_MAX_BODY         Max request body in bytes (default: 2097152)
+    MCP_HTTP_MAX_BODY         Positive max request body in bytes (default: 2097152)
 
   Logging:
     MCP_LOG_FORMAT            text (default) or json

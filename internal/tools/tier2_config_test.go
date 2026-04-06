@@ -184,3 +184,89 @@ func TestArchiveProjects(t *testing.T) {
 		t.Fatalf("expected PUT calls for both p1 and p2, got %v", putPaths)
 	}
 }
+
+func TestConfigTier2RejectsMalformedIDs(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("no request expected for malformed ID input")
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		fn   func() error
+	}{
+		{
+			name: "custom field",
+			fn: func() error {
+				_, err := svc.GetCustomField(ctx, map[string]any{"field_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "custom field target",
+			fn: func() error {
+				_, err := svc.SetCustomFieldValue(ctx, map[string]any{
+					"field_id":   "0123456789abcdef01234567",
+					"value":      "x",
+					"project_id": "bad/id",
+				})
+				return err
+			},
+		},
+		{
+			name: "user group admin",
+			fn: func() error {
+				_, err := svc.GetUserGroup(ctx, map[string]any{"group_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "holiday",
+			fn: func() error {
+				_, err := svc.DeleteHoliday(ctx, map[string]any{"holiday_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "project template",
+			fn: func() error {
+				_, err := svc.GetProjectTemplate(ctx, map[string]any{"project_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "project memberships",
+			fn: func() error {
+				_, err := svc.SetProjectMemberships(ctx, map[string]any{
+					"project_id": "0123456789abcdef01234567",
+					"user_ids":   []any{"bad/id"},
+				})
+				return err
+			},
+		},
+		{
+			name: "archive projects",
+			fn: func() error {
+				_, err := svc.ArchiveProjects(ctx, map[string]any{
+					"project_ids": []any{"bad/id"},
+				})
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.fn()
+			if err == nil {
+				t.Fatal("expected validation error")
+			}
+			if err != nil && err.Error() == "" {
+				t.Fatal("expected non-empty validation error")
+			}
+		})
+	}
+}

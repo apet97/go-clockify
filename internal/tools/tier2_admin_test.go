@@ -89,16 +89,21 @@ func TestCreateWebhookBlocksPrivateIP(t *testing.T) {
 	svc := New(client, "ws1")
 
 	cases := []struct {
-		url     string
-		wantErr string
+		url string
 	}{
-		{"https://localhost/hook", "private/loopback"},
-		{"https://127.0.0.1/hook", "private/loopback"},
-		{"https://10.0.0.1/hook", "private/loopback"},
-		{"https://192.168.1.1/hook", "private/loopback"},
-		{"https://172.16.0.1/hook", "private addresses"},
-		{"https://172.31.255.1/hook", "private addresses"},
-		{"https://0.0.0.0/hook", "private/loopback"},
+		{"https://localhost/hook"},
+		{"https://api.localhost/hook"},
+		{"https://127.0.0.1/hook"},
+		{"https://10.0.0.1/hook"},
+		{"https://192.168.1.1/hook"},
+		{"https://172.16.0.1/hook"},
+		{"https://172.31.255.1/hook"},
+		{"https://0.0.0.0/hook"},
+		{"https://169.254.169.254/hook"},
+		{"https://100.64.0.1/hook"},
+		{"https://[::1]/hook"},
+		{"https://[fe80::1]/hook"},
+		{"https://[fd00::1]/hook"},
 	}
 
 	for _, tc := range cases {
@@ -106,8 +111,8 @@ func TestCreateWebhookBlocksPrivateIP(t *testing.T) {
 			"url":    tc.url,
 			"events": []any{"NEW_TIME_ENTRY"},
 		})
-		if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
-			t.Fatalf("URL %s: expected error containing %q, got %v", tc.url, tc.wantErr, err)
+		if err == nil || !strings.Contains(err.Error(), "cannot target") {
+			t.Fatalf("URL %s: expected reserved-target error, got %v", tc.url, err)
 		}
 	}
 }
@@ -200,6 +205,12 @@ func TestValidateWebhookURL(t *testing.T) {
 	if err := validateWebhookURL("https://hooks.example.com:8443/callback"); err != nil {
 		t.Fatalf("valid URL with port rejected: %v", err)
 	}
+	if err := validateWebhookURL("https://8.8.8.8/hook"); err != nil {
+		t.Fatalf("public IPv4 should be allowed: %v", err)
+	}
+	if err := validateWebhookURL("https://[2001:4860:4860::8888]/hook"); err != nil {
+		t.Fatalf("public IPv6 should be allowed: %v", err)
+	}
 
 	// 172.15.x should be allowed (not in 16-31 range)
 	if err := validateWebhookURL("https://172.15.0.1/hook"); err != nil {
@@ -208,6 +219,12 @@ func TestValidateWebhookURL(t *testing.T) {
 	// 172.32.x should be allowed (not in 16-31 range)
 	if err := validateWebhookURL("https://172.32.0.1/hook"); err != nil {
 		t.Fatalf("172.32.x should be allowed: %v", err)
+	}
+}
+
+func TestValidateWebhookURLRejectsCredentials(t *testing.T) {
+	if err := validateWebhookURL("https://user:pass@example.com/hook"); err == nil {
+		t.Fatal("expected embedded credentials to be rejected")
 	}
 }
 

@@ -28,10 +28,10 @@ clockify-mcp
 |----------|----------|---------|-------------|
 | `MCP_TRANSPORT` | No | `stdio` | Set to `http` |
 | `MCP_HTTP_BIND` | Yes (http) | `:8080` | Bind address |
-| `MCP_BEARER_TOKEN` | Yes (http) | — | Bearer token for auth |
+| `MCP_BEARER_TOKEN` | Yes (http) | — | Bearer token for auth (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | No | — | Comma-separated allowed browser origins |
 | `MCP_ALLOW_ANY_ORIGIN` | No | — | Set `1` to allow all origins |
-| `MCP_HTTP_MAX_BODY` | No | `2097152` | Max request body (bytes, default 2MB) |
+| `MCP_HTTP_MAX_BODY` | No | `2097152` | Positive max request body (bytes, default 2MB) |
 | `MCP_LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Authentication
@@ -54,17 +54,17 @@ The token is compared using constant-time comparison (`crypto/subtle`) to preven
 | `/mcp` | POST | Bearer | MCP JSON-RPC endpoint |
 | `/mcp` | OPTIONS | None | CORS preflight |
 | `/health` | GET | None | Health check (always 200) |
-| `/ready` | GET | None | Readiness check (503 until initialized) |
+| `/ready` | GET | None | Readiness check for the HTTP server itself (HTTP mode auto-initializes before serving, so this is `200` once the listener is up) |
 
 ## Security Headers
 
-All HTTP responses include:
+HTTP responses include:
 
 | Header | Value | Purpose |
 |--------|-------|---------|
 | `X-Content-Type-Options` | `nosniff` | Prevent content-type sniffing |
 | `Cache-Control` | `no-store` | Prevent caching of MCP responses |
-| `Content-Type` | `application/json` | All responses (including errors) are JSON |
+| `Content-Type` | `application/json` | JSON endpoints and JSON error responses |
 
 ## Server Timeouts
 
@@ -158,7 +158,7 @@ level=INFO msg=http_shutdown reason="context cancelled"
 ## Load Testing
 
 The server includes built-in rate limiting:
-- `CLOCKIFY_MAX_CONCURRENT=10` — max simultaneous tool calls
-- `CLOCKIFY_RATE_LIMIT=120` — max calls per 60s window
+- `CLOCKIFY_MAX_CONCURRENT=10` — max simultaneous tool calls (`0` disables this layer)
+- `CLOCKIFY_RATE_LIMIT=120` — max calls per 60s window (`0` disables this layer)
 
 These protect both the MCP server and the upstream Clockify API.

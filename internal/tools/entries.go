@@ -192,8 +192,6 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 		return ResultEnvelope{}, err
 	}
 
-	auditLog("create", "time_entry", "clockify_add_entry")
-
 	meta := map[string]any{"workspaceId": wsID}
 	if projectID != "" {
 		meta["projectId"] = projectID
@@ -334,8 +332,6 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID); err != nil {
 		return ResultEnvelope{}, err
 	}
-
-	auditLog("delete", "time_entry", "clockify_delete_entry")
 
 	return ok("clockify_delete_entry", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
 }

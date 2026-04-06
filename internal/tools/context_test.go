@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -177,8 +178,86 @@ func TestSearchToolsByQuery(t *testing.T) {
 	if count == 0 {
 		t.Fatal("expected at least one result for 'timer' query")
 	}
-	byDomain, _ := data["by_domain"].(map[string][]interface{})
-	_ = byDomain // grouped results present
+	byDomain, ok := data["by_domain"].(map[string][]map[string]any)
+	if !ok {
+		t.Fatalf("unexpected by_domain type: %T", data["by_domain"])
+	}
+	if len(byDomain["timer"]) == 0 {
+		t.Fatal("expected timer-domain results")
+	}
+}
+
+func TestSearchToolsIncludesTier2Groups(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	result, err := svc.SearchTools(context.Background(), map[string]any{
+		"query": "invoice",
+	})
+	if err != nil {
+		t.Fatalf("search tools failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	allResults, ok := data["all_results"].([]map[string]any)
+	if !ok {
+		t.Fatalf("unexpected all_results type: %T", data["all_results"])
+	}
+	foundGroup := false
+	for _, entry := range allResults {
+		if entry["type"] == "group" && entry["name"] == "invoices" {
+			foundGroup = true
+			break
+		}
+	}
+	if !foundGroup {
+		t.Fatal("expected invoices tier2 group in search results")
+	}
+}
+
+func TestSearchToolsActivateGroup(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	svc.ActivateGroup = func(name string) (ActivationResult, error) {
+		if name != "invoices" {
+			return ActivationResult{}, fmt.Errorf("unexpected group %q", name)
+		}
+		return ActivationResult{Kind: "group", Name: name, Group: name, ToolCount: 12}, nil
+	}
+
+	result, err := svc.SearchTools(context.Background(), map[string]any{
+		"activate_group": "invoices",
+	})
+	if err != nil {
+		t.Fatalf("activate group failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	if data["activated"] != "invoices" {
+		t.Fatalf("expected invoices activation, got %v", data["activated"])
+	}
+	if data["tool_count"] != 12 {
+		t.Fatalf("expected tool_count=12, got %v", data["tool_count"])
+	}
+}
+
+func TestSearchToolsActivateTool(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	svc.ActivateTool = func(name string) (ActivationResult, error) {
+		if name != "clockify_send_invoice" {
+			return ActivationResult{}, fmt.Errorf("unexpected tool %q", name)
+		}
+		return ActivationResult{Kind: "tool", Name: name, Group: "invoices", ToolCount: 12}, nil
+	}
+
+	result, err := svc.SearchTools(context.Background(), map[string]any{
+		"activate_tool": "clockify_send_invoice",
+	})
+	if err != nil {
+		t.Fatalf("activate tool failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	if data["activated"] != "clockify_send_invoice" {
+		t.Fatalf("expected send_invoice activation, got %v", data["activated"])
+	}
+	if data["group"] != "invoices" {
+		t.Fatalf("expected group=invoices, got %v", data["group"])
+	}
 }
 
 func TestPolicyInfo(t *testing.T) {

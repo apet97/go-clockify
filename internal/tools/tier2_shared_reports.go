@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {
@@ -122,8 +123,8 @@ func (s *Service) listSharedReports(ctx context.Context, args map[string]any) (R
 
 func (s *Service) getSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	reportID := stringArg(args, "report_id")
-	if reportID == "" {
-		return ResultEnvelope{}, fmt.Errorf("report_id is required")
+	if err := resolve.ValidateID(reportID, "report_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -165,8 +166,8 @@ func (s *Service) createSharedReport(ctx context.Context, args map[string]any) (
 
 func (s *Service) updateSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	reportID := stringArg(args, "report_id")
-	if reportID == "" {
-		return ResultEnvelope{}, fmt.Errorf("report_id is required")
+	if err := resolve.ValidateID(reportID, "report_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -193,8 +194,8 @@ func (s *Service) updateSharedReport(ctx context.Context, args map[string]any) (
 
 func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	reportID := stringArg(args, "report_id")
-	if reportID == "" {
-		return ResultEnvelope{}, fmt.Errorf("report_id is required")
+	if err := resolve.ValidateID(reportID, "report_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -226,8 +227,8 @@ func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (
 
 func (s *Service) exportSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	reportID := stringArg(args, "report_id")
-	if reportID == "" {
-		return ResultEnvelope{}, fmt.Errorf("report_id is required")
+	if err := resolve.ValidateID(reportID, "report_id"); err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

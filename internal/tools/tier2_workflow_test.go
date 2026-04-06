@@ -196,3 +196,55 @@ func TestDeleteSharedReportDryRun(t *testing.T) {
 		t.Fatal("expected note in dry run result")
 	}
 }
+
+func TestWorkflowTier2RejectsMalformedIDs(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("no request expected for malformed ID input")
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		fn   func() error
+	}{
+		{
+			name: "approval request",
+			fn: func() error {
+				_, err := svc.getApprovalRequest(ctx, map[string]any{"approval_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "approve timesheet",
+			fn: func() error {
+				_, err := svc.approveTimesheet(ctx, map[string]any{"approval_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "shared report",
+			fn: func() error {
+				_, err := svc.getSharedReport(ctx, map[string]any{"report_id": "bad/id"})
+				return err
+			},
+		},
+		{
+			name: "shared report export",
+			fn: func() error {
+				_, err := svc.exportSharedReport(ctx, map[string]any{"report_id": "bad/id"})
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.fn(); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}

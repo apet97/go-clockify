@@ -41,7 +41,7 @@ The following production features are already implemented—**do not regress the
 
 ### Testing Standards
 
-- **Maintain 268+ tests.**
+- **Maintain broad test coverage across unit, integration, golden, HTTP transport, and opt-in live E2E tests.**
 - **Integration Tests**: `internal/mcp/integration_test.go` verifies the full protocol handshake.
 - **Golden Tests**: `internal/tools/golden_test.go` verifies tool schemas and Tier 2 catalogs.
 - **Race Safety**: All shared state must be protected by atomics or mutexes.
@@ -67,7 +67,7 @@ go build ./...
 go test -race -count=1 ./...
 
 # Check formatting
-gofmt -l ./cmd ./internal
+gofmt -l .
 
 # Run with log level
 MCP_LOG_LEVEL=debug CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp

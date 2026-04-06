@@ -20,11 +20,11 @@ jobs:
           go-version: "1.25.0"
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l ./cmd ./internal)
+          unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then
             echo "Unformatted files:"
             echo "$unformatted"
-            gofmt -d ./cmd ./internal
+            gofmt -d .
             exit 1
           fi
 

@@ -4,7 +4,7 @@ Brief description of what this PR does.
 
 ## Checklist
 
-- [ ] `gofmt -w ./cmd ./internal` — no formatting issues
+- [ ] `gofmt -w ./cmd ./internal ./tests` — no formatting issues
 - [ ] `go vet ./...` — no warnings
 - [ ] `go build ./...` — builds successfully
 - [ ] `go test -race ./...` — all tests pass

@@ -75,8 +75,6 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	auditLog("create", "project", "clockify_create_project")
-
 	meta := map[string]any{"workspaceId": wsID}
 	return ok("clockify_create_project", project, meta), nil
 }

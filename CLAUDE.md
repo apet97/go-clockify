@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 always-available + 91 Tier 2 on-demand) over stdio and HTTP JSON-RPC transports, intended for use with Claude Desktop, Cursor, and similar MCP clients.
+GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 tools registered at startup + 91 Tier 2 tools activated on demand) over stdio and HTTP JSON-RPC transports, intended for use with Claude Desktop, Cursor, and similar MCP clients.
 
 ## Build / Test / Run
 
@@ -12,7 +12,7 @@ GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockif
 # Build
 go build ./...
 
-# Run all tests (268 tests across 13 packages)
+# Run all tests
 go test ./...
 
 # Run with race detector
@@ -23,7 +23,10 @@ go test ./internal/tools/...
 go test ./internal/mcp/...
 
 # Format
-gofmt -w ./cmd ./internal
+gofmt -w ./cmd ./internal ./tests
+
+# Run opt-in live Clockify E2E tests
+CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_API_KEY=xxx go test -tags livee2e ./tests
 
 # Run server — stdio mode (default)
 CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
@@ -62,8 +65,8 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_OVERLAP_CHECK` | `true` | Detect overlapping time entries |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | `full_tier1`, `minimal`, `custom` |
 | `CLOCKIFY_BOOTSTRAP_TOOLS` | — | Comma-separated tools for custom mode |
-| `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls |
-| `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window |
+| `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (`0` disables this layer) |
+| `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window (`0` disables this layer) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Token truncation budget (0=off) |
 
 ### Transport
@@ -71,10 +74,10 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 |---|---|---|
 | `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
-| `MCP_BEARER_TOKEN` | — | Required for HTTP mode |
+| `MCP_BEARER_TOKEN` | — | Required for HTTP mode (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
-| `MCP_HTTP_MAX_BODY` | `2097152` | Max request body (bytes) |
+| `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 
@@ -126,7 +129,7 @@ Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `err
 
 **Tier 1 (33 tools):** Always registered. Visibility controlled by bootstrap mode. Includes CRUD for entries/projects/clients/tags/tasks, timer control, reports, workflows, and context/discovery tools.
 
-**Tier 2 (91 tools, 11 groups):** Registered lazily via `search_tools` activation. Groups: invoices (12), expenses (10), scheduling (10), time_off (12), approvals (6), shared_reports (6), user_admin (8), webhooks (7), custom_fields (6), groups_holidays (8), project_admin (6).
+**Tier 2 (91 tools, 11 groups):** Registered lazily via `clockify_search_tools` activation. Groups: invoices (12), expenses (10), scheduling (10), time_off (12), approvals (6), shared_reports (6), user_admin (8), webhooks (7), custom_fields (6), groups_holidays (8), project_admin (6).
 
 ### Key Design Decisions
 
@@ -142,7 +145,7 @@ Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `err
 
 Tier 1: `internal/tools/registry.go` via `Service.Registry()` returning `[]mcp.ToolDescriptor`. Use `toolRO()`, `toolRW()`, `toolDestructive()`.
 
-Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier2Group()`. Activated at runtime via `server.ActivateGroup()`.
+Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier2Group()`. Activated at runtime via `clockify_search_tools` -> `Service.ActivateGroup` / `Service.ActivateTool` -> `server.ActivateGroup()` / `server.ActivateTier1Tool()`.
 
 ### Clockify Client
 
@@ -154,7 +157,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ## Testing
 
-268 tests across 13 packages. Patterns:
+The repo uses unit, integration, golden, HTTP transport, and opt-in live E2E tests. Patterns:
 
 ```go
 // Mock Clockify API via httptest

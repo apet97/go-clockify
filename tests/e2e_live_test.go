@@ -1,3 +1,5 @@
+//go:build livee2e
+
 package e2e_test
 
 import (
@@ -18,7 +20,10 @@ func setupTestEnv(t *testing.T) *tools.Service {
 	if os.Getenv("CLOCKIFY_API_KEY") == "" {
 		t.Skip("Skipping live e2e tests since CLOCKIFY_API_KEY is not set")
 	}
-	os.Setenv("CLOCKIFY_DRY_RUN", "off") // Allow real mutations
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" {
+		t.Skip("Skipping live e2e tests unless CLOCKIFY_RUN_LIVE_E2E=1")
+	}
+	t.Setenv("CLOCKIFY_DRY_RUN", "off") // Allow real mutations for this test only
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -93,13 +98,39 @@ func TestE2EMutating(t *testing.T) {
 	svc := setupTestEnv(t)
 	ctx := context.Background()
 	tagPrefix := fmt.Sprintf("AG_TEST_%d", time.Now().Unix())
+	wsID, err := svc.ResolveWorkspaceID(ctx)
+	if err != nil {
+		t.Fatalf("resolve workspace failed: %v", err)
+	}
+	var client clockify.ClientEntity
+	var project clockify.Project
+	var entry clockify.TimeEntry
+	t.Cleanup(func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if entry.ID != "" {
+			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/time-entries/"+entry.ID); err != nil {
+				t.Logf("cleanup delete entry %s failed: %v", entry.ID, err)
+			}
+		}
+		if project.ID != "" {
+			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/projects/"+project.ID); err != nil {
+				t.Logf("cleanup delete project %s failed: %v", project.ID, err)
+			}
+		}
+		if client.ID != "" {
+			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/clients/"+client.ID); err != nil {
+				t.Logf("cleanup delete client %s failed: %v", client.ID, err)
+			}
+		}
+	})
 
 	// 1. Create a client
 	cResEnv, err := invokeTool(ctx, svc, "clockify_create_client", map[string]any{"name": tagPrefix + "_client"})
 	if err != nil {
 		t.Fatalf("create_client failed: %v", err)
 	}
-	var client clockify.ClientEntity
 	if err := unmarshalData(cResEnv.Data, &client); err != nil {
 		t.Fatalf("Unexpected client return format")
 	}
@@ -107,13 +138,12 @@ func TestE2EMutating(t *testing.T) {
 
 	// 2. Create a project
 	pResEnv, err := invokeTool(ctx, svc, "clockify_create_project", map[string]any{
-		"name": tagPrefix + "_project",
+		"name":   tagPrefix + "_project",
 		"client": client.ID,
 	})
 	if err != nil {
 		t.Fatalf("create_project failed: %v", err)
 	}
-	var project clockify.Project
 	if err := unmarshalData(pResEnv.Data, &project); err != nil {
 		t.Fatalf("Unexpected project return format")
 	}
@@ -121,7 +151,7 @@ func TestE2EMutating(t *testing.T) {
 
 	// 3. Start a timer
 	startResEnv, err := invokeTool(ctx, svc, "clockify_start_timer", map[string]any{
-		"project_id": project.ID,
+		"project_id":  project.ID,
 		"description": "E2E testing timer",
 	})
 	if err != nil {
@@ -135,20 +165,18 @@ func TestE2EMutating(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stop_timer failed: %v", err)
 	}
-	var entry clockify.TimeEntry
 	if err := unmarshalData(stopResEnv.Data, &entry); err != nil {
 		t.Fatalf("Unexpected stop timer return format")
 	}
 	t.Logf("stopped timer entry: %s", entry.ID)
 
-	// 5. Cleanup time entry
+	// 5. Cleanup time entry explicitly so the timer artifact is removed before test exit.
 	_, err = invokeTool(ctx, svc, "clockify_delete_entry", map[string]any{"entry_id": entry.ID, "dry_run": false})
 	if err != nil {
 		t.Fatalf("delete_entry failed: %v", err)
 	}
 	t.Logf("deleted entry: %s", entry.ID)
-
-	t.Logf("Test data left over: Client: %s, Project: %s", client.ID, project.ID)
+	entry.ID = ""
 }
 
 func TestE2EErrors(t *testing.T) {

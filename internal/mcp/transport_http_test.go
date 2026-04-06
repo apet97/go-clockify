@@ -37,6 +37,9 @@ func TestHealthEndpoint(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("expected status ok, got %q", body["status"])
 	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
 }
 
 func TestReadyNotInitialized(t *testing.T) {
@@ -75,6 +78,9 @@ func TestReadyInitialized(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("expected status ok, got %q", body["status"])
 	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
 }
 
 func TestMCPUnauthorized(t *testing.T) {
@@ -84,6 +90,20 @@ func TestMCPUnauthorized(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
 	req.Header.Set("Authorization", "Bearer wrong-token")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestMCPRejectsTokenWithoutBearerPrefix(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", testBearerToken)
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusUnauthorized {

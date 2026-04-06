@@ -284,6 +284,9 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		return nil, err
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
+	if !d.ReadOnlyHint {
+		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
+	}
 
 	// 6. Truncation
 	if s.Truncation.Enabled {
@@ -336,8 +339,13 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 		return fmt.Errorf("group '%s' is blocked by policy", groupName)
 	}
 	s.mu.Lock()
+	activatedNames := make([]string, 0, len(descriptors))
 	for _, d := range descriptors {
 		s.tools[d.Tool.Name] = d
+		activatedNames = append(activatedNames, d.Tool.Name)
+	}
+	if s.Bootstrap != nil {
+		s.Bootstrap.ActivateTools(activatedNames)
 	}
 	s.mu.Unlock()
 	// Send tools/list_changed notification
@@ -346,13 +354,20 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 	return nil
 }
 
-// ActivateTier1Tool marks a single tool as visible. The tool must already
-// be registered; bootstrap manages the actual visibility.
-func (s *Server) ActivateTier1Tool(name string) {
-	// Nothing to do for the tool map — deferred tools are already registered.
-	// This is about making them visible in tools/list via bootstrap.
-	// The bootstrap config manages visibility.
+// ActivateTier1Tool marks a single registered tool as visible.
+func (s *Server) ActivateTier1Tool(name string) error {
+	s.mu.Lock()
+	if _, exists := s.tools[name]; !exists {
+		s.mu.Unlock()
+		return fmt.Errorf("unknown tool: %s", name)
+	}
+	if s.Bootstrap != nil {
+		s.Bootstrap.ActivateTool(name)
+	}
+	s.mu.Unlock()
+	s.notifyToolsChanged()
 	slog.Info("tier1_tool_activated", "tool", name)
+	return nil
 }
 
 func (s *Server) notifyToolsChanged() {

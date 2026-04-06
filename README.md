@@ -1,6 +1,6 @@
 # clockify-mcp-go
 
-MCP server for Clockify, built in Go. 124 tools — 33 at startup, 91 on demand across 11 domains.
+MCP server for Clockify, built in Go. 124 tools total: 33 Tier 1 tools registered at startup and 91 Tier 2 tools activated on demand across 11 domains.
 
 Zero external dependencies. Single static binary.
 
@@ -135,7 +135,7 @@ Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `err
 
 **Tier 2 (on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin.
 
-Use `clockify_search_tools` to discover and activate Tier 2 groups.
+Use `clockify_search_tools` to discover and activate Tier 2 groups or a specific hidden tool. Activation updates `tools/list` at runtime.
 
 See [docs/tool-catalog.md](docs/tool-catalog.md) for the complete tool list.
 
@@ -190,8 +190,8 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit |
-| `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per minute |
+| `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit (`0` disables concurrency limiting) |
+| `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per minute (`0` disables window limiting) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Response token budget (0 = off) |
 
 ### Bootstrap
@@ -207,10 +207,10 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 |----------|---------|-------------|
 | `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
-| `MCP_BEARER_TOKEN` | — | Required for HTTP mode |
+| `MCP_BEARER_TOKEN` | — | Required for HTTP mode; clients must send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
-| `MCP_HTTP_MAX_BODY` | `2097152` | Max request body (bytes) |
+| `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 
@@ -237,10 +237,10 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 
 ```
 → clockify_search_tools { "query": "invoices" }
-← { "results": [{ "domain_group": "invoices", "tool_count": 12 }] }
+← { "count": 1, "all_results": [{ "type": "group", "name": "invoices", "tool_count": 12, "availability": "tier2" }] }
 
 → clockify_search_tools { "activate_group": "invoices" }
-← { "activated": "invoices", "activation_message": "..." }
+← { "activated": "invoices", "activation_type": "group", "group": "invoices", "tool_count": 12, "activation_message": "Activated 12 tools from group \"invoices\"" }
 ```
 
 ### Dry-run a destructive operation
@@ -281,14 +281,17 @@ See [docs/http-transport.md](docs/http-transport.md) for the full HTTP transport
 # Build
 go build ./...
 
-# Run all tests (268 tests across 13 packages)
+# Run all tests
 go test ./...
 
 # Run with race detector
 go test -race ./...
 
 # Format
-gofmt -w ./cmd ./internal
+gofmt -w ./cmd ./internal ./tests
+
+# Run opt-in live Clockify E2E tests
+CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_API_KEY=xxx go test -tags livee2e ./tests
 
 # Run server — stdio mode (default)
 CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp

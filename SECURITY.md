@@ -41,10 +41,12 @@ The following are in scope:
 - API keys passed via environment variables only (never in config files)
 - Config validation rejects non-HTTPS base URLs unless loopback or explicitly opted in
 - HTTP transport: constant-time bearer token comparison (`crypto/subtle`)
+- HTTP transport: strict `Authorization: Bearer <token>` parsing
 - HTTP server timeouts: `ReadHeaderTimeout` (10s), `ReadTimeout` (30s), `WriteTimeout` (60s), `IdleTimeout` (120s) — prevents resource exhaustion
 - Security headers: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` on all HTTP responses
 - JSON error responses (not `text/plain`) — prevents content-type sniffing
-- ID validation: path traversal characters rejected (`/?#`)
+- ID validation: path-building handlers reject path traversal characters (`/?#`)
+- Webhook URL validation: rejects non-HTTPS URLs, embedded credentials, localhost, and private/loopback/link-local/reserved IP literals
 - Name resolution: ambiguous matches fail closed (no guessing)
 - CORS: cross-origin requests rejected by default (explicit opt-in required)
 - Policy modes: destructive tools can be disabled entirely

@@ -106,17 +106,17 @@ Tier 2 tools follow the same annotation pattern. Each group is activated on dema
 
 | Group | Tools | Read | Write | Destructive |
 |-------|-------|------|-------|-------------|
-| invoices | 12 | 4 | 5 | 3 |
-| expenses | 10 | 3 | 4 | 3 |
-| scheduling | 10 | 4 | 3 | 3 |
-| time_off | 12 | 5 | 4 | 3 |
+| invoices | 12 | 4 | 6 | 2 |
+| expenses | 10 | 4 | 4 | 2 |
+| scheduling | 10 | 6 | 3 | 1 |
+| time_off | 12 | 5 | 6 | 1 |
 | approvals | 6 | 2 | 4 | 0 |
 | shared_reports | 6 | 3 | 2 | 1 |
-| user_admin | 8 | 3 | 4 | 1 |
-| webhooks | 7 | 2 | 2 | 3 |
-| custom_fields | 6 | 2 | 2 | 2 |
+| user_admin | 8 | 1 | 5 | 2 |
+| webhooks | 7 | 3 | 3 | 1 |
+| custom_fields | 6 | 2 | 3 | 1 |
 | groups_holidays | 8 | 3 | 3 | 2 |
-| project_admin | 6 | 2 | 3 | 1 |
+| project_admin | 6 | 2 | 4 | 0 |
 
 ## How Annotations Drive Behavior
 
@@ -125,6 +125,8 @@ Tier 2 tools follow the same annotation pattern. Each group is activated on dema
 3. **tools/list filtering**: Both hints filter what appears in `tools/list` responses
 4. **Error response format**: Tool errors return as `result.isError: true` (MCP spec), not JSON-RPC `error`
 5. **Client UI**: Clients can use annotations to show warning indicators or require confirmation
+
+`clockify_search_tools` is intentionally annotated as read-only because it does not mutate Clockify resources. It can still activate additional MCP tool descriptors and trigger `tools/list_changed`.
 
 ## MCP Protocol Notes
 

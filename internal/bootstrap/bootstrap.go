@@ -19,6 +19,7 @@ const (
 type Config struct {
 	Mode        Mode
 	CustomTools map[string]bool
+	ActiveTools map[string]bool
 	Tier1Names  map[string]bool // set post-registry via SetTier1Tools
 }
 
@@ -141,6 +142,9 @@ func (c *Config) IsVisible(name string) bool {
 	if AlwaysVisible[name] {
 		return true
 	}
+	if c.ActiveTools[name] {
+		return true
+	}
 	switch c.Mode {
 	case FullTier1:
 		return c.Tier1Names[name]
@@ -150,6 +154,21 @@ func (c *Config) IsVisible(name string) bool {
 		return c.CustomTools[name]
 	}
 	return false
+}
+
+// ActivateTool marks a tool as visible regardless of bootstrap mode.
+func (c *Config) ActivateTool(name string) {
+	if c.ActiveTools == nil {
+		c.ActiveTools = make(map[string]bool)
+	}
+	c.ActiveTools[name] = true
+}
+
+// ActivateTools marks multiple tools as visible regardless of bootstrap mode.
+func (c *Config) ActivateTools(names []string) {
+	for _, name := range names {
+		c.ActivateTool(name)
+	}
 }
 
 // VisibleCount returns how many of the registered Tier 1 tool names pass IsVisible.

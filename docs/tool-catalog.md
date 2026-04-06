@@ -94,23 +94,23 @@ Complete catalog of all 124 tools in the Clockify MCP server.
 
 ## Tier 2 Tools (91 — on demand)
 
-Activate via `clockify_search_tools { "activate_group": "group_name" }`.
+Activate via `clockify_search_tools { "activate_group": "group_name" }` or `clockify_search_tools { "activate_tool": "tool_name" }`.
 
 ### Invoices (12)
 
-`clockify_list_invoices`, `clockify_get_invoice`, `clockify_create_invoice`, `clockify_update_invoice`, `clockify_delete_invoice`, `clockify_send_invoice`, `clockify_list_invoice_items`, `clockify_add_invoice_item`, `clockify_update_invoice_item`, `clockify_delete_invoice_item`, `clockify_mark_invoice_sent`, `clockify_mark_invoice_paid`
+`clockify_list_invoices`, `clockify_get_invoice`, `clockify_create_invoice`, `clockify_update_invoice`, `clockify_delete_invoice`, `clockify_send_invoice`, `clockify_mark_invoice_paid`, `clockify_list_invoice_items`, `clockify_add_invoice_item`, `clockify_update_invoice_item`, `clockify_delete_invoice_item`, `clockify_invoice_report`
 
 ### Expenses (10)
 
-`clockify_list_expenses`, `clockify_get_expense`, `clockify_create_expense`, `clockify_update_expense`, `clockify_delete_expense`, `clockify_list_expense_categories`, `clockify_create_expense_category`, `clockify_update_expense_category`, `clockify_delete_expense_category`, `clockify_get_expense_summary`
+`clockify_list_expenses`, `clockify_get_expense`, `clockify_create_expense`, `clockify_update_expense`, `clockify_delete_expense`, `clockify_list_expense_categories`, `clockify_create_expense_category`, `clockify_update_expense_category`, `clockify_delete_expense_category`, `clockify_expense_report`
 
 ### Scheduling (10)
 
-`clockify_list_assignments`, `clockify_get_assignment`, `clockify_create_assignment`, `clockify_update_assignment`, `clockify_delete_assignment`, `clockify_list_schedules`, `clockify_get_schedule`, `clockify_create_schedule`, `clockify_update_schedule`, `clockify_delete_schedule`
+`clockify_list_assignments`, `clockify_get_assignment`, `clockify_create_assignment`, `clockify_update_assignment`, `clockify_delete_assignment`, `clockify_list_schedules`, `clockify_get_schedule`, `clockify_create_schedule`, `clockify_get_project_schedule_totals`, `clockify_filter_schedule_capacity`
 
 ### Time Off (12)
 
-`clockify_list_time_off_policies`, `clockify_get_time_off_policy`, `clockify_list_time_off_requests`, `clockify_get_time_off_request`, `clockify_create_time_off_request`, `clockify_update_time_off_request`, `clockify_delete_time_off_request`, `clockify_approve_time_off_request`, `clockify_reject_time_off_request`, `clockify_list_time_off_balances`, `clockify_get_time_off_balance`, `clockify_update_time_off_balance`
+`clockify_list_time_off_requests`, `clockify_get_time_off_request`, `clockify_create_time_off_request`, `clockify_update_time_off_request`, `clockify_delete_time_off_request`, `clockify_approve_time_off`, `clockify_deny_time_off`, `clockify_list_time_off_policies`, `clockify_get_time_off_policy`, `clockify_create_time_off_policy`, `clockify_update_time_off_policy`, `clockify_time_off_balance`
 
 ### Approvals (6)
 
@@ -122,7 +122,7 @@ Activate via `clockify_search_tools { "activate_group": "group_name" }`.
 
 ### User Admin (8)
 
-`clockify_list_workspace_users`, `clockify_get_workspace_user`, `clockify_invite_user`, `clockify_update_user_role`, `clockify_deactivate_user`, `clockify_reactivate_user`, `clockify_remove_user`, `clockify_update_user_cost_rate`
+`clockify_list_user_groups`, `clockify_create_user_group`, `clockify_update_user_group`, `clockify_delete_user_group`, `clockify_add_user_to_group`, `clockify_remove_user_from_group`, `clockify_update_user_role`, `clockify_deactivate_user`
 
 ### Webhooks (7)
 
@@ -130,15 +130,15 @@ Activate via `clockify_search_tools { "activate_group": "group_name" }`.
 
 ### Custom Fields (6)
 
-`clockify_list_custom_fields`, `clockify_get_custom_field`, `clockify_create_custom_field`, `clockify_update_custom_field`, `clockify_delete_custom_field`, `clockify_set_entry_custom_field`
+`clockify_list_custom_fields`, `clockify_get_custom_field`, `clockify_create_custom_field`, `clockify_update_custom_field`, `clockify_delete_custom_field`, `clockify_set_custom_field_value`
 
 ### Groups & Holidays (8)
 
-`clockify_list_user_groups`, `clockify_get_user_group`, `clockify_create_user_group`, `clockify_delete_user_group`, `clockify_add_user_to_group`, `clockify_remove_user_from_group`, `clockify_list_holidays`, `clockify_delete_holiday`
+`clockify_list_user_groups_admin`, `clockify_get_user_group`, `clockify_create_user_group_admin`, `clockify_update_user_group_admin`, `clockify_delete_user_group_admin`, `clockify_list_holidays`, `clockify_create_holiday`, `clockify_delete_holiday`
 
 ### Project Admin (6)
 
-`clockify_update_project`, `clockify_archive_project`, `clockify_delete_project`, `clockify_update_project_membership`, `clockify_update_project_estimate`, `clockify_update_project_template`
+`clockify_list_project_templates`, `clockify_get_project_template`, `clockify_create_project_template`, `clockify_update_project_estimate`, `clockify_set_project_memberships`, `clockify_archive_projects`
 
 ## Response Format
 

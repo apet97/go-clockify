@@ -1,5 +1,7 @@
 # GOCLMCP Production Plan
 
+This document is now primarily historical. The repo has already implemented most of the plan below. Treat `README.md`, `CLAUDE.md`, `AGENTS.md`, and `docs/*` as the current operational references.
+
 ## Goal
 
 Build a production-ready **Go MCP server for Clockify** that is safe, maintainable, testable, observable, and compatible with real MCP clients such as Claude Desktop, Cursor, and OpenClaw-style runtimes.
@@ -67,25 +69,27 @@ GOCLMCP is production-ready when it has all of the following:
 
 # Current State
 
-The repository is now a **production-grade** MCP server (v0.3.0).
+The repository is now a production-grade MCP server (v0.3.0 lineage, with post-v0.3.0 hardening applied in-tree).
 
 It currently has:
 - canonical Go module path (`github.com/apet97/go-clockify`)
-- 124 tools across 12 domain groups (33 Tier 1 + 91 Tier 2)
+- 124 tools across 11 domain groups (33 Tier 1 + 91 Tier 2)
 - full MCP protocol compliance (initialize, tools/list, tools/call, ping, isError)
 - hardened HTTP client with retry/backoff, pagination, and 10MB response body limits
 - HTTP transport with bearer auth, CORS, security headers, and server timeouts
 - 4 policy modes (read_only, safe_core, standard, full) with group/tool-level overrides
 - 3-strategy dry-run framework (confirm, preview, minimal)
 - name-to-ID resolution with ambiguity blocking
-- bootstrap modes (full_tier1, minimal, custom) with discovery via `clockify_search_tools`
+- bootstrap modes (`full_tier1`, `minimal`, `custom`) with discovery via `clockify_search_tools`
+- runtime MCP activation of Tier 2 groups and hidden Tier 1 tools via `clockify_search_tools`
 - rate limiting (semaphore concurrency + window-based throughput, race-safe)
 - token-aware progressive response truncation
 - duplicate entry detection + time overlap checking
 - context-aware graceful shutdown (stdio and HTTP)
 - structured logging with configurable level and request ID correlation
+- structured audit logging for write-capable tool calls
 - `--help` and `--version` flags
-- 268 tests across 13 packages (unit, integration, golden, HTTP transport)
+- broad automated coverage across unit, integration, golden, HTTP transport, and opt-in live E2E tests
 - CI/CD pipeline (GitHub Actions: format, vet, build, test, multi-platform release)
 - Docker deployment (distroless), npm distribution, cosign signing, SBOMs
 - comprehensive documentation (README, CLAUDE.md, CHANGELOG, SECURITY, CONTRIBUTING, docs/)
@@ -304,6 +308,7 @@ Add on-demand domains:
 ### Acceptance criteria
 - server remains usable even with 100+ tools
 - clients can discover advanced tools without overwhelming tool lists
+- activation updates `tools/list` at runtime via `tools/list_changed`
 
 ---
 
@@ -320,6 +325,7 @@ Add on-demand domains:
 - rate limiting
 - response truncation / token-budget awareness
 - health / readiness endpoints for HTTP mode
+- centralized audit logs for write-capable tool calls
 
 ### Reliability goals
 - no stdout pollution in stdio mode
@@ -356,7 +362,7 @@ Add on-demand domains:
 - no plaintext live keys in committed config
 - explicit docs for local secret storage
 - CI checks for accidental secret leakage patterns
-- dependency audit in CI
+- dependency audit in CI when non-stdlib dependencies or external tooling are introduced
 
 ### Acceptance criteria
 - fresh user can install in <10 minutes
