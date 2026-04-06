@@ -89,7 +89,7 @@ func TestSwitchProject(t *testing.T) {
 		switch {
 		case r.URL.Path == "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/user/u1/time-entries":
+		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/ws1/user/u1/time-entries":
 			// Stop timer
 			respondJSON(t, w, clockify.TimeEntry{ID: "stopped1", Description: "Old task", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T11:00:00Z"}})
 		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/projects":

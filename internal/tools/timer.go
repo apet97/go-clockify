@@ -50,7 +50,7 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	}
 	payload := map[string]any{"end": time.Now().UTC().Format(time.RFC3339)}
 	var out clockify.TimeEntry
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/user/"+user.ID+"/time-entries", payload, &out); err != nil {
+	if err := s.Client.Patch(ctx, "/workspaces/"+wsID+"/user/"+user.ID+"/time-entries", payload, &out); err != nil {
 		return nil, err
 	}
 	return ok("clockify_stop_timer", out, map[string]any{"workspaceId": wsID, "userId": user.ID}), nil
