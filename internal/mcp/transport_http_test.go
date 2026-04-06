@@ -222,6 +222,142 @@ func TestMCPCORSPreflightBlocked(t *testing.T) {
 	}
 }
 
+func TestHTTPToolsCall(t *testing.T) {
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "test_tool", Description: "returns hello world"},
+		Handler: func(_ context.Context, args map[string]any) (any, error) {
+			return map[string]any{"hello": "world"}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+	s.initialized.Store(true)
+
+	const bearer = "test-bearer-token-1234"
+	handler := s.handleMCP(bearer, nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"test_tool","arguments":{}}}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+
+	// Result should contain content with the tool's output
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
+	}
+	content, ok := resultMap["content"].([]any)
+	if !ok || len(content) == 0 {
+		t.Fatalf("expected non-empty content array, got %v", resultMap["content"])
+	}
+	firstContent, ok := content[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected map in content[0], got %T", content[0])
+	}
+	text, ok := firstContent["text"].(string)
+	if !ok || text == "" {
+		t.Fatalf("expected non-empty text in content, got %v", firstContent["text"])
+	}
+	// The text should contain our tool's output (JSON-encoded)
+	if !strings.Contains(text, `"hello"`) || !strings.Contains(text, `"world"`) {
+		t.Fatalf("expected tool output in text, got %q", text)
+	}
+}
+
+func TestHTTPToolsList(t *testing.T) {
+	s := NewServer("test", []ToolDescriptor{
+		{
+			Tool:         Tool{Name: "alpha_tool", Description: "first tool"},
+			Handler:      func(_ context.Context, args map[string]any) (any, error) { return nil, nil },
+			ReadOnlyHint: true,
+		},
+		{
+			Tool:         Tool{Name: "beta_tool", Description: "second tool"},
+			Handler:      func(_ context.Context, args map[string]any) (any, error) { return nil, nil },
+			ReadOnlyHint: true,
+		},
+	}, nil, nil)
+	s.initialized.Store(true)
+
+	const bearer = "test-bearer-token-1234"
+	handler := s.handleMCP(bearer, nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	body := `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
+	}
+	tools, ok := resultMap["tools"].([]any)
+	if !ok {
+		t.Fatalf("expected tools array, got %T", resultMap["tools"])
+	}
+	if len(tools) != 2 {
+		t.Fatalf("expected 2 tools, got %d", len(tools))
+	}
+
+	// Tools should be sorted alphabetically
+	first, _ := tools[0].(map[string]any)
+	second, _ := tools[1].(map[string]any)
+	if first["name"] != "alpha_tool" {
+		t.Fatalf("expected first tool alpha_tool, got %v", first["name"])
+	}
+	if second["name"] != "beta_tool" {
+		t.Fatalf("expected second tool beta_tool, got %v", second["name"])
+	}
+}
+
+func TestHTTPBodyTooLarge(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+
+	const bearer = "test-bearer-token-1234"
+	// Set a very small max body size (64 bytes)
+	handler := s.handleMCP(bearer, nil, true, 64)
+
+	// Create a body that exceeds the limit
+	largeBody := strings.Repeat("x", 256)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(largeBody))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d", rec.Code)
+	}
+}
+
 func TestIsOriginAllowed(t *testing.T) {
 	tests := []struct {
 		name           string

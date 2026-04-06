@@ -204,6 +204,29 @@ func TestOverlapSkipsRunningTimer(t *testing.T) {
 	}
 }
 
+func TestDuplicateCaseInsensitive(t *testing.T) {
+	entries := []clockify.TimeEntry{
+		{
+			ID:          "e1",
+			Description: "Code Review",
+			ProjectID:   "p1",
+			TimeInterval: clockify.TimeInterval{
+				Start: "2026-04-06T14:00:00Z",
+				End:   "2026-04-06T15:00:00Z",
+			},
+		},
+	}
+	// Same description different case should still be detected as duplicate
+	result := CheckDuplicate(entries, "code review", "p1", "2026-04-06T14:00:30Z")
+	if !result.IsDuplicate {
+		t.Error("expected case-insensitive duplicate detection")
+	}
+	result = CheckDuplicate(entries, "CODE REVIEW", "p1", "2026-04-06T14:00:30Z")
+	if !result.IsDuplicate {
+		t.Error("expected case-insensitive duplicate detection for upper case")
+	}
+}
+
 func TestEmptyEntries(t *testing.T) {
 	var entries []clockify.TimeEntry
 

@@ -62,7 +62,7 @@ func ConfigFromEnv() Config {
 type Action int
 
 const (
-	ConfirmPattern  Action = iota // remove confirm flag, call handler normally for preview
+	ConfirmPattern  Action = iota // remove confirm flag, call handler normally (NOTE: this EXECUTES the handler)
 	PreviewTool                   // call GET counterpart instead of DELETE
 	MinimalFallback               // echo parameters, no API call
 	NotDestructive                // error: dry_run on non-destructive tool

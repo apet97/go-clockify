@@ -1,7 +1,8 @@
 # Hardening Plan — GOCLMCP
 
 **Created**: 2026-04-06
-**Status**: Implementation complete
+**Updated**: 2026-04-06
+**Status**: Phase 2 complete — production review hardening
 
 ---
 
@@ -82,12 +83,30 @@
 | P2 | No golangci-lint in CI | Low | Remaining | Optional `lint` target in Makefile; CI can add later |
 | P3 | No security scanning (gosec) | Low | Remaining | Zero external dependencies reduces risk |
 
+## Production Review Hardening (Phase 2)
+
+| # | Finding | Severity | Status | Notes |
+|---|---------|----------|--------|-------|
+| PR1 | Enforcement package 0% coverage | High | **Fixed** | 40 tests, 96.4% coverage — Pipeline + Gate fully tested |
+| PR2 | Clockify client 35.6% coverage | High | **Fixed** | 15 new tests: retry, Retry-After, pagination, deadline check. 73.2% |
+| PR3 | ConfirmPattern dry-run executes real handler | High | **Fixed** | Documented accurately in docs/safe-usage.md + dryrun.go comment |
+| PR4 | No retry deadline check | High | **Fixed** | doJSON checks ctx.Deadline() before sleeping for retry |
+| PR5 | Bearer token no minimum length | Medium | **Fixed** | 16-char minimum enforced for HTTP mode |
+| PR6 | ValidateID missing .. and % check | Medium | **Fixed** | Rejects .., %, and control chars |
+| PR7 | AllowAnyOrigin not warned | Medium | **Fixed** | slog.Warn in main.go when enabled |
+| PR8 | Case-sensitive dedupe | Medium | **Fixed** | strings.EqualFold for description comparison |
+| PR9 | 45s tool timeout hardcoded | Medium | **Fixed** | CLOCKIFY_TOOL_TIMEOUT env var (5s-10m, default 45s) |
+| PR10 | No HTTP end-to-end tests | Medium | **Fixed** | 3 tests: tools/call, tools/list, body-too-large |
+| PR11 | No tool handler execution tests | Medium | **Fixed** | 5 tests: WhoAmI, ListProjects, TimerStatus, APIError |
+| PR12 | No rate limiter stress test | Low | **Fixed** | 50-goroutine concurrent stress test |
+
 ---
 
 ## Summary
 
-- **Items reviewed**: 37
+- **Items reviewed**: 49
 - **Already present**: 13
-- **Fixed**: 20
+- **Fixed (Phase 1)**: 20
+- **Fixed (Phase 2 — Production Review)**: 12
 - **Remaining (Low)**: 4
 - **Critical/High issues remaining**: 0

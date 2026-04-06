@@ -127,6 +127,12 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			if waitDur <= 0 {
 				waitDur = backoff(attempt)
 			}
+			// Before sleeping for retry, check if we have enough time left.
+			if deadline, ok := ctx.Deadline(); ok {
+				if time.Until(deadline) < waitDur {
+					return lastErr
+				}
+			}
 			if err := sleepWithContext(ctx, waitDur); err != nil {
 				return err
 			}

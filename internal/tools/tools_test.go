@@ -435,6 +435,223 @@ func TestDeleteEntryDryRun(t *testing.T) {
 	}
 }
 
+func TestWhoAmI(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice Smith", Email: "alice@example.com"})
+		case "/workspaces":
+			respondJSON(t, w, []clockify.Workspace{{ID: "ws1", Name: "My Workspace"}})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.WhoAmI(context.Background())
+	if err != nil {
+		t.Fatalf("WhoAmI failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatalf("expected ok=true, got ok=false")
+	}
+	if result.Action != "clockify_whoami" {
+		t.Fatalf("expected action clockify_whoami, got %s", result.Action)
+	}
+	data, ok := result.Data.(IdentityData)
+	if !ok {
+		t.Fatalf("expected IdentityData, got %T", result.Data)
+	}
+	if data.User.ID != "u1" {
+		t.Fatalf("expected user ID u1, got %s", data.User.ID)
+	}
+	if data.User.Name != "Alice Smith" {
+		t.Fatalf("expected user name Alice Smith, got %s", data.User.Name)
+	}
+	if data.User.Email != "alice@example.com" {
+		t.Fatalf("expected email alice@example.com, got %s", data.User.Email)
+	}
+	if data.WorkspaceID != "ws1" {
+		t.Fatalf("expected workspace ID ws1, got %s", data.WorkspaceID)
+	}
+}
+
+func TestListProjects(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/ws123/projects":
+			respondJSON(t, w, []clockify.Project{
+				{ID: "p1", Name: "Backend API", Color: "#0000FF", Archived: false},
+				{ID: "p2", Name: "Frontend App", Color: "#FF0000", Archived: false},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws123")
+	result, err := svc.ListProjects(context.Background())
+	if err != nil {
+		t.Fatalf("ListProjects failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatalf("expected ok=true")
+	}
+	if result.Action != "clockify_list_projects" {
+		t.Fatalf("expected action clockify_list_projects, got %s", result.Action)
+	}
+	projects, ok := result.Data.([]clockify.Project)
+	if !ok {
+		t.Fatalf("expected []clockify.Project, got %T", result.Data)
+	}
+	if len(projects) != 2 {
+		t.Fatalf("expected 2 projects, got %d", len(projects))
+	}
+	if projects[0].Name != "Backend API" {
+		t.Fatalf("expected first project Backend API, got %s", projects[0].Name)
+	}
+	if projects[1].Name != "Frontend App" {
+		t.Fatalf("expected second project Frontend App, got %s", projects[1].Name)
+	}
+	count, ok := result.Meta["count"].(int)
+	if !ok || count != 2 {
+		t.Fatalf("expected meta count=2, got %v", result.Meta["count"])
+	}
+}
+
+func TestTimerStatus_NoRunning(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			// Return an entry with a non-empty End (finished, not running)
+			respondJSON(t, w, []clockify.TimeEntry{
+				{
+					ID:          "e1",
+					Description: "Finished task",
+					TimeInterval: clockify.TimeInterval{
+						Start: "2026-04-06T09:00:00Z",
+						End:   "2026-04-06T10:00:00Z",
+					},
+				},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimerStatus(context.Background())
+	if err != nil {
+		t.Fatalf("TimerStatus failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatalf("expected ok=true")
+	}
+	if result.Action != "clockify_timer_status" {
+		t.Fatalf("expected action clockify_timer_status, got %s", result.Action)
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map data, got %T", result.Data)
+	}
+	running, ok := dataMap["running"].(bool)
+	if !ok || running {
+		t.Fatalf("expected running=false, got %v", dataMap["running"])
+	}
+	elapsed, ok := dataMap["elapsed"].(string)
+	if !ok || elapsed != "" {
+		t.Fatalf("expected empty elapsed string, got %q", elapsed)
+	}
+}
+
+func TestTimerStatus_Running(t *testing.T) {
+	// Use a start time close to "now" so we get a valid elapsed calculation
+	startTime := time.Now().UTC().Add(-35 * time.Minute).Format(time.RFC3339)
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			// Return an entry with empty End (running)
+			respondJSON(t, w, []clockify.TimeEntry{
+				{
+					ID:          "e1",
+					Description: "Active task",
+					TimeInterval: clockify.TimeInterval{
+						Start: startTime,
+						End:   "", // empty = running
+					},
+				},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimerStatus(context.Background())
+	if err != nil {
+		t.Fatalf("TimerStatus failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatalf("expected ok=true")
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map data, got %T", result.Data)
+	}
+	running, ok := dataMap["running"].(bool)
+	if !ok || !running {
+		t.Fatalf("expected running=true, got %v", dataMap["running"])
+	}
+	elapsed, ok := dataMap["elapsed"].(string)
+	if !ok || elapsed == "" {
+		t.Fatalf("expected non-empty elapsed string, got %q", elapsed)
+	}
+	// With 35 minutes elapsed, it should show something like "35m Xs"
+	if !strings.Contains(elapsed, "m") {
+		t.Fatalf("expected elapsed to contain minutes, got %q", elapsed)
+	}
+	// Verify the entry is in the result
+	entry, ok := dataMap["entry"].(clockify.TimeEntry)
+	if !ok {
+		t.Fatalf("expected clockify.TimeEntry for entry field, got %T", dataMap["entry"])
+	}
+	if entry.ID != "e1" {
+		t.Fatalf("expected entry ID e1, got %s", entry.ID)
+	}
+}
+
+func TestHandlerAPIError(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"message":"internal server error"}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.WhoAmI(context.Background())
+	if err == nil {
+		t.Fatal("expected error from WhoAmI when API returns 500, got nil")
+	}
+	// Verify the error message includes the status info
+	if !strings.Contains(err.Error(), "500") {
+		t.Fatalf("expected error to contain status code 500, got: %s", err.Error())
+	}
+}
+
 func newTestClient(t *testing.T, handler http.HandlerFunc) (*clockify.Client, func()) {
 	t.Helper()
 	ts := httptest.NewServer(handler)

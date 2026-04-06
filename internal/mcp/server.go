@@ -26,8 +26,9 @@ type ToolDescriptor struct {
 
 type Server struct {
 	Version     string
-	Enforcement Enforcement // nil = no filtering or enforcement
-	Activator   Activator   // nil = activation unrestricted
+	Enforcement Enforcement   // nil = no filtering or enforcement
+	Activator   Activator     // nil = activation unrestricted
+	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
 
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
@@ -268,7 +269,11 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 
 	// Dispatch
 	start := time.Now()
-	callCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	timeout := s.ToolTimeout
+	if timeout <= 0 {
+		timeout = 45 * time.Second
+	}
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	result, err := d.Handler(callCtx, params.Arguments)

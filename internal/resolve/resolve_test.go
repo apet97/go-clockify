@@ -16,11 +16,35 @@ func TestValidateID(t *testing.T) {
 	if err := ValidateID("abc123", "project"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if err := ValidateID("5e1b2c3d4e5f6a7b8c9d0e1f", "project"); err != nil {
+		t.Fatalf("valid clockify ID should pass: %v", err)
+	}
 	if err := ValidateID("", "project"); err == nil {
 		t.Fatal("expected empty id error")
 	}
 	if err := ValidateID("bad/path", "project"); err == nil {
-		t.Fatal("expected invalid char error")
+		t.Fatal("expected invalid char error for /")
+	}
+	if err := ValidateID("bad?query", "project"); err == nil {
+		t.Fatal("expected invalid char error for ?")
+	}
+	if err := ValidateID("bad#frag", "project"); err == nil {
+		t.Fatal("expected invalid char error for #")
+	}
+	if err := ValidateID("bad%2Fpath", "project"); err == nil {
+		t.Fatal("expected invalid char error for %")
+	}
+	if err := ValidateID("../../../etc/passwd", "project"); err == nil {
+		t.Fatal("expected invalid char error for ..")
+	}
+	if err := ValidateID("foo..bar", "project"); err == nil {
+		t.Fatal("expected invalid char error for embedded ..")
+	}
+	if err := ValidateID("bad\x00null", "project"); err == nil {
+		t.Fatal("expected invalid char error for null byte")
+	}
+	if err := ValidateID("bad\x1Fcontrol", "project"); err == nil {
+		t.Fatal("expected invalid char error for control char")
 	}
 }
 

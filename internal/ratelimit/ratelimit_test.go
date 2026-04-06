@@ -176,6 +176,45 @@ func TestZeroWindowDisablesWindowLayer(t *testing.T) {
 	release()
 }
 
+func TestConcurrentStress(t *testing.T) {
+	const (
+		maxConcurrent = 5
+		goroutines    = 50
+		perWindow     = 200
+	)
+	rl := New(maxConcurrent, int64(perWindow), 60000)
+
+	errCh := make(chan error, goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			rel, err := rl.Acquire(context.Background())
+			if err != nil {
+				errCh <- err
+				return
+			}
+			time.Sleep(1 * time.Millisecond) // brief hold
+			rel()
+			errCh <- nil
+		}()
+	}
+
+	var succeeded, rateLimited int
+	for i := 0; i < goroutines; i++ {
+		err := <-errCh
+		if err == nil {
+			succeeded++
+		} else {
+			rateLimited++
+		}
+	}
+
+	// At least maxConcurrent should succeed; some may be rate-limited due to semaphore timeout
+	if succeeded < maxConcurrent {
+		t.Errorf("expected at least %d successes, got %d", maxConcurrent, succeeded)
+	}
+	t.Logf("stress: %d succeeded, %d rate-limited", succeeded, rateLimited)
+}
+
 func TestAcquireRespectsContextCancellation(t *testing.T) {
 	rl := New(1, 100, 60000) // 1 concurrent slot
 

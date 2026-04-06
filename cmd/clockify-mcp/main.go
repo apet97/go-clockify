@@ -112,6 +112,7 @@ func run() error {
 		Bootstrap: &bc,
 	}
 	server := mcp.NewServer(version, registry, pipeline, gate)
+	server.ToolTimeout = cfg.ToolTimeout
 
 	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)
@@ -177,6 +178,9 @@ func run() error {
 	defer cancel()
 
 	if cfg.Transport == "http" {
+		if cfg.AllowAnyOrigin {
+			slog.Warn("cors_any_origin", "msg", "MCP_ALLOW_ANY_ORIGIN=1 is set — all cross-origin requests will be accepted. This is not recommended for production.")
+		}
 		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)

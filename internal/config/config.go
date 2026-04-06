@@ -29,6 +29,9 @@ type Config struct {
 	AllowedOrigins []string
 	AllowAnyOrigin bool
 	MaxBodySize    int64
+
+	// Tool execution
+	ToolTimeout time.Duration
 }
 
 func Load() (Config, error) {
@@ -86,8 +89,13 @@ func Load() (Config, error) {
 	}
 
 	cfg.BearerToken = os.Getenv("MCP_BEARER_TOKEN")
-	if cfg.Transport == "http" && cfg.BearerToken == "" {
-		return Config{}, fmt.Errorf("MCP_BEARER_TOKEN is required when MCP_TRANSPORT=http")
+	if cfg.Transport == "http" {
+		if cfg.BearerToken == "" {
+			return Config{}, fmt.Errorf("MCP_BEARER_TOKEN is required when MCP_TRANSPORT=http")
+		}
+		if len(cfg.BearerToken) < 16 {
+			return Config{}, fmt.Errorf("MCP_BEARER_TOKEN must be at least 16 characters for security")
+		}
 	}
 
 	if origins := os.Getenv("MCP_ALLOWED_ORIGINS"); origins != "" {
@@ -112,6 +120,19 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be greater than 0")
 		}
 		cfg.MaxBodySize = v
+	}
+
+	// Tool timeout
+	cfg.ToolTimeout = 45 * time.Second
+	if tt := os.Getenv("CLOCKIFY_TOOL_TIMEOUT"); tt != "" {
+		d, err := time.ParseDuration(tt)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_TOOL_TIMEOUT %q: %w", tt, err)
+		}
+		if d < 5*time.Second || d > 10*time.Minute {
+			return Config{}, fmt.Errorf("CLOCKIFY_TOOL_TIMEOUT must be between 5s and 10m")
+		}
+		cfg.ToolTimeout = d
 	}
 
 	return cfg, nil

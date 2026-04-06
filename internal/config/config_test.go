@@ -87,7 +87,7 @@ func TestLoadTransportHTTP(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 		"MCP_TRANSPORT":    "http",
-		"MCP_BEARER_TOKEN": "tok",
+		"MCP_BEARER_TOKEN": "my-strong-token-1234567890",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -358,13 +358,98 @@ func TestLoadHTTPTransportWithBearerToken(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 		"MCP_TRANSPORT":    "http",
-		"MCP_BEARER_TOKEN": "my-secret",
+		"MCP_BEARER_TOKEN": "my-strong-secret-token",
 	})
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("HTTP with bearer token should pass: %v", err)
 	}
-	if cfg.BearerToken != "my-secret" {
-		t.Fatalf("expected my-secret, got %q", cfg.BearerToken)
+	if cfg.BearerToken != "my-strong-secret-token" {
+		t.Fatalf("expected my-strong-secret-token, got %q", cfg.BearerToken)
+	}
+}
+
+func TestLoadHTTPBearerTokenMinLength(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "http",
+		"MCP_BEARER_TOKEN": "short",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for bearer token shorter than 16 characters")
+	}
+}
+
+func TestLoadStdioBearerTokenNoLengthCheck(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_BEARER_TOKEN": "short",
+	})
+	os.Unsetenv("MCP_TRANSPORT")
+	_, err := Load()
+	if err != nil {
+		t.Fatalf("stdio mode should not enforce bearer token length: %v", err)
+	}
+}
+
+func TestLoadToolTimeoutDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("CLOCKIFY_TOOL_TIMEOUT")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ToolTimeout != 45*1000000000 { // 45s in nanoseconds
+		t.Fatalf("expected 45s default, got %v", cfg.ToolTimeout)
+	}
+}
+
+func TestLoadToolTimeoutCustom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_TOOL_TIMEOUT": "2m",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ToolTimeout != 120*1000000000 { // 2m
+		t.Fatalf("expected 2m, got %v", cfg.ToolTimeout)
+	}
+}
+
+func TestLoadToolTimeoutTooShort(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_TOOL_TIMEOUT": "1s",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for timeout < 5s")
+	}
+}
+
+func TestLoadToolTimeoutTooLong(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_TOOL_TIMEOUT": "15m",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for timeout > 10m")
+	}
+}
+
+func TestLoadToolTimeoutInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_TOOL_TIMEOUT": "not-a-duration",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid duration")
 	}
 }

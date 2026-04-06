@@ -12,8 +12,16 @@ func ValidateID(id, name string) error {
 	if strings.TrimSpace(id) == "" {
 		return fmt.Errorf("%s cannot be empty", name)
 	}
-	if strings.ContainsAny(id, "/?#") {
+	if strings.ContainsAny(id, "/?#%") {
 		return fmt.Errorf("%s contains invalid characters", name)
+	}
+	if strings.Contains(id, "..") {
+		return fmt.Errorf("%s contains invalid characters", name)
+	}
+	for _, r := range id {
+		if r < 0x20 || r == 0x7F {
+			return fmt.Errorf("%s contains invalid characters", name)
+		}
 	}
 	return nil
 }

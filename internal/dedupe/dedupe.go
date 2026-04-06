@@ -86,12 +86,12 @@ func ConfigFromEnv() (Config, error) {
 
 // CheckDuplicate checks whether a proposed time entry duplicates an existing one.
 // A duplicate is defined as an exact match on all three of:
-//  1. Description (case-sensitive)
+//  1. Description (case-insensitive)
 //  2. ProjectID (or both empty)
 //  3. Start time to the minute (first 16 chars of ISO 8601)
 func CheckDuplicate(entries []clockify.TimeEntry, description, projectID, startISO string) *DuplicateResult {
 	for _, entry := range entries {
-		if entry.Description != description {
+		if !strings.EqualFold(entry.Description, description) {
 			continue
 		}
 		if entry.ProjectID != projectID {
