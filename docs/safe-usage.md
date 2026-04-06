@@ -121,6 +121,8 @@ Two-layer protection (race-safe window reset):
 
 Set either to `0` to disable that layer.
 
+Additionally, the server strictly honors Clockify's built-in `Retry-After` headers if the API returns a `429 Too Many Requests` or `503 Service Unavailable`, preventing potential API key bans under high load.
+
 ## Token Budget
 
 Large responses are automatically truncated to fit within a token budget:

@@ -11,7 +11,9 @@ The following production features are already implemented—**do not regress the
 - **MCP Spec Compliance**: Tool errors return `isError: true` in the result (not JSON-RPC errors).
 - **Initialization Guard**: All `tools/call` requests are rejected before the `initialize` handshake.
 - **Graceful Shutdown**: SIGTERM/SIGINT triggers a 10s drain period for in-flight requests.
-- **Race Safety**: The rate limiter window reset uses atomic/mutex double-checked locking.
+- **Race Safety**: Target resources like server `initialized` properties and the rate limiter window are protected by `atomic` boundaries and mutexes.
+- **Async Multiplexing**: The `stdio` JSON-RPC transport uses concurrent goroutines synced via `sync.WaitGroup` for tool execution, eliminating IO stall scenarios.
+- **Reliable Client Core**: Core HTTP limits depend on strict `Retry-After` header extraction, and paginations are typed securely via `ListAll[T any]`.
 - **HTTP Security**: Security headers, JSON error bodies, and configurable timeouts are in place.
 - **Observability**: Monotonic request IDs and configurable `MCP_LOG_LEVEL`.
 - **Zero Dependencies**: Maintain the "stdlib only" constraint.

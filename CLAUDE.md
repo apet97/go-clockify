@@ -84,9 +84,9 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 cmd/clockify-mcp/main.go           Entrypoint — wires 8 subsystems, transport selection
 internal/
   config/         Config from env vars, URL validation
-  clockify/       HTTP client (retry/backoff, pagination, typed errors), entity models
+  clockify/       HTTP client (Retry-After backoff, generic pagination, typed errors), entity models
   mcp/
-    server.go       Stdio JSON-RPC server with enforcement pipeline
+    server.go       Stdio JSON-RPC server with enforcement pipeline (async tools/call dispatch)
     types.go        MCP protocol types (Request, Response, Tool, ToolDescriptor)
     transport_http.go  HTTP transport (bearer auth, CORS, health/ready, security headers)
   tools/
@@ -146,7 +146,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ### Clockify Client
 
-`internal/clockify/client.go` — stdlib HTTP client with `X-Api-Key` auth, exponential backoff + jitter for 429/5xx, `ListAll` pagination, typed `APIError`. Methods: `Get`, `Post`, `Put`, `Patch`, `Delete`. Response body limited to 10MB.
+`internal/clockify/client.go` — stdlib HTTP client with `X-Api-Key` auth, `Retry-After` compliance for 429/503 limits, generic `ListAll[T any]` pagination, typed `APIError`. Methods: `Get`, `Post`, `Put`, `Patch`, `Delete`. Response body limited to 10MB.
 
 ### Name Resolution
 
