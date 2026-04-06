@@ -1,0 +1,44 @@
+services:
+  clockify-mcp:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+    ports:
+      - "8080:8080"
+    environment:
+      - CLOCKIFY_API_KEY=${CLOCKIFY_API_KEY}
+      - CLOCKIFY_WORKSPACE_ID=${CLOCKIFY_WORKSPACE_ID:-}
+      - CLOCKIFY_TIMEZONE=${CLOCKIFY_TIMEZONE:-UTC}
+      - CLOCKIFY_BASE_URL=${CLOCKIFY_BASE_URL:-https://api.clockify.me/api/v1}
+      - CLOCKIFY_REPORTS_URL=${CLOCKIFY_REPORTS_URL:-}
+      - CLOCKIFY_POLICY=${CLOCKIFY_POLICY:-standard}
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_BIND=0.0.0.0:8080
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}
+      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
+      - MCP_LOG_FORMAT=${MCP_LOG_FORMAT:-json}
+      - MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-info}
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 256M
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - clockify-mcp
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/resolve"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

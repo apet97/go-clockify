@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestCreateProject(t *testing.T) {

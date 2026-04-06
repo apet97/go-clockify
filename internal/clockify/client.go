@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,11 +15,16 @@ import (
 	"time"
 )
 
+// maxResponseBody is the maximum number of bytes read from API responses
+// to prevent OOM on unexpectedly large or malicious responses.
+const maxResponseBody = 10 * 1024 * 1024 // 10 MB
+
 type Client struct {
 	apiKey     string
 	baseURL    string
 	httpClient *http.Client
 	maxRetries int
+	userAgent  string
 }
 
 func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *Client {
@@ -34,7 +39,13 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		httpClient: &http.Client{Timeout: timeout},
 		maxRetries: maxRetries,
+		userAgent:  "clockify-mcp-go/0.2.0",
 	}
+}
+
+// SetUserAgent sets the User-Agent string sent with every request.
+func (c *Client) SetUserAgent(ua string) {
+	c.userAgent = ua
 }
 
 func (c *Client) Get(ctx context.Context, path string, query map[string]string, out any) error {
@@ -49,18 +60,17 @@ func (c *Client) Put(ctx context.Context, path string, body any, out any) error 
 	return c.doJSON(ctx, http.MethodPut, path, nil, body, out)
 }
 
+func (c *Client) Patch(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, http.MethodPatch, path, nil, body, out)
+}
+
 func (c *Client) Delete(ctx context.Context, path string) error {
 	return c.doJSON(ctx, http.MethodDelete, path, nil, nil, nil)
 }
 
-func (c *Client) ListAll(ctx context.Context, path string, baseQuery map[string]string, out any) error {
-	itemsPtr, ok := out.(*[]map[string]any)
-	if !ok {
-		return fmt.Errorf("ListAll requires *[]map[string]any output")
-	}
-
+func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string) ([]T, error) {
 	page := 1
-	all := make([]map[string]any, 0)
+	all := make([]T, 0)
 	for {
 		query := cloneQuery(baseQuery)
 		query["page"] = strconv.Itoa(page)
@@ -68,9 +78,9 @@ func (c *Client) ListAll(ctx context.Context, path string, baseQuery map[string]
 			query["page-size"] = "50"
 		}
 
-		var batch []map[string]any
+		var batch []T
 		if err := c.Get(ctx, path, query, &batch); err != nil {
-			return err
+			return nil, err
 		}
 		all = append(all, batch...)
 		if len(batch) == 0 || len(batch) < atoiDefault(query["page-size"], 50) {
@@ -78,12 +88,11 @@ func (c *Client) ListAll(ctx context.Context, path string, baseQuery map[string]
 		}
 		page++
 		if page > 1000 {
-			return fmt.Errorf("pagination safety stop reached")
+			return nil, fmt.Errorf("pagination safety stop reached")
 		}
 	}
 
-	*itemsPtr = all
-	return nil
+	return all, nil
 }
 
 func (c *Client) doJSON(ctx context.Context, method, path string, query map[string]string, body any, out any) error {
@@ -97,11 +106,17 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 	}
 
 	var lastErr error
+	var explicitRetryAfter time.Duration
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
-			if err := sleepWithContext(ctx, backoff(attempt)); err != nil {
+			waitDur := explicitRetryAfter
+			if waitDur <= 0 {
+				waitDur = backoff(attempt)
+			}
+			if err := sleepWithContext(ctx, waitDur); err != nil {
 				return err
 			}
+			explicitRetryAfter = 0
 		}
 
 		err = c.doOnce(ctx, method, path, query, payload, out)
@@ -114,6 +129,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 		if !ok || !isRetryableStatus(apiErr.StatusCode) {
 			return err
 		}
+		explicitRetryAfter = apiErr.RetryAfter
 	}
 
 	if lastErr != nil {
@@ -146,7 +162,7 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 	}
 	req.Header.Set("X-Api-Key", c.apiKey)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "goclmcp/0.1.0")
+	req.Header.Set("User-Agent", c.userAgent)
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -157,14 +173,30 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 	}
 	defer resp.Body.Close()
 
+	// Limit body reads to prevent OOM on oversized responses.
+	limitedBody := io.LimitReader(resp.Body, maxResponseBody)
+
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		// Limit error body read to 64KB for error messages
+		errorReader := io.LimitReader(resp.Body, 64*1024)
+		bodyBytes, _ := io.ReadAll(errorReader)
+
+		var retryAfter time.Duration
+		if ra := resp.Header.Get("Retry-After"); ra != "" {
+			if s, err := strconv.Atoi(ra); err == nil {
+				retryAfter = time.Duration(s) * time.Second
+			} else if d, err := time.Parse(time.RFC1123, ra); err == nil {
+				retryAfter = time.Until(d)
+			}
+		}
+
 		return &APIError{
 			Method:     method,
 			Path:       path,
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,
 			Body:       trimBody(string(bodyBytes)),
+			RetryAfter: retryAfter,
 		}
 	}
 
@@ -172,16 +204,20 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return json.NewDecoder(limitedBody).Decode(out)
 }
 
 func isRetryableStatus(code int) bool {
-	return code == http.StatusTooManyRequests || (code >= 500 && code <= 599)
+	return code == http.StatusTooManyRequests ||
+		code == http.StatusBadGateway ||
+		code == http.StatusServiceUnavailable ||
+		code == http.StatusGatewayTimeout ||
+		(code >= 500 && code <= 599)
 }
 
 func backoff(attempt int) time.Duration {
 	base := 250.0 * math.Pow(2, float64(attempt-1))
-	jitter := rand.Intn(125)
+	jitter := rand.IntN(125)
 	return time.Duration(base+float64(jitter)) * time.Millisecond
 }
 

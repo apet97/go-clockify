@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync/atomic"
 	"testing"
 
-	"goclmcp/internal/bootstrap"
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/policy"
-	"goclmcp/internal/truncate"
+	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/policy"
+	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 // ---------------------------------------------------------------------------
@@ -49,11 +50,19 @@ func TestFullMCPHandshake(t *testing.T) {
 		t.Fatalf("expected 4 responses, got %d: %s", len(lines), out.String())
 	}
 
-	// Verify initialize
-	var initResp Response
-	if err := json.Unmarshal([]byte(lines[0]), &initResp); err != nil {
-		t.Fatalf("unmarshal initialize: %v", err)
+	responses := make(map[float64]Response)
+	for _, line := range lines {
+		var r Response
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			t.Fatalf("unmarshal line: %v", err)
+		}
+		if id, ok := r.ID.(float64); ok {
+			responses[id] = r
+		}
 	}
+
+	// Verify initialize
+	initResp := responses[1]
 	if initResp.Error != nil {
 		t.Fatalf("initialize error: %v", initResp.Error)
 	}
@@ -70,10 +79,7 @@ func TestFullMCPHandshake(t *testing.T) {
 	}
 
 	// Verify tools/list
-	var listResp Response
-	if err := json.Unmarshal([]byte(lines[1]), &listResp); err != nil {
-		t.Fatalf("unmarshal tools/list: %v", err)
-	}
+	listResp := responses[2]
 	if listResp.Error != nil {
 		t.Fatalf("tools/list error: %v", listResp.Error)
 	}
@@ -84,10 +90,7 @@ func TestFullMCPHandshake(t *testing.T) {
 	}
 
 	// Verify tools/call
-	var callResp Response
-	if err := json.Unmarshal([]byte(lines[2]), &callResp); err != nil {
-		t.Fatalf("unmarshal tools/call: %v", err)
-	}
+	callResp := responses[3]
 	if callResp.Error != nil {
 		t.Fatalf("tools/call error: %v", callResp.Error)
 	}
@@ -98,10 +101,7 @@ func TestFullMCPHandshake(t *testing.T) {
 	}
 
 	// Verify ping
-	var pingResp Response
-	if err := json.Unmarshal([]byte(lines[3]), &pingResp); err != nil {
-		t.Fatalf("unmarshal ping: %v", err)
-	}
+	pingResp := responses[4]
 	if pingResp.Error != nil {
 		t.Fatalf("ping error: %v", pingResp.Error)
 	}
@@ -138,6 +138,7 @@ func TestUnknownMethodReturnsError(t *testing.T) {
 
 func TestUnknownToolReturnsError(t *testing.T) {
 	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server.initialized.Store(true) // skip init guard — we're testing tool dispatch
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"nonexistent","arguments":{}}}`
 
 	var out strings.Builder
@@ -149,11 +150,52 @@ func TestUnknownToolReturnsError(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if resp.Error == nil {
-		t.Fatal("expected error for unknown tool")
+	// Tool errors now use isError per MCP spec
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
 	}
-	if !strings.Contains(resp.Error.Message, "unknown tool") {
-		t.Fatalf("expected 'unknown tool' in error, got %q", resp.Error.Message)
+	isErr, _ := resultMap["isError"].(bool)
+	if !isErr {
+		t.Fatal("expected isError=true for unknown tool")
+	}
+	content, _ := resultMap["content"].([]any)
+	if len(content) == 0 {
+		t.Fatal("expected content in error response")
+	}
+	textObj, _ := content[0].(map[string]any)
+	text, _ := textObj["text"].(string)
+	if !strings.Contains(text, "unknown tool") {
+		t.Fatalf("expected 'unknown tool' in error text, got %q", text)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 3b. tools/call before initialize returns error
+// ---------------------------------------------------------------------------
+
+func TestToolCallBeforeInitialize(t *testing.T) {
+	server := NewServer("test", nil, nil, nil, truncate.Config{}, dryrun.Config{}, nil)
+	// Do NOT set server.initialized — test the guard
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"any","arguments":{}}}`
+
+	var out strings.Builder
+	if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	var resp Response
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Error == nil {
+		t.Fatal("expected error for tools/call before initialize")
+	}
+	if resp.Error.Code != -32002 {
+		t.Fatalf("expected error code -32002, got %d", resp.Error.Code)
+	}
+	if !strings.Contains(resp.Error.Message, "not initialized") {
+		t.Fatalf("expected 'not initialized' in error, got %q", resp.Error.Message)
 	}
 }
 
@@ -284,6 +326,7 @@ func TestPolicyBlocksToolCallExecution(t *testing.T) {
 	}
 
 	server := NewServer("test", pol, []ToolDescriptor{writeTool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server.initialized.Store(true) // skip init guard — we're testing policy enforcement
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
 
 	var out strings.Builder
@@ -295,11 +338,23 @@ func TestPolicyBlocksToolCallExecution(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if resp.Error == nil {
-		t.Fatal("expected error when calling blocked tool")
+	// Tool errors now use isError per MCP spec
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
 	}
-	if !strings.Contains(resp.Error.Message, "blocked by policy") {
-		t.Fatalf("expected 'blocked by policy' error, got %q", resp.Error.Message)
+	isErr, _ := resultMap["isError"].(bool)
+	if !isErr {
+		t.Fatal("expected isError=true when calling blocked tool")
+	}
+	content, _ := resultMap["content"].([]any)
+	if len(content) == 0 {
+		t.Fatal("expected content in error response")
+	}
+	textObj, _ := content[0].(map[string]any)
+	text, _ := textObj["text"].(string)
+	if !strings.Contains(text, "blocked by policy") {
+		t.Fatalf("expected 'blocked by policy' in error text, got %q", text)
 	}
 }
 
@@ -667,6 +722,7 @@ func TestTruncationApplied(t *testing.T) {
 
 	tc := truncate.Config{TokenBudget: 100, Enabled: true}
 	server := NewServer("test", nil, []ToolDescriptor{bigTool}, nil, tc, dryrun.Config{}, nil)
+	server.initialized.Store(true) // skip init guard — we're testing truncation
 
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"big_tool","arguments":{}}}`
 	var out strings.Builder
@@ -721,6 +777,7 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 	}
 
 	server := NewServer("test", nil, []ToolDescriptor{readTool}, nil, truncate.Config{}, dryrun.Config{Enabled: true}, nil)
+	server.initialized.Store(true) // skip init guard — we're testing dry-run
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"safe_read","arguments":{"dry_run":true}}}`
 
 	var out strings.Builder
@@ -732,11 +789,23 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if resp.Error == nil {
-		t.Fatal("expected error for dry_run on non-destructive tool")
+	// Tool errors now use isError per MCP spec
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
 	}
-	if !strings.Contains(resp.Error.Message, "not supported for non-destructive") {
-		t.Fatalf("expected 'not supported for non-destructive' error, got %q", resp.Error.Message)
+	isErr, _ := resultMap["isError"].(bool)
+	if !isErr {
+		t.Fatal("expected isError=true for dry_run on non-destructive tool")
+	}
+	content, _ := resultMap["content"].([]any)
+	if len(content) == 0 {
+		t.Fatal("expected content in error response")
+	}
+	textObj, _ := content[0].(map[string]any)
+	text, _ := textObj["text"].(string)
+	if !strings.Contains(text, "not supported for non-destructive") {
+		t.Fatalf("expected 'not supported for non-destructive' in error text, got %q", text)
 	}
 }
 
@@ -745,7 +814,7 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestMultipleSequentialRequests(t *testing.T) {
-	counter := 0
+	var counter atomic.Int32
 	tool := ToolDescriptor{
 		Tool: Tool{
 			Name:        "counter_tool",
@@ -754,13 +823,14 @@ func TestMultipleSequentialRequests(t *testing.T) {
 			Annotations: map[string]any{"readOnlyHint": true},
 		},
 		Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			counter++
-			return map[string]any{"count": counter}, nil
+			val := counter.Add(1)
+			return map[string]any{"count": val}, nil
 		},
 		ReadOnlyHint: true,
 	}
 
 	server := NewServer("test", nil, []ToolDescriptor{tool}, nil, truncate.Config{}, dryrun.Config{}, nil)
+	server.initialized.Store(true) // skip init guard — we're testing sequential dispatch
 
 	var requests []string
 	for i := 1; i <= 5; i++ {
@@ -777,7 +847,7 @@ func TestMultipleSequentialRequests(t *testing.T) {
 	if len(lines) != 5 {
 		t.Fatalf("expected 5 responses, got %d", len(lines))
 	}
-	if counter != 5 {
-		t.Fatalf("expected counter=5, got %d", counter)
+	if counter.Load() != 5 {
+		t.Fatalf("expected counter=5, got %d", counter.Load())
 	}
 }

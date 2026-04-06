@@ -27,6 +27,7 @@ type Config struct {
 	HTTPBind       string
 	BearerToken    string
 	AllowedOrigins []string
+	AllowAnyOrigin bool
 	MaxBodySize    int64
 }
 
@@ -79,6 +80,8 @@ func Load() (Config, error) {
 			}
 		}
 	}
+
+	cfg.AllowAnyOrigin = os.Getenv("MCP_ALLOW_ANY_ORIGIN") == "1"
 
 	cfg.MaxBodySize = 2097152 // 2 MB default
 	if mbs := os.Getenv("MCP_HTTP_MAX_BODY"); mbs != "" {

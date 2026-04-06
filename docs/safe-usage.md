@@ -1,0 +1,195 @@
+# Safe Usage Guide
+
+This guide covers how to safely deploy the Clockify MCP server for LLM agent use.
+
+## Policy Modes
+
+Control tool access based on your trust level. Set via `CLOCKIFY_POLICY`:
+
+| Mode | Read | Write | Delete | Tier 2 | Use Case |
+|------|------|-------|--------|--------|----------|
+| `read_only` | ✅ | ❌ | ❌ | ❌ | Untrusted agents — observe only |
+| `safe_core` | ✅ | allowlist | ❌ | ❌ | Day-to-day time tracking |
+| `standard` | ✅ | ✅ | ✅ | on demand | **Default** — balanced |
+| `full` | ✅ | ✅ | ✅ | ✅ | Admin and automation |
+
+### safe_core Allowlist
+
+`safe_core` mode allows writes only for these tools:
+- `clockify_start_timer`
+- `clockify_stop_timer`
+- `clockify_add_entry`
+- `clockify_update_entry`
+- `clockify_log_time`
+- `clockify_switch_project`
+- `clockify_find_and_update_entry`
+- `clockify_create_project`
+- `clockify_create_client`
+- `clockify_create_tag`
+- `clockify_create_task`
+
+### Fine-Grained Overrides
+
+| Variable | Description |
+|----------|-------------|
+| `CLOCKIFY_DENY_TOOLS` | Comma-separated tool names to block |
+| `CLOCKIFY_DENY_GROUPS` | Comma-separated Tier 2 domain groups to block |
+| `CLOCKIFY_ALLOW_GROUPS` | Comma-separated allowed groups (overrides mode default) |
+
+### Introspection Tools
+
+These tools are **always available** regardless of policy mode:
+- `clockify_whoami`
+- `clockify_current_user`
+- `clockify_list_workspaces`
+- `clockify_search_tools`
+- `clockify_policy_info`
+- `clockify_resolve_debug`
+
+## Dry-Run
+
+Destructive tools support a `dry_run: true` parameter that previews the operation without making changes.
+
+### Strategies
+
+| Strategy | When | Behavior |
+|----------|------|----------|
+| **Confirm pattern** | `send_invoice`, `approve_timesheet`, etc. | Calls handler without confirm flag for preview |
+| **Preview (GET)** | `delete_entry`, `delete_invoice`, etc. | Calls the GET counterpart to show what would be deleted |
+| **Minimal fallback** | All other destructive tools | Echoes parameters back, no API call |
+
+### Example
+
+```json
+{"name": "clockify_delete_entry", "arguments": {"entry_id": "abc123", "dry_run": true}}
+```
+
+Response:
+```json
+{
+  "dry_run": true,
+  "tool": "clockify_delete_entry",
+  "preview": {"id": "abc123", "description": "Meeting", "duration": "PT1H"},
+  "note": "This is a dry-run preview. No changes were made."
+}
+```
+
+### Configuration
+
+Dry-run is enabled by default. To disable:
+```sh
+CLOCKIFY_DRY_RUN=off
+```
+
+## Duplicate Detection
+
+The server checks for duplicate entries before creating new ones.
+
+### How It Works
+
+A duplicate is detected when a proposed entry matches an existing one on all three of:
+1. Description (case-sensitive)
+2. Project ID (or both empty)
+3. Start time (to the minute)
+
+### Configuration
+
+| Variable | Default | Options |
+|----------|---------|---------|
+| `CLOCKIFY_DEDUPE_MODE` | `warn` | `warn` — include warning in response |
+| | | `block` — reject the duplicate entry |
+| | | `off` — disable detection |
+| `CLOCKIFY_DEDUPE_LOOKBACK` | `25` | Number of recent entries to check |
+
+## Overlap Detection
+
+The server detects overlapping time ranges on the same project.
+
+```sh
+CLOCKIFY_OVERLAP_CHECK=true   # default, warns on overlap
+CLOCKIFY_OVERLAP_CHECK=off    # disable
+```
+
+## Rate Limiting
+
+Two-layer protection (race-safe window reset):
+
+| Control | Variable | Default | Description |
+|---------|----------|---------|-------------|
+| Concurrency | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max simultaneous tool calls |
+| Throughput | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window |
+
+Set either to `0` to disable that layer.
+
+## Token Budget
+
+Large responses are automatically truncated to fit within a token budget:
+
+```sh
+CLOCKIFY_TOKEN_BUDGET=8000    # default
+CLOCKIFY_TOKEN_BUDGET=0       # disable truncation
+```
+
+Progressive truncation stages:
+1. Strip null values
+2. Strip empty collections
+3. Truncate long strings (200 chars)
+4. Halve arrays (up to 8 iterations)
+
+Truncation metadata is added when applied.
+
+## Name Resolution
+
+The server resolves human-readable names to Clockify IDs:
+- Projects, clients, tags, tasks: exact name match via `strict-name-search=true`
+- Users: match by name or email (case-insensitive)
+- 24-char hex strings: passed through as IDs
+
+**Fail closed**: Multiple matches are rejected with an actionable error suggesting the list tool.
+
+## Audit Logging
+
+All write operations emit structured audit events to stderr:
+
+```
+level=INFO msg=audit action=create resource_type=entry tool=clockify_add_entry
+```
+
+Set `MCP_LOG_LEVEL=debug` for verbose logging including API request/response details.
+
+## Error Behavior
+
+**Tool errors** return as `result.isError: true` per the MCP spec:
+```json
+{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"unknown tool: foo"}],"isError":true}}
+```
+
+**Protocol errors** (invalid JSON, unknown method, uninitialized server) return as JSON-RPC errors:
+```json
+{"jsonrpc":"2.0","id":1,"error":{"code":-32002,"message":"server not initialized: send initialize first"}}
+```
+
+The server requires an `initialize` handshake before accepting `tools/call` requests.
+
+## Recommended Production Setup
+
+```sh
+# Minimal safe config for untrusted agents
+export CLOCKIFY_API_KEY=your-key
+export CLOCKIFY_POLICY=read_only
+export MCP_LOG_LEVEL=warn
+
+# Balanced config for trusted agents
+export CLOCKIFY_API_KEY=your-key
+export CLOCKIFY_POLICY=safe_core
+export CLOCKIFY_DEDUPE_MODE=block
+export CLOCKIFY_DRY_RUN=enabled
+
+# Full access with HTTP transport
+export CLOCKIFY_API_KEY=your-key
+export CLOCKIFY_POLICY=standard
+export MCP_TRANSPORT=http
+export MCP_BEARER_TOKEN=your-secret
+export MCP_ALLOWED_ORIGINS=https://your-app.example.com
+export MCP_LOG_LEVEL=info
+```

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 // TestApprovalHandlersCount verifies that the approvals group produces exactly 6 tools.

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"goclmcp/internal/bootstrap"
-	"goclmcp/internal/resolve"
+	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ResolveDebug(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

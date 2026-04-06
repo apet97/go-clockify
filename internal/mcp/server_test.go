@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/truncate"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 func TestInitializeAndToolsList(t *testing.T) {

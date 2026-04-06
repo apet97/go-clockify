@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/resolve"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListProjects(ctx context.Context) (ResultEnvelope, error) {

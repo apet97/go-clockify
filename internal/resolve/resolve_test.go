@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestValidateID(t *testing.T) {

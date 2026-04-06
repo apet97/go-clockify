@@ -9,15 +9,15 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
+	"time"
 )
 
 // ServeHTTP starts an HTTP server that wraps the MCP server's handle() method.
 // It requires a non-empty bearerToken for authentication on the /mcp endpoint.
-func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowedOrigins []string, maxBodySize int64) error {
+// When allowAnyOrigin is false and allowedOrigins is empty, cross-origin requests
+// are rejected (secure default).
+func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) error {
 	if bearerToken == "" {
 		return fmt.Errorf("MCP_BEARER_TOKEN is required for HTTP transport")
 	}
@@ -31,23 +31,27 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /ready", s.handleReady)
-	mux.Handle("POST /mcp", s.handleMCP(bearerToken, allowedOrigins, maxBodySize))
+	mux.Handle("POST /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
 	// Handle OPTIONS for CORS preflight on /mcp
-	mux.Handle("OPTIONS /mcp", s.handleMCP(bearerToken, allowedOrigins, maxBodySize))
+	mux.Handle("OPTIONS /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
 
 	srv := &http.Server{
-		Addr:    bind,
-		Handler: mux,
+		Addr:              bind,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
-	// Graceful shutdown on signal
-	shutdownCtx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
+	// Use the provided ctx for shutdown — no duplicate signal registration.
+	// The caller (main.go) is responsible for signal handling on ctx.
 	go func() {
-		<-shutdownCtx.Done()
-		slog.Info("http_shutdown", "reason", "signal received")
-		srv.Shutdown(context.Background())
+		<-ctx.Done()
+		slog.Info("http_shutdown", "reason", "context cancelled")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		srv.Shutdown(shutdownCtx)
 	}()
 
 	slog.Info("http_start", "bind", bind)
@@ -57,8 +61,8 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	}
 
 	// Auto-initialize for HTTP mode
-	if !s.initialized {
-		s.initialized = true
+	if !s.initialized.Load() {
+		s.initialized.Store(true)
 	}
 
 	if err := srv.Serve(ln); err != http.ErrServerClosed {
@@ -69,12 +73,14 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if !s.initialized {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if !s.initialized.Load() {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"status":"not_ready"}`))
 		return
@@ -82,15 +88,27 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, maxBodySize int64) http.HandlerFunc {
+func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		reqID := s.requestSeq.Add(1)
+
+		// Security headers on all responses
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+
 		// 1. CORS check
 		if origin := r.Header.Get("Origin"); origin != "" {
-			if !isOriginAllowed(origin, allowedOrigins) {
-				http.Error(w, "origin not allowed", http.StatusForbidden)
+			if !isOriginAllowed(origin, allowedOrigins, allowAnyOrigin) {
+				writeJSONError(w, http.StatusForbidden, "origin not allowed")
+				slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 403, "reason", "cors_rejected", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
 				return
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+			if allowAnyOrigin {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
 		}
 
 		// Handle preflight
@@ -102,7 +120,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, maxBodyS
 		}
 
 		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
 
@@ -110,7 +128,8 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, maxBodyS
 		auth := r.Header.Get("Authorization")
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if subtle.ConstantTimeCompare([]byte(token), []byte(bearerToken)) != 1 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
 			return
 		}
 
@@ -120,7 +139,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, maxBodyS
 		// 4. Read and parse JSON-RPC request
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+			writeJSONError(w, http.StatusRequestEntityTooLarge, "request too large")
 			return
 		}
 
@@ -139,12 +158,32 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, maxBodyS
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
+
+		// 6. Structured access log
+		slog.Info("http_request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"rpc_method", req.Method,
+			"status", 200,
+			"req_id", reqID,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
 	}
 }
 
-func isOriginAllowed(origin string, allowed []string) bool {
+// writeJSONError sends an error response as JSON instead of text/plain.
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func isOriginAllowed(origin string, allowed []string, allowAnyOrigin bool) bool {
+	if allowAnyOrigin {
+		return true
+	}
 	if len(allowed) == 0 {
-		return true // no restrictions if not configured
+		return false // reject by default when no origins configured
 	}
 	for _, a := range allowed {
 		if strings.EqualFold(a, origin) {

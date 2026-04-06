@@ -10,13 +10,14 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"goclmcp/internal/bootstrap"
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/policy"
-	"goclmcp/internal/ratelimit"
-	"goclmcp/internal/truncate"
+	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/policy"
+	"github.com/apet97/go-clockify/internal/ratelimit"
+	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
@@ -39,8 +40,10 @@ type Server struct {
 
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
-	initialized bool
+	initialized atomic.Bool
 	encoder     *json.Encoder // stored for push notifications
+	encoderMu   sync.Mutex    // protects concurrent encoder writes
+	requestSeq  atomic.Int64  // monotonic request ID for log correlation
 }
 
 func NewServer(version string, pol *policy.Policy, descriptors []ToolDescriptor,
@@ -60,36 +63,99 @@ func NewServer(version string, pol *policy.Policy, descriptors []ToolDescriptor,
 	}
 }
 
+// Run processes JSON-RPC requests from r and writes responses to w.
+// It respects ctx cancellation for graceful shutdown — when ctx is
+// cancelled, the loop exits even if stdin is blocking.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 1024*1024)
+	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)
+	s.encoderMu.Unlock()
 
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(strings.TrimSpace(string(line))) == 0 {
-			continue
+	// Channel-based approach: scan lines in a goroutine so we can
+	// select on ctx.Done() in the main loop.
+	type scanResult struct {
+		line []byte
+		ok   bool
+	}
+	lines := make(chan scanResult, 1)
+
+	go func() {
+		defer close(lines)
+		for scanner.Scan() {
+			cpy := make([]byte, len(scanner.Bytes()))
+			copy(cpy, scanner.Bytes())
+			select {
+			case lines <- scanResult{line: cpy, ok: true}:
+			case <-ctx.Done():
+				return
+			}
 		}
+		// Signal EOF.
+		select {
+		case lines <- scanResult{ok: false}:
+		case <-ctx.Done():
+		}
+	}()
 
-		var req Request
-		if err := json.Unmarshal(line, &req); err != nil {
-			if err := s.encoder.Encode(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}}); err != nil {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case result, chanOpen := <-lines:
+			if !chanOpen || !result.ok {
+				return scanner.Err()
+			}
+			if len(strings.TrimSpace(string(result.line))) == 0 {
+				continue
+			}
+
+			var req Request
+			if err := json.Unmarshal(result.line, &req); err != nil {
+				if err := s.writeResponse(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}}); err != nil {
+					return err
+				}
+				continue
+			}
+
+			if req.Method == "tools/call" {
+				wg.Add(1)
+				go func(r Request) {
+					defer wg.Done()
+					resp := s.handle(ctx, r)
+					if r.ID != nil || resp.Error != nil {
+						if err := s.writeResponse(resp); err != nil {
+							slog.Warn("async_response_failed", "error", err.Error())
+						}
+					}
+				}(req)
+				continue
+			}
+
+			resp := s.handle(ctx, req)
+			if req.ID == nil && resp.Error == nil && resp.Result == nil {
+				continue
+			}
+			if err := s.writeResponse(resp); err != nil {
 				return err
 			}
-			continue
-		}
-
-		resp := s.handle(ctx, req)
-		if req.ID == nil && resp.Error == nil && resp.Result == nil {
-			continue
-		}
-		if err := s.encoder.Encode(resp); err != nil {
-			return err
 		}
 	}
+}
 
-	return scanner.Err()
+// writeResponse thread-safely encodes a response to the output encoder.
+func (s *Server) writeResponse(resp Response) error {
+	s.encoderMu.Lock()
+	defer s.encoderMu.Unlock()
+	if s.encoder == nil {
+		return nil
+	}
+	return s.encoder.Encode(resp)
 }
 
 func (s *Server) handle(ctx context.Context, req Request) Response {
@@ -97,7 +163,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 
 	switch req.Method {
 	case "initialize":
-		s.initialized = true
+		s.initialized.Store(true)
 		resp.Result = map[string]any{
 			"protocolVersion": "2025-06-18",
 			"serverInfo":      map[string]any{"name": "clockify-go-mcp", "version": s.Version},
@@ -110,6 +176,12 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 	case "tools/list":
 		resp.Result = map[string]any{"tools": s.listTools()}
 	case "tools/call":
+		// Guard: reject tools/call before initialization (spec compliance)
+		if !s.initialized.Load() {
+			resp.Error = &RPCError{Code: -32002, Message: "server not initialized: send initialize first"}
+			return resp
+		}
+
 		var params ToolCallParams
 		if err := decodeParams(req.Params, &params); err != nil {
 			resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params"}
@@ -117,7 +189,14 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		}
 		result, err := s.callTool(ctx, params)
 		if err != nil {
-			resp.Error = &RPCError{Code: -32000, Message: err.Error()}
+			// MCP spec: tool errors return content with isError: true
+			resp.Result = map[string]any{
+				"content": []map[string]any{{
+					"type": "text",
+					"text": err.Error(),
+				}},
+				"isError": true,
+			}
 		} else {
 			resp.Result = map[string]any{"content": []map[string]any{{"type": "text", "text": mustJSON(result)}}}
 		}
@@ -155,6 +234,8 @@ func (s *Server) listTools() []Tool {
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
+	reqID := s.requestSeq.Add(1)
+
 	s.mu.RLock()
 	d, ok := s.tools[params.Name]
 	s.mu.RUnlock()
@@ -190,15 +271,19 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 
 	// 4. Dispatch
 	start := time.Now()
-	result, err := d.Handler(ctx, params.Arguments)
+	
+	callCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
+	result, err := d.Handler(callCtx, params.Arguments)
 	duration := time.Since(start)
 
-	// 5. Log
+	// 5. Log with request ID for correlation
 	if err != nil {
-		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds())
+		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
-	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds())
+	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
 
 	// 6. Truncation
 	if s.Truncation.Enabled {
@@ -271,13 +356,17 @@ func (s *Server) ActivateTier1Tool(name string) {
 }
 
 func (s *Server) notifyToolsChanged() {
+	s.encoderMu.Lock()
+	defer s.encoderMu.Unlock()
 	if s.encoder == nil {
 		return
 	}
-	_ = s.encoder.Encode(Response{
+	if err := s.encoder.Encode(Response{
 		JSONRPC: "2.0",
 		Method:  "notifications/tools/list_changed",
-	})
+	}); err != nil {
+		slog.Warn("notification_failed", "method", "tools/list_changed", "error", err.Error())
+	}
 }
 
 func decodeParams(raw any, out any) error {

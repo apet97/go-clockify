@@ -1,6 +1,6 @@
 package tools
 
-import "goclmcp/internal/mcp"
+import "github.com/apet97/go-clockify/internal/mcp"
 
 // Tier2Group defines a lazily-activated group of related tools.
 type Tier2Group struct {

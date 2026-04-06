@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/resolve"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {

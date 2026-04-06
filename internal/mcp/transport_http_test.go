@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/truncate"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 const testBearerToken = "test-secret-token"
@@ -41,7 +41,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestReadyNotInitialized(t *testing.T) {
 	s := newTestServer()
-	s.initialized = false
+	s.initialized.Store(false)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	s.handleReady(rec, req)
@@ -60,7 +60,7 @@ func TestReadyNotInitialized(t *testing.T) {
 
 func TestReadyInitialized(t *testing.T) {
 	s := newTestServer()
-	s.initialized = true
+	s.initialized.Store(true)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	s.handleReady(rec, req)
@@ -79,7 +79,7 @@ func TestReadyInitialized(t *testing.T) {
 
 func TestMCPUnauthorized(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, 2097152)
+	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -93,8 +93,8 @@ func TestMCPUnauthorized(t *testing.T) {
 
 func TestMCPAuthorized(t *testing.T) {
 	s := newTestServer()
-	s.initialized = true
-	handler := s.handleMCP(testBearerToken, nil, 2097152)
+	s.initialized.Store(true)
+	handler := s.handleMCP(testBearerToken, nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -119,7 +119,7 @@ func TestMCPAuthorized(t *testing.T) {
 
 func TestMCPCORSBlocked(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, 2097152)
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -134,8 +134,8 @@ func TestMCPCORSBlocked(t *testing.T) {
 
 func TestMCPCORSAllowed(t *testing.T) {
 	s := newTestServer()
-	s.initialized = true
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, 2097152)
+	s.initialized.Store(true)
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -153,7 +153,7 @@ func TestMCPCORSAllowed(t *testing.T) {
 
 func TestMCPMethodNotAllowed(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, 2097152)
+	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
@@ -167,21 +167,23 @@ func TestMCPMethodNotAllowed(t *testing.T) {
 
 func TestIsOriginAllowed(t *testing.T) {
 	tests := []struct {
-		name    string
-		origin  string
-		allowed []string
-		want    bool
+		name           string
+		origin         string
+		allowed        []string
+		allowAnyOrigin bool
+		want           bool
 	}{
-		{"empty list allows all", "https://any.example.com", nil, true},
-		{"exact match", "https://foo.com", []string{"https://foo.com"}, true},
-		{"case insensitive", "HTTPS://FOO.COM", []string{"https://foo.com"}, true},
-		{"not in list", "https://bar.com", []string{"https://foo.com"}, false},
-		{"multiple allowed", "https://bar.com", []string{"https://foo.com", "https://bar.com"}, true},
+		{"empty list rejects by default", "https://any.example.com", nil, false, false},
+		{"allowAnyOrigin allows all", "https://any.example.com", nil, true, true},
+		{"exact match", "https://foo.com", []string{"https://foo.com"}, false, true},
+		{"case insensitive", "HTTPS://FOO.COM", []string{"https://foo.com"}, false, true},
+		{"not in list", "https://bar.com", []string{"https://foo.com"}, false, false},
+		{"multiple allowed", "https://bar.com", []string{"https://foo.com", "https://bar.com"}, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isOriginAllowed(tt.origin, tt.allowed); got != tt.want {
-				t.Fatalf("isOriginAllowed(%q, %v) = %v, want %v", tt.origin, tt.allowed, got, tt.want)
+			if got := isOriginAllowed(tt.origin, tt.allowed, tt.allowAnyOrigin); got != tt.want {
+				t.Fatalf("isOriginAllowed(%q, %v, %v) = %v, want %v", tt.origin, tt.allowed, tt.allowAnyOrigin, got, tt.want)
 			}
 		})
 	}

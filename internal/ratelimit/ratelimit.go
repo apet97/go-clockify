@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -20,6 +21,7 @@ type RateLimiter struct {
 	windowStart   atomic.Int64 // epoch millis
 	maxPerWindow  int64
 	windowMillis  int64
+	windowMu      sync.Mutex // protects atomic window reset
 }
 
 // FromEnv builds a RateLimiter from environment variables.
@@ -61,11 +63,18 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 		return func() {}, nil
 	}
 
-	// Reset the window if it has expired.
+	// Atomically reset the window if it has expired.
+	// Using a mutex to prevent the race where two goroutines both
+	// see an expired window and both reset, losing one's increment.
 	now := time.Now().UnixMilli()
 	if now-rl.windowStart.Load() > rl.windowMillis {
-		rl.windowStart.Store(now)
-		rl.windowCount.Store(0)
+		rl.windowMu.Lock()
+		// Double-check after acquiring the lock.
+		if time.Now().UnixMilli()-rl.windowStart.Load() > rl.windowMillis {
+			rl.windowStart.Store(time.Now().UnixMilli())
+			rl.windowCount.Store(0)
+		}
+		rl.windowMu.Unlock()
 	}
 
 	// Pre-check: bail early when the window is already exhausted.
@@ -115,6 +124,3 @@ func envInt(key string, def int) int {
 	}
 	return n
 }
-
-// compile-time assertion: silence the unused-import checker for context.
-var _ context.Context

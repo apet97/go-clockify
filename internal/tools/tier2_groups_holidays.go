@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/mcp"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 func init() {

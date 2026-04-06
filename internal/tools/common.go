@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/dedupe"
-	"goclmcp/internal/mcp"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dedupe"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 type Service struct {

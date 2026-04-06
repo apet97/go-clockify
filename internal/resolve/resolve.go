@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func ValidateID(id, name string) error {
@@ -84,8 +84,8 @@ func resolveByNameOrID(ctx context.Context, client *clockify.Client, path, ref, 
 		return ref, nil
 	}
 
-	var items []map[string]any
-	if err := client.ListAll(ctx, path, map[string]string{"name": ref, "strict-name-search": "true", "page-size": "50"}, &items); err != nil {
+	items, err := clockify.ListAll[map[string]any](ctx, client, path, map[string]string{"name": ref, "strict-name-search": "true", "page-size": "50"})
+	if err != nil {
 		return "", err
 	}
 

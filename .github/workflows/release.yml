@@ -1,0 +1,205 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-binaries:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            os: macos-14
+            goos: darwin
+            goarch: arm64
+            platform: darwin-arm64
+          - target: darwin-amd64
+            os: macos-14
+            goos: darwin
+            goarch: amd64
+            platform: darwin-x64
+          - target: linux-amd64
+            os: ubuntu-22.04
+            goos: linux
+            goarch: amd64
+            platform: linux-x64
+          - target: linux-arm64
+            os: ubuntu-22.04
+            goos: linux
+            goarch: arm64
+            platform: linux-arm64
+          - target: windows-amd64
+            os: ubuntu-22.04
+            goos: windows
+            goarch: amd64
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - name: Build binary
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+            -ldflags "-s -w -X main.version=${VERSION}" \
+            -o "clockify-mcp-${PLATFORM}${EXT}" \
+            ./cmd/clockify-mcp
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          PLATFORM: ${{ matrix.platform }}
+      - name: Smoke-test (native builds only)
+        if: ${{ matrix.goos == 'darwin' || (matrix.goos == 'linux' && matrix.goarch == 'amd64') }}
+        run: |
+          BIN="clockify-mcp-${PLATFORM}"
+          chmod +x "$BIN"
+          MCP_TRANSPORT=http \
+          MCP_HTTP_BIND=127.0.0.1:8091 \
+          MCP_BEARER_TOKEN=smoke-test \
+          CLOCKIFY_API_KEY=smoke-test-dummy \
+          ./"$BIN" &
+          PID=$!
+          sleep 2
+          curl -sf http://127.0.0.1:8091/health || { kill "$PID" 2>/dev/null; exit 1; }
+          curl -sf http://127.0.0.1:8091/ready  || { kill "$PID" 2>/dev/null; exit 1; }
+          kill "$PID" 2>/dev/null || true
+        env:
+          PLATFORM: ${{ matrix.platform }}
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: sbom-${{ matrix.platform }}
+          output-file: clockify-mcp-${{ matrix.platform }}.spdx.json
+          format: spdx-json
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}
+          path: clockify-mcp-${{ matrix.platform }}*
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.platform }}
+          path: clockify-mcp-${{ matrix.platform }}.spdx.json
+
+  publish-npm:
+    name: Publish npm packages
+    needs: build-binaries
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+      - name: Publish platform packages
+        run: |
+          PLATFORMS="darwin-arm64:darwin:arm64:macOS ARM64
+          darwin-x64:darwin:x64:macOS x64
+          linux-x64:linux:x64:Linux x64
+          linux-arm64:linux:arm64:Linux ARM64
+          windows-x64:win32:x64:Windows x64"
+
+          echo "$PLATFORMS" | while IFS=: read -r platform os cpu desc; do
+            platform=$(echo "$platform" | xargs)
+            pkg_dir="npm-pkg-${platform}"
+            mkdir -p "${pkg_dir}/bin"
+
+            # Copy binary from artifact
+            if [ "${platform}" = "windows-x64" ]; then
+              cp "artifacts/binary-${platform}/clockify-mcp-${platform}.exe" "${pkg_dir}/bin/clockify-mcp.exe"
+            else
+              cp "artifacts/binary-${platform}/clockify-mcp-${platform}" "${pkg_dir}/bin/clockify-mcp"
+              chmod +x "${pkg_dir}/bin/clockify-mcp"
+            fi
+
+            # Generate platform package.json from template
+            VERSION="${GITHUB_REF_NAME#v}"
+            sed -e "s/PLATFORM/${platform}/g" \
+                -e "s/PLATFORM_DESCRIPTION/${desc}/g" \
+                -e "s/OS_VALUE/${os}/g" \
+                -e "s/CPU_VALUE/${cpu}/g" \
+                -e "s/VERSION/${VERSION}/g" \
+                npm/package.json.tmpl > "${pkg_dir}/package.json"
+
+            cd "${pkg_dir}"
+            npm publish --access public
+            cd ..
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish base package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd npm/clockify-mcp-go
+          sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          for dir in artifacts/binary-*; do
+            platform=$(basename "$dir" | sed 's/binary-//')
+            for bin in "$dir"/clockify-mcp-*; do
+              [ -f "$bin" ] || continue
+              dest="release-assets/$(basename "$bin")"
+              cp "$bin" "$dest"
+              chmod +x "$dest" 2>/dev/null || true
+            done
+          done
+          for dir in artifacts/sbom-*; do
+            [ -d "$dir" ] || continue
+            cp "$dir"/*.spdx.json release-assets/ 2>/dev/null || true
+          done
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+      - name: Sign release binaries with cosign (keyless)
+        run: |
+          cd release-assets
+          for file in clockify-mcp-*; do
+            case "$file" in
+              *.sig|*.bundle|*.spdx.json|SHA256SUMS.txt) continue ;;
+            esac
+            echo "Signing $file ..."
+            cosign sign-blob --yes \
+              --output-signature "${file}.sig" \
+              --output-certificate "${file}.bundle" \
+              "$file"
+          done
+          sha256sum * > SHA256SUMS.txt
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*

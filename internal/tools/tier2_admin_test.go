@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestUserAdminHandlersCount(t *testing.T) {

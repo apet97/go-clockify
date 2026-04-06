@@ -12,8 +12,11 @@ GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockif
 # Build
 go build ./...
 
-# Run all tests (276 tests across 13 packages)
+# Run all tests (265 tests across 13 packages)
 go test ./...
+
+# Run with race detector
+go test -race ./...
 
 # Run a single package's tests
 go test ./internal/tools/...
@@ -27,9 +30,12 @@ CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 
 # Run server — HTTP mode
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
+
+# Show help and all env vars
+go run ./cmd/clockify-mcp --help
 ```
 
-Go 1.25.0, stdlib only — zero external dependencies.
+Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/apet97/go-clockify`.
 
 ## Environment Variables
 
@@ -67,8 +73,10 @@ Go 1.25.0, stdlib only — zero external dependencies.
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |
+| `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
+| `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Architecture
 
@@ -80,7 +88,7 @@ internal/
   mcp/
     server.go       Stdio JSON-RPC server with enforcement pipeline
     types.go        MCP protocol types (Request, Response, Tool, ToolDescriptor)
-    transport_http.go  HTTP transport (bearer auth, CORS, health/ready)
+    transport_http.go  HTTP transport (bearer auth, CORS, health/ready, security headers)
   tools/
     common.go       Service struct (with lazy user/workspace cache), ResultEnvelope, helpers
     registry.go     Tier 1 tool registration (33 tools)
@@ -94,7 +102,7 @@ internal/
   resolve/        Name-to-ID resolution with email detection, ambiguity blocking
   dryrun/         3-strategy dry-run: confirm pattern, GET preview, minimal fallback
   bootstrap/      Tool visibility modes (FullTier1/Minimal/Custom), searchable catalog
-  ratelimit/      Dual control: semaphore concurrency + window-based throughput
+  ratelimit/      Dual control: semaphore concurrency + window-based throughput (race-safe)
   truncate/       Progressive token-aware output truncation
   dedupe/         Duplicate entry detection + time overlap checking
   timeparse/      Natural language time parsing ("now", "today 14:30", "2h30m", ISO 8601)
@@ -104,12 +112,15 @@ internal/
 ### Server Enforcement Pipeline
 
 Every `tools/call` passes through this pipeline in order:
-1. **Policy check** → blocked? return error with human-readable reason
-2. **Rate limit** → acquire semaphore + window permit, defer release
-3. **Dry-run intercept** → if `dry_run=true`, route to preview strategy (before handler)
-4. **Handler dispatch** → call the tool handler
-5. **Truncation** → post-process if result exceeds token budget
-6. **Logging** → `slog` to stderr with tool name and duration
+1. **Init guard** → reject with `-32002` if `initialize` has not been called
+2. **Policy check** → blocked? return `isError: true` with human-readable reason
+3. **Rate limit** → acquire semaphore + window permit, defer release
+4. **Dry-run intercept** → if `dry_run=true`, route to preview strategy (before handler)
+5. **Handler dispatch** → call the tool handler
+6. **Truncation** → post-process if result exceeds token budget
+7. **Logging** → `slog` to stderr with tool name, duration, and request ID
+
+Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `error`). Protocol errors (unknown method, invalid JSON, init guard) use JSON-RPC `error`.
 
 ### Tool Tiers
 
@@ -119,12 +130,13 @@ Every `tools/call` passes through this pipeline in order:
 
 ### Key Design Decisions
 
-- **Stdlib only.** Zero external dependencies. Uses `log/slog` for structured logging, `net/http` for HTTP transport, `crypto/subtle` for constant-time auth.
+- **Stdlib only.** Zero external dependencies. Uses `log/slog` for structured logging, `net/http` for HTTP transport, `crypto/subtle` for constant-time auth, `math/rand/v2` for jitter.
 - **Stdout purity.** Protocol responses only on stdout. All logs go to stderr via slog.
 - **ResultEnvelope.** Every tool returns `{ok, action, data, meta}`. Write tools use `helpers.WriteResult`.
 - **Fail closed.** Ambiguous name resolution errors. Multiple matches are rejected. Destructive tools require policy + dry-run.
 - **Lazy caching.** `Service` caches current user and workspace ID with `sync.Mutex` to avoid redundant API calls.
 - **Flat package layout.** All Tier 1 and Tier 2 tools live in `package tools` with domain-named files. No sub-packages needed.
+- **Context-aware shutdown.** Stdio loop exits cleanly on SIGTERM via goroutine + `select` on `ctx.Done()`. HTTP server uses `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout`.
 
 ### Tool Registration
 
@@ -134,7 +146,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ### Clockify Client
 
-`internal/clockify/client.go` — stdlib HTTP client with `X-Api-Key` auth, exponential backoff + jitter for 429/5xx, `ListAll` pagination, typed `APIError`.
+`internal/clockify/client.go` — stdlib HTTP client with `X-Api-Key` auth, exponential backoff + jitter for 429/5xx, `ListAll` pagination, typed `APIError`. Methods: `Get`, `Post`, `Put`, `Patch`, `Delete`. Response body limited to 10MB.
 
 ### Name Resolution
 
@@ -142,7 +154,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ## Testing
 
-276 tests across 13 packages. Patterns:
+265 tests across 13 packages. Patterns:
 
 ```go
 // Mock Clockify API via httptest
@@ -153,9 +165,9 @@ svc := New(client, "ws1")
 
 Key test files:
 - `internal/tools/golden_test.go` — golden tool list (33 Tier 1 names), Tier 2 catalog (11 groups, 91 tools), schema validation, annotation consistency
-- `internal/mcp/integration_test.go` — full MCP handshake, policy filtering, bootstrap modes, truncation, dry-run pipeline
+- `internal/mcp/integration_test.go` — full MCP handshake, policy filtering, bootstrap modes, truncation, dry-run pipeline, init guard, isError response format
 - `internal/tools/*_test.go` — per-domain handler tests
-- `internal/mcp/transport_http_test.go` — HTTP auth, CORS, health/ready
+- `internal/mcp/transport_http_test.go` — HTTP auth, CORS, health/ready, security headers
 
 ## Constraints
 
@@ -164,3 +176,4 @@ Key test files:
 - No fuzzy/guessed destructive updates — fail closed
 - Destructive tools must have policy + dry-run + tests
 - Typed models for stable entities; `map[string]any` acceptable for Tier 2
+- Tool errors use `isError: true` (MCP spec); protocol errors use JSON-RPC `error`

@@ -5,26 +5,46 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
-	"goclmcp/internal/bootstrap"
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/config"
-	"goclmcp/internal/dedupe"
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/mcp"
-	"goclmcp/internal/policy"
-	"goclmcp/internal/ratelimit"
-	"goclmcp/internal/tools"
-	"goclmcp/internal/truncate"
+	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/dedupe"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/policy"
+	"github.com/apet97/go-clockify/internal/ratelimit"
+	"github.com/apet97/go-clockify/internal/tools"
+	"github.com/apet97/go-clockify/internal/truncate"
 )
 
-const version = "0.2.0"
+// version is set at build time via ldflags:
+//
+//	go build -ldflags "-X main.version=v0.3.0" ./cmd/clockify-mcp
+var version = "0.3.0"
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-v":
+			fmt.Println(version)
+			os.Exit(0)
+		case "--help", "-h":
+			printHelp()
+			os.Exit(0)
+		}
+	}
+
+	// Configure log level
+	logLevel := parseLogLevel(os.Getenv("MCP_LOG_LEVEL"))
+
 	// Configure slog to stderr
-	var logHandler slog.Handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	var logHandler slog.Handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
 	if os.Getenv("MCP_LOG_FORMAT") == "json" {
-		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
 	}
 	slog.SetDefault(slog.New(logHandler))
 
@@ -60,6 +80,7 @@ func run() error {
 	}
 
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
+	client.SetUserAgent("clockify-mcp-go/" + version)
 	service := tools.New(client, cfg.WorkspaceID)
 	service.DedupeConfig = &dd
 	service.PolicyDescribe = pol.Describe
@@ -81,10 +102,76 @@ func run() error {
 		"tools", len(registry),
 		"policy", string(pol.Mode),
 		"bootstrap", bc.Mode.String(),
+		"transport", cfg.Transport,
+		"workspace", cfg.WorkspaceID,
 	)
 
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	if cfg.Transport == "http" {
-		return server.ServeHTTP(context.Background(), cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.MaxBodySize)
+		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
 	}
-	return server.Run(context.Background(), os.Stdin, os.Stdout)
+	return server.Run(ctx, os.Stdin, os.Stdout)
+}
+
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
+func printHelp() {
+	fmt.Fprintf(os.Stderr, `clockify-mcp v%s — MCP server for Clockify
+
+Usage: clockify-mcp [--version | --help]
+
+Environment Variables:
+  Core:
+    CLOCKIFY_API_KEY          API key (required)
+    CLOCKIFY_WORKSPACE_ID     Workspace ID (auto-detected if only one)
+    CLOCKIFY_BASE_URL         API base URL (default: https://api.clockify.me/api/v1)
+    CLOCKIFY_REPORTS_URL      Reports API URL
+    CLOCKIFY_TIMEZONE         IANA timezone for time parsing
+    CLOCKIFY_INSECURE         Set to 1 to allow non-HTTPS base URLs
+
+  Safety:
+    CLOCKIFY_POLICY           read_only, safe_core, standard (default), full
+    CLOCKIFY_DRY_RUN          Dry-run for destructive tools (default: enabled)
+    CLOCKIFY_DENY_TOOLS       Comma-separated tools to block
+    CLOCKIFY_DENY_GROUPS      Comma-separated groups to block
+    CLOCKIFY_ALLOW_GROUPS     Comma-separated allowed groups
+    CLOCKIFY_DEDUPE_MODE      warn (default), block, off
+    CLOCKIFY_DEDUPE_LOOKBACK  Recent entries to check (default: 25)
+    CLOCKIFY_OVERLAP_CHECK    Overlapping entry detection (default: true)
+
+  Performance:
+    CLOCKIFY_MAX_CONCURRENT   Concurrent tool call limit (default: 10)
+    CLOCKIFY_RATE_LIMIT       Tool calls per minute (default: 120)
+    CLOCKIFY_TOKEN_BUDGET     Response token budget, 0=off (default: 8000)
+
+  Bootstrap:
+    CLOCKIFY_BOOTSTRAP_MODE   full_tier1 (default), minimal, custom
+    CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
+
+  Transport:
+    MCP_TRANSPORT             stdio (default) or http
+    MCP_HTTP_BIND             HTTP listen address (default: :8080)
+    MCP_BEARER_TOKEN          Required for HTTP mode
+    MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
+    MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
+    MCP_HTTP_MAX_BODY         Max request body in bytes (default: 2097152)
+
+  Logging:
+    MCP_LOG_FORMAT            text (default) or json
+    MCP_LOG_LEVEL             debug, info (default), warn, error
+`, version)
 }

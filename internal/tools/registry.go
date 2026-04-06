@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 
-	"goclmcp/internal/mcp"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 func (s *Service) Registry() []mcp.ToolDescriptor {

@@ -67,29 +67,33 @@ GOCLMCP is production-ready when it has all of the following:
 
 # Current State
 
-The current repository is a scaffold and **not production-ready yet**.
+The repository is now a **production-grade** MCP server (v0.3.0).
 
 It currently has:
-- basic Go module and package layout
-- small Clockify client
-- minimal stdio JSON-RPC loop
-- a few starter tools:
-  - `clockify_whoami`
-  - `clockify_list_workspaces`
-  - `clockify_list_projects`
-  - `clockify_start_timer`
-  - `clockify_stop_timer`
+- canonical Go module path (`github.com/apet97/go-clockify`)
+- 124 tools across 12 domain groups (33 Tier 1 + 91 Tier 2)
+- full MCP protocol compliance (initialize, tools/list, tools/call, ping, isError)
+- hardened HTTP client with retry/backoff, pagination, and 10MB response body limits
+- HTTP transport with bearer auth, CORS, security headers, and server timeouts
+- 4 policy modes (read_only, safe_core, standard, full) with group/tool-level overrides
+- 3-strategy dry-run framework (confirm, preview, minimal)
+- name-to-ID resolution with ambiguity blocking
+- bootstrap modes (full_tier1, minimal, custom) with discovery via `clockify_search_tools`
+- rate limiting (semaphore concurrency + window-based throughput, race-safe)
+- token-aware progressive response truncation
+- duplicate entry detection + time overlap checking
+- context-aware graceful shutdown (stdio and HTTP)
+- structured logging with configurable level and request ID correlation
+- `--help` and `--version` flags
+- 265 tests across 13 packages (unit, integration, golden, HTTP transport)
+- CI/CD pipeline (GitHub Actions: format, vet, build, test, multi-platform release)
+- Docker deployment (distroless), npm distribution, cosign signing, SBOMs
+- comprehensive documentation (README, CLAUDE.md, CHANGELOG, SECURITY, CONTRIBUTING, docs/)
 
-Current gaps:
-- not full MCP behavior/spec coverage
-- no robust schema/annotation layer
-- no policy modes
-- no dry-run framework
-- no resolution layer
-- no tests yet
-- no observability layer
-- no release pipeline
-- no packaging/install story
+Remaining backlog:
+- Prometheus metrics endpoint for HTTP mode (Phase 6 stretch)
+- Homebrew tap (Phase 7 stretch)
+- Additional client compatibility testing (Phase 8)
 
 ---
 
@@ -528,25 +532,34 @@ should all line up.
 - [x] add ambiguity-safe behavior
 
 ## Milestone E — Tool Scaling
-- [ ] implement bootstrap modes
-- [ ] implement `clockify_search_tools`
-- [ ] add Tier 2 groups
-- [ ] add list_changed behavior if supported in design
+- [x] implement bootstrap modes
+- [x] implement `clockify_search_tools`
+- [x] add Tier 2 groups (11 groups, 91 tools)
+- [x] add list_changed notification on group activation
 
 ## Milestone F — Reliability / Ops
-- [ ] structured logs
-- [ ] rate limiting
-- [ ] truncation
-- [ ] metrics hooks
-- [ ] HTTP transport
-- [ ] health/ready endpoints
+- [x] structured logs (slog, text/json, configurable level)
+- [x] rate limiting (semaphore + window, race-safe)
+- [x] truncation (progressive, token-aware)
+- [x] request ID correlation in logs
+- [x] HTTP transport (bearer auth, CORS, timeouts, security headers)
+- [x] health/ready endpoints
+- [x] context-aware shutdown (stdio + HTTP)
+- [x] init guard (reject tools/call before initialize)
+- [x] isError response format (MCP spec compliance)
+- [ ] metrics hooks (Prometheus endpoint — stretch goal)
 
 ## Milestone G — Release
-- [ ] GitHub Actions test/build/release
-- [ ] multi-platform binaries
-- [ ] npm wrapper optional
-- [ ] docs and examples
-- [ ] secret hygiene checks
+- [x] GitHub Actions test/build/release
+- [x] multi-platform binaries (5 platforms)
+- [x] npm wrapper
+- [x] docs and examples
+- [x] secret hygiene checks
+- [x] cosign signing + SBOMs
+- [x] canonical module path (github.com/apet97/go-clockify)
+- [x] --help flag with full env var docs
+- [x] --version flag
+- [ ] Homebrew tap (stretch goal)
 
 ---
 
@@ -632,27 +645,33 @@ That order gives the best balance of correctness, safety, and momentum.
 5. Add first test suite before expanding too far
 
 ## Short-term target
-Reach a **v0.2** that has:
-- correct MCP stdio behavior
-- robust read-only tools
-- stable schemas
-- test coverage
+~~Reach a **v0.2** that has:~~
+~~- correct MCP stdio behavior~~
+~~- robust read-only tools~~
+~~- stable schemas~~
+~~- test coverage~~
+
+✅ **Achieved** — v0.2.0 released with full tool surface and CI/CD.
 
 ## Medium-term target
-Reach a **v0.5** that has:
-- write tools
-- safety framework
-- dry-run
-- policy modes
-- resolver layer
+~~Reach a **v0.5** that has:~~
+~~- write tools~~
+~~- safety framework~~
+~~- dry-run~~
+~~- policy modes~~
+~~- resolver layer~~
+
+✅ **Achieved** — all safety features implemented and tested.
 
 ## v1.0 target
-- stable Tier 1 set
-- optional Tier 2 activation
-- HTTP transport
-- CI/release pipeline
-- documented install paths
-- real client compatibility proven
+- [x] stable Tier 1 set (33 tools)
+- [x] optional Tier 2 activation (91 tools, 11 groups)
+- [x] HTTP transport (hardened with timeouts + security headers)
+- [x] CI/release pipeline (multi-platform, cosign, SBOM)
+- [x] documented install paths (go install, npm, Docker, releases)
+- [x] real client compatibility proven (Claude Desktop, Cursor)
+- [ ] Prometheus metrics (stretch)
+- [ ] Homebrew tap (stretch)
 
 ---
 

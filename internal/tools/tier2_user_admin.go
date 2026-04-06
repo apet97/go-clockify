@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/mcp"
-	"goclmcp/internal/resolve"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func init() {

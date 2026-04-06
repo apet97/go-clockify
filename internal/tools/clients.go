@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func (s *Service) ListClients(ctx context.Context) (ResultEnvelope, error) {

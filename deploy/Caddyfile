@@ -1,0 +1,7 @@
+your-domain.example.com {
+    reverse_proxy clockify-mcp:8080
+    encode gzip
+    log {
+        output stderr
+    }
+}

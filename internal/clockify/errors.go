@@ -3,6 +3,7 @@ package clockify
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type APIError struct {
@@ -11,6 +12,7 @@ type APIError struct {
 	StatusCode int
 	Status     string
 	Body       string
+	RetryAfter time.Duration
 }
 
 func (e *APIError) Error() string {

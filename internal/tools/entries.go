@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"goclmcp/internal/clockify"
-	"goclmcp/internal/dryrun"
-	"goclmcp/internal/resolve"
-	"goclmcp/internal/timeparse"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/resolve"
+	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
 // ListEntries returns recent time entries with optional filtering by date range,

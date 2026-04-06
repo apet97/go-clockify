@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 // helper to clear all dedupe-related env vars before each test.

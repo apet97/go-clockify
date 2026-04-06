@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l ./cmd ./internal)
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files:"
+            echo "$unformatted"
+            gofmt -d ./cmd ./internal
+            exit 1
+          fi
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - run: go vet ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - run: go build ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - run: go test -race -count=1 -timeout 120s ./...
+
+  test-http:
+    name: Test (HTTP smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+      - name: Build and smoke-test HTTP transport
+        run: |
+          go build -o clockify-mcp ./cmd/clockify-mcp
+          MCP_TRANSPORT=http \
+          MCP_HTTP_BIND=127.0.0.1:8091 \
+          MCP_BEARER_TOKEN=smoke-test \
+          CLOCKIFY_API_KEY=smoke-test-dummy \
+          ./clockify-mcp &
+          PID=$!
+          sleep 2
+          curl -sf http://127.0.0.1:8091/health || { kill "$PID" 2>/dev/null; exit 1; }
+          curl -sf http://127.0.0.1:8091/ready  || { kill "$PID" 2>/dev/null; exit 1; }
+          kill "$PID" 2>/dev/null || true

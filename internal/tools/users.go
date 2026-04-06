@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 
-	"goclmcp/internal/clockify"
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func (s *Service) WhoAmI(ctx context.Context) (ResultEnvelope, error) {
