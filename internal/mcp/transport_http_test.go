@@ -1,0 +1,188 @@
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"goclmcp/internal/dryrun"
+	"goclmcp/internal/truncate"
+)
+
+const testBearerToken = "test-secret-token"
+
+func newTestServer() *Server {
+	return NewServer("test", nil, []ToolDescriptor{{
+		Tool:    Tool{Name: "echo", Description: "echoes input"},
+		Handler: func(_ context.Context, args map[string]any) (any, error) { return args, nil },
+	}}, nil, truncate.Config{}, dryrun.Config{}, nil)
+}
+
+func TestHealthEndpoint(t *testing.T) {
+	s := newTestServer()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	s.handleHealth(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body["status"] != "ok" {
+		t.Fatalf("expected status ok, got %q", body["status"])
+	}
+}
+
+func TestReadyNotInitialized(t *testing.T) {
+	s := newTestServer()
+	s.initialized = false
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	s.handleReady(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body["status"] != "not_ready" {
+		t.Fatalf("expected status not_ready, got %q", body["status"])
+	}
+}
+
+func TestReadyInitialized(t *testing.T) {
+	s := newTestServer()
+	s.initialized = true
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	s.handleReady(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body["status"] != "ok" {
+		t.Fatalf("expected status ok, got %q", body["status"])
+	}
+}
+
+func TestMCPUnauthorized(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, nil, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer wrong-token")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestMCPAuthorized(t *testing.T) {
+	s := newTestServer()
+	s.initialized = true
+	handler := s.handleMCP(testBearerToken, nil, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+	if resp.JSONRPC != "2.0" {
+		t.Fatalf("expected jsonrpc 2.0, got %q", resp.JSONRPC)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+}
+
+func TestMCPCORSBlocked(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Origin", "https://evil.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestMCPCORSAllowed(t *testing.T) {
+	s := newTestServer()
+	s.initialized = true
+	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Origin", "https://allowed.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://allowed.example.com" {
+		t.Fatalf("expected CORS header %q, got %q", "https://allowed.example.com", got)
+	}
+}
+
+func TestMCPMethodNotAllowed(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, nil, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestIsOriginAllowed(t *testing.T) {
+	tests := []struct {
+		name    string
+		origin  string
+		allowed []string
+		want    bool
+	}{
+		{"empty list allows all", "https://any.example.com", nil, true},
+		{"exact match", "https://foo.com", []string{"https://foo.com"}, true},
+		{"case insensitive", "HTTPS://FOO.COM", []string{"https://foo.com"}, true},
+		{"not in list", "https://bar.com", []string{"https://foo.com"}, false},
+		{"multiple allowed", "https://bar.com", []string{"https://foo.com", "https://bar.com"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isOriginAllowed(tt.origin, tt.allowed); got != tt.want {
+				t.Fatalf("isOriginAllowed(%q, %v) = %v, want %v", tt.origin, tt.allowed, got, tt.want)
+			}
+		})
+	}
+}

@@ -1,0 +1,219 @@
+package config
+
+import (
+	"os"
+	"testing"
+)
+
+func TestValidateBaseURL(t *testing.T) {
+	cases := []struct {
+		name      string
+		url       string
+		insecure  bool
+		wantError bool
+	}{
+		{"https ok", "https://api.clockify.me/api/v1", false, false},
+		{"loopback http ok", "http://localhost:8080", false, false},
+		{"insecure override ok", "http://example.com", true, false},
+		{"http remote blocked", "http://example.com", false, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateBaseURL(tc.url, tc.insecure)
+			if tc.wantError && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tc.wantError && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// setEnvs is a test helper that sets multiple env vars and returns a cleanup function.
+func setEnvs(t *testing.T, envs map[string]string) {
+	t.Helper()
+	for k, v := range envs {
+		t.Setenv(k, v)
+	}
+}
+
+func TestLoadReportsURL(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_REPORTS_URL": "https://reports.clockify.me/v1/",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ReportsURL != "https://reports.clockify.me/v1" {
+		t.Fatalf("expected trailing slash trimmed, got %q", cfg.ReportsURL)
+	}
+}
+
+func TestLoadTimezone(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"CLOCKIFY_TIMEZONE": "Europe/Belgrade",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Timezone != "Europe/Belgrade" {
+		t.Fatalf("expected Europe/Belgrade, got %q", cfg.Timezone)
+	}
+}
+
+func TestLoadTransportDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	// Ensure MCP_TRANSPORT is unset.
+	os.Unsetenv("MCP_TRANSPORT")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Transport != "stdio" {
+		t.Fatalf("expected default transport stdio, got %q", cfg.Transport)
+	}
+}
+
+func TestLoadTransportHTTP(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "http",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Transport != "http" {
+		t.Fatalf("expected http, got %q", cfg.Transport)
+	}
+}
+
+func TestLoadHTTPBindDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("MCP_HTTP_BIND")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPBind != ":8080" {
+		t.Fatalf("expected :8080 default, got %q", cfg.HTTPBind)
+	}
+}
+
+func TestLoadHTTPBindCustom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_HTTP_BIND":    ":9090",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPBind != ":9090" {
+		t.Fatalf("expected :9090, got %q", cfg.HTTPBind)
+	}
+}
+
+func TestLoadBearerToken(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_BEARER_TOKEN": "secret-token",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.BearerToken != "secret-token" {
+		t.Fatalf("expected secret-token, got %q", cfg.BearerToken)
+	}
+}
+
+func TestLoadAllowedOrigins(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":    "test-key",
+		"MCP_ALLOWED_ORIGINS": " http://localhost:3000 , https://example.com , ",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedOrigins) != 2 {
+		t.Fatalf("expected 2 origins, got %d: %v", len(cfg.AllowedOrigins), cfg.AllowedOrigins)
+	}
+	if cfg.AllowedOrigins[0] != "http://localhost:3000" {
+		t.Fatalf("expected trimmed first origin, got %q", cfg.AllowedOrigins[0])
+	}
+	if cfg.AllowedOrigins[1] != "https://example.com" {
+		t.Fatalf("expected trimmed second origin, got %q", cfg.AllowedOrigins[1])
+	}
+}
+
+func TestLoadAllowedOriginsEmpty(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("MCP_ALLOWED_ORIGINS")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AllowedOrigins != nil {
+		t.Fatalf("expected nil origins, got %v", cfg.AllowedOrigins)
+	}
+}
+
+func TestLoadMaxBodySizeDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("MCP_HTTP_MAX_BODY")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxBodySize != 2097152 {
+		t.Fatalf("expected 2097152 default, got %d", cfg.MaxBodySize)
+	}
+}
+
+func TestLoadMaxBodySizeCustom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "4194304",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxBodySize != 4194304 {
+		t.Fatalf("expected 4194304, got %d", cfg.MaxBodySize)
+	}
+}
+
+func TestLoadMaxBodySizeInvalidFallsBackToDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "not-a-number",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxBodySize != 2097152 {
+		t.Fatalf("expected default 2097152 on invalid input, got %d", cfg.MaxBodySize)
+	}
+}
