@@ -31,12 +31,22 @@
 | C8 | Pagination end-of-data assumption | Low | Remaining | 1000-page safety stop mitigates |
 | C9 | User cache theoretical TOCTOU | Low | Remaining | Worst case: extra API call |
 
+## Architecture
+
+| # | Finding | Severity | Status | Notes |
+|---|---------|----------|--------|-------|
+| A1 | Protocol core coupled to 5 domain packages | High | **Fixed** | Extracted `Enforcement` + `Activator` interfaces; server.go has zero domain imports |
+| A2 | No connection pooling on HTTP client | High | **Fixed** | Explicit `http.Transport` with `MaxIdleConns`, `MaxConnsPerHost`, `IdleConnTimeout` |
+| A3 | Client response body double-read | Medium | **Fixed** | Error path reads/drains before success path; connection reuse preserved |
+| A4 | Client retries non-transient 501 | Medium | **Fixed** | Retryable statuses narrowed to 429, 502, 503, 504 |
+| A5 | No `Close()` on client | Low | **Fixed** | `Close()` drains idle connections |
+
 ## Reliability
 
 | # | Finding | Severity | Status | Notes |
 |---|---------|----------|--------|-------|
 | R1 | Rate limiter ignores context cancellation | High | **Fixed** | `ctx.Done()` case added to semaphore select |
-| R2 | Retry with exponential backoff + jitter | — | Already present | `client.go` retries on 429/5xx |
+| R2 | Retry with exponential backoff + jitter | — | Already present | `client.go` retries on 429/502/503/504 |
 | R3 | `Retry-After` header respected | — | Already present | Both integer seconds and RFC1123 dates |
 | R4 | Graceful shutdown via signal handling | — | Already present | `signal.NotifyContext` on SIGINT/SIGTERM |
 | R5 | HTTP server timeouts configured | — | Already present | ReadHeader:10s, Read:30s, Write:60s, Idle:120s |
@@ -76,8 +86,8 @@
 
 ## Summary
 
-- **Items reviewed**: 32
+- **Items reviewed**: 37
 - **Already present**: 13
-- **Fixed**: 15
+- **Fixed**: 20
 - **Remaining (Low)**: 4
 - **Critical/High issues remaining**: 0

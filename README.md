@@ -90,14 +90,14 @@ A valid JSON-RPC response confirms the server is working. If your API key only h
 ## Architecture
 
 ```
-cmd/clockify-mcp/main.go           Entrypoint — wires 8 subsystems, transport selection
+cmd/clockify-mcp/main.go           Entrypoint — wires layers, transport selection
 internal/
   config/         Config from env vars, URL validation
   enforcement/    Concrete Enforcement + Activator (composes policy, rate limit, dry-run, truncation)
-  clockify/       HTTP client (retry/backoff, pagination, typed errors), entity models
+  clockify/       HTTP client (connection pooling, retry/backoff, pagination, typed errors)
   mcp/
-    server.go       Stdio JSON-RPC server with enforcement pipeline (context-aware shutdown)
-    types.go        MCP protocol types (Request, Response, Tool, ToolDescriptor)
+    server.go       Pure JSON-RPC/MCP engine — zero domain imports, pluggable Enforcement interface
+    types.go        MCP protocol types + Enforcement/Activator interfaces
     transport_http.go  HTTP transport (bearer auth, CORS, health/ready, security headers, timeouts)
   tools/
     common.go       Service struct (with lazy user/workspace cache), ResultEnvelope, helpers
@@ -117,16 +117,23 @@ internal/
   helpers/        Error message mapping, paginated results, write envelopes
 ```
 
-### Server Enforcement Pipeline
+### Layered Architecture
 
-Every `tools/call` passes through this pipeline in order:
-1. **Init guard** → reject with `-32002` if server not yet initialized
-2. **Policy check** → blocked? return `isError: true` with human-readable reason
-3. **Rate limit** → acquire semaphore + window permit, defer release
-4. **Dry-run intercept** → if `dry_run=true`, route to preview strategy (before handler)
-5. **Handler dispatch** → call the tool handler
-6. **Truncation** → post-process if result exceeds token budget
-7. **Logging** → `slog` to stderr with tool name, duration, and request ID
+The server is structured in four clean layers:
+
+1. **Protocol core** (`mcp/`) — pure JSON-RPC/MCP engine with zero domain imports. Pluggable via `Enforcement` and `Activator` interfaces.
+2. **Clockify client** (`clockify/`) — stdlib HTTP client with connection pooling, retry/backoff, pagination, and `Close()`.
+3. **Tool surface** (`tools/`) — 33 Tier 1 tools in a declarative registry, 91 Tier 2 tools across 11 lazy-loaded groups.
+4. **Safety layer** (`enforcement/`) — composes policy, rate limiting, dry-run, truncation, and bootstrap into the interfaces consumed by the protocol core.
+
+### Enforcement Pipeline
+
+Every `tools/call` is gated by the `Enforcement` interface:
+1. **Init guard** → reject with `-32002` if server not yet initialized (protocol core)
+2. **`BeforeCall`** → policy check, rate limit acquire, dry-run intercept (enforcement layer)
+3. **Handler dispatch** → call the tool handler with 45s context timeout (protocol core)
+4. **`AfterCall`** → truncation post-processing (enforcement layer)
+5. **Logging** → `slog` to stderr with tool name, duration, and request ID (protocol core)
 
 Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `error`). Protocol errors (unknown method, invalid JSON, init guard) use JSON-RPC `error`.
 

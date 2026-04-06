@@ -117,16 +117,23 @@ internal/
   helpers/        Error message mapping, paginated results, write envelopes
 ```
 
+### Layered Architecture
+
+The server is structured in four clean layers:
+
+1. **Protocol core** (`mcp/server.go`) — pure JSON-RPC/MCP engine with zero domain imports. Delegates all filtering, gating, and post-processing to two pluggable interfaces: `Enforcement` and `Activator` defined in `mcp/types.go`.
+2. **Clockify client** (`clockify/`) — stdlib HTTP client with explicit connection pooling, retry/backoff with `Retry-After` compliance, generic pagination, typed errors, and `Close()` for clean shutdown.
+3. **Tool surface** (`tools/`) — 33 Tier 1 tools in a single declarative registry, 91 Tier 2 tools across 11 lazy-loaded groups.
+4. **Safety layer** (`enforcement/`) — composes policy, rate limiting, dry-run, truncation, and bootstrap into the `Enforcement` and `Activator` interfaces consumed by the protocol core.
+
 ### Server Enforcement Pipeline
 
-Every `tools/call` passes through this pipeline in order:
-1. **Init guard** → reject with `-32002` if `initialize` has not been called
-2. **Policy check** → blocked? return `isError: true` with human-readable reason
-3. **Rate limit** → acquire semaphore + window permit, defer release
-4. **Dry-run intercept** → if `dry_run=true`, route to preview strategy (before handler)
-5. **Handler dispatch** → call the tool handler
-6. **Truncation** → post-process if result exceeds token budget
-7. **Logging** → `slog` to stderr with tool name, duration, and request ID
+Every `tools/call` is gated by the `Enforcement` interface (`enforcement.Pipeline`):
+1. **Init guard** → reject with `-32002` if `initialize` has not been called (protocol core)
+2. **`BeforeCall`** → policy check, rate limit acquire, dry-run intercept (enforcement layer)
+3. **Handler dispatch** → call the tool handler with 45s context timeout (protocol core)
+4. **`AfterCall`** → truncation post-processing (enforcement layer)
+5. **Logging** → `slog` to stderr with tool name, duration, and request ID (protocol core)
 
 Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `error`). Protocol errors (unknown method, invalid JSON, init guard) use JSON-RPC `error`.
 
@@ -139,9 +146,11 @@ Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `err
 ### Key Design Decisions
 
 - **Stdlib only.** Zero external dependencies. Uses `log/slog` for structured logging, `net/http` for HTTP transport, `crypto/subtle` for constant-time auth, `math/rand/v2` for jitter.
+- **Layered separation.** Protocol core (`mcp/`) has zero domain imports. All enforcement logic lives in `enforcement/`. The two are connected via `Enforcement` and `Activator` interfaces.
 - **Stdout purity.** Protocol responses only on stdout. All logs go to stderr via slog.
 - **ResultEnvelope.** Every tool returns `{ok, action, data, meta}`. Write tools use `helpers.WriteResult`.
 - **Fail closed.** Ambiguous name resolution errors. Multiple matches are rejected. Destructive tools require policy + dry-run.
+- **Fail fast.** Config validation at startup: HTTPS enforcement on BaseURL/ReportsURL, transport validation, timezone validation, bearer token required for HTTP.
 - **Lazy caching.** `Service` caches current user and workspace ID with `sync.Mutex` to avoid redundant API calls.
 - **Flat package layout.** All Tier 1 and Tier 2 tools live in `package tools` with domain-named files. No sub-packages needed.
 - **Context-aware shutdown.** Stdio loop exits cleanly on SIGTERM via goroutine + `select` on `ctx.Done()`. HTTP server uses `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout`.
@@ -154,7 +163,7 @@ Tier 2: Each `tier2_*.go` file self-registers via `init()` calling `registerTier
 
 ### Clockify Client
 
-`internal/clockify/client.go` — stdlib HTTP client with `X-Api-Key` auth, `Retry-After` compliance for 429/503 limits, generic `ListAll[T any]` pagination, typed `APIError`. Methods: `Get`, `Post`, `Put`, `Patch`, `Delete`. Response body limited to 10MB.
+`internal/clockify/client.go` — stdlib HTTP client with explicit connection pooling (`http.Transport`), `X-Api-Key` auth, `Retry-After` compliance for 429/502/503/504, exponential backoff with jitter, generic `ListAll[T any]` pagination, typed `APIError`, and `Close()` for clean shutdown. Methods: `Get`, `Post`, `Put`, `Patch`, `Delete`. Response body limited to 10MB.
 
 ### Name Resolution
 

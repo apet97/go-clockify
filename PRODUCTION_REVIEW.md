@@ -39,13 +39,15 @@ Client → [stdio/HTTP transport] → JSON-RPC parse → Server.handle()
 ### Key Subsystems
 | Subsystem | Purpose | Thread Safety |
 |-----------|---------|---------------|
-| `mcp/server.go` | JSON-RPC dispatch, enforcement pipeline | RWMutex on tool registry, atomic init flag |
+| `mcp/server.go` | Pure JSON-RPC/MCP engine, zero domain imports | RWMutex on tool registry, atomic init flag |
+| `mcp/types.go` | Protocol types + Enforcement/Activator interfaces | N/A (types only) |
 | `mcp/transport_http.go` | HTTP transport with auth, CORS, health checks | Per-request, stateless |
-| `clockify/client.go` | HTTP client with retry, backoff, pagination | Stateless per-request |
+| `enforcement/` | Composes policy, rate limit, dry-run, truncation | Delegates to subsystem thread-safety |
+| `clockify/client.go` | HTTP client with connection pooling, retry, pagination | Stateless per-request, pooled transport |
 | `tools/` | 124 tool handlers across 20+ files | Mutex on user/workspace cache |
 | `policy/` | 4-tier access control | Immutable after init |
 | `ratelimit/` | Dual concurrency + window control | Atomic + mutex |
-| `bootstrap/` | Tool visibility modes | Set once at startup |
+| `bootstrap/` | Tool visibility modes, searchable catalog | Set once at startup |
 | `dryrun/` | Preview strategies for destructive tools | Stateless |
 | `dedupe/` | Duplicate entry + overlap detection | Stateless per-call |
 | `truncate/` | Token-aware output reduction | Stateless |
@@ -60,12 +62,16 @@ Client → [stdio/HTTP transport] → JSON-RPC parse → Server.handle()
 1. **ReportsURL SSRF** — `CLOCKIFY_REPORTS_URL` accepted any URL without HTTPS validation. Could reach cloud metadata endpoints. **Fixed**: Same `validateBaseURL()` applied.
 
 ### High (Fixed)
-2. **Transport not validated** — Invalid `MCP_TRANSPORT` values silently fell through to stdio. **Fixed**: Strict `switch` rejects unknown values.
-3. **Timezone not validated at config** — Invalid timezone passed config, failed at runtime during tool calls. **Fixed**: `time.LoadLocation()` at config time.
-4. **HTTP bearer token not fail-fast** — Missing token only detected at `ServeHTTP()`, after server started. **Fixed**: Config rejects `http` transport without token.
-5. **Rate limiter ignores context cancellation** — 100ms hardcoded semaphore timeout didn't respect caller's context. **Fixed**: Added `ctx.Done()` case.
-6. **Stale hardcoded user-agent** — `"clockify-mcp-go/0.2.0"` hardcoded in client when actual version is 0.3.0. **Fixed**: Default changed to `"dev"`.
-7. **intArg overflow on NaN/Inf/large floats** — `int(float64)` without bounds checking could produce garbage values. **Fixed**: Bounds check with fallback.
+2. **Protocol core coupled to domain** — `server.go` imported 5 domain-specific packages (policy, ratelimit, dryrun, truncate, bootstrap), preventing reuse of the protocol layer. **Fixed**: Extracted `Enforcement` and `Activator` interfaces; server now has zero domain imports.
+3. **Client missing connection pooling** — Default `http.Client` with no `Transport` configuration. **Fixed**: Explicit `http.Transport` with `MaxIdleConns`, `MaxConnsPerHost`, `IdleConnTimeout`.
+4. **Client response body handling** — `limitedBody` created before error status check; error path could interfere with connection reuse. **Fixed**: Error path reads and drains body before success path.
+5. **Client retries 501 Not Implemented** — Broad `500-599` retry range included non-transient errors. **Fixed**: Only retries 429, 502, 503, 504.
+6. **Transport not validated** — Invalid `MCP_TRANSPORT` values silently fell through to stdio. **Fixed**: Strict `switch` rejects unknown values.
+7. **Timezone not validated at config** — Invalid timezone passed config, failed at runtime during tool calls. **Fixed**: `time.LoadLocation()` at config time.
+8. **HTTP bearer token not fail-fast** — Missing token only detected at `ServeHTTP()`, after server started. **Fixed**: Config rejects `http` transport without token.
+9. **Rate limiter ignores context cancellation** — 100ms hardcoded semaphore timeout didn't respect caller's context. **Fixed**: Added `ctx.Done()` case.
+10. **Stale hardcoded user-agent** — `"clockify-mcp-go/0.2.0"` hardcoded in client when actual version is 0.3.0. **Fixed**: Default changed to `"dev"`.
+11. **intArg overflow on NaN/Inf/large floats** — `int(float64)` without bounds checking could produce garbage values. **Fixed**: Bounds check with fallback.
 
 ### Medium (Fixed)
 8. **No version in health endpoint** — `/health` returned no version info. **Fixed**: Version field added.
@@ -87,9 +93,12 @@ Client → [stdio/HTTP transport] → JSON-RPC parse → Server.handle()
 
 | File | Change | Category |
 |------|--------|----------|
+| `internal/mcp/server.go` | Remove 5 domain imports; delegate to Enforcement/Activator interfaces | Architecture |
+| `internal/mcp/types.go` | Define Enforcement, Activator, ToolHints interfaces | Architecture |
+| `internal/enforcement/enforcement.go` | New package: Pipeline (Enforcement) + Gate (Activator) | Architecture |
+| `internal/clockify/client.go` | Connection pooling, body handling fix, remove 501 retry, add Close(), user-agent fix | Reliability |
 | `internal/config/config.go` | ReportsURL HTTPS validation, transport validation, timezone validation, bearer token fail-fast | Security, Correctness |
 | `internal/config/config_test.go` | 10 new tests for all validation paths | Testing |
-| `internal/clockify/client.go` | Default user-agent `"dev"` instead of stale `"0.2.0"` | Correctness |
 | `internal/ratelimit/ratelimit.go` | Context cancellation in semaphore acquire | Reliability |
 | `internal/ratelimit/ratelimit_test.go` | Context cancellation test | Testing |
 | `internal/tools/common.go` | NaN/Inf/overflow bounds check in `intArg` | Correctness |

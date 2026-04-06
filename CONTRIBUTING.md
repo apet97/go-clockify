@@ -32,34 +32,32 @@ go test -v -run TestName ./internal/mcp/...
 Before submitting a PR, ensure:
 
 ```sh
-# Format
+# All-in-one (recommended)
+make check
+
+# Or individually:
 gofmt -w ./cmd ./internal ./tests
-
-# Vet
 go vet ./...
-
-# Build
 go build ./...
-
-# Test with race detector
 go test -race -count=1 ./...
 ```
 
-All four must pass with no errors.
+All checks must pass with no errors.
 
 ## Project Structure
 
 ```
-cmd/clockify-mcp/     Entrypoint
+cmd/clockify-mcp/     Entrypoint — wires all layers
 internal/
-  config/             Environment variable configuration
-  clockify/           HTTP client, models, errors
-  mcp/                MCP server (stdio + HTTP transport, context-aware shutdown)
-  tools/              All 124 tool handlers (Tier 1 + Tier 2)
+  mcp/                Protocol core — pure JSON-RPC/MCP engine, Enforcement/Activator interfaces
+  clockify/           HTTP client (connection pooling, retry/backoff, pagination)
+  tools/              All 124 tool handlers (Tier 1 registry + Tier 2 lazy groups)
+  enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
+  config/             Environment variable configuration (fail-fast validation)
   policy/             Policy modes (read_only/safe_core/standard/full)
   resolve/            Name-to-ID resolution
-  dryrun/             Dry-run interception
-  bootstrap/          Tool visibility modes
+  dryrun/             Dry-run interception strategies
+  bootstrap/          Tool visibility modes, searchable catalog
   ratelimit/          Concurrency + throughput control (race-safe)
   truncate/           Token-aware output truncation
   dedupe/             Duplicate entry detection
