@@ -51,7 +51,9 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 		slog.Info("http_shutdown", "reason", "context cancelled")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		srv.Shutdown(shutdownCtx)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("http_shutdown_error", "error", err)
+		}
 	}()
 
 	slog.Info("http_start", "bind", bind)
@@ -90,7 +92,36 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"status":"not_ready"}`))
 		return
 	}
+	if s.ReadyChecker != nil {
+		if err := s.checkReady(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": err.Error()})
+			return
+		}
+	}
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+const readyCacheTTL = 15 * time.Second
+
+func (s *Server) checkReady(ctx context.Context) error {
+	s.readyMu.Lock()
+	defer s.readyMu.Unlock()
+
+	if time.Since(s.readyAt) < readyCacheTTL {
+		if s.readyCached {
+			return nil
+		}
+		return fmt.Errorf("upstream unhealthy (cached)")
+	}
+
+	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	err := s.ReadyChecker(checkCtx)
+	s.readyAt = time.Now()
+	s.readyCached = err == nil
+	return err
 }
 
 func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
@@ -113,6 +144,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 			} else {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Vary", "Origin")
 			}
 		}
 
@@ -120,6 +152,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "POST")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -159,6 +192,15 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 			json.NewEncoder(w).Encode(Response{
 				JSONRPC: "2.0",
 				Error:   &RPCError{Code: -32700, Message: "invalid JSON"},
+			})
+			return
+		}
+		if rpcErr := validateRequest(req); rpcErr != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(Response{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Error:   rpcErr,
 			})
 			return
 		}

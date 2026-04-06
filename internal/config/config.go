@@ -19,7 +19,6 @@ type Config struct {
 	RequestTimeout time.Duration
 	MaxRetries     int
 	Insecure       bool
-	ReportsURL     string
 	Timezone       string
 
 	// MCP transport
@@ -54,14 +53,6 @@ func Load() (Config, error) {
 
 	cfg.RequestTimeout = 30 * time.Second
 	cfg.MaxRetries = 3
-
-	// Reports URL
-	cfg.ReportsURL = strings.TrimRight(os.Getenv("CLOCKIFY_REPORTS_URL"), "/")
-	if cfg.ReportsURL != "" {
-		if err := validateBaseURL(cfg.ReportsURL, cfg.Insecure); err != nil {
-			return Config{}, fmt.Errorf("invalid CLOCKIFY_REPORTS_URL: %w", err)
-		}
-	}
 
 	// Timezone
 	cfg.Timezone = os.Getenv("CLOCKIFY_TIMEZONE")
@@ -118,6 +109,9 @@ func Load() (Config, error) {
 		}
 		if v <= 0 {
 			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be greater than 0")
+		}
+		if v > 52428800 {
+			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be at most 50 MB (52428800)")
 		}
 		cfg.MaxBodySize = v
 	}

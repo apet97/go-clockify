@@ -28,11 +28,11 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (Resul
 	if boolArg(args, "include_entries") {
 		data.Entries = entries
 	}
-	return ok("clockify_summary_report", data, map[string]any{"workspaceId": wsID, "userId": userID, "source": "time-entries-wrapper"}), nil
+	return ok("clockify_summary_report", data, addTruncationWarning(map[string]any{"workspaceId": wsID, "userId": userID, "source": "time-entries-wrapper"}, len(entries))), nil
 }
 
 func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	loc, err := loadLocation(stringArg(args, "timezone"))
+	loc, err := loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -54,7 +54,7 @@ func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (Resul
 	if boolArg(args, "include_entries") {
 		data.Entries = entries
 	}
-	return ok("clockify_weekly_summary", data, map[string]any{"workspaceId": wsID, "userId": userID, "timezone": loc.String(), "source": "time-entries-wrapper"}), nil
+	return ok("clockify_weekly_summary", data, addTruncationWarning(map[string]any{"workspaceId": wsID, "userId": userID, "timezone": loc.String(), "source": "time-entries-wrapper"}, len(entries))), nil
 }
 
 func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -85,7 +85,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	} else {
 		data.EntriesSample = entries
 	}
-	return ok("clockify_quick_report", data, map[string]any{"workspaceId": wsID, "userId": userID, "days": days, "source": "time-entries-wrapper"}), nil
+	return ok("clockify_quick_report", data, addTruncationWarning(map[string]any{"workspaceId": wsID, "userId": userID, "days": days, "source": "time-entries-wrapper"}, len(entries))), nil
 }
 
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -129,7 +129,7 @@ func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (Resu
 		data["entries"] = filtered
 	}
 
-	return ok("clockify_detailed_report", data, map[string]any{"workspaceId": wsID, "userId": userID, "source": "time-entries-wrapper"}), nil
+	return ok("clockify_detailed_report", data, addTruncationWarning(map[string]any{"workspaceId": wsID, "userId": userID, "source": "time-entries-wrapper"}, len(entries))), nil
 }
 
 func weekBounds(weekStart string, loc *time.Location) (time.Time, time.Time, error) {

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -85,8 +86,13 @@ func run() error {
 	}
 
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
+	defer client.Close()
 	client.SetUserAgent("clockify-mcp-go/" + version)
 	service := tools.New(client, cfg.WorkspaceID)
+	if cfg.Timezone != "" {
+		loc, _ := time.LoadLocation(cfg.Timezone) // already validated in config.Load
+		service.DefaultTimezone = loc
+	}
 	service.DedupeConfig = &dd
 	service.PolicyDescribe = pol.Describe
 
@@ -181,6 +187,11 @@ func run() error {
 		if cfg.AllowAnyOrigin {
 			slog.Warn("cors_any_origin", "msg", "MCP_ALLOW_ANY_ORIGIN=1 is set — all cross-origin requests will be accepted. This is not recommended for production.")
 		}
+		// Wire upstream health check: lightweight GET /api/v1/user
+		server.ReadyChecker = func(ctx context.Context) error {
+			var user struct{ ID string }
+			return client.Get(ctx, "/user", nil, &user)
+		}
 		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)
@@ -217,7 +228,6 @@ Environment Variables:
     CLOCKIFY_API_KEY          API key (required)
     CLOCKIFY_WORKSPACE_ID     Workspace ID (auto-detected if only one)
     CLOCKIFY_BASE_URL         API base URL (default: https://api.clockify.me/api/v1)
-    CLOCKIFY_REPORTS_URL      Reports API URL
     CLOCKIFY_TIMEZONE         IANA timezone for time parsing
     CLOCKIFY_INSECURE         Set to 1 to allow non-HTTPS base URLs
 

@@ -325,23 +325,54 @@ func TestBeforeCall_NormalPassThrough(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline.BeforeCall — dry-run: NotDestructive
+// Pipeline.BeforeCall — dry-run: non-destructive write tool passes through
 // ---------------------------------------------------------------------------
 
-func TestBeforeCall_DryRun_NotDestructive(t *testing.T) {
+func TestBeforeCall_DryRun_NonDestructivePassThrough(t *testing.T) {
 	p := &Pipeline{
 		Policy: standardPolicy(),
 		DryRun: dryrun.Config{Enabled: true},
 	}
-	// Tool is NOT destructive, but args include dry_run=true.
-	hints := mcp.ToolHints{ReadOnly: true, Destructive: false}
-	args := map[string]any{"dry_run": true}
-	_, _, err := p.BeforeCall(context.Background(), "clockify_list_entries", args, hints, noLookup)
-	if err == nil {
-		t.Fatal("expected NotDestructiveError for non-destructive tool with dry_run")
+	// Non-destructive write tool with dry_run=true: enforcement passes through,
+	// leaving the flag in args so the handler's own dry-run logic can run.
+	hints := mcp.ToolHints{ReadOnly: false, Destructive: false}
+	args := map[string]any{"dry_run": true, "description": "test"}
+	result, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", args, hints, noLookup)
+	if err != nil {
+		t.Fatalf("expected no error for non-destructive tool pass-through, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not supported for non-destructive tool") {
-		t.Fatalf("unexpected error: %v", err)
+	if result != nil {
+		t.Fatal("expected nil result (pass through to handler)")
+	}
+	// dry_run flag must remain in args for the handler.
+	if _, exists := args["dry_run"]; !exists {
+		t.Fatal("expected dry_run key to remain in args for handler-level dry-run")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline.BeforeCall — dry-run disabled via CLOCKIFY_DRY_RUN=off
+// ---------------------------------------------------------------------------
+
+func TestBeforeCall_DryRunDisabled_SkipsIntercept(t *testing.T) {
+	p := &Pipeline{
+		Policy: standardPolicy(),
+		DryRun: dryrun.Config{Enabled: false},
+	}
+	// Destructive tool with dry_run=true, but enforcement dry-run is disabled.
+	// The flag passes through to the handler (not consumed by enforcement).
+	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
+	args := map[string]any{"dry_run": true, "entry_id": "e1"}
+	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, noLookup)
+	if err != nil {
+		t.Fatalf("expected no error when dry-run is disabled, got: %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result (pass through to handler)")
+	}
+	// dry_run flag must remain in args since enforcement didn't consume it.
+	if _, exists := args["dry_run"]; !exists {
+		t.Fatal("expected dry_run key to remain in args when enforcement dry-run is disabled")
 	}
 }
 
@@ -380,10 +411,13 @@ func TestBeforeCall_DryRun_MinimalFallback(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline.BeforeCall — dry-run: ConfirmPattern (handler found)
+// Pipeline.BeforeCall — dry-run: destructive tool falls to MinimalFallback
+// (clockify_send_invoice is no longer in confirmTools; it's a toolRW tool
+// that handles dry-run at the handler level. This test uses Destructive: true
+// to exercise the enforcement fallback path.)
 // ---------------------------------------------------------------------------
 
-func TestBeforeCall_DryRun_ConfirmPattern(t *testing.T) {
+func TestBeforeCall_DryRun_DestructiveFallsToMinimal(t *testing.T) {
 	handler, calls := handlerRecorder(map[string]any{"id": "inv1", "status": "sent"}, nil)
 	lookup := lookupWith(map[string]mcp.ToolHandler{
 		"clockify_send_invoice": handler,
@@ -394,49 +428,15 @@ func TestBeforeCall_DryRun_ConfirmPattern(t *testing.T) {
 		DryRun: dryrun.Config{Enabled: true},
 	}
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
-	args := map[string]any{"dry_run": true, "confirm": true, "invoice_id": "inv1"}
+	args := map[string]any{"dry_run": true, "invoice_id": "inv1"}
 
 	result, release, err := p.BeforeCall(context.Background(), "clockify_send_invoice", args, hints, lookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if calls.Load() != 1 {
-		t.Fatalf("expected handler called once, got %d", calls.Load())
-	}
-	m, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map[string]any, got %T", result)
-	}
-	if m["dry_run"] != true {
-		t.Fatal("expected dry_run=true in wrapped result")
-	}
-	if m["preview"] == nil {
-		t.Fatal("expected preview field in wrapped result")
-	}
-	// Confirm key should have been removed from args before handler call.
-	if _, found := args["confirm"]; found {
-		t.Fatal("expected 'confirm' to be removed from args")
-	}
-	if release != nil {
-		release()
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Pipeline.BeforeCall — dry-run: ConfirmPattern (handler NOT found → MinimalResult)
-// ---------------------------------------------------------------------------
-
-func TestBeforeCall_DryRun_ConfirmPattern_HandlerNotFound(t *testing.T) {
-	p := &Pipeline{
-		Policy: standardPolicy(),
-		DryRun: dryrun.Config{Enabled: true},
-	}
-	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
-	args := map[string]any{"dry_run": true, "confirm": true}
-
-	result, _, err := p.BeforeCall(context.Background(), "clockify_send_invoice", args, hints, noLookup)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	// Handler should NOT be called — MinimalFallback doesn't invoke the handler.
+	if calls.Load() != 0 {
+		t.Fatalf("expected handler NOT called for minimal fallback, got %d calls", calls.Load())
 	}
 	m, ok := result.(map[string]any)
 	if !ok {
@@ -447,34 +447,12 @@ func TestBeforeCall_DryRun_ConfirmPattern_HandlerNotFound(t *testing.T) {
 	}
 	// Minimal result has resource=nil, not a "preview" key.
 	if _, hasPrev := m["preview"]; hasPrev {
-		t.Fatal("expected minimal result, but got preview key")
+		t.Fatal("expected minimal result without preview key")
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Pipeline.BeforeCall — dry-run: ConfirmPattern handler returns error
-// ---------------------------------------------------------------------------
-
-func TestBeforeCall_DryRun_ConfirmPattern_HandlerError(t *testing.T) {
-	handler, _ := handlerRecorder(nil, errors.New("api failure"))
-	lookup := lookupWith(map[string]mcp.ToolHandler{
-		"clockify_send_invoice": handler,
-	})
-
-	p := &Pipeline{
-		Policy: standardPolicy(),
-		DryRun: dryrun.Config{Enabled: true},
+	if release != nil {
+		release()
 	}
-	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
-	args := map[string]any{"dry_run": true, "confirm": true}
-
-	_, _, err := p.BeforeCall(context.Background(), "clockify_send_invoice", args, hints, lookup)
-	if err == nil {
-		t.Fatal("expected error when confirm handler fails")
-	}
-	if !strings.Contains(err.Error(), "api failure") {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	_ = lookup
 }
 
 // ---------------------------------------------------------------------------
@@ -581,18 +559,24 @@ func TestBeforeCall_DryRun_PreviewTool_HandlerError(t *testing.T) {
 
 func TestBeforeCall_DryRun_ReleasesOnError(t *testing.T) {
 	rl := ratelimit.New(1, 1000, 60000)
+	// PreviewTool handler that returns an error.
+	handler, _ := handlerRecorder(nil, errors.New("not found"))
+	lookup := lookupWith(map[string]mcp.ToolHandler{
+		"clockify_get_entry": handler,
+	})
+
 	p := &Pipeline{
 		Policy:    standardPolicy(),
 		RateLimit: rl,
 		DryRun:    dryrun.Config{Enabled: true},
 	}
-	// Non-destructive + dry_run → NotDestructiveError.
-	hints := mcp.ToolHints{ReadOnly: true, Destructive: false}
-	args := map[string]any{"dry_run": true}
+	// Destructive tool with dry_run → PreviewTool path → handler error.
+	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
+	args := map[string]any{"dry_run": true, "entry_id": "e1"}
 
-	_, _, err := p.BeforeCall(context.Background(), "clockify_list_entries", args, hints, noLookup)
+	_, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, lookup)
 	if err == nil {
-		t.Fatal("expected NotDestructiveError")
+		t.Fatal("expected error from preview handler")
 	}
 
 	// The semaphore slot should have been released. Verify by acquiring again.

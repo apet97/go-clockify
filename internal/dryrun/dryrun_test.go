@@ -56,25 +56,18 @@ func TestCheckDryRunNotSet(t *testing.T) {
 	}
 }
 
-func TestCheckDryRunNotDestructive(t *testing.T) {
-	args := map[string]any{"dry_run": true}
-	action, active := CheckDryRun("clockify_get_entry", args, false)
-	if !active {
-		t.Fatal("expected active=true")
+func TestCheckDryRunNonDestructive_PassThrough(t *testing.T) {
+	args := map[string]any{"dry_run": true, "description": "test"}
+	action, active := CheckDryRun("clockify_add_entry", args, false)
+	if active {
+		t.Fatal("expected active=false for non-destructive tool (pass through to handler)")
 	}
-	if action != NotDestructive {
-		t.Fatalf("expected NotDestructive, got %d", action)
+	if action != 0 {
+		t.Fatalf("expected action=0, got %d", action)
 	}
-}
-
-func TestCheckDryRunConfirmPattern(t *testing.T) {
-	args := map[string]any{"dry_run": true}
-	action, active := CheckDryRun("clockify_send_invoice", args, true)
-	if !active {
-		t.Fatal("expected active=true")
-	}
-	if action != ConfirmPattern {
-		t.Fatalf("expected ConfirmPattern, got %d", action)
+	// Flag must remain in args so the handler's dryrun.Enabled() check sees it.
+	if _, exists := args["dry_run"]; !exists {
+		t.Fatal("expected dry_run key to remain in args for non-destructive tools")
 	}
 }
 

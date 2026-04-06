@@ -13,15 +13,16 @@ import (
 )
 
 type Service struct {
-	Client         *clockify.Client
-	WorkspaceID    string
-	DedupeConfig   *dedupe.Config        // optional, set during wiring
-	PolicyDescribe func() map[string]any // set during wiring; returns policy description
-	ActivateGroup  func(string) (ActivationResult, error)
-	ActivateTool   func(string) (ActivationResult, error)
-	mu             sync.Mutex
-	cachedUser     *clockify.User
-	cachedWSID     string
+	Client          *clockify.Client
+	WorkspaceID     string
+	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil = system timezone
+	DedupeConfig    *dedupe.Config        // optional, set during wiring
+	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
+	ActivateGroup   func(string) (ActivationResult, error)
+	ActivateTool    func(string) (ActivationResult, error)
+	mu              sync.Mutex
+	cachedUser      *clockify.User
+	cachedWSID      string
 }
 
 type ActivationResult struct {
@@ -188,8 +189,11 @@ func hours(seconds int64) float64 {
 	return float64(seconds) / 3600.0
 }
 
-func loadLocation(name string) (*time.Location, error) {
+func loadLocation(name string, defaultTZ *time.Location) (*time.Location, error) {
 	if strings.TrimSpace(name) == "" {
+		if defaultTZ != nil {
+			return defaultTZ, nil
+		}
 		return time.Now().Location(), nil
 	}
 	loc, err := time.LoadLocation(name)
@@ -233,10 +237,21 @@ func parseStartEnd(args map[string]any) (time.Time, time.Time, error) {
 	return parseRange(args)
 }
 
+const entryRangePageSize = 100
+
 func entryRangeQuery(start, end time.Time) map[string]string {
 	return map[string]string{
 		"start":     start.UTC().Format(time.RFC3339),
 		"end":       end.UTC().Format(time.RFC3339),
-		"page-size": "100",
+		"page-size": fmt.Sprintf("%d", entryRangePageSize),
 	}
+}
+
+// addTruncationWarning adds a warning to meta if the result count equals the
+// page size, indicating potential silent truncation.
+func addTruncationWarning(meta map[string]any, count int) map[string]any {
+	if count >= entryRangePageSize {
+		meta["warning"] = fmt.Sprintf("Results may be truncated. Only the first %d entries are returned per query. Use narrower date ranges for complete data.", entryRangePageSize)
+	}
+	return meta
 }

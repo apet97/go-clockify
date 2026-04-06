@@ -37,14 +37,9 @@ func (e *testEnforcement) BeforeCall(ctx context.Context, name string, args map[
 		return nil, nil, fmt.Errorf("tool blocked by policy: %s", e.policy.BlockReason(name, hints.ReadOnly))
 	}
 	if e.dryRun.Enabled {
-		action, isDryRun := dryrun.CheckDryRun(name, args, hints.Destructive)
+		_, isDryRun := dryrun.CheckDryRun(name, args, hints.Destructive)
 		if isDryRun {
-			switch action {
-			case dryrun.NotDestructive:
-				return nil, nil, dryrun.NotDestructiveError(name)
-			default:
-				return dryrun.MinimalResult(name, args), nil, nil
-			}
+			return dryrun.MinimalResult(name, args), nil, nil
 		}
 	}
 	return nil, nil, nil
@@ -826,6 +821,9 @@ func TestTruncationApplied(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDryRunOnNonDestructiveTool(t *testing.T) {
+	// Non-destructive tools with dry_run=true pass through to the handler.
+	// The handler receives the dry_run flag in args and can implement its
+	// own dry-run logic.
 	readTool := ToolDescriptor{
 		Tool: Tool{
 			Name:        "safe_read",
@@ -834,14 +832,14 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 			Annotations: map[string]any{"readOnlyHint": true},
 		},
 		Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return map[string]any{"data": "ok"}, nil
+			return map[string]any{"data": "ok", "saw_dry_run": args["dry_run"]}, nil
 		},
 		ReadOnlyHint:    true,
 		DestructiveHint: false,
 	}
 
 	server := NewServer("test", []ToolDescriptor{readTool}, &testEnforcement{dryRun: dryrun.Config{Enabled: true}}, nil)
-	server.initialized.Store(true) // skip init guard — we're testing dry-run
+	server.initialized.Store(true)
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"safe_read","arguments":{"dry_run":true}}}`
 
 	var out strings.Builder
@@ -853,23 +851,24 @@ func TestDryRunOnNonDestructiveTool(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	// Tool errors now use isError per MCP spec
 	resultMap, ok := resp.Result.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map result, got %T", resp.Result)
 	}
+	// Should succeed — enforcement passes through, handler runs normally.
 	isErr, _ := resultMap["isError"].(bool)
-	if !isErr {
-		t.Fatal("expected isError=true for dry_run on non-destructive tool")
+	if isErr {
+		t.Fatal("expected no error — non-destructive tools with dry_run should pass through to handler")
 	}
 	content, _ := resultMap["content"].([]any)
 	if len(content) == 0 {
-		t.Fatal("expected content in error response")
+		t.Fatal("expected content in response")
 	}
 	textObj, _ := content[0].(map[string]any)
 	text, _ := textObj["text"].(string)
-	if !strings.Contains(text, "not supported for non-destructive") {
-		t.Fatalf("expected 'not supported for non-destructive' in error text, got %q", text)
+	// The handler should have seen dry_run=true in args.
+	if !strings.Contains(text, "saw_dry_run") {
+		t.Fatalf("expected handler to see dry_run flag, got %q", text)
 	}
 }
 

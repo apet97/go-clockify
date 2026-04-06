@@ -25,10 +25,11 @@ type ToolDescriptor struct {
 }
 
 type Server struct {
-	Version     string
-	Enforcement Enforcement   // nil = no filtering or enforcement
-	Activator   Activator     // nil = activation unrestricted
-	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
+	Version      string
+	Enforcement  Enforcement                     // nil = no filtering or enforcement
+	Activator    Activator                       // nil = activation unrestricted
+	ToolTimeout  time.Duration                   // per-call timeout; 0 = default 45s
+	ReadyChecker func(ctx context.Context) error // optional upstream health check for /ready
 
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
@@ -36,6 +37,11 @@ type Server struct {
 	encoder     *json.Encoder // stored for push notifications
 	encoderMu   sync.Mutex    // protects concurrent encoder writes
 	requestSeq  atomic.Int64  // monotonic request ID for log correlation
+
+	// readiness cache
+	readyMu     sync.Mutex
+	readyCached bool
+	readyAt     time.Time
 }
 
 func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
@@ -106,6 +112,12 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			var req Request
 			if err := json.Unmarshal(result.line, &req); err != nil {
 				if err := s.writeResponse(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}}); err != nil {
+					return err
+				}
+				continue
+			}
+			if rpcErr := validateRequest(req); rpcErr != nil {
+				if err := s.writeResponse(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr}); err != nil {
 					return err
 				}
 				continue
@@ -361,4 +373,21 @@ func mustJSON(v any) string {
 		return fmt.Sprintf(`{"error":%q}`, err.Error())
 	}
 	return string(b)
+}
+
+// validateRequest checks JSON-RPC 2.0 version and id type per spec.
+// Returns an RPCError if validation fails, or nil if valid.
+func validateRequest(req Request) *RPCError {
+	if req.JSONRPC != "2.0" {
+		return &RPCError{Code: -32600, Message: "invalid request: jsonrpc must be \"2.0\""}
+	}
+	if req.ID != nil {
+		switch req.ID.(type) {
+		case string, float64:
+			// valid per JSON-RPC 2.0 spec
+		default:
+			return &RPCError{Code: -32600, Message: "invalid request: id must be a string or number"}
+		}
+	}
+	return nil
 }

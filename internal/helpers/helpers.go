@@ -48,19 +48,3 @@ func PaginatedResult(items any, page, pageSize int, entityName string, hasMore b
 		"has_more":  hasMore,
 	}
 }
-
-// WriteResult builds a standard mutation response map.
-func WriteResult(action, resourceType string, resourceID *string, data any, warnings []string) map[string]any {
-	result := map[string]any{
-		"action":        action,
-		"resource_type": resourceType,
-		"data":          data,
-	}
-	if resourceID != nil {
-		result["resource_id"] = *resourceID
-	}
-	if len(warnings) > 0 {
-		result["warnings"] = warnings
-	}
-	return result
-}

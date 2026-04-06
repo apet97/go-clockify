@@ -112,6 +112,16 @@ CLOCKIFY_OVERLAP_CHECK=true   # default, warns on overlap
 CLOCKIFY_OVERLAP_CHECK=off    # disable
 ```
 
+## Bootstrap vs Policy
+
+**Important distinction:** Bootstrap mode (`CLOCKIFY_BOOTSTRAP_MODE`) controls tool *discovery* — which tools appear in `tools/list`. Policy mode (`CLOCKIFY_POLICY`) controls tool *execution* — which tools can be called.
+
+A tool hidden by bootstrap (e.g., `minimal` mode hides most Tier 1 tools) can still be called if the client knows the tool name. Bootstrap only affects the `tools/list` response.
+
+**To restrict tool access, use policy modes.** Bootstrap is a UX feature for reducing tool clutter, not a security boundary.
+
+> **Note:** `standard` and `full` policy modes are currently functionally identical — both allow all tool operations. `full` is reserved for potential future capabilities (e.g., bypassing dry-run defaults). Use `standard` unless you have a specific reason to use `full`.
+
 ## Rate Limiting
 
 Two-layer protection (race-safe window reset):

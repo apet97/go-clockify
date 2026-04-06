@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -80,6 +81,92 @@ func TestReadyInitialized(t *testing.T) {
 	}
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
+}
+
+func TestReadyUpstreamUnhealthy(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+	s.ReadyChecker = func(ctx context.Context) error {
+		return fmt.Errorf("clockify API unreachable")
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	s.handleReady(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when upstream unhealthy, got %d", rec.Code)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body["status"] != "not_ready" {
+		t.Fatalf("expected status not_ready, got %q", body["status"])
+	}
+}
+
+func TestReadyUpstreamHealthy(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+	s.ReadyChecker = func(ctx context.Context) error {
+		return nil
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	s.handleReady(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 when upstream healthy, got %d", rec.Code)
+	}
+}
+
+func TestCORSVaryOriginHeader(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Origin", "https://app.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Vary"); got != "Origin" {
+		t.Fatalf("expected Vary: Origin header when reflecting origin, got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://app.example.com" {
+		t.Fatalf("expected ACAO to reflect origin, got %q", got)
+	}
+}
+
+func TestCORSNoVaryOnWildcard(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+	handler := s.handleMCP(testBearerToken, nil, true, 2097152) // allowAnyOrigin=true
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Origin", "https://anything.com")
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Vary"); got == "Origin" {
+		t.Fatal("should NOT set Vary: Origin when using wildcard ACAO")
+	}
+}
+
+func TestPreflightMaxAge(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	req.Header.Set("Origin", "https://app.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Max-Age"); got != "86400" {
+		t.Fatalf("expected Access-Control-Max-Age 86400, got %q", got)
 	}
 }
 

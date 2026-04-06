@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -135,10 +136,12 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	var stoppedEntry any
 	stopResult, stopErr := s.StopTimer(ctx, map[string]any{})
 	if stopErr != nil {
-		if !strings.Contains(stopErr.Error(), "404") && !strings.Contains(stopErr.Error(), "400") {
+		var apiErr *clockify.APIError
+		if errors.As(stopErr, &apiErr) && (apiErr.StatusCode == 404 || apiErr.StatusCode == 400) {
+			// No timer was running — proceed with start.
+		} else {
 			return ResultEnvelope{}, fmt.Errorf("stop timer: %w", stopErr)
 		}
-		// No timer was running — proceed with start.
 	} else {
 		stoppedEntry = stopResult
 	}

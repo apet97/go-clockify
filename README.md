@@ -177,9 +177,8 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `CLOCKIFY_API_KEY` | — | API key (**required**) |
 | `CLOCKIFY_WORKSPACE_ID` | auto | Workspace ID (auto-detected if only one) |
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | API base URL |
-| `CLOCKIFY_REPORTS_URL` | — | Reports API URL (HTTPS enforced, same rules as base URL) |
-| `CLOCKIFY_TIMEZONE` | system | IANA timezone for time parsing (validated at startup) |
-| `CLOCKIFY_INSECURE` | — | Set to `1` to allow non-HTTPS base/reports URLs (loopback exempt) |
+| `CLOCKIFY_TIMEZONE` | system | IANA timezone for time parsing (used as default when no per-request timezone is provided) |
+| `CLOCKIFY_INSECURE` | — | Set to `1` to allow non-HTTPS base URL on non-loopback hosts. Note: this bypasses URL scheme validation only — it does NOT disable TLS certificate verification in the HTTP client. |
 
 ### Safety
 

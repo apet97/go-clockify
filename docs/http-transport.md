@@ -93,6 +93,10 @@ MCP_ALLOW_ANY_ORIGIN=1
 
 Preflight `OPTIONS` requests do not require the bearer token.
 
+## Known Limitations
+
+**Tool list change notifications are not supported in HTTP mode.** When Tier 2 tool groups are activated via `clockify_search_tools`, the `notifications/tools/list_changed` push notification is only delivered in stdio mode (where a persistent connection exists). HTTP clients should re-fetch `tools/list` after activating groups.
+
 ## Structured Access Logging
 
 Every HTTP request is logged with structured fields:

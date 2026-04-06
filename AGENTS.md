@@ -52,8 +52,7 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_API_KEY` | Yes | — | Clockify API key |
 | `CLOCKIFY_WORKSPACE_ID` | No | auto-resolve | Workspace ID (auto if only one) |
 | `CLOCKIFY_BASE_URL` | No | `https://api.clockify.me/api/v1` | API base URL |
-| `CLOCKIFY_REPORTS_URL` | No | — | Separate reports API host (HTTPS enforced) |
-| `CLOCKIFY_TIMEZONE` | No | system | IANA timezone for time parsing (validated at startup) |
+| `CLOCKIFY_TIMEZONE` | No | system | IANA timezone for time parsing (used as default when no per-request timezone is provided) |
 | `CLOCKIFY_INSECURE` | No | `0` | Set `1` for non-loopback HTTP |
 
 ### Safety & Control
@@ -148,9 +147,9 @@ Tool errors return as `result.isError: true` per the MCP spec (not JSON-RPC `err
 - **Stdlib only.** Zero external dependencies. Uses `log/slog` for structured logging, `net/http` for HTTP transport, `crypto/subtle` for constant-time auth, `math/rand/v2` for jitter.
 - **Layered separation.** Protocol core (`mcp/`) has zero domain imports. All enforcement logic lives in `enforcement/`. The two are connected via `Enforcement` and `Activator` interfaces.
 - **Stdout purity.** Protocol responses only on stdout. All logs go to stderr via slog.
-- **ResultEnvelope.** Every tool returns `{ok, action, data, meta}`. Write tools use `helpers.WriteResult`.
+- **ResultEnvelope.** Every tool returns `{ok, action, data, meta}` via the `ok()` helper in `common.go`.
 - **Fail closed.** Ambiguous name resolution errors. Multiple matches are rejected. Destructive tools require policy + dry-run.
-- **Fail fast.** Config validation at startup: HTTPS enforcement on BaseURL/ReportsURL, transport validation, timezone validation, bearer token required for HTTP.
+- **Fail fast.** Config validation at startup: HTTPS enforcement on BaseURL, transport validation, timezone validation, bearer token required for HTTP.
 - **Lazy caching.** `Service` caches current user and workspace ID with `sync.Mutex` to avoid redundant API calls.
 - **Flat package layout.** All Tier 1 and Tier 2 tools live in `package tools` with domain-named files. No sub-packages needed.
 - **Context-aware shutdown.** Stdio loop exits cleanly on SIGTERM via goroutine + `select` on `ctx.Done()`. HTTP server uses `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout`.

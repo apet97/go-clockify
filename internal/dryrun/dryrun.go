@@ -84,13 +84,11 @@ var previewMap = map[string]string{
 	"clockify_delete_webhook":          "clockify_get_webhook",
 }
 
-// confirmTools use confirm-pattern interception.
-var confirmTools = map[string]bool{
-	"clockify_send_invoice":      true,
-	"clockify_approve_timesheet": true,
-	"clockify_reject_timesheet":  true,
-	"clockify_deactivate_user":   true,
-}
+// confirmTools maps destructive tools that use confirm-pattern interception.
+// These tools must be registered with toolDestructive() to reach this path.
+// Note: tools registered with toolRW() handle dry-run at the handler level
+// and never reach this map (CheckDryRun passes through for non-destructive tools).
+var confirmTools = map[string]bool{}
 
 // minimalTools use minimal fallback (no GET counterpart).
 var minimalTools = map[string]bool{
@@ -107,8 +105,10 @@ var minimalTools = map[string]bool{
 // ---------------------------------------------------------------------------
 
 // CheckDryRun inspects args for a dry_run flag and determines the
-// interception strategy. It consumes (deletes) the dry_run key from args.
-// Returns (action, true) when dry-run is active, or (0, false) otherwise.
+// interception strategy for destructive tools. For non-destructive tools,
+// it leaves the flag in args and returns (0, false) so the handler's own
+// dry-run logic can run. For destructive tools, it consumes the flag and
+// returns the appropriate interception action.
 func CheckDryRun(toolName string, args map[string]any, isDestructive bool) (Action, bool) {
 	v, ok := args["dry_run"]
 	if !ok {
@@ -119,12 +119,14 @@ func CheckDryRun(toolName string, args map[string]any, isDestructive bool) (Acti
 		return 0, false
 	}
 
-	// Consume the flag.
-	delete(args, "dry_run")
-
+	// Non-destructive tools handle dry-run at the handler level.
+	// Do NOT consume the flag — let it pass through.
 	if !isDestructive {
-		return NotDestructive, true
+		return 0, false
 	}
+
+	// Consume the flag for destructive tools (enforcement handles dry-run).
+	delete(args, "dry_run")
 	if confirmTools[toolName] {
 		return ConfirmPattern, true
 	}

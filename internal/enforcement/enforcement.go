@@ -60,17 +60,19 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 		release = rel
 	}
 
-	// 3. Dry-run intercept
-	action, isDryRun := dryrun.CheckDryRun(name, args, hints.Destructive)
-	if isDryRun {
-		result, err := p.executeDryRun(ctx, action, name, args, hints, lookupHandler)
-		if err != nil {
-			if release != nil {
-				release()
+	// 3. Dry-run intercept (only when CLOCKIFY_DRY_RUN is enabled)
+	if p.DryRun.Enabled {
+		action, isDryRun := dryrun.CheckDryRun(name, args, hints.Destructive)
+		if isDryRun {
+			result, err := p.executeDryRun(ctx, action, name, args, hints, lookupHandler)
+			if err != nil {
+				if release != nil {
+					release()
+				}
+				return nil, nil, err
 			}
-			return nil, nil, err
+			return result, release, nil
 		}
-		return result, release, nil
 	}
 
 	return nil, release, nil
@@ -90,16 +92,10 @@ func (p *Pipeline) executeDryRun(ctx context.Context, action dryrun.Action, name
 	case dryrun.NotDestructive:
 		return nil, dryrun.NotDestructiveError(name)
 	case dryrun.ConfirmPattern:
-		delete(args, "confirm")
-		handler, ok := lookupHandler(name)
-		if !ok {
-			return dryrun.MinimalResult(name, args), nil
-		}
-		result, err := handler(ctx, args)
-		if err != nil {
-			return nil, err
-		}
-		return dryrun.WrapResult(result, name), nil
+		// ConfirmPattern uses minimal fallback — the tool is NOT executed.
+		// This avoids the dangerous pattern of executing a mutation and then
+		// claiming "No changes were made" in the dry-run envelope.
+		return dryrun.MinimalResult(name, args), nil
 	case dryrun.PreviewTool:
 		previewTool, ok := dryrun.PreviewToolFor(name)
 		if !ok {

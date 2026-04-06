@@ -39,17 +39,15 @@ func setEnvs(t *testing.T, envs map[string]string) {
 	}
 }
 
-func TestLoadReportsURL(t *testing.T) {
+func TestLoadReportsURLRemoved(t *testing.T) {
+	// CLOCKIFY_REPORTS_URL was removed — setting it is harmlessly ignored.
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":     "test-key",
 		"CLOCKIFY_REPORTS_URL": "https://reports.clockify.me/v1/",
 	})
-	cfg, err := Load()
+	_, err := Load()
 	if err != nil {
 		t.Fatal(err)
-	}
-	if cfg.ReportsURL != "https://reports.clockify.me/v1" {
-		t.Fatalf("expected trailing slash trimmed, got %q", cfg.ReportsURL)
 	}
 }
 
@@ -227,62 +225,14 @@ func TestLoadMaxBodySizeZeroReturnsError(t *testing.T) {
 	}
 }
 
-// --- ReportsURL validation tests ---
-
-func TestLoadReportsURLHTTPSValid(t *testing.T) {
+func TestLoadMaxBodySizeTooLargeReturnsError(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":     "test-key",
-		"CLOCKIFY_REPORTS_URL": "https://reports.clockify.me/v1",
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "99999999999",
 	})
-	_, err := Load()
-	if err != nil {
-		t.Fatalf("valid HTTPS reports URL should pass: %v", err)
-	}
-}
-
-func TestLoadReportsURLHTTPBlockedOnRemote(t *testing.T) {
-	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":     "test-key",
-		"CLOCKIFY_REPORTS_URL": "http://169.254.169.254/metadata",
-	})
-	os.Unsetenv("CLOCKIFY_INSECURE")
 	_, err := Load()
 	if err == nil {
-		t.Fatal("expected error for HTTP reports URL on non-loopback host")
-	}
-}
-
-func TestLoadReportsURLHTTPLoopbackOK(t *testing.T) {
-	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":     "test-key",
-		"CLOCKIFY_REPORTS_URL": "http://localhost:9090/v1",
-	})
-	_, err := Load()
-	if err != nil {
-		t.Fatalf("HTTP loopback reports URL should be allowed: %v", err)
-	}
-}
-
-func TestLoadReportsURLInsecureOverride(t *testing.T) {
-	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":     "test-key",
-		"CLOCKIFY_REPORTS_URL": "http://example.com/reports",
-		"CLOCKIFY_INSECURE":    "1",
-	})
-	_, err := Load()
-	if err != nil {
-		t.Fatalf("insecure flag should allow HTTP reports URL: %v", err)
-	}
-}
-
-func TestLoadReportsURLEmptyPassthrough(t *testing.T) {
-	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-	})
-	os.Unsetenv("CLOCKIFY_REPORTS_URL")
-	_, err := Load()
-	if err != nil {
-		t.Fatalf("empty reports URL should pass: %v", err)
+		t.Fatal("expected error for MCP_HTTP_MAX_BODY exceeding 50MB")
 	}
 }
 
