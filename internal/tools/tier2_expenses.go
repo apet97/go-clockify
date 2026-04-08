@@ -27,7 +27,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 			},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenses(ctx, args)
 		}},
 
@@ -36,7 +36,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":       "object",
 			"required":   []string{"expense_id"},
 			"properties": map[string]any{"expense_id": map[string]any{"type": "string"}},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getExpense(ctx, args)
 		}},
 
@@ -86,7 +86,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. List expense categories
 		{Tool: toolRO("clockify_list_expense_categories", "List expense categories in the workspace", map[string]any{
 			"type": "object",
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenseCategories(ctx, args)
 		}},
 
@@ -134,7 +134,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 			},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.expenseReport(ctx, args)
 		}},
 	}

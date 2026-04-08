@@ -33,7 +33,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 						"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 					},
 				}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListCustomFields(ctx, args)
 			},
@@ -43,7 +43,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_get_custom_field",
 				"Get a custom field by ID",
 				requiredSchema("field_id")),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.GetCustomField(ctx, args)
 			},

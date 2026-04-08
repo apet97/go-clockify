@@ -3,21 +3,32 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
-func (s *Service) ListTags(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
 	var out []clockify.Tag
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/tags", map[string]string{"page-size": "50"}, &out); err != nil {
+	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/tags", query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_tags", out, map[string]any{"workspaceId": wsID, "count": len(out)}), nil
+	return ok("clockify_list_tags", out, map[string]any{
+		"workspaceId": wsID,
+		"count":       len(out),
+		"page":        page,
+		"pageSize":    pageSize,
+	}), nil
 }
 
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

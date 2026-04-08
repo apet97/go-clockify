@@ -27,7 +27,7 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 			},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listSharedReports(ctx, args)
 		}},
 
@@ -36,7 +36,7 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":       "object",
 			"required":   []string{"report_id"},
 			"properties": map[string]any{"report_id": map[string]any{"type": "string"}},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getSharedReport(ctx, args)
 		}},
 
@@ -87,7 +87,7 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 				"report_id": map[string]any{"type": "string"},
 				"format":    map[string]any{"type": "string", "description": "Export format: csv, json, pdf, or excel (default json)"},
 			},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.exportSharedReport(ctx, args)
 		}},
 	}

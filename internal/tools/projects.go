@@ -3,22 +3,33 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) ListProjects(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) ListProjects(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
 	var projects []clockify.Project
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects", map[string]string{"page-size": "50"}, &projects); err != nil {
+	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects", query, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_projects", projects, map[string]any{"workspaceId": wsID, "count": len(projects)}), nil
+	return ok("clockify_list_projects", projects, map[string]any{
+		"workspaceId": wsID,
+		"count":       len(projects),
+		"page":        page,
+		"pageSize":    pageSize,
+	}), nil
 }
 
 func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnvelope, error) {

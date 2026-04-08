@@ -194,6 +194,21 @@ func TestAnnotationConsistency(t *testing.T) {
 					label, d.Tool.Name)
 			}
 		}
+		// IdempotentHint: the descriptor flag and annotation must agree.
+		idemAnn, hasIdemAnn := ann["idempotentHint"].(bool)
+		if d.IdempotentHint && !(hasIdemAnn && idemAnn) {
+			t.Fatalf("%s: tool %s is marked IdempotentHint but missing idempotentHint annotation",
+				label, d.Tool.Name)
+		}
+		if hasIdemAnn && idemAnn && !d.IdempotentHint {
+			t.Fatalf("%s: tool %s has idempotentHint annotation but descriptor IdempotentHint is false",
+				label, d.Tool.Name)
+		}
+		// All read-only tools must carry IdempotentHint — reads are inherently
+		// idempotent and clients rely on this signal.
+		if d.ReadOnlyHint && !d.IdempotentHint {
+			t.Fatalf("%s: read-only tool %s missing IdempotentHint", label, d.Tool.Name)
+		}
 	}
 
 	// Check Tier 1

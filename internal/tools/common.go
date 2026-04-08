@@ -131,11 +131,18 @@ func New(client *clockify.Client, workspaceID string) *Service {
 }
 
 func toolRO(name, desc string, schema map[string]any) mcp.Tool {
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": true}}
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": true, "idempotentHint": true}}
 }
 
 func toolRW(name, desc string, schema map[string]any) mcp.Tool {
 	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": false}}
+}
+
+// toolRWIdem marks a write tool as idempotent. Use for PUT/PATCH-style updates
+// and tools whose handlers produce the same end state on repeated calls
+// (e.g. clockify_stop_timer when no timer is running becomes a no-op).
+func toolRWIdem(name, desc string, schema map[string]any) mcp.Tool {
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": false, "idempotentHint": true}}
 }
 
 func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
@@ -146,6 +153,29 @@ func requiredSchema(field string) map[string]any {
 	return map[string]any{"type": "object", "required": []string{field}, "properties": map[string]any{field: map[string]any{"type": "string"}}}
 }
 
+// paginationSchema returns a JSON schema with standard `page`/`page_size`
+// integer properties merged with the caller's extras. The extras map may
+// supply additional `properties` (merged) and `required` (concatenated).
+func paginationSchema(extras map[string]any) map[string]any {
+	props := map[string]any{
+		"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
+		"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50, max 200)"},
+	}
+	schema := map[string]any{"type": "object", "properties": props}
+	if extras == nil {
+		return schema
+	}
+	if extra, ok := extras["properties"].(map[string]any); ok {
+		for k, v := range extra {
+			props[k] = v
+		}
+	}
+	if req, ok := extras["required"].([]string); ok && len(req) > 0 {
+		schema["required"] = req
+	}
+	return schema
+}
+
 func stringArg(args map[string]any, key string) string {
 	v, _ := args[key].(string)
 	return v
@@ -154,6 +184,23 @@ func stringArg(args map[string]any, key string) string {
 func boolArg(args map[string]any, key string) bool {
 	v, _ := args[key].(bool)
 	return v
+}
+
+// paginationFromArgs extracts page/page_size from a tool args map, applying
+// the standard defaults (page=1, page_size=50) and a hard cap of 200.
+func paginationFromArgs(args map[string]any) (page, pageSize int) {
+	page = intArg(args, "page", 1)
+	if page < 1 {
+		page = 1
+	}
+	pageSize = intArg(args, "page_size", 50)
+	if pageSize < 1 {
+		pageSize = 50
+	}
+	if pageSize > 200 {
+		pageSize = 200
+	}
+	return page, pageSize
 }
 
 func intArg(args map[string]any, key string, fallback int) int {

@@ -30,7 +30,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffRequests(ctx, args)
 			},
@@ -43,7 +43,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffRequest(ctx, args)
 			},
@@ -132,7 +132,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffPolicies(ctx, args)
 			},
@@ -144,7 +144,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"policy_id"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffPolicy(ctx, args)
 			},
@@ -194,7 +194,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"policy_id": map[string]any{"type": "string"},
 					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.timeOffBalance(ctx, args)
 			},

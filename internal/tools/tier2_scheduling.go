@@ -30,7 +30,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"page":       map[string]any{"type": "integer", "description": "Page number (default 1)"},
 					"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listAssignments(ctx, args)
 			},
@@ -42,7 +42,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"assignment_id"}, "properties": map[string]any{
 					"assignment_id": map[string]any{"type": "string"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getAssignment(ctx, args)
 			},
@@ -102,7 +102,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listSchedules(ctx, args)
 			},
@@ -114,7 +114,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"schedule_id"}, "properties": map[string]any{
 					"schedule_id": map[string]any{"type": "string"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getSchedule(ctx, args)
 			},
@@ -141,7 +141,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "properties": map[string]any{
 					"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getProjectScheduleTotals(ctx, args)
 			},
@@ -155,7 +155,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"end":     map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
 					"user_id": map[string]any{"type": "string", "description": "Filter by user ID"},
 				}}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.filterScheduleCapacity(ctx, args)
 			},
