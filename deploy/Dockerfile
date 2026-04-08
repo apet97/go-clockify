@@ -29,4 +29,10 @@ ENV MCP_LOG_FORMAT=json
 
 EXPOSE 8080
 
+# Liveness probe: verify the binary can execute. Distroless has no shell or
+# curl, so we use the exec form with --version, which exits 0 on success.
+# Real HTTP health is exposed at /health and /ready for orchestrator probes.
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD ["/usr/local/bin/clockify-mcp", "--version"]
+
 ENTRYPOINT ["clockify-mcp"]
