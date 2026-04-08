@@ -33,7 +33,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 					"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 				},
 			}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListWebhooks(ctx, args)
 			},
@@ -47,7 +47,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 					"webhook_id": map[string]any{"type": "string", "description": "Webhook ID"},
 				},
 			}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.GetWebhook(ctx, args)
 			},
@@ -114,7 +114,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_list_webhook_events", "List available webhook event types", map[string]any{
 				"type": "object",
 			}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListWebhookEvents(ctx, args)
 			},

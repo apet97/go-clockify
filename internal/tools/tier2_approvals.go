@@ -28,7 +28,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 			},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listApprovalRequests(ctx, args)
 		}},
 
@@ -37,7 +37,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":       "object",
 			"required":   []string{"approval_id"},
 			"properties": map[string]any{"approval_id": map[string]any{"type": "string"}},
-		}), ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getApprovalRequest(ctx, args)
 		}},
 

@@ -30,7 +30,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 					"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 				},
 			}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListUserGroups(ctx, args)
 			},

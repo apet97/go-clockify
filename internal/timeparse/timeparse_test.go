@@ -380,3 +380,33 @@ func TestParseISO8601Duration(t *testing.T) {
 		})
 	}
 }
+
+// FuzzParseDatetime feeds random strings into ParseDatetime and requires that
+// it never panics. Errors are fine; panics aren't.
+func FuzzParseDatetime(f *testing.F) {
+	seeds := []string{
+		"",
+		"now",
+		"today",
+		"today 14:30",
+		"yesterday",
+		"2026-04-08",
+		"2026-04-08T09:00:00Z",
+		"2026-04-08T09:00:00+02:00",
+		"2h30m",
+		"PT1H30M",
+		"tomorrow",
+		"\x00",
+		"0000-00-00T00:00:00Z",
+		"\n\t  ",
+		"not-a-date",
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, input string) {
+		// We only care about panic-freedom; returned value and error are
+		// intentionally ignored.
+		_, _ = ParseDatetime(input, time.UTC)
+	})
+}

@@ -24,7 +24,7 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_list_project_templates",
 				"List project templates in the workspace",
 				map[string]any{"type": "object"}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 				return s.ListProjectTemplates(ctx)
 			},
@@ -34,7 +34,7 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_get_project_template",
 				"Get a project template by ID",
 				requiredSchema("project_id")),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.GetProjectTemplate(ctx, args)
 			},

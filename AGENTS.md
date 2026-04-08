@@ -71,6 +71,7 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (`0` disables this layer) |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window (`0` disables this layer) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Token truncation budget (0=off) |
+| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool-call timeout (5s–10m, Go duration format) |
 
 ### Transport
 | Variable | Default | Purpose |

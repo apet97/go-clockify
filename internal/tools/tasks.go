@@ -3,13 +3,15 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) ListTasks(ctx context.Context, projectRef string) (ResultEnvelope, error) {
+func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
 		return ResultEnvelope{}, fmt.Errorf("project is required")
 	}
@@ -21,11 +23,22 @@ func (s *Service) ListTasks(ctx context.Context, projectRef string) (ResultEnvel
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
 	var out []clockify.Task
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects/"+projectID+"/tasks", map[string]string{"page-size": "50"}, &out); err != nil {
+	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects/"+projectID+"/tasks", query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_tasks", out, map[string]any{"workspaceId": wsID, "projectId": projectID, "count": len(out)}), nil
+	return ok("clockify_list_tasks", out, map[string]any{
+		"workspaceId": wsID,
+		"projectId":   projectID,
+		"count":       len(out),
+		"page":        page,
+		"pageSize":    pageSize,
+	}), nil
 }
 
 func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

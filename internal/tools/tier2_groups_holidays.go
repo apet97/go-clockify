@@ -26,7 +26,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_list_user_groups_admin",
 				"List user groups in the workspace (admin view)",
 				map[string]any{"type": "object"}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 				return s.ListUserGroupsAdmin(ctx)
 			},
@@ -36,7 +36,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_get_user_group",
 				"Get a user group by ID",
 				requiredSchema("group_id")),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.GetUserGroup(ctx, args)
 			},
@@ -99,7 +99,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_list_holidays",
 				"List holidays configured in the workspace",
 				map[string]any{"type": "object"}),
-			ReadOnlyHint: true,
+			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 				return s.ListHolidays(ctx)
 			},

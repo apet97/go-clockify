@@ -56,3 +56,16 @@ The following are in scope:
 - Response body limits: 10MB on API responses, 2MB on HTTP request bodies
 - Zero external dependencies (stdlib only) — minimal supply chain attack surface
 - Initialization guard: `tools/call` rejected before `initialize` handshake
+
+## TLS / HTTP Transport
+
+The HTTP transport does **not** terminate TLS. Production deployments MUST
+front the server with a TLS-terminating reverse proxy (Caddy, nginx, Envoy,
+Traefik, or a cloud load balancer). Without a proxy, the bearer token and all
+request/response bodies travel in plain HTTP. See `deploy/Caddyfile.example`
+for a reference configuration that uses Caddy's automatic Let's Encrypt
+support.
+
+`CLOCKIFY_INSECURE=1` only bypasses base-URL scheme validation when resolving
+`CLOCKIFY_BASE_URL`; it does not disable TLS certificate verification in the
+outbound Clockify client. See `docs/safe-usage.md` for the full scope.

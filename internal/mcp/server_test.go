@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -29,4 +30,29 @@ func TestInitializeAndToolsList(t *testing.T) {
 	if !strings.Contains(got, `"demo_tool"`) {
 		t.Fatalf("missing tool list response: %s", got)
 	}
+}
+
+// FuzzJSONRPCParse feeds random byte sequences into the JSON-RPC Request
+// decoder and ensures it never panics. Malformed requests should produce
+// errors, not crashes.
+func FuzzJSONRPCParse(f *testing.F) {
+	seeds := [][]byte{
+		[]byte(`{}`),
+		[]byte(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`),
+		[]byte(`{"jsonrpc":"2.0","id":"abc","method":"tools/list"}`),
+		[]byte(`{"jsonrpc":"2.0","id":null,"method":"ping"}`),
+		[]byte(`{"jsonrpc":"1.0","id":1,"method":"bad"}`),
+		[]byte(`{"jsonrpc":"2.0","id":{"nested":true},"method":"weird"}`),
+		[]byte(`not json at all`),
+		[]byte(``),
+		[]byte(`{"method":"x","params":{"a":1,"b":[1,2,3]}}`),
+		[]byte(`{"\u0000":"null byte key"}`),
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, payload []byte) {
+		var req Request
+		_ = json.Unmarshal(payload, &req)
+	})
 }

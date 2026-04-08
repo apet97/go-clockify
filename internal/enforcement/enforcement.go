@@ -79,9 +79,14 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 }
 
 // AfterCall applies post-processing (truncation) to a successful result.
+// Truncate returns (value, wasTruncated). When truncation occurs we log at
+// debug level so operators can observe progressive token-budget reductions.
 func (p *Pipeline) AfterCall(result any) (any, error) {
 	if p.Truncation.Enabled {
-		truncated, _ := p.Truncation.Truncate(result)
+		truncated, wasTruncated := p.Truncation.Truncate(result)
+		if wasTruncated {
+			slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
+		}
 		return truncated, nil
 	}
 	return result, nil
