@@ -196,7 +196,7 @@ func TestAnnotationConsistency(t *testing.T) {
 		}
 		// IdempotentHint: the descriptor flag and annotation must agree.
 		idemAnn, hasIdemAnn := ann["idempotentHint"].(bool)
-		if d.IdempotentHint && !(hasIdemAnn && idemAnn) {
+		if d.IdempotentHint && (!hasIdemAnn || !idemAnn) {
 			t.Fatalf("%s: tool %s is marked IdempotentHint but missing idempotentHint annotation",
 				label, d.Tool.Name)
 		}

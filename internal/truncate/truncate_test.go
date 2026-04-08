@@ -158,17 +158,9 @@ func TestTruncateStringsUTF8(t *testing.T) {
 		t.Errorf("expected 200 runes before ..., got %d", runeCount)
 	}
 
-	// Verify the trimmed portion is valid UTF-8
-	for i := 0; i < len(trimmed); {
-		r, size := rune(trimmed[i]), 0
-		for trimmed[i]&(0x80>>(size)) != 0 {
-			size++
-		}
-		_ = r
-		// Just use range which already validates
-		break
-	}
-	// Simpler: range over string never produces invalid runes if input is valid
+	// Verify the trimmed portion is valid UTF-8. Range over string substitutes
+	// \uFFFD for invalid sequences, so a U+FFFD rune means truncation split a
+	// multi-byte character.
 	for _, r := range trimmed {
 		if r == '\uFFFD' {
 			t.Fatal("truncation split a multi-byte character")

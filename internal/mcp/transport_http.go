@@ -77,7 +77,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"status":  "ok",
 		"version": s.Version,
 	})
@@ -89,17 +89,17 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	if !s.initialized.Load() {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte(`{"status":"not_ready"}`))
+		_, _ = w.Write([]byte(`{"status":"not_ready"}`))
 		return
 	}
 	if s.ReadyChecker != nil {
 		if err := s.checkReady(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": err.Error()})
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": err.Error()})
 			return
 		}
 	}
-	w.Write([]byte(`{"status":"ok"}`))
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 const readyCacheTTL = 15 * time.Second
@@ -189,7 +189,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 		var req Request
 		if err := json.Unmarshal(body, &req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(Response{
+			_ = json.NewEncoder(w).Encode(Response{
 				JSONRPC: "2.0",
 				Error:   &RPCError{Code: -32700, Message: "invalid JSON"},
 			})
@@ -197,7 +197,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 		}
 		if rpcErr := validateRequest(req); rpcErr != nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(Response{
+			_ = json.NewEncoder(w).Encode(Response{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Error:   rpcErr,
@@ -209,7 +209,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 		resp := s.handle(r.Context(), req)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 
 		// 6. Structured access log
 		slog.Info("http_request",
@@ -227,7 +227,7 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
 func isOriginAllowed(origin string, allowed []string, allowAnyOrigin bool) bool {

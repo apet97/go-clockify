@@ -136,7 +136,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			if err := sleepWithContext(ctx, waitDur); err != nil {
 				return err
 			}
-			explicitRetryAfter = 0
+			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
 		err = c.doOnce(ctx, method, path, query, payload, out)
@@ -191,7 +191,7 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		// Read error body (limited to 64KB) before any other reads.

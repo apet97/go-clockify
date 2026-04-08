@@ -125,7 +125,7 @@ func CheckOverlap(entries []clockify.TimeEntry, projectID, startISO, endISO stri
 		}
 		// Overlap exists when the ranges are NOT disjoint.
 		// Disjoint: endISO <= entry.Start  OR  startISO >= entry.End
-		if !(endISO <= entry.TimeInterval.Start || startISO >= entry.TimeInterval.End) {
+		if endISO > entry.TimeInterval.Start && startISO < entry.TimeInterval.End {
 			return &OverlapResult{
 				HasOverlap:     true,
 				OverlapEntryID: entry.ID,

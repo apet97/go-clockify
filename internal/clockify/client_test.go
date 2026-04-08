@@ -485,7 +485,7 @@ func TestPostWithBody(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(fmt.Sprintf(`{"id":"p1","name":"%s"}`, body["name"])))
+		_, _ = fmt.Fprintf(w, `{"id":"p1","name":"%s"}`, body["name"])
 	}))
 	defer ts.Close()
 
