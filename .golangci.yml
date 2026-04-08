@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+  go: "1.25"
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - gosimple
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+
+issues:
+  exclude-rules:
+    # Test files frequently ignore close errors and use type assertions on test fixtures
+    - path: _test\.go
+      linters:
+        - errcheck
