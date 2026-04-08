@@ -1,3 +1,3 @@
 module github.com/apet97/go-clockify
 
-go 1.25.0
+go 1.25.9
