@@ -7,15 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-08
+
 ### Added
 
+- **Supply-chain hardening**: All GitHub Actions in `ci.yml` and `release.yml` are now pinned to full 40-char commit SHAs with a version comment.
+- **golangci-lint in CI**: New `.golangci.yml` (govet, staticcheck, errcheck, ineffassign, unused, gosimple) and a dedicated `lint` CI job.
+- **govulncheck in CI**: New `vulncheck` job (soft-fail initially) scans the stdlib for known vulnerabilities on every push.
+- **Fuzz testing**:
+  - `FuzzParseDatetime` in `internal/timeparse/timeparse_test.go`
+  - `FuzzValidateID` in `internal/resolve/resolve_test.go`
+  - `FuzzJSONRPCParse` in `internal/mcp/server_test.go`
+  - New `fuzz` CI job runs each target for 30s (continue-on-error).
+- **List tool pagination**: `clockify_list_projects`, `clockify_list_clients`, `clockify_list_tags`, `clockify_list_tasks`, and `clockify_list_users` now accept `page` and `page_size` parameters (default 1/50, max 200), matching the existing `clockify_list_entries` contract.
+- **IdempotentHint annotations**: All read-only Tier 1 and Tier 2 tools now carry `idempotentHint: true` via both the descriptor field and the MCP `Annotations` map. `clockify_stop_timer`, `clockify_update_entry`, and `clockify_find_and_update_entry` are also marked idempotent via the new `toolRWIdem` helper.
+- **Dockerfile HEALTHCHECK**: `deploy/Dockerfile` now runs `/usr/local/bin/clockify-mcp --version` every 30s as a distroless-compatible liveness probe.
+- **Test coverage investment**: New tests for `WeeklySummary`, `QuickReport`, `DetailedReport` (incl. project filtering), `AddEntry` dry-run, `FindAndUpdateEntry` happy path, `ListClients`/`ListTags`/`ListTasks`/`ListEntries`/`ListUsers` pagination. Total coverage crossed **50%** (up from ~45% at 0.3.0).
+- **Coverage threshold raised** from 40% to **50%** in `.github/workflows/ci.yml`.
 - **Opt-in live end-to-end testing**: `tests/e2e_live_test.go` is now gated behind the `livee2e` build tag and `CLOCKIFY_RUN_LIVE_E2E=1`, with cleanup for created resources.
 - **Client Reliability**: Clockify API client now accurately listens to `Retry-After` HTTP headers on 429 errors.
 - **Server Concurrency**: Asynchronous multiplexing inside `stdio` transport using goroutines for `tools/call` requests.
 - **Generic Pagination**: Cleanly typed internal API pagination (`ListAll[T any]`) instead of vulnerable map casts.
 - **Data Safety**: `server.initialized` is now safeguarded with `atomic.Bool` to prevent read/write lifecycle panics.
 
+### Changed
+
+- **Truncation observability**: `enforcement.Pipeline.AfterCall` now logs a `response_truncated` debug event when progressive token-budget truncation is applied. The previous code silently discarded the `wasTruncated` signal.
+- **List handler signatures**: `Service.ListProjects`, `ListClients`, `ListTags`, `ListUsers`, and `ListTasks` now take `args map[string]any` (matching `ListEntries`) to support pagination. This is an internal-only change; MCP tool schemas gained new optional properties.
+- **`SECURITY.md`**: added explicit "TLS / HTTP Transport" section documenting the reverse-proxy requirement and the scope of `CLOCKIFY_INSECURE=1`.
+- **`docs/safe-usage.md`**: added "HTTP Transport Security" section covering TLS requirements and `CLOCKIFY_INSECURE=1` clarification.
+
 ### Fixed
+
 - **Timer Management**: Fixed `clockify_stop_timer` using `http.MethodPost` instead of the required `http.MethodPatch`, ensuring active timers end properly via standards-compliant requests.
 - **Tier 2 activation**: `clockify_search_tools` now activates Tier 2 groups and hidden tools through the actual MCP request path and emits `tools/list_changed`.
 - **Release packaging**: npm base-package publishing now rewrites `optionalDependencies` to the release version before publish.
@@ -125,7 +148,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Non-HTTPS base URLs blocked unless loopback or `CLOCKIFY_INSECURE=1`
 - Zero external dependencies (stdlib only)
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/apet97/go-clockify/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/apet97/go-clockify/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/apet97/go-clockify/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/apet97/go-clockify/releases/tag/v0.1.0

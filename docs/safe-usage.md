@@ -209,3 +209,33 @@ export MCP_BEARER_TOKEN=your-secret
 export MCP_ALLOWED_ORIGINS=https://your-app.example.com
 export MCP_LOG_LEVEL=info
 ```
+
+## HTTP Transport Security
+
+### No Built-in TLS — Use a Reverse Proxy
+
+The HTTP transport listens in plain HTTP. **Production deployments MUST front
+the server with a TLS-terminating reverse proxy** (Caddy, nginx, Envoy,
+Traefik, or a cloud load balancer). The bearer token in `Authorization:` and
+all request/response bodies travel in the clear otherwise.
+
+See `deploy/Caddyfile.example` for a reference Caddy config with automatic
+Let's Encrypt certificates.
+
+### `CLOCKIFY_INSECURE=1` — Scope Clarification
+
+Setting `CLOCKIFY_INSECURE=1` only bypasses **base-URL scheme validation** so
+you can point `CLOCKIFY_BASE_URL` at a non-`https://` endpoint on a non-loopback
+host (e.g. a test fixture or a local proxy).
+
+It does **NOT**:
+
+- Disable TLS certificate verification in the Go HTTP client. Connecting to an
+  `https://` endpoint with a self-signed certificate will still fail with a
+  TLS error. For self-signed endpoints, install the CA into the system trust
+  store or route through a reverse proxy that terminates and re-originates TLS.
+- Relax any other security check (bearer auth, CORS, body size limits, ID
+  validation, webhook URL validation).
+
+Only use `CLOCKIFY_INSECURE=1` in development or when you explicitly trust the
+link between the server and the Clockify-compatible endpoint.
