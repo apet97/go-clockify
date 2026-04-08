@@ -492,7 +492,7 @@ func TestListProjects(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws123")
-	result, err := svc.ListProjects(context.Background())
+	result, err := svc.ListProjects(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("ListProjects failed: %v", err)
 	}
@@ -649,6 +649,284 @@ func TestHandlerAPIError(t *testing.T) {
 	// Verify the error message includes the status info
 	if !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error to contain status code 500, got: %s", err.Error())
+	}
+}
+
+// TestAddEntryDryRun verifies that dry_run:true returns a preview envelope
+// without issuing a POST to the Clockify API.
+func TestAddEntryDryRun(t *testing.T) {
+	var postCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postCalled = true
+		}
+		t.Fatalf("unexpected %s %s — dry run should not call the API", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.AddEntry(context.Background(), map[string]any{
+		"start":       "2026-04-06T09:00:00Z",
+		"end":         "2026-04-06T10:00:00Z",
+		"description": "Planned work",
+		"dry_run":     true,
+	})
+	if err != nil {
+		t.Fatalf("add entry dry run failed: %v", err)
+	}
+	if postCalled {
+		t.Fatal("POST must not be called on dry run")
+	}
+	if result.Action != "clockify_add_entry" {
+		t.Fatalf("unexpected action: %s", result.Action)
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map data for dry run, got %T", result.Data)
+	}
+	if dataMap["dry_run"] != true {
+		t.Fatalf("expected dry_run=true marker, got %+v", dataMap)
+	}
+	if dataMap["note"] == nil {
+		t.Fatal("expected note in dry run preview")
+	}
+}
+
+// TestFindAndUpdateEntryHappyPath covers a single matching entry being updated
+// via PUT, including verification of the updatedFields metadata.
+func TestFindAndUpdateEntryHappyPath(t *testing.T) {
+	var gotPutBody map[string]any
+	var putCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{
+				{ID: "e1", Description: "draft docs", ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}, Billable: false},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/e1" && r.Method == http.MethodPut:
+			putCalled = true
+			if err := json.NewDecoder(r.Body).Decode(&gotPutBody); err != nil {
+				t.Fatalf("decode PUT body: %v", err)
+			}
+			respondJSON(t, w, clockify.TimeEntry{ID: "e1", Description: "Write docs", ProjectID: "p1", ProjectName: "Docs", Billable: true, TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
+		"description_contains": "draft docs",
+		"new_description":      "Write docs",
+		"billable":             true,
+	})
+	if err != nil {
+		t.Fatalf("find and update failed: %v", err)
+	}
+	if !putCalled {
+		t.Fatal("expected PUT to be called")
+	}
+
+	env, ok := result.(ResultEnvelope)
+	if !ok {
+		t.Fatalf("unexpected result type: %T", result)
+	}
+	data, ok := env.Data.(FindAndUpdateEntryData)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", env.Data)
+	}
+	if data.Entry.Description != "Write docs" {
+		t.Fatalf("expected updated description, got %s", data.Entry.Description)
+	}
+	hasDesc, hasBillable := false, false
+	for _, f := range data.UpdatedFields {
+		switch f {
+		case "description":
+			hasDesc = true
+		case "billable":
+			hasBillable = true
+		}
+	}
+	if !hasDesc || !hasBillable {
+		t.Fatalf("expected updatedFields to include description and billable, got %v", data.UpdatedFields)
+	}
+	// PUT body must carry the merged fields
+	if gotPutBody["description"] != "Write docs" {
+		t.Fatalf("expected description in PUT body, got %+v", gotPutBody)
+	}
+	if gotPutBody["billable"] != true {
+		t.Fatalf("expected billable=true in PUT body, got %+v", gotPutBody)
+	}
+}
+
+// TestListClientsPagination verifies that page and page_size args are forwarded
+// to the Clockify API as query parameters.
+func TestListClientsPagination(t *testing.T) {
+	var gotPage, gotPageSize string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/clients" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		gotPage = r.URL.Query().Get("page")
+		gotPageSize = r.URL.Query().Get("page-size")
+		respondJSON(t, w, []clockify.ClientEntity{{ID: "c1", Name: "Acme"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListClients(context.Background(), map[string]any{
+		"page":      2,
+		"page_size": 100,
+	})
+	if err != nil {
+		t.Fatalf("list clients failed: %v", err)
+	}
+	if gotPage != "2" || gotPageSize != "100" {
+		t.Fatalf("expected page=2 page-size=100, got page=%s page-size=%s", gotPage, gotPageSize)
+	}
+	meta := result.Meta
+	if meta["page"] != 2 || meta["pageSize"] != 100 {
+		t.Fatalf("expected meta page=2 pageSize=100, got %+v", meta)
+	}
+}
+
+// TestListClientsPageSizeCap ensures page_size is capped at 200.
+func TestListClientsPageSizeCap(t *testing.T) {
+	var gotPageSize string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPageSize = r.URL.Query().Get("page-size")
+		respondJSON(t, w, []clockify.ClientEntity{})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ListClients(context.Background(), map[string]any{"page_size": 9999})
+	if err != nil {
+		t.Fatalf("list clients failed: %v", err)
+	}
+	if gotPageSize != "200" {
+		t.Fatalf("expected page-size capped at 200, got %s", gotPageSize)
+	}
+}
+
+// TestListTags verifies default pagination (page=1, page_size=50).
+func TestListTags(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("page") != "1" || r.URL.Query().Get("page-size") != "50" {
+			t.Fatalf("expected default pagination, got %s", r.URL.RawQuery)
+		}
+		respondJSON(t, w, []clockify.Tag{{ID: "t1", Name: "urgent"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListTags(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("list tags failed: %v", err)
+	}
+	tags, ok := result.Data.([]clockify.Tag)
+	if !ok || len(tags) != 1 {
+		t.Fatalf("expected 1 tag, got %+v", result.Data)
+	}
+}
+
+// TestListTasks verifies that project ref is resolved and pagination applied.
+func TestListTasks(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/ws1/projects":
+			respondJSON(t, w, []map[string]any{{"id": "p1", "name": "MyProj"}})
+		case "/workspaces/ws1/projects/p1/tasks":
+			respondJSON(t, w, []clockify.Task{{ID: "tk1", Name: "Task A", ProjectID: "p1"}})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListTasks(context.Background(), map[string]any{"project": "MyProj"})
+	if err != nil {
+		t.Fatalf("list tasks failed: %v", err)
+	}
+	if result.Action != "clockify_list_tasks" {
+		t.Fatalf("unexpected action: %s", result.Action)
+	}
+	tasks, ok := result.Data.([]clockify.Task)
+	if !ok || len(tasks) != 1 || tasks[0].ID != "tk1" {
+		t.Fatalf("unexpected tasks: %+v", result.Data)
+	}
+}
+
+// TestListTasksMissingProject verifies fail-closed on missing project arg.
+func TestListTasksMissingProject(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("no request expected")
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ListTasks(context.Background(), map[string]any{})
+	if err == nil {
+		t.Fatal("expected error for missing project")
+	}
+}
+
+// TestListEntries verifies basic listing with date filters and pagination.
+func TestListEntries(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			q := r.URL.Query()
+			if q.Get("start") == "" || q.Get("end") == "" {
+				t.Fatalf("expected start/end filters, got %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{
+				{ID: "e1", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListEntries(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-02T00:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("list entries failed: %v", err)
+	}
+	if result.Action != "clockify_list_entries" {
+		t.Fatalf("unexpected action: %s", result.Action)
+	}
+}
+
+// TestListUsersPagination covers the users handler and its pagination contract.
+func TestListUsersPagination(t *testing.T) {
+	var gotPage string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/users" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		gotPage = r.URL.Query().Get("page")
+		respondJSON(t, w, []clockify.User{{ID: "u1", Name: "Alice"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ListUsers(context.Background(), map[string]any{"page": 3})
+	if err != nil {
+		t.Fatalf("list users failed: %v", err)
+	}
+	if gotPage != "3" {
+		t.Fatalf("expected page=3, got %s", gotPage)
 	}
 }
 
