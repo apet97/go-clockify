@@ -213,3 +213,28 @@ func TestImprovedErrorMultiple(t *testing.T) {
 		t.Fatalf("error should suggest using full ID, got: %v", err)
 	}
 }
+
+// FuzzValidateID feeds random strings into ValidateID and requires that it
+// never panics. Errors are expected for malicious input.
+func FuzzValidateID(f *testing.F) {
+	seeds := []string{
+		"",
+		"abc123",
+		"5e1b2c3d4e5f6a7b8c9d0e1f",
+		"../etc/passwd",
+		"a/b/c",
+		"a?b=c",
+		"a#b",
+		"\x00",
+		"very-long-" + strings.Repeat("x", 300),
+		"\n\t  ",
+		"with spaces",
+		"uni\u202ecode",
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, input string) {
+		_ = ValidateID(input, "fuzz")
+	})
+}
