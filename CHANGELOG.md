@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-04-08
+
+### Security
+
+- **Go toolchain bumped to 1.25.9** (`go.mod`, CI, docs). Closes 17 stdlib advisories flagged by `govulncheck` across `crypto/x509`, `crypto/tls`, `net/http`, `net/url`, `encoding/asn1`, and `os` — `GO-2025-4007`..`GO-2025-4013`, `GO-2025-4155`, `GO-2025-4175`, and siblings. `govulncheck` now reports **"No vulnerabilities found."**
+
+### Fixed
+
+- **Lint CI job**: migrated `.golangci.yml` to golangci-lint v2 format (`default: none`, `gosimple` folded into `staticcheck`), bumped `golangci-lint-action` from v6.5.2 → v9.2.0 (SHA-pinned) and linter version from v1.62 → v2.5.0.
+- **Lint findings** (12 issues surfaced by v2): `errcheck` on `resp.Body.Close`, `json.Encoder.Encode`, `w.Write`, and the inline RPC error responder in `internal/clockify/client.go` and `internal/mcp/transport_http.go`; `ineffassign` on a dead `explicitRetryAfter` reset; `staticcheck` QF1012 (prefer `fmt.Fprintf`), three QF1001 De Morgan's law flattenings, and SA4004 (dead UTF-8 scan loop in `internal/truncate/truncate_test.go`).
+- **Coverage CI job**: scope tests to `./internal/...` so Go doesn't try to instrument the `cmd/clockify-mcp` main package, which previously tripped `go: no such tool "covdata"` on some toolchain installs. Replaced `bc`-based threshold comparison with `awk` for portability and added `set -euo pipefail`.
+- **HTTP smoke CI job** (`ci.yml` + `release.yml`): the smoke test used `MCP_BEARER_TOKEN=smoke-test` (10 characters), but the server requires ≥16 since the 0.3.x hardening round, so the server refused to start. Bumped the dummy token to 26 characters and updated the `/ready` assertion to accept 503 (the upstream Clockify call must fail with a dummy API key; the smoke test only verifies the endpoint is reachable).
+- **Vulncheck CI job**: install `golang.org/x/vuln/cmd/govulncheck@master` instead of `@latest`. The `v1.1.4` tagged release bundled `go/types` from go1.24 and refused to parse any go1.25 module.
+- **Fuzz CI job**: added `timeout-minutes: 8` ceiling so a hung fuzz target can no longer pin the runner for GitHub's default 6-hour budget, and dropped `-fuzztime` from 30s → 20s.
+
 ## [0.4.0] - 2026-04-08
 
 ### Added
@@ -148,7 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Non-HTTPS base URLs blocked unless loopback or `CLOCKIFY_INSECURE=1`
 - Zero external dependencies (stdlib only)
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/apet97/go-clockify/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/apet97/go-clockify/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/apet97/go-clockify/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/apet97/go-clockify/compare/v0.1.0...v0.2.0

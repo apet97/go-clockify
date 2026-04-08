@@ -8,7 +8,7 @@ cd go-clockify
 go build ./...
 ```
 
-Requires Go 1.25.0+. No external dependencies. Module path: `github.com/apet97/go-clockify`.
+Requires Go 1.25.9+. No external dependencies. Module path: `github.com/apet97/go-clockify`.
 
 ## Running Tests
 

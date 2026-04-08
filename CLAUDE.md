@@ -42,7 +42,7 @@ make check       # fmt + vet + test (CI equivalent)
 make cover       # tests with coverage report
 ```
 
-Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/apet97/go-clockify`.
+Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/apet97/go-clockify`.
 
 ## Environment Variables
 

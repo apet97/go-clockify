@@ -321,13 +321,13 @@ CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
 
 # Build with version
-go build -ldflags "-X main.version=v0.3.0" ./cmd/clockify-mcp
+go build -ldflags "-X main.version=v0.4.1" ./cmd/clockify-mcp
 
 # Show all env vars
 clockify-mcp --help
 ```
 
-Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/apet97/go-clockify`.
+Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/apet97/go-clockify`.
 
 ## Compatibility
 
@@ -337,7 +337,7 @@ Go 1.25.0, stdlib only — zero external dependencies. Module path: `github.com/
 | Claude Desktop | latest |
 | Cursor | latest |
 | Other MCP clients | any supporting stdio or Streamable HTTP |
-| Go | 1.25.0+ |
+| Go | 1.25.9+ |
 | Node.js (npm wrapper) | 16+ |
 
 ## Troubleshooting
