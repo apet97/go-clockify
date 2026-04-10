@@ -200,6 +200,8 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit (`0` disables concurrency limiting) |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per minute (`0` disables window limiting) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Response token budget (0 = off) |
+| `MCP_MAX_INFLIGHT_TOOL_CALLS` | `64` | Stdio dispatch-layer goroutine cap. Acquired before goroutine spawn, independent of business rate limiting. `0` disables. |
+| `CLOCKIFY_REPORT_MAX_ENTRIES` | `10000` | Hard cap on entries aggregated by report tools. When `include_entries=true` and the range exceeds the cap, the tool fails closed with an actionable error. `0` disables the cap. |
 
 ### Bootstrap
 

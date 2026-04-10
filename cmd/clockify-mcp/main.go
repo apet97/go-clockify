@@ -242,9 +242,11 @@ Environment Variables:
     CLOCKIFY_OVERLAP_CHECK    Overlapping entry detection (default: true)
 
   Performance:
-    CLOCKIFY_MAX_CONCURRENT   Concurrent tool call limit, 0=off (default: 10)
-    CLOCKIFY_RATE_LIMIT       Tool calls per minute, 0=off (default: 120)
-    CLOCKIFY_TOKEN_BUDGET     Response token budget, 0=off (default: 8000)
+    CLOCKIFY_MAX_CONCURRENT        Concurrent tool call limit, 0=off (default: 10)
+    CLOCKIFY_RATE_LIMIT            Tool calls per minute, 0=off (default: 120)
+    CLOCKIFY_TOKEN_BUDGET          Response token budget, 0=off (default: 8000)
+    MCP_MAX_INFLIGHT_TOOL_CALLS    Stdio dispatch goroutine cap, 0=off (default: 64)
+    CLOCKIFY_REPORT_MAX_ENTRIES    Hard cap on entries aggregated by report tools, 0=off (default: 10000)
 
   Bootstrap:
     CLOCKIFY_BOOTSTRAP_MODE   full_tier1 (default), minimal, custom

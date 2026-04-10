@@ -68,10 +68,12 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_OVERLAP_CHECK` | `true` | Detect overlapping time entries |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | `full_tier1`, `minimal`, `custom` |
 | `CLOCKIFY_BOOTSTRAP_TOOLS` | — | Comma-separated tools for custom mode |
-| `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (`0` disables this layer) |
+| `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (business layer, `0` disables) |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window (`0` disables this layer) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Token truncation budget (0=off) |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool-call timeout (5s–10m, Go duration format) |
+| `MCP_MAX_INFLIGHT_TOOL_CALLS` | `64` | Stdio dispatch-layer goroutine cap (`0` disables) |
+| `CLOCKIFY_REPORT_MAX_ENTRIES` | `10000` | Hard cap on entries aggregated by report tools (`0` disables) |
 
 ### Transport
 | Variable | Default | Purpose |

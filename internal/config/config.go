@@ -31,6 +31,12 @@ type Config struct {
 
 	// Tool execution
 	ToolTimeout time.Duration
+
+	// Dispatch-layer concurrency bound for stdio tools/call. 0 disables.
+	MaxInFlightToolCalls int
+
+	// Hard cap on entries aggregated by report tools. 0 disables.
+	ReportMaxEntries int
 }
 
 func Load() (Config, error) {
@@ -127,6 +133,33 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_TOOL_TIMEOUT must be between 5s and 10m")
 		}
 		cfg.ToolTimeout = d
+	}
+
+	cfg.MaxInFlightToolCalls = 64
+	if v := os.Getenv("MCP_MAX_INFLIGHT_TOOL_CALLS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_MAX_INFLIGHT_TOOL_CALLS %q: %w", v, err)
+		}
+		if n < 0 {
+			return Config{}, fmt.Errorf("MCP_MAX_INFLIGHT_TOOL_CALLS must be >= 0")
+		}
+		if n > 10000 {
+			return Config{}, fmt.Errorf("MCP_MAX_INFLIGHT_TOOL_CALLS must be <= 10000")
+		}
+		cfg.MaxInFlightToolCalls = n
+	}
+
+	cfg.ReportMaxEntries = 10000
+	if v := os.Getenv("CLOCKIFY_REPORT_MAX_ENTRIES"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_REPORT_MAX_ENTRIES %q: %w", v, err)
+		}
+		if n < 0 {
+			return Config{}, fmt.Errorf("CLOCKIFY_REPORT_MAX_ENTRIES must be >= 0")
+		}
+		cfg.ReportMaxEntries = n
 	}
 
 	return cfg, nil
