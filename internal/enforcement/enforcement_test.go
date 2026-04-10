@@ -2,6 +2,7 @@ package enforcement
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync/atomic"
@@ -735,6 +736,69 @@ func TestAfterCall_TruncationDisabled(t *testing.T) {
 	}
 	if _, hasTrunc := m["_truncation"]; hasTrunc {
 		t.Fatal("did not expect truncation metadata when truncation is disabled")
+	}
+}
+
+// TestAfterCall_TruncatesResultEnvelope proves the JSON roundtrip in AfterCall
+// lets truncation reach typed struct results. It constructs a ResultEnvelope-
+// shaped struct (anonymous, to avoid importing the tools package and creating
+// a circular dependency) with a large Data slice and verifies the slice is
+// reduced and _truncation metadata is attached.
+func TestAfterCall_TruncatesResultEnvelope(t *testing.T) {
+	type envelope struct {
+		OK     bool           `json:"ok"`
+		Action string         `json:"action"`
+		Data   any            `json:"data,omitempty"`
+		Meta   map[string]any `json:"meta,omitempty"`
+	}
+	bigData := make([]any, 500)
+	for i := range bigData {
+		bigData[i] = map[string]any{
+			"id":   i,
+			"text": strings.Repeat("x", 200),
+		}
+	}
+	env := envelope{OK: true, Action: "test", Data: bigData}
+
+	p := &Pipeline{Truncation: truncate.Config{Enabled: true, TokenBudget: 200}}
+	out, err := p.AfterCall(env)
+	if err != nil {
+		t.Fatalf("AfterCall error: %v", err)
+	}
+	b, _ := json.Marshal(out)
+	// Rough token estimate: len(bytes)/4. Assert result fits loosely.
+	if len(b)/4 > 500 {
+		t.Fatalf("truncation did not apply: got %d bytes (~%d tokens)", len(b), len(b)/4)
+	}
+	// Verify the _truncation metadata is present at top level.
+	m, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", out)
+	}
+	if _, ok := m["_truncation"]; !ok {
+		t.Fatal("expected _truncation metadata in result")
+	}
+	// Verify the data array is smaller than the original.
+	data, ok := m["data"].([]any)
+	if !ok {
+		t.Fatalf("expected data to be []any, got %T", m["data"])
+	}
+	if len(data) >= 500 {
+		t.Fatalf("expected data array to be reduced, got len=%d", len(data))
+	}
+	// Verify elements remain homogeneous: every element is a map with an id key
+	// and NO sentinel leaked in.
+	for i, el := range data {
+		elm, ok := el.(map[string]any)
+		if !ok {
+			t.Fatalf("element %d: expected map, got %T", i, el)
+		}
+		if _, ok := elm["id"]; !ok {
+			t.Fatalf("element %d: missing 'id' key", i)
+		}
+		if _, bad := elm["_truncated"]; bad {
+			t.Fatalf("element %d: sentinel _truncated leaked", i)
+		}
 	}
 }
 

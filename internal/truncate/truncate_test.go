@@ -1,6 +1,8 @@
 package truncate
 
 import (
+	"fmt"
+	"math/rand/v2"
 	"os"
 	"strings"
 	"testing"
@@ -175,29 +177,183 @@ func TestReduceArrays(t *testing.T) {
 	}
 	data := map[string]any{"items": items}
 
-	result := reduceArrays(data).(map[string]any)
+	rep := &TruncationReport{}
+	result := reduceArrays(data, "", rep).(map[string]any)
 	arr := result["items"].([]any)
 
-	// Should be halved: 10 items + 1 truncation indicator = 11
-	if len(arr) != 11 {
-		t.Errorf("expected 11 elements (10 + indicator), got %d", len(arr))
+	// Should be halved to 10 with NO sentinel element.
+	if len(arr) != 10 {
+		t.Errorf("expected 10 elements (halved, no sentinel), got %d", len(arr))
 	}
 
-	// Last element should be the truncation indicator
-	indicator := arr[len(arr)-1].(map[string]any)
-	if indicator["_truncated"] != true {
-		t.Error("expected _truncated=true in indicator")
+	// Every surviving element must still be a homogeneous {id: int} object —
+	// no _truncated/_remaining sentinel leaked into the array.
+	for i, el := range arr {
+		m, ok := el.(map[string]any)
+		if !ok {
+			t.Fatalf("element %d: expected map[string]any, got %T", i, el)
+		}
+		if _, ok := m["id"]; !ok {
+			t.Fatalf("element %d: missing 'id' key, got %v", i, m)
+		}
+		if _, bad := m["_truncated"]; bad {
+			t.Fatalf("element %d: sentinel _truncated leaked into array", i)
+		}
+		if _, bad := m["_remaining"]; bad {
+			t.Fatalf("element %d: sentinel _remaining leaked into array", i)
+		}
 	}
-	if indicator["_remaining"] != 10 {
-		t.Errorf("expected _remaining=10, got %v", indicator["_remaining"])
+}
+
+func TestReduceArrays_ReportPopulated(t *testing.T) {
+	items := make([]any, 20)
+	for i := range items {
+		items[i] = map[string]any{"id": i}
+	}
+	data := map[string]any{"items": items}
+
+	rep := &TruncationReport{}
+	_ = reduceArrays(data, "", rep)
+
+	if len(rep.ArrayReductions) != 1 {
+		t.Fatalf("expected 1 array reduction, got %d", len(rep.ArrayReductions))
+	}
+	r := rep.ArrayReductions[0]
+	if r.Path != "items" {
+		t.Errorf("expected path=items, got %q", r.Path)
+	}
+	if r.OriginalLen != 20 {
+		t.Errorf("expected OriginalLen=20, got %d", r.OriginalLen)
+	}
+	if r.NewLen != 10 {
+		t.Errorf("expected NewLen=10, got %d", r.NewLen)
+	}
+	if r.Removed != 10 {
+		t.Errorf("expected Removed=10, got %d", r.Removed)
+	}
+}
+
+func TestReduceArrays_Homogeneous(t *testing.T) {
+	// Seed an envelope-shaped map with a 20-element homogeneous array.
+	items := make([]any, 20)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "name": fmt.Sprintf("item-%d", i)}
+	}
+	data := map[string]any{
+		"ok":     true,
+		"action": "list",
+		"items":  items,
+	}
+
+	// Very small budget forces stage 4 (array reduction) to run.
+	cfg := Config{TokenBudget: 1, Enabled: true}
+	out, truncated := cfg.Truncate(data)
+	if !truncated {
+		t.Fatal("expected truncation at budget=1")
+	}
+	m, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map, got %T", out)
+	}
+	arr, ok := m["items"].([]any)
+	if !ok {
+		t.Fatalf("expected items to be []any, got %T", m["items"])
+	}
+	if len(arr) >= 20 {
+		t.Fatalf("expected items to shrink, got len=%d", len(arr))
+	}
+	for i, el := range arr {
+		em, ok := el.(map[string]any)
+		if !ok {
+			t.Fatalf("element %d: expected map[string]any, got %T", i, el)
+		}
+		if _, ok := em["id"]; !ok {
+			t.Fatalf("element %d: missing 'id' key", i)
+		}
+		if _, bad := em["_truncated"]; bad {
+			t.Fatalf("element %d: sentinel _truncated leaked in", i)
+		}
+		if _, bad := em["_remaining"]; bad {
+			t.Fatalf("element %d: sentinel _remaining leaked in", i)
+		}
+	}
+}
+
+// TestTruncate_PropertyArraysStayHomogeneous generates random nested maps with
+// homogeneous arrays of {id:int} objects and verifies that after Truncate at
+// low budgets, every array in the output still contains only map elements.
+func TestTruncate_PropertyArraysStayHomogeneous(t *testing.T) {
+	r := rand.New(rand.NewPCG(42, 1337))
+	for iter := 0; iter < 60; iter++ {
+		data := genNestedMap(r, 3)
+		budget := 1 + r.IntN(20)
+		cfg := Config{TokenBudget: budget, Enabled: true}
+		out, _ := cfg.Truncate(data)
+		assertArraysHomogeneous(t, out, fmt.Sprintf("iter=%d root", iter))
+	}
+}
+
+// genNestedMap builds a map with up to depth levels containing some
+// homogeneous arrays of {id:int} objects plus scalar fields.
+func genNestedMap(r *rand.Rand, depth int) map[string]any {
+	m := map[string]any{
+		"id":   r.IntN(1000),
+		"name": strings.Repeat("n", 5+r.IntN(10)),
+	}
+	// Homogeneous object array.
+	arrLen := 2 + r.IntN(10)
+	arr := make([]any, arrLen)
+	for i := 0; i < arrLen; i++ {
+		arr[i] = map[string]any{"id": i, "text": strings.Repeat("x", 5+r.IntN(10))}
+	}
+	m["items"] = arr
+	if depth > 0 && r.IntN(2) == 0 {
+		m["child"] = genNestedMap(r, depth-1)
+	}
+	return m
+}
+
+// assertArraysHomogeneous walks v and fails if any []any contains a
+// non-map element (sentinels would be maps too, but per contract we
+// also reject objects with _truncated/_remaining keys).
+func assertArraysHomogeneous(t *testing.T, v any, path string) {
+	t.Helper()
+	switch val := v.(type) {
+	case map[string]any:
+		for k, child := range val {
+			if k == "_truncation" {
+				// Metadata lives here; skip its internal shape.
+				continue
+			}
+			assertArraysHomogeneous(t, child, path+"."+k)
+		}
+	case []any:
+		for i, el := range val {
+			em, ok := el.(map[string]any)
+			if !ok {
+				t.Fatalf("%s[%d]: expected map element, got %T", path, i, el)
+			}
+			if _, bad := em["_truncated"]; bad {
+				t.Fatalf("%s[%d]: array sentinel _truncated leaked", path, i)
+			}
+			if _, bad := em["_remaining"]; bad {
+				t.Fatalf("%s[%d]: array sentinel _remaining leaked", path, i)
+			}
+			assertArraysHomogeneous(t, el, fmt.Sprintf("%s[%d]", path, i))
+		}
 	}
 }
 
 func TestMetadataInjected(t *testing.T) {
-	// Use a very small budget to force truncation
+	// Use a very small budget to force truncation through stage 4 so
+	// array_reductions is populated.
 	cfg := Config{TokenBudget: 1, Enabled: true}
+	items := make([]any, 100)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "text": strings.Repeat("x", 20)}
+	}
 	data := map[string]any{
-		"items": make([]any, 100),
+		"items": items,
 		"big":   strings.Repeat("x", 1000),
 	}
 	result, truncated := cfg.Truncate(data)
@@ -217,6 +373,13 @@ func TestMetadataInjected(t *testing.T) {
 	}
 	if meta["original_token_estimate"] == nil {
 		t.Error("expected original_token_estimate in metadata")
+	}
+	reductions, ok := meta["array_reductions"].([]ArrayReduction)
+	if !ok {
+		t.Fatalf("expected array_reductions []ArrayReduction in metadata, got %T", meta["array_reductions"])
+	}
+	if len(reductions) == 0 {
+		t.Fatal("expected at least one array reduction recorded")
 	}
 }
 
