@@ -1,8 +1,19 @@
 # clockify-mcp-go
 
-MCP server for Clockify, built in Go. 124 tools total: 33 Tier 1 tools registered at startup and 91 Tier 2 tools activated on demand across 11 domains.
+Production-grade MCP server for Clockify, built in Go. 124 tools total: 33 Tier 1 registered at startup and 91 Tier 2 activated on demand across 11 domains.
 
-Zero external dependencies. Single static binary.
+Zero external dependencies. Single static binary. Every release is signed with cosign keyless OIDC, ships a SPDX SBOM, and carries SLSA build provenance for both binaries and container images.
+
+**Highlights**
+
+- **Layered architecture** — protocol core, Clockify client, tool surface, safety layer. `Enforcement` / `Activator` / `Notifier` interfaces keep the protocol core domain-free.
+- **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged`, and returns an `instructions` string for agentic clients.
+- **Four policy modes** (`read_only`, `safe_core`, `standard`, `full`) + per-tool/group deny/allow lists + three-strategy dry-run for every destructive operation.
+- **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and window-based throughput limiter. Neither layer can strand resources in the other.
+- **Observability built in** — `/metrics` endpoint exposes tool RED metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Histogram buckets are tuned to the documented SLO boundaries.
+- **PII-redacting structured logs** — every slog handler is wrapped in a recursive scrubber that masks 20+ secret-key patterns before they reach the encoder.
+- **Hardened Kubernetes reference manifests** — non-root distroless pod, read-only root FS, dropped ALL capabilities, NetworkPolicy (default-deny), PodDisruptionBudget, dedicated ServiceAccount, image pinned by version.
+- **Multi-arch container image pipeline** — buildx → Trivy scan → cosign keyless sign → SPDX SBOM → SLSA provenance attested to the registry.
 
 ## Quickstart
 
@@ -219,8 +230,9 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (validated at startup); clients send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
+| `MCP_STRICT_HOST_CHECK` | — | Set `1` to enforce DNS rebinding protection: the inbound `Host` header must match a loopback literal or a host in `MCP_ALLOWED_ORIGINS`. Default off to preserve reverse-proxy deployments that rewrite Host. |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
-| `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
+| `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr). All handlers are wrapped in a PII-redacting layer that scrubs secret keys (`authorization`, `api_key`, `bearer`, `token`, …) before encoding. |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Common Workflows
@@ -364,8 +376,10 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 
 ## Deployment and operations
 
-- Kubernetes reference manifests: [deploy/k8s/](deploy/k8s/)
-- Incident runbooks: [docs/runbooks/](docs/runbooks/)
+- **Kubernetes reference manifests** in [`deploy/k8s/`](deploy/k8s/): hardened `Deployment`, `Service`, `ConfigMap`, `Secret` template, `ServiceAccount`, `PodDisruptionBudget`, and `NetworkPolicy` (default-deny ingress except labelled allowed pods, default-deny egress except DNS + HTTPS).
+- **Docker image pipeline** in [`.github/workflows/docker-image.yml`](.github/workflows/docker-image.yml): multi-arch buildx (linux/amd64, linux/arm64) → Trivy scan (fail on HIGH/CRITICAL) → cosign keyless OIDC sign → SPDX SBOM → SLSA build provenance attested to the registry. The image ships at `ghcr.io/apet97/go-clockify:v<version>`.
+- **Incident runbooks**: [`docs/runbooks/`](docs/runbooks/).
+- **Observability reference**: [`docs/observability.md`](docs/observability.md) — metric names, SLOs, alert rules, log event taxonomy.
 
 ## Documentation
 

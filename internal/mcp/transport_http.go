@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -32,12 +33,13 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", s.handleHealth)
-	mux.HandleFunc("GET /ready", s.handleReady)
-	mux.HandleFunc("GET /metrics", handleMetrics)
-	mux.Handle("POST /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
+	mux.HandleFunc("GET /health", observeHTTP("/health", s.handleHealth))
+	mux.HandleFunc("GET /ready", observeHTTP("/ready", s.handleReady))
+	mux.HandleFunc("GET /metrics", observeHTTP("/metrics", handleMetrics))
+	mcpHandler := s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize)
+	mux.Handle("POST /mcp", observeHTTPH("/mcp", mcpHandler))
 	// Handle OPTIONS for CORS preflight on /mcp
-	mux.Handle("OPTIONS /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
+	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", mcpHandler))
 
 	srv := &http.Server{
 		Addr:              bind,
@@ -64,6 +66,14 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	ln, err := net.Listen("tcp", bind)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", bind, err)
+	}
+
+	// Install the legacy-POST notification sink so activation events
+	// (tools/list_changed) are visibly dropped and counted instead of
+	// silently vanishing into a nil encoder. Real server→client streaming
+	// requires the Streamable HTTP (2025-03-26) transport rewrite.
+	if s.notifier == nil {
+		s.SetNotifier(droppingNotifier{})
 	}
 
 	// Auto-initialize for HTTP mode
@@ -104,6 +114,59 @@ func (sr *statusRecorder) Write(b []byte) (int, error) {
 		sr.status = http.StatusOK
 	}
 	return sr.ResponseWriter.Write(b)
+}
+
+// observeHTTP wraps a HandlerFunc with metrics and panic recovery, recording
+// both the HTTPRequestsTotal counter and HTTPRequestDuration histogram against
+// a fixed, bounded path label. Use this for every mux route so /metrics
+// cardinality stays predictable regardless of probe traffic.
+func observeHTTP(path string, fn http.HandlerFunc) http.HandlerFunc {
+	return observeHTTPH(path, http.HandlerFunc(fn))
+}
+
+// observeHTTPH is the Handler form of observeHTTP for already-constructed handlers.
+func observeHTTPH(path string, h http.Handler) http.HandlerFunc {
+	return func(rawW http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		w := &statusRecorder{ResponseWriter: rawW}
+		defer func() {
+			if rec := recover(); rec != nil {
+				metrics.PanicsRecoveredTotal.Inc("http")
+				slog.Error("panic_recovered",
+					"site", "http",
+					"path", path,
+					"method", r.Method,
+					"panic", fmtAny(rec),
+					"stack", string(debug.Stack()),
+				)
+				if w.status == 0 {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusInternalServerError)
+					_, _ = w.Write([]byte(`{"error":"internal server error"}`))
+				}
+			}
+			status := w.status
+			if status == 0 {
+				status = http.StatusOK
+			}
+			statusStr := strconv.Itoa(status)
+			metrics.HTTPRequestsTotal.Inc(path, r.Method, statusStr)
+			metrics.HTTPRequestDuration.Observe(time.Since(start).Seconds(), path, r.Method, statusStr)
+		}()
+		h.ServeHTTP(w, r)
+	}
+}
+
+// fmtAny safely stringifies a panic value without importing fmt in hot paths.
+func fmtAny(v any) string {
+	switch x := v.(type) {
+	case error:
+		return x.Error()
+	case string:
+		return x
+	default:
+		return fmt.Sprintf("%v", x)
+	}
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -158,21 +221,40 @@ func (s *Server) checkReady(ctx context.Context) error {
 }
 
 func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
-	return func(rawW http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		reqID := s.requestSeq.Add(1)
-		w := &statusRecorder{ResponseWriter: rawW}
-		defer func() {
-			status := w.status
-			if status == 0 {
-				status = http.StatusOK
-			}
-			metrics.HTTPRequestsTotal.Inc(r.URL.Path, r.Method, strconv.Itoa(status))
-		}()
 
-		// Security headers on all responses
+		// Security headers on all responses. HSTS/CSP/Referrer-Policy are
+		// emitted alongside the legacy nosniff+no-store pair for defense in
+		// depth; operators running without a reverse proxy still get the
+		// baseline modern browser hardening.
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Permissions-Policy", "()")
+
+		// DNS rebinding protection: when strict host checking is enabled,
+		// reject Host headers that don't match the configured origin
+		// allowlist. This complements the Origin check for clients that
+		// omit Origin and is specifically the attack vector DNS rebinding
+		// uses against loopback-bound services.
+		if s.StrictHostCheck && !isHostAllowed(r.Host, allowedOrigins, allowAnyOrigin) {
+			writeJSONError(w, http.StatusForbidden, "host not allowed")
+			slog.Warn("http_request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"host", r.Host,
+				"status", 403,
+				"reason", "host_rejected",
+				"req_id", reqID,
+				"duration_ms", time.Since(start).Milliseconds(),
+			)
+			return
+		}
 
 		// 1. CORS check
 		if origin := r.Header.Get("Origin"); origin != "" {
@@ -280,6 +362,55 @@ func isOriginAllowed(origin string, allowed []string, allowAnyOrigin bool) bool 
 	}
 	for _, a := range allowed {
 		if strings.EqualFold(a, origin) {
+			return true
+		}
+	}
+	return false
+}
+
+// isHostAllowed protects against DNS rebinding attacks when the operator has
+// opted into strict mode by configuring MCP_ALLOWED_ORIGINS. In strict mode
+// the Host header must match either a loopback literal or the host component
+// of one of the configured allowed origins. When no allowlist is configured
+// (legacy behaviour) or AllowAnyOrigin is set we accept any Host — this keeps
+// backward compatibility for operators running behind a reverse proxy that
+// rewrites Host, and for local stdio-over-HTTP development workflows.
+//
+// Loopback is always accepted regardless of allowlist so curl 127.0.0.1:8080
+// smoke tests continue to work.
+func isHostAllowed(host string, allowed []string, allowAnyOrigin bool) bool {
+	if allowAnyOrigin {
+		return true
+	}
+	// No allowlist configured → permissive. Operators who want strict DNS
+	// rebinding protection must explicitly list their public origin.
+	if len(allowed) == 0 {
+		return true
+	}
+	if host == "" {
+		return false
+	}
+	// Strip port for comparison.
+	h := host
+	if i := strings.LastIndex(h, ":"); i >= 0 && strings.Count(h, ":") == 1 {
+		h = h[:i]
+	}
+	// IPv6 literal like [::1]:8080 / [::1]
+	h = strings.TrimPrefix(strings.TrimSuffix(h, "]"), "[")
+	switch strings.ToLower(h) {
+	case "localhost", "127.0.0.1", "::1", "0.0.0.0":
+		return true
+	}
+	for _, a := range allowed {
+		// allowed entries look like "https://example.com"; extract host.
+		ah := a
+		if i := strings.Index(ah, "://"); i >= 0 {
+			ah = ah[i+3:]
+		}
+		if i := strings.IndexAny(ah, "/?#"); i >= 0 {
+			ah = ah[:i]
+		}
+		if strings.EqualFold(ah, host) || strings.EqualFold(ah, h) {
 			return true
 		}
 	}

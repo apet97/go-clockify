@@ -22,15 +22,45 @@ at the network layer (NetworkPolicy, ingress filter, or a sidecar).
 
 ## Metrics reference
 
+### Server RED metrics
+
 | Name | Type | Labels | Description |
 |---|---|---|---|
 | `clockify_mcp_tool_calls_total` | counter | `tool`, `outcome` | Dispatches of `tools/call` by tool name and outcome. |
-| `clockify_mcp_tool_call_duration_seconds` | histogram | `tool` | Dispatch duration in seconds. Default Prometheus buckets. |
+| `clockify_mcp_tool_call_duration_seconds` | histogram | `tool` | Dispatch duration in seconds. Buckets tuned to the 3s/10s SLO: `{0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 45}`. |
+| `clockify_mcp_http_requests_total` | counter | `path`, `method`, `status` | HTTP requests hitting the transport. `path` is normalized to `{/mcp, /health, /ready, /metrics, /other}`. |
+| `clockify_mcp_http_request_duration_seconds` | histogram | `path`, `method`, `status` | HTTP request duration. Buckets tuned for fast JSON-RPC: `{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}`. |
 | `clockify_mcp_rate_limit_rejections_total` | counter | `kind` | Rate limiter rejections. Kind is `concurrency` or `window`. |
-| `clockify_mcp_http_requests_total` | counter | `path`, `method`, `status` | HTTP requests hitting the transport. |
-| `clockify_mcp_ready_state` | gauge | — | 1 when the cached readiness probe is passing, 0 otherwise. |
-| `clockify_mcp_build_info` | gauge | `version` | Build metadata. Value is always 1. |
+| `clockify_mcp_protocol_errors_total` | counter | `code` | JSON-RPC protocol-level error responses by error code. `code` is the numeric JSON-RPC error code as a string, or a short reason for notification drops. |
+| `clockify_mcp_panics_recovered_total` | counter | `site` | Panics recovered from tool handlers or HTTP handlers. `site` is one of `stdio_tool_dispatch`, `http`. |
 | `clockify_mcp_inflight_tool_calls` | gauge | — | Current depth of the stdio dispatch semaphore. |
+| `clockify_mcp_ready_state` | gauge | — | 1 when the cached readiness probe is passing, 0 otherwise. |
+| `clockify_mcp_build_info` | gauge | `version`, `commit`, `build_date`, `go_version` | Build metadata. Value is always 1. |
+
+### Upstream Clockify client metrics
+
+| Name | Type | Labels | Description |
+|---|---|---|---|
+| `clockify_upstream_requests_total` | counter | `endpoint`, `method`, `status` | Outbound Clockify API requests. `endpoint` is the path template with `:id` placeholders; `status` is bucketed to `{2xx, 3xx, 4xx, 5xx, error}`. |
+| `clockify_upstream_request_duration_seconds` | histogram | `endpoint`, `method` | Outbound Clockify API latency. Buckets: `{0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 45}`. |
+| `clockify_upstream_retries_total` | counter | `endpoint`, `reason` | Retry attempts by reason: `rate_limited`, `bad_gateway`, `service_unavailable`, `gateway_timeout`, `error`. |
+
+### Go runtime + process metrics
+
+| Name | Type | Labels | Description |
+|---|---|---|---|
+| `go_goroutines` | gauge | — | Number of goroutines currently running. |
+| `go_gomaxprocs` | gauge | — | Current `GOMAXPROCS` setting. |
+| `go_memstats_heap_alloc_bytes` | gauge | — | Heap bytes allocated and still in use. |
+| `go_memstats_heap_inuse_bytes` | gauge | — | Heap bytes currently in use (objects + unused). |
+| `go_memstats_heap_released_bytes` | gauge | — | Heap bytes released to the OS. |
+| `go_memstats_stack_inuse_bytes` | gauge | — | Stack bytes in use. |
+| `go_memstats_sys_bytes` | gauge | — | Total bytes obtained from the OS. |
+| `go_gc_runs_total` | gauge | — | Total number of completed GC cycles. |
+| `go_info` | gauge | `version` | Go runtime version. Value is always 1. |
+| `process_start_time_seconds` | gauge | — | Process start time as unix epoch seconds. |
+| `process_resident_memory_bytes` | gauge | — | Resident memory approximation via `runtime/metrics`. |
+| `process_open_fds` | gauge | — | Open file descriptor count (cached 5s, best-effort via `/dev/fd`). |
 
 ### Outcome values for `tool_calls_total`
 
@@ -224,10 +254,12 @@ Stable events emitted by the server:
 
 | Event | Level | Source | Stable keys |
 |---|---|---|---|
-| `initialize` | info | `internal/mcp/server.go` | `client`, `version` |
+| `initialize` | info | `internal/mcp/server.go` | `protocol_version`, `requested_version`, `client_name`, `client_version` |
 | `tool_call` | info | `internal/mcp/server.go` | `tool`, `req_id`, `duration_ms`, `outcome` |
 | `tool_error` | warn | `internal/mcp/server.go` | `tool`, `req_id`, `error` |
 | `async_response_failed` | warn | `internal/mcp/server.go` | `error` |
+| `panic_recovered` | error | `internal/mcp/server.go`, `internal/mcp/transport_http.go` | `site`, `tool` / `path` / `method`, `panic`, `stack` |
+| `notification_dropped` | warn | `internal/mcp/server.go` | `method`, `reason` |
 | `http_request` | info | `internal/mcp/transport_http.go` | `method`, `path`, `rpc_method`, `status`, `req_id`, `duration_ms` |
 | `http_auth_failure` | warn | `internal/mcp/transport_http.go` | `remote`, `reason` |
 | `http_body_too_large` | warn | `internal/mcp/transport_http.go` | `limit`, `size` |
@@ -237,9 +269,17 @@ Stable events emitted by the server:
 | `response_truncated` | debug | `internal/enforcement/enforcement.go` | `budget` |
 | `truncate_marshal_failed` | debug | `internal/enforcement/enforcement.go` | `error` |
 
-Secret values (bearer tokens, API keys) are never logged. Request IDs
-(`req_id`) are monotonic per-process counters suitable for log
-correlation.
+**PII redaction.** Every slog handler is wrapped in
+`internal/logging.RedactingHandler`, which recursively scrubs 20+
+well-known secret-key patterns (`authorization`, `api_key`, `bearer`,
+`token`, `cookie`, `client_secret`, `refresh_token`, …) from both
+top-level attrs and nested map/group values before they reach the
+text/JSON encoder. Hot-path code still avoids logging secrets
+explicitly; the redactor is defence-in-depth for accidental
+header-map or error-body logs.
+
+Request IDs (`req_id`) are monotonic per-process counters suitable for
+log correlation.
 
 ## Structured log JSON example
 

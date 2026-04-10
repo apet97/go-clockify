@@ -133,23 +133,75 @@ func New(client *clockify.Client, workspaceID string) *Service {
 	return &Service{Client: client, WorkspaceID: workspaceID}
 }
 
+// baseAnnotations returns the common annotation map every tool carries.
+// openWorldHint is always true because every Clockify MCP tool touches the
+// external Clockify API (not a closed local system), and title is derived
+// from the tool name for display in MCP clients that render a tool picker.
+// Callers overlay hint fields (readOnlyHint, destructiveHint, idempotentHint)
+// on top of this base so each descriptor ends up with a complete annotation
+// set instead of a sparse one that spec-strict clients misinterpret.
+func baseAnnotations(name string) map[string]any {
+	return map[string]any{
+		"title":         titleFromName(name),
+		"openWorldHint": true,
+	}
+}
+
+// titleFromName converts a snake_case tool name into a human-readable title.
+// "clockify_list_entries" → "List Entries", "clockify_quick_report" → "Quick
+// Report". Custom per-tool titles can be added later by overriding the
+// "title" key after the base annotations are copied.
+func titleFromName(name string) string {
+	stripped := strings.TrimPrefix(name, "clockify_")
+	if stripped == "" {
+		return name
+	}
+	parts := strings.Split(stripped, "_")
+	for i, p := range parts {
+		if p == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, " ")
+}
+
 func toolRO(name, desc string, schema map[string]any) mcp.Tool {
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": true, "idempotentHint": true}}
+	ann := baseAnnotations(name)
+	ann["readOnlyHint"] = true
+	ann["destructiveHint"] = false
+	ann["idempotentHint"] = true
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
 }
 
 func toolRW(name, desc string, schema map[string]any) mcp.Tool {
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": false}}
+	ann := baseAnnotations(name)
+	ann["readOnlyHint"] = false
+	// Explicitly declare non-destructive. Absent this, MCP spec-strict
+	// clients assume destructive for write tools and may require extra
+	// confirmation for every call.
+	ann["destructiveHint"] = false
+	ann["idempotentHint"] = false
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
 }
 
 // toolRWIdem marks a write tool as idempotent. Use for PUT/PATCH-style updates
 // and tools whose handlers produce the same end state on repeated calls
 // (e.g. clockify_stop_timer when no timer is running becomes a no-op).
 func toolRWIdem(name, desc string, schema map[string]any) mcp.Tool {
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": false, "idempotentHint": true}}
+	ann := baseAnnotations(name)
+	ann["readOnlyHint"] = false
+	ann["destructiveHint"] = false
+	ann["idempotentHint"] = true
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
 }
 
 func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: map[string]any{"readOnlyHint": false, "destructiveHint": true}}
+	ann := baseAnnotations(name)
+	ann["readOnlyHint"] = false
+	ann["destructiveHint"] = true
+	ann["idempotentHint"] = false
+	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
 }
 
 func requiredSchema(field string) map[string]any {

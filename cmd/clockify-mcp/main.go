@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/enforcement"
+	logslog "github.com/apet97/go-clockify/internal/logging"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
@@ -24,10 +26,21 @@ import (
 	"github.com/apet97/go-clockify/internal/truncate"
 )
 
-// version is set at build time via ldflags:
+// version, commit, and buildDate are populated at build time via ldflags:
 //
-//	go build -ldflags "-X main.version=v0.5.0" ./cmd/clockify-mcp
-var version = "0.5.0"
+//	go build -ldflags "-X main.version=v0.5.0 \
+//	                   -X main.commit=$(git rev-parse HEAD) \
+//	                   -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+//	        ./cmd/clockify-mcp
+//
+// commit and buildDate default to placeholder strings when ldflags are not
+// set (local `go run`, `go build` without flags), so the /metrics build_info
+// gauge always emits a sample.
+var (
+	version   = "0.5.0"
+	commit    = "unknown"
+	buildDate = "unknown"
+)
 
 func main() {
 	if len(os.Args) > 1 {
@@ -48,11 +61,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "warning: unknown MCP_LOG_LEVEL %q, defaulting to info\n", rawLevel)
 	}
 
-	// Configure slog to stderr
+	// Configure slog to stderr. The chosen handler is always wrapped in a
+	// RedactingHandler so that any attribute matching a well-known secret
+	// key (authorization, api_key, bearer, token, ...) is masked before it
+	// reaches the underlying encoder. This is defence-in-depth; hot-path
+	// code should still avoid logging secrets explicitly.
 	var logHandler slog.Handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
 	if os.Getenv("MCP_LOG_FORMAT") == "json" {
 		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
 	}
+	logHandler = logslog.NewRedactingHandler(logHandler)
 	slog.SetDefault(slog.New(logHandler))
 
 	if err := run(); err != nil {
@@ -122,11 +140,21 @@ func run() error {
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
+	// Opt-in DNS rebinding protection. Defaults to off so that reverse-
+	// proxy deployments that rewrite Host are unaffected; operators running
+	// localhost-bound enterprise deployments should set this to 1 alongside
+	// MCP_ALLOWED_ORIGINS.
+	if v := os.Getenv("MCP_STRICT_HOST_CHECK"); v == "1" || strings.EqualFold(v, "true") {
+		server.StrictHostCheck = true
+	}
 
 	// Wire observability gauges. ReadyState uses the server's cached
 	// readiness snapshot so /metrics scrapes do not trigger upstream
 	// Clockify probes; scrapers that need a fresh probe should hit /ready.
-	metrics.BuildInfo.SetFunc(func() float64 { return 1 }, version)
+	metrics.BuildInfo.SetFunc(
+		func() float64 { return 1 },
+		version, commit, buildDate, runtime.Version(),
+	)
 	metrics.ReadyState.SetFunc(func() float64 {
 		if server.IsReadyCached() {
 			return 1

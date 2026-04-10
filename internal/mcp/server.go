@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,6 +18,88 @@ import (
 
 	"github.com/apet97/go-clockify/internal/metrics"
 )
+
+// SupportedProtocolVersions lists MCP protocol versions this server can
+// negotiate, newest first. The first entry is returned as the default when
+// the client does not send a protocolVersion. When a client requests an
+// unsupported version, we echo back the newest supported version — clients
+// that cannot downgrade will treat that as an error and disconnect, which is
+// the spec-compliant behaviour.
+var SupportedProtocolVersions = []string{
+	"2025-06-18",
+	"2025-03-26",
+	"2024-11-05",
+}
+
+// ServerInstructions is returned in the initialize response to teach MCP
+// clients how to navigate the server. Agentic clients consume this as part
+// of their system prompt, so it trades some verbosity for clarity.
+const ServerInstructions = `This is the Clockify Go MCP server. It exposes a tiered tool surface and safety enforcement for Clockify operations.
+
+Tool tiers:
+  - Tier 1 tools are registered at startup and visible in tools/list.
+  - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
+  - Use 'clockify_search_tools' to discover tools by keyword or group name.
+  - Use 'clockify_activate_group' or 'clockify_activate_tool' to enable Tier 2 tools before calling them.
+
+Safety:
+  - The server supports four policy modes: read_only, safe_core, standard (default), full.
+  - Destructive tools run through a dry-run interceptor by default; pass dry_run:true to preview, dry_run:false to execute.
+  - Use 'clockify_policy_info' to inspect the active policy and dry-run configuration.
+  - Tool arguments that reference entities by name (project, client, tag, user) are resolved strictly; ambiguous matches are rejected rather than guessed.
+
+Errors are returned in the MCP tool-error envelope (result.content + isError:true) for tool failures, and as JSON-RPC errors only for protocol violations.`
+
+// Notifier delivers server-initiated notifications (e.g. tools/list_changed)
+// to the connected client. Transports implement this: the stdio transport
+// writes through the shared JSON encoder, while the legacy HTTP POST-only
+// transport logs + counts drops until a real SSE channel is wired by the
+// Streamable HTTP transport rewrite.
+type Notifier interface {
+	Notify(method string, params any) error
+}
+
+// droppingNotifier is installed by the legacy HTTP transport. It records
+// every drop so operators can measure the gap until Streamable HTTP ships.
+type droppingNotifier struct{}
+
+func (droppingNotifier) Notify(method string, _ any) error {
+	metrics.ProtocolErrorsTotal.Inc("notification_dropped")
+	slog.Warn("notification_dropped",
+		"method", method,
+		"reason", "legacy_http_transport",
+		"hint", "migrate to Streamable HTTP for server-initiated notifications",
+	)
+	return nil
+}
+
+// encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
+// Notifier interface. Decoupling notification delivery from the raw encoder
+// lets transports plug in their own delivery mechanism without the server
+// core holding transport-specific state.
+type encoderNotifier struct {
+	mu      *sync.Mutex
+	encoder **json.Encoder
+}
+
+func (e encoderNotifier) Notify(method string, params any) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.encoder == nil || *e.encoder == nil {
+		return nil
+	}
+	msg := map[string]any{
+		"jsonrpc": "2.0",
+		"method":  method,
+	}
+	if params != nil {
+		msg["params"] = params
+	} else {
+		// The spec strongly prefers a params object or array even when empty.
+		msg["params"] = map[string]any{}
+	}
+	return (*e.encoder).Encode(msg)
+}
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
 
@@ -40,6 +124,14 @@ type Server struct {
 	// amplify goroutine count. 0 = unlimited.
 	MaxInFlightToolCalls int
 
+	// StrictHostCheck enables DNS rebinding protection on the HTTP
+	// transport: the inbound Host header must match either a loopback
+	// literal or one of the configured allowed-origin hostnames. Defaults
+	// to off so that reverse-proxy deployments that rewrite Host are
+	// unaffected; flip on (MCP_STRICT_HOST_CHECK=1) in localhost-bound
+	// production deployments to get the strict guarantee.
+	StrictHostCheck bool
+
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
 	initialized atomic.Bool
@@ -47,12 +139,45 @@ type Server struct {
 	encoderMu   sync.Mutex    // protects concurrent encoder writes
 	requestSeq  atomic.Int64  // monotonic request ID for log correlation
 
+	// notifier delivers server→client notifications. Set by the transport
+	// layer (stdio Run or HTTP ServeHTTP) at startup. nil = drop with a log.
+	notifier Notifier
+
+	// Negotiated client info. Populated on successful initialize; read by
+	// downstream log calls via NegotiatedProtocolVersion() / ClientInfo().
+	negotiatedMu      sync.RWMutex
+	negotiatedVersion string
+	clientName        string
+	clientVersion     string
+
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
 	// readiness cache
 	readyMu     sync.Mutex
 	readyCached bool
 	readyAt     time.Time
+}
+
+// SetNotifier installs a notification sink. Transports call this during
+// startup. Safe to call once per server lifetime; later calls replace the
+// sink without synchronisation, so transports must call before traffic flows.
+func (s *Server) SetNotifier(n Notifier) {
+	s.notifier = n
+}
+
+// NegotiatedProtocolVersion returns the MCP protocol version agreed with the
+// client, or empty string before initialize runs.
+func (s *Server) NegotiatedProtocolVersion() string {
+	s.negotiatedMu.RLock()
+	defer s.negotiatedMu.RUnlock()
+	return s.negotiatedVersion
+}
+
+// ClientInfo returns the client name and version sent during initialize.
+func (s *Server) ClientInfo() (name, version string) {
+	s.negotiatedMu.RLock()
+	defer s.negotiatedMu.RUnlock()
+	return s.clientName, s.clientVersion
 }
 
 func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
@@ -82,6 +207,11 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)
 	s.encoderMu.Unlock()
+	// Install the stdio notifier so activation events (tools/list_changed)
+	// flow back through the same thread-safe encoder the responses use.
+	if s.notifier == nil {
+		s.notifier = encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
+	}
 
 	// Channel-based approach: scan lines in a goroutine so we can
 	// select on ctx.Done() in the main loop.
@@ -155,7 +285,39 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 					if s.toolCallSem != nil {
 						defer func() { <-s.toolCallSem }()
 					}
+					// Panic recovery: a crashing tool handler must not
+					// take down the whole stdio loop. Emit a structured
+					// panic event and surface a tool-error to the client.
+					defer func() {
+						if rec := recover(); rec != nil {
+							metrics.PanicsRecoveredTotal.Inc("stdio_tool_dispatch")
+							stack := string(debug.Stack())
+							slog.Error("panic_recovered",
+								"site", "stdio_tool_dispatch",
+								"tool", toolNameFromRequest(r),
+								"panic", fmt.Sprintf("%v", rec),
+								"stack", stack,
+							)
+							panicResp := Response{
+								JSONRPC: "2.0",
+								ID:      r.ID,
+								Result: map[string]any{
+									"content": []map[string]any{{
+										"type": "text",
+										"text": "tool panic: " + fmt.Sprintf("%v", rec),
+									}},
+									"isError": true,
+								},
+							}
+							if err := s.writeResponse(panicResp); err != nil {
+								slog.Warn("async_response_failed", "error", err.Error())
+							}
+						}
+					}()
 					resp := s.handle(ctx, r)
+					if resp.Error != nil {
+						metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
+					}
 					if r.ID != nil || resp.Error != nil {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
@@ -166,6 +328,9 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			}
 
 			resp := s.handle(ctx, req)
+			if resp.Error != nil {
+				metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
+			}
 			if req.ID == nil && resp.Error == nil && resp.Result == nil {
 				continue
 			}
@@ -174,6 +339,22 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			}
 		}
 	}
+}
+
+// toolNameFromRequest extracts the tool name from a tools/call Request for
+// log correlation. Falls back to "unknown" when params are missing or
+// malformed — this helper runs in the panic-recovery path so it must not
+// allocate on the error path beyond a short string.
+func toolNameFromRequest(req Request) string {
+	if req.Method != "tools/call" || req.Params == nil {
+		return req.Method
+	}
+	if m, ok := req.Params.(map[string]any); ok {
+		if name, ok := m["name"].(string); ok && name != "" {
+			return name
+		}
+	}
+	return "unknown"
 }
 
 // writeResponse thread-safely encodes a response to the output encoder.
@@ -191,12 +372,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 
 	switch req.Method {
 	case "initialize":
-		s.initialized.Store(true)
-		resp.Result = map[string]any{
-			"protocolVersion": "2025-06-18",
-			"serverInfo":      map[string]any{"name": "clockify-go-mcp", "version": s.Version},
-			"capabilities":    map[string]any{"tools": map[string]any{}},
-		}
+		resp.Result = s.handleInitialize(req.Params)
 	case "notifications/initialized":
 		return Response{}
 	case "ping":
@@ -233,6 +409,74 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 	}
 
 	return resp
+}
+
+// handleInitialize parses the InitializeParams, negotiates the protocol
+// version, records client info for log correlation, and returns the server
+// capabilities and instructions.
+//
+// Version negotiation policy: if the client requests a version we support,
+// echo it back. Otherwise return our newest supported version — the client
+// is expected to either accept the downgrade or disconnect. A previously-
+// initialized server accepts a repeat initialize and re-negotiates; the
+// current spec does not forbid this and a strict rejection has historically
+// broken clients that aggressively reconnect.
+func (s *Server) handleInitialize(raw any) map[string]any {
+	var params InitializeParams
+	_ = decodeParams(raw, &params) // tolerate missing / malformed params
+
+	negotiated := SupportedProtocolVersions[0]
+	if requested := strings.TrimSpace(params.ProtocolVersion); requested != "" {
+		for _, v := range SupportedProtocolVersions {
+			if v == requested {
+				negotiated = requested
+				break
+			}
+		}
+	}
+
+	// Extract clientInfo name/version for log correlation.
+	var clientName, clientVersion string
+	if params.ClientInfo != nil {
+		if v, ok := params.ClientInfo["name"].(string); ok {
+			clientName = v
+		}
+		if v, ok := params.ClientInfo["version"].(string); ok {
+			clientVersion = v
+		}
+	}
+
+	s.negotiatedMu.Lock()
+	s.negotiatedVersion = negotiated
+	s.clientName = clientName
+	s.clientVersion = clientVersion
+	s.negotiatedMu.Unlock()
+
+	s.initialized.Store(true)
+
+	slog.Info("initialize",
+		"protocol_version", negotiated,
+		"requested_version", params.ProtocolVersion,
+		"client_name", clientName,
+		"client_version", clientVersion,
+	)
+
+	return map[string]any{
+		"protocolVersion": negotiated,
+		"serverInfo": map[string]any{
+			"name":    "clockify-go-mcp",
+			"title":   "Clockify Go MCP Server",
+			"version": s.Version,
+		},
+		"capabilities": map[string]any{
+			// listChanged is true because ActivateGroup / ActivateTier1Tool
+			// emit notifications/tools/list_changed. Declaring the capability
+			// lets clients subscribe; previously the server emitted the
+			// notification without declaring support, so clients ignored it.
+			"tools": map[string]any{"listChanged": true},
+		},
+		"instructions": ServerInstructions,
+	}
 }
 
 func (s *Server) listTools() []Tool {
@@ -413,17 +657,25 @@ func (s *Server) ActivateTier1Tool(name string) error {
 	return nil
 }
 
+// notifyToolsChanged delivers notifications/tools/list_changed through the
+// configured Notifier. If no notifier is installed (e.g. a test harness that
+// calls ActivateGroup directly without running a transport), the notification
+// is dropped and counted so the gap is visible in /metrics.
 func (s *Server) notifyToolsChanged() {
-	s.encoderMu.Lock()
-	defer s.encoderMu.Unlock()
-	if s.encoder == nil {
+	notifier := s.notifier
+	if notifier == nil {
+		metrics.ProtocolErrorsTotal.Inc("notification_dropped_no_notifier")
+		slog.Warn("notification_dropped",
+			"method", "notifications/tools/list_changed",
+			"reason", "no_notifier_installed",
+		)
 		return
 	}
-	if err := s.encoder.Encode(Response{
-		JSONRPC: "2.0",
-		Method:  "notifications/tools/list_changed",
-	}); err != nil {
-		slog.Warn("notification_failed", "method", "tools/list_changed", "error", err.Error())
+	if err := notifier.Notify("notifications/tools/list_changed", map[string]any{}); err != nil {
+		slog.Warn("notification_failed",
+			"method", "notifications/tools/list_changed",
+			"error", err.Error(),
+		)
 	}
 }
 

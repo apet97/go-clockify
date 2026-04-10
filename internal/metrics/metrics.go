@@ -22,6 +22,21 @@ import (
 // DefaultBuckets mirrors Prometheus client_golang's default histogram buckets.
 var DefaultBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 
+// ToolCallBuckets targets the documented tool-call SLO (p95 < 3s, p99 < 10s).
+// Finer granularity at the 3s boundary lets us measure SLO breaches precisely;
+// coverage up to 45s accommodates long-running report tools that may legitimately
+// approach the per-call timeout.
+var ToolCallBuckets = []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 45}
+
+// HTTPDurationBuckets targets fast JSON-RPC request/response latency on the
+// HTTP transport. Pre-handler auth + CORS + decode should land well under
+// 100ms; downstream tool-call time dominates beyond that.
+var HTTPDurationBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+
+// UpstreamDurationBuckets targets Clockify upstream API latency. Most list
+// endpoints respond in 100-500ms; reports can spike into seconds.
+var UpstreamDurationBuckets = []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 45}
+
 var nameRegexp = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // Counter is a monotonically increasing value with optional labels.
@@ -527,13 +542,29 @@ var (
 	// RateLimitRejections counts rate limiter rejections by kind.
 	RateLimitRejections *Counter
 	// HTTPRequestsTotal counts HTTP requests by path, method, and status.
+	// Path is normalized at the call site to a bounded set (/mcp, /health,
+	// /ready, /metrics, /other) to prevent cardinality blowup from probes.
 	HTTPRequestsTotal *Counter
+	// HTTPRequestDuration records HTTP request wall-clock duration.
+	HTTPRequestDuration *Histogram
 	// ReadyState is 1 when the server is ready, 0 otherwise.
 	ReadyState *Gauge
 	// BuildInfo exposes build metadata; value is always 1.
 	BuildInfo *Gauge
 	// InFlightToolCalls reports the dispatch-layer in-flight goroutine count.
 	InFlightToolCalls *Gauge
+	// UpstreamRequestsTotal counts outbound Clockify API requests by
+	// endpoint (URL template), HTTP method, and status code bucket
+	// (2xx/3xx/4xx/5xx/error).
+	UpstreamRequestsTotal *Counter
+	// UpstreamRequestDuration records Clockify API call latency.
+	UpstreamRequestDuration *Histogram
+	// UpstreamRetriesTotal counts retry attempts by endpoint and reason.
+	UpstreamRetriesTotal *Counter
+	// ProtocolErrorsTotal counts JSON-RPC protocol-level errors by code.
+	ProtocolErrorsTotal *Counter
+	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
+	PanicsRecoveredTotal *Counter
 )
 
 func init() {
@@ -545,7 +576,7 @@ func init() {
 	ToolCallDuration = Default.NewHistogram(
 		"clockify_mcp_tool_call_duration_seconds",
 		"Duration of tools/call dispatch in seconds.",
-		DefaultBuckets,
+		ToolCallBuckets,
 		"tool",
 	)
 	RateLimitRejections = Default.NewCounter(
@@ -555,7 +586,13 @@ func init() {
 	)
 	HTTPRequestsTotal = Default.NewCounter(
 		"clockify_mcp_http_requests_total",
-		"HTTP requests by path, method, and status.",
+		"HTTP requests by path (normalized), method, and status.",
+		"path", "method", "status",
+	)
+	HTTPRequestDuration = Default.NewHistogram(
+		"clockify_mcp_http_request_duration_seconds",
+		"HTTP request duration in seconds by path (normalized), method, and status.",
+		HTTPDurationBuckets,
 		"path", "method", "status",
 	)
 	ReadyState = Default.NewGauge(
@@ -565,10 +602,37 @@ func init() {
 	BuildInfo = Default.NewGauge(
 		"clockify_mcp_build_info",
 		"Build metadata. Value is always 1.",
-		"version",
+		"version", "commit", "build_date", "go_version",
 	)
 	InFlightToolCalls = Default.NewGauge(
 		"clockify_mcp_inflight_tool_calls",
 		"Current in-flight tools/call dispatch goroutines.",
 	)
+	UpstreamRequestsTotal = Default.NewCounter(
+		"clockify_upstream_requests_total",
+		"Outbound Clockify API requests by endpoint template, method, and status bucket.",
+		"endpoint", "method", "status",
+	)
+	UpstreamRequestDuration = Default.NewHistogram(
+		"clockify_upstream_request_duration_seconds",
+		"Outbound Clockify API request latency in seconds by endpoint template and method.",
+		UpstreamDurationBuckets,
+		"endpoint", "method",
+	)
+	UpstreamRetriesTotal = Default.NewCounter(
+		"clockify_upstream_retries_total",
+		"Outbound Clockify API retry attempts by endpoint template and reason.",
+		"endpoint", "reason",
+	)
+	ProtocolErrorsTotal = Default.NewCounter(
+		"clockify_mcp_protocol_errors_total",
+		"JSON-RPC protocol-level error responses by error code.",
+		"code",
+	)
+	PanicsRecoveredTotal = Default.NewCounter(
+		"clockify_mcp_panics_recovered_total",
+		"Panics recovered from tool handlers or HTTP handlers by site.",
+		"site",
+	)
+	registerRuntimeMetrics(Default)
 }

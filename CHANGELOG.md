@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MCP protocol version negotiation** — `initialize` now parses `InitializeParams`, negotiates against `SupportedProtocolVersions` (2025-06-18, 2025-03-26, 2024-11-05), echoes back the negotiated version, and records `clientInfo.name`/`clientInfo.version` for log correlation. `serverInfo` carries a human-readable `title`. A new `instructions` field explains Tier 1/Tier 2 discovery, the dry-run idiom, and the four policy modes so agentic clients can self-orient.
+- **`tools.listChanged` capability advertised** in `initialize.result.capabilities`. The server already emitted `notifications/tools/list_changed` on dynamic activation; declaring the capability lets clients subscribe instead of silently discarding the notification.
+- **Pluggable `Notifier` interface** decouples server→client notification delivery from the stdio JSON encoder. `encoderNotifier` is installed by `Run()`; the legacy HTTP POST transport installs `droppingNotifier`, which logs every suppressed notification and increments `clockify_mcp_protocol_errors_total{code="notification_dropped"}` — previously activations on HTTP silently vanished into a nil encoder.
+- **Panic recovery** in the stdio dispatch goroutine (`server.Run`) and the HTTP middleware (`observeHTTPH`). Panics produce a structured `panic_recovered` slog event with the recovered value + `debug.Stack()`, increment `clockify_mcp_panics_recovered_total{site}`, and return a tool-error envelope to the client instead of crashing the loop.
+- **PII-redacting slog handler** (`internal/logging/redact.go`) wraps every log handler at startup. Recursively scrubs 20 well-known secret key patterns (`authorization`, `api_key`, `bearer`, `token`, `cookie`, `client_secret`, `refresh_token`, …) from both top-level attrs and nested maps/groups. Defence-in-depth layer: hot-path code still avoids logging secrets explicitly, but an accidental header-map log no longer leaks credentials.
+- **Full HTTP security header suite** on every `/mcp` response: `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy: ()`, in addition to the pre-existing `X-Content-Type-Options: nosniff` and `Cache-Control: no-store`.
+- **DNS rebinding protection** (opt-in via `MCP_STRICT_HOST_CHECK=1`). When enabled, the Host header must match either a loopback literal or the host component of an entry in `MCP_ALLOWED_ORIGINS`. Default off preserves reverse-proxy deployments that rewrite Host.
+- **HTTP request duration histogram** `clockify_mcp_http_request_duration_seconds{path,method,status}` with buckets tuned for fast JSON-RPC (0.005→10s). `HTTPRequestsTotal.path` is normalized to `{/mcp,/health,/ready,/metrics,/other}` so probe traffic can never blow label cardinality. All mux routes flow through a single `observeHTTPH` middleware that records metrics + panic recovery uniformly.
+- **Upstream Clockify client metrics** (`clockify/metrics.go` + instrumentation in `doOnce` / `doJSON`):
+  - `clockify_upstream_requests_total{endpoint,method,status}` with status bucketed to `{2xx,3xx,4xx,5xx,error}`
+  - `clockify_upstream_request_duration_seconds{endpoint,method}` histogram tuned 0.05→45s
+  - `clockify_upstream_retries_total{endpoint,reason}` with reasons `rate_limited|bad_gateway|service_unavailable|gateway_timeout|error`
+  - `normalizeEndpoint` collapses 24/32/36-char hex segments to `:id`, bounding the endpoint label to the ~40 distinct Clockify URL templates regardless of traffic volume
+- **Go runtime + process metrics** (`internal/metrics/runtime.go`) exposed via `runtime/metrics.Read` (lock-free, no stop-the-world): `go_goroutines`, `go_gomaxprocs`, `go_memstats_heap_{alloc,inuse,released}_bytes`, `go_memstats_sys_bytes`, `go_memstats_stack_inuse_bytes`, `go_gc_runs_total`, `go_info{version}`, `process_start_time_seconds`, `process_resident_memory_bytes`, `process_open_fds` (cached 5s, O(1) between refreshes).
+- **`clockify_mcp_build_info`** gauge labels extended to `{version,commit,build_date,go_version}`. `commit` and `buildDate` are set via `-ldflags` (`-X main.commit=... -X main.buildDate=...`) and default to `"unknown"` for local `go build` / `go run`.
+- **`clockify_mcp_protocol_errors_total{code}`** counter fires on every JSON-RPC error response (stdio + HTTP paths) keyed by JSON-RPC error code.
+- **SLO-aligned histogram buckets** — new `ToolCallBuckets` (0.05→45s with fine resolution at the 3s SLO boundary), `HTTPDurationBuckets` (fast JSON-RPC), and `UpstreamDurationBuckets` (Clockify API).
+- **Tool surface annotations**: every one of the 124 tools now carries `openWorldHint: true` (all tools touch the external Clockify API), a derived human-readable `title`, and **explicit** `destructiveHint` / `idempotentHint` bools — previously `toolRW` omitted these fields, causing spec-strict clients to default-assume destructive for all write tools.
+- **Enterprise k8s manifests** — `deploy/k8s/networkpolicy.yaml` (default-deny ingress except labelled allowed pods, default-deny egress except DNS + HTTPS), `deploy/k8s/pdb.yaml` (`minAvailable: 1`), `deploy/k8s/serviceaccount.yaml` (dedicated SA with `automountServiceAccountToken: false`).
+- **Multi-arch Docker image pipeline** (`.github/workflows/docker-image.yml`): multi-arch buildx (linux/amd64, linux/arm64) via SHA-pinned `docker/build-push-action`, Trivy vulnerability scan fail-on-HIGH-CRITICAL with SARIF upload to CodeQL, cosign keyless OIDC image signing, SPDX SBOM generation + `cosign attest` attachment, `attest-build-provenance` with image digest subject pushed to the registry. Tags generated from `docker/metadata-action` (sha, branch, PR, semver, `latest` on tag).
+- **Hardened `deploy/Dockerfile`**: multi-arch build args (`TARGETOS`/`TARGETARCH`), `-trimpath`, three build ldflags (`VERSION`/`COMMIT`/`BUILD_DATE`), full OCI image labels (`title`/`description`/`source`/`licenses`/`version`/`revision`/`created`), `USER 65532:65532` numeric, `STOPSIGNAL SIGTERM`, distroless `:nonroot` base.
+
+### Changed
+
+- **`deploy/k8s/deployment.yaml`** pinned from `ghcr.io/apet97/go-clockify:latest` → `:v0.5.0`, added `terminationGracePeriodSeconds: 30` and `serviceAccountName: clockify-mcp`.
+- **Default log format** wrapped in the redacting handler at startup (affects both text and JSON modes).
+- **stdio + HTTP transport** share one dispatch-layer goroutine semaphore via `observeHTTPH` instrumentation so concurrency caps are uniform across transports.
+- **`Server.callTool`** records `clockify_mcp_protocol_errors_total` on every JSON-RPC error response.
+
+### Removed
+
+- **Repo hygiene pass** — deleted stale planning docs from repo root: `HARDENING_PLAN.md`, `IMPLEMENTATION_PLAN.md`, `IMPLEMENTATION_SUMMARY.md`, `PRODUCTION_PLAN.md`, `PRODUCTION_READINESS_PLAN.md`, `PRODUCTION_REVIEW.md`, `CLAUDE_CODE_GUIDE.md`. Deleted the legacy `RUST MCP/` submodule reference. Retired the `.gitignore` and `.gitmodules` files — the repo now contains only curated content, nothing that needs to be masked.
+
 ## [0.5.0] - 2026-04-10
 
 Enterprise-grade production hardening across correctness, safety,

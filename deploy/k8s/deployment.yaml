@@ -31,9 +31,12 @@ spec:
         fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: clockify-mcp
       containers:
         - name: clockify-mcp
-          image: ghcr.io/apet97/go-clockify:latest
+          # Pin to an immutable tag. Bump on release; never use :latest in production.
+          image: ghcr.io/apet97/go-clockify:v0.5.0
           imagePullPolicy: IfNotPresent
           args: []
           env:

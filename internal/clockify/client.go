@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 // maxResponseBody is the maximum number of bytes read from API responses
@@ -119,10 +121,21 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 		}
 	}
 
+	endpoint := normalizeEndpoint(path)
+
 	var lastErr error
 	var explicitRetryAfter time.Duration
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
+			// Record the retry attempt with the reason derived from the last
+			// error's status code. This lets operators see retry storms by
+			// endpoint and reason before they escalate into tool errors.
+			reason := "error"
+			if apiErr, ok := lastErr.(*APIError); ok {
+				reason = retryReason(apiErr.StatusCode)
+			}
+			metrics.UpstreamRetriesTotal.Inc(endpoint, reason)
+
 			waitDur := explicitRetryAfter
 			if waitDur <= 0 {
 				waitDur = backoff(attempt)
@@ -139,7 +152,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
-		err = c.doOnce(ctx, method, path, query, payload, out)
+		err = c.doOnce(ctx, method, path, endpoint, query, payload, out)
 		if err == nil {
 			return nil
 		}
@@ -158,7 +171,14 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 	return fmt.Errorf("request failed without specific error")
 }
 
-func (c *Client) doOnce(ctx context.Context, method, path string, query map[string]string, payload []byte, out any) error {
+func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, query map[string]string, payload []byte, out any) error {
+	start := time.Now()
+	statusCode := 0
+	defer func() {
+		metrics.UpstreamRequestsTotal.Inc(endpoint, method, statusBucket(statusCode))
+		metrics.UpstreamRequestDuration.Observe(time.Since(start).Seconds(), endpoint, method)
+	}()
+
 	u, err := url.Parse(c.baseURL + path)
 	if err != nil {
 		return err
@@ -192,6 +212,7 @@ func (c *Client) doOnce(ctx context.Context, method, path string, query map[stri
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	statusCode = resp.StatusCode
 
 	if resp.StatusCode >= 400 {
 		// Read error body (limited to 64KB) before any other reads.
