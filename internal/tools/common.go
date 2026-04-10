@@ -20,9 +20,12 @@ type Service struct {
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	ActivateGroup   func(string) (ActivationResult, error)
 	ActivateTool    func(string) (ActivationResult, error)
-	mu              sync.Mutex
-	cachedUser      *clockify.User
-	cachedWSID      string
+	// ReportMaxEntries is the hard cap on the number of time entries a report
+	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
+	ReportMaxEntries int
+	mu               sync.Mutex
+	cachedUser       *clockify.User
+	cachedWSID       string
 }
 
 type ActivationResult struct {
@@ -284,21 +287,12 @@ func parseStartEnd(args map[string]any) (time.Time, time.Time, error) {
 	return parseRange(args)
 }
 
-const entryRangePageSize = 100
-
+// entryRangeQuery builds the base date-range query for time-entry reports.
+// Pagination params are set by the paginator in aggregateEntriesRange; this
+// helper intentionally does NOT set page or page-size.
 func entryRangeQuery(start, end time.Time) map[string]string {
 	return map[string]string{
-		"start":     start.UTC().Format(time.RFC3339),
-		"end":       end.UTC().Format(time.RFC3339),
-		"page-size": fmt.Sprintf("%d", entryRangePageSize),
+		"start": start.UTC().Format(time.RFC3339),
+		"end":   end.UTC().Format(time.RFC3339),
 	}
-}
-
-// addTruncationWarning adds a warning to meta if the result count equals the
-// page size, indicating potential silent truncation.
-func addTruncationWarning(meta map[string]any, count int) map[string]any {
-	if count >= entryRangePageSize {
-		meta["warning"] = fmt.Sprintf("Results may be truncated. Only the first %d entries are returned per query. Use narrower date ranges for complete data.", entryRangePageSize)
-	}
-	return meta
 }

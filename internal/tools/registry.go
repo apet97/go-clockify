@@ -51,13 +51,27 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TodayEntries(ctx, args)
 		}},
-		{Tool: toolRO("clockify_summary_report", "Summarize entries for a date/time range by project using the current user's time entries", map[string]any{"type": "object", "properties": map[string]any{"start": map[string]any{"type": "string", "description": "RFC3339 timestamp"}, "end": map[string]any{"type": "string", "description": "RFC3339 timestamp"}, "include_entries": map[string]any{"type": "boolean"}}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_summary_report", "Summarize entries for a date/time range by project using the current user's time entries", map[string]any{"type": "object", "properties": map[string]any{
+			"start":           map[string]any{"type": "string", "description": "RFC3339 timestamp"},
+			"end":             map[string]any{"type": "string", "description": "RFC3339 timestamp"},
+			"include_entries": map[string]any{"type": "boolean"},
+			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
+		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SummaryReport(ctx, args)
 		}},
-		{Tool: toolRO("clockify_weekly_summary", "Get a weekly summary for the current user, grouped by day and project. This is a safe wrapper built over time-entry data rather than a separate reports API.", map[string]any{"type": "object", "properties": map[string]any{"week_start": map[string]any{"type": "string", "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time."}, "timezone": map[string]any{"type": "string", "description": "Optional IANA timezone, defaults to local/server timezone."}, "include_entries": map[string]any{"type": "boolean"}}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_weekly_summary", "Get a weekly summary for the current user, grouped by day and project. This is a safe wrapper built over time-entry data rather than a separate reports API.", map[string]any{"type": "object", "properties": map[string]any{
+			"week_start":      map[string]any{"type": "string", "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time."},
+			"timezone":        map[string]any{"type": "string", "description": "Optional IANA timezone, defaults to local/server timezone."},
+			"include_entries": map[string]any{"type": "boolean"},
+			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
+		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.WeeklySummary(ctx, args)
 		}},
-		{Tool: toolRO("clockify_quick_report", "Quick high-signal summary for a recent period. Safe helper over the current user's time entries.", map[string]any{"type": "object", "properties": map[string]any{"days": map[string]any{"type": "integer", "minimum": 1, "maximum": 31}, "include_entries": map[string]any{"type": "boolean"}}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_quick_report", "Quick high-signal summary for a recent period. Safe helper over the current user's time entries.", map[string]any{"type": "object", "properties": map[string]any{
+			"days":            map[string]any{"type": "integer", "minimum": 1, "maximum": 31},
+			"include_entries": map[string]any{"type": "boolean"},
+			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
+		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.QuickReport(ctx, args)
 		}},
 		{Tool: toolRW("clockify_start_timer", "Start a new timer", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -146,6 +160,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"end":             map[string]any{"type": "string", "description": "RFC3339 timestamp"},
 			"project":         map[string]any{"type": "string"},
 			"include_entries": map[string]any{"type": "boolean"},
+			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.DetailedReport(ctx, args)
 		}},
