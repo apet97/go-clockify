@@ -90,7 +90,7 @@ func run() error {
 		return err
 	}
 
-	rl := ratelimit.FromEnv()
+	rl := ratelimit.FromEnvWithAcquireTimeout(cfg.ConcurrencyAcquireTimeout)
 	tc := truncate.ConfigFromEnv()
 	dc := dryrun.ConfigFromEnv()
 
@@ -140,13 +140,7 @@ func run() error {
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
-	// Opt-in DNS rebinding protection. Defaults to off so that reverse-
-	// proxy deployments that rewrite Host are unaffected; operators running
-	// localhost-bound enterprise deployments should set this to 1 alongside
-	// MCP_ALLOWED_ORIGINS.
-	if v := os.Getenv("MCP_STRICT_HOST_CHECK"); v == "1" || strings.EqualFold(v, "true") {
-		server.StrictHostCheck = true
-	}
+	server.StrictHostCheck = cfg.StrictHostCheck
 
 	// Wire observability gauges. ReadyState uses the server's cached
 	// readiness snapshot so /metrics scrapes do not trigger upstream
@@ -288,6 +282,7 @@ Environment Variables:
 
   Performance:
     CLOCKIFY_MAX_CONCURRENT        Concurrent tool call limit, 0=off (default: 10)
+    CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT  Time to wait for a concurrency slot (default: 100ms)
     CLOCKIFY_RATE_LIMIT            Tool calls per minute, 0=off (default: 120)
     CLOCKIFY_TOKEN_BUDGET          Response token budget, 0=off (default: 8000)
     MCP_MAX_INFLIGHT_TOOL_CALLS    Stdio dispatch goroutine cap, 0=off (default: 64)
@@ -303,6 +298,7 @@ Environment Variables:
     MCP_BEARER_TOKEN          Required for HTTP mode; send as Authorization: Bearer <token>
     MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
     MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
+    MCP_STRICT_HOST_CHECK     Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS
     MCP_HTTP_MAX_BODY         Positive max request body in bytes (default: 2097152)
 
   Logging:

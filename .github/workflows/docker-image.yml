@@ -55,6 +55,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute build metadata
+        id: build_meta
+        run: |
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
       - name: Compute image metadata
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
@@ -72,6 +78,9 @@ jobs:
             org.opencontainers.image.description=Go MCP server for Clockify
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.version=${{ steps.build_meta.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.build_meta.outputs.build_date }}
 
       - name: Build and push image
         id: build
@@ -89,8 +98,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ steps.build_meta.outputs.version }}
             COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.build_meta.outputs.build_date }}
 
       - name: Trivy vulnerability scan (registry digest)
         if: github.event_name != 'pull_request'

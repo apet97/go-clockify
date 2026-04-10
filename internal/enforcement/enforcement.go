@@ -9,9 +9,9 @@ package enforcement
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -59,11 +59,11 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 		rel, err := p.RateLimit.Acquire(ctx)
 		if err != nil {
 			kind := "window"
-			if strings.Contains(err.Error(), "concurrency") {
+			if errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded) {
 				kind = "concurrency"
 			}
 			metrics.RateLimitRejections.Inc(kind)
-			return nil, nil, fmt.Errorf("rate limited: %s", err)
+			return nil, nil, fmt.Errorf("rate limited: %w", err)
 		}
 		release = rel
 	}

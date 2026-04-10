@@ -27,6 +27,9 @@ func TestInitializeAndToolsList(t *testing.T) {
 	if !strings.Contains(got, `"protocolVersion":"2025-06-18"`) {
 		t.Fatalf("missing initialize response: %s", got)
 	}
+	if !strings.Contains(got, `"listChanged":true`) {
+		t.Fatalf("expected stdio initialize to advertise tools.listChanged: %s", got)
+	}
 	if !strings.Contains(got, `"demo_tool"`) {
 		t.Fatalf("missing tool list response: %s", got)
 	}

@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,17 +12,61 @@ import (
 	"time"
 )
 
+const DefaultAcquireTimeout = 100 * time.Millisecond
+
+var (
+	ErrConcurrencyLimitExceeded = errors.New("concurrency limit exceeded")
+	ErrRateLimitExceeded        = errors.New("rate limit exceeded")
+)
+
 // RateLimiter controls concurrent access and per-window call volume to the
 // Clockify API. A nil *RateLimiter is safe to use — Acquire returns a no-op
 // release function and nil error.
 type RateLimiter struct {
-	semaphore     chan struct{}
-	maxConcurrent int
-	windowCount   atomic.Int64
-	windowStart   atomic.Int64 // epoch millis
-	maxPerWindow  int64
-	windowMillis  int64
-	windowMu      sync.Mutex // protects atomic window reset
+	semaphore      chan struct{}
+	acquireTimeout time.Duration
+	maxConcurrent  int
+	windowCount    atomic.Int64
+	windowStart    atomic.Int64 // epoch millis
+	maxPerWindow   int64
+	windowMillis   int64
+	windowMu       sync.Mutex // protects atomic window reset
+}
+
+type ConcurrencyLimitError struct {
+	MaxConcurrent int
+	Cause         error
+}
+
+func (e *ConcurrencyLimitError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("concurrency limit: context cancelled: %v", e.Cause)
+	}
+	return fmt.Sprintf("concurrency limit exceeded: %d concurrent calls", e.MaxConcurrent)
+}
+
+func (e *ConcurrencyLimitError) Is(target error) bool {
+	if target == ErrConcurrencyLimitExceeded {
+		return true
+	}
+	return e.Cause != nil && errors.Is(e.Cause, target)
+}
+
+func (e *ConcurrencyLimitError) Unwrap() error {
+	return e.Cause
+}
+
+type RateLimitError struct {
+	MaxPerWindow int64
+	WindowMillis int64
+}
+
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("rate limit exceeded: %d calls in %ds window", e.MaxPerWindow, e.WindowMillis/1000)
+}
+
+func (e *RateLimitError) Is(target error) bool {
+	return target == ErrRateLimitExceeded
 }
 
 // FromEnv builds a RateLimiter from environment variables.
@@ -31,12 +76,16 @@ type RateLimiter struct {
 //
 // Returns nil if both values are 0 (rate limiting fully disabled).
 func FromEnv() *RateLimiter {
+	return FromEnvWithAcquireTimeout(DefaultAcquireTimeout)
+}
+
+func FromEnvWithAcquireTimeout(acquireTimeout time.Duration) *RateLimiter {
 	maxConc := envInt("CLOCKIFY_MAX_CONCURRENT", 10)
 	maxWin := envInt("CLOCKIFY_RATE_LIMIT", 120)
 	if maxConc == 0 && maxWin == 0 {
 		return nil
 	}
-	return New(maxConc, int64(maxWin), 60000)
+	return NewWithAcquireTimeout(maxConc, int64(maxWin), 60000, acquireTimeout)
 }
 
 // New creates a RateLimiter with explicit parameters.
@@ -45,15 +94,23 @@ func FromEnv() *RateLimiter {
 //	maxPerWindow  – maximum calls allowed within each rolling window
 //	windowMillis  – window length in milliseconds
 func New(maxConcurrent int, maxPerWindow int64, windowMillis int64) *RateLimiter {
+	return NewWithAcquireTimeout(maxConcurrent, maxPerWindow, windowMillis, DefaultAcquireTimeout)
+}
+
+func NewWithAcquireTimeout(maxConcurrent int, maxPerWindow int64, windowMillis int64, acquireTimeout time.Duration) *RateLimiter {
 	var semaphore chan struct{}
 	if maxConcurrent > 0 {
 		semaphore = make(chan struct{}, maxConcurrent)
 	}
+	if acquireTimeout <= 0 {
+		acquireTimeout = DefaultAcquireTimeout
+	}
 	rl := &RateLimiter{
-		semaphore:     semaphore,
-		maxConcurrent: maxConcurrent,
-		maxPerWindow:  maxPerWindow,
-		windowMillis:  windowMillis,
+		semaphore:      semaphore,
+		acquireTimeout: acquireTimeout,
+		maxConcurrent:  maxConcurrent,
+		maxPerWindow:   maxPerWindow,
+		windowMillis:   windowMillis,
 	}
 	rl.windowStart.Store(time.Now().UnixMilli())
 	return rl
@@ -84,8 +141,7 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 
 		// Pre-check: bail early when the window is already exhausted.
 		if rl.windowCount.Load() >= rl.maxPerWindow {
-			return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
-				rl.maxPerWindow, rl.windowMillis/1000)
+			return nil, &RateLimitError{MaxPerWindow: rl.maxPerWindow, WindowMillis: rl.windowMillis}
 		}
 	}
 
@@ -95,10 +151,9 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 		case rl.semaphore <- struct{}{}:
 			// Slot acquired.
 		case <-ctx.Done():
-			return nil, fmt.Errorf("concurrency limit: context cancelled: %w", ctx.Err())
-		case <-time.After(100 * time.Millisecond):
-			return nil, fmt.Errorf("concurrency limit exceeded: %d concurrent calls",
-				rl.maxConcurrent)
+			return nil, &ConcurrencyLimitError{MaxConcurrent: rl.maxConcurrent, Cause: ctx.Err()}
+		case <-time.After(rl.acquireTimeout):
+			return nil, &ConcurrencyLimitError{MaxConcurrent: rl.maxConcurrent}
 		}
 	}
 
@@ -109,8 +164,7 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 			if rl.maxConcurrent > 0 {
 				<-rl.semaphore // release slot — this call won't proceed
 			}
-			return nil, fmt.Errorf("rate limit exceeded: %d calls in %ds window",
-				rl.maxPerWindow, rl.windowMillis/1000)
+			return nil, &RateLimitError{MaxPerWindow: rl.maxPerWindow, WindowMillis: rl.windowMillis}
 		}
 	}
 

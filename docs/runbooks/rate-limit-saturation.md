@@ -37,7 +37,16 @@ sum by (kind) (rate(clockify_mcp_rate_limit_rejections_total[5m]))
      CLOCKIFY_RATE_LIMIT=240
    ```
 
-3. If abuse is suspected (runaway client, tight loop without backoff),
+3. If the issue is local concurrency contention rather than upstream
+   quota, increase the semaphore wait modestly before raising the hard
+   concurrency cap:
+
+   ```bash
+   kubectl -n clockify-mcp set env deployment/clockify-mcp \
+     CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT=250ms
+   ```
+
+4. If abuse is suspected (runaway client, tight loop without backoff),
    tighten the policy to block writes while you investigate:
 
    ```bash
@@ -98,4 +107,4 @@ sum by (kind) (rate(clockify_mcp_rate_limit_rejections_total[5m]))
 - `docs/runbooks/clockify-upstream-outage.md` — when upstream 5xx is
   the root cause, not saturation.
 - `CLAUDE.md` — `CLOCKIFY_RATE_LIMIT`, `CLOCKIFY_MAX_CONCURRENT`,
-  `CLOCKIFY_POLICY` env var reference.
+  `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT`, `CLOCKIFY_POLICY` env var reference.

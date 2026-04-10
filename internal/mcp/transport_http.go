@@ -75,11 +75,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	if s.notifier == nil {
 		s.SetNotifier(droppingNotifier{})
 	}
-
-	// Auto-initialize for HTTP mode
-	if !s.initialized.Load() {
-		s.initialized.Store(true)
-	}
+	s.advertiseListChanged.Store(false)
 
 	if err := srv.Serve(ln); err != http.ErrServerClosed {
 		return err
@@ -183,11 +179,6 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
-	if !s.initialized.Load() {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte(`{"status":"not_ready"}`))
-		return
-	}
 	if s.ReadyChecker != nil {
 		if err := s.checkReady(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -221,6 +212,10 @@ func (s *Server) checkReady(ctx context.Context) error {
 }
 
 func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
+	if s.notifier == nil {
+		s.SetNotifier(droppingNotifier{})
+	}
+	s.advertiseListChanged.Store(false)
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		reqID := s.requestSeq.Add(1)
@@ -369,36 +364,22 @@ func isOriginAllowed(origin string, allowed []string, allowAnyOrigin bool) bool 
 }
 
 // isHostAllowed protects against DNS rebinding attacks when the operator has
-// opted into strict mode by configuring MCP_ALLOWED_ORIGINS. In strict mode
-// the Host header must match either a loopback literal or the host component
-// of one of the configured allowed origins. When no allowlist is configured
-// (legacy behaviour) or AllowAnyOrigin is set we accept any Host — this keeps
-// backward compatibility for operators running behind a reverse proxy that
-// rewrites Host, and for local stdio-over-HTTP development workflows.
+// opted into strict mode. In strict mode the Host header must match either a
+// loopback literal or the host component of one of the configured allowed
+// origins. AllowAnyOrigin disables the check entirely.
 //
-// Loopback is always accepted regardless of allowlist so curl 127.0.0.1:8080
-// smoke tests continue to work.
+// Loopback is always accepted regardless of allowlist so curl
+// 127.0.0.1:8080 smoke tests continue to work.
 func isHostAllowed(host string, allowed []string, allowAnyOrigin bool) bool {
 	if allowAnyOrigin {
-		return true
-	}
-	// No allowlist configured → permissive. Operators who want strict DNS
-	// rebinding protection must explicitly list their public origin.
-	if len(allowed) == 0 {
 		return true
 	}
 	if host == "" {
 		return false
 	}
-	// Strip port for comparison.
-	h := host
-	if i := strings.LastIndex(h, ":"); i >= 0 && strings.Count(h, ":") == 1 {
-		h = h[:i]
-	}
-	// IPv6 literal like [::1]:8080 / [::1]
-	h = strings.TrimPrefix(strings.TrimSuffix(h, "]"), "[")
+	h := canonicalHost(host)
 	switch strings.ToLower(h) {
-	case "localhost", "127.0.0.1", "::1", "0.0.0.0":
+	case "localhost", "127.0.0.1", "::1":
 		return true
 	}
 	for _, a := range allowed {
@@ -410,9 +391,19 @@ func isHostAllowed(host string, allowed []string, allowAnyOrigin bool) bool {
 		if i := strings.IndexAny(ah, "/?#"); i >= 0 {
 			ah = ah[:i]
 		}
-		if strings.EqualFold(ah, host) || strings.EqualFold(ah, h) {
+		if strings.EqualFold(canonicalHost(ah), h) {
 			return true
 		}
 	}
 	return false
+}
+
+func canonicalHost(host string) string {
+	if host == "" {
+		return ""
+	}
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		return strings.Trim(parsedHost, "[]")
+	}
+	return strings.Trim(host, "[]")
 }

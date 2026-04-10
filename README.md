@@ -7,7 +7,7 @@ Zero external dependencies. Single static binary. Every release is signed with c
 **Highlights**
 
 - **Layered architecture** — protocol core, Clockify client, tool surface, safety layer. `Enforcement` / `Activator` / `Notifier` interfaces keep the protocol core domain-free.
-- **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged`, and returns an `instructions` string for agentic clients.
+- **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged` only on transports that can actually push it, and returns an `instructions` string for agentic clients.
 - **Four policy modes** (`read_only`, `safe_core`, `standard`, `full`) + per-tool/group deny/allow lists + three-strategy dry-run for every destructive operation.
 - **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and window-based throughput limiter. Neither layer can strand resources in the other.
 - **Observability built in** — `/metrics` endpoint exposes tool RED metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Histogram buckets are tuned to the documented SLO boundaries.
@@ -209,6 +209,7 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit (`0` disables concurrency limiting) |
+| `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | How long to wait for a concurrency slot before rejecting the call. Must be between `1ms` and `30s`. |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per minute (`0` disables window limiting) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Response token budget (0 = off) |
 | `MCP_MAX_INFLIGHT_TOOL_CALLS` | `64` | Stdio dispatch-layer goroutine cap. Acquired before goroutine spawn, independent of business rate limiting. `0` disables. |
@@ -230,7 +231,7 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (validated at startup); clients send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
-| `MCP_STRICT_HOST_CHECK` | — | Set `1` to enforce DNS rebinding protection: the inbound `Host` header must match a loopback literal or a host in `MCP_ALLOWED_ORIGINS`. Default off to preserve reverse-proxy deployments that rewrite Host. |
+| `MCP_STRICT_HOST_CHECK` | — | Set `1` to enforce DNS rebinding protection: the inbound `Host` header must match `localhost`, `127.0.0.1`, `::1`, or a host in `MCP_ALLOWED_ORIGINS`. In strict mode, non-loopback hosts are rejected unless explicitly allowlisted. Default off to preserve reverse-proxy deployments that rewrite Host. |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr). All handlers are wrapped in a PII-redacting layer that scrubs secret keys (`authorization`, `api_key`, `bearer`, `token`, …) before encoding. |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
@@ -334,8 +335,8 @@ CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 # Run server — HTTP mode
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
 
-# Build with version
-go build -ldflags "-X main.version=v0.5.0" ./cmd/clockify-mcp
+# Build with explicit metadata
+go build -ldflags "-X main.version=v0.5.0 -X main.commit=$(git rev-parse HEAD) -X main.buildDate=$(git show -s --format=%cI HEAD)" ./cmd/clockify-mcp
 
 # Show all env vars
 clockify-mcp --help
@@ -350,7 +351,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | MCP Protocol | `2025-06-18` |
 | Claude Desktop | latest |
 | Cursor | latest |
-| Other MCP clients | any supporting stdio or Streamable HTTP |
+| Other MCP clients | any supporting stdio or the documented legacy POST JSON-RPC HTTP mode |
 | Go | 1.25.9+ |
 | Node.js (npm wrapper) | 16+ |
 
@@ -372,7 +373,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 
 **HTTP connection refused** — Verify `MCP_HTTP_BIND` and `MCP_BEARER_TOKEN` are set correctly.
 
-**Stale tool list** — The server sends `tools/list_changed` after group activation. Your client must re-fetch `tools/list`.
+**Stale tool list** — Stdio clients receive `notifications/tools/list_changed` after activation. HTTP clients do not; they must re-fetch `tools/list` after activation.
 
 ## Deployment and operations
 

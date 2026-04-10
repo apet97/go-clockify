@@ -219,6 +219,9 @@ func TestBeforeCall_RateLimitExhausted(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected rate limit error")
 	}
+	if !errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded) {
+		t.Fatalf("expected concurrency rate-limit error, got %v", err)
+	}
 	if !strings.Contains(err.Error(), "rate limited") {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -242,6 +245,9 @@ func TestBeforeCall_RateLimitWindowExhausted(t *testing.T) {
 	_, _, err = p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
 	if err == nil {
 		t.Fatal("expected rate limit error for window exhaustion")
+	}
+	if !errors.Is(err, ratelimit.ErrRateLimitExceeded) {
+		t.Fatalf("expected window rate-limit error, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "rate limited") {
 		t.Fatalf("unexpected error: %v", err)

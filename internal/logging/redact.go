@@ -16,6 +16,7 @@ package logging
 import (
 	"context"
 	"log/slog"
+	"reflect"
 	"strings"
 )
 
@@ -134,11 +135,44 @@ func (h *RedactingHandler) scrubAttr(a slog.Attr) slog.Attr {
 		return slog.Attr{Key: a.Key, Value: slog.GroupValue(out...)}
 	}
 	if a.Value.Kind() == slog.KindAny {
-		if m, ok := a.Value.Any().(map[string]any); ok {
-			return slog.Attr{Key: a.Key, Value: slog.AnyValue(h.scrubMap(m))}
-		}
+		return slog.Attr{Key: a.Key, Value: slog.AnyValue(h.scrubAny(a.Value.Any()))}
 	}
 	return a
+}
+
+func (h *RedactingHandler) scrubAny(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		return h.scrubMap(x)
+	case []any:
+		return h.scrubSlice(x)
+	}
+
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
+		return v
+	}
+	switch rv.Kind() {
+	case reflect.Map:
+		if rv.Type().Key().Kind() != reflect.String {
+			return v
+		}
+		out := make(map[string]any, rv.Len())
+		iter := rv.MapRange()
+		for iter.Next() {
+			key := iter.Key().String()
+			if h.isSensitive(key) {
+				out[key] = h.mask
+				continue
+			}
+			out[key] = h.scrubAny(iter.Value().Interface())
+		}
+		return out
+	case reflect.Slice, reflect.Array:
+		return h.scrubSliceValue(rv)
+	default:
+		return v
+	}
 }
 
 func (h *RedactingHandler) scrubMap(m map[string]any) map[string]any {
@@ -148,11 +182,23 @@ func (h *RedactingHandler) scrubMap(m map[string]any) map[string]any {
 			out[k] = h.mask
 			continue
 		}
-		if nested, ok := v.(map[string]any); ok {
-			out[k] = h.scrubMap(nested)
-			continue
-		}
-		out[k] = v
+		out[k] = h.scrubAny(v)
+	}
+	return out
+}
+
+func (h *RedactingHandler) scrubSlice(values []any) []any {
+	out := make([]any, len(values))
+	for i, v := range values {
+		out[i] = h.scrubAny(v)
+	}
+	return out
+}
+
+func (h *RedactingHandler) scrubSliceValue(rv reflect.Value) []any {
+	out := make([]any, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		out[i] = h.scrubAny(rv.Index(i).Interface())
 	}
 	return out
 }

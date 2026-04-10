@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -22,6 +23,22 @@ func TestFromEnvDefaults(t *testing.T) {
 	if rl.maxPerWindow != 120 {
 		t.Errorf("maxPerWindow = %d; want 120", rl.maxPerWindow)
 	}
+	if rl.acquireTimeout != DefaultAcquireTimeout {
+		t.Errorf("acquireTimeout = %v; want %v", rl.acquireTimeout, DefaultAcquireTimeout)
+	}
+}
+
+func TestFromEnvWithAcquireTimeoutRespectsOverride(t *testing.T) {
+	os.Unsetenv("CLOCKIFY_MAX_CONCURRENT")
+	os.Unsetenv("CLOCKIFY_RATE_LIMIT")
+
+	rl := FromEnvWithAcquireTimeout(250 * time.Millisecond)
+	if rl == nil {
+		t.Fatal("expected non-nil RateLimiter with default env")
+	}
+	if rl.acquireTimeout != 250*time.Millisecond {
+		t.Fatalf("acquireTimeout = %v; want 250ms", rl.acquireTimeout)
+	}
 }
 
 func TestAcquireAndRelease(t *testing.T) {
@@ -35,6 +52,33 @@ func TestAcquireAndRelease(t *testing.T) {
 		t.Fatal("release function is nil")
 	}
 	release()
+}
+
+func TestLimitErrorHelpers(t *testing.T) {
+	concurrencyErr := &ConcurrencyLimitError{
+		MaxConcurrent: 1,
+		Cause:         context.DeadlineExceeded,
+	}
+	if !errors.Is(concurrencyErr, ErrConcurrencyLimitExceeded) {
+		t.Fatal("expected concurrency error to match sentinel")
+	}
+	if !errors.Is(concurrencyErr, context.DeadlineExceeded) {
+		t.Fatal("expected concurrency error to unwrap context cause")
+	}
+	if concurrencyErr.Unwrap() != context.DeadlineExceeded {
+		t.Fatalf("unexpected unwrap cause: %v", concurrencyErr.Unwrap())
+	}
+	if got := concurrencyErr.Error(); got == "" {
+		t.Fatal("expected non-empty concurrency error string")
+	}
+
+	windowErr := &RateLimitError{MaxPerWindow: 5, WindowMillis: 60000}
+	if !errors.Is(windowErr, ErrRateLimitExceeded) {
+		t.Fatal("expected rate-limit error to match sentinel")
+	}
+	if got := windowErr.Error(); got != "rate limit exceeded: 5 calls in 60s window" {
+		t.Fatalf("unexpected window error string: %q", got)
+	}
 }
 
 func TestConcurrencyLimit(t *testing.T) {
@@ -55,6 +99,9 @@ func TestConcurrencyLimit(t *testing.T) {
 	_, err := rl.Acquire(context.Background())
 	if err == nil {
 		t.Fatal("expected concurrency-limit error, got nil")
+	}
+	if !errors.Is(err, ErrConcurrencyLimitExceeded) {
+		t.Fatalf("expected ErrConcurrencyLimitExceeded, got %v", err)
 	}
 	if got := err.Error(); got != "concurrency limit exceeded: 2 concurrent calls" {
 		t.Errorf("unexpected error: %s", got)
@@ -81,6 +128,9 @@ func TestWindowLimit(t *testing.T) {
 	_, err := rl.Acquire(context.Background())
 	if err == nil {
 		t.Fatal("expected window-limit error, got nil")
+	}
+	if !errors.Is(err, ErrRateLimitExceeded) {
+		t.Fatalf("expected ErrRateLimitExceeded, got %v", err)
 	}
 }
 
@@ -134,6 +184,9 @@ func TestFailedConcurrencyDoesntBurnWindow(t *testing.T) {
 	_, err = rl.Acquire(context.Background())
 	if err == nil {
 		t.Fatal("expected concurrency-limit error")
+	}
+	if !errors.Is(err, ErrConcurrencyLimitExceeded) {
+		t.Fatalf("expected ErrConcurrencyLimitExceeded, got %v", err)
 	}
 
 	after := rl.windowCount.Load()
@@ -236,8 +289,85 @@ func TestAcquireRespectsContextCancellation(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from cancelled context")
 	}
+	if !errors.Is(err, ErrConcurrencyLimitExceeded) {
+		t.Fatalf("expected ErrConcurrencyLimitExceeded, got %v", err)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected wrapped context deadline exceeded, got %v", err)
+	}
 	// Should return before the 100ms semaphore timeout.
 	if elapsed >= 80*time.Millisecond {
 		t.Errorf("expected cancellation before 80ms, took %v", elapsed)
+	}
+}
+
+func TestAcquireHonorsConfiguredTimeout(t *testing.T) {
+	rl := NewWithAcquireTimeout(1, 100, 60000, 20*time.Millisecond)
+
+	rel, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("first Acquire failed: %v", err)
+	}
+	defer rel()
+
+	start := time.Now()
+	_, err = rl.Acquire(context.Background())
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !errors.Is(err, ErrConcurrencyLimitExceeded) {
+		t.Fatalf("expected ErrConcurrencyLimitExceeded, got %v", err)
+	}
+	if elapsed < 15*time.Millisecond || elapsed > 100*time.Millisecond {
+		t.Fatalf("expected configured timeout around 20ms, got %v", elapsed)
+	}
+}
+
+func TestNewWithAcquireTimeoutDefaultsZero(t *testing.T) {
+	rl := NewWithAcquireTimeout(1, 1, 60000, 0)
+	if rl.acquireTimeout != DefaultAcquireTimeout {
+		t.Fatalf("expected default acquire timeout, got %v", rl.acquireTimeout)
+	}
+}
+
+func TestStatsAndString(t *testing.T) {
+	rl := NewWithAcquireTimeout(2, 3, 60000, 250*time.Millisecond)
+
+	rel, err := rl.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("Acquire failed: %v", err)
+	}
+	defer rel()
+
+	stats := rl.Stats()
+	if stats.Concurrent != 1 {
+		t.Fatalf("Concurrent = %d; want 1", stats.Concurrent)
+	}
+	if stats.MaxConcurrent != 2 || stats.MaxPerWindow != 3 || stats.WindowMillis != 60000 {
+		t.Fatalf("unexpected stats snapshot: %+v", stats)
+	}
+
+	if got := rl.String(); got != "RateLimiter{concurrent:2, window:3/60s}" {
+		t.Fatalf("unexpected string: %q", got)
+	}
+	if got := ((*RateLimiter)(nil)).String(); got != "RateLimiter{disabled}" {
+		t.Fatalf("unexpected nil string: %q", got)
+	}
+	if stats := ((*RateLimiter)(nil)).Stats(); stats != (Stats{}) {
+		t.Fatalf("expected zero stats for nil limiter, got %+v", stats)
+	}
+}
+
+func TestEnvInt(t *testing.T) {
+	t.Setenv("CLOCKIFY_RATE_LIMIT", "250")
+	if got := envInt("CLOCKIFY_RATE_LIMIT", 120); got != 250 {
+		t.Fatalf("envInt parsed value = %d; want 250", got)
+	}
+
+	t.Setenv("CLOCKIFY_RATE_LIMIT", "bad")
+	if got := envInt("CLOCKIFY_RATE_LIMIT", 120); got != 120 {
+		t.Fatalf("envInt fallback = %d; want 120", got)
 	}
 }

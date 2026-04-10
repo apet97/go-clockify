@@ -10,12 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **MCP protocol version negotiation** — `initialize` now parses `InitializeParams`, negotiates against `SupportedProtocolVersions` (2025-06-18, 2025-03-26, 2024-11-05), echoes back the negotiated version, and records `clientInfo.name`/`clientInfo.version` for log correlation. `serverInfo` carries a human-readable `title`. A new `instructions` field explains Tier 1/Tier 2 discovery, the dry-run idiom, and the four policy modes so agentic clients can self-orient.
-- **`tools.listChanged` capability advertised** in `initialize.result.capabilities`. The server already emitted `notifications/tools/list_changed` on dynamic activation; declaring the capability lets clients subscribe instead of silently discarding the notification.
+- **Transport-aware `tools.listChanged` capability advertisement.** `initialize.result.capabilities.tools.listChanged` is now only advertised on transports that can actually deliver `notifications/tools/list_changed` (stdio today). Legacy HTTP intentionally omits the capability.
 - **Pluggable `Notifier` interface** decouples server→client notification delivery from the stdio JSON encoder. `encoderNotifier` is installed by `Run()`; the legacy HTTP POST transport installs `droppingNotifier`, which logs every suppressed notification and increments `clockify_mcp_protocol_errors_total{code="notification_dropped"}` — previously activations on HTTP silently vanished into a nil encoder.
 - **Panic recovery** in the stdio dispatch goroutine (`server.Run`) and the HTTP middleware (`observeHTTPH`). Panics produce a structured `panic_recovered` slog event with the recovered value + `debug.Stack()`, increment `clockify_mcp_panics_recovered_total{site}`, and return a tool-error envelope to the client instead of crashing the loop.
 - **PII-redacting slog handler** (`internal/logging/redact.go`) wraps every log handler at startup. Recursively scrubs 20 well-known secret key patterns (`authorization`, `api_key`, `bearer`, `token`, `cookie`, `client_secret`, `refresh_token`, …) from both top-level attrs and nested maps/groups. Defence-in-depth layer: hot-path code still avoids logging secrets explicitly, but an accidental header-map log no longer leaks credentials.
 - **Full HTTP security header suite** on every `/mcp` response: `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy: ()`, in addition to the pre-existing `X-Content-Type-Options: nosniff` and `Cache-Control: no-store`.
-- **DNS rebinding protection** (opt-in via `MCP_STRICT_HOST_CHECK=1`). When enabled, the Host header must match either a loopback literal or the host component of an entry in `MCP_ALLOWED_ORIGINS`. Default off preserves reverse-proxy deployments that rewrite Host.
+- **Validated transport knobs** for `MCP_STRICT_HOST_CHECK` and `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT`, both parsed in `internal/config` instead of being read ad hoc at the edge.
+- **Typed rate-limit errors** in `internal/ratelimit`, allowing `errors.Is` classification in enforcement and protocol paths instead of message-substring matching.
+- **Dedicated redaction tests** covering top-level attrs, grouped attrs, nested maps, nested slices, reflect-backed maps/slices, case-insensitive substring matches, and non-sensitive passthrough.
+- **Release metadata smoke verification** in the release workflow, asserting `/metrics` exposes the expected `clockify_mcp_build_info{version,commit,build_date,...}` labels.
+- **Docker metadata parity**: the image workflow now passes `BUILD_DATE`, aligning OCI labels with embedded binary metadata.
 - **HTTP request duration histogram** `clockify_mcp_http_request_duration_seconds{path,method,status}` with buckets tuned for fast JSON-RPC (0.005→10s). `HTTPRequestsTotal.path` is normalized to `{/mcp,/health,/ready,/metrics,/other}` so probe traffic can never blow label cardinality. All mux routes flow through a single `observeHTTPH` middleware that records metrics + panic recovery uniformly.
 - **Upstream Clockify client metrics** (`clockify/metrics.go` + instrumentation in `doOnce` / `doJSON`):
   - `clockify_upstream_requests_total{endpoint,method,status}` with status bucketed to `{2xx,3xx,4xx,5xx,error}`
@@ -37,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Default log format** wrapped in the redacting handler at startup (affects both text and JSON modes).
 - **stdio + HTTP transport** share one dispatch-layer goroutine semaphore via `observeHTTPH` instrumentation so concurrency caps are uniform across transports.
 - **`Server.callTool`** records `clockify_mcp_protocol_errors_total` on every JSON-RPC error response.
+- **Legacy HTTP transport is now truthful about its semantics.** It no longer auto-initializes the server, `/ready` no longer depends on `initialize`, and docs describe it as stateless POST JSON-RPC without server-push notifications.
+- **Strict host checking tightened**: `0.0.0.0` is no longer accepted as a Host header, and strict mode now requires non-loopback hosts to be explicitly allowlisted in `MCP_ALLOWED_ORIGINS`.
+- **Release binaries now inject all three build metadata fields**: `main.version`, `main.commit`, and `main.buildDate`.
+- **CI gates tightened**: `govulncheck` and fuzzing are now blocking, and coverage enforcement moved from one soft global threshold to a global floor plus critical-package floors.
 
 ### Removed
 

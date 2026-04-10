@@ -174,6 +174,33 @@ func TestLoadAllowedOriginsEmpty(t *testing.T) {
 	}
 }
 
+func TestLoadStrictHostCheck(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_STRICT_HOST_CHECK": "true",
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.StrictHostCheck {
+		t.Fatal("expected StrictHostCheck to be true")
+	}
+}
+
+func TestLoadStrictHostCheckInvalidReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_STRICT_HOST_CHECK": "maybe",
+	})
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid MCP_STRICT_HOST_CHECK")
+	}
+}
+
 func TestLoadMaxBodySizeDefault(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
@@ -401,5 +428,64 @@ func TestLoadToolTimeoutInvalid(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for invalid duration")
+	}
+}
+
+func TestLoadConcurrencyAcquireTimeoutDefault(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	os.Unsetenv("CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ConcurrencyAcquireTimeout != 100*1000*1000 { // 100ms
+		t.Fatalf("expected 100ms default, got %v", cfg.ConcurrencyAcquireTimeout)
+	}
+}
+
+func TestLoadConcurrencyAcquireTimeoutCustom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":                     "test-key",
+		"CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT": "250ms",
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ConcurrencyAcquireTimeout != 250*1000*1000 {
+		t.Fatalf("expected 250ms, got %v", cfg.ConcurrencyAcquireTimeout)
+	}
+}
+
+func TestLoadConcurrencyAcquireTimeoutInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":                     "test-key",
+		"CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT": "not-a-duration",
+	})
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid concurrency acquire timeout")
+	}
+}
+
+func TestLoadConcurrencyAcquireTimeoutOutOfRange(t *testing.T) {
+	tests := []string{"0", "31s"}
+	for _, value := range tests {
+		t.Run(value, func(t *testing.T) {
+			setEnvs(t, map[string]string{
+				"CLOCKIFY_API_KEY":                     "test-key",
+				"CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT": value,
+			})
+
+			_, err := Load()
+			if err == nil {
+				t.Fatalf("expected error for out-of-range timeout %q", value)
+			}
+		})
 	}
 }

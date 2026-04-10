@@ -129,6 +129,7 @@ Two-layer protection (race-safe window reset):
 | Control | Variable | Default | Description |
 |---------|----------|---------|-------------|
 | Concurrency | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max simultaneous tool calls |
+| Acquire timeout | `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | Max time to wait for a concurrency slot before rejecting |
 | Throughput | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window |
 
 Set either to `0` to disable that layer.

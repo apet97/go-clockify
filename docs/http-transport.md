@@ -5,7 +5,7 @@
 Use HTTP transport for:
 - Multi-user deployments
 - Centralized hosting
-- MCP clients that support Streamable HTTP transport
+- MCP clients that can speak legacy POST JSON-RPC over HTTP
 - Server-side deployments behind a reverse proxy
 
 Use stdio (default) for:
@@ -31,6 +31,7 @@ clockify-mcp
 | `MCP_BEARER_TOKEN` | Yes (http) | — | Bearer token for auth (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | No | — | Comma-separated allowed browser origins |
 | `MCP_ALLOW_ANY_ORIGIN` | No | — | Set `1` to allow all origins |
+| `MCP_STRICT_HOST_CHECK` | No | — | Set `1` to require `Host` match `localhost`, `127.0.0.1`, `::1`, or a host from `MCP_ALLOWED_ORIGINS` |
 | `MCP_HTTP_MAX_BODY` | No | `2097152` | Positive max request body (bytes, default 2MB) |
 | `MCP_LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` |
 
@@ -42,10 +43,12 @@ All requests to `/mcp` require a Bearer token:
 curl -X POST http://localhost:8080/mcp \
   -H "Authorization: Bearer your-secret-token" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
 ```
 
 The token is compared using constant-time comparison (`crypto/subtle`) to prevent timing attacks.
+
+HTTP mode is a legacy stateless JSON-RPC transport. It does not provide server-initiated streaming or session-backed notification delivery. Clients should send `initialize` before the first `tools/call` after process start.
 
 ## Endpoints
 
@@ -54,7 +57,7 @@ The token is compared using constant-time comparison (`crypto/subtle`) to preven
 | `/mcp` | POST | Bearer | MCP JSON-RPC endpoint |
 | `/mcp` | OPTIONS | None | CORS preflight |
 | `/health` | GET | None | Health check (always 200) |
-| `/ready` | GET | None | Readiness check for the HTTP server itself (HTTP mode auto-initializes before serving, so this is `200` once the listener is up) |
+| `/ready` | GET | None | Readiness check for the HTTP server and optional upstream Clockify probe; independent of MCP `initialize` state |
 
 ## Security Headers
 
@@ -91,11 +94,18 @@ To allow all origins (not recommended for production):
 MCP_ALLOW_ANY_ORIGIN=1
 ```
 
+To enable strict Host-header validation against DNS rebinding attacks:
+```sh
+MCP_STRICT_HOST_CHECK=1
+```
+
+When strict host checking is enabled, non-loopback hosts must also appear in `MCP_ALLOWED_ORIGINS`. `0.0.0.0` is a bind address, not an allowed Host header.
+
 Preflight `OPTIONS` requests do not require the bearer token.
 
 ## Known Limitations
 
-**Tool list change notifications are not supported in HTTP mode.** When Tier 2 tool groups are activated via `clockify_search_tools`, the `notifications/tools/list_changed` push notification is only delivered in stdio mode (where a persistent connection exists). HTTP clients should re-fetch `tools/list` after activating groups.
+**Tool list change notifications are not supported in HTTP mode.** `initialize` over HTTP intentionally omits `capabilities.tools.listChanged`, because the legacy POST transport cannot deliver `notifications/tools/list_changed`. When Tier 2 tool groups are activated via `clockify_search_tools`, HTTP clients should re-fetch `tools/list` after activating groups.
 
 ## Structured Access Logging
 

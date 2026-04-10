@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/metrics"
+	"github.com/apet97/go-clockify/internal/ratelimit"
 )
 
 // SupportedProtocolVersions lists MCP protocol versions this server can
@@ -135,9 +136,13 @@ type Server struct {
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
 	initialized atomic.Bool
-	encoder     *json.Encoder // stored for push notifications
-	encoderMu   sync.Mutex    // protects concurrent encoder writes
-	requestSeq  atomic.Int64  // monotonic request ID for log correlation
+	// advertiseListChanged controls whether initialize reports
+	// capabilities.tools.listChanged=true. Only transports that can actually
+	// deliver notifications/tools/list_changed should set this.
+	advertiseListChanged atomic.Bool
+	encoder              *json.Encoder // stored for push notifications
+	encoderMu            sync.Mutex    // protects concurrent encoder writes
+	requestSeq           atomic.Int64  // monotonic request ID for log correlation
 
 	// notifier delivers server→client notifications. Set by the transport
 	// layer (stdio Run or HTTP ServeHTTP) at startup. nil = drop with a log.
@@ -212,6 +217,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	if s.notifier == nil {
 		s.notifier = encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
 	}
+	s.advertiseListChanged.Store(true)
 
 	// Channel-based approach: scan lines in a goroutine so we can
 	// select on ctx.Done() in the main loop.
@@ -468,15 +474,17 @@ func (s *Server) handleInitialize(raw any) map[string]any {
 			"title":   "Clockify Go MCP Server",
 			"version": s.Version,
 		},
-		"capabilities": map[string]any{
-			// listChanged is true because ActivateGroup / ActivateTier1Tool
-			// emit notifications/tools/list_changed. Declaring the capability
-			// lets clients subscribe; previously the server emitted the
-			// notification without declaring support, so clients ignored it.
-			"tools": map[string]any{"listChanged": true},
-		},
+		"capabilities": map[string]any{"tools": s.toolCapabilities()},
 		"instructions": ServerInstructions,
 	}
+}
+
+func (s *Server) toolCapabilities() map[string]any {
+	tools := map[string]any{}
+	if s.advertiseListChanged.Load() {
+		tools["listChanged"] = true
+	}
+	return tools
 }
 
 func (s *Server) listTools() []Tool {
@@ -550,7 +558,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		}
 		if err != nil {
 			switch {
-			case strings.Contains(err.Error(), "rate limit"), strings.Contains(err.Error(), "concurrency"):
+			case errors.Is(err, ratelimit.ErrRateLimitExceeded), errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded):
 				outcome = "rate_limited"
 			case strings.Contains(err.Error(), "blocked by policy"):
 				outcome = "policy_denied"

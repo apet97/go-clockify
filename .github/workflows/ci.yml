@@ -53,7 +53,6 @@ jobs:
   vulncheck:
     name: Vulncheck
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -105,15 +104,40 @@ jobs:
           set -euo pipefail
           COVERAGE=$(go tool cover -func=coverage.out | awk '/^total:/ {print $NF}' | tr -d '%')
           echo "Total coverage: ${COVERAGE}%"
-          awk -v cov="$COVERAGE" 'BEGIN { exit (cov + 0 < 50) ? 1 : 0 }' || {
-            echo "Coverage ${COVERAGE}% is below 50% threshold"
+          awk -v cov="$COVERAGE" 'BEGIN { exit (cov + 0 < 55) ? 1 : 0 }' || {
+            echo "Coverage ${COVERAGE}% is below 55% threshold"
             exit 1
           }
+      - name: Check critical package coverage floors
+        run: |
+          set -euo pipefail
+          REPORT=$(go test -cover ./internal/mcp ./internal/config ./internal/enforcement ./internal/ratelimit ./internal/logging)
+          printf '%s\n' "$REPORT"
+
+          check_pkg() {
+            local pkg="$1"
+            local floor="$2"
+            local cov
+            cov=$(printf '%s\n' "$REPORT" | awk -v pkg="github.com/apet97/go-clockify/${pkg}" '$1 == "ok" && $2 == pkg { gsub("%", "", $5); print $5 }')
+            if [ -z "$cov" ]; then
+              echo "Missing coverage report for ${pkg}"
+              exit 1
+            fi
+            awk -v cov="$cov" -v floor="$floor" 'BEGIN { exit (cov + 0 < floor + 0) ? 1 : 0 }' || {
+              echo "Coverage ${cov}% for ${pkg} is below ${floor}%"
+              exit 1
+            }
+          }
+
+          check_pkg internal/mcp 62
+          check_pkg internal/config 78
+          check_pkg internal/enforcement 85
+          check_pkg internal/ratelimit 70
+          check_pkg internal/logging 85
 
   fuzz:
     name: Fuzz (20s per target)
     runs-on: ubuntu-latest
-    continue-on-error: true
     # Hard ceiling: if any target hangs, the whole job is killed after 8min
     # instead of occupying the runner for GitHub's default 6-hour timeout.
     timeout-minutes: 8

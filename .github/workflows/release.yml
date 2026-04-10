@@ -49,11 +49,13 @@ jobs:
       - name: Build binary
         run: |
           VERSION="${GITHUB_REF_NAME}"
+          COMMIT="${GITHUB_SHA}"
+          BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
             -trimpath \
-            -ldflags "-s -w -X main.version=${VERSION}" \
+            -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" \
             -o "clockify-mcp-${PLATFORM}${EXT}" \
             ./cmd/clockify-mcp
         env:
@@ -64,6 +66,9 @@ jobs:
         if: ${{ matrix.goos == 'darwin' || (matrix.goos == 'linux' && matrix.goarch == 'amd64') }}
         run: |
           BIN="clockify-mcp-${PLATFORM}"
+          VERSION="${GITHUB_REF_NAME}"
+          COMMIT="${GITHUB_SHA}"
+          BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
           chmod +x "$BIN"
           MCP_TRANSPORT=http \
           MCP_HTTP_BIND=127.0.0.1:8091 \
@@ -81,6 +86,14 @@ jobs:
             200|503) ;;
             *) echo "unexpected /ready status: $code"; kill "$PID" 2>/dev/null; exit 1 ;;
           esac
+          metrics="$(curl -sf http://127.0.0.1:8091/metrics)"
+          expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
+          printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {
+            echo "missing expected build_info labels"
+            echo "$metrics"
+            kill "$PID" 2>/dev/null
+            exit 1
+          }
           kill "$PID" 2>/dev/null || true
         env:
           PLATFORM: ${{ matrix.platform }}

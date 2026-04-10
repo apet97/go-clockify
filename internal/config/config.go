@@ -22,15 +22,17 @@ type Config struct {
 	Timezone       string
 
 	// MCP transport
-	Transport      string
-	HTTPBind       string
-	BearerToken    string
-	AllowedOrigins []string
-	AllowAnyOrigin bool
-	MaxBodySize    int64
+	Transport       string
+	HTTPBind        string
+	BearerToken     string
+	AllowedOrigins  []string
+	AllowAnyOrigin  bool
+	StrictHostCheck bool
+	MaxBodySize     int64
 
 	// Tool execution
-	ToolTimeout time.Duration
+	ToolTimeout               time.Duration
+	ConcurrencyAcquireTimeout time.Duration
 
 	// Dispatch-layer concurrency bound for stdio tools/call. 0 disables.
 	MaxInFlightToolCalls int
@@ -106,6 +108,11 @@ func Load() (Config, error) {
 	}
 
 	cfg.AllowAnyOrigin = os.Getenv("MCP_ALLOW_ANY_ORIGIN") == "1"
+	strictHostCheck, err := optionalBoolEnv("MCP_STRICT_HOST_CHECK")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.StrictHostCheck = strictHostCheck
 
 	cfg.MaxBodySize = 2097152 // 2 MB default
 	if mbs := os.Getenv("MCP_HTTP_MAX_BODY"); mbs != "" {
@@ -133,6 +140,18 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_TOOL_TIMEOUT must be between 5s and 10m")
 		}
 		cfg.ToolTimeout = d
+	}
+
+	cfg.ConcurrencyAcquireTimeout = 100 * time.Millisecond
+	if tt := os.Getenv("CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT"); tt != "" {
+		d, err := time.ParseDuration(tt)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT %q: %w", tt, err)
+		}
+		if d < time.Millisecond || d > 30*time.Second {
+			return Config{}, fmt.Errorf("CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT must be between 1ms and 30s")
+		}
+		cfg.ConcurrencyAcquireTimeout = d
 	}
 
 	cfg.MaxInFlightToolCalls = 64
@@ -192,4 +211,16 @@ func isLoopbackHost(host string) bool {
 	default:
 		return false
 	}
+}
+
+func optionalBoolEnv(key string) (bool, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return false, nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s %q: must be a boolean", key, raw)
+	}
+	return value, nil
 }

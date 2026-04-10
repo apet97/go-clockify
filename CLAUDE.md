@@ -69,6 +69,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | `full_tier1`, `minimal`, `custom` |
 | `CLOCKIFY_BOOTSTRAP_TOOLS` | — | Comma-separated tools for custom mode |
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (business layer, `0` disables) |
+| `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | Max time to wait for a concurrency slot before rejecting (`1ms`–`30s`) |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window (`0` disables this layer) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Token truncation budget (0=off) |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool-call timeout (5s–10m, Go duration format) |
@@ -83,6 +84,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
+| `MCP_STRICT_HOST_CHECK` | — | Set `1` to require Host match `localhost`, `127.0.0.1`, `::1`, or `MCP_ALLOWED_ORIGINS` |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |

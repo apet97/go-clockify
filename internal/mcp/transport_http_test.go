@@ -50,15 +50,15 @@ func TestReadyNotInitialized(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	s.handleReady(rec, req)
 
-	if rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("expected 503, got %d", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	var body map[string]string
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if body["status"] != "not_ready" {
-		t.Fatalf("expected status not_ready, got %q", body["status"])
+	if body["status"] != "ok" {
+		t.Fatalf("expected status ok, got %q", body["status"])
 	}
 }
 
@@ -200,7 +200,6 @@ func TestMCPRejectsTokenWithoutBearerPrefix(t *testing.T) {
 
 func TestMCPAuthorized(t *testing.T) {
 	s := newTestServer()
-	s.initialized.Store(true)
 	handler := s.handleMCP(testBearerToken, nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
@@ -221,6 +220,45 @@ func TestMCPAuthorized(t *testing.T) {
 	}
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+}
+
+func TestHTTPInitializeOmitsListChangedCapability(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerToken, nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
+	}
+	capabilities, ok := resultMap["capabilities"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected capabilities map, got %T", resultMap["capabilities"])
+	}
+	toolsCaps, ok := capabilities["tools"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected tools capability map, got %T", capabilities["tools"])
+	}
+	if _, found := toolsCaps["listChanged"]; found {
+		t.Fatalf("expected HTTP initialize to omit tools.listChanged, got %v", toolsCaps)
 	}
 }
 
@@ -317,10 +355,17 @@ func TestHTTPToolsCall(t *testing.T) {
 		},
 		ReadOnlyHint: true,
 	}}, nil, nil)
-	s.initialized.Store(true)
-
 	const bearer = "test-bearer-token-1234"
 	handler := s.handleMCP(bearer, nil, true, 2097152)
+
+	initRec := httptest.NewRecorder()
+	initReq := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`))
+	initReq.Header.Set("Authorization", "Bearer "+bearer)
+	initReq.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(initRec, initReq)
+	if initRec.Code != http.StatusOK {
+		t.Fatalf("expected initialize 200, got %d", initRec.Code)
+	}
 
 	rec := httptest.NewRecorder()
 	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"test_tool","arguments":{}}}`
@@ -361,6 +406,41 @@ func TestHTTPToolsCall(t *testing.T) {
 	// The text should contain our tool's output (JSON-encoded)
 	if !strings.Contains(text, `"hello"`) || !strings.Contains(text, `"world"`) {
 		t.Fatalf("expected tool output in text, got %q", text)
+	}
+}
+
+func TestHTTPToolsCallRequiresInitialize(t *testing.T) {
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "test_tool", Description: "returns hello world"},
+		Handler: func(_ context.Context, args map[string]any) (any, error) {
+			return map[string]any{"hello": "world"}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+
+	const bearer = "test-bearer-token-1234"
+	handler := s.handleMCP(bearer, nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"test_tool","arguments":{}}}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+	if resp.Error == nil {
+		t.Fatal("expected JSON-RPC error before initialize")
+	}
+	if resp.Error.Code != -32002 {
+		t.Fatalf("expected -32002, got %d", resp.Error.Code)
 	}
 }
 
@@ -445,6 +525,53 @@ func TestHTTPBodyTooLarge(t *testing.T) {
 	}
 }
 
+func TestHTTPStrictHostCheckRejectsZeroAddress(t *testing.T) {
+	s := newTestServer()
+	s.StrictHostCheck = true
+	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Host = "0.0.0.0:8080"
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestHTTPStrictHostCheckAllowsLoopbackAndAllowlistedHosts(t *testing.T) {
+	tests := []struct {
+		name    string
+		host    string
+		allowed []string
+	}{
+		{name: "localhost", host: "localhost:8080"},
+		{name: "ipv4 loopback", host: "127.0.0.1:8080"},
+		{name: "ipv6 loopback", host: "[::1]:8080"},
+		{name: "allowlisted host", host: "app.example.com:8080", allowed: []string{"https://app.example.com"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestServer()
+			s.StrictHostCheck = true
+			handler := s.handleMCP(testBearerToken, tt.allowed, false, 2097152)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+			req.Header.Set("Authorization", "Bearer "+testBearerToken)
+			req.Host = tt.host
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+		})
+	}
+}
+
 func TestIsOriginAllowed(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -464,6 +591,33 @@ func TestIsOriginAllowed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := isOriginAllowed(tt.origin, tt.allowed, tt.allowAnyOrigin); got != tt.want {
 				t.Fatalf("isOriginAllowed(%q, %v, %v) = %v, want %v", tt.origin, tt.allowed, tt.allowAnyOrigin, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsHostAllowed(t *testing.T) {
+	tests := []struct {
+		name           string
+		host           string
+		allowed        []string
+		allowAnyOrigin bool
+		want           bool
+	}{
+		{"allowAnyOrigin bypasses host check", "evil.example.com:8080", nil, true, true},
+		{"empty host rejected", "", nil, false, false},
+		{"localhost allowed", "localhost:8080", nil, false, true},
+		{"ipv4 loopback allowed", "127.0.0.1:8080", nil, false, true},
+		{"ipv6 loopback allowed", "[::1]:8080", nil, false, true},
+		{"zero address rejected", "0.0.0.0:8080", nil, false, false},
+		{"allowlisted host allowed", "app.example.com:8080", []string{"https://app.example.com"}, false, true},
+		{"non-allowlisted host rejected", "evil.example.com:8080", []string{"https://app.example.com"}, false, false},
+		{"strict with no allowlist rejects non-loopback", "app.example.com:8080", nil, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isHostAllowed(tt.host, tt.allowed, tt.allowAnyOrigin); got != tt.want {
+				t.Fatalf("isHostAllowed(%q, %v, %v) = %v, want %v", tt.host, tt.allowed, tt.allowAnyOrigin, got, tt.want)
 			}
 		})
 	}
