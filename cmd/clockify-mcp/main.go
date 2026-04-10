@@ -95,6 +95,7 @@ func run() error {
 	}
 	service.DedupeConfig = &dd
 	service.PolicyDescribe = pol.Describe
+	service.ReportMaxEntries = cfg.ReportMaxEntries
 
 	registry := service.Registry()
 
