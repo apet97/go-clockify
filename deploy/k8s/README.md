@@ -1,0 +1,144 @@
+# Kubernetes reference manifests
+
+Stock YAML manifests for running `clockify-mcp` in HTTP mode on any vanilla
+Kubernetes cluster. No Helm, no Kustomize — copy, tweak, apply.
+
+## What's here
+
+| File | Role |
+|---|---|
+| `deployment.yaml` | Deployment with hardened pod security, resource limits, and three probes (startup, liveness, readiness). |
+| `service.yaml` | ClusterIP service exposing port 8080 (`http`) for in-cluster clients and ingress controllers. |
+| `configmap.yaml` | Non-secret environment variables (policy, rate limits, timeouts, bootstrap mode). |
+| `secret.example.yaml` | Template for the Secret holding `CLOCKIFY_API_KEY` and `MCP_BEARER_TOKEN`. Do not commit real values. |
+
+The server runs in HTTP transport mode in-cluster. Stdio is reserved for
+local MCP clients (Claude Desktop, Cursor).
+
+## Quickstart
+
+```bash
+kubectl create namespace clockify-mcp
+
+# Create the Secret (DO NOT commit real values).
+kubectl -n clockify-mcp create secret generic clockify-mcp-secrets \
+  --from-literal=CLOCKIFY_API_KEY="$CLOCKIFY_API_KEY" \
+  --from-literal=MCP_BEARER_TOKEN="$(openssl rand -base64 24)"
+
+kubectl apply -f deploy/k8s/configmap.yaml
+kubectl apply -f deploy/k8s/service.yaml
+kubectl apply -f deploy/k8s/deployment.yaml
+
+kubectl -n clockify-mcp rollout status deployment/clockify-mcp
+```
+
+Verify the pod is healthy and authenticated:
+
+```bash
+kubectl -n clockify-mcp port-forward svc/clockify-mcp 8080:8080 &
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8080/ready
+curl -fsS -H "Authorization: Bearer $MCP_BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}' \
+  http://127.0.0.1:8080/mcp
+```
+
+## Image
+
+The manifest references `ghcr.io/apet97/go-clockify:latest`. The project's
+Dockerfile lives in [`deploy/Dockerfile`](../Dockerfile). In production:
+
+- Pin to a released tag (for example `ghcr.io/apet97/go-clockify:v0.4.1`)
+  instead of `:latest` so rollouts are deterministic.
+- Consider building your own image from a verified release binary and
+  publishing it to your internal registry.
+- Mirror the image to keep supply-chain provenance under your control.
+
+## Security posture
+
+The pod spec is hardened out of the box:
+
+- `runAsNonRoot: true`, `runAsUser: 65532`, `runAsGroup: 65532` — runs as
+  the unprivileged `nonroot` user shipped with distroless base images.
+- `readOnlyRootFilesystem: true` — the container cannot write to its own
+  filesystem. The server writes nothing on disk; all state is in memory.
+- `allowPrivilegeEscalation: false` — blocks `setuid`/`setgid` escalation.
+- `capabilities.drop: ["ALL"]` — no Linux capabilities are granted.
+- `seccompProfile.type: RuntimeDefault` — uses the runtime's default
+  seccomp filter, blocking unexpected syscalls.
+- `automountServiceAccountToken: false` — the container has no in-cluster
+  API credential. The MCP server never talks to the Kubernetes API.
+
+Secrets are injected via `envFrom: secretRef`, not baked into the image
+or the Deployment manifest.
+
+## Observability
+
+The HTTP transport exposes three unauthenticated endpoints:
+
+- `GET /health` — liveness (always 200 if the process is alive).
+- `GET /ready` — readiness (503 if the upstream Clockify API is unreachable).
+- `GET /metrics` — Prometheus text-format metrics.
+
+Structured JSON logs are written to stderr (`MCP_LOG_FORMAT=json`).
+
+If your cluster uses annotation-based Prometheus discovery, add to the
+pod template:
+
+```yaml
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+```
+
+For a `ServiceMonitor`-based scrape (kube-prometheus-stack), create a
+`ServiceMonitor` that selects on `app.kubernetes.io/name: clockify-mcp`.
+
+## Scaling
+
+The provided Deployment runs 2 replicas for availability during rolling
+updates. Horizontal scaling notes:
+
+- The server is stateless apart from in-memory caches (current user and
+  workspace). Scaling replicas is safe.
+- Every replica authenticates with the same `CLOCKIFY_API_KEY`. Clockify
+  rate limits are applied per-key at the upstream, so adding replicas
+  does **not** raise the aggregate rate-limit ceiling — it only raises
+  local concurrency headroom. If you regularly see upstream 429s, scale
+  the policy (`CLOCKIFY_POLICY`) or request volume, not the replica count.
+- An HPA on CPU (target around 70%) is a reasonable default once traffic
+  patterns are known. Memory-based autoscaling is unnecessary — the
+  process footprint is effectively constant.
+
+## Secret rotation
+
+Both `CLOCKIFY_API_KEY` and `MCP_BEARER_TOKEN` can be rotated without
+downtime by updating the Secret and restarting the rollout:
+
+```bash
+# Generate a new bearer token and patch the Secret in one step.
+NEW_TOKEN=$(openssl rand -base64 24)
+kubectl -n clockify-mcp create secret generic clockify-mcp-secrets \
+  --from-literal=CLOCKIFY_API_KEY="$CLOCKIFY_API_KEY" \
+  --from-literal=MCP_BEARER_TOKEN="$NEW_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Roll pods so the new env values are loaded.
+kubectl -n clockify-mcp rollout restart deployment/clockify-mcp
+kubectl -n clockify-mcp rollout status deployment/clockify-mcp
+```
+
+Distribute the new bearer token to authorized clients out-of-band.
+Because the Deployment uses `maxUnavailable: 0`, the service stays
+available through the restart.
+
+## Troubleshooting
+
+Incident runbooks live under [`docs/runbooks/`](../../docs/runbooks/):
+
+- `rate-limit-saturation.md` — upstream or local rate-limit spikes.
+- `clockify-upstream-outage.md` — Clockify API 5xx or timeout spikes.
+- `auth-failures.md` — 401 spikes and bearer token rotation.

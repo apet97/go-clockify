@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clockify-mcp
+  namespace: clockify-mcp
+  labels:
+    app.kubernetes.io/name: clockify-mcp
+    app.kubernetes.io/component: server
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: clockify-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: clockify-mcp
+        app.kubernetes.io/component: server
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: clockify-mcp
+          image: ghcr.io/apet97/go-clockify:latest
+          imagePullPolicy: IfNotPresent
+          args: []
+          env:
+            - name: MCP_TRANSPORT
+              value: http
+            - name: MCP_HTTP_BIND
+              value: ":8080"
+            - name: MCP_LOG_FORMAT
+              value: json
+            - name: MCP_LOG_LEVEL
+              value: info
+          envFrom:
+            - configMapRef:
+                name: clockify-mcp-config
+            - secretRef:
+                name: clockify-mcp-secrets
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 1
