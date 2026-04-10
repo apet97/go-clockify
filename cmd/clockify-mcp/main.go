@@ -119,6 +119,7 @@ func run() error {
 	}
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = cfg.ToolTimeout
+	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
 
 	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)

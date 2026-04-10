@@ -31,12 +31,20 @@ type Server struct {
 	ToolTimeout  time.Duration                   // per-call timeout; 0 = default 45s
 	ReadyChecker func(ctx context.Context) error // optional upstream health check for /ready
 
+	// MaxInFlightToolCalls bounds the number of concurrently-running
+	// tools/call goroutines spawned by the stdio dispatch loop.
+	// Acquired before the goroutine is created so bursty input cannot
+	// amplify goroutine count. 0 = unlimited.
+	MaxInFlightToolCalls int
+
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
 	initialized atomic.Bool
 	encoder     *json.Encoder // stored for push notifications
 	encoderMu   sync.Mutex    // protects concurrent encoder writes
 	requestSeq  atomic.Int64  // monotonic request ID for log correlation
+
+	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
 	// readiness cache
 	readyMu     sync.Mutex
@@ -61,6 +69,10 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 // It respects ctx cancellation for graceful shutdown — when ctx is
 // cancelled, the loop exits even if stdin is blocking.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
+	if s.MaxInFlightToolCalls > 0 && s.toolCallSem == nil {
+		s.toolCallSem = make(chan struct{}, s.MaxInFlightToolCalls)
+	}
+
 	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 1024*1024)
@@ -124,9 +136,22 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			}
 
 			if req.Method == "tools/call" {
+				// Acquire a dispatch-layer slot BEFORE spawning the
+				// goroutine so bursty input cannot amplify goroutine
+				// count. Context cancellation prevents shutdown deadlock.
+				if s.toolCallSem != nil {
+					select {
+					case s.toolCallSem <- struct{}{}:
+					case <-ctx.Done():
+						return nil
+					}
+				}
 				wg.Add(1)
 				go func(r Request) {
 					defer wg.Done()
+					if s.toolCallSem != nil {
+						defer func() { <-s.toolCallSem }()
+					}
 					resp := s.handle(ctx, r)
 					if r.ID != nil || resp.Error != nil {
 						if err := s.writeResponse(resp); err != nil {
