@@ -69,3 +69,21 @@ support.
 `CLOCKIFY_INSECURE=1` only bypasses base-URL scheme validation when resolving
 `CLOCKIFY_BASE_URL`; it does not disable TLS certificate verification in the
 outbound Clockify client. See `docs/safe-usage.md` for the full scope.
+
+## Verifying release artifacts
+
+Every release ships with:
+
+- The binary (`clockify-mcp-<platform>[.exe]`)
+- A sigstore bundle (`clockify-mcp-<platform>.sigstore.json`) produced by
+  keyless cosign signing
+- A SPDX SBOM (`clockify-mcp-<platform>.spdx.json`)
+- A GitHub build provenance attestation (SLSA-aligned, stored in the
+  GitHub attestation service)
+
+Release binaries are built with `-trimpath` so they do not embed the
+builder's absolute paths.
+
+See [docs/verification.md](docs/verification.md) for step-by-step
+verification commands using `cosign verify-blob --bundle` and
+`gh attestation verify`.
