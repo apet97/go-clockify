@@ -362,6 +362,11 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 
 **Stale tool list** — The server sends `tools/list_changed` after group activation. Your client must re-fetch `tools/list`.
 
+## Deployment and operations
+
+- Kubernetes reference manifests: [deploy/k8s/](deploy/k8s/)
+- Incident runbooks: [docs/runbooks/](docs/runbooks/)
+
 ## Documentation
 
 - [Tool Catalog](docs/tool-catalog.md) — all 124 tools
