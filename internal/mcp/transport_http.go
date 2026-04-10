@@ -9,8 +9,11 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 // ServeHTTP starts an HTTP server that wraps the MCP server's handle() method.
@@ -31,6 +34,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /ready", s.handleReady)
+	mux.HandleFunc("GET /metrics", handleMetrics)
 	mux.Handle("POST /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
 	// Handle OPTIONS for CORS preflight on /mcp
 	mux.Handle("OPTIONS /mcp", s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize))
@@ -71,6 +75,35 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 		return err
 	}
 	return nil
+}
+
+// handleMetrics exposes the Prometheus default registry. The endpoint is
+// unauthenticated by design so Prometheus scrapers do not need to be
+// configured with bearer tokens; access control on /metrics is expected to
+// be enforced at the network layer (e.g. service mesh / NetworkPolicy).
+func handleMetrics(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = metrics.Default.WriteTo(w)
+}
+
+// statusRecorder captures the response status code so middleware can observe
+// it after the handler has written. Defaults to 200 per net/http semantics.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (sr *statusRecorder) WriteHeader(code int) {
+	sr.status = code
+	sr.ResponseWriter.WriteHeader(code)
+}
+
+func (sr *statusRecorder) Write(b []byte) (int, error) {
+	if sr.status == 0 {
+		sr.status = http.StatusOK
+	}
+	return sr.ResponseWriter.Write(b)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -125,9 +158,17 @@ func (s *Server) checkReady(ctx context.Context) error {
 }
 
 func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(rawW http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		reqID := s.requestSeq.Add(1)
+		w := &statusRecorder{ResponseWriter: rawW}
+		defer func() {
+			status := w.status
+			if status == 0 {
+				status = http.StatusOK
+			}
+			metrics.HTTPRequestsTotal.Inc(r.URL.Path, r.Method, strconv.Itoa(status))
+		}()
 
 		// Security headers on all responses
 		w.Header().Set("X-Content-Type-Options", "nosniff")

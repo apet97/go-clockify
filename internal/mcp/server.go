@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
@@ -259,11 +262,18 @@ func (s *Server) listTools() []Tool {
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
 	reqID := s.requestSeq.Add(1)
+	callStart := time.Now()
+	outcome := "success"
+	defer func() {
+		metrics.ToolCallsTotal.Inc(params.Name, outcome)
+		metrics.ToolCallDuration.Observe(time.Since(callStart).Seconds(), params.Name)
+	}()
 
 	s.mu.RLock()
 	d, ok := s.tools[params.Name]
 	s.mu.RUnlock()
 	if !ok {
+		outcome = "tool_error"
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
 
@@ -295,10 +305,19 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 			defer release()
 		}
 		if err != nil {
+			switch {
+			case strings.Contains(err.Error(), "rate limit"), strings.Contains(err.Error(), "concurrency"):
+				outcome = "rate_limited"
+			case strings.Contains(err.Error(), "blocked by policy"):
+				outcome = "policy_denied"
+			default:
+				outcome = "tool_error"
+			}
 			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
 			return nil, err
 		}
 		if result != nil {
+			outcome = "dry_run"
 			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
 			return result, nil
 		}
@@ -317,6 +336,11 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	duration := time.Since(start)
 
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			outcome = "timeout"
+		} else {
+			outcome = "tool_error"
+		}
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
@@ -331,6 +355,25 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	}
 
 	return result, nil
+}
+
+// InFlightToolCalls reports the current depth of the stdio dispatch
+// semaphore. Returns 0 when the semaphore is disabled.
+func (s *Server) InFlightToolCalls() int {
+	if s.toolCallSem == nil {
+		return 0
+	}
+	return len(s.toolCallSem)
+}
+
+// IsReadyCached reports whether the last cached readiness probe
+// resulted in success. Scrapers should prefer /ready for fresh
+// probes; this method only reads the cached value so /metrics
+// does not trigger upstream calls on every scrape.
+func (s *Server) IsReadyCached() bool {
+	s.readyMu.Lock()
+	defer s.readyMu.Unlock()
+	return s.readyCached
 }
 
 // ActivateGroup registers a group of tool descriptors dynamically and

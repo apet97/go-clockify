@@ -368,6 +368,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - [Safe Usage](docs/safe-usage.md) — policy, dry-run, dedupe, rate limiting
 - [HTTP Transport](docs/http-transport.md) — setup, auth, CORS, Docker
 - [Tool Annotations](docs/tool-annotations.md) — readOnlyHint, destructiveHint, idempotentHint
+- [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy
 
 ## Support
 
