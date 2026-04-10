@@ -172,7 +172,8 @@ func (c *Counter) Add(delta uint64, labelValues ...string) {
 			labelValues: append([]string(nil), labelValues...),
 		})
 	}
-	v.(*counterSample).value.Add(delta)
+	cs, _ := v.(*counterSample)
+	cs.value.Add(delta)
 }
 
 // Get returns the current value for a label set. Primarily used in tests.
@@ -184,7 +185,8 @@ func (c *Counter) Get(labelValues ...string) uint64 {
 	if !ok {
 		return 0
 	}
-	return v.(*counterSample).value.Load()
+	cs, _ := v.(*counterSample)
+	return cs.value.Load()
 }
 
 // Histogram API.
@@ -203,7 +205,7 @@ func (h *Histogram) Observe(value float64, labelValues ...string) {
 			counts:      counts,
 		})
 	}
-	s := v.(*histSample)
+	s, _ := v.(*histSample)
 	for i, ub := range h.buckets {
 		if value <= ub {
 			s.counts[i].Add(1)
@@ -356,11 +358,12 @@ type counterSnapshot struct {
 func collectCounterSamples(c *Counter) []counterSnapshot {
 	var out []counterSnapshot
 	c.values.Range(func(k, v any) bool {
-		cs := v.(*counterSample)
+		cs, _ := v.(*counterSample)
+		keyStr, _ := k.(string)
 		out = append(out, counterSnapshot{
 			labelValues: cs.labelValues,
 			value:       cs.value.Load(),
-			key:         k.(string),
+			key:         keyStr,
 		})
 		return true
 	})
@@ -379,17 +382,18 @@ type histSnapshot struct {
 func collectHistSamples(h *Histogram) []histSnapshot {
 	var out []histSnapshot
 	h.values.Range(func(k, v any) bool {
-		hs := v.(*histSample)
+		hs, _ := v.(*histSample)
 		counts := make([]uint64, len(hs.counts))
 		for i := range hs.counts {
 			counts[i] = hs.counts[i].Load()
 		}
+		keyStr, _ := k.(string)
 		out = append(out, histSnapshot{
 			labelValues: hs.labelValues,
 			counts:      counts,
 			sum:         math.Float64frombits(hs.sum.Load()),
 			count:       hs.count.Load(),
-			key:         k.(string),
+			key:         keyStr,
 		})
 		return true
 	})
