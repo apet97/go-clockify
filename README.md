@@ -374,6 +374,13 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues)
 - Security vulnerabilities: see [SECURITY.md](SECURITY.md)
 
+## Verifying releases
+
+Each release includes cosign sigstore bundles, SPDX SBOMs, and GitHub
+build provenance attestations. Release binaries are built with
+`-trimpath` for reproducibility. See [docs/verification.md](docs/verification.md)
+for step-by-step verification commands.
+
 ## License
 
 MIT
