@@ -8,6 +8,7 @@ package enforcement
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -79,17 +80,35 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 }
 
 // AfterCall applies post-processing (truncation) to a successful result.
-// Truncate returns (value, wasTruncated). When truncation occurs we log at
-// debug level so operators can observe progressive token-budget reductions.
+//
+// Tool handlers return typed structs (e.g. ResultEnvelope) which the truncate
+// package's type switch can't walk. We JSON-roundtrip the result into a
+// generic map[string]any / []any tree before calling Truncate so the walker
+// sees the whole structure. The extra marshal cost is acceptable because the
+// server marshals the result for wire transport moments later anyway.
+//
+// On marshal/unmarshal failure we fail open and return the original result
+// unchanged — dropping a tool response because truncation misbehaved would be
+// worse than returning an over-budget payload.
 func (p *Pipeline) AfterCall(result any) (any, error) {
-	if p.Truncation.Enabled {
-		truncated, wasTruncated := p.Truncation.Truncate(result)
-		if wasTruncated {
-			slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
-		}
-		return truncated, nil
+	if !p.Truncation.Enabled {
+		return result, nil
 	}
-	return result, nil
+	b, err := json.Marshal(result)
+	if err != nil {
+		slog.Debug("truncate_marshal_failed", "error", err.Error())
+		return result, nil
+	}
+	var generic any
+	if err := json.Unmarshal(b, &generic); err != nil {
+		slog.Debug("truncate_unmarshal_failed", "error", err.Error())
+		return result, nil
+	}
+	truncated, wasTruncated := p.Truncation.Truncate(generic)
+	if wasTruncated {
+		slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
+	}
+	return truncated, nil
 }
 
 func (p *Pipeline) executeDryRun(ctx context.Context, action dryrun.Action, name string, args map[string]any, hints mcp.ToolHints, lookupHandler func(string) (mcp.ToolHandler, bool)) (any, error) {
