@@ -121,6 +121,34 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 	}, nil
 }
 
+// Stats describes a snapshot of the rate limiter's live counters. A zero
+// Stats is returned for a nil receiver so callers do not need a nil guard.
+type Stats struct {
+	Concurrent    int
+	MaxConcurrent int
+	WindowCount   int64
+	MaxPerWindow  int64
+	WindowMillis  int64
+}
+
+// Stats returns a snapshot of the current limiter state.
+func (rl *RateLimiter) Stats() Stats {
+	if rl == nil {
+		return Stats{}
+	}
+	concurrent := 0
+	if rl.semaphore != nil {
+		concurrent = len(rl.semaphore)
+	}
+	return Stats{
+		Concurrent:    concurrent,
+		MaxConcurrent: rl.maxConcurrent,
+		WindowCount:   rl.windowCount.Load(),
+		MaxPerWindow:  rl.maxPerWindow,
+		WindowMillis:  rl.windowMillis,
+	}
+}
+
 // String returns a human-readable description of the limiter's configuration.
 func (rl *RateLimiter) String() string {
 	if rl == nil {

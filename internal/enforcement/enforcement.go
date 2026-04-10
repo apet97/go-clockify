@@ -11,10 +11,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/truncate"
@@ -56,6 +58,11 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 	if p.RateLimit != nil {
 		rel, err := p.RateLimit.Acquire(ctx)
 		if err != nil {
+			kind := "window"
+			if strings.Contains(err.Error(), "concurrency") {
+				kind = "concurrency"
+			}
+			metrics.RateLimitRejections.Inc(kind)
 			return nil, nil, fmt.Errorf("rate limited: %s", err)
 		}
 		release = rel

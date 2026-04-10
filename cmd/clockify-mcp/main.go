@@ -17,6 +17,7 @@ import (
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/enforcement"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/tools"
@@ -121,6 +122,20 @@ func run() error {
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
+
+	// Wire observability gauges. ReadyState uses the server's cached
+	// readiness snapshot so /metrics scrapes do not trigger upstream
+	// Clockify probes; scrapers that need a fresh probe should hit /ready.
+	metrics.BuildInfo.SetFunc(func() float64 { return 1 }, version)
+	metrics.ReadyState.SetFunc(func() float64 {
+		if server.IsReadyCached() {
+			return 1
+		}
+		return 0
+	})
+	metrics.InFlightToolCalls.SetFunc(func() float64 {
+		return float64(server.InFlightToolCalls())
+	})
 
 	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)
