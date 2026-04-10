@@ -26,8 +26,8 @@ import (
 
 // version is set at build time via ldflags:
 //
-//	go build -ldflags "-X main.version=v0.4.1" ./cmd/clockify-mcp
-var version = "0.4.1"
+//	go build -ldflags "-X main.version=v0.5.0" ./cmd/clockify-mcp
+var version = "0.5.0"
 
 func main() {
 	if len(os.Args) > 1 {

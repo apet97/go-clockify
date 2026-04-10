@@ -323,7 +323,7 @@ CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
 
 # Build with version
-go build -ldflags "-X main.version=v0.4.1" ./cmd/clockify-mcp
+go build -ldflags "-X main.version=v0.5.0" ./cmd/clockify-mcp
 
 # Show all env vars
 clockify-mcp --help

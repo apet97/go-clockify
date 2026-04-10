@@ -102,7 +102,7 @@ For an end-to-end check from a downloaded release:
 
 ```sh
 # 1. Download the release assets into ./release
-gh release download v0.4.1 -R apet97/go-clockify -D ./release
+gh release download v0.5.0 -R apet97/go-clockify -D ./release
 cd ./release
 
 # 2. Verify cosign bundle

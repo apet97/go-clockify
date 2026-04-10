@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-10
+
+Enterprise-grade production hardening across correctness, safety,
+observability, supply chain, and operations.
+
+### Fixed
+
+- **Reports silently capped at 100 entries.** `entryRangeQuery` hardcoded `page-size: 100` and all four report handlers (`SummaryReport`, `WeeklySummary`, `QuickReport`, `DetailedReport`) fetched exactly one page, returning wrong totals at scale. Introduced `aggregateEntriesRange`, a streaming paginator that walks all pages for the requested range and updates totals incrementally. Fails closed with actionable guidance when `include_entries=true` and the range exceeds `CLOCKIFY_REPORT_MAX_ENTRIES` (default 10000). With `include_entries=false`, entries are never stored so memory stays bounded regardless of range size. Replaces free-form `meta.warning` strings with structured `meta.pagination = {page_size, pages_fetched, entries_total}` and `meta.limits = {max_entries}`. Reports gain an optional `max_entries` request parameter for per-call cap override.
+- **Truncation violated homogeneous array schemas.** `reduceArrays` appended `{_truncated: true, _remaining: N}` sentinel objects into every truncated array, breaking consumers that expected uniform element types. Arrays now truncate to a prefix with no trailing sentinel; reduction metadata is threaded through a `TruncationReport` and emitted as `result._truncation.array_reductions` with `{path, original_len, new_len, removed}` records (capped at 50 entries).
+- **Truncation silently no-op'd on real tool outputs.** `truncate.Truncate` used a type switch that only matched `map[string]any` and `[]any`, but every tool handler returns a typed `ResultEnvelope` struct, so `AfterCall` passed a struct to `Truncate` which fell through the `default` case unchanged. Token budget was silently unenforced for every real tool call. `Pipeline.AfterCall` now JSON-roundtrips the result to a generic value before calling `Truncate`, at the cost of one extra marshal/unmarshal per call (the server marshals again for stdout shortly afterward). Marshal failures fail open.
+- **Stdio dispatch spawned unbounded goroutines.** The `Run` loop spawned a goroutine for every `tools/call` request before any limiter ran, creating amplification under bursty input. Added a dispatch-layer semaphore (`MCP_MAX_INFLIGHT_TOOL_CALLS`, default 64) acquired with a context-aware select **before** `go func` is called. Release happens in the goroutine's defer. Context cancellation during acquire exits `Run` cleanly, no deadlocks. Independent of `internal/ratelimit` — one cap gates goroutine creation, the other gates business work.
+
+### Added
+
+- **`internal/metrics` package** — stdlib-only Prometheus text exposition v0.0.4 (Counter, Histogram, Gauge, Registry) backed by `sync.Map` and `atomic.Uint64`. Zero external dependencies. ~570 LOC including a full test suite.
+- **`GET /metrics` HTTP endpoint** exposing seven metrics:
+  - `clockify_mcp_tool_calls_total{tool, outcome}` — outcome ∈ {success, tool_error, rate_limited, policy_denied, timeout, dry_run}
+  - `clockify_mcp_tool_call_duration_seconds{tool}` histogram
+  - `clockify_mcp_rate_limit_rejections_total{kind}` — kind ∈ {concurrency, window}
+  - `clockify_mcp_http_requests_total{path, method, status}`
+  - `clockify_mcp_ready_state` — reads the cached readiness probe, does not trigger upstream calls
+  - `clockify_mcp_build_info{version}` — always 1
+  - `clockify_mcp_inflight_tool_calls` — samples the dispatch semaphore depth
+- **`docs/observability.md`** — SLOs (99.9% availability, 99% tool success, p95<3s/p99<10s latency), SLIs as PromQL, five example alert rules, Prometheus scrape config, and the stable log event taxonomy.
+- **`docs/verification.md`** — step-by-step verification of cosign bundles, GitHub build attestations, and SBOM inspection, plus a combined end-to-end recipe.
+- **`deploy/k8s/`** — Kubernetes reference manifests: hardened Deployment (non-root, read-only root FS, dropped ALL caps, seccomp RuntimeDefault, runAsUser/Group 65532, resource requests/limits, liveness/readiness/startup probes), Service (ClusterIP on 8080), ConfigMap, Secret template, and README covering quickstart, security posture, observability, scaling, secret rotation, and troubleshooting.
+- **`docs/runbooks/`** — three incident runbooks following a consistent template: `rate-limit-saturation.md`, `clockify-upstream-outage.md`, `auth-failures.md`.
+- **`Server.InFlightToolCalls()`** and **`Server.IsReadyCached()`** — read-only accessors for observability wiring.
+- **`ratelimit.Stats()`** — snapshot of semaphore depth and window counter state.
+- **Config fields**: `CLOCKIFY_REPORT_MAX_ENTRIES` (default 10000) and `MCP_MAX_INFLIGHT_TOOL_CALLS` (default 64).
+- **SLSA build provenance** via `actions/attest-build-provenance` in the release workflow, SHA-pinned, generating per-artifact attestations verifiable with `gh attestation verify`.
+
+### Changed
+
+- **Build reproducibility**: `-trimpath` added to `Makefile` and the release workflow's per-platform build step. Binaries no longer embed the builder's absolute paths.
+- **Cosign signing** switched from `--output-signature`/`--output-certificate` pair to `--bundle <file>.sigstore.json`. The bundle is self-contained (signature, certificate, transparency log entry) and aligns with current sigstore ecosystem defaults.
+- **Release workflow permissions** extended with `attestations: write` to support the build provenance step.
+- **`Pipeline.AfterCall`** is now an outcome-aware stage, not just a truncation pass-through. Marshal/unmarshal failures fail open with a debug log rather than losing the tool response.
+- **`addTruncationWarning` removed** in favor of `paginationMeta`. No code references the vague warning string anymore.
+
+### Tests
+
+Added property tests and targeted coverage for every fix:
+- `TestSummaryReport_MultiPage`, `TestWeeklySummary_MultiPage`, `TestDetailedReport_CapExceeded_*`, `TestReports_PaginationMeta`, `TestAggregateEntriesRange_NeverLosesData` (table-driven across N ∈ {0, 1, 199, 200, 201, 400, 599, 600, 999, 1000}).
+- `TestReduceArrays`, `TestReduceArrays_ReportPopulated`, `TestReduceArrays_Homogeneous`, `TestTruncate_PropertyArraysStayHomogeneous` (60-iteration property test), `TestAfterCall_TruncatesResultEnvelope`.
+- `TestStdioDispatch_BoundedConcurrency`, `TestStdioDispatch_ContextCancelReleases`, `TestStdioDispatch_Unlimited`.
+- `TestCounter_Format`, `TestHistogram_Format`, `TestGauge_Format`, `TestWriteTo_DeterministicOrder`, `TestCounter_Concurrent`, `TestLabelEscape`.
+
+All 15 packages pass `go test -race -count=1 -timeout 180s ./...`.
+
 ## [0.4.1] - 2026-04-08
 
 ### Security
@@ -163,7 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Non-HTTPS base URLs blocked unless loopback or `CLOCKIFY_INSECURE=1`
 - Zero external dependencies (stdlib only)
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/apet97/go-clockify/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/apet97/go-clockify/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/apet97/go-clockify/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/apet97/go-clockify/compare/v0.2.0...v0.3.0
