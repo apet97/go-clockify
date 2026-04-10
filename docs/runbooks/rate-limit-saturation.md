@@ -1,7 +1,7 @@
 # Runbook: rate-limit saturation
 
 Triggered when the MCP server's local rate limiter (concurrency or
-window) is rejecting calls at a non-trivial rate, or when upstream
+fixed window) is rejecting calls at a non-trivial rate, or when upstream
 Clockify rate limiting is cascading into user-visible errors.
 
 ## Symptoms
@@ -10,7 +10,7 @@ Clockify rate limiting is cascading into user-visible errors.
 - Tool responses with the `rate limited:` error prefix.
 - Prometheus alert `ClockifyMCPRateLimitSaturation` firing.
 - Clients reporting slow or failed MCP `tools/call` responses.
-- Logs on stderr containing `rate_limited` or `window full`.
+- Logs on stderr containing `rate_limited`.
 
 Example PromQL for the rejection rate:
 
@@ -28,7 +28,7 @@ sum by (kind) (rate(clockify_mcp_rate_limit_rejections_total[5m]))
    kubectl -n clockify-mcp scale deployment clockify-mcp --replicas=4
    ```
 
-2. Temporarily raise the per-minute window limit. The default is 120
+2. Temporarily raise the fixed-window limit. The default is 120
    calls per 60s; 240 is a safe ceiling for most Clockify plans but
    confirm against your upstream quota first.
 
@@ -71,7 +71,7 @@ sum by (kind) (rate(clockify_mcp_rate_limit_rejections_total[5m]))
   ```
 
 - Check for retry storms. A client without exponential backoff will
-  hammer the window limit until the server returns success. Look for
+  hammer the fixed-window limit until the server returns success. Look for
   the same tool repeating dozens of times per second from one caller.
 
 - Confirm whether the saturation is local (our rate limiter) or upstream
@@ -79,6 +79,10 @@ sum by (kind) (rate(clockify_mcp_rate_limit_rejections_total[5m]))
   `clockify_mcp_rate_limit_rejections_total` distinguishes local
   concurrency vs. window rejections. Upstream 429s surface as tool
   errors whose message mentions `429`.
+
+- Remember the fixed-window tradeoff when interpreting bursts. Calls can
+  cluster near a window boundary even when the limiter is behaving as
+  designed; that is not evidence of a token-bucket or sliding-window bug.
 
 ## Recovery
 

@@ -46,26 +46,33 @@ jobs:
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: "1.25.9"
+      - name: Compute binary filename
+        id: binary_meta
+        run: |
+          ext=""
+          if [ "${GOOS}" = "windows" ]; then ext=".exe"; fi
+          echo "filename=clockify-mcp-${PLATFORM}${ext}" >> "$GITHUB_OUTPUT"
+        env:
+          GOOS: ${{ matrix.goos }}
+          PLATFORM: ${{ matrix.platform }}
       - name: Build binary
         run: |
           VERSION="${GITHUB_REF_NAME}"
           COMMIT="${GITHUB_SHA}"
           BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
-          EXT=""
-          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
             -trimpath \
             -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" \
-            -o "clockify-mcp-${PLATFORM}${EXT}" \
+            -o "${BINARY_FILENAME}" \
             ./cmd/clockify-mcp
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          PLATFORM: ${{ matrix.platform }}
+          BINARY_FILENAME: ${{ steps.binary_meta.outputs.filename }}
       - name: Smoke-test (native builds only)
         if: ${{ matrix.goos == 'darwin' || (matrix.goos == 'linux' && matrix.goarch == 'amd64') }}
         run: |
-          BIN="clockify-mcp-${PLATFORM}"
+          BIN="${BINARY_FILENAME}"
           VERSION="${GITHUB_REF_NAME}"
           COMMIT="${GITHUB_SHA}"
           BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
@@ -96,19 +103,19 @@ jobs:
           }
           kill "$PID" 2>/dev/null || true
         env:
-          PLATFORM: ${{ matrix.platform }}
+          BINARY_FILENAME: ${{ steps.binary_meta.outputs.filename }}
       - name: Generate SBOM (SPDX)
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          path: .
-          artifact-name: sbom-${{ matrix.platform }}
+          file: ${{ steps.binary_meta.outputs.filename }}
           output-file: clockify-mcp-${{ matrix.platform }}.spdx.json
           format: spdx-json
+          upload-artifact: false
       - name: Upload binary artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: binary-${{ matrix.platform }}
-          path: clockify-mcp-${{ matrix.platform }}*
+          path: ${{ steps.binary_meta.outputs.filename }}
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:

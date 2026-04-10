@@ -124,15 +124,19 @@ A tool hidden by bootstrap (e.g., `minimal` mode hides most Tier 1 tools) can st
 
 ## Rate Limiting
 
-Two-layer protection (race-safe window reset):
+Two-layer protection: a concurrency semaphore plus a race-safe fixed-window throughput limiter.
 
 | Control | Variable | Default | Description |
 |---------|----------|---------|-------------|
 | Concurrency | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max simultaneous tool calls |
 | Acquire timeout | `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | Max time to wait for a concurrency slot before rejecting |
-| Throughput | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window |
+| Throughput | `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per fixed 60s window |
 
 Set either to `0` to disable that layer.
+
+The throughput limiter intentionally stays fixed-window. A token bucket would smooth bursts, but it would also change operator-visible semantics by carrying burst credit across windows. A sliding window would be fairer at the boundary, but adds state and complexity without much benefit for this per-process guardrail. Because the server already has a concurrency cap and explicitly honors Clockify `Retry-After`, the deterministic fixed window remains the lowest-risk choice.
+
+Tradeoff: callers can still burst at a window boundary. That is accepted for the current deployment model and is preferable to changing the documented behavior without a clear correctness gain.
 
 Additionally, the server strictly honors Clockify's built-in `Retry-After` headers if the API returns a `429 Too Many Requests` or `503 Service Unavailable`, preventing potential API key bans under high load.
 
@@ -202,7 +206,7 @@ export CLOCKIFY_POLICY=safe_core
 export CLOCKIFY_DEDUPE_MODE=block
 export CLOCKIFY_DRY_RUN=enabled
 
-# Full access with HTTP transport
+# Full access with legacy HTTP transport
 export CLOCKIFY_API_KEY=your-key
 export CLOCKIFY_POLICY=standard
 export MCP_TRANSPORT=http

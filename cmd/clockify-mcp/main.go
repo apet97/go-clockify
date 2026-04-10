@@ -283,7 +283,7 @@ Environment Variables:
   Performance:
     CLOCKIFY_MAX_CONCURRENT        Concurrent tool call limit, 0=off (default: 10)
     CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT  Time to wait for a concurrency slot (default: 100ms)
-    CLOCKIFY_RATE_LIMIT            Tool calls per minute, 0=off (default: 120)
+    CLOCKIFY_RATE_LIMIT            Tool calls per fixed 60s window, 0=off (default: 120)
     CLOCKIFY_TOKEN_BUDGET          Response token budget, 0=off (default: 8000)
     MCP_MAX_INFLIGHT_TOOL_CALLS    Stdio dispatch goroutine cap, 0=off (default: 64)
     CLOCKIFY_REPORT_MAX_ENTRIES    Hard cap on entries aggregated by report tools, 0=off (default: 10000)
@@ -293,9 +293,9 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT             stdio (default) or http
+    MCP_TRANSPORT             stdio (default) or legacy http (non-streaming, shared process state)
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
-    MCP_BEARER_TOKEN          Required for HTTP mode; send as Authorization: Bearer <token>
+    MCP_BEARER_TOKEN          Required for legacy HTTP mode; send as Authorization: Bearer <token>
     MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
     MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
     MCP_STRICT_HOST_CHECK     Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS

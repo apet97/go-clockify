@@ -19,7 +19,7 @@ var (
 	ErrRateLimitExceeded        = errors.New("rate limit exceeded")
 )
 
-// RateLimiter controls concurrent access and per-window call volume to the
+// RateLimiter controls concurrent access and fixed-window call volume to the
 // Clockify API. A nil *RateLimiter is safe to use — Acquire returns a no-op
 // release function and nil error.
 type RateLimiter struct {
@@ -27,7 +27,7 @@ type RateLimiter struct {
 	acquireTimeout time.Duration
 	maxConcurrent  int
 	windowCount    atomic.Int64
-	windowStart    atomic.Int64 // epoch millis
+	windowStart    atomic.Int64 // start of current fixed window, epoch millis
 	maxPerWindow   int64
 	windowMillis   int64
 	windowMu       sync.Mutex // protects atomic window reset
@@ -72,7 +72,7 @@ func (e *RateLimitError) Is(target error) bool {
 // FromEnv builds a RateLimiter from environment variables.
 //
 //	CLOCKIFY_MAX_CONCURRENT  – default 10 (0 disables concurrency limit)
-//	CLOCKIFY_RATE_LIMIT      – default 120 (0 disables window limit)
+//	CLOCKIFY_RATE_LIMIT      – default 120 (0 disables fixed-window limit)
 //
 // Returns nil if both values are 0 (rate limiting fully disabled).
 func FromEnv() *RateLimiter {
@@ -91,8 +91,8 @@ func FromEnvWithAcquireTimeout(acquireTimeout time.Duration) *RateLimiter {
 // New creates a RateLimiter with explicit parameters.
 //
 //	maxConcurrent – buffered-channel capacity (simultaneous in-flight calls)
-//	maxPerWindow  – maximum calls allowed within each rolling window
-//	windowMillis  – window length in milliseconds
+//	maxPerWindow  – maximum calls allowed within each fixed window
+//	windowMillis  – fixed-window length in milliseconds
 func New(maxConcurrent int, maxPerWindow int64, windowMillis int64) *RateLimiter {
 	return NewWithAcquireTimeout(maxConcurrent, maxPerWindow, windowMillis, DefaultAcquireTimeout)
 }
@@ -117,8 +117,8 @@ func NewWithAcquireTimeout(maxConcurrent int, maxPerWindow int64, windowMillis i
 }
 
 // Acquire reserves a slot. The returned function must be called to release
-// the slot when work is done. Returns an error if the concurrency or window
-// limit would be exceeded.
+// the slot when work is done. Returns an error if the concurrency or current
+// fixed-window limit would be exceeded.
 func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 	if rl == nil {
 		return func() {}, nil

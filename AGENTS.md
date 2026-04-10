@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## What This Is
 
-GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 tools registered at startup + 91 Tier 2 tools activated on demand) over stdio and HTTP JSON-RPC transports, intended for use with Codex Desktop, Cursor, and similar MCP clients.
+GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 tools registered at startup + 91 Tier 2 tools activated on demand) over stdio and legacy HTTP JSON-RPC transports, intended for use with Codex Desktop, Cursor, and similar MCP clients.
 
 ## Build / Test / Run
 
@@ -31,7 +31,7 @@ CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_API_KEY=xxx go test -tags livee2e ./tests
 # Run server — stdio mode (default)
 CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 
-# Run server — HTTP mode
+# Run server — legacy HTTP mode
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
 
 # Show help and all env vars
@@ -70,14 +70,14 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `CLOCKIFY_BOOTSTRAP_TOOLS` | — | Comma-separated tools for custom mode |
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Max concurrent tool calls (`0` disables this layer) |
 | `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | Max time to wait for a concurrency slot before rejecting (`1ms`–`30s`) |
-| `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per 60s window (`0` disables this layer) |
+| `CLOCKIFY_RATE_LIMIT` | `120` | Max calls per fixed 60s window (`0` disables this layer) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Token truncation budget (0=off) |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool-call timeout (5s–10m, Go duration format) |
 
 ### Transport
 | Variable | Default | Purpose |
 |---|---|---|
-| `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `MCP_TRANSPORT` | `stdio` | `stdio` or legacy `http` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |
@@ -112,7 +112,7 @@ internal/
   resolve/        Name-to-ID resolution with email detection, ambiguity blocking
   dryrun/         3-strategy dry-run: confirm pattern, GET preview, minimal fallback
   bootstrap/      Tool visibility modes (FullTier1/Minimal/Custom), searchable catalog
-  ratelimit/      Dual control: semaphore concurrency + window-based throughput (race-safe)
+  ratelimit/      Dual control: semaphore concurrency + fixed-window throughput (race-safe)
   truncate/       Progressive token-aware output truncation
   dedupe/         Duplicate entry detection + time overlap checking
   timeparse/      Natural language time parsing ("now", "today 14:30", "2h30m", ISO 8601)

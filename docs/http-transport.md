@@ -5,7 +5,7 @@
 Use HTTP transport for:
 - Multi-user deployments
 - Centralized hosting
-- MCP clients that can speak legacy POST JSON-RPC over HTTP
+- MCP clients that can speak the documented legacy POST JSON-RPC transport over HTTP
 - Server-side deployments behind a reverse proxy
 
 Use stdio (default) for:
@@ -26,7 +26,7 @@ clockify-mcp
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MCP_TRANSPORT` | No | `stdio` | Set to `http` |
+| `MCP_TRANSPORT` | No | `stdio` | Set to `http` for the legacy POST JSON-RPC transport |
 | `MCP_HTTP_BIND` | Yes (http) | `:8080` | Bind address |
 | `MCP_BEARER_TOKEN` | Yes (http) | — | Bearer token for auth (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | No | — | Comma-separated allowed browser origins |
@@ -48,7 +48,18 @@ curl -X POST http://localhost:8080/mcp \
 
 The token is compared using constant-time comparison (`crypto/subtle`) to prevent timing attacks.
 
-HTTP mode is a legacy stateless JSON-RPC transport. It does not provide server-initiated streaming or session-backed notification delivery. Clients should send `initialize` before the first `tools/call` after process start.
+HTTP mode is a legacy stateless JSON-RPC transport. It does not provide server-initiated streaming, session-backed notification delivery, or per-client initialization semantics. Clients should send `initialize` before the first `tools/call` after process start.
+
+## Current Semantics
+
+Current HTTP behavior is intentionally capability-reduced rather than pretending to implement Streamable HTTP:
+
+- `initialize` state is process-global, not per-client or per-connection.
+- Negotiated protocol version and recorded `clientInfo` are process-global.
+- Tool activation and visibility changes are process-global.
+- Server-initiated notifications are not delivered; attempted `tools/list_changed` notifications are dropped and counted.
+
+This is safe for a shared legacy JSON-RPC endpoint, but it is not a session-aware MCP transport.
 
 ## Endpoints
 
@@ -105,7 +116,20 @@ Preflight `OPTIONS` requests do not require the bearer token.
 
 ## Known Limitations
 
-**Tool list change notifications are not supported in HTTP mode.** `initialize` over HTTP intentionally omits `capabilities.tools.listChanged`, because the legacy POST transport cannot deliver `notifications/tools/list_changed`. When Tier 2 tool groups are activated via `clockify_search_tools`, HTTP clients should re-fetch `tools/list` after activating groups.
+- **Tool list change notifications are not supported in HTTP mode.** `initialize` over HTTP intentionally omits `capabilities.tools.listChanged`, because the legacy POST transport cannot deliver `notifications/tools/list_changed`. When Tier 2 tool groups are activated via `clockify_search_tools`, HTTP clients should re-fetch `tools/list` after activating groups.
+- **HTTP state is shared across callers.** A later HTTP `initialize` call replaces the process-global negotiated client metadata, and activated tool visibility is shared across all HTTP callers using that server process.
+
+## Migration Path to Streamable HTTP
+
+A correct Streamable HTTP implementation is intentionally out of scope for `MCP_TRANSPORT=http` today. Before introducing it, the MCP core needs session-scoped state for:
+
+- `initialized`
+- negotiated protocol version and `clientInfo`
+- notifier / server-initiated delivery
+- visible and activated tool state
+- session lifecycle tests for spec-correct stream transport behavior
+
+When that work lands, it should ship behind an explicit new transport mode instead of silently changing the meaning of `MCP_TRANSPORT=http`.
 
 ## Structured Access Logging
 
@@ -173,6 +197,6 @@ level=INFO msg=http_shutdown reason="context cancelled"
 
 The server includes built-in rate limiting:
 - `CLOCKIFY_MAX_CONCURRENT=10` — max simultaneous tool calls (`0` disables this layer)
-- `CLOCKIFY_RATE_LIMIT=120` — max calls per 60s window (`0` disables this layer)
+- `CLOCKIFY_RATE_LIMIT=120` — max calls per fixed 60s window (`0` disables this layer)
 
 These protect both the MCP server and the upstream Clockify API.

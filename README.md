@@ -9,7 +9,7 @@ Zero external dependencies. Single static binary. Every release is signed with c
 - **Layered architecture** — protocol core, Clockify client, tool surface, safety layer. `Enforcement` / `Activator` / `Notifier` interfaces keep the protocol core domain-free.
 - **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged` only on transports that can actually push it, and returns an `instructions` string for agentic clients.
 - **Four policy modes** (`read_only`, `safe_core`, `standard`, `full`) + per-tool/group deny/allow lists + three-strategy dry-run for every destructive operation.
-- **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and window-based throughput limiter. Neither layer can strand resources in the other.
+- **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and fixed-window throughput limiter. Neither layer can strand resources in the other.
 - **Observability built in** — `/metrics` endpoint exposes tool RED metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Histogram buckets are tuned to the documented SLO boundaries.
 - **PII-redacting structured logs** — every slog handler is wrapped in a recursive scrubber that masks 20+ secret-key patterns before they reach the encoder.
 - **Hardened Kubernetes reference manifests** — non-root distroless pod, read-only root FS, dropped ALL capabilities, NetworkPolicy (default-deny), PodDisruptionBudget, dedicated ServiceAccount, image pinned by version.
@@ -121,7 +121,7 @@ internal/
   resolve/        Name-to-ID resolution with email detection, ambiguity blocking
   dryrun/         3-strategy dry-run: confirm, GET preview, minimal fallback
   bootstrap/      Tool visibility modes (FullTier1/Minimal/Custom), searchable catalog
-  ratelimit/      Dual control: semaphore concurrency + window-based throughput (race-safe)
+  ratelimit/      Dual control: semaphore concurrency + fixed-window throughput (race-safe)
   truncate/       Progressive token-aware output truncation
   dedupe/         Duplicate entry detection + time overlap checking
   timeparse/      Natural language time parsing ("now", "today 14:30", ISO 8601)
@@ -210,7 +210,7 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 |----------|---------|-------------|
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit (`0` disables concurrency limiting) |
 | `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | How long to wait for a concurrency slot before rejecting the call. Must be between `1ms` and `30s`. |
-| `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per minute (`0` disables window limiting) |
+| `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per fixed 60s window (`0` disables window limiting) |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Response token budget (0 = off) |
 | `MCP_MAX_INFLIGHT_TOOL_CALLS` | `64` | Stdio dispatch-layer goroutine cap. Acquired before goroutine spawn, independent of business rate limiting. `0` disables. |
 | `CLOCKIFY_REPORT_MAX_ENTRIES` | `10000` | Hard cap on entries aggregated by report tools. When `include_entries=true` and the range exceeds the cap, the tool fails closed with an actionable error. `0` disables the cap. |
@@ -226,7 +226,7 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_TRANSPORT` | `stdio` | `stdio` or `http` (validated at startup) |
+| `MCP_TRANSPORT` | `stdio` | `stdio` or legacy `http` (validated at startup) |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (validated at startup); clients send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
@@ -295,6 +295,8 @@ docker compose up
 
 This starts the MCP server on port 8080 with a Caddy reverse proxy on port 443 for TLS termination. Edit `deploy/Caddyfile` to set your domain.
 
+HTTP mode remains the documented legacy POST JSON-RPC transport. It does not provide server-initiated streaming, session-backed notifications, or per-client initialization state. In shared HTTP deployments, `initialize`, negotiated protocol/client info, notifier behavior, and activated tool visibility are process-global today.
+
 See [docs/http-transport.md](docs/http-transport.md) for the full HTTP transport guide.
 
 ## Build / Test / Run
@@ -332,7 +334,7 @@ CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_API_KEY=xxx go test -tags livee2e ./tests
 # Run server — stdio mode (default)
 CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 
-# Run server — HTTP mode
+# Run server — legacy HTTP mode
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
 
 # Build with explicit metadata
@@ -374,6 +376,8 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 **HTTP connection refused** — Verify `MCP_HTTP_BIND` and `MCP_BEARER_TOKEN` are set correctly.
 
 **Stale tool list** — Stdio clients receive `notifications/tools/list_changed` after activation. HTTP clients do not; they must re-fetch `tools/list` after activation.
+
+**Shared HTTP state** — Legacy HTTP mode is not session-aware. Repeating `initialize` from one caller updates the process-global negotiated client metadata for all HTTP callers.
 
 ## Deployment and operations
 

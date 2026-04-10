@@ -80,7 +80,7 @@ Every tools/call dispatch records exactly one outcome:
 | Kind | Source |
 |---|---|
 | `concurrency` | The `CLOCKIFY_MAX_CONCURRENT` semaphore was full. |
-| `window` | The `CLOCKIFY_RATE_LIMIT` per-minute window was exhausted. |
+| `window` | The `CLOCKIFY_RATE_LIMIT` fixed 60s window was exhausted. |
 
 The dispatch-layer goroutine cap (`MCP_MAX_INFLIGHT_TOOL_CALLS`) does
 not emit rejections — it backpressures via the stdin scanner channel
