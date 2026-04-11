@@ -194,11 +194,29 @@ will print a fatal error message and exit. See
 [`docs/adr/011-fips-build-target.md`](adr/011-fips-build-target.md)
 for the full threat model.
 
-## Reproducibility note
+## 6. Reproducibility
 
-Release binaries are built with `-trimpath`, which strips local build
-paths from the embedded DWARF / filename tables. Combined with
-`-ldflags "-s -w"` (strip symbol and debug info), this means builds
-produced from the same Go version, source commit, and `GOOS`/`GOARCH`
-should be byte-for-byte reproducible. Build environments are pinned in
-`.github/workflows/release.yml`.
+Release binaries are built with `-trimpath`, `-ldflags "-s -w -X
+main.version -X main.commit -X main.buildDate"`, and `CGO_ENABLED=0`,
+so each binary is deterministic given the same Go toolchain version
+and source tree. Wave 3 adds an automated CI job that re-exercises
+this claim on every published release.
+
+- **Automated**: `.github/workflows/reproducibility.yml` fires on
+  `release: published` and cross-compiles all 9 release assets (5
+  default + 4 FIPS) from the tagged source, then compares sha256
+  against the published assets. A failure prints a `go version -m`
+  diff to pinpoint the drift.
+- **Manual**: any operator can reproduce a release locally. See
+  [`docs/reproducibility.md`](reproducibility.md) for the exact one-
+  liner (spoiler: it hinges on Go's `vcs.modified=true` stamp —
+  goreleaser dirties the tree by creating `dist/`, so a clean
+  checkout produces a different binary; the workflow and the
+  documented recipe both induce the same dirty state).
+
+Combined with the cosign keyless signature (`docs/verification.md §1`)
+and the SLSA build provenance attestation (`§2`), reproducibility
+closes the supply-chain loop: cosign proves the published bytes
+weren't tampered with post-build, and the reproducibility job proves
+those bytes are exactly what rebuilding from source and the documented
+build contract would produce.
