@@ -54,7 +54,10 @@ func (c *resourceStateCache) get(uri string) ([]byte, bool) {
 		return nil, false
 	}
 	c.ll.MoveToFront(el)
-	entry := el.Value.(*resourceCacheEntry)
+	entry, ok := el.Value.(*resourceCacheEntry)
+	if !ok {
+		return nil, false
+	}
 	out := make([]byte, len(entry.data))
 	copy(out, entry.data)
 	return out, true
@@ -75,7 +78,9 @@ func (c *resourceStateCache) put(uri string, data []byte) {
 	defer c.mu.Unlock()
 	if el, ok := c.index[uri]; ok {
 		c.ll.MoveToFront(el)
-		el.Value.(*resourceCacheEntry).data = snapshot
+		if existing, typeOK := el.Value.(*resourceCacheEntry); typeOK {
+			existing.data = snapshot
+		}
 		return
 	}
 	el := c.ll.PushFront(&resourceCacheEntry{uri: uri, data: snapshot})
@@ -83,7 +88,9 @@ func (c *resourceStateCache) put(uri string, data []byte) {
 	if c.ll.Len() > c.cap {
 		oldest := c.ll.Back()
 		if oldest != nil {
-			delete(c.index, oldest.Value.(*resourceCacheEntry).uri)
+			if entry, ok := oldest.Value.(*resourceCacheEntry); ok {
+				delete(c.index, entry.uri)
+			}
 			c.ll.Remove(oldest)
 		}
 	}

@@ -75,12 +75,12 @@ func TestResourceStateCacheDrop(t *testing.T) {
 
 func TestResourceStateCacheNilSafe(t *testing.T) {
 	var c *resourceStateCache
-	c.put("a", []byte("1"))          // no panic
-	if _, ok := c.get("a"); ok {     // always miss
+	c.put("a", []byte("1"))      // no panic
+	if _, ok := c.get("a"); ok { // always miss
 		t.Fatal("nil cache should not return hits")
 	}
-	c.drop("a")                      // no panic
-	if c.len() != 0 {                // returns 0
+	c.drop("a")       // no panic
+	if c.len() != 0 { // returns 0
 		t.Fatalf("expected 0")
 	}
 }
