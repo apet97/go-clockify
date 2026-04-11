@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/metrics"
+	"github.com/apet97/go-clockify/internal/tracing"
 )
 
 // maxResponseBody is the maximum number of bytes read from API responses
@@ -172,9 +173,15 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 }
 
 func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, query map[string]string, payload []byte, out any) error {
+	ctx, span := tracing.Default.Start(ctx, "clockify.http")
+	span.SetAttribute("upstream.endpoint", endpoint)
+	span.SetAttribute("http.method", method)
+	defer span.End()
+
 	start := time.Now()
 	statusCode := 0
 	defer func() {
+		span.SetAttribute("http.status_code", statusCode)
 		metrics.UpstreamRequestsTotal.Inc(endpoint, method, statusBucket(statusCode))
 		metrics.UpstreamRequestDuration.Observe(time.Since(start).Seconds(), endpoint, method)
 	}()
@@ -206,6 +213,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	tracing.Default.InjectHTTPHeaders(ctx, req.Header)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

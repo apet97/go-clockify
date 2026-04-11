@@ -298,6 +298,44 @@ log correlation.
 }
 ```
 
+## Distributed tracing (optional, `-tags=otel`)
+
+The server supports OpenTelemetry tracing behind a build tag. Default
+`go build` produces a stdlib-only binary with **zero** `opentelemetry.io`
+symbols — enforced by the `verify-no-otel-default` CI step which runs
+`go tool nm` and fails the build on any leaked symbols. To ship a
+tracing-enabled binary, rebuild with `-tags=otel`:
+
+```sh
+go build -tags=otel ./cmd/clockify-mcp
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.internal:4318 clockify-mcp
+```
+
+When the `otel` tag is compiled in AND `OTEL_EXPORTER_OTLP_ENDPOINT` is
+set at runtime, an `init()` inside `internal/tracing/otel.go` constructs
+an OTLP HTTP exporter, wires a `TracerProvider` with a default service
+name of `clockify-mcp`, registers the W3C trace-context propagator, and
+replaces `tracing.Default` via `SetDefault`. If the exporter fails to
+construct (bad endpoint, network error) the process falls back silently
+to the no-op tracer rather than crashing.
+
+Spans are emitted from two sites:
+
+| Span | Attributes | Emitted by |
+|------|------------|------------|
+| `mcp.tools/call` | `tool.name`, `outcome` (`success`, `tool_error`, `rate_limited`, `policy_denied`, `timeout`, `dry_run`, `cancelled`) | `internal/mcp/server.callTool` |
+| `clockify.http` | `upstream.endpoint` (template), `http.method`, `http.status_code` | `internal/clockify/client.doOnce` |
+
+The outbound Clockify request carries a W3C `traceparent` header
+injected via `tracing.Default.InjectHTTPHeaders`, so downstream services
+that participate in the trace can stitch a complete request timeline.
+
+Env vars honoured by the otel build (beyond `OTEL_EXPORTER_OTLP_ENDPOINT`)
+are the standard ones supported by the `otlptracehttp` exporter —
+`OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_COMPRESSION`,
+`OTEL_EXPORTER_OTLP_TIMEOUT`, etc. — see the upstream OpenTelemetry
+documentation. The default build ignores all of them.
+
 ## Related
 
 - [docs/verification.md](verification.md) — release artifact verification

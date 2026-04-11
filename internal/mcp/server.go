@@ -18,6 +18,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/ratelimit"
+	"github.com/apet97/go-clockify/internal/tracing"
 )
 
 // SupportedProtocolVersions lists MCP protocol versions this server can
@@ -685,10 +686,15 @@ func (s *Server) listTools() []Tool {
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
+	ctx, span := tracing.Default.Start(ctx, "mcp.tools/call")
+	span.SetAttribute("tool.name", params.Name)
+	defer span.End()
+
 	reqID := s.requestSeq.Add(1)
 	callStart := time.Now()
 	outcome := "success"
 	defer func() {
+		span.SetAttribute("outcome", outcome)
 		metrics.ToolCallsTotal.Inc(params.Name, outcome)
 		metrics.ToolCallDuration.Observe(time.Since(callStart).Seconds(), params.Name)
 	}()
