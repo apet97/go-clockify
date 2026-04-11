@@ -125,6 +125,76 @@ func (s *Service) emitEntryAndWeekly(ctx context.Context, wsID, entryID, startRa
 	}
 }
 
+// emitEntryAndWeeklyWithState is the W4-04d write-through variant.
+// Callers that already have the post-API entry struct in hand pass
+// it here to skip the emit path's ReadResource round-trip for the
+// concrete entry URI — one fewer GET /time-entries/{id} per
+// mutation on subscribed hot paths. Weekly-report URIs still go
+// through the normal emit path because the aggregated weekly view
+// is not derivable from a single entry.
+//
+// The entry's JSON serialisation must match what a subsequent
+// ReadResource call would return so subscribers diffing against
+// their cached copy see the same patch shape. clockify.TimeEntry
+// satisfies this because the GET response and the POST/PUT response
+// share the same typed model.
+func (s *Service) emitEntryAndWeeklyWithState(ctx context.Context, wsID string, entry clockify.TimeEntry) {
+	s.emitResourceUpdateWithState(entryResourceURI(wsID, entry.ID), entry)
+	loc := s.DefaultTimezone
+	if loc == nil {
+		loc = time.UTC
+	}
+	for _, uri := range weeklyReportURIsForEntry(wsID, entry.TimeInterval.Start, entry.TimeInterval.End, loc) {
+		s.emitResourceUpdate(ctx, uri)
+	}
+}
+
+// emitResourceUpdateWithState publishes a resources/updated delta
+// using the pre-computed new state, bypassing the ReadResource
+// round-trip entirely. Structurally identical to emitResourceUpdate
+// except for the input source: instead of re-fetching the current
+// state from Clockify, the caller hands us the post-API response
+// they already decoded and we marshal it to canonical JSON.
+//
+// The subscription gate still runs first so unsubscribed URIs pay
+// zero cost (no marshal, no cache update, no hook call). When the
+// gate is disabled or returns true, we marshal, diff against the
+// prior cache slot (or emit format=none on a cold cache), update
+// the cache, and publish.
+//
+// Failure modes mirror emitResourceUpdate: marshal error, diff
+// error, unmarshal of diff → fall through to format=none.
+func (s *Service) emitResourceUpdateWithState(uri string, payload any) {
+	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
+		return
+	}
+	if s.SubscriptionGate != nil && !s.SubscriptionGate(uri) {
+		return
+	}
+	newState, err := json.Marshal(payload)
+	if err != nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	prevState, hadPrev := s.resourceCache.get(uri)
+	s.resourceCache.put(uri, newState)
+	if !hadPrev {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	patchBytes, format, err := diffResourceState(prevState, newState)
+	if err != nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	var patchValue any
+	if err := json.Unmarshal(patchBytes, &patchValue); err != nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: format, Patch: patchValue})
+}
+
 const clockifyResourceScheme = "clockify://"
 
 // ListResources returns a small, immediately-navigable set of concrete

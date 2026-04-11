@@ -196,7 +196,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if projectID != "" {
 		meta["projectId"] = projectID
 	}
-	s.emitEntryAndWeekly(ctx, wsID, entry.ID, entry.TimeInterval.Start, entry.TimeInterval.End)
+	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
 	return ok("clockify_add_entry", entry, meta), nil
 }
 
@@ -302,7 +302,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	s.emitEntryAndWeekly(ctx, wsID, entryID, updated.TimeInterval.Start, updated.TimeInterval.End)
+	s.emitEntryAndWeeklyWithState(ctx, wsID, updated)
 	return ok("clockify_update_entry", updated, meta), nil
 }
 
