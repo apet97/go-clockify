@@ -119,6 +119,14 @@ type Server struct {
 	ToolTimeout  time.Duration                   // per-call timeout; 0 = default 45s
 	ReadyChecker func(ctx context.Context) error // optional upstream health check for /ready
 
+	// ResourceProvider backs resources/* method handlers. nil disables the
+	// resources capability (server omits it from initialize.result.capabilities).
+	ResourceProvider ResourceProvider
+	resourceSubs     resourceSubscriptions
+
+	// prompts registers the built-in prompt templates surfaced via prompts/*.
+	prompts *promptRegistry
+
 	// MaxInFlightToolCalls bounds the number of concurrently-running
 	// tools/call goroutines spawned by the stdio dispatch loop.
 	// Acquired before the goroutine is created so bursty input cannot
@@ -209,6 +217,7 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 		Activator:   activator,
 		tools:       toolMap,
 		inflight:    make(map[any]context.CancelFunc),
+		prompts:     newPromptRegistry(),
 	}
 }
 
@@ -475,6 +484,48 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		resp.Result = map[string]any{}
 	case "tools/list":
 		resp.Result = map[string]any{"tools": s.listTools()}
+	case "resources/list":
+		if result, rpcErr := s.handleResourcesList(ctx); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "resources/read":
+		if result, rpcErr := s.handleResourcesRead(ctx, req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "resources/templates/list":
+		if result, rpcErr := s.handleResourcesTemplatesList(ctx); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "resources/subscribe":
+		if result, rpcErr := s.handleResourcesSubscribe(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "resources/unsubscribe":
+		if result, rpcErr := s.handleResourcesUnsubscribe(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "prompts/list":
+		if result, rpcErr := s.handlePromptsList(); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case "prompts/get":
+		if result, rpcErr := s.handlePromptsGet(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
 	case "tools/call":
 		// Guard: reject tools/call before initialization (spec compliance)
 		if !s.initialized.Load() {
@@ -567,6 +618,12 @@ func (s *Server) handleInitialize(raw any) map[string]any {
 		"client_version", clientVersion,
 	)
 
+	caps := map[string]any{"tools": s.toolCapabilities()}
+	if s.ResourceProvider != nil {
+		caps["resources"] = map[string]any{"subscribe": true, "listChanged": true}
+	}
+	caps["prompts"] = map[string]any{"listChanged": true}
+
 	return map[string]any{
 		"protocolVersion": negotiated,
 		"serverInfo": map[string]any{
@@ -574,7 +631,7 @@ func (s *Server) handleInitialize(raw any) map[string]any {
 			"title":   "Clockify Go MCP Server",
 			"version": s.Version,
 		},
-		"capabilities": map[string]any{"tools": s.toolCapabilities()},
+		"capabilities": caps,
 		"instructions": ServerInstructions,
 	}
 }

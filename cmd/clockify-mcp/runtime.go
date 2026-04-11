@@ -97,6 +97,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	server.MaxInFlightToolCalls = deps.cfg.MaxInFlightToolCalls
 	server.StrictHostCheck = deps.cfg.StrictHostCheck
 	server.Auditor = deps.auditor
+	server.ResourceProvider = service
 
 	service.ActivateGroup = func(_ context.Context, group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)

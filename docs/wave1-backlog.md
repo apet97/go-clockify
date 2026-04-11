@@ -17,6 +17,7 @@ Each item names the file paths that need to change and the rough size
 - ✅ **W1-11** `internal/tools` coverage push — 38.9% → 52.0% via four Tier 2 sweep tests (invoices, expenses, groups_holidays, custom_fields).
 - ✅ **W1-06** OAuth 2.1 Resource Server completion — pluggable JWKS HTTP client, resource indicator binding, WWW-Authenticate header, `/.well-known/oauth-protected-resource` metadata document, integration test. `internal/authn` 65.9% → 88.2%.
 - ✅ **W1-01** Streamable HTTP completion — `GET /mcp` now serves the SSE notification stream with per-event `id:` stamping; clients reconnecting with `Last-Event-ID` receive replay of backlog entries stamped strictly after the supplied id. Non-initialize requests with a present-but-mismatched `Mcp-Protocol-Version` header are rejected with HTTP 400 + JSON-RPC `-32600`, counted under `clockify_mcp_protocol_errors_total{code="protocol_version_mismatch"}`. `GET /mcp/events` kept as a back-compat alias through 0.6 (removed in 0.7). `internal/mcp` 65.5% → 69.7%.
+- ✅ **W1-04 + W1-05** Resources + Prompts capabilities — new pluggable `mcp.ResourceProvider` interface implemented by `tools.Service`, surfacing 2 concrete resources (`clockify://workspace/{current}` + `.../user/current`) and 5 parametric URI templates (workspace / user / project / entry / weekly report). Server dispatches `resources/list`, `resources/read`, `resources/templates/list`, `resources/subscribe`, `resources/unsubscribe`. `NotifyResourceUpdated` is gated by an internal subscription set so only subscribed URIs fire `notifications/resources/updated`. Five built-in prompt templates (`log-week-from-calendar`, `weekly-review`, `find-unbilled-hours`, `find-duplicate-entries`, `generate-timesheet-report`) shipped via a new `promptRegistry` and dispatched through `prompts/list` + `prompts/get` with `{{name}}` argument substitution and required-argument validation. `initialize.result.capabilities` now advertises `resources` (when a provider is wired) and `prompts.listChanged`. `internal/mcp` 69.7% → 71.5%.
 
 ---
 
@@ -42,36 +43,6 @@ the configured `Notifier` as `aggregateEntriesRange` walks pages.
 
 **Files**: `internal/mcp/types.go`, `internal/mcp/server.go`,
 `internal/tools/reports.go`, new test for the progress emit path.
-
-### W1-04 — Resources capability  (L)
-
-Implement `resources/list`, `resources/read`, `resources/templates/list`,
-`resources/subscribe`, `notifications/resources/updated`,
-`notifications/resources/list_changed`. URIs to expose:
-
-- `clockify://workspace/{id}`
-- `clockify://workspace/{id}/user/{userId}`
-- `clockify://workspace/{id}/project/{projectId}`
-- `clockify://workspace/{id}/entry/{entryId}`
-- `clockify://workspace/{id}/report/weekly/{weekStart}`
-
-Advertise `{"resources":{"subscribe":true,"listChanged":true}}` in
-`initialize.result.capabilities`.
-
-**Files**: new `internal/mcp/resources.go`, `internal/mcp/server.go`,
-`internal/tools/common.go` (resource builders read from the same
-`Service`).
-
-### W1-05 — Prompts capability  (M)
-
-Implement `prompts/list`, `prompts/get`,
-`notifications/prompts/list_changed`. Ship templates: `log-week-from-calendar`,
-`weekly-review`, `find-unbilled-hours`, `find-duplicate-entries`,
-`generate-timesheet-report`. Advertise
-`{"prompts":{"listChanged":true}}`.
-
-**Files**: new `internal/mcp/prompts.go`, `internal/mcp/server.go`,
-`docs/prompts.md`.
 
 ---
 
