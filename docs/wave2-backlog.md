@@ -17,11 +17,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 ## Tier 4 — verification depth
 
-### W2-08 — Chaos harness
-
-`tests/chaos/` with kill-replica, drop-packet, and 429-storm scenarios via
-toxiproxy. **Size:** L.
-
 
 ### W2-11 — FIPS build target behind `-tags=fips`
 
@@ -34,6 +29,45 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-08 — Chaos harness at `tests/chaos/`
+
+**Landed:** 2026-04-11 (Track H of the v0.7.0 development session).
+Drives the stdlib-only Clockify HTTP client under five failure-
+injection scenarios and asserts the retry / backoff / error
+classification invariants. Scope note: the plan called for toxiproxy-
+style network-level failures, but the existing client does not open
+raw sockets — it goes through `net/http` — so an in-process httptest
+server with hijacked connections, self-signed TLS certs, and
+`.invalid` TLD hostnames reproduces the same failure modes without
+an extra dependency.
+
+**Critical files shipped:**
+- `tests/chaos/main.go` (new, `package main`) — five scenarios:
+  `429-storm`, `503-burst`, `mid-body-reset`, `tls-handshake-fail`,
+  `dns-fail`. Each scenario wires an `httptest.NewServer` or a
+  bogus `.invalid` URL, constructs a real `clockify.NewClient`,
+  issues a GET, and asserts against the expected error type + attempt
+  count + elapsed time. No third-party assertion library — plain Go
+  returns matching ADR 001's stdlib-only constraint.
+- `tests/chaos/README.md` (new) — scenario catalog, acceptance
+  criteria, first-run output, onboarding guide for new scenarios.
+- `.github/workflows/chaos.yml` (new) — `workflow_dispatch` only.
+  Scenario input passed via `env:` and quoted in `run:`.
+
+**Local acceptance (recorded).**
+- `429-storm` — 3 attempts, final success after ~2.0s of Retry-After
+  waits.
+- `503-burst` — 3 attempts, final success after ~0.94s of jittered
+  backoff.
+- `mid-body-reset` — `unexpected EOF` surfaced cleanly in ~0.7ms; no
+  panic or hang.
+- `tls-handshake-fail` — `x509: certificate signed by unknown
+  authority` surfaced in ~38ms.
+- `dns-fail` — `no such host` surfaced in ~0.32s (well under the
+  3s context deadline). Note recorded in the harness: DNS failures
+  currently retry until ctx deadline — candidate for a future
+  classification improvement, not a regression.
 
 ### W2-09 — Load harness at `tests/load/`
 
