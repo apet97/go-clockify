@@ -196,6 +196,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if projectID != "" {
 		meta["projectId"] = projectID
 	}
+	s.emitResourceUpdate(ctx, entryResourceURI(wsID, entry.ID))
 	return ok("clockify_add_entry", entry, meta), nil
 }
 
@@ -301,6 +302,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	s.emitResourceUpdate(ctx, entryResourceURI(wsID, entryID))
 	return ok("clockify_update_entry", updated, meta), nil
 }
 
@@ -333,6 +335,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	s.emitResourceDeleted(entryResourceURI(wsID, entryID))
 	return ok("clockify_delete_entry", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
 }
 

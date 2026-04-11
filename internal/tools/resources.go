@@ -20,6 +20,24 @@ func diffResourceState(prev, curr []byte) ([]byte, string, error) {
 	return jsonmergepatch.DiffOrFull(prev, curr)
 }
 
+// entryResourceURI builds the canonical resource URI for a single time
+// entry. Returns empty if any required piece is missing so callers can
+// safely skip the notification emit step.
+func entryResourceURI(workspaceID, entryID string) string {
+	if workspaceID == "" || entryID == "" {
+		return ""
+	}
+	return fmt.Sprintf("clockify://workspace/%s/entry/%s", workspaceID, entryID)
+}
+
+// projectResourceURI builds the canonical resource URI for a project.
+func projectResourceURI(workspaceID, projectID string) string {
+	if workspaceID == "" || projectID == "" {
+		return ""
+	}
+	return fmt.Sprintf("clockify://workspace/%s/project/%s", workspaceID, projectID)
+}
+
 const clockifyResourceScheme = "clockify://"
 
 // ListResources returns a small, immediately-navigable set of concrete
