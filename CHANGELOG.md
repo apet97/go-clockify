@@ -50,6 +50,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Repo hygiene pass** — deleted stale planning docs from repo root: `HARDENING_PLAN.md`, `IMPLEMENTATION_PLAN.md`, `IMPLEMENTATION_SUMMARY.md`, `PRODUCTION_PLAN.md`, `PRODUCTION_READINESS_PLAN.md`, `PRODUCTION_REVIEW.md`, `CLAUDE_CODE_GUIDE.md`. Deleted the legacy `RUST MCP/` submodule reference. Retired the `.gitignore` and `.gitmodules` files — the repo now contains only curated content, nothing that needs to be masked.
 
+### Tests
+
+- **`internal/vault/vault_test.go`** — every backend (inline, env, file), every error branch, JSON-payload variants, missing-api_key, fallback workspace/baseURL propagation. **0% → 95.2%**.
+- **`internal/controlplane/store_test.go`** — memory + file DSN forms, full PutTenant/PutCredentialRef/PutSession/AppendAuditEvent round-trip with on-disk reload, DeleteSession, missing-id lookups, `resolvePath` parser branches. **0% → 84.1%**.
+- **`internal/authn/authn_test.go`** — `New` defaults across every mode (`static_bearer`, `forward_auth`, `mtls`, `oidc`); `staticBearerAuthenticator` constant-time happy + missing/invalid token; `forwardAuthAuthenticator` header propagation; `mtlsAuthenticator` with fabricated `*tls.ConnectionState` (no real handshake); `bearerToken` parser; `decodeJWT` happy + 5 error branches; `validateClaims` issuer/audience/exp/nbf branches; `claimAudience.UnmarshalJSON` for both shapes; `claimString`; `jwkPublicKey` round-trip for RSA + EC + unsupported kty + decode errors; `curveFor`; `hashForAlg` for every supported alg + the unsupported error; `verifyJWT` RSA round-trip with a generated 2048-bit key including tamper-detection. **0% → 65.9%**.
+- **`internal/enforcement/clone_test.go`** — `Pipeline.Clone` and `Gate.Clone` nil + deep-copy paths (Policy/Bootstrap must not alias parent); `Gate.OnActivate` marks bootstrap-tracked tools visible; `Gate.IsGroupAllowed` nil-policy default. **80.0% → 88.6%**.
+- **`internal/mcp/server_helpers_test.go`** — `toolNameFromRequest` happy + 4 edge cases; `resourceIDs` nil/empty/full coverage; `InFlightToolCalls` nil-sem + active-sem; `IsReadyCached` round-trip; `ActivateTier1Tool` unknown-tool error + happy path with stub notifier; `droppingNotifier.Notify`; `encoderNotifier.Notify` nil-encoder no-op + buffer round-trip; `notifyToolsChanged` drop-with-no-notifier path.
+- **`internal/mcp/transport_streamable_http_helpers_test.go`** — `sessionEventHub` backlog replay + cap trimming + slow-subscriber drop + close + cancel-with-double-cancel; `applyHTTPBaselineHeaders`; `addSessionToInitializeResult` non-map passthrough + map merge without input mutation; `randomID`; `stringsTrimSpace`.
+- **`internal/mcp/transport_http_helpers_test.go`** — `statusRecorder` WriteHeader + Write-defaults-to-200; `handleMetrics` exposition headers + body prefix; `observeHTTPH` happy path + panic recovery for string/error/struct panic types; `fmtAny` every branch.
+- **CI critical-package coverage floors enforced**: `internal/mcp 62%`, `internal/config 78%`, `internal/enforcement 85%`, `internal/ratelimit 70%`, `internal/logging 85%` — all passing alongside the global 55% gate.
+
+| Package | Coverage |
+|---|---|
+| `internal/logging` | 97.2% |
+| `internal/vault` | 95.2% |
+| `internal/ratelimit` | 93.8% |
+| `internal/truncate` | 92.3% |
+| `internal/timeparse` | 90.4% |
+| `internal/enforcement` | 88.6% |
+| `internal/helpers` | 87.5% |
+| `internal/controlplane` | 84.1% |
+| `internal/metrics` | 83.3% |
+| `internal/dryrun` | 82.9% |
+| `internal/resolve` | 80.3% |
+| `internal/config` | 78.1% |
+| `internal/policy` | 77.2% |
+| `internal/bootstrap` | 74.3% |
+| `internal/clockify` | 71.9% |
+| `internal/authn` | 65.9% |
+| `internal/dedupe` | 64.1% |
+| `internal/mcp` | 63.2% |
+| `internal/tools` | 38.9% |
+| **Total** | **57.2%** |
+
 ## [0.5.0] - 2026-04-10
 
 Enterprise-grade production hardening across correctness, safety,

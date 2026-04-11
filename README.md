@@ -402,6 +402,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy
 - [Security Threat Model](docs/security-threat-model.md) — trust boundaries, session/tenant isolation, residual risks
 - [Stability Policy](docs/stability-policy.md) — compatibility tiers and deprecation rules
+- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap (Streamable HTTP completion, OAuth 2.1 RS, OTel tracing, tool `outputSchema` sweep, …)
 
 ## Support
 
