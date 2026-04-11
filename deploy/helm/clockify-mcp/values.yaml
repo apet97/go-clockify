@@ -1,0 +1,149 @@
+# values.yaml — clockify-mcp Helm chart defaults.
+#
+# Every knob the base Kustomize manifests expose is reachable from
+# here. Override per-environment via `-f values-{env}.yaml` or via
+# `--set` on the CLI.
+
+image:
+  repository: ghcr.io/apet97/go-clockify
+  tag: "0.7.0"
+  pullPolicy: IfNotPresent
+
+# Number of replicas. The PDB (pdb.enabled below) pins minAvailable: 1
+# so rolling updates stay available at replicaCount >= 2.
+replicaCount: 2
+
+# Override fullnameOverride to pin the resource prefix. Default is
+# the release name truncated to 63 chars.
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+  # Name of the service account. If empty, the chart generates one.
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+# Hardened pod security context. Matches the base kustomize manifests.
+# Do not weaken unless you know why.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
+# Environment variables consumed by the server. Values here become the
+# ConfigMap keys. Override per env via -f values-dev.yaml etc.
+config:
+  CLOCKIFY_POLICY: "standard"
+  CLOCKIFY_DRY_RUN: "enabled"
+  CLOCKIFY_DEDUPE_MODE: "warn"
+  CLOCKIFY_DEDUPE_LOOKBACK: "25"
+  CLOCKIFY_OVERLAP_CHECK: "true"
+  CLOCKIFY_MAX_CONCURRENT: "10"
+  CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT: "100ms"
+  CLOCKIFY_RATE_LIMIT: "120"
+  CLOCKIFY_TOKEN_BUDGET: "8000"
+  CLOCKIFY_TOOL_TIMEOUT: "45s"
+  CLOCKIFY_REPORT_MAX_ENTRIES: "10000"
+  CLOCKIFY_BOOTSTRAP_MODE: "full_tier1"
+  MCP_MAX_INFLIGHT_TOOL_CALLS: "64"
+  MCP_HTTP_MAX_BODY: "2097152"
+
+# Transport-specific env. Set strictHostCheck to "1" in prod.
+transport:
+  mode: "http"  # http or streamable_http (stdio is not supported in-cluster)
+  bind: ":8080"
+  strictHostCheck: "0"
+  logFormat: "json"
+  logLevel: "info"
+
+# Secret values. By default the chart creates a placeholder Secret with
+# empty values so operators remember to inject real ones before applying.
+# Set create: false to use an external Secret (e.g. sealed-secrets).
+secrets:
+  create: true
+  name: ""  # defaults to "{fullname}-secrets"
+  clockifyApiKey: ""       # CLOCKIFY_API_KEY
+  mcpBearerToken: ""       # MCP_BEARER_TOKEN
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# NetworkPolicy — default-deny with two allowlist labels. Set
+# networkPolicy.enabled: false to opt out entirely.
+networkPolicy:
+  enabled: true
+  ingressAllowedLabel: "clockify-mcp-ingress-allowed"
+  metricsScraperLabel: "clockify-mcp-metrics-scraper"
+  kubeDnsNamespace: "kube-system"
+  kubeDnsLabel: "k8s-app=kube-dns"
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# kube-prometheus-stack ServiceMonitor. Gated behind
+# metrics.serviceMonitor.enabled so clusters without the operator
+# CRDs installed do not fail the template render.
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: "30s"
+    scrapeTimeout: "10s"
+  prometheusRule:
+    enabled: false
+    sloBudgetFactor: "0.001"  # 99.9% SLO
+
+# Probe tuning. The base manifests' defaults are encoded here.
+probes:
+  startup:
+    path: /health
+    failureThreshold: 30
+    periodSeconds: 1
+  liveness:
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 3
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 2
+
+# Deployment rollout strategy.
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Termination grace period for clean shutdowns.
+terminationGracePeriodSeconds: 30
+
+# Revision history kept on the Deployment.
+revisionHistoryLimit: 3

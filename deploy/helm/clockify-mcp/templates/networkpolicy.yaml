@@ -1,0 +1,55 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "clockify-mcp.fullname" . }}
+  labels:
+    {{- include "clockify-mcp.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "clockify-mcp.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{ .Values.networkPolicy.ingressAllowedLabel }}: "true"
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
+    - from:
+        - podSelector:
+            matchLabels:
+              {{ .Values.networkPolicy.metricsScraperLabel }}: "true"
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.kubeDnsNamespace }}
+          podSelector:
+            matchLabels:
+              {{- $parts := splitList "=" .Values.networkPolicy.kubeDnsLabel }}
+              {{ index $parts 0 }}: {{ index $parts 1 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+{{- end }}

@@ -1,0 +1,26 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "clockify-mcp.fullname" . }}
+  labels:
+    {{- include "clockify-mcp.labels" . | nindent 4 }}
+    prometheus: operator
+spec:
+  selector:
+    matchLabels:
+      {{- include "clockify-mcp.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      honorLabels: false
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: '.*_test_.*'
+          action: drop
+{{- end }}

@@ -15,10 +15,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 ## Tier 3 — deployment polish
 
-### W2-05 — Helm chart under `deploy/helm/`
-
-Same values surface as the raw manifests in `deploy/k8s/`. **Size:** M.
-
 ## Tier 4 — verification depth
 
 ### W2-08 — Chaos harness
@@ -46,6 +42,58 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-05 — Helm chart at `deploy/helm/clockify-mcp/`
+
+**Landed:** 2026-04-11 (Track D of the v0.7.0 development session).
+Complementary to the Kustomize base + overlays landed in W2-06; neither
+replaces the flat manifests or the other format. Chart version +
+appVersion track the MCP server semver one-to-one (both set to
+`0.7.0` in `Chart.yaml`).
+
+**Critical files shipped:**
+- `deploy/helm/clockify-mcp/Chart.yaml` — v2 application chart.
+- `deploy/helm/clockify-mcp/.helmignore`.
+- `deploy/helm/clockify-mcp/values.yaml` — every knob the base Kustomize
+  manifests expose. Image coordinates, replicaCount, pod/container
+  security contexts, resources, the full `config` map that feeds the
+  ConfigMap, transport env, secrets, service, networkPolicy,
+  pdb, metrics.serviceMonitor / metrics.prometheusRule (conditional),
+  probe tuning, strategy, revisionHistoryLimit,
+  terminationGracePeriodSeconds.
+- `deploy/helm/clockify-mcp/templates/_helpers.tpl` — name, fullname,
+  labels, selectorLabels, serviceAccountName, secretName helpers.
+- `deploy/helm/clockify-mcp/templates/deployment.yaml` — full deployment
+  template with security contexts, three probes, envFrom ConfigMap +
+  Secret.
+- `deploy/helm/clockify-mcp/templates/service.yaml` — ClusterIP service.
+- `deploy/helm/clockify-mcp/templates/configmap.yaml` — renders
+  `.Values.config` as a map.
+- `deploy/helm/clockify-mcp/templates/secret.yaml` — created only when
+  `secrets.create: true`.
+- `deploy/helm/clockify-mcp/templates/serviceaccount.yaml`.
+- `deploy/helm/clockify-mcp/templates/networkpolicy.yaml`.
+- `deploy/helm/clockify-mcp/templates/pdb.yaml`.
+- `deploy/helm/clockify-mcp/templates/servicemonitor.yaml` — conditional
+  on `metrics.serviceMonitor.enabled` so clusters without the
+  kube-prometheus-stack CRDs installed do not break template rendering.
+- `deploy/helm/clockify-mcp/templates/prometheusrule.yaml` — conditional
+  on `metrics.prometheusRule.enabled`, includes all seven alerts from
+  `docs/observability.md` with the SLO budget factor parameterised
+  via `metrics.prometheusRule.sloBudgetFactor`.
+- `deploy/helm/README.md` — install instructions, values reference
+  table, equivalence note pointing at `deploy/k8s/base/`, and local
+  verification recipe.
+
+**Acceptance (local).**
+- `helm lint deploy/helm/clockify-mcp` → PASS (1 INFO about optional
+  `icon:` in Chart.yaml, no WARN/ERROR).
+- `helm template clockify-mcp deploy/helm/clockify-mcp | kubeconform
+  -strict -skip ServiceMonitor,PrometheusRule` → 7 resources valid
+  at defaults.
+- Same command with `--set metrics.serviceMonitor.enabled=true
+  --set metrics.prometheusRule.enabled=true` → 9 resources, 7 valid,
+  2 skipped (ServiceMonitor + PrometheusRule CRDs).
 
 ### W2-06 — Kustomize base + overlays
 
