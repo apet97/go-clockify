@@ -422,8 +422,10 @@ func escapePtr(s string) string {
 // pattern matching behaves like JSON-schema's implicit anchoring for
 // format constraints. (Raw Go regexp is substring-match by default.)
 func compilePattern(p string) (*regexp.Regexp, error) {
-	if cached, ok := patternCache.Load(p); ok {
-		return cached.(*regexp.Regexp), nil
+	if raw, ok := patternCache.Load(p); ok {
+		if re, ok := raw.(*regexp.Regexp); ok {
+			return re, nil
+		}
 	}
 	src := p
 	if len(src) == 0 || src[0] != '^' {
