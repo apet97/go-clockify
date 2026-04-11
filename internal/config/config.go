@@ -35,15 +35,20 @@ type Config struct {
 	MetricsBearerToken string
 
 	// Enterprise shared-service
-	ControlPlaneDSN      string
-	SessionTTL           time.Duration
-	TenantClaim          string
-	SubjectClaim         string
-	DefaultTenantID      string
-	OIDCIssuer           string
-	OIDCAudience         string
-	OIDCJWKSURL          string
-	OIDCJWKSPath         string
+	ControlPlaneDSN string
+	SessionTTL      time.Duration
+	TenantClaim     string
+	SubjectClaim    string
+	DefaultTenantID string
+	OIDCIssuer      string
+	OIDCAudience    string
+	OIDCJWKSURL     string
+	OIDCJWKSPath    string
+	// OIDCResourceURI is the canonical URI clients use to address this
+	// MCP server. When set, every OIDC token must list this URI in its
+	// audience claim — RFC 8707 / MCP OAuth 2.1 resource indicator
+	// binding. Wired from MCP_RESOURCE_URI.
+	OIDCResourceURI      string
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
@@ -186,6 +191,7 @@ func Load() (Config, error) {
 	cfg.OIDCAudience = strings.TrimSpace(os.Getenv("MCP_OIDC_AUDIENCE"))
 	cfg.OIDCJWKSURL = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_URL"))
 	cfg.OIDCJWKSPath = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_PATH"))
+	cfg.OIDCResourceURI = strings.TrimSpace(os.Getenv("MCP_RESOURCE_URI"))
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))

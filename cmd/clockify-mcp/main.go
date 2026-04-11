@@ -153,7 +153,7 @@ func run() error {
 		if err := bootstrapDefaultTenant(store, cfg); err != nil {
 			return err
 		}
-		authenticator, err := authn.New(authn.Config{
+		authnCfg := authn.Config{
 			Mode:                 authn.Mode(cfg.AuthMode),
 			BearerToken:          cfg.BearerToken,
 			DefaultTenantID:      cfg.DefaultTenantID,
@@ -163,13 +163,16 @@ func run() error {
 			OIDCAudience:         cfg.OIDCAudience,
 			OIDCJWKSURL:          cfg.OIDCJWKSURL,
 			OIDCJWKSPath:         cfg.OIDCJWKSPath,
+			OIDCResourceURI:      cfg.OIDCResourceURI,
 			ForwardTenantHeader:  cfg.ForwardTenantHeader,
 			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
 			MTLSTenantHeader:     cfg.MTLSTenantHeader,
-		})
+		}
+		authenticator, err := authn.New(authnCfg)
 		if err != nil {
 			return err
 		}
+		protectedResource := authn.ProtectedResourceHandler(authnCfg)
 		deps.auditor = controlPlaneAuditor{store: store}
 		var readyChecker func(context.Context) error
 		if cfg.APIKey != "" {
@@ -181,16 +184,17 @@ func run() error {
 			}
 		}
 		return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
-			Version:         version,
-			Bind:            cfg.HTTPBind,
-			MaxBodySize:     cfg.MaxBodySize,
-			AllowedOrigins:  cfg.AllowedOrigins,
-			AllowAnyOrigin:  cfg.AllowAnyOrigin,
-			StrictHostCheck: cfg.StrictHostCheck,
-			SessionTTL:      cfg.SessionTTL,
-			ReadyChecker:    readyChecker,
-			Authenticator:   authenticator,
-			ControlPlane:    store,
+			Version:           version,
+			Bind:              cfg.HTTPBind,
+			MaxBodySize:       cfg.MaxBodySize,
+			AllowedOrigins:    cfg.AllowedOrigins,
+			AllowAnyOrigin:    cfg.AllowAnyOrigin,
+			StrictHostCheck:   cfg.StrictHostCheck,
+			SessionTTL:        cfg.SessionTTL,
+			ReadyChecker:      readyChecker,
+			Authenticator:     authenticator,
+			ControlPlane:      store,
+			ProtectedResource: protectedResource,
 			Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 				return tenantRuntime(ctx, principal.TenantID, deps, store)
 			},

@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +55,16 @@ type Config struct {
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
+	// OIDCResourceURI is the canonical resource URI this server represents
+	// per RFC 8707 (OAuth 2.0 Resource Indicators) and the MCP OAuth 2.1
+	// profile. When set, every OIDC token must list this URI in its `aud`
+	// claim — token-binding to the protected resource. Empty disables the
+	// extra check (back-compat with the simple OIDCAudience match).
+	OIDCResourceURI string
+	// HTTPClient overrides the JWKS fetcher's transport. Tests inject
+	// httptest-backed clients here; production code leaves it nil and
+	// uses http.DefaultClient.
+	HTTPClient *http.Client
 }
 
 type Authenticator interface {
@@ -195,8 +206,9 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	return oidcAuthenticator{
 		cfg: cfg,
 		cache: &jwksCache{
-			url:  cfg.OIDCJWKSURL,
-			path: cfg.OIDCJWKSPath,
+			url:    cfg.OIDCJWKSURL,
+			path:   cfg.OIDCJWKSPath,
+			client: cfg.HTTPClient,
 		},
 	}, nil
 }
@@ -320,17 +332,16 @@ func validateClaims(claims jwtClaims, cfg Config) error {
 	if claims.Issuer != cfg.OIDCIssuer {
 		return fmt.Errorf("unexpected issuer %q", claims.Issuer)
 	}
-	if cfg.OIDCAudience != "" {
-		matched := false
-		for _, aud := range claims.Audience {
-			if aud == cfg.OIDCAudience {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return fmt.Errorf("unexpected audience")
-		}
+	if cfg.OIDCAudience != "" && !slices.Contains([]string(claims.Audience), cfg.OIDCAudience) {
+		return fmt.Errorf("unexpected audience")
+	}
+	// Resource indicator binding (RFC 8707 / MCP OAuth 2.1 profile): if a
+	// canonical resource URI is configured, every token must list it in
+	// the audience claim. This is independent of OIDCAudience so an
+	// authorization server may issue tokens with multiple audiences and
+	// the protected resource still validates only those targeted at it.
+	if cfg.OIDCResourceURI != "" && !slices.Contains([]string(claims.Audience), cfg.OIDCResourceURI) {
+		return fmt.Errorf("token aud does not contain resource URI %q", cfg.OIDCResourceURI)
 	}
 	if claims.Expires != 0 && now >= claims.Expires {
 		return fmt.Errorf("token expired")
@@ -352,6 +363,7 @@ type jwksCache struct {
 	mu      sync.Mutex
 	url     string
 	path    string
+	client  *http.Client // nil = http.DefaultClient
 	expires time.Time
 	keys    map[string]crypto.PublicKey
 }
@@ -387,7 +399,11 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		if reqErr != nil {
 			return reqErr
 		}
-		resp, doErr := http.DefaultClient.Do(req)
+		client := c.client
+		if client == nil {
+			client = http.DefaultClient
+		}
+		resp, doErr := client.Do(req)
 		if doErr != nil {
 			return doErr
 		}

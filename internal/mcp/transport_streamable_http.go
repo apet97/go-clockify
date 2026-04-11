@@ -40,6 +40,12 @@ type StreamableHTTPOptions struct {
 	Authenticator   authn.Authenticator
 	ControlPlane    *controlplane.Store
 	Factory         StreamableSessionFactory
+	// ProtectedResource is the unauthenticated handler for the
+	// /.well-known/oauth-protected-resource metadata document. When
+	// non-nil it is mounted at the canonical RFC 9728 path. nil =
+	// endpoint omitted (e.g. server does not advertise OAuth 2.1
+	// resource discovery).
+	ProtectedResource http.Handler
 }
 
 type streamSession struct {
@@ -103,6 +109,10 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
 	mux.Handle("GET /mcp/events", observeHTTPH("/mcp/events", streamableEventsHandler(opts, mgr)))
+	if opts.ProtectedResource != nil {
+		mux.Handle("/.well-known/oauth-protected-resource",
+			observeHTTPH("/.well-known/oauth-protected-resource", opts.ProtectedResource))
+	}
 
 	srv := &http.Server{
 		Addr:              opts.Bind,
@@ -162,7 +172,7 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			authn.WriteUnauthorized(w, "invalid_token", err.Error())
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, opts.MaxBodySize)
@@ -227,7 +237,7 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			authn.WriteUnauthorized(w, "invalid_token", err.Error())
 			return
 		}
 		sessionID := stringsTrimSpace(r.Header.Get("X-MCP-Session-ID"))
