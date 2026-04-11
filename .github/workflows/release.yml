@@ -17,6 +17,7 @@ jobs:
       id-token: write
       attestations: write
       packages: write
+      actions: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -71,3 +72,20 @@ jobs:
             exit 0
           fi
           ./scripts/publish-npm.sh "$RELEASE_VERSION"
+      - name: Trigger reproducibility verification
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # GoReleaser creates the GH release via GITHUB_TOKEN, which
+          # suppresses the `release: [published]` event per GitHub's
+          # infinite-loop-prevention rules. Fire the reproducibility
+          # workflow explicitly via workflow_dispatch (which IS allowed
+          # with GITHUB_TOKEN) to close the gap.
+          echo "Dispatching reproducibility.yml for tag ${RELEASE_VERSION}"
+          gh workflow run reproducibility.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${RELEASE_VERSION}" \
+            -f tag="${RELEASE_VERSION}"
+          echo "Dispatched. Monitor: gh run list --workflow=reproducibility.yml"

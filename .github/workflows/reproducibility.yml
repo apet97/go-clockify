@@ -26,6 +26,19 @@ name: Reproducibility
 # build is genuinely non-reproducible on the target platform — in which
 # case docs/reproducibility.md should be updated to document the gap and
 # the matrix entry marked `continue-on-error: true` for that platform.
+#
+# Trigger model. `release: [published]` fires only when a release is
+# created by a human (UI) or a PAT-holding workflow. Releases created
+# via `GITHUB_TOKEN` (goreleaser-action's default in release.yml) do
+# NOT fire downstream workflow events — GitHub suppresses them to
+# prevent infinite workflow recursion. See:
+# https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+#
+# Because of that limitation, release.yml explicitly invokes this
+# workflow via `gh workflow run reproducibility.yml -f tag=<tag>` as
+# its final step. The `release: [published]` trigger is kept as a
+# safety net for UI-initiated releases. Manual `workflow_dispatch`
+# remains available for re-verifying any historical tag.
 
 on:
   release:
