@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Security
+
+### Deprecated
+
+## [0.7.0] - 2026-04-11
+
+Wave 2 complete. v0.7.0 closes every Wave 2 backlog item (W2-04 through W2-11 plus W2-13, which is subsumed by W2-07). The release ships on a new goreleaser-driven pipeline with parallel FIPS 140-3 binaries, npm distribution under the `@apet97` scope, Kustomize overlays and Helm chart for operators, load and chaos harnesses, and nightly mutation testing via gremlins. Every Wave 1 invariant is preserved — stdlib-only default build (now also with zero OTel rows in `go.mod`), symbol-level nm gates for default/pprof/otel/fips binaries, protocol-core layering, and the `docs/verification.md` cosign + SLSA + SBOM matrix.
+
+### Added
+
 - **W2-11 — FIPS 140-3 build target** (`cmd/clockify-mcp/fips_on.go`, `cmd/clockify-mcp/fips_off.go`, `cmd/clockify-mcp/main.go`, `.goreleaser.yaml`, `.github/workflows/ci.yml`, `docs/adr/011-fips-build-target.md`, `docs/verification.md`). Every tagged release now ships parallel FIPS binaries under the `-tags=fips` build tag, built with `GOFIPS140=latest` so the Go 1.25 native FIPS 140-3 cryptographic module is embedded at compile time. **No cgo, no BoringSSL, no toolchain fork** — the stdlib-only invariant from ADR 001 is preserved for the FIPS variant. A companion startup assertion in `cmd/clockify-mcp/fips_on.go` calls `crypto/fips140.Enabled()` as the very first statement of `main()` and fails the process fatally if the FIPS module is not active; on success it logs `fips140_enabled version=latest enforced=<bool>` via `slog`. Archives are named `clockify-mcp-fips-{os}-{arch}` and land on the GH Release alongside the default binaries with identical cosign signature + SLSA attestation + SBOM coverage. The FIPS matrix is Linux + macOS only (darwin/arm64, darwin/amd64, linux/amd64, linux/arm64) — Windows FIPS available on request. Three new CI gates (build, verify, test) catch any regression toward a non-approved primitive. See [ADR 011](docs/adr/011-fips-build-target.md) and [`docs/verification.md`](docs/verification.md#5-fips-140-3-build-variant-optional).
 - **W2-08 — Chaos harness at `tests/chaos/`** (`tests/chaos/main.go`, `tests/chaos/README.md`, `.github/workflows/chaos.yml`). New in-process chaos driver exercising the stdlib-only Clockify HTTP client under five failure-injection scenarios: `429-storm` (Retry-After compliance), `503-burst` (jittered exponential backoff), `mid-body-reset` (connection hijacked and closed mid-body; reader cleanup), `tls-handshake-fail` (self-signed cert; no infinite retry), `dns-fail` (unresolvable `.invalid` hostname; fail-fast). Each scenario asserts error type, attempt count, and elapsed-time bounds. Exits non-zero on regression. Workflow runs on `workflow_dispatch` only. See [`tests/chaos/README.md`](tests/chaos/README.md).
 - **W2-09 — Load harness at `tests/load/`** (`tests/load/main.go`, `tests/load/README.md`, `.github/workflows/load.yml`, `internal/ratelimit/ratelimit.go`). New in-process load driver that exercises `ratelimit.RateLimiter.AcquireForSubject` — the same entry point `enforcement.Pipeline.BeforeCall` uses in production — under four scenarios: `steady`, `burst`, `tenant-mix`, and `per-token-saturation`. The `per-token-saturation` scenario is the W2-09 acceptance gate: the noisy tenant is expected to exhaust its per-token budget while quiet tenants keep flowing at 100% success. Harness encodes the assertion explicitly and `log.Fatal`s on isolation regression. A new public method `RateLimiter.SetPerTokenLimits(maxConcurrent, maxPerWindow)` lets programmatic consumers configure the per-subject sub-layer without mutating env vars. `.github/workflows/load.yml` triggers on `workflow_dispatch` only — never on the PR critical path. See [`tests/load/README.md`](tests/load/README.md).

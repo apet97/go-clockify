@@ -1,22 +1,13 @@
-# Wave 2 backlog — active
+# Wave 2 backlog — closed
 
-**Opens:** 2026-04-11, immediately after `v0.6.0` was tagged.
-**Supersedes:** [`docs/wave1-backlog.md`](wave1-backlog.md) (closed at `40ef8d3`).
-This file is the active backlog for the 0.6.x → 0.7.0 development cycle. Items
-land on `main` in priority order; each lands as an atomic commit with green CI.
-Closed items migrate to the [Landed](#landed) section at the bottom with their
-commit SHA, mirroring how Wave 1 was tracked.
+**Opened:** 2026-04-11, immediately after `v0.6.0` was tagged.
+**Closed:** 2026-04-11 at `v0.7.0`. Every item listed here landed on `main` in
+the v0.7.0 development session. Supersedes:
+[`docs/wave1-backlog.md`](wave1-backlog.md) (closed at `40ef8d3`).
+The file is kept as an append-only historical record; future work lives in
+a subsequent wave backlog that will be opened when the v0.8.0 cycle begins.
 
-## Tier 1 — contract enforcement
-
-(empty — W2-01 landed; see the [Landed](#landed) section.)
-
-## Tier 2 — observability & release-infra depth
-
-## Tier 3 — deployment polish
-
-## Tier 4 — verification depth
-
+All Wave 2 items landed — see the [Landed](#landed) section below.
 
 ## Out of scope for Wave 2 (deferred to Wave 3)
 
