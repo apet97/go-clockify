@@ -13,60 +13,63 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 ## Tier 2 — observability & release-infra depth
 
-### W2-12 — Release infrastructure gaps exposed by the v0.6.0 cut
+### W2-13 — npm distribution greenfield rebuild
 
-**Context.** The `v0.6.0` release workflow and the tag-triggered Docker Image
-workflow each partially failed on 2026-04-11 for infra/secret reasons (not
-code). The core release — GitHub Release page with 16 assets, cosign keyless
-signatures, SLSA build provenance attestations, `ghcr.io/apet97/go-clockify:v0.6.0`
-— all landed cleanly. The gaps are narrowly scoped:
+**Context.** The `publish-npm` job in `.github/workflows/release.yml` was
+deleted during the v0.6.1 re-cut because three independent problems made
+it impossible to run as written:
 
-1. **npm publish — `ENEEDAUTH`**. The `Publish npm packages` job in
-   `.github/workflows/release.yml` built every platform tarball
-   (`@anycli/clockify-mcp-go-{darwin-arm64,darwin-x64,linux-x64,linux-arm64,windows-x64}@0.6.0`
-   plus the base package) and reached `npm publish --access public` with
-   `NODE_AUTH_TOKEN` empty, logging `npm error code ENEEDAUTH`. Root cause:
-   the repo-level secret that populates `NODE_AUTH_TOKEN` (`NPM_TOKEN` or
-   equivalent) is either missing or not wired to the step. Result: 0.6.0 is
-   not on npm; the latest npm version remains 0.5.x until this is fixed.
+1. **`NPM_TOKEN` was never set.** The `NODE_AUTH_TOKEN` env on `npm publish`
+   resolved to empty, causing `ENEEDAUTH` on v0.6.0. Root cause: the secret
+   was missing from the repo.
 
-2. **Docker-tag SBOM attach — `Resource not accessible by integration`**. The
-   tag-triggered `Docker Image` workflow built + pushed
-   `ghcr.io/apet97/go-clockify@sha256:0fc2e3857c2660a2497ea4943dcae2d30694de846f98cb11e31f9f3a5bb85ee9`,
-   generated a syft SPDX image SBOM, uploaded it as a workflow artifact, then
-   failed at the `Attaching SBOMs to release: 'v0.6.0'` step with
-   `##[error]Resource not accessible by integration`. Root cause: the
-   workflow's `GITHUB_TOKEN` lacks `contents: write` (or similar) on the
-   tag-push event, so it cannot add an asset to the already-created Release.
-   The image itself is fine; only the SBOM attachment is missing from the
-   v0.6.0 Release page.
+2. **The `@anycli` scope is not owned by this project.** The platform-package
+   template at `npm/package.json.tmpl` hard-codes
+   `@anycli/clockify-mcp-go-PLATFORM`, but `@anycli` is the oclif/anycli org
+   on npm — not a scope anyone on this project controls. `npm view
+   @anycli/clockify-mcp-go` returns 404 because the package was never
+   published. Even with a valid token, publishing to a foreign scope fails.
 
-**Files.**
-- `.github/workflows/release.yml` — verify `NODE_AUTH_TOKEN` wiring
-  (`env.NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` on the `publish` job, or
-  `actions/setup-node@v4` with `registry-url: https://registry.npmjs.org`
-  which reads `NPM_TOKEN` automatically).
-- `.github/workflows/docker-image.yml` — add explicit top-level `permissions:`
-  block granting `contents: write` (for release asset upload) and
-  `id-token: write` (already required for cosign keyless); confirm the SBOM-
-  attach step still runs when the Release was created by a sibling workflow.
-- New repo-level secret: `NPM_TOKEN` (classic automation token with publish
-  rights to `@anycli/clockify-mcp-go*`).
-- `docs/verification.md` — add a note that operators should verify the cosign
-  bundle + SLSA attestation directly; npm tarball verification is Wave 2+.
-- `CHANGELOG.md [Unreleased] > Fixed` — note that 0.6.0 had partial
-  distribution and 0.6.1 will be a re-cut with the full release surface.
+3. **The `Publish base package` step references a nonexistent directory.**
+   Line 174+ did `cd npm/clockify-mcp-go` and then `npm publish`, but the
+   repo only ships `npm/package.json.tmpl`; there is no
+   `npm/clockify-mcp-go/package.json`. The platform-package step would
+   have to succeed for the base-package step to run at all, and when it
+   ran it would fail on the missing `cd` target.
 
-**Acceptance.**
-- A follow-up `v0.6.1` tag produces a fully-green Release workflow (all jobs).
-- All five `@anycli/clockify-mcp-go-<platform>@0.6.1` packages + the base
-  `@anycli/clockify-mcp-go@0.6.1` are live on npmjs.org.
-- The tag-triggered Docker workflow successfully attaches the image SBOM to
-  the v0.6.1 Release.
-- Runbook `docs/runbooks/release-incident.md` (new, short) captures the
-  diagnosis path for future breakages.
+In aggregate, npm distribution has never worked for this repo since the
+first line of the workflow was written. v0.6.0 was the first attempted
+publish and it failed at step 1. The hand-rolled npm wiring was deleted
+in the v0.6.1 cut rather than papered over so the broken state is not
+carried forward.
 
-**Size:** S–M. **Blocks:** the next clean release (likely 0.6.1 or 0.7.0).
+**Files to recreate when this lands.**
+- `.github/workflows/release.yml` — author a fresh `publish-npm` job from
+  scratch; see the deletion comment for the checklist of what must be
+  present. The job must be a `needs:` dependency of `create-release` so
+  the GH Release waits for a successful npm push before going live (the
+  prior workflow let them race, which allowed partial releases).
+- `npm/package.json.tmpl` — update the scope from `@anycli` to whatever
+  scope the project actually controls (e.g. `@apet97/*` if this stays
+  personal, or a dedicated scope such as `@go-clockify/*`).
+- `npm/clockify-mcp-go/package.json` (new) — base package that depends on
+  the five platform packages via `optionalDependencies` keyed on the
+  same version. The existing `VERSION` placeholder pattern in the
+  template can be lifted for this base package too.
+- A `scripts/smoke-npm-dry-run.sh` or `.github/workflows/release-dry-run.yml`
+  (opt-in) that runs `npm publish --dry-run` against a tag to verify the
+  full matrix before tagging a real release. v0.6.0's partial failure
+  would have been caught by this.
+
+**Prerequisite (user action).** Decide the scope name and get an
+`npm` account + automation token with publish rights to it. Set as the
+`NPM_TOKEN` repo secret before the job is wired up.
+
+**Alternative path.** W2-07 (goreleaser migration) subsumes W2-13: goreleaser
+has a first-class npm publisher that handles scope, matrix, and token
+wiring end-to-end. If W2-07 lands first, close W2-13 as duplicate.
+
+**Size:** M (greenfield job + per-package scaffolding + dry-run harness).
 
 ### W2-04 — Tracing as a Go submodule
 
@@ -118,6 +121,46 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-12 — Release infrastructure gaps from the v0.6.0 cut
+
+**Landed:** 2026-04-11 across Track A.1 + the npm deletion of the v0.6.1
+release session. The v0.6.0 cut surfaced two pipeline gaps that blocked a
+clean release: (1) the docker-image workflow's SBOM attach-to-release
+step failed with `Resource not accessible by integration` because the
+workflow permissions granted only `contents: read`, and (2) the
+`publish-npm` job hit `ENEEDAUTH` because `NPM_TOKEN` was never set.
+
+Investigating (2) during the v0.6.1 cut surfaced additional latent
+problems: the `@anycli` scope is not controlled by this project, and the
+`Publish base package` step referenced `npm/clockify-mcp-go/` which has
+never existed in the repo. The entire hand-rolled npm pipeline was
+therefore deleted rather than papered over, and the full npm surface
+is now tracked as W2-13 (see above — not yet landed).
+
+**Changes shipped:**
+- `.github/workflows/docker-image.yml` — bumped top-level
+  `permissions.contents` from `read` to `write` so the
+  `anchore/sbom-action` upload-to-release step can add the image SBOM
+  as a GH Release asset. Fix is scoped to the docker-image workflow;
+  unrelated jobs keep their default permissions.
+- `docs/runbooks/release-incident.md` (new) — runbook with the two
+  canonical partial-release failure modes (`ENEEDAUTH`, `Resource not
+  accessible by integration`), diagnosis commands, and the rerun-vs-re-cut
+  decision tree.
+- `.github/workflows/release.yml` — the `publish-npm` job was deleted in
+  full. A comment at the deletion site documents why and lists the
+  checklist of everything that must be present when the job is
+  rebuilt (W2-13). The `create-release` job keeps all its existing
+  behaviour; the GH Release continues to carry binaries, signatures,
+  attestations, and SBOMs.
+- `CHANGELOG.md [0.6.1]` — `Fixed` entry noting that v0.6.0 shipped
+  with partial distribution (missing SBOM release asset + no npm
+  tarballs) and v0.6.1 is the re-cut with the docker SBOM fix.
+
+**Acceptance.** The v0.6.1 tag re-runs both the release and docker-tag
+workflows end-to-end with zero failing jobs. The image SBOM now attaches
+to the v0.6.1 GH Release as an asset.
 
 ### W2-03 — CodeQL Action v3 → v4
 

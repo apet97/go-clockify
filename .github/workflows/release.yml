@@ -122,71 +122,23 @@ jobs:
           name: sbom-${{ matrix.platform }}
           path: clockify-mcp-${{ matrix.platform }}.spdx.json
 
-  publish-npm:
-    name: Publish npm packages
-    needs: build-binaries
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
-        with:
-          path: artifacts/
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        with:
-          node-version: "20"
-          registry-url: https://registry.npmjs.org
-      - name: Publish platform packages
-        run: |
-          PLATFORMS="darwin-arm64:darwin:arm64:macOS ARM64
-          darwin-x64:darwin:x64:macOS x64
-          linux-x64:linux:x64:Linux x64
-          linux-arm64:linux:arm64:Linux ARM64
-          windows-x64:win32:x64:Windows x64"
-
-          echo "$PLATFORMS" | while IFS=: read -r platform os cpu desc; do
-            platform=$(echo "$platform" | xargs)
-            pkg_dir="npm-pkg-${platform}"
-            mkdir -p "${pkg_dir}/bin"
-
-            # Copy binary from artifact
-            if [ "${platform}" = "windows-x64" ]; then
-              cp "artifacts/binary-${platform}/clockify-mcp-${platform}.exe" "${pkg_dir}/bin/clockify-mcp.exe"
-            else
-              cp "artifacts/binary-${platform}/clockify-mcp-${platform}" "${pkg_dir}/bin/clockify-mcp"
-              chmod +x "${pkg_dir}/bin/clockify-mcp"
-            fi
-
-            # Generate platform package.json from template
-            VERSION="${GITHUB_REF_NAME#v}"
-            sed -e "s/PLATFORM/${platform}/g" \
-                -e "s/PLATFORM_DESCRIPTION/${desc}/g" \
-                -e "s/OS_VALUE/${os}/g" \
-                -e "s/CPU_VALUE/${cpu}/g" \
-                -e "s/VERSION/${VERSION}/g" \
-                npm/package.json.tmpl > "${pkg_dir}/package.json"
-
-            cd "${pkg_dir}"
-            npm publish --access public
-            cd ..
-          done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish base package
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          cd npm/clockify-mcp-go
-          VERSION="${VERSION}" node -e '
-            const fs = require("fs");
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            pkg.version = process.env.VERSION;
-            for (const name of Object.keys(pkg.optionalDependencies || {})) {
-              pkg.optionalDependencies[name] = process.env.VERSION;
-            }
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-          '
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  # publish-npm was removed from the v0.6.1 release cycle (tracked as W2-13).
+  #
+  # Why: the v0.6.0 cut exposed that (a) NPM_TOKEN was never set, (b) the
+  # target scope `@anycli/*` is not owned by this project, and (c) the
+  # `Publish base package` step referenced `npm/clockify-mcp-go/` which
+  # does not exist on disk. The npm distribution surface has never worked
+  # for this repo, so rather than carry broken wiring across releases it
+  # was deleted and filed as a greenfield backlog item. When W2-13 lands
+  # (or when the W2-07 goreleaser migration subsumes it), a fresh job
+  # should be authored from scratch with:
+  #   - a scope that this project actually owns,
+  #   - a concrete `npm/clockify-mcp-go/package.json` checked into git,
+  #   - explicit NPM_TOKEN wiring verified end-to-end in a dry-run tag,
+  #   - the `create-release` job updated to take it as a `needs:` so the
+  #     GH Release waits for npm publication before going live.
+  # The existing `npm/package.json.tmpl` is kept as a starting point for
+  # the platform-package layout when the job is rebuilt.
 
   create-release:
     name: Create GitHub Release
