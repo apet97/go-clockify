@@ -26,8 +26,9 @@ func fipsStartupCheck() {
 		fmt.Fprintln(os.Stderr, "hint: rebuild with GOFIPS140=latest, or set GODEBUG=fips140=on in the environment")
 		os.Exit(1)
 	}
-	slog.Info("fips140_enabled",
-		"version", fips140.Version(),
-		"enforced", fips140.Enforced(),
-	)
+	// Note: crypto/fips140.Version() and crypto/fips140.Enforced() are Go
+	// 1.26+ only. Go 1.25.9 (the repo's go.mod floor) ships only Enabled().
+	// Operators can read the module version + enforced flag from `go version
+	// -m` on the binary or from the GODEBUG setting in the environment.
+	slog.Info("fips140_enabled")
 }
