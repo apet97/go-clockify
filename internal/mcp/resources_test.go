@@ -182,13 +182,13 @@ func TestResourcesSubscribeAndNotify(t *testing.T) {
 	}
 
 	// A different URI should not fire a notification.
-	server.NotifyResourceUpdated("clockify://workspace/abc/entry/99")
+	server.NotifyResourceUpdated("clockify://workspace/abc/entry/99", ResourceUpdateDelta{})
 	if len(notifier.calls) != 0 {
 		t.Fatalf("unexpected notification for unsubscribed URI: %+v", notifier.calls)
 	}
 
-	// The subscribed URI should.
-	server.NotifyResourceUpdated("clockify://workspace/abc/entry/42")
+	// Legacy payload shape: empty delta → only {"uri": ...}.
+	server.NotifyResourceUpdated("clockify://workspace/abc/entry/42", ResourceUpdateDelta{})
 	if len(notifier.calls) != 1 {
 		t.Fatalf("expected 1 notification, got %d", len(notifier.calls))
 	}
@@ -199,6 +199,43 @@ func TestResourcesSubscribeAndNotify(t *testing.T) {
 	if params["uri"] != "clockify://workspace/abc/entry/42" {
 		t.Fatalf("params: %+v", params)
 	}
+	if _, hasFormat := params["format"]; hasFormat {
+		t.Fatalf("legacy payload should not carry format key: %+v", params)
+	}
+	if _, hasPatch := params["patch"]; hasPatch {
+		t.Fatalf("legacy payload should not carry patch key: %+v", params)
+	}
+
+	// New wire format: merge-patch envelope.
+	server.NotifyResourceUpdated(
+		"clockify://workspace/abc/entry/42",
+		ResourceUpdateDelta{Format: "merge", Patch: map[string]any{"description": "updated"}},
+	)
+	if len(notifier.calls) != 2 {
+		t.Fatalf("expected 2 notifications after merge delta, got %d", len(notifier.calls))
+	}
+	mergeParams, _ := notifier.calls[1].Params.(map[string]any)
+	if mergeParams["format"] != "merge" {
+		t.Fatalf("expected format=merge, got %v", mergeParams["format"])
+	}
+	patch, _ := mergeParams["patch"].(map[string]any)
+	if patch["description"] != "updated" {
+		t.Fatalf("unexpected patch payload: %+v", mergeParams)
+	}
+
+	// FormatNone and FormatDeleted omit the patch field but still
+	// carry the format code so clients know to re-fetch or drop state.
+	server.NotifyResourceUpdated(
+		"clockify://workspace/abc/entry/42",
+		ResourceUpdateDelta{Format: "none"},
+	)
+	noneParams, _ := notifier.calls[2].Params.(map[string]any)
+	if noneParams["format"] != "none" {
+		t.Fatalf("expected format=none, got %v", noneParams["format"])
+	}
+	if _, hasPatch := noneParams["patch"]; hasPatch {
+		t.Fatalf("format=none must not carry patch: %+v", noneParams)
+	}
 
 	// Unsubscribe — further notifications must not fire.
 	resp = server.handle(context.Background(), Request{
@@ -208,8 +245,8 @@ func TestResourcesSubscribeAndNotify(t *testing.T) {
 	if resp.Error != nil {
 		t.Fatalf("unsubscribe: %+v", resp.Error)
 	}
-	server.NotifyResourceUpdated("clockify://workspace/abc/entry/42")
-	if len(notifier.calls) != 1 {
+	server.NotifyResourceUpdated("clockify://workspace/abc/entry/42", ResourceUpdateDelta{})
+	if len(notifier.calls) != 3 {
 		t.Fatalf("notification fired after unsubscribe: %+v", notifier.calls)
 	}
 }

@@ -130,16 +130,62 @@ func (s *Server) handleResourcesUnsubscribe(raw any) (any, *RPCError) {
 	return map[string]any{}, nil
 }
 
+// ResourceUpdateDelta carries the optional delta envelope the server can
+// attach to a notifications/resources/updated payload. When Format is
+// empty the legacy payload shape is emitted ({"uri": ...}); otherwise the
+// envelope is merged into the notification params so MCP clients can
+// apply a minimal JSON Merge Patch (RFC 7396) against their cached
+// resource state instead of re-fetching the whole document.
+//
+// Format values are defined in internal/jsonmergepatch (FormatNone /
+// FormatMerge / FormatFull / FormatDeleted). The protocol core does not
+// interpret them; it passes the envelope through to the notifier. Format
+// validation and payload shape are the tools-layer caller's responsibility.
+//
+// This extension is additive and backwards compatible: clients that only
+// read the `uri` field keep working. No MCP protocol version bump is
+// required. See docs/adr/013-resource-delta-sync.md.
+type ResourceUpdateDelta struct {
+	// Format is one of FormatNone / FormatMerge / FormatFull /
+	// FormatDeleted. Empty means do not emit a delta envelope — legacy
+	// payload shape {"uri": "..."} is used.
+	Format string
+	// Patch is the wire-format payload for FormatMerge / FormatFull. It
+	// is emitted verbatim under the "patch" key. Pre-decoded (already
+	// a Go value) so marshalling the notification doesn't require a
+	// re-parse step.
+	Patch any
+}
+
 // NotifyResourceUpdated publishes notifications/resources/updated if the URI
 // has an active subscription. Transports/tool handlers call this after a
 // mutation that invalidates a cached resource view. Safe to call before the
 // notifier is wired — the call silently no-ops.
-func (s *Server) NotifyResourceUpdated(uri string) {
+//
+// When delta.Format is non-empty the notification params include the
+// envelope:
+//
+//	{
+//	  "uri": "clockify://workspace/ws/entry/id",
+//	  "format": "merge",
+//	  "patch": { "description": "new text", "billable": true }
+//	}
+//
+// Empty delta preserves the legacy payload shape {"uri": "..."} so
+// existing clients and tests remain unchanged.
+func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 	if uri == "" || !s.resourceSubs.has(uri) {
 		return
 	}
 	if s.notifier == nil {
 		return
 	}
-	_ = s.notifier.Notify("notifications/resources/updated", map[string]any{"uri": uri})
+	params := map[string]any{"uri": uri}
+	if delta.Format != "" {
+		params["format"] = delta.Format
+		if delta.Format != "none" && delta.Format != "deleted" {
+			params["patch"] = delta.Patch
+		}
+	}
+	_ = s.notifier.Notify("notifications/resources/updated", params)
 }
