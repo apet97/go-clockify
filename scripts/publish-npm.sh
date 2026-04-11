@@ -65,12 +65,17 @@ publish_platform() {
   cp "$REPO_ROOT/$src" "$pkg_dir/bin/$bin_name"
   chmod +x "$pkg_dir/bin/$bin_name"
 
-  # Substitute placeholders in the template. Using sed with | as the
-  # delimiter so the description (which may contain slashes) is safe.
+  # Substitute placeholders in the template. PLATFORM_DESCRIPTION must
+  # be replaced before PLATFORM, otherwise the PLATFORM pass mangles
+  # the longer placeholder into "<suffix>_DESCRIPTION" (which is what
+  # v0.7.1 shipped — every description read as "linux-x64_DESCRIPTION"
+  # etc. in `npm view`). The order below fixes it forward; v0.7.1 is
+  # immutable. Using | as the sed delimiter so the description (which
+  # may contain slashes or spaces) is safe.
   sed \
+    -e "s|PLATFORM_DESCRIPTION|$description|g" \
     -e "s|PLATFORM|$suffix|g" \
     -e "s|VERSION|$VERSION|g" \
-    -e "s|PLATFORM_DESCRIPTION|$description|g" \
     -e "s|OS_VALUE|$os|g" \
     -e "s|CPU_VALUE|$cpu|g" \
     "$TEMPLATE" > "$pkg_dir/package.json"
@@ -96,5 +101,17 @@ for row in "${PLATFORMS[@]}"; do
 done
 
 publish_base
+
+# Workaround for npm's "tarball uploaded but version index stuck at 404"
+# failure mode we hit during the v0.7.1 cutover (2026-04-11). The dispatcher
+# package tarball was retrievable via direct URL but the package metadata
+# document returned 404 for `npm install`, `npm view`, and every GET.
+# Running a no-op `npm deprecate` against a version range that matches
+# nothing forces npm to rewrite the metadata document, which clears the
+# stuck 404 within seconds. Idempotent — no effect if the metadata is
+# already healthy. `|| true` so a failed nudge doesn't abort the release
+# (the packages are already published at this point).
+echo "[npm] nudging dispatcher metadata to clear any stale 404 cache"
+npm deprecate "@apet97/clockify-mcp-go@<0.0.1" "" 2>/dev/null || true
 
 echo "[npm] all packages published for $VERSION"

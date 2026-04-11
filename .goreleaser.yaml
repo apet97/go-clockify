@@ -155,7 +155,14 @@ release:
     name: go-clockify
   draft: false
   prerelease: auto
-  mode: append
+  # keep-existing silently skips any asset whose name already exists on
+  # the target release instead of 422'ing on duplicate upload. This makes
+  # `gh run rerun` on a tag-triggered Release workflow idempotent — the
+  # v0.7.1 cutover discovered that `mode: append` erroring on duplicates
+  # blocks the remaining steps (SLSA attestation, npm publish) from
+  # running during a rerun after NPM_TOKEN gets set. See the ADR 010 /
+  # W2-07 commit for context.
+  mode: keep-existing
   name_template: "v{{ .Version }}"
 
 changelog:
