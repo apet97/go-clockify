@@ -397,14 +397,18 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 
 ## Documentation
 
+- [Architecture](docs/architecture.md) — layer diagram + mermaid sequence flows (tool-call enforcement, dry-run interception, Tier 2 activation, graceful shutdown, streamable HTTP session lifecycle)
+- [Architecture Decision Records](docs/adr/) — seven ADRs: stdlib-only, metrics exporter, enforcement pipeline, dispatch semaphore, policy modes, multi-tenant control plane, streamable HTTP rewrite
 - [Tool Catalog](docs/tool-catalog.md) — all 124 tools
 - [Safe Usage](docs/safe-usage.md) — policy, dry-run, dedupe, rate limiting
 - [HTTP Transport](docs/http-transport.md) — setup, auth, CORS, Docker
 - [Tool Annotations](docs/tool-annotations.md) — readOnlyHint, destructiveHint, idempotentHint
-- [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy
+- [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy, OTel tracing
+- [Troubleshooting](docs/troubleshooting.md) — symptom → diagnosis → fix matrix
+- [Migration guide 0.5 → 0.6](docs/migration/0.5-to-0.6.md) — Wave 1 delta, env-var changes, metric label changes, back-compat windows
 - [Security Threat Model](docs/security-threat-model.md) — trust boundaries, session/tenant isolation, residual risks
 - [Stability Policy](docs/stability-policy.md) — compatibility tiers and deprecation rules
-- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap. **Landed**: cancellation map (W1-02), `outputSchema` sweep (W1-09), tier2 coverage push (W1-11), OAuth 2.1 Resource Server completion (W1-06). **Remaining**: Streamable HTTP completion (W1-01), progress notifications (W1-03), resources/prompts capabilities (W1-04/05), per-token rate limiting (W1-07), OTel tracing (W1-12), alerts/runbooks/manifests (W1-13/14), architecture + ADR docs (W1-15/16/17).
+- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap. **Wave 1 landed**: cancellation map (W1-02), `outputSchema` sweep (W1-09), tier2 coverage push (W1-11), OAuth 2.1 Resource Server completion (W1-06), Streamable HTTP completion (W1-01), Resources + Prompts capabilities (W1-04 + W1-05), progress notifications + per-token rate limiting (W1-03 + W1-07), OpenTelemetry tracing behind `-tags=otel` (W1-12), schema tightening sweep (W1-10), burn-rate alerts + operator manifests (W1-13 + W1-14), architecture + ADRs + troubleshooting + migration guide (W1-15 + W1-16 + W1-17).
 
 ## Support
 
