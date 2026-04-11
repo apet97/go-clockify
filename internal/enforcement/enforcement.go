@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -66,16 +67,27 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 		return nil, nil, fmt.Errorf("tool blocked by policy: %s", reason)
 	}
 
-	// 2. Rate limit
+	// 2. Rate limit — per-subject when a Principal is on the context,
+	// global-only fallback otherwise. Scope label distinguishes the two
+	// rejection layers so dashboards can tell a noisy tenant from a global
+	// saturation event.
 	var release func()
 	if p.RateLimit != nil {
-		rel, err := p.RateLimit.Acquire(ctx)
+		subject := ""
+		if principal, ok := authn.PrincipalFromContext(ctx); ok && principal != nil {
+			subject = principal.Subject
+		}
+		rel, scope, err := p.RateLimit.AcquireForSubject(ctx, subject)
 		if err != nil {
 			kind := "window"
 			if errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded) {
 				kind = "concurrency"
 			}
-			metrics.RateLimitRejections.Inc(kind)
+			scopeLabel := "global"
+			if scope == ratelimit.ScopePerToken {
+				scopeLabel = "per_token"
+			}
+			metrics.RateLimitRejections.Inc(kind, scopeLabel)
 			return nil, nil, fmt.Errorf("rate limited: %w", err)
 		}
 		release = rel

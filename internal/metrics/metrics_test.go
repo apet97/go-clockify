@@ -220,7 +220,7 @@ func TestDefaultRegistryPreRegistered(t *testing.T) {
 	// Exercise the pre-registered metrics.
 	ToolCallsTotal.Inc("some_tool", "success")
 	ToolCallDuration.Observe(0.2, "some_tool")
-	RateLimitRejections.Inc("window")
+	RateLimitRejections.Inc("window", "global")
 	HTTPRequestsTotal.Inc("/mcp", "POST", "200")
 	BuildInfo.SetFunc(func() float64 { return 1 }, "test-version")
 	ReadyState.SetFunc(func() float64 { return 1 })

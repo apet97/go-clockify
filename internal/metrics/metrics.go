@@ -588,8 +588,8 @@ func init() {
 	)
 	RateLimitRejections = Default.NewCounter(
 		"clockify_mcp_rate_limit_rejections_total",
-		"Rate limiter rejections by kind (concurrency, window).",
-		"kind",
+		"Rate limiter rejections by kind (concurrency, window) and scope (global, per_token).",
+		"kind", "scope",
 	)
 	Cancellations = Default.NewCounter(
 		"clockify_mcp_cancellations_total",

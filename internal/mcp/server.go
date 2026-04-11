@@ -191,6 +191,18 @@ func (s *Server) SetNotifier(n Notifier) {
 	s.notifier = n
 }
 
+// Notify forwards a server-initiated notification through the currently
+// installed Notifier. Drops silently when no notifier is wired. Satisfies
+// the Notifier interface so the tools layer can treat Server as its
+// notification sink without hard-coding the transport.
+func (s *Server) Notify(method string, params any) error {
+	n := s.notifier
+	if n == nil {
+		return nil
+	}
+	return n.Notify(method, params)
+}
+
 // NegotiatedProtocolVersion returns the MCP protocol version agreed with the
 // client, or empty string before initialize runs.
 func (s *Server) NegotiatedProtocolVersion() string {
@@ -543,6 +555,9 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		// can abort an in-flight tool handler. The cancel func is removed
 		// from the inflight map before this case returns regardless of
 		// outcome.
+		if params.Meta != nil && params.Meta.ProgressToken != nil {
+			ctx = WithProgressToken(ctx, params.Meta.ProgressToken)
+		}
 		callCtx, cancel := context.WithCancel(ctx)
 		s.registerInflight(req.ID, cancel)
 		defer s.unregisterInflight(req.ID)

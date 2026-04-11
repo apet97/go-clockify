@@ -104,6 +104,9 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 			return nil, "", "", err
 		}
 		result.PagesFetched++
+		// Progress notification — total is unknown until the final short page
+		// is seen, so report it as -1 mid-walk and let the caller finalise.
+		s.EmitProgress(ctx, float64(result.PagesFetched), -1, fmt.Sprintf("fetched %d entries", result.EntriesCount))
 
 		for _, entry := range batch {
 			result.EntriesCount++

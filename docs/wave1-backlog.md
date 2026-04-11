@@ -17,6 +17,7 @@ Each item names the file paths that need to change and the rough size
 - ✅ **W1-11** `internal/tools` coverage push — 38.9% → 52.0% via four Tier 2 sweep tests (invoices, expenses, groups_holidays, custom_fields).
 - ✅ **W1-06** OAuth 2.1 Resource Server completion — pluggable JWKS HTTP client, resource indicator binding, WWW-Authenticate header, `/.well-known/oauth-protected-resource` metadata document, integration test. `internal/authn` 65.9% → 88.2%.
 - ✅ **W1-01** Streamable HTTP completion — `GET /mcp` now serves the SSE notification stream with per-event `id:` stamping; clients reconnecting with `Last-Event-ID` receive replay of backlog entries stamped strictly after the supplied id. Non-initialize requests with a present-but-mismatched `Mcp-Protocol-Version` header are rejected with HTTP 400 + JSON-RPC `-32600`, counted under `clockify_mcp_protocol_errors_total{code="protocol_version_mismatch"}`. `GET /mcp/events` kept as a back-compat alias through 0.6 (removed in 0.7). `internal/mcp` 65.5% → 69.7%.
+- ✅ **W1-03 + W1-07** Progress notifications + per-token rate limiting — `ToolCallParams` / `InitializeParams` gain a `_meta.progressToken` field that `handle()` threads through the call context via `WithProgressToken`. `tools.Service` now carries a `Notifier mcp.Notifier` field wired from `cmd/clockify-mcp/runtime.go` to the `Server` itself (which satisfies the interface via a forwarding `Notify`). `aggregateEntriesRange` emits one `notifications/progress` per fetched page with an indeterminate `total`. The `authn.Principal` landed in Phase C is now attached to the request context via the new `authn.WithPrincipal`/`PrincipalFromContext` helpers at every streamable HTTP auth site. `ratelimit.RateLimiter` gains a per-subject sub-layer configured by new env vars `CLOCKIFY_PER_TOKEN_RATE_LIMIT` (default `60`/window) and `CLOCKIFY_PER_TOKEN_CONCURRENCY` (default `5`), exposed via a new `AcquireForSubject(ctx, subject)` method that first passes through the global layer and then through a lazily-created per-subject `subjectLimiter`. `enforcement.Pipeline.BeforeCall` reads the principal from the request context and routes rejections through `AcquireForSubject`, tagging `clockify_mcp_rate_limit_rejections_total` with a new `scope` label (`global` / `per_token`). Tests cover per-subject isolation, global-cap enforcement, anonymous fallback, empty-subject passthrough, authn context round-trip, and the enforcement pipeline per-subject path. `internal/authn` 88.2% → **88.5%**; `internal/enforcement` 88.6% → **89.5%**; `internal/mcp` 71.5% → **71.4%**; `internal/ratelimit` 93.8% → **84.4%** (floor 70% holds); global 66.2% → **66.4%**.
 - ✅ **W1-04 + W1-05** Resources + Prompts capabilities — new pluggable `mcp.ResourceProvider` interface implemented by `tools.Service`, surfacing 2 concrete resources (`clockify://workspace/{current}` + `.../user/current`) and 5 parametric URI templates (workspace / user / project / entry / weekly report). Server dispatches `resources/list`, `resources/read`, `resources/templates/list`, `resources/subscribe`, `resources/unsubscribe`. `NotifyResourceUpdated` is gated by an internal subscription set so only subscribed URIs fire `notifications/resources/updated`. Five built-in prompt templates (`log-week-from-calendar`, `weekly-review`, `find-unbilled-hours`, `find-duplicate-entries`, `generate-timesheet-report`) shipped via a new `promptRegistry` and dispatched through `prompts/list` + `prompts/get` with `{{name}}` argument substitution and required-argument validation. `initialize.result.capabilities` now advertises `resources` (when a provider is wired) and `prompts.listChanged`. `internal/mcp` 69.7% → 71.5%.
 
 ---
@@ -33,16 +34,6 @@ cancel func, and clean up on completion. Add a metric
 cancellation while a slow tool handler is in flight.
 
 **Files**: `internal/mcp/server.go`, new test `internal/mcp/cancel_test.go`.
-
-### W1-03 — Progress notifications  (M)
-
-Read `tools/call.params._meta.progressToken` (extend `ToolCallParams` /
-`InitializeParams` types). Long-running report tools
-(`internal/tools/reports.go`) should emit `notifications/progress` via
-the configured `Notifier` as `aggregateEntriesRange` walks pages.
-
-**Files**: `internal/mcp/types.go`, `internal/mcp/server.go`,
-`internal/tools/reports.go`, new test for the progress emit path.
 
 ---
 
@@ -63,16 +54,6 @@ MCP-spec OAuth 2.1 RS. Add:
 
 **Files**: `internal/authn/authn.go`, new `internal/authn/oauth_resource.go`,
 new test `internal/authn/oidc_integration_test.go`.
-
-### W1-07 — Per-token rate limiting  (M)
-
-`internal/ratelimit` is currently global. Extend to a per-client bucket
-keyed off `Principal.Subject` (or token-id), with the global limit as
-an upper bound. Add metric labels.
-
-**Files**: `internal/ratelimit/ratelimit.go`,
-`internal/enforcement/enforcement.go`,
-`docs/observability.md` (new metric labels).
 
 ### W1-08 — mTLS deep test + CRL/OCSP  (S)
 

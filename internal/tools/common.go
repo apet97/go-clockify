@@ -21,12 +21,39 @@ type Service struct {
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	ActivateGroup   func(context.Context, string) (ActivationResult, error)
 	ActivateTool    func(context.Context, string) (ActivationResult, error)
+	// Notifier delivers server→client notifications (progress, resource updates,
+	// etc.) emitted by tool handlers. nil = drop silently.
+	Notifier mcp.Notifier
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
 	mu               sync.Mutex
 	cachedUser       *clockify.User
 	cachedWSID       string
+}
+
+// EmitProgress publishes a notifications/progress if a progressToken was
+// supplied with the current tools/call and the Service has a Notifier wired.
+// No-op otherwise. total < 0 signals an indeterminate total.
+func (s *Service) EmitProgress(ctx context.Context, progress, total float64, message string) {
+	if s == nil || s.Notifier == nil {
+		return
+	}
+	token, ok := mcp.ProgressTokenFromContext(ctx)
+	if !ok {
+		return
+	}
+	params := map[string]any{
+		"progressToken": token,
+		"progress":      progress,
+	}
+	if total >= 0 {
+		params["total"] = total
+	}
+	if message != "" {
+		params["message"] = message
+	}
+	_ = s.Notifier.Notify("notifications/progress", params)
 }
 
 type ActivationResult struct {

@@ -31,6 +31,23 @@ type RateLimiter struct {
 	maxPerWindow   int64
 	windowMillis   int64
 	windowMu       sync.Mutex // protects atomic window reset
+
+	// Per-subject sub-limiters, created lazily on first AcquireForSubject.
+	// Each subject gets its own window counter + concurrency semaphore so a
+	// noisy tenant cannot monopolise the global budget.
+	perTokenMaxConcurrent int
+	perTokenMaxPerWindow  int64
+	subjectsMu            sync.Mutex
+	subjects              map[string]*subjectLimiter
+}
+
+// subjectLimiter tracks one Principal.Subject's window counter and
+// concurrency semaphore. Fields mirror the global RateLimiter shape.
+type subjectLimiter struct {
+	semaphore    chan struct{}
+	windowCount  atomic.Int64
+	windowStart  atomic.Int64
+	maxPerWindow int64
 }
 
 type ConcurrencyLimitError struct {
@@ -82,10 +99,17 @@ func FromEnv() *RateLimiter {
 func FromEnvWithAcquireTimeout(acquireTimeout time.Duration) *RateLimiter {
 	maxConc := envInt("CLOCKIFY_MAX_CONCURRENT", 10)
 	maxWin := envInt("CLOCKIFY_RATE_LIMIT", 120)
-	if maxConc == 0 && maxWin == 0 {
+	perTokenConc := envInt("CLOCKIFY_PER_TOKEN_CONCURRENCY", 5)
+	perTokenWin := envInt("CLOCKIFY_PER_TOKEN_RATE_LIMIT", 60)
+	if maxConc == 0 && maxWin == 0 && perTokenConc == 0 && perTokenWin == 0 {
 		return nil
 	}
-	return NewWithAcquireTimeout(maxConc, int64(maxWin), 60000, acquireTimeout)
+	rl := NewWithAcquireTimeout(maxConc, int64(maxWin), 60000, acquireTimeout)
+	if rl != nil {
+		rl.perTokenMaxConcurrent = perTokenConc
+		rl.perTokenMaxPerWindow = int64(perTokenWin)
+	}
+	return rl
 }
 
 // New creates a RateLimiter with explicit parameters.
@@ -171,6 +195,118 @@ func (rl *RateLimiter) Acquire(ctx context.Context) (func(), error) {
 	return func() {
 		if rl.maxConcurrent > 0 {
 			<-rl.semaphore
+		}
+	}, nil
+}
+
+// PerTokenScope describes the sub-layer an AcquireForSubject rejection
+// originated from so callers (enforcement.Pipeline, metrics) can label
+// rejections consistently without inspecting error strings.
+type PerTokenScope string
+
+const (
+	ScopeGlobal     PerTokenScope = "global"
+	ScopePerToken   PerTokenScope = "per_token"
+	ScopeUnknown    PerTokenScope = "unknown"
+	ScopeConcurrent               = "concurrency"
+)
+
+// AcquireForSubject extends Acquire with an optional per-subject layer:
+// first it runs the full global acquire path (semaphore + window), then it
+// also checks a subject-scoped sub-limiter so a single authenticated client
+// cannot monopolise the global budget. An empty subject skips the per-token
+// layer entirely (back-compat with unauthenticated paths).
+//
+// When the per-token layer rejects, AcquireForSubject releases the global
+// slot it already acquired before returning, so the global budget is never
+// stranded on a per-token failure. The returned PerTokenScope identifies
+// which layer rejected.
+func (rl *RateLimiter) AcquireForSubject(ctx context.Context, subject string) (func(), PerTokenScope, error) {
+	release, err := rl.Acquire(ctx)
+	if err != nil {
+		scope := ScopeGlobal
+		if errors.Is(err, ErrConcurrencyLimitExceeded) {
+			scope = ScopeGlobal
+		}
+		return nil, scope, err
+	}
+	if rl == nil || subject == "" || (rl.perTokenMaxConcurrent <= 0 && rl.perTokenMaxPerWindow <= 0) {
+		return release, ScopeGlobal, nil
+	}
+
+	sub := rl.subjectLimiterFor(subject)
+	subRelease, err := sub.acquire(ctx, rl.windowMillis, rl.acquireTimeout)
+	if err != nil {
+		if release != nil {
+			release()
+		}
+		return nil, ScopePerToken, err
+	}
+	combined := func() {
+		subRelease()
+		if release != nil {
+			release()
+		}
+	}
+	return combined, ScopePerToken, nil
+}
+
+func (rl *RateLimiter) subjectLimiterFor(subject string) *subjectLimiter {
+	rl.subjectsMu.Lock()
+	defer rl.subjectsMu.Unlock()
+	if rl.subjects == nil {
+		rl.subjects = map[string]*subjectLimiter{}
+	}
+	if existing, ok := rl.subjects[subject]; ok {
+		return existing
+	}
+	var sem chan struct{}
+	if rl.perTokenMaxConcurrent > 0 {
+		sem = make(chan struct{}, rl.perTokenMaxConcurrent)
+	}
+	sub := &subjectLimiter{
+		semaphore:    sem,
+		maxPerWindow: rl.perTokenMaxPerWindow,
+	}
+	sub.windowStart.Store(time.Now().UnixMilli())
+	rl.subjects[subject] = sub
+	return sub
+}
+
+// acquire is the per-subject equivalent of RateLimiter.Acquire with the same
+// window/concurrency contract.
+func (sl *subjectLimiter) acquire(ctx context.Context, windowMillis int64, acquireTimeout time.Duration) (func(), error) {
+	if sl.maxPerWindow > 0 {
+		now := time.Now().UnixMilli()
+		if now-sl.windowStart.Load() > windowMillis {
+			sl.windowStart.Store(now)
+			sl.windowCount.Store(0)
+		}
+		if sl.windowCount.Load() >= sl.maxPerWindow {
+			return nil, &RateLimitError{MaxPerWindow: sl.maxPerWindow, WindowMillis: windowMillis}
+		}
+	}
+	if sl.semaphore != nil {
+		select {
+		case sl.semaphore <- struct{}{}:
+		case <-ctx.Done():
+			return nil, &ConcurrencyLimitError{MaxConcurrent: cap(sl.semaphore), Cause: ctx.Err()}
+		case <-time.After(acquireTimeout):
+			return nil, &ConcurrencyLimitError{MaxConcurrent: cap(sl.semaphore)}
+		}
+	}
+	if sl.maxPerWindow > 0 {
+		cnt := sl.windowCount.Add(1)
+		if cnt > sl.maxPerWindow {
+			if sl.semaphore != nil {
+				<-sl.semaphore
+			}
+			return nil, &RateLimitError{MaxPerWindow: sl.maxPerWindow, WindowMillis: windowMillis}
+		}
+	}
+	return func() {
+		if sl.semaphore != nil {
+			<-sl.semaphore
 		}
 	}, nil
 }

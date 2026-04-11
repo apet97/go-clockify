@@ -211,6 +211,8 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 | `CLOCKIFY_MAX_CONCURRENT` | `10` | Concurrent tool call limit (`0` disables concurrency limiting) |
 | `CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT` | `100ms` | How long to wait for a concurrency slot before rejecting the call. Must be between `1ms` and `30s`. |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per fixed 60s window (`0` disables window limiting) |
+| `CLOCKIFY_PER_TOKEN_RATE_LIMIT` | `60` | Tool calls per 60s window per authenticated `Principal.Subject`. Applies only to requests that carry a principal (OIDC, forward-auth, mTLS). `0` disables the per-token layer. |
+| `CLOCKIFY_PER_TOKEN_CONCURRENCY` | `5` | Max in-flight tool calls per `Principal.Subject`. `0` disables. |
 | `CLOCKIFY_TOKEN_BUDGET` | `8000` | Response token budget (0 = off) |
 | `MCP_MAX_INFLIGHT_TOOL_CALLS` | `64` | Stdio dispatch-layer goroutine cap. Acquired before goroutine spawn, independent of business rate limiting. `0` disables. |
 | `CLOCKIFY_REPORT_MAX_ENTRIES` | `10000` | Hard cap on entries aggregated by report tools. When `include_entries=true` and the range exceeds the cap, the tool fails closed with an actionable error. `0` disables the cap. |

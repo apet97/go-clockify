@@ -182,6 +182,7 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			authn.WriteUnauthorized(w, "invalid_token", err.Error())
 			return
 		}
+		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 		r.Body = http.MaxBytesReader(w, r.Body, opts.MaxBodySize)
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -254,6 +255,7 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 			authn.WriteUnauthorized(w, "invalid_token", err.Error())
 			return
 		}
+		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 		sessionID := stringsTrimSpace(r.Header.Get("X-MCP-Session-ID"))
 		if sessionID == "" {
 			writeJSONError(w, http.StatusUnauthorized, "missing session id")

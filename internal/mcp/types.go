@@ -26,11 +26,46 @@ type InitializeParams struct {
 	ProtocolVersion string         `json:"protocolVersion,omitempty"`
 	Capabilities    map[string]any `json:"capabilities,omitempty"`
 	ClientInfo      map[string]any `json:"clientInfo,omitempty"`
+	Meta            *RequestMeta   `json:"_meta,omitempty"`
 }
 
 type ToolCallParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments,omitempty"`
+	Meta      *RequestMeta   `json:"_meta,omitempty"`
+}
+
+// RequestMeta is the MCP _meta object that can attach side-channel hints to
+// any request. progressToken is the only field used today — clients supply
+// one to opt into notifications/progress from long-running tool handlers.
+type RequestMeta struct {
+	ProgressToken any `json:"progressToken,omitempty"`
+}
+
+// ProgressToken is the opaque client-supplied token echoed back on every
+// notifications/progress. Either a string or a number per the MCP spec.
+type ProgressToken = any
+
+type progressTokenCtxKey struct{}
+
+// WithProgressToken attaches the client-supplied progressToken (if any) to
+// ctx so downstream tool handlers can emit notifications/progress keyed off
+// the same value.
+func WithProgressToken(ctx context.Context, token ProgressToken) context.Context {
+	if token == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, progressTokenCtxKey{}, token)
+}
+
+// ProgressTokenFromContext returns the progressToken supplied in the current
+// tools/call _meta, or (nil, false) when the client did not opt in.
+func ProgressTokenFromContext(ctx context.Context) (ProgressToken, bool) {
+	v := ctx.Value(progressTokenCtxKey{})
+	if v == nil {
+		return nil, false
+	}
+	return v, true
 }
 
 type Tool struct {
