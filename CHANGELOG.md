@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Security
+
+### Deprecated
+
+## [0.6.1] - 2026-04-11
+
+Re-cut of 0.6.0 that closes the three release-infra gaps exposed by the 0.6.0 tag run. The binaries, Docker image, cosign signatures, SLSA attestations, and SBOMs for 0.6.1 carry exactly the same protocol semantics as 0.6.0 plus the four Wave 2 items below (W2-01, W2-02, W2-03, W2-12). 0.6.0's git tag remains in history; 0.6.1 is the supported release for new installs.
+
+### Added
+
 - **W2-01 — Runtime JSON-schema validation at the enforcement boundary** (`internal/jsonschema/validator.go`, `internal/jsonschema/validator_test.go`, `internal/mcp/types.go`, `internal/mcp/server.go`, `internal/mcp/schema_validation_dispatch_test.go`, `internal/enforcement/enforcement.go`, `internal/enforcement/schema_validation_test.go`, `internal/tools/schema_validator_property_test.go`, `docs/adr/008-runtime-schema-validation.md`, `.github/workflows/ci.yml`). New stdlib-only JSON-schema validator package at `internal/jsonschema` wired into `enforcement.Pipeline.BeforeCall` as the first gate — before policy, rate-limiting, and dry-run. Every incoming `tools/call` is now validated against the tool's advertised `InputSchema`; malformed calls are rejected at the enforcement boundary. Supported keyword subset: `type`, `required`, `additionalProperties: false`, `properties` (recursive), `items`, `minimum`/`maximum`, `minLength`/`maxLength`, `pattern` (anchored), `format: date`/`date-time`, `enum`. Deliberately out of scope: `$ref`, `$defs`, `allOf`/`anyOf`/`oneOf`, `not`, conditionals, `const`, `exclusiveMinimum`/`exclusiveMaximum`, `multipleOf`, `propertyNames`, `patternProperties`. A new property test `TestRegistrySchemasAcceptHappyPathArgs` walks every Tier 1 + Tier 2 descriptor and synthesises a happy-path argument map, catching walker/validator drift. Coverage: `internal/jsonschema` new at **86.4%** (floor 85%), `internal/enforcement` 89.5% → **89.0%** (floor still 85%), global 66.7% → **67.4%**. See [ADR 008](docs/adr/008-runtime-schema-validation.md).
+- **W2-02 — `pprof` endpoints behind `-tags=pprof`** (`internal/mcp/transport_extra.go`, `internal/mcp/server.go`, `internal/mcp/transport_http.go`, `internal/mcp/transport_streamable_http.go`, `internal/mcp/transport_extra_pprof_test.go`, `cmd/clockify-mcp/pprof_on.go`, `cmd/clockify-mcp/pprof_off.go`, `cmd/clockify-mcp/main.go`, `.github/workflows/ci.yml`, `docs/runbooks/oom-or-goroutine-leak.md`). The `net/http/pprof` side-imports are now a first-class build tag that mounts `/debug/pprof/*` on whichever HTTP transport the server is running (legacy `http` or `streamable_http`). Default builds are byte-identical to 0.6.0 — a new CI symbol gate enforces that `go tool nm` on the default binary shows **zero** `net/http/pprof` symbols, and a sibling positive gate enforces that the `-tags=pprof` binary shows at least one. Design: a neutral `ExtraHandler{Pattern, Handler}` type plus a `mountExtras` helper in `internal/mcp/transport_extra.go` (stdlib-only); both transports grew an opt-in slice field (`Server.ExtraHTTPHandlers` for legacy HTTP, `StreamableHTTPOptions.ExtraHandlers` for streamable) that's walked before `ListenAndServe`. `cmd/clockify-mcp/` owns the sole `net/http/pprof` import behind `//go:build pprof`; the default stub returns `nil`. pprof endpoints bypass the `/mcp` bearer gate because they live at a sibling path — debug builds must only run on loopback or behind a firewall. Documented in `docs/runbooks/oom-or-goroutine-leak.md`, which now carries the exact `-tags=pprof` recipe replacing the prior "rebuild manually" note.
 
 ### Changed
 
@@ -19,9 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **W2-12 — Release infrastructure gaps from the 0.6.0 cut** (`.github/workflows/docker-image.yml`, `.github/workflows/release.yml`, `docs/runbooks/release-incident.md`, `docs/wave2-backlog.md`). The docker-image workflow's top-level `permissions.contents` was bumped from `read` to `write` so `anchore/sbom-action`'s Release-asset upload step can attach the image SBOM to a tag Release. On 0.6.0 this step failed with `Resource not accessible by integration` and no SBOM reached the GH Release asset list; the 0.6.1 Docker-tag run completes this step cleanly. A new runbook at `docs/runbooks/release-incident.md` documents the two canonical partial-release failure modes (`ENEEDAUTH`, `Resource not accessible by integration`), diagnosis commands, and the rerun-vs-re-cut decision tree so on-call has a playbook for the next breakage.
+- **W2-12 (continued) — Broken `publish-npm` job removed**. Investigating the 0.6.0 `ENEEDAUTH` surfaced three independent problems in the `publish-npm` job that made it impossible to run as written: `NPM_TOKEN` was never set, the hard-coded `@anycli` scope is not controlled by this project (`npm view @anycli/clockify-mcp-go` returns 404 — the package has never existed on npm), and the `Publish base package` step referenced `npm/clockify-mcp-go/` which has no directory on disk. The job was deleted rather than papered over, with a comment at the deletion site listing the checklist for a rebuild. `npm/package.json.tmpl` is kept as a starting point. The entire npm distribution surface is re-filed as W2-13 in `docs/wave2-backlog.md`. **Note to npm consumers:** 0.6.1 does not ship npm tarballs. Use the GH Release binaries, `go install github.com/apet97/go-clockify/cmd/clockify-mcp@v0.6.1`, or `ghcr.io/apet97/go-clockify:v0.6.1`.
+
 ### Security
 
+- **W2-03 — CodeQL Action v3 → v4.35.1** (`.github/workflows/docker-image.yml`). The sole `github/codeql-action/upload-sarif` pin in the repo was on v3, which GitHub began surfacing as a deprecation warning on every Docker-image workflow run. Bumped to `c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1`. The only v3→v4 delta from the action changelog is a Node.js v24 runtime requirement which GitHub-hosted `ubuntu-22.04` runners already satisfy; `upload-sarif` inputs are unchanged and `sarif_file: trivy-results.sarif` still validates.
+
 ### Deprecated
+
+- **npm tarballs for `@anycli/clockify-mcp-go*`** (never shipped; see W2-13 in the backlog). The broken npm distribution wiring was deleted from `release.yml` in the 0.6.1 re-cut. A replacement will ship when W2-13 lands or when W2-07 (goreleaser migration) subsumes it.
 
 ## [0.6.0] - 2026-04-11
 
