@@ -84,7 +84,8 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `MCP_TRANSPORT` | `stdio` | `stdio`, `http`, `streamable_http`, or `grpc` (grpc requires `-tags=grpc` build) |
 | `MCP_GRPC_BIND` | `:9090` | gRPC listen address when `MCP_TRANSPORT=grpc` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
-| `MCP_BEARER_TOKEN` | — | Required for HTTP mode (`Authorization: Bearer <token>`) |
+| `MCP_BEARER_TOKEN` | — | Required for HTTP mode or `MCP_AUTH_MODE=static_bearer` on gRPC (`Authorization: Bearer <token>`) |
+| `MCP_AUTH_MODE` | — | `static_bearer`, `oidc`, `forward_auth`, `mtls`. On gRPC transport, only `static_bearer` and `oidc` are supported; `forward_auth` / `mtls` remain HTTP-only (see ADR 012 §auth) |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
 | `MCP_STRICT_HOST_CHECK` | — | Set `1` to require Host match `localhost`, `127.0.0.1`, `::1`, or `MCP_ALLOWED_ORIGINS` |

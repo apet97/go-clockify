@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/mcp"
 
 	"google.golang.org/grpc"
@@ -20,10 +21,17 @@ import (
 // shared mcp.Server instance every stream will dispatch against. MaxRecvSize
 // caps per-frame inbound bytes to match the legacy HTTP MCP_HTTP_MAX_BODY
 // default (2 MiB) when unset.
+//
+// Authenticator is optional. When non-nil, a grpc.StreamServerInterceptor
+// is installed that bridges the shared internal/authn contract onto gRPC
+// metadata — see authStreamInterceptor for the wire details and ADR 012
+// for the rationale. Leaving it nil preserves the Wave 3 behaviour of
+// relying on an external mTLS gateway / service mesh for authn.
 type Options struct {
-	Bind        string
-	Server      *mcp.Server
-	MaxRecvSize int
+	Bind          string
+	Server        *mcp.Server
+	MaxRecvSize   int
+	Authenticator authn.Authenticator
 }
 
 // Serve starts the gRPC transport on the given bind and blocks until ctx
@@ -51,10 +59,14 @@ func Serve(ctx context.Context, opts Options) error {
 	handler := &exchangeServer{srv: opts.Server}
 	desc := buildServiceDesc()
 
-	grpcSrv := grpc.NewServer(
+	serverOpts := []grpc.ServerOption{
 		grpc.ForceServerCodec(bytesCodec{}),
 		grpc.MaxRecvMsgSize(opts.MaxRecvSize),
-	)
+	}
+	if opts.Authenticator != nil {
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator)))
+	}
+	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)
 
 	ln, err := net.Listen("tcp", opts.Bind)

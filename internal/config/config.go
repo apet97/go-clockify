@@ -126,8 +126,19 @@ func Load() (Config, error) {
 	if cfg.Transport == "stdio" && cfg.AuthMode != "" {
 		return Config{}, fmt.Errorf("MCP_AUTH_MODE is only valid for HTTP transports")
 	}
-	if cfg.Transport == "grpc" && cfg.AuthMode != "" {
-		return Config{}, fmt.Errorf("MCP_AUTH_MODE is not currently wired for gRPC transport; use mTLS or a service mesh")
+	if cfg.Transport == "grpc" {
+		// The gRPC transport bridges authn via a synthetic http.Request
+		// carrying the Authorization metadata key. static_bearer and oidc
+		// read only that header and work transparently. forward_auth
+		// requires extra forwarded headers, and mtls needs real TLS
+		// verified chains — neither is expressible through the synthetic
+		// request shape, so they remain HTTP-only. See ADR 012 §auth.
+		switch cfg.AuthMode {
+		case "", "static_bearer", "oidc":
+			// supported
+		case "forward_auth", "mtls":
+			return Config{}, fmt.Errorf("MCP_AUTH_MODE=%s is not supported on gRPC transport (no forwarded headers or TLS verified chains available via synthetic request); use static_bearer or oidc, or front gRPC with mTLS externally", cfg.AuthMode)
+		}
 	}
 
 	cfg.HTTPBind = os.Getenv("MCP_HTTP_BIND")

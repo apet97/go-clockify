@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -312,6 +313,81 @@ func TestLoadTransportGRPCDefaultBind(t *testing.T) {
 	}
 	if cfg.GRPCBind != ":9090" {
 		t.Fatalf("expected :9090 default, got %q", cfg.GRPCBind)
+	}
+}
+
+// TestLoadTransportGRPCStaticBearer verifies the W4-03 auth amendment:
+// gRPC + static_bearer is accepted when MCP_BEARER_TOKEN is set, matching
+// the legacy HTTP transport's shape so operators get a consistent knob.
+func TestLoadTransportGRPCStaticBearer(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+		"MCP_AUTH_MODE":    "static_bearer",
+		"MCP_BEARER_TOKEN": "1234567890abcdef",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("grpc + static_bearer should be accepted: %v", err)
+	}
+	if cfg.AuthMode != "static_bearer" {
+		t.Fatalf("expected static_bearer, got %q", cfg.AuthMode)
+	}
+}
+
+// TestLoadTransportGRPCOIDC verifies that oidc auth is accepted under gRPC.
+// OIDC only touches the Authorization header (plus JWKS fetch via the
+// request context), so the synthetic *http.Request bridge in the gRPC
+// interceptor is compatible with it out of the box.
+func TestLoadTransportGRPCOIDC(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+		"MCP_AUTH_MODE":    "oidc",
+		"MCP_OIDC_ISSUER":  "https://idp.example.com",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("grpc + oidc should be accepted: %v", err)
+	}
+	if cfg.AuthMode != "oidc" {
+		t.Fatalf("expected oidc, got %q", cfg.AuthMode)
+	}
+}
+
+// TestLoadTransportGRPCForwardAuthRejected documents the W4-03 stop
+// condition: forward_auth needs X-Forwarded-{User,Tenant} headers that
+// the synthetic request in the gRPC interceptor does not carry.
+func TestLoadTransportGRPCForwardAuthRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+		"MCP_AUTH_MODE":    "forward_auth",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected gRPC + forward_auth to be rejected")
+	}
+	if !strings.Contains(err.Error(), "forward_auth") {
+		t.Fatalf("expected error mentioning forward_auth, got: %v", err)
+	}
+}
+
+// TestLoadTransportGRPCMTLSRejected documents the W4-03 stop condition:
+// mtls needs real TLS VerifiedChains that the synthetic request cannot
+// expose. Operators still front gRPC with an external mTLS terminator.
+func TestLoadTransportGRPCMTLSRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+		"MCP_AUTH_MODE":    "mtls",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected gRPC + mtls to be rejected")
+	}
+	if !strings.Contains(err.Error(), "mtls") {
+		t.Fatalf("expected error mentioning mtls, got: %v", err)
 	}
 }
 

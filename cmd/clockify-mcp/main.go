@@ -246,7 +246,36 @@ func run() error {
 		// stub returns a clear error explaining the build-tag requirement.
 		// See ADR 012. Upstream readiness is not yet wired for gRPC because
 		// the transport has no HTTP-style /ready endpoint.
-		return serveGRPC(ctx, cfg.GRPCBind, server)
+		//
+		// When MCP_AUTH_MODE is set, build the shared authn.Authenticator
+		// (same construction path as the streamable_http branch above) and
+		// let the gRPC transport install its auth stream interceptor. The
+		// config layer already rejects forward_auth/mtls for grpc, so only
+		// static_bearer and oidc reach here.
+		var grpcAuthenticator authn.Authenticator
+		if cfg.AuthMode != "" {
+			authnCfg := authn.Config{
+				Mode:                 authn.Mode(cfg.AuthMode),
+				BearerToken:          cfg.BearerToken,
+				DefaultTenantID:      cfg.DefaultTenantID,
+				TenantClaim:          cfg.TenantClaim,
+				SubjectClaim:         cfg.SubjectClaim,
+				OIDCIssuer:           cfg.OIDCIssuer,
+				OIDCAudience:         cfg.OIDCAudience,
+				OIDCJWKSURL:          cfg.OIDCJWKSURL,
+				OIDCJWKSPath:         cfg.OIDCJWKSPath,
+				OIDCResourceURI:      cfg.OIDCResourceURI,
+				ForwardTenantHeader:  cfg.ForwardTenantHeader,
+				ForwardSubjectHeader: cfg.ForwardSubjectHeader,
+				MTLSTenantHeader:     cfg.MTLSTenantHeader,
+			}
+			var err error
+			grpcAuthenticator, err = authn.New(authnCfg)
+			if err != nil {
+				return err
+			}
+		}
+		return serveGRPC(ctx, cfg.GRPCBind, server, grpcAuthenticator)
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)
 }
@@ -310,7 +339,7 @@ Environment Variables:
   Transport:
     MCP_TRANSPORT             stdio (default), legacy http, streamable_http, or grpc
     MCP_GRPC_BIND             gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
-    MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls
+    MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
     MCP_BEARER_TOKEN          Required for static bearer auth; send as Authorization: Bearer <token>
     MCP_ALLOWED_ORIGINS       Comma-separated CORS origins

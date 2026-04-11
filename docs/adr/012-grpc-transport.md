@@ -1,6 +1,9 @@
 # ADR 012 — gRPC transport via isolated sub-module (no protobuf codegen)
 
-**Status**: Accepted, 2026-04-11.
+**Status**: Accepted, 2026-04-11. Amended 2026-04-12 (W4-03) to land
+the native `static_bearer` / `oidc` auth interceptor via a synthetic
+`*http.Request` bridge instead of the service-mesh-only posture the
+Wave 3 version required.
 
 ## Context
 
@@ -114,13 +117,56 @@ mirrors the `otel_on.go` / `otel_off.go` and `pprof_on.go` /
 `Config.Load` is extended with a new `MCP_GRPC_BIND` environment
 variable (default `:9090`) surfaced through `Config.GRPCBind`, and the
 transport validator accepts `"grpc"` alongside `"stdio"`, `"http"`,
-and `"streamable_http"`. Auth modes are currently rejected for the
-gRPC transport: production deployments are expected to terminate
-authentication at the service mesh edge (mTLS, Istio authz, or equivalent)
-because grpc-go's credentials/interceptor wiring is a larger surface
-than Wave 3 needed to land. Follow-up work can add a native
-`static_bearer` / `oidc` equivalent behind a gRPC `UnaryInterceptor`
-once the transport has soaked in production.
+and `"streamable_http"`.
+
+### Auth bridge (W4-03)
+
+The W4-03 amendment lands a native stream interceptor in
+`internal/transport/grpc/auth.go` that bridges the shared
+`internal/authn.Authenticator` contract onto gRPC metadata. The
+interceptor reads the `authorization` metadata key, constructs a
+synthetic `*http.Request` that carries only an `Authorization: Bearer
+<token>` header, and invokes `Authenticator.Authenticate(ctx, req)`
+through the same code path the streamable HTTP transport uses. On
+success it wraps the stream in an `authServerStream` whose `Context()`
+returns a principal-augmented context via `authn.WithPrincipal`, so
+downstream enforcement (rate limiting, policy, audit) buckets calls
+by `Principal.Subject` exactly as it does for HTTP.
+
+Two auth modes are supported:
+
+- `static_bearer` — the existing
+  `staticBearerAuthenticator.Authenticate` reads only the Authorization
+  header; the synthetic request is indistinguishable from a real HTTP
+  request for its purposes.
+- `oidc` — the existing `oidcAuthenticator` reads only the
+  Authorization header and fetches JWKS via the real request context
+  (not the synthetic body). Works without modification.
+
+`forward_auth` and `mtls` remain HTTP-only because they require data
+the synthetic request cannot carry: `forward_auth` needs the
+`X-Forwarded-User` / `X-Forwarded-Tenant` headers from an upstream
+auth gateway, and `mtls` needs `Request.TLS.VerifiedChains` from the
+actual TLS handshake. `Config.Load` rejects both modes for
+`MCP_TRANSPORT=grpc` with a clear error pointing operators at
+`static_bearer`, `oidc`, or an external mTLS termination layer.
+
+Validation lifetime is **per-stream, not per-message**. The
+interceptor fires once when a new `Exchange` stream opens and the
+principal persists for the life of that stream. Long-lived streams
+that outlast an OIDC token's `exp` claim retain the original
+principal — operators that need per-message re-validation should
+rotate streams. Per-message re-validation is follow-up work.
+
+Metrics rejections. Policy denials and rate-limit hits from the
+enforcement pipeline continue to emit
+`clockify_mcp_rate_limit_rejections_total{scope=per_token}` exactly as
+they do for HTTP, because the interceptor populates `Principal.Subject`
+through the same context key the enforcement layer reads. The only
+gRPC-specific failure mode is `codes.Unauthenticated` from the
+interceptor itself; those rejections never reach the enforcement
+layer and are not counted in the rate-limit metric. A dedicated
+`clockify_mcp_grpc_auth_rejections_total` counter is follow-up work.
 
 Two new CI gates live in `.github/workflows/ci.yml`:
 
@@ -169,10 +215,14 @@ unrelated edits by hand.
   the grpc-go runtime plus its transitive closure. Exact symbol
   counts will vary with the gRPC release; the positive-side CI
   gate asserts non-zero linkage rather than a specific count.
-- **gRPC authentication is out of scope for v0.8.0.** Operators who
-  enable `MCP_TRANSPORT=grpc` must front the listener with mTLS or
-  an L7 proxy that enforces authn/authz. A future ADR can add a
-  static-bearer and OIDC interceptor under the same sub-module.
+- **gRPC authentication landed in v0.9.0 (W4-03).** The W4-03
+  amendment introduces a native stream interceptor supporting
+  `static_bearer` and `oidc` via a synthetic `*http.Request` bridge
+  onto the existing `internal/authn` package. Operators can now set
+  `MCP_AUTH_MODE=static_bearer` (or `oidc`) alongside `MCP_TRANSPORT=grpc`
+  without fronting the listener with an external mTLS gateway.
+  `forward_auth` and `mtls` remain HTTP-only; see the Auth bridge
+  section above for the rationale.
 - **Stream notifier semantics match the existing transports.** The
   per-stream `streamNotifier` is installed via `Server.SetNotifier`
   each time a new `Exchange` stream opens; the most recently opened
@@ -182,8 +232,8 @@ unrelated edits by hand.
 
 ## Follow-ups
 
-- Authentication interceptor for `MCP_AUTH_MODE=static_bearer` and
-  `MCP_AUTH_MODE=oidc` on gRPC.
+- ~~Authentication interceptor for `MCP_AUTH_MODE=static_bearer` and
+  `MCP_AUTH_MODE=oidc` on gRPC.~~ **Landed in W4-03 (2026-04-12).**
 - Multi-stream notifier fan-out so server-initiated notifications
   reach every active `Exchange` stream rather than only the most
   recently attached one.
@@ -191,8 +241,16 @@ unrelated edits by hand.
   through the gRPC bidirectional channel (the existing
   `EmitProgress` helper already routes through `Server.notifier` and
   should work unchanged once multi-stream notifier fan-out lands).
+- Per-message auth re-validation so long-lived streams do not retain
+  a principal past the token's `exp` claim.
+- `clockify_mcp_grpc_auth_rejections_total` counter for interceptor-
+  level `codes.Unauthenticated` rejections (current metrics only
+  cover post-auth enforcement rejections).
+- Native gRPC health protocol probes so Kubernetes `readinessProbe`
+  can use `grpc: { port: N }` instead of `tcpSocket`.
 
 ## Status
 
 Landed on `main` in the W3-04 commit of the 2026-04-11 session. Wave 3
-backlog T-4 moved to Landed.
+backlog T-4 moved to Landed. Amended 2026-04-12 by the W4-03 auth
+interceptor commit.
