@@ -134,6 +134,66 @@ If all steps succeed, you have verified:
 - **Transparency** — a complete dependency inventory is available
   (SPDX SBOM)
 
+## 5. FIPS 140-3 build variant (optional)
+
+Every tagged release also ships a parallel set of binaries built
+with Go 1.25's native FIPS 140-3 mode. These artefacts are named
+`clockify-mcp-fips-{platform}` (for example
+`clockify-mcp-fips-linux-x64`) and land in the GH Release alongside
+the default binaries. The matrix is Linux + macOS only; Windows
+FIPS is available on request.
+
+FIPS binaries are built with `GOFIPS140=latest` at compile time so
+the frozen FIPS 140-3 cryptographic module is embedded in the
+binary. At startup they log:
+
+```
+INFO fips140_enabled version=latest enforced=false
+```
+
+`enforced=false` means approved algorithms are routed through the
+FIPS module but non-approved algorithms (e.g. `sha1`) still
+compile and run normally. To get hard-fail semantics on
+non-approved primitives at runtime, set `GODEBUG=fips140=only` in
+the environment.
+
+FIPS binaries carry the same cosign keyless signature, the same
+SPDX SBOM, and the same SLSA build-provenance attestation as their
+non-FIPS counterparts:
+
+```sh
+# Verify signature (identity regexp unchanged — same workflow builds both)
+cosign verify-blob \
+  --bundle clockify-mcp-fips-linux-x64.sigstore.json \
+  --certificate-identity-regexp "https://github.com/apet97/go-clockify/.github/workflows/release.yml@.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  clockify-mcp-fips-linux-x64
+
+# Verify build-provenance attestation
+gh attestation verify clockify-mcp-fips-linux-x64 --repo apet97/go-clockify
+
+# Inspect the FIPS SBOM
+syft clockify-mcp-fips-linux-x64.spdx.json
+```
+
+To confirm the binary you downloaded is actually a FIPS binary:
+
+```sh
+./clockify-mcp-fips-linux-x64 --version
+# Expect stderr to include:
+#   INFO fips140_enabled version=latest enforced=false
+```
+
+If the `fips140_enabled` line is absent, the binary was not built
+with `GOFIPS140=latest` and is not a FIPS-compliant artefact — do
+not treat it as one even if the filename matches.
+
+Running the FIPS binary without `GOFIPS140` at build time (or
+without `GODEBUG=fips140=on` at runtime against a default build)
+will print a fatal error message and exit. See
+[`docs/adr/011-fips-build-target.md`](adr/011-fips-build-target.md)
+for the full threat model.
+
 ## Reproducibility note
 
 Release binaries are built with `-trimpath`, which strips local build

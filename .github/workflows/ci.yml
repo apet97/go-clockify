@@ -130,6 +130,28 @@ jobs:
         run: go test -tags=pprof -count=1 ./internal/mcp/...
       - name: Build with -tags=pprof,otel
         run: go build -tags=pprof,otel ./...
+      - name: Build with -tags=fips (GOFIPS140=latest)
+        env:
+          GOFIPS140: latest
+        run: go build -tags=fips ./...
+      - name: Verify -tags=fips binary activates crypto/fips140
+        env:
+          GOFIPS140: latest
+        run: |
+          set -euo pipefail
+          go build -tags=fips -o /tmp/clockify-mcp-fips ./cmd/clockify-mcp
+          # Binary built with GOFIPS140=latest should report fips140_enabled
+          # on startup without needing GODEBUG at runtime.
+          output=$(/tmp/clockify-mcp-fips --version 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "fips140_enabled" || {
+            echo "-tags=fips binary did not log fips140_enabled on startup"
+            exit 1
+          }
+      - name: Test with -tags=fips
+        env:
+          GOFIPS140: latest
+        run: go test -tags=fips -count=1 -timeout 120s ./...
 
   test:
     name: Test

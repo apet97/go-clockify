@@ -65,6 +65,35 @@ builds:
       - -X main.buildDate={{.CommitDate}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # W2-11 — FIPS 140-3 build target. Same matrix, same ldflags, plus
+  # the `fips` build tag (activates the crypto/fips140 startup assertion
+  # in cmd/clockify-mcp/fips_on.go) and GOFIPS140=latest at compile time
+  # so the binary ships with the frozen FIPS cryptographic module active.
+  # Archives are named clockify-mcp-fips-{os}-{arch} so operators can tell
+  # them apart from the default artifacts. See ADR 011.
+  - id: clockify-mcp-fips
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp-fips
+    env:
+      - CGO_ENABLED=0
+      - GOFIPS140=latest
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -tags=fips
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
   - id: clockify-mcp
     ids:
@@ -74,6 +103,16 @@ archives:
     # docs/verification.md operator commands reference these filenames.
     name_template: >-
       {{ .ProjectName }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: clockify-mcp-fips
+    ids:
+      - clockify-mcp-fips
+    formats: [binary]
+    name_template: >-
+      {{ .ProjectName }}-fips-
       {{- .Os }}-
       {{- if eq .Arch "amd64" }}x64
       {{- else if eq .Arch "arm64" }}arm64

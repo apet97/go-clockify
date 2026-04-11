@@ -42,6 +42,11 @@ var (
 )
 
 func main() {
+	// Run the FIPS startup assertion first. Default build is a no-op.
+	// Under -tags=fips this fails the process if crypto/fips140 reports
+	// the module is not active. See ADR 011.
+	fipsStartupCheck()
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "--version", "-v":

@@ -18,10 +18,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 ## Tier 4 — verification depth
 
 
-### W2-11 — FIPS build target behind `-tags=fips`
-
-**Size:** M. Only if an enterprise contact asks for it.
-
 ## Out of scope for Wave 2 (deferred to Wave 3)
 
 - Reproducible-build verification job
@@ -29,6 +25,53 @@ commit SHA, mirroring how Wave 1 was tracked.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-11 — FIPS 140-3 build target
+
+**Landed:** 2026-04-11 (Track I of the v0.7.0 development session).
+Ships parallel FIPS binaries built via Go 1.25's native
+`crypto/fips140` mode — no cgo, no BoringSSL, no toolchain fork.
+See [ADR 011](adr/011-fips-build-target.md) for the full rationale.
+
+**Critical files shipped:**
+- `cmd/clockify-mcp/fips_on.go` (new, `//go:build fips`) — exports
+  `fipsStartupCheck()` which calls `crypto/fips140.Enabled()`. Fails
+  fatally with a clear error message if FIPS mode is not active,
+  otherwise logs `slog.Info("fips140_enabled", version, enforced)`.
+- `cmd/clockify-mcp/fips_off.go` (new, `//go:build !fips`) — no-op
+  stub mirroring the `pprof_off.go` template.
+- `cmd/clockify-mcp/main.go` — calls `fipsStartupCheck()` as the
+  first statement of `main()`, before arg parsing or slog setup, so
+  a failing assertion cannot be masked by later init code.
+- `.goreleaser.yaml` — adds a second `build` entry
+  `clockify-mcp-fips` with `env: [CGO_ENABLED=0, GOFIPS140=latest]`,
+  `flags: [-trimpath, -tags=fips]`, and a matching `archives:`
+  entry producing `clockify-mcp-fips-{os}-{arch}` artefacts. Matrix
+  is Linux + macOS only (no Windows FIPS yet).
+- `.github/workflows/ci.yml` — three new build-job steps:
+  1. `Build with -tags=fips (GOFIPS140=latest)` — builds the FIPS
+     binary on every CI run.
+  2. `Verify -tags=fips binary activates crypto/fips140` — runs
+     the binary and asserts stderr contains `fips140_enabled`.
+  3. `Test with -tags=fips` — runs the full test suite under the
+     FIPS tag so any regression toward a non-approved primitive
+     surfaces immediately.
+- `docs/adr/011-fips-build-target.md` (new).
+- `docs/verification.md` — new section 5 documenting how to verify
+  a downloaded FIPS binary (cosign signature, SLSA attestation,
+  SBOM, startup log assertion).
+
+**Acceptance (local).**
+- `go build ./...` → default build unchanged.
+- `GOFIPS140=latest go build -tags=fips ./...` → succeeds.
+- `go test -race -tags=fips ./...` → entire suite passes; no
+  regression from non-approved primitives.
+- `GOFIPS140=latest go build -tags=fips -o /tmp/mcp-fips
+  ./cmd/clockify-mcp && /tmp/mcp-fips --version` →
+  `INFO fips140_enabled version=latest enforced=false` + `v0.6.1`.
+- `goreleaser release --snapshot --skip=publish --skip=sign
+  --skip=sbom` → 9 archives (5 default + 4 FIPS), all with the
+  expected filenames in `SHA256SUMS.txt`.
 
 ### W2-08 — Chaos harness at `tests/chaos/`
 
