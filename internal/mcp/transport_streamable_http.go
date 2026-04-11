@@ -10,12 +10,14 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/controlplane"
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 type StreamableSessionRuntime struct {
@@ -108,6 +110,11 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	}))
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
+	// GET /mcp is the spec-canonical SSE stream for server→client
+	// notifications (MCP Streamable HTTP 2025-03-26 §3.3). GET /mcp/events
+	// is kept as a deprecated back-compat alias for one release and will be
+	// removed in 0.7.
+	mux.Handle("GET /mcp", observeHTTPH("/mcp", streamableEventsHandler(opts, mgr)))
 	mux.Handle("GET /mcp/events", observeHTTPH("/mcp/events", streamableEventsHandler(opts, mgr)))
 	if opts.ProtectedResource != nil {
 		mux.Handle("/.well-known/oauth-protected-resource",
@@ -216,6 +223,13 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 				writeJSONError(w, http.StatusForbidden, "session principal mismatch")
 				return
 			}
+			if vErr := validateProtocolVersion(r, session); vErr != nil {
+				metrics.ProtocolErrorsTotal.Inc("protocol_version_mismatch")
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(Response{JSONRPC: "2.0", ID: req.ID, Error: &RPCError{Code: -32600, Message: vErr.Error()}})
+				return
+			}
 		}
 		mgr.touch(session.id)
 		resp := session.server.handle(r.Context(), req)
@@ -263,7 +277,14 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Connection", "keep-alive")
-		ch, cancel := session.events.subscribe()
+		// Last-Event-ID resumability — absent/malformed falls back to full replay.
+		var lastEventID uint64
+		if hdr := strings.TrimSpace(r.Header.Get("Last-Event-ID")); hdr != "" {
+			if n, err := strconv.ParseUint(hdr, 10, 64); err == nil {
+				lastEventID = n
+			}
+		}
+		ch, cancel := session.events.subscribeFrom(lastEventID)
 		defer cancel()
 		_, _ = fmt.Fprintf(w, ": session %s\n\n", session.id)
 		flusher.Flush()
@@ -285,12 +306,37 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 					"method":  event.method,
 					"params":  event.params,
 				})
+				_, _ = fmt.Fprintf(w, "id: %d\n", event.id)
 				_, _ = fmt.Fprintf(w, "event: %s\n", event.method)
 				_, _ = fmt.Fprintf(w, "data: %s\n\n", payload)
 				flusher.Flush()
 			}
 		}
 	})
+}
+
+// validateProtocolVersion enforces Mcp-Protocol-Version on non-initialize
+// requests. Absent = accept (pre-2025-03-26 clients). Present but unsupported
+// or mismatched against the session's negotiated version = reject.
+func validateProtocolVersion(r *http.Request, session *streamSession) error {
+	v := strings.TrimSpace(r.Header.Get("Mcp-Protocol-Version"))
+	if v == "" {
+		return nil
+	}
+	supported := false
+	for _, s := range SupportedProtocolVersions {
+		if s == v {
+			supported = true
+			break
+		}
+	}
+	if !supported {
+		return fmt.Errorf("unsupported Mcp-Protocol-Version %q", v)
+	}
+	if negotiated := session.server.NegotiatedProtocolVersion(); negotiated != "" && v != negotiated {
+		return fmt.Errorf("Mcp-Protocol-Version %q does not match session %q", v, negotiated)
+	}
+	return nil
 }
 
 func applyHTTPBaselineHeaders(w http.ResponseWriter) {
@@ -480,6 +526,7 @@ func (m *streamSessionManager) closeAll() {
 }
 
 type sessionEvent struct {
+	id     uint64
 	method string
 	params any
 }
@@ -487,6 +534,7 @@ type sessionEvent struct {
 type sessionEventHub struct {
 	mu          sync.Mutex
 	nextID      int
+	lastEventID uint64
 	subscribers map[int]chan sessionEvent
 	backlog     []sessionEvent
 	backlogCap  int
@@ -504,7 +552,8 @@ func newSessionEventHub(backlogCap, bufferCap int) *sessionEventHub {
 func (h *sessionEventHub) Notify(method string, params any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	event := sessionEvent{method: method, params: params}
+	h.lastEventID++
+	event := sessionEvent{id: h.lastEventID, method: method, params: params}
 	h.backlog = append(h.backlog, event)
 	if len(h.backlog) > h.backlogCap {
 		h.backlog = append([]sessionEvent(nil), h.backlog[len(h.backlog)-h.backlogCap:]...)
@@ -521,13 +570,21 @@ func (h *sessionEventHub) Notify(method string, params any) error {
 }
 
 func (h *sessionEventHub) subscribe() (<-chan sessionEvent, func()) {
+	return h.subscribeFrom(0)
+}
+
+// subscribeFrom replays backlog events with id > lastEventID (0 = replay all).
+// Events trimmed from the backlog are unrecoverable — SSE best-effort semantics.
+func (h *sessionEventHub) subscribeFrom(lastEventID uint64) (<-chan sessionEvent, func()) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	id := h.nextID
 	h.nextID++
 	ch := make(chan sessionEvent, h.bufferCap)
 	for _, event := range h.backlog {
-		ch <- event
+		if event.id > lastEventID {
+			ch <- event
+		}
 	}
 	h.subscribers[id] = ch
 	return ch, func() {

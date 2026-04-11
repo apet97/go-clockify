@@ -16,31 +16,11 @@ Each item names the file paths that need to change and the rough size
 - ✅ **W1-09** `outputSchema` for every tool — Tier 1 + Tier 2 decorated via `tier1OutputSchemas` lookup + `applyOpaqueOutputSchemas`. Stdlib reflection-based generator at `internal/tools/schemagen.go`.
 - ✅ **W1-11** `internal/tools` coverage push — 38.9% → 52.0% via four Tier 2 sweep tests (invoices, expenses, groups_holidays, custom_fields).
 - ✅ **W1-06** OAuth 2.1 Resource Server completion — pluggable JWKS HTTP client, resource indicator binding, WWW-Authenticate header, `/.well-known/oauth-protected-resource` metadata document, integration test. `internal/authn` 65.9% → 88.2%.
+- ✅ **W1-01** Streamable HTTP completion — `GET /mcp` now serves the SSE notification stream with per-event `id:` stamping; clients reconnecting with `Last-Event-ID` receive replay of backlog entries stamped strictly after the supplied id. Non-initialize requests with a present-but-mismatched `Mcp-Protocol-Version` header are rejected with HTTP 400 + JSON-RPC `-32600`, counted under `clockify_mcp_protocol_errors_total{code="protocol_version_mismatch"}`. `GET /mcp/events` kept as a back-compat alias through 0.6 (removed in 0.7). `internal/mcp` 65.5% → 69.7%.
 
 ---
 
 ## Tier 1: protocol completeness
-
-### W1-01 — Streamable HTTP (2025-03-26): finish the migration  (L)
-
-Codex shipped the session-aware control plane and per-tenant runtime in
-`internal/mcp/transport_streamable_http.go`. What remains to make it
-spec-complete:
-
-- `GET /mcp` SSE persistent stream that delivers server→client
-  notifications (currently the SSE stream lives at `/mcp/events`,
-  outside the spec path).
-- `Last-Event-ID` resumability — the spec requires the server to honour
-  this header on reconnect and replay backlog events from that ID.
-  `sessionEventHub` already keeps a backlog with a configurable cap, so
-  the wiring is mostly an event-id stamp + a "skip until ID" filter.
-- `Mcp-Protocol-Version` request-header validation on every non-`initialize`
-  request. Reject mismatches with HTTP 400 + a JSON-RPC error envelope.
-- Harmonise the legacy POST-only `/mcp` and the streamable transport so
-  the documentation can stop describing them as two products.
-
-**Files**: `internal/mcp/transport_streamable_http.go`,
-`internal/mcp/transport_http.go`, `docs/http-transport.md`.
 
 ### W1-02 — Cancellation map  (M)
 

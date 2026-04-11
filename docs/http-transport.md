@@ -105,8 +105,9 @@ This is acceptable for single-tenant compatibility deployments, but it is not a 
 `MCP_TRANSPORT=streamable_http` creates an authenticated per-client session:
 
 - `initialize` creates a session-bound MCP server instance and returns `X-MCP-Session-ID`.
-- Subsequent `POST /mcp` requests must send `X-MCP-Session-ID`.
-- `GET /mcp/events` streams server notifications for that same session.
+- Subsequent `POST /mcp` requests must send `X-MCP-Session-ID`, and — per MCP Streamable HTTP 2025-03-26 — a `Mcp-Protocol-Version` header whose value matches the version negotiated at `initialize`. Pre-2025-03-26 clients that omit the header are still accepted (back-compat); clients that send a known-but-mismatched or unknown version are rejected with HTTP 400 + JSON-RPC `-32600`. Rejections increment `clockify_mcp_protocol_errors_total{code="protocol_version_mismatch"}`.
+- `GET /mcp` streams server→client notifications as SSE for that same session. Each event carries a monotonically-increasing `id:` line; clients that reconnect may send `Last-Event-ID: <n>` and the server replays only the backlog entries stamped with `id > n`. Events trimmed from the backlog when it exceeded its cap are unrecoverable — standard SSE best-effort semantics.
+- `GET /mcp/events` is a deprecated alias for `GET /mcp`, retained through the 0.6 release for clients still on the pre-spec path. It will be removed in 0.7.
 - Negotiated protocol version, `clientInfo`, tool activation, notifier delivery, and audit correlation are all session-local.
 - Sessions expire after `MCP_SESSION_TTL` unless refreshed by activity.
 
@@ -114,11 +115,12 @@ This is acceptable for single-tenant compatibility deployments, but it is not a 
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/mcp` | POST | Bearer | MCP JSON-RPC endpoint |
+| `/mcp` | POST | Bearer + session | MCP JSON-RPC endpoint. Non-`initialize` requests must include `Mcp-Protocol-Version` matching the session. |
+| `/mcp` | GET | Bearer + session | SSE server→client notification stream. Supports `Last-Event-ID` resumability. |
 | `/mcp` | OPTIONS | None | CORS preflight |
+| `/mcp/events` | GET | Bearer + session | **Deprecated** alias for `GET /mcp`. Removed in 0.7. |
 | `/health` | GET | None | Health check (always 200) |
 | `/ready` | GET | None | Readiness check for the HTTP server and optional upstream Clockify probe; independent of MCP `initialize` state |
-| `/mcp/events` | GET | Transport auth + session | Server-initiated notifications for `streamable_http` |
 | `/.well-known/oauth-protected-resource` | GET, HEAD | None | OAuth 2.1 Protected Resource Metadata document (RFC 9728). Mounted on `streamable_http` only when `MCP_RESOURCE_URI` is set. Lists the resource URI, the authorization server (OIDC issuer), and the supported bearer methods. |
 
 ## Security Headers

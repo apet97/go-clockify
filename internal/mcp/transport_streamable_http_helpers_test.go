@@ -111,6 +111,67 @@ func TestSessionEventHubClose(t *testing.T) {
 	}
 }
 
+// TestSessionEventHubLastEventIDReplay verifies subscribeFrom filters the
+// backlog to events with id strictly greater than lastEventID.
+func TestSessionEventHubLastEventIDReplay(t *testing.T) {
+	hub := newSessionEventHub(16, 16)
+	for _, m := range []string{"a", "b", "c", "d", "e"} {
+		if err := hub.Notify(m, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ch, cancel := hub.subscribeFrom(2)
+	defer cancel()
+
+	// Events c(3), d(4), e(5) — strictly > 2.
+	for _, want := range []string{"c", "d", "e"} {
+		select {
+		case got := <-ch:
+			if got.method != want {
+				t.Fatalf("got %q want %q", got.method, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("timed out waiting for %q", want)
+		}
+	}
+}
+
+// TestSessionEventHubLastEventIDFutureSkip verifies that a lastEventID beyond
+// the highest-stamped event yields no replay (but the subscriber still
+// receives any subsequent live events).
+func TestSessionEventHubLastEventIDFutureSkip(t *testing.T) {
+	hub := newSessionEventHub(8, 4)
+	if err := hub.Notify("one", nil); err != nil {
+		t.Fatal(err)
+	}
+	ch, cancel := hub.subscribeFrom(999)
+	defer cancel()
+
+	// No backlog replay expected.
+	select {
+	case ev, ok := <-ch:
+		if ok {
+			t.Fatalf("unexpected replayed event: %+v", ev)
+		}
+	case <-time.After(50 * time.Millisecond):
+		// ok — no events
+	}
+
+	// A new live event should still come through.
+	if err := hub.Notify("two", nil); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case got := <-ch:
+		if got.method != "two" {
+			t.Fatalf("got %q want two", got.method)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for live event")
+	}
+}
+
 // TestSessionEventHubCancelSubscriber removes one subscriber via its cancel
 // function and verifies the others continue to receive events.
 func TestSessionEventHubCancelSubscriber(t *testing.T) {
