@@ -173,7 +173,7 @@ func TestBeforeCall_PolicyBlocks(t *testing.T) {
 		Policy: readOnlyPolicy(),
 	}
 	hints := mcp.ToolHints{ReadOnly: false}
-	_, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", map[string]any{}, hints, noLookup)
+	_, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", map[string]any{}, hints, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected error from policy block")
 	}
@@ -187,7 +187,7 @@ func TestBeforeCall_PolicyDenyTool(t *testing.T) {
 		Policy: denyToolPolicy("clockify_list_entries"),
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
-	_, _, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	_, _, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected error from explicit deny")
 	}
@@ -215,7 +215,7 @@ func TestBeforeCall_RateLimitExhausted(t *testing.T) {
 		RateLimit: rl,
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
-	_, _, err = p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	_, _, err = p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected rate limit error")
 	}
@@ -242,7 +242,7 @@ func TestBeforeCall_RateLimitWindowExhausted(t *testing.T) {
 		RateLimit: rl,
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
-	_, _, err = p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	_, _, err = p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected rate limit error for window exhaustion")
 	}
@@ -260,7 +260,7 @@ func TestBeforeCall_NilRateLimit(t *testing.T) {
 		RateLimit: nil,
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
-	result, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestBeforeCall_ReleaseFunction(t *testing.T) {
 		RateLimit: rl,
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
-	_, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	_, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestBeforeCall_ReleaseFunction(t *testing.T) {
 func TestBeforeCall_NilPolicy(t *testing.T) {
 	p := &Pipeline{Policy: nil}
 	hints := mcp.ToolHints{ReadOnly: false}
-	result, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", map[string]any{}, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", map[string]any{}, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error with nil policy: %v", err)
 	}
@@ -318,7 +318,7 @@ func TestBeforeCall_NormalPassThrough(t *testing.T) {
 	}
 	hints := mcp.ToolHints{ReadOnly: true}
 	// No dry_run in args, so no interception.
-	result, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, noLookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_list_entries", map[string]any{}, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -344,7 +344,7 @@ func TestBeforeCall_DryRun_NonDestructivePassThrough(t *testing.T) {
 	// leaving the flag in args so the handler's own dry-run logic can run.
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: false}
 	args := map[string]any{"dry_run": true, "description": "test"}
-	result, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", args, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_add_entry", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("expected no error for non-destructive tool pass-through, got: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestBeforeCall_DryRunDisabled_SkipsIntercept(t *testing.T) {
 	// The flag passes through to the handler (not consumed by enforcement).
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
-	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("expected no error when dry-run is disabled, got: %v", err)
 	}
@@ -395,7 +395,7 @@ func TestBeforeCall_DryRun_MinimalFallback(t *testing.T) {
 	// Use a tool in the minimalTools map.
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "group_id": "g1"}
-	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_holiday", args, hints, noLookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_holiday", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -437,7 +437,7 @@ func TestBeforeCall_DryRun_DestructiveFallsToMinimal(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "invoice_id": "inv1"}
 
-	result, release, err := p.BeforeCall(context.Background(), "clockify_send_invoice", args, hints, lookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_send_invoice", args, hints, nil, lookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -480,7 +480,7 @@ func TestBeforeCall_DryRun_PreviewTool(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
 
-	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, lookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, lookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -520,7 +520,7 @@ func TestBeforeCall_DryRun_PreviewTool_HandlerNotFound(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
 
-	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -551,7 +551,7 @@ func TestBeforeCall_DryRun_PreviewTool_HandlerError(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
 
-	_, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, lookup)
+	_, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, lookup)
 	if err == nil {
 		t.Fatal("expected error when preview handler fails")
 	}
@@ -581,7 +581,7 @@ func TestBeforeCall_DryRun_ReleasesOnError(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
 
-	_, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, lookup)
+	_, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, lookup)
 	if err == nil {
 		t.Fatal("expected error from preview handler")
 	}
@@ -608,7 +608,7 @@ func TestBeforeCall_DryRun_ReturnsRelease(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "group_id": "g1"}
 
-	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_holiday", args, hints, noLookup)
+	result, release, err := p.BeforeCall(context.Background(), "clockify_delete_holiday", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -639,7 +639,7 @@ func TestBeforeCall_NoDryRunFlag(t *testing.T) {
 	// No dry_run key in args.
 	args := map[string]any{"entry_id": "e1"}
 
-	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, lookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, lookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -663,7 +663,7 @@ func TestBeforeCall_DryRunFalse(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": false}
 
-	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_delete_entry", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -686,7 +686,7 @@ func TestBeforeCall_DryRun_DefaultDestructiveMinimal(t *testing.T) {
 	hints := mcp.ToolHints{ReadOnly: false, Destructive: true}
 	args := map[string]any{"dry_run": true, "id": "x"}
 
-	result, _, err := p.BeforeCall(context.Background(), "clockify_archive_project", args, hints, noLookup)
+	result, _, err := p.BeforeCall(context.Background(), "clockify_archive_project", args, hints, nil, noLookup)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -959,6 +959,7 @@ func TestPipelineAndGate_Integration(t *testing.T) {
 		"clockify_list_entries",
 		map[string]any{},
 		mcp.ToolHints{ReadOnly: true},
+		nil,
 		noLookup,
 	)
 	if err != nil {

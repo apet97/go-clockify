@@ -566,6 +566,23 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 
 		result, err := s.callTool(callCtx, params)
 		if err != nil {
+			// W2-01: schema-validation failures are protocol-level errors
+			// (JSON-RPC -32602), not tool-errors. The JSON Pointer to the
+			// failing field goes in error.data.pointer so clients can
+			// locate the offender without string parsing.
+			var ipe *InvalidParamsError
+			if errors.As(err, &ipe) {
+				data := map[string]any{}
+				if ipe.Pointer != "" {
+					data["pointer"] = ipe.Pointer
+				}
+				resp.Error = &RPCError{
+					Code:    -32602,
+					Message: ipe.Error(),
+					Data:    data,
+				}
+				return resp
+			}
 			// MCP spec: tool errors return content with isError: true
 			resp.Result = map[string]any{
 				"content": []map[string]any{{
@@ -730,13 +747,16 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 			}
 			return td.Handler, true
 		}
-		result, rel, err := s.Enforcement.BeforeCall(ctx, params.Name, params.Arguments, hints, lookup)
+		result, rel, err := s.Enforcement.BeforeCall(ctx, params.Name, params.Arguments, hints, d.Tool.InputSchema, lookup)
 		if rel != nil {
 			release = rel
 			defer release()
 		}
 		if err != nil {
+			var ipe *InvalidParamsError
 			switch {
+			case errors.As(err, &ipe):
+				outcome = "invalid_params"
 			case errors.Is(err, ratelimit.ErrRateLimitExceeded), errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded):
 				outcome = "rate_limited"
 			case strings.Contains(err.Error(), "blocked by policy"):

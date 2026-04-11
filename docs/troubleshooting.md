@@ -14,6 +14,7 @@ outage), see the runbooks under [`docs/runbooks/`](runbooks/).
 | `rate limited: rate limit exceeded` | `CLOCKIFY_RATE_LIMIT` (default 120/60s) or `CLOCKIFY_PER_TOKEN_RATE_LIMIT` (default 60/60s) window exhausted. | Wait for the window to roll, raise the cap, or split traffic across replicas. |
 | `tool call timed out` after 45s | `CLOCKIFY_TOOL_TIMEOUT` (default 45s) expired. | Usually a slow Clockify response or a very wide report range. Narrow the range, or raise `CLOCKIFY_TOOL_TIMEOUT` (max 10m). |
 | A report tool returns `entry cap of N exceeded` | `CLOCKIFY_REPORT_MAX_ENTRIES` (default 10000) — the range with `include_entries=true` would aggregate too many rows. | Narrow the range, set `include_entries=false`, or raise the cap. This fails closed on purpose — see the ADR set for the safety rationale. |
+| `tools/call` returns `{"error":{"code":-32602,"message":"invalid params at /<field>","data":{"pointer":"/<field>"}}}` | JSON-schema validation rejected the arguments (W2-01). The pointer in `error.data.pointer` identifies the failing field in RFC 6901 form — e.g. `/start` for a missing required RFC3339 timestamp, or `/bogus` for an unknown top-level key. Every Tier 1 + Tier 2 tool now carries `additionalProperties: false`. | Inspect the tool's advertised `inputSchema` via `tools/list` and fix the field the pointer names. Drop unknown top-level keys — extras are the most common cause after Wave 2. See [ADR 008](adr/008-runtime-schema-validation.md). |
 
 ## Transport / auth
 

@@ -16,6 +16,7 @@ import (
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/jsonschema"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
@@ -57,10 +58,28 @@ func (p *Pipeline) FilterTool(name string, hints mcp.ToolHints) bool {
 }
 
 // BeforeCall runs the enforcement pipeline before a tool handler:
+//  0. Schema validation (W2-01)
 //  1. Policy gate
 //  2. Rate limit acquire
 //  3. Dry-run intercept
-func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]any, hints mcp.ToolHints, lookupHandler func(string) (mcp.ToolHandler, bool)) (any, func(), error) {
+func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]any, hints mcp.ToolHints, schema map[string]any, lookupHandler func(string) (mcp.ToolHandler, bool)) (any, func(), error) {
+	// 0. JSON-schema validation. Runs before the policy gate so malformed
+	// calls never consume a rate-limit slot or trigger a dry-run preview.
+	// A nil schema means the caller opted out (legacy tests); the absence
+	// of validation is then indistinguishable from the pre-W2-01 behavior.
+	if schema != nil {
+		if err := jsonschema.Validate(schema, args); err != nil {
+			var ve *jsonschema.ValidationError
+			if errors.As(err, &ve) {
+				return nil, nil, &mcp.InvalidParamsError{
+					Pointer: ve.Pointer,
+					Message: ve.Message,
+				}
+			}
+			return nil, nil, &mcp.InvalidParamsError{Pointer: "", Message: err.Error()}
+		}
+	}
+
 	// 1. Policy check
 	if p.Policy != nil && !p.Policy.IsAllowed(name, hints.ReadOnly) {
 		reason := p.Policy.BlockReason(name, hints.ReadOnly)

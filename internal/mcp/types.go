@@ -1,6 +1,9 @@
 package mcp
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type Request struct {
 	JSONRPC string `json:"jsonrpc"`
@@ -18,8 +21,28 @@ type Response struct {
 }
 
 type RPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Data    map[string]any `json:"data,omitempty"`
+}
+
+// InvalidParamsError is returned from Enforcement.BeforeCall when the tool's
+// input arguments fail schema validation. The tools/call dispatch translates
+// it into a JSON-RPC -32602 (invalid params) response, with Pointer exposed
+// under error.data.pointer so clients can locate the offending field.
+//
+// Pointer is an RFC 6901 JSON Pointer (e.g. "/workspace_id"). An empty
+// pointer means the root value itself was rejected.
+type InvalidParamsError struct {
+	Pointer string
+	Message string
+}
+
+func (e *InvalidParamsError) Error() string {
+	if e.Pointer == "" {
+		return "invalid params: " + e.Message
+	}
+	return fmt.Sprintf("invalid params at %s: %s", e.Pointer, e.Message)
 }
 
 type InitializeParams struct {
@@ -118,7 +141,11 @@ type Enforcement interface {
 	//   - short-circuit with a result (e.g., dry-run preview)
 	//   - return (nil, noop, nil) to proceed normally
 	// The returned release function must be called when the call completes.
-	BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, lookupHandler func(string) (ToolHandler, bool)) (result any, release func(), err error)
+	//
+	// schema is the tool's advertised InputSchema (may be nil) — the
+	// pipeline uses it for runtime JSON-schema validation. Pipelines that
+	// receive nil skip validation and behave as before.
+	BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, schema map[string]any, lookupHandler func(string) (ToolHandler, bool)) (result any, release func(), err error)
 	// AfterCall post-processes a successful tool result (e.g., truncation).
 	AfterCall(result any) (any, error)
 }

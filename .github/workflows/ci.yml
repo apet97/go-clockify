@@ -125,7 +125,7 @@ jobs:
       - name: Check critical package coverage floors
         run: |
           set -euo pipefail
-          REPORT=$(go test -cover ./internal/mcp ./internal/config ./internal/enforcement ./internal/ratelimit ./internal/logging)
+          REPORT=$(go test -cover ./internal/mcp ./internal/config ./internal/enforcement ./internal/ratelimit ./internal/logging ./internal/jsonschema)
           printf '%s\n' "$REPORT"
 
           check_pkg() {
@@ -148,6 +148,7 @@ jobs:
           check_pkg internal/enforcement 85
           check_pkg internal/ratelimit 70
           check_pkg internal/logging 85
+          check_pkg internal/jsonschema 85
 
   fuzz:
     name: Fuzz (20s per target)

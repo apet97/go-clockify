@@ -32,7 +32,7 @@ func (e *testEnforcement) FilterTool(name string, hints ToolHints) bool {
 	return true
 }
 
-func (e *testEnforcement) BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, lookup func(string) (ToolHandler, bool)) (any, func(), error) {
+func (e *testEnforcement) BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, _ map[string]any, lookup func(string) (ToolHandler, bool)) (any, func(), error) {
 	if e.policy != nil && !e.policy.IsAllowed(name, hints.ReadOnly) {
 		return nil, nil, fmt.Errorf("tool blocked by policy: %s", e.policy.BlockReason(name, hints.ReadOnly))
 	}

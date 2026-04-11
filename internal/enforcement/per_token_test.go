@@ -31,7 +31,7 @@ func TestBeforeCallIsolatesPerSubjectBudgets(t *testing.T) {
 	ctxB := authn.WithPrincipal(context.Background(), bob)
 
 	// Alice's first call succeeds.
-	_, rel, err := pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, rel, err := pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err != nil {
 		t.Fatalf("alice 1: %v", err)
 	}
@@ -40,13 +40,13 @@ func TestBeforeCallIsolatesPerSubjectBudgets(t *testing.T) {
 	}
 
 	// Alice's second call is rejected by the per-token layer.
-	_, _, err = pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, _, err = pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected alice's second call to be rejected")
 	}
 
 	// Bob's call still succeeds — isolation.
-	_, rel, err = pipe.BeforeCall(ctxB, "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, rel, err = pipe.BeforeCall(ctxB, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err != nil {
 		t.Fatalf("bob: %v", err)
 	}
@@ -71,14 +71,14 @@ func TestBeforeCallAnonymousFallsBackToGlobal(t *testing.T) {
 		RateLimit: rl,
 	}
 
-	_, rel1, err := pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, rel1, err := pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err != nil {
 		t.Fatalf("anon 1: %v", err)
 	}
 	if rel1 != nil {
 		rel1()
 	}
-	_, rel2, err := pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, rel2, err := pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err != nil {
 		t.Fatalf("anon 2: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestBeforeCallAnonymousFallsBackToGlobal(t *testing.T) {
 	}
 
 	// The third anon call hits the global window cap.
-	_, _, err = pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, noLookup)
+	_, _, err = pipe.BeforeCall(context.Background(), "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
 	if err == nil {
 		t.Fatal("expected global rejection on third anon call")
 	}

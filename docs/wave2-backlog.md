@@ -9,49 +9,7 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 ## Tier 1 — contract enforcement
 
-### W2-01 — Runtime JSON-schema validation at the enforcement boundary
-
-**Context.** Phase H (`W1-10`) rewrote every Tier 1 + Tier 2 input schema to
-carry `additionalProperties:false`, bounded pagination, RFC3339 format, and
-hex-color patterns — but nothing on the wire actually validates against those
-schemas. Clients that send extra keys or wrong types today silently reach the
-handler. W2-01 turns the contract into real wire enforcement.
-
-**Files.**
-- `internal/jsonschema/validator.go` (new) — stdlib-only validator, ~400 LOC.
-- `internal/jsonschema/validator_test.go` (new).
-- `internal/enforcement/enforcement.go` — `Pipeline.BeforeCall` gains a
-  validation step as its first gate.
-- `internal/mcp/types.go` — introduce `InvalidParamsError` (typed, carries a
-  JSON Pointer path) so the protocol core can translate it to JSON-RPC -32602.
-- `internal/mcp/server.go` — `tools/call` dispatch `errors.As`-checks for
-  `*mcp.InvalidParamsError` and sets `resp.Error = &RPCError{Code: -32602}`
-  instead of wrapping into `result.isError:true`.
-- `internal/enforcement/schema_validation_test.go` (new) — pipeline-level test.
-- `internal/mcp/transport_streamable_http_test.go` — wire-level test asserting
-  the -32602 code + JSON Pointer path on invalid args.
-- `docs/adr/008-runtime-schema-validation.md` (new).
-- `docs/troubleshooting.md` — add a row for the new -32602 failure mode.
-- `CHANGELOG.md` — `[Unreleased] > Changed` entry with `**BREAKING:**` prefix.
-
-**Scope (supported JSON-schema keywords).**
-`type` (object/string/integer/number/boolean/array), `required`,
-`additionalProperties: false`, `properties` (recursive), `items`,
-`minimum`/`maximum`, `minLength`/`maxLength`, `pattern` (anchored via
-`^...$`), `format: date` / `format: date-time`, `enum`.
-
-**Out of scope.** `$ref`, `$defs`, `allOf`/`anyOf`/`oneOf`, `not`,
-conditionals (`if`/`then`/`else`), `dependentSchemas`, `const`,
-`exclusiveMinimum`/`exclusiveMaximum`, `multipleOf`, `propertyNames`,
-`patternProperties`. None appear in Tier 1 or Tier 2 today.
-
-**Size:** L. **Acceptance:**
-- Every Tier 1 + Tier 2 tool's happy-path args still pass (property test).
-- Representative invalid args per keyword get rejected with -32602 + pointer.
-- `internal/enforcement` stays ≥ 85%, `internal/jsonschema` lands at ≥ 85%.
-- Stdlib-only default-build OTel symbol gate still passes.
-
-**Scheduled for TRACK C of the 2026-04-11 session.**
+(empty — W2-01 landed; see the [Landed](#landed) section.)
 
 ## Tier 2 — observability & release-infra depth
 
@@ -177,4 +135,44 @@ toxiproxy. **Size:** L.
 
 ## Landed
 
-(empty — items move here with commit SHA when they close)
+### W2-01 — Runtime JSON-schema validation at the enforcement boundary
+
+**Landed:** 2026-04-11 (Track C of the v0.6.0 release session, commit SHA
+recorded at push time). Wire enforcement of every Tier 1 + Tier 2 tool's
+`InputSchema` via a new stdlib-only validator at `internal/jsonschema`,
+threaded into `enforcement.Pipeline.BeforeCall` as the first gate.
+Validation failures surface as JSON-RPC `-32602 invalid params` with
+an RFC 6901 JSON Pointer in `error.data.pointer`.
+
+**Critical files shipped:**
+- `internal/jsonschema/validator.go` + `validator_test.go` — new package,
+  ~450 LOC, 86.4% coverage.
+- `internal/mcp/types.go` — `InvalidParamsError` typed error +
+  `RPCError.Data` field; `Enforcement.BeforeCall` signature gained
+  `schema map[string]any`.
+- `internal/mcp/server.go` — `tools/call` dispatch `errors.As` branch
+  sets `resp.Error = &RPCError{Code: -32602, Data: {pointer}}`;
+  `callTool` passes `d.Tool.InputSchema` to BeforeCall; new `outcome`
+  label `invalid_params` on `clockify_mcp_tool_calls_total`.
+- `internal/enforcement/enforcement.go` — `Pipeline.BeforeCall` validation
+  first step, wrapping `jsonschema.ValidationError` into
+  `*mcp.InvalidParamsError`.
+- `internal/mcp/schema_validation_dispatch_test.go` (new) — three
+  dispatch-layer tests asserting -32602 + pointer translation, wire
+  JSON shape, and non-schema-error pass-through.
+- `internal/enforcement/schema_validation_test.go` (new) — six pipeline-
+  level tests (unknown key, wrong type, missing required, invalid
+  date-time, happy path, nil-schema passthrough).
+- `internal/tools/schema_validator_property_test.go` (new) —
+  `TestRegistrySchemasAcceptHappyPathArgs` synthesises happy-path args
+  for every Tier 1 + Tier 2 descriptor; walker/validator drift guard.
+- `docs/adr/008-runtime-schema-validation.md` (new).
+- `docs/troubleshooting.md` — new `-32602 invalid params` row.
+- `CHANGELOG.md [Unreleased]` — `Added` + `Changed` (with BREAKING note).
+- `.github/workflows/ci.yml` — new per-package floor
+  `check_pkg internal/jsonschema 85`.
+
+**Coverage delta:** `internal/jsonschema` new at **86.4%**;
+`internal/enforcement` 89.5% → **89.0%** (floor 85%);
+`internal/mcp` 71.5% → **71.8%**; global 66.7% → **67.4%**. OTel
+symbol gate still clean.
