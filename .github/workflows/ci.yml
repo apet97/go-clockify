@@ -256,7 +256,7 @@ jobs:
           check_pkg internal/jsonschema 85
 
   fuzz:
-    name: Fuzz (20s per target)
+    name: Fuzz (30s per target)
     runs-on: ubuntu-latest
     # Hard ceiling: if any target hangs, the whole job is killed after 8min
     # instead of occupying the runner for GitHub's default 6-hour timeout.
@@ -267,12 +267,16 @@ jobs:
         with:
           go-version: "1.25.9"
       - name: Run fuzz targets
-        # -fuzztime=20s keeps the happy path well under timeout-minutes while
-        # still exercising the 3 targets meaningfully.
+        # -fuzztime=30s gives the worker pool enough headroom for the growing
+        # FuzzJSONRPCParse corpus, which under Wave 3 started producing
+        # "context deadline exceeded" flakes at the former 20s budget even
+        # without a crashing input (the fuzzer was still discovering new
+        # coverage paths at the 20s mark). 3 targets * 30s ~= 90s worst
+        # case; still well under the 8min job ceiling.
         run: |
-          go test -fuzz=FuzzParseDatetime -fuzztime=20s ./internal/timeparse
-          go test -fuzz=FuzzValidateID   -fuzztime=20s ./internal/resolve
-          go test -fuzz=FuzzJSONRPCParse -fuzztime=20s ./internal/mcp
+          go test -fuzz=FuzzParseDatetime -fuzztime=30s ./internal/timeparse
+          go test -fuzz=FuzzValidateID   -fuzztime=30s ./internal/resolve
+          go test -fuzz=FuzzJSONRPCParse -fuzztime=30s ./internal/mcp
 
   deploy-render:
     name: Deploy render (k8s + helm)
