@@ -70,11 +70,11 @@ func TestResourceIDs(t *testing.T) {
 	})
 	t.Run("only_id_fields_present", func(t *testing.T) {
 		args := map[string]any{
-			"entry_id":    "abc123",
-			"PROJECT_ID":  "proj-7",
-			"description": "ignored",
-			"tag":         "ignored",
-			"empty_id":    "   ",
+			"entry_id":     "abc123",
+			"PROJECT_ID":   "proj-7",
+			"description":  "ignored",
+			"tag":          "ignored",
+			"empty_id":     "   ",
 			"nonstring_id": 42,
 		}
 		got := resourceIDs(args)
