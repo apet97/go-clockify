@@ -11,6 +11,11 @@ Kubernetes cluster. No Helm, no Kustomize — copy, tweak, apply.
 | `service.yaml` | ClusterIP service exposing port 8080 (`http`) for in-cluster clients and ingress controllers. |
 | `configmap.yaml` | Non-secret environment variables (policy, rate limits, timeouts, bootstrap mode). |
 | `secret.example.yaml` | Template for the Secret holding `CLOCKIFY_API_KEY` and `MCP_BEARER_TOKEN`. Do not commit real values. |
+| `networkpolicy.yaml` | Default-deny ingress/egress policies. |
+| `pdb.yaml` | PodDisruptionBudget preserving at least one healthy replica during voluntary disruptions. |
+| `serviceaccount.yaml` | Dedicated ServiceAccount used by the Deployment. |
+| `servicemonitor.yaml` | kube-prometheus-stack `ServiceMonitor` scraping `/metrics` on the `http` port every 30s. |
+| `prometheus-rule.yaml` | `PrometheusRule` mirroring `docs/observability.md` alerts: multi-window burn-rate (99.9% SLO), `ClockifyMCPUpstreamUnavailable`, `ClockifyMCPHighToolErrorRate`, `ClockifyMCPRateLimitSaturation`, `ClockifyMCPHighLatency`, `ClockifyMCPNotReady`, `ClockifyMCPAuthFailures`. |
 
 The server runs in HTTP transport mode in-cluster. Stdio is reserved for
 local MCP clients (Claude Desktop, Cursor).

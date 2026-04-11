@@ -222,6 +222,81 @@ groups:
         annotations:
           summary: clockify-mcp 401 rate elevated
           runbook: docs/runbooks/auth-failures.md
+
+      # Multi-window multi-burn-rate alerts for the 99.9% SLO on
+      # (tool_error|timeout) as a fraction of non-policy-denied calls.
+      # Fast burn: budget exhausted in 1h at 14.4x the allowed error rate.
+      # Slow burn: budget exhausted in 6h at 6x the allowed error rate.
+      - alert: ClockifyMCPFastBurn
+        expr: |
+          (
+            sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[5m]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[5m]))
+          ) > (14.4 * 0.001)
+          and
+          (
+            sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[1h]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[1h]))
+          ) > (14.4 * 0.001)
+        for: 2m
+        labels:
+          severity: critical
+          slo: clockify-mcp-99_9
+        annotations:
+          summary: clockify-mcp fast-burn — 1h error budget exhaustion trajectory
+          description: Error rate is burning through the 99.9% SLO budget at 14.4x allowed rate.
+          runbook: docs/runbooks/clockify-upstream-outage.md
+
+      - alert: ClockifyMCPSlowBurn
+        expr: |
+          (
+            sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[30m]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[30m]))
+          ) > (6 * 0.001)
+          and
+          (
+            sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[6h]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[6h]))
+          ) > (6 * 0.001)
+        for: 15m
+        labels:
+          severity: warning
+          slo: clockify-mcp-99_9
+        annotations:
+          summary: clockify-mcp slow-burn — 6h error budget exhaustion trajectory
+          description: Error rate is burning through the 99.9% SLO budget at 6x allowed rate.
+          runbook: docs/runbooks/clockify-upstream-outage.md
+
+      # ClockifyMCPUpstreamUnavailable — referenced by
+      # docs/runbooks/clockify-upstream-outage.md but previously undefined.
+      - alert: ClockifyMCPUpstreamUnavailable
+        expr: |
+          sum(rate(clockify_upstream_requests_total{status=~"5xx|error"}[5m])) > 0.5
+          and
+          sum(rate(clockify_upstream_requests_total{status="2xx"}[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: clockify-mcp cannot reach upstream Clockify API
+          description: Every upstream Clockify request in the last 5m errored or returned 5xx.
+          runbook: docs/runbooks/clockify-upstream-outage.md
+
+      - alert: ClockifyMCPHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(clockify_mcp_tool_call_duration_seconds_bucket[10m]))
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: clockify-mcp p99 tool latency >10s for 10m
+          runbook: docs/runbooks/high-latency.md
 ```
 
 ## Prometheus scrape config

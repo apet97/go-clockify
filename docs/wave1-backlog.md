@@ -17,6 +17,7 @@ Each item names the file paths that need to change and the rough size
 - ✅ **W1-11** `internal/tools` coverage push — 38.9% → 52.0% via four Tier 2 sweep tests (invoices, expenses, groups_holidays, custom_fields).
 - ✅ **W1-06** OAuth 2.1 Resource Server completion — pluggable JWKS HTTP client, resource indicator binding, WWW-Authenticate header, `/.well-known/oauth-protected-resource` metadata document, integration test. `internal/authn` 65.9% → 88.2%.
 - ✅ **W1-01** Streamable HTTP completion — `GET /mcp` now serves the SSE notification stream with per-event `id:` stamping; clients reconnecting with `Last-Event-ID` receive replay of backlog entries stamped strictly after the supplied id. Non-initialize requests with a present-but-mismatched `Mcp-Protocol-Version` header are rejected with HTTP 400 + JSON-RPC `-32600`, counted under `clockify_mcp_protocol_errors_total{code="protocol_version_mismatch"}`. `GET /mcp/events` kept as a back-compat alias through 0.6 (removed in 0.7). `internal/mcp` 65.5% → 69.7%.
+- ✅ **W1-13 + W1-14** Observability + manifests — `docs/observability.md` gains a multi-window multi-burn-rate alert pair (`ClockifyMCPFastBurn` @ 14.4×/1h, `ClockifyMCPSlowBurn` @ 6×/6h) for the 99.9% SLO, plus the previously-referenced-but-undefined `ClockifyMCPUpstreamUnavailable` critical, plus `ClockifyMCPHighLatency` warning. Four new runbooks land under `docs/runbooks/`: `high-latency.md`, `metrics-scrape-failure.md`, `shutdown-drain-timeout.md`, `oom-or-goroutine-leak.md` — each with a consistent Symptom / Triage / Mitigation / Escalation shape. `deploy/k8s/prometheus-rule.yaml` mirrors every alert from observability.md as a Prometheus Operator `PrometheusRule` CR split across `clockify-mcp.slo` and `clockify-mcp.errors` groups. `deploy/k8s/servicemonitor.yaml` provides the matching `ServiceMonitor` selecting on the existing `app.kubernetes.io/name: clockify-mcp` label with a 30s scrape interval and a defensive metric-relabel drop for accidental `.*_test_.*` series.
 - ✅ **W1-10** Schema tightening sweep — instead of hand-editing 100+ inline schemas across `registry.go` and 11 `tier2_*.go` files, a new `tightenInputSchema` walker inside `normalizeDescriptors` recursively mutates every Tier 1 + Tier 2 tool's `InputSchema` in place: object schemas gain `additionalProperties: false` unless explicitly set; `page` gains `minimum: 1`; `page_size` gains `minimum: 1, maximum: 200`; any `color` property whose description mentions "Hex" gains the `^#[0-9a-fA-F]{6}$` pattern; any string property whose description mentions "RFC3339" gains `format: "date-time"`. Two property tests (`TestRegistrySchemasAllHaveAdditionalPropertiesFalse`, `TestTier2SchemasAllHaveAdditionalPropertiesFalse`) walk the full 33-tool Tier 1 registry + every Tier 2 group's 91 tools and assert the invariant for every nested object and array-item schema. Two precondition tests (`TestTier1RegistryNonEmpty`, `TestTier2CatalogPopulated`) guard against the property tests becoming vacuous. Schema contract change only — no runtime validator is wired today, so this is advertised not enforced (follow-up captured as decision point #4 in the Wave 1 plan). `internal/tools` 52.4% → **52.9%**.
 - ✅ **W1-12** OpenTelemetry tracing behind `-tags=otel` — new `internal/tracing` package carries a tag-neutral `Tracer`/`Span` facade with an always-safe no-op implementation. A tag-gated `otel.go` (`//go:build otel`) installs an OTLP HTTP exporter + W3C trace-context propagator at init time when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Two span sites (`mcp.tools/call` in `Server.callTool`, `clockify.http` in `Client.doOnce`) attach `tool.name`/`outcome` and `upstream.endpoint`/`http.method`/`http.status_code` attributes. Outbound Clockify requests propagate `traceparent` via `tracing.Default.InjectHTTPHeaders`. A new CI step `Verify default build has zero OpenTelemetry symbols` uses `go tool nm` to enforce that `go build ./...` (no tags) produces a binary with **zero** `opentelemetry.io` symbols; a sibling `Test tracing package with -tags=otel` job exercises the OTLP branch compiles and runs. `internal/tracing` 100% coverage.
 - ✅ **W1-03 + W1-07** Progress notifications + per-token rate limiting — `ToolCallParams` / `InitializeParams` gain a `_meta.progressToken` field that `handle()` threads through the call context via `WithProgressToken`. `tools.Service` now carries a `Notifier mcp.Notifier` field wired from `cmd/clockify-mcp/runtime.go` to the `Server` itself (which satisfies the interface via a forwarding `Notify`). `aggregateEntriesRange` emits one `notifications/progress` per fetched page with an indeterminate `total`. The `authn.Principal` landed in Phase C is now attached to the request context via the new `authn.WithPrincipal`/`PrincipalFromContext` helpers at every streamable HTTP auth site. `ratelimit.RateLimiter` gains a per-subject sub-layer configured by new env vars `CLOCKIFY_PER_TOKEN_RATE_LIMIT` (default `60`/window) and `CLOCKIFY_PER_TOKEN_CONCURRENCY` (default `5`), exposed via a new `AcquireForSubject(ctx, subject)` method that first passes through the global layer and then through a lazily-created per-subject `subjectLimiter`. `enforcement.Pipeline.BeforeCall` reads the principal from the request context and routes rejections through `AcquireForSubject`, tagging `clockify_mcp_rate_limit_rejections_total` with a new `scope` label (`global` / `per_token`). Tests cover per-subject isolation, global-cap enforcement, anonymous fallback, empty-subject passthrough, authn context round-trip, and the enforcement pipeline per-subject path. `internal/authn` 88.2% → **88.5%**; `internal/enforcement` 88.6% → **89.5%**; `internal/mcp` 71.5% → **71.4%**; `internal/ratelimit` 93.8% → **84.4%** (floor 70% holds); global 66.2% → **66.4%**.
@@ -88,28 +89,6 @@ top 5 most-used handlers (`clockify_log_time`, `clockify_list_entries`,
 client mocks.
 
 **Files**: new test files under `internal/tools/`.
-
----
-
-## Tier 4: observability depth
-
-### W1-13 — Burn-rate alerts + missing runbooks  (S)
-
-Add multi-window multi-burn-rate alerts in `docs/observability.md` (2%/1h
-+ 14.4%/5m for the 99.9% SLO). Define the missing
-`ClockifyMCPUpstreamUnavailable` alert that
-`docs/runbooks/clockify-upstream-outage.md:16` references but
-`docs/observability.md` does not. Add runbooks for:
-
-- `docs/runbooks/high-latency.md`
-- `docs/runbooks/metrics-scrape-failure.md`
-- `docs/runbooks/shutdown-drain-timeout.md`
-- `docs/runbooks/oom-or-goroutine-leak.md`
-
-### W1-14 — `deploy/k8s/prometheus-rule.yaml` + `servicemonitor.yaml`  (S)
-
-Mirror the alerts from `docs/observability.md` into a `PrometheusRule`
-manifest, plus a `ServiceMonitor` for Prometheus Operator deployments.
 
 ---
 

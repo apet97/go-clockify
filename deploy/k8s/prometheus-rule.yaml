@@ -1,0 +1,132 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: clockify-mcp
+  namespace: clockify-mcp
+  labels:
+    app.kubernetes.io/name: clockify-mcp
+    prometheus: operator
+    role: alert-rules
+spec:
+  groups:
+    - name: clockify-mcp.slo
+      interval: 30s
+      rules:
+        # Multi-window multi-burn-rate alerts for the 99.9% SLO on
+        # (tool_error|timeout) as a fraction of non-policy-denied calls.
+        - alert: ClockifyMCPFastBurn
+          expr: |
+            (
+              sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[5m]))
+              /
+              sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[5m]))
+            ) > (14.4 * 0.001)
+            and
+            (
+              sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[1h]))
+              /
+              sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[1h]))
+            ) > (14.4 * 0.001)
+          for: 2m
+          labels:
+            severity: critical
+            slo: clockify-mcp-99_9
+          annotations:
+            summary: clockify-mcp fast-burn — 1h error budget exhaustion trajectory
+            description: Error rate is burning through the 99.9% SLO budget at 14.4x allowed rate.
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/clockify-upstream-outage.md
+
+        - alert: ClockifyMCPSlowBurn
+          expr: |
+            (
+              sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[30m]))
+              /
+              sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[30m]))
+            ) > (6 * 0.001)
+            and
+            (
+              sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[6h]))
+              /
+              sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[6h]))
+            ) > (6 * 0.001)
+          for: 15m
+          labels:
+            severity: warning
+            slo: clockify-mcp-99_9
+          annotations:
+            summary: clockify-mcp slow-burn — 6h error budget exhaustion trajectory
+            description: Error rate is burning through the 99.9% SLO budget at 6x allowed rate.
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/clockify-upstream-outage.md
+
+    - name: clockify-mcp.errors
+      interval: 30s
+      rules:
+        - alert: ClockifyMCPHighToolErrorRate
+          expr: |
+            sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[5m]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[5m]))
+            > 0.01
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: clockify-mcp tool error rate >1% for 10m
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/clockify-upstream-outage.md
+
+        - alert: ClockifyMCPUpstreamUnavailable
+          expr: |
+            sum(rate(clockify_upstream_requests_total{status=~"5xx|error"}[5m])) > 0.5
+            and
+            sum(rate(clockify_upstream_requests_total{status="2xx"}[5m])) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: clockify-mcp cannot reach upstream Clockify API
+            description: Every upstream Clockify request in the last 5m errored or returned 5xx.
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/clockify-upstream-outage.md
+
+        - alert: ClockifyMCPRateLimitSaturation
+          expr: |
+            sum(rate(clockify_mcp_rate_limit_rejections_total[5m]))
+            /
+            sum(rate(clockify_mcp_tool_calls_total[5m]))
+            > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: clockify-mcp rate-limit rejection ratio >5% for 5m
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/rate-limit-saturation.md
+
+        - alert: ClockifyMCPHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum by (le) (rate(clockify_mcp_tool_call_duration_seconds_bucket[10m]))
+            ) > 10
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: clockify-mcp p99 tool latency >10s for 10m
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/high-latency.md
+
+        - alert: ClockifyMCPNotReady
+          expr: clockify_mcp_ready_state == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: clockify-mcp readiness probe failing
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/clockify-upstream-outage.md
+
+        - alert: ClockifyMCPAuthFailures
+          expr: |
+            sum(rate(clockify_mcp_http_requests_total{status="401"}[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: clockify-mcp 401 rate elevated
+            runbook_url: https://github.com/apet97/go-clockify/blob/main/docs/runbooks/auth-failures.md
