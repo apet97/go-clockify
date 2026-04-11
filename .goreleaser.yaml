@@ -124,7 +124,11 @@ checksum:
 
 sboms:
   - id: archive-sbom
-    artifacts: archive
+    # archives with format: binary produce binary-type artifacts, not
+    # archive-type — use `artifacts: binary` so the sbom filter matches.
+    # The v0.7.0 release shipped without SBOMs because this was set to
+    # `archive` and nothing matched; v0.7.1 restores them.
+    artifacts: binary
     documents:
       - "{{ .ArtifactName }}.spdx.json"
     cmd: syft

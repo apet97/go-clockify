@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+## [0.7.1] - 2026-04-11
+
+Patch release that restores the SPDX SBOMs missing from the v0.7.0 GitHub Release. The v0.7.0 goreleaser config set `sboms.artifacts: archive`, but the `format: binary` archives produce binary-type artifacts, so the filter matched nothing and no `.spdx.json` files were uploaded. v0.7.1 switches the filter to `artifacts: binary` so all 9 binaries (5 default + 4 FIPS) get SBOM coverage. No other changes; every binary, signature, attestation, and npm package on v0.7.1 carries the same content semantics as v0.7.0.
+
+### Fixed
+
+- **goreleaser sboms filter** (`.goreleaser.yaml`). The v0.7.0 release did not produce SPDX SBOM files because `sboms.artifacts: archive` matched none of the binary-format archives that goreleaser emitted (goreleaser reports `no artifacts matching current filters` in the log). Switching the filter to `artifacts: binary` makes syft catalog every binary artifact. The cosign signature bundles and SLSA build-provenance attestations on v0.7.0 remain valid — only the SBOMs were missing from the asset list. v0.7.1 is the supported release going forward.
+
 ## [0.7.0] - 2026-04-11
 
 Wave 2 complete. v0.7.0 closes every Wave 2 backlog item (W2-04 through W2-11 plus W2-13, which is subsumed by W2-07). The release ships on a new goreleaser-driven pipeline with parallel FIPS 140-3 binaries, npm distribution under the `@apet97` scope, Kustomize overlays and Helm chart for operators, load and chaos harnesses, and nightly mutation testing via gremlins. Every Wave 1 invariant is preserved — stdlib-only default build (now also with zero OTel rows in `go.mod`), symbol-level nm gates for default/pprof/otel/fips binaries, protocol-core layering, and the `docs/verification.md` cosign + SLSA + SBOM matrix.
