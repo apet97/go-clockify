@@ -1,21 +1,20 @@
-//go:build otel
-
-// otel.go is only compiled when -tags=otel is passed to `go build`. It
-// wires an OTLP HTTP exporter + W3C trace-context propagator and replaces
-// tracing.Default with an OpenTelemetry-backed tracer.
+// Package otel is the OpenTelemetry-backed tracer implementation for
+// clockify-mcp. It lives in a dedicated Go sub-module so the top-level
+// github.com/apet97/go-clockify go.mod carries zero OTel rows, preserving
+// the "stdlib-only default build" invariant documented in ADR 001 and
+// closed by ADR 009.
 //
-// This file is the only place in the codebase that imports
-// go.opentelemetry.io/* packages, so `go build` (no tags) produces a
-// binary with zero otel symbols. Enforced by the `verify-no-otel-default`
-// CI job which runs `go tool nm` and asserts the substring is absent.
-
-package tracing
+// Callers wire this package by passing `-tags=otel` to `go build` — the
+// build-tagged file cmd/clockify-mcp/otel_on.go then imports this package
+// and calls Install during startup. Under the default build,
+// cmd/clockify-mcp/otel_off.go returns a no-op stub and the sub-module is
+// never compiled.
+package otel
 
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -25,6 +24,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/apet97/go-clockify/internal/tracing"
 )
 
 // otelTracer is the OpenTelemetry-backed tracer installed under -tags=otel.
@@ -64,7 +65,7 @@ func attributeFrom(key string, value any) attribute.KeyValue {
 	}
 }
 
-func (o *otelTracer) Start(ctx context.Context, name string) (context.Context, Span) {
+func (o *otelTracer) Start(ctx context.Context, name string) (context.Context, tracing.Span) {
 	ctx, span := o.tracer.Start(ctx, name)
 	return ctx, otelSpan{s: span}
 }
@@ -78,19 +79,17 @@ func (o *otelTracer) Shutdown(ctx context.Context) error {
 	return o.provider.Shutdown(ctx)
 }
 
-// init replaces tracing.Default with an OTLP-backed tracer when the `otel`
-// build tag is set and OTEL_EXPORTER_OTLP_ENDPOINT is configured. Failing
-// to construct the exporter falls back silently to the no-op tracer so a
-// misconfigured deployment does not crash the whole process.
-func init() {
-	endpoint := strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
-	if endpoint == "" {
-		return
-	}
-	ctx := context.Background()
+// Install wires an OTLP HTTP exporter, registers an OpenTelemetry-backed
+// tracer as tracing.Default, and returns a shutdown closure. Callers must
+// defer the closure during graceful shutdown. The exporter reads its
+// endpoint from the standard OTEL_EXPORTER_OTLP_* env vars (as interpreted
+// by otlptracehttp.New); Install propagates any exporter-construction error
+// back to the caller so a misconfigured deployment surfaces immediately
+// instead of silently running without tracing.
+func Install(ctx context.Context) (func(), error) {
 	exporter, err := otlptracehttp.New(ctx)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("otel: create exporter: %w", err)
 	}
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
@@ -98,7 +97,7 @@ func init() {
 		),
 	)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("otel: create resource: %w", err)
 	}
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
@@ -106,9 +105,14 @@ func init() {
 	)
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	SetDefault(&otelTracer{
+	tracing.SetDefault(&otelTracer{
 		provider: provider,
 		tracer:   provider.Tracer("clockify-mcp"),
 		propag:   otel.GetTextMapPropagator(),
 	})
+	return func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = provider.Shutdown(shutdownCtx)
+	}, nil
 }

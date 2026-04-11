@@ -95,10 +95,25 @@ jobs:
             echo "default build leaked net/http/pprof symbols; enforce -tags=pprof gating"
             exit 1
           fi
+      - name: Verify go.mod has zero OpenTelemetry rows
+        run: |
+          set -euo pipefail
+          count=$(grep -c 'go.opentelemetry.io' go.mod || true)
+          echo "go.opentelemetry.io rows in go.mod: $count"
+          if [ "$count" -ne 0 ]; then
+            echo "go.mod leaked OpenTelemetry rows; run 'git restore go.mod' after tidy (ADR 009)"
+            exit 1
+          fi
       - name: Build with -tags=otel
         run: go build -tags=otel ./...
       - name: Test tracing package with -tags=otel
         run: go test -tags=otel -count=1 ./internal/tracing/...
+      - name: Build tracing sub-module
+        run: |
+          set -euo pipefail
+          cd internal/tracing/otel
+          go build ./...
+          go vet ./...
       - name: Build with -tags=pprof
         run: go build -tags=pprof ./...
       - name: Verify -tags=pprof build contains net/http/pprof symbols

@@ -71,14 +71,6 @@ wiring end-to-end. If W2-07 lands first, close W2-13 as duplicate.
 
 **Size:** M (greenfield job + per-package scaffolding + dry-run harness).
 
-### W2-04 — Tracing as a Go submodule
-
-**Context.** `go.mod` currently carries OTel rows even though the default
-build links zero OTel symbols. Moving `internal/tracing/otel.go` into a
-sub-module would remove those rows entirely — Decision Point #3 from the
-Wave 1 plan, deferred at the time for scope. Needs an ADR addendum.
-**Size:** M–L.
-
 ## Tier 3 — deployment polish
 
 ### W2-05 — Helm chart under `deploy/helm/`
@@ -121,6 +113,59 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-04 — Tracing as a Go sub-module
+
+**Landed:** 2026-04-11 (Track A of the v0.7.0 development session).
+Closes the ADR 001 W1 deferred trade-off. `internal/tracing/otel.go`
+was moved into a dedicated Go sub-module at `internal/tracing/otel/`
+with its own `go.mod`; the top-level `go.mod` now carries zero
+`go.opentelemetry.io` rows (down from 9). The tag-gated installer
+pair `cmd/clockify-mcp/otel_{on,off}.go` mirrors the `pprof_{on,off}.go`
+template established by W2-02.
+
+**Critical files shipped:**
+- `internal/tracing/otel/go.mod` + `go.sum` (new sub-module) — module
+  path `github.com/apet97/go-clockify/internal/tracing/otel`, replaces
+  `github.com/apet97/go-clockify => ../../..` for the `Tracer`/`Span`
+  interface.
+- `internal/tracing/otel/otel.go` (moved from `internal/tracing/otel.go`)
+  — package `otel`, exported `Install(ctx) (shutdown, error)` replaces
+  the previous `init()` auto-register hook.
+- `cmd/clockify-mcp/otel_on.go` (new, `//go:build otel`) — reads
+  `OTEL_EXPORTER_OTLP_ENDPOINT` as a gate, delegates to the sub-module's
+  `Install`, logs through `slog` on failure, returns a safe no-op on
+  unset endpoint or failed exporter.
+- `cmd/clockify-mcp/otel_off.go` (new, `//go:build !otel`) — default-build
+  stub returning a no-op shutdown.
+- `cmd/clockify-mcp/main.go` — `run()` calls `installOTel(ctx)` right
+  after `signal.NotifyContext` and `defer`s the shutdown.
+- `go.mod` (top-level) — dropped from 28 lines to 7; now carries a
+  single `replace` directive pointing at the sub-module plus the
+  corresponding `require`. Zero `go.opentelemetry.io` rows.
+- `go.work` (new, repo root) — lists the main module and the sub-module
+  so `go build -tags=otel ./...` from the parent resolves the sub-module
+  locally.
+- `.github/workflows/ci.yml` — two new `build`-job steps:
+  `Verify go.mod has zero OpenTelemetry rows` (grep gate) and
+  `Build tracing sub-module` (cd into sub-module and run `go build` +
+  `go vet`). Existing `-tags=otel` build and nm gate remain unchanged.
+- `docs/adr/009-tracing-submodule.md` (new) — ADR covering context,
+  decision, consequences, and the `go mod tidy` caveat (developers
+  must `git restore go.mod` after tidy re-adds OTel indirect rows).
+- `docs/adr/001-stdlib-only.md` — extended the "opt-in OpenTelemetry"
+  paragraph to point at ADR 009 as the closure of the W1-deferred
+  trade-off.
+- `docs/observability.md` — updated the `-tags=otel` section to
+  describe the sub-module + `Install` path instead of the previous
+  `init()` hook.
+
+**Acceptance.**
+- Default binary: 0 `opentelemetry` symbols (unchanged).
+- `-tags=otel` binary: 2077 `opentelemetry` symbols (unchanged).
+- Top-level `go.mod`: 0 `go.opentelemetry.io` rows (down from 9).
+- Sub-module builds and vets cleanly from its own directory.
+- Full `go test -race ./...` suite green.
 
 ### W2-12 — Release infrastructure gaps from the v0.6.0 cut
 

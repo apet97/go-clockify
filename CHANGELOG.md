@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **W2-04 — Tracing OTel wiring moved into a dedicated Go sub-module** (`internal/tracing/otel/go.mod`, `internal/tracing/otel/go.sum`, `internal/tracing/otel/otel.go`, `cmd/clockify-mcp/otel_on.go`, `cmd/clockify-mcp/otel_off.go`, `cmd/clockify-mcp/main.go`, `go.mod`, `go.work`, `.github/workflows/ci.yml`, `docs/adr/009-tracing-submodule.md`, `docs/adr/001-stdlib-only.md`, `docs/observability.md`). The OpenTelemetry-backed tracer has been moved out of the main module and into a dedicated Go sub-module at `internal/tracing/otel/`. The top-level `go.mod` drops from 28 lines to 7 and carries **zero** `go.opentelemetry.io` rows — closing the Wave 1 deferred trade-off documented in ADR 001. The `init()` auto-register hook is replaced by an exported `Install(ctx) (shutdown, error)` delegated from a new `cmd/clockify-mcp/otel_{on,off}.go` build-tag pair, which mirrors the `pprof_{on,off}.go` template established in W2-02. A new CI gate in the `build` job (`Verify go.mod has zero OpenTelemetry rows`) catches any `go mod tidy` regression. A `go.work` file at the repo root makes the sub-module resolvable for parent-tree `-tags=otel` builds. Default binary symbol count is unchanged (0 OTel symbols); `-tags=otel` binary symbol count is unchanged (2077 OTel symbols). **Developer note:** running `go mod tidy` on the main module will re-add the OTel transitive deps as `// indirect` rows because Go 1.17+ lazy-loading requires the main module to list transitively reachable modules — follow with `git restore go.mod` to undo. See [ADR 009](docs/adr/009-tracing-submodule.md).
+
 ### Fixed
 
 ### Security

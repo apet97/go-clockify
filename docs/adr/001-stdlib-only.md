@@ -28,11 +28,14 @@ Stdlib features actively used in place of typical external deps:
   exporter) replace `prometheus/client_golang`.
 - **JSON** — `encoding/json` rather than `json-iterator` or `easyjson`.
 
-The tracing package (ADR 002 — wait, actually ADR 002 is the metrics
-exporter — see ADR 007 for tracing) allows an opt-in OpenTelemetry build
-via `-tags=otel`, which does link `go.opentelemetry.io/*`. The default
-build is verified to carry **zero** `opentelemetry` symbols by a CI job
-running `go tool nm` on the default binary.
+The tracing package (`internal/tracing/`) allows an opt-in
+OpenTelemetry build via `-tags=otel`, which does link
+`go.opentelemetry.io/*`. The default build is verified to carry
+**zero** `opentelemetry` symbols by a CI job running `go tool nm` on
+the default binary. As of Wave 2 (W2-04) the OTel wiring lives in a
+dedicated Go sub-module at `internal/tracing/otel/`, so the top-level
+`go.mod` also carries **zero** `go.opentelemetry.io` rows — see ADR 009
+for the sub-module layout and the `go mod tidy` caveat.
 
 ## Consequences
 

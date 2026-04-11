@@ -387,12 +387,17 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.internal:4318 clockify-mcp
 ```
 
 When the `otel` tag is compiled in AND `OTEL_EXPORTER_OTLP_ENDPOINT` is
-set at runtime, an `init()` inside `internal/tracing/otel.go` constructs
-an OTLP HTTP exporter, wires a `TracerProvider` with a default service
-name of `clockify-mcp`, registers the W3C trace-context propagator, and
-replaces `tracing.Default` via `SetDefault`. If the exporter fails to
-construct (bad endpoint, network error) the process falls back silently
-to the no-op tracer rather than crashing.
+set at runtime, `cmd/clockify-mcp/otel_on.go` delegates to
+`Install(ctx)` in the `github.com/apet97/go-clockify/internal/tracing/otel`
+sub-module, which constructs an OTLP HTTP exporter, wires a
+`TracerProvider` with a default service name of `clockify-mcp`,
+registers the W3C trace-context propagator, and replaces
+`tracing.Default` via `SetDefault`. The sub-module is a separate Go
+module (`internal/tracing/otel/go.mod`) so the top-level `go.mod`
+carries zero `go.opentelemetry.io` rows — see ADR 009. If the
+exporter fails to construct (bad endpoint, network error) the
+installer logs through `slog.Warn("otel_install_failed")` and the
+process continues with the no-op tracer rather than crashing.
 
 Spans are emitted from two sites:
 

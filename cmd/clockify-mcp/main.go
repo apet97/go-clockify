@@ -132,6 +132,11 @@ func run() error {
 	// Set up signal handling for graceful shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	// Install the OTel exporter when built with -tags=otel and
+	// OTEL_EXPORTER_OTLP_ENDPOINT is set. Default build is a no-op. See ADR 009.
+	otelShutdown := installOTel(ctx)
+	defer otelShutdown()
 	if cfg.MetricsBind != "" {
 		go func() {
 			if err := mcp.ServeMetrics(ctx, mcp.MetricsServerOptions{
