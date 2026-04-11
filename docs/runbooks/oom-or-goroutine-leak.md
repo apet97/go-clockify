@@ -21,15 +21,30 @@
    go_goroutines{job="clockify-mcp"}
    ```
    The stdio dispatch caps goroutines at `MCP_MAX_INFLIGHT_TOOL_CALLS` (default 64). Anything sustainably above that cap is a leak — almost certainly a `context.WithCancel` whose `cancel()` isn't being called, or a goroutine holding an unbuffered channel send forever.
-3. **pprof snapshot** — the default binary does **not** expose `net/http/pprof`; capturing a profile requires a rebuild:
+3. **pprof snapshot** — the default binary does **not** link `net/http/pprof`; a CI symbol gate enforces this so production images can never accidentally expose the endpoints. Capturing a profile requires a debug rebuild with the `pprof` build tag, which mounts `/debug/pprof/*` on the same listener that serves `/mcp`:
    ```sh
-   # Rebuild with pprof exposed (Wave 2 work — tracked as an open item).
-   # Until then, reproduce locally:
-   CLOCKIFY_API_KEY=... go run -gcflags='all=-N -l' ./cmd/clockify-mcp
-   curl -s http://localhost:6060/debug/pprof/goroutine?debug=1 > /tmp/goroutines.txt
-   curl -s http://localhost:6060/debug/pprof/heap > /tmp/heap.pprof
+   # Build with the pprof tag. This is the ONLY supported way to get pprof.
+   go build -tags=pprof -o clockify-mcp ./cmd/clockify-mcp
+
+   # Start in HTTP mode (legacy or streamable — both transports wire pprof).
+   CLOCKIFY_API_KEY=... \
+   MCP_TRANSPORT=http \
+   MCP_HTTP_BIND=127.0.0.1:8080 \
+   MCP_BEARER_TOKEN=... \
+   ./clockify-mcp &
+
+   # Capture — the endpoints are NOT bearer-authed; only run on loopback
+   # or behind a firewall.
+   go tool pprof http://127.0.0.1:8080/debug/pprof/goroutine
+   curl -s 'http://127.0.0.1:8080/debug/pprof/goroutine?debug=1' > /tmp/goroutines.txt
+   curl -s  http://127.0.0.1:8080/debug/pprof/heap         > /tmp/heap.pprof
    go tool pprof -top /tmp/heap.pprof
    ```
+
+   Important security note: the pprof handlers bypass the `/mcp` bearer gate
+   because they live at a sibling path. Debug builds must only run on
+   trusted networks. Never push a `-tags=pprof` image to a registry used by
+   production pulls; reuse the existing `clockify-mcp:<sha>` tag for prod.
 4. **Correlate with traffic** — growth that scales with tool-call rate and doesn't plateau implies a per-call leak.
 
 ## Mitigation

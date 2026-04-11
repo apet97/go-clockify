@@ -68,17 +68,6 @@ signatures, SLSA build provenance attestations, `ghcr.io/apet97/go-clockify:v0.6
 
 **Size:** S–M. **Blocks:** the next clean release (likely 0.6.1 or 0.7.0).
 
-### W2-02 — `pprof` exposure behind `-tags=pprof`
-
-**Context.** `docs/runbooks/oom-or-goroutine-leak.md` currently instructs
-operators to rebuild with `net/http/pprof` manually. Turn that into a
-build-tagged opt-in so production binaries never link `pprof` but
-debug builds can mount `/debug/pprof/*` under the existing HTTP transport.
-
-**Files.** `cmd/clockify-mcp/pprof_on.go` (tag-gated), `cmd/clockify-mcp/pprof_off.go`
-(default stub). Add a "Build with `-tags=pprof`" CI step. Update the runbook.
-**Size:** S.
-
 ### W2-03 — CodeQL Action v3 → v4
 
 **Context.** `.github/workflows/*` emits deprecation warnings on every run.
@@ -134,6 +123,59 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-02 — `pprof` exposure behind `-tags=pprof`
+
+**Landed:** 2026-04-11 (Track B of the v0.6.1 release session). Previously
+`docs/runbooks/oom-or-goroutine-leak.md` instructed operators to rebuild
+with `net/http/pprof` manually; that rebuild path is now a first-class
+build tag that mounts `/debug/pprof/*` on whichever HTTP transport the
+server is running (`http` or `streamable_http`).
+
+**Design.** A neutral `ExtraHandler{Pattern, Handler}` type plus a
+`mountExtras` helper in `internal/mcp/transport_extra.go` (stdlib-only,
+zero pprof references). Both transports grew a slice field
+(`Server.ExtraHTTPHandlers` for legacy HTTP, `StreamableHTTPOptions.ExtraHandlers`
+for streamable) that `mountExtras` walks before `ListenAndServe`.
+`cmd/clockify-mcp/` owns the sole `net/http/pprof` import behind
+`//go:build pprof` in `pprof_on.go`; the default build sees only
+`pprof_off.go` which returns `nil`, so `mountExtras` is a no-op.
+
+**Critical files shipped:**
+- `internal/mcp/transport_extra.go` (new) — `ExtraHandler` type +
+  `mountExtras` helper, both stdlib-only.
+- `internal/mcp/server.go` — new `ExtraHTTPHandlers []ExtraHandler`
+  field on `Server`.
+- `internal/mcp/transport_http.go` — `ServeHTTP` calls
+  `mountExtras(mux, s.ExtraHTTPHandlers)` after core handlers.
+- `internal/mcp/transport_streamable_http.go` — new
+  `ExtraHandlers []ExtraHandler` field on `StreamableHTTPOptions`;
+  `ServeStreamableHTTP` calls `mountExtras(mux, opts.ExtraHandlers)`.
+- `internal/mcp/transport_extra_pprof_test.go` (new, `//go:build pprof`)
+  — mountExtras + pprof end-to-end through `httptest.NewServer`;
+  `goroutine` and `cmdline` profiles reachable; baseline handler still
+  reachable alongside pprof; compile-time field-wiring guard.
+- `cmd/clockify-mcp/pprof_on.go` (new, `//go:build pprof`) — side-imports
+  `net/http/pprof`, returns a one-element `[]ExtraHandler` pointing at
+  `http.DefaultServeMux` with the `/debug/pprof/` pattern. Emits a
+  startup warning so operators never miss that a debug build is running.
+- `cmd/clockify-mcp/pprof_off.go` (new, `//go:build !pprof`) — stub
+  returning `nil`.
+- `cmd/clockify-mcp/main.go` — two call sites: `ExtraHandlers: pprofExtras()`
+  in the `ServeStreamableHTTP` branch; `server.ExtraHTTPHandlers = pprofExtras()`
+  in the legacy HTTP branch, set between `ReadyChecker` wiring and
+  `server.ServeHTTP(...)`.
+- `.github/workflows/ci.yml` — extended the `build` job: added the
+  negative nm-gate (`net/http/pprof` count must equal 0 in default
+  build), the `-tags=pprof` build + positive nm-gate (must be > 0),
+  a `-tags=pprof` test run of `./internal/mcp/...`, and a combined
+  `-tags=pprof,otel` build step.
+- `docs/runbooks/oom-or-goroutine-leak.md` — replaced the manual-rebuild
+  paragraph with the `-tags=pprof` recipe and a security note that
+  pprof endpoints bypass the `/mcp` bearer gate.
+
+**Verification:** default build has 0 `net/http/pprof` symbols, `-tags=pprof`
+build has 45. Both CI nm-gates cover the regression surface.
 
 ### W2-01 — Runtime JSON-schema validation at the enforcement boundary
 

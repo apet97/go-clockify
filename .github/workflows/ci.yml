@@ -85,10 +85,36 @@ jobs:
             echo "default build leaked OpenTelemetry symbols; enforce -tags=otel gating"
             exit 1
           fi
+      - name: Verify default build has zero net/http/pprof symbols
+        run: |
+          set -euo pipefail
+          # /tmp/clockify-mcp-default was produced by the previous step.
+          count=$(go tool nm /tmp/clockify-mcp-default | grep -c 'net/http/pprof' || true)
+          echo "net/http/pprof symbol count in default build: $count"
+          if [ "$count" -ne 0 ]; then
+            echo "default build leaked net/http/pprof symbols; enforce -tags=pprof gating"
+            exit 1
+          fi
       - name: Build with -tags=otel
         run: go build -tags=otel ./...
       - name: Test tracing package with -tags=otel
         run: go test -tags=otel -count=1 ./internal/tracing/...
+      - name: Build with -tags=pprof
+        run: go build -tags=pprof ./...
+      - name: Verify -tags=pprof build contains net/http/pprof symbols
+        run: |
+          set -euo pipefail
+          go build -tags=pprof -o /tmp/clockify-mcp-pprof ./cmd/clockify-mcp
+          count=$(go tool nm /tmp/clockify-mcp-pprof | grep -c 'net/http/pprof' || true)
+          echo "net/http/pprof symbol count in -tags=pprof build: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "-tags=pprof build did not link net/http/pprof; build-tag wiring is broken"
+            exit 1
+          fi
+      - name: Test with -tags=pprof
+        run: go test -tags=pprof -count=1 ./internal/mcp/...
+      - name: Build with -tags=pprof,otel
+        run: go build -tags=pprof,otel ./...
 
   test:
     name: Test

@@ -48,6 +48,11 @@ type StreamableHTTPOptions struct {
 	// endpoint omitted (e.g. server does not advertise OAuth 2.1
 	// resource discovery).
 	ProtectedResource http.Handler
+	// ExtraHandlers mounts optional handlers on the streamable HTTP
+	// mux before ListenAndServe — counterpart to Server.ExtraHTTPHandlers
+	// for the streamable transport. Used by -tags=pprof to attach
+	// /debug/pprof/* alongside /mcp. nil = no extras, default path.
+	ExtraHandlers []ExtraHandler
 }
 
 type streamSession struct {
@@ -120,6 +125,9 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		mux.Handle("/.well-known/oauth-protected-resource",
 			observeHTTPH("/.well-known/oauth-protected-resource", opts.ProtectedResource))
 	}
+	// Mount opt-in extras (e.g. /debug/pprof/* under -tags=pprof). nil slice
+	// is a no-op so default builds are byte-identical.
+	mountExtras(mux, opts.ExtraHandlers)
 
 	srv := &http.Server{
 		Addr:              opts.Bind,

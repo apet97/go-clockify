@@ -195,6 +195,7 @@ func run() error {
 			Authenticator:     authenticator,
 			ControlPlane:      store,
 			ProtectedResource: protectedResource,
+			ExtraHandlers:     pprofExtras(),
 			Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 				return tenantRuntime(ctx, principal.TenantID, deps, store)
 			},
@@ -225,6 +226,9 @@ func run() error {
 			var user struct{ ID string }
 			return client.Get(ctx, "/user", nil, &user)
 		}
+		// Opt-in debug handlers (e.g. /debug/pprof/* under -tags=pprof).
+		// Default build returns nil so ServeHTTP sees an empty slice.
+		server.ExtraHTTPHandlers = pprofExtras()
 		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)

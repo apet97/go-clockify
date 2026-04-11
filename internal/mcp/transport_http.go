@@ -40,6 +40,9 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", mcpHandler))
 	// Handle OPTIONS for CORS preflight on /mcp
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", mcpHandler))
+	// Mount opt-in extras (e.g. /debug/pprof/* under -tags=pprof). nil slice
+	// is a no-op so default builds are byte-identical.
+	mountExtras(mux, s.ExtraHTTPHandlers)
 
 	srv := &http.Server{
 		Addr:              bind,

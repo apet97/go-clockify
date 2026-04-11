@@ -142,6 +142,13 @@ type Server struct {
 	// production deployments to get the strict guarantee.
 	StrictHostCheck bool
 
+	// ExtraHTTPHandlers carries optional handlers that the legacy HTTP
+	// transport mounts on its mux before ListenAndServe. Used by the
+	// -tags=pprof build in cmd/clockify-mcp/ to attach /debug/pprof/*
+	// without forcing internal/mcp to depend on net/http/pprof. nil or
+	// empty = no extras registered, which is the default production path.
+	ExtraHTTPHandlers []ExtraHandler
+
 	mu          sync.RWMutex
 	tools       map[string]ToolDescriptor
 	initialized atomic.Bool
