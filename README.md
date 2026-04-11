@@ -412,7 +412,8 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - [Migration guide 0.5 → 0.6](docs/migration/0.5-to-0.6.md) — Wave 1 delta, env-var changes, metric label changes, back-compat windows
 - [Security Threat Model](docs/security-threat-model.md) — trust boundaries, session/tenant isolation, residual risks
 - [Stability Policy](docs/stability-policy.md) — compatibility tiers and deprecation rules
-- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap. **Wave 1 landed**: cancellation map (W1-02), `outputSchema` sweep (W1-09), tier2 coverage push (W1-11), OAuth 2.1 Resource Server completion (W1-06), Streamable HTTP completion (W1-01), Resources + Prompts capabilities (W1-04 + W1-05), progress notifications + per-token rate limiting (W1-03 + W1-07), OpenTelemetry tracing behind `-tags=otel` (W1-12), schema tightening sweep (W1-10), burn-rate alerts + operator manifests (W1-13 + W1-14), architecture + ADRs + troubleshooting + migration guide (W1-15 + W1-16 + W1-17).
+- [Wave 1 Backlog (closed)](docs/wave1-backlog.md) — curated next-iteration roadmap. **Wave 1 landed**: cancellation map (W1-02), `outputSchema` sweep (W1-09), tier2 coverage push (W1-11), OAuth 2.1 Resource Server completion (W1-06), Streamable HTTP completion (W1-01), Resources + Prompts capabilities (W1-04 + W1-05), progress notifications + per-token rate limiting (W1-03 + W1-07), OpenTelemetry tracing behind `-tags=otel` (W1-12), schema tightening sweep (W1-10), burn-rate alerts + operator manifests (W1-13 + W1-14), architecture + ADRs + troubleshooting + migration guide (W1-15 + W1-16 + W1-17).
+- [Wave 2 Backlog](docs/wave2-backlog.md) — active backlog for the 0.6.x → 0.7.0 cycle.
 
 ## Support
 
