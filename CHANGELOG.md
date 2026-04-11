@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+### Security
+
+### Deprecated
+
+## [0.6.0] - 2026-04-11
+
 ### Wave 1
 
 - **W1-15 + W1-16 + W1-17 — Documentation polish** (`docs/architecture.md`, `docs/adr/001-stdlib-only.md` .. `docs/adr/007-streamable-http-rewrite.md`, `docs/troubleshooting.md`, `docs/migration/0.5-to-0.6.md`, `README.md`). Closes the Wave 1 documentation tier:
