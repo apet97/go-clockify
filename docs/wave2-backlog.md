@@ -68,11 +68,6 @@ signatures, SLSA build provenance attestations, `ghcr.io/apet97/go-clockify:v0.6
 
 **Size:** S–M. **Blocks:** the next clean release (likely 0.6.1 or 0.7.0).
 
-### W2-03 — CodeQL Action v3 → v4
-
-**Context.** `.github/workflows/*` emits deprecation warnings on every run.
-Upgrade and re-test. **Size:** S.
-
 ### W2-04 — Tracing as a Go submodule
 
 **Context.** `go.mod` currently carries OTel rows even though the default
@@ -123,6 +118,29 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-03 — CodeQL Action v3 → v4
+
+**Landed:** 2026-04-11 (Track C of the v0.6.1 release session). The single
+CodeQL action invocation in the repo — `github/codeql-action/upload-sarif`
+in `.github/workflows/docker-image.yml:203` — was pinned at v3, which
+GitHub began surfacing as a deprecation warning on every run.
+
+**Change.** One SHA pin bump:
+`5c8a8a642e79153f5d047b10ec1cba1d1cc65699 # v3` →
+`c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1`.
+
+**v4 breaking changes relevant to this repo.** None that affect
+`upload-sarif` specifically. The only v3→v4 delta documented in the
+action changelog (4.30.7, 2025-10-06) is "the CodeQL Action now runs
+on Node.js v24" — a runtime bump that GitHub-hosted `ubuntu-22.04`
+runners already support. All `upload-sarif` inputs are unchanged;
+`sarif_file: trivy-results.sarif` still validates against the v4
+schema without edits.
+
+**Verification.** Docker Image workflow run on the Track C commit
+uploads Trivy SARIF successfully via the v4 pin; the run's security
+tab continues to show the scan results exactly as before the upgrade.
 
 ### W2-02 — `pprof` exposure behind `-tags=pprof`
 
