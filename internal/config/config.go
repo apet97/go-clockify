@@ -25,6 +25,7 @@ type Config struct {
 	Transport          string
 	AuthMode           string
 	HTTPBind           string
+	GRPCBind           string
 	BearerToken        string
 	AllowedOrigins     []string
 	AllowAnyOrigin     bool
@@ -92,10 +93,10 @@ func Load() (Config, error) {
 		cfg.Transport = "stdio"
 	}
 	switch cfg.Transport {
-	case "stdio", "http", "streamable_http":
+	case "stdio", "http", "streamable_http", "grpc":
 		// valid
 	default:
-		return Config{}, fmt.Errorf("invalid MCP_TRANSPORT %q: must be \"stdio\", \"http\", or \"streamable_http\"", cfg.Transport)
+		return Config{}, fmt.Errorf("invalid MCP_TRANSPORT %q: must be \"stdio\", \"http\", \"streamable_http\", or \"grpc\"", cfg.Transport)
 	}
 	if cfg.Transport != "streamable_http" && cfg.APIKey == "" {
 		return Config{}, fmt.Errorf("CLOCKIFY_API_KEY is required")
@@ -125,10 +126,18 @@ func Load() (Config, error) {
 	if cfg.Transport == "stdio" && cfg.AuthMode != "" {
 		return Config{}, fmt.Errorf("MCP_AUTH_MODE is only valid for HTTP transports")
 	}
+	if cfg.Transport == "grpc" && cfg.AuthMode != "" {
+		return Config{}, fmt.Errorf("MCP_AUTH_MODE is not currently wired for gRPC transport; use mTLS or a service mesh")
+	}
 
 	cfg.HTTPBind = os.Getenv("MCP_HTTP_BIND")
 	if cfg.HTTPBind == "" {
 		cfg.HTTPBind = ":8080"
+	}
+
+	cfg.GRPCBind = os.Getenv("MCP_GRPC_BIND")
+	if cfg.GRPCBind == "" {
+		cfg.GRPCBind = ":9090"
 	}
 
 	cfg.BearerToken = os.Getenv("MCP_BEARER_TOKEN")
@@ -294,6 +303,7 @@ func (c Config) Fingerprint() map[string]any {
 		"transport":               c.Transport,
 		"auth_mode":               c.AuthMode,
 		"http_bind":               c.HTTPBind,
+		"grpc_bind":               c.GRPCBind,
 		"metrics_bind":            c.MetricsBind,
 		"metrics_auth_mode":       c.MetricsAuthMode,
 		"clockify_base_url":       c.BaseURL,

@@ -268,11 +268,50 @@ func TestLoadMaxBodySizeTooLargeReturnsError(t *testing.T) {
 func TestLoadTransportInvalid(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
+		"MCP_TRANSPORT":    "carrier-pigeon",
 	})
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for invalid transport value")
+	}
+}
+
+// TestLoadTransportGRPC verifies that the gRPC transport is accepted and
+// that MCP_GRPC_BIND is wired into Config. The transport binary itself is
+// only linked under -tags=grpc (see ADR 012); Config.Load just validates
+// the selection and records the bind address.
+func TestLoadTransportGRPC(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+		"MCP_GRPC_BIND":    "127.0.0.1:7777",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("grpc transport should be accepted: %v", err)
+	}
+	if cfg.Transport != "grpc" {
+		t.Fatalf("expected grpc, got %q", cfg.Transport)
+	}
+	if cfg.GRPCBind != "127.0.0.1:7777" {
+		t.Fatalf("expected 127.0.0.1:7777 bind, got %q", cfg.GRPCBind)
+	}
+}
+
+// TestLoadTransportGRPCDefaultBind confirms :9090 is the default when
+// MCP_GRPC_BIND is not set.
+func TestLoadTransportGRPCDefaultBind(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "grpc",
+	})
+	os.Unsetenv("MCP_GRPC_BIND")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("grpc transport should be accepted: %v", err)
+	}
+	if cfg.GRPCBind != ":9090" {
+		t.Fatalf("expected :9090 default, got %q", cfg.GRPCBind)
 	}
 }
 

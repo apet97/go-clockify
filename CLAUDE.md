@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 tools registered at startup + 91 Tier 2 tools activated on demand) and advertises MCP `resources` (2 concrete + 5 parametric URI templates) and `prompts` (5 built-in templates) capabilities alongside `tools`, over stdio and three HTTP transports (streamable HTTP 2025-03-26, legacy POST-only JSON-RPC, and a back-compat SSE alias). Intended for use with Claude Desktop, Cursor, and similar MCP clients.
+GOCLMCP is a production-grade Go MCP (Model Context Protocol) server for Clockify. It exposes 124 Clockify tools (33 Tier 1 tools registered at startup + 91 Tier 2 tools activated on demand) and advertises MCP `resources` (2 concrete + 5 parametric URI templates) and `prompts` (5 built-in templates) capabilities alongside `tools`, over stdio, three HTTP transports (streamable HTTP 2025-03-26, legacy POST-only JSON-RPC, and a back-compat SSE alias), and an opt-in gRPC bidirectional stream transport (`-tags=grpc`, ADR 012). Intended for use with Claude Desktop, Cursor, and similar MCP clients.
 
 ## Build / Test / Run
 
@@ -81,7 +81,8 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 ### Transport
 | Variable | Default | Purpose |
 |---|---|---|
-| `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `MCP_TRANSPORT` | `stdio` | `stdio`, `http`, `streamable_http`, or `grpc` (grpc requires `-tags=grpc` build) |
+| `MCP_GRPC_BIND` | `:9090` | gRPC listen address when `MCP_TRANSPORT=grpc` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP mode (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins |

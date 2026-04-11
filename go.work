@@ -3,4 +3,5 @@ go 1.25.9
 use (
 	.
 	./internal/tracing/otel
+	./internal/transport/grpc
 )

@@ -241,6 +241,13 @@ func run() error {
 		server.ExtraHTTPHandlers = pprofExtras()
 		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
 	}
+	if cfg.Transport == "grpc" {
+		// gRPC transport is built only with -tags=grpc. The default build
+		// stub returns a clear error explaining the build-tag requirement.
+		// See ADR 012. Upstream readiness is not yet wired for gRPC because
+		// the transport has no HTTP-style /ready endpoint.
+		return serveGRPC(ctx, cfg.GRPCBind, server)
+	}
 	return server.Run(ctx, os.Stdin, os.Stdout)
 }
 
@@ -301,7 +308,8 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT             stdio (default), legacy http, or streamable_http
+    MCP_TRANSPORT             stdio (default), legacy http, streamable_http, or grpc
+    MCP_GRPC_BIND             gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
     MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
     MCP_BEARER_TOKEN          Required for static bearer auth; send as Authorization: Bearer <token>

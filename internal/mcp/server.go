@@ -441,6 +441,37 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	}
 }
 
+// DispatchMessage parses a single JSON-RPC message from raw bytes, invokes
+// the central handler, and returns the serialized response. It is intended
+// for non-stdio transports (gRPC sub-module, custom bridges) that own their
+// own concurrency model and framing.
+//
+// Parse and validation errors are converted to JSON-RPC error responses
+// mirroring the stdio loop. A notification (no id, no result, no error)
+// returns (nil, nil); the caller must skip sending on the wire in that case.
+//
+// This method does NOT apply the stdio dispatch-layer toolCallSem. Callers
+// that need backpressure on tools/call must implement their own bound.
+func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error) {
+	var req Request
+	if err := json.Unmarshal(msg, &req); err != nil {
+		metrics.ProtocolErrorsTotal.Inc("-32700")
+		return json.Marshal(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
+	}
+	if rpcErr := validateRequest(req); rpcErr != nil {
+		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
+		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
+	}
+	resp := s.handle(ctx, req)
+	if resp.Error != nil {
+		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
+	}
+	if req.ID == nil && resp.Error == nil && resp.Result == nil {
+		return nil, nil
+	}
+	return json.Marshal(resp)
+}
+
 // handleCancelled processes a notifications/cancelled message by looking
 // up the request ID in the inflight map and aborting the corresponding
 // tool handler. Malformed payloads and unknown IDs are silently ignored
