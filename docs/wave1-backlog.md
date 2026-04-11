@@ -1,14 +1,17 @@
-# Wave 1 backlog
+# Wave 1 backlog — closed
 
-Wave 0 (the enterprise-readiness sprint) is shipped on `main` as of
-`5c69f2c`. The full plan with 250 enumerated items lives at
-`/Users/15x/.claude/plans/moonlit-doodling-meadow.md`. This document is
-the curated, priority-ordered subset of the plan that should land in Wave
-1 — items that move the repo from "enterprise-grade with caveats" to
-"enterprise-grade with no asterisks".
+**Wave 1 completed on 2026-04-11 at `40ef8d3`.** Every curated item in the
+list below has landed on `main` with green CI. This file is kept as a
+historical log of what shipped, not an active backlog. Next-iteration work
+lives in the out-of-scope section at the bottom (promoted to Wave 2), in
+`docs/adr/` for architectural direction, and in `docs/wave2-backlog.md`
+once that file is created.
 
-Each item names the file paths that need to change and the rough size
-("S/M/L"). Pick by capacity and dependency, not by document order.
+Wave 0 (the enterprise-readiness sprint) shipped on `main` as of `5c69f2c`.
+The original 250-item plan lives at
+`/Users/15x/.claude/plans/moonlit-doodling-meadow.md`. This document was
+the curated, priority-ordered Wave 1 subset moving the repo from
+"enterprise-grade with caveats" to "enterprise-grade with no asterisks".
 
 ## Landed (do not re-pick)
 

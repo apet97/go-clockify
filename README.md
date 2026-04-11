@@ -1,18 +1,22 @@
 # clockify-mcp-go
 
-Production-grade MCP server for Clockify, built in Go. 124 tools total: 33 Tier 1 registered at startup and 91 Tier 2 activated on demand across 11 domains.
+Production-grade MCP server for Clockify, built in Go. 124 tools total: 33 Tier 1 registered at startup and 91 Tier 2 activated on demand across 11 domains. Also advertises MCP `resources` and `prompts` capabilities alongside `tools`.
 
-Zero external dependencies. Single static binary. Every release is signed with cosign keyless OIDC, ships a SPDX SBOM, and carries SLSA build provenance for both binaries and container images.
+Stdlib-only default build — the default `go build` produces a binary that links zero `opentelemetry.io/*` symbols (verified by a CI gate running `go tool nm`). OpenTelemetry tracing is opt-in via `-tags=otel`. Every release is signed with cosign keyless OIDC, ships a SPDX SBOM, and carries SLSA build provenance for both binaries and container images.
 
 **Highlights**
 
-- **Layered architecture** — protocol core, Clockify client, tool surface, safety layer. `Enforcement` / `Activator` / `Notifier` interfaces keep the protocol core domain-free.
+- **Three MCP capabilities** — `tools` (124), `resources` (2 concrete + 5 parametric URI templates over `clockify://workspace/...`), and `prompts` (5 built-in templates: weekly-review, find-unbilled-hours, find-duplicate-entries, generate-timesheet-report, log-week-from-calendar).
+- **Streamable HTTP 2025-03-26** — `POST /mcp` for JSON-RPC, `GET /mcp` for the SSE notification stream with per-event `id:` stamping and `Last-Event-ID` resumability, `Mcp-Protocol-Version` header validation on every non-initialize request. Legacy `GET /mcp/events` kept as a back-compat alias through 0.6 (removal in 0.7).
+- **Layered architecture** — protocol core, Clockify client, tool surface, safety layer. `Enforcement` / `Activator` / `Notifier` / `ResourceProvider` interfaces keep the protocol core domain-free. See [docs/architecture.md](docs/architecture.md) for mermaid sequence flows and [docs/adr/](docs/adr/) for seven ADRs covering the non-obvious decisions.
 - **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged` only on transports that can actually push it, and returns an `instructions` string for agentic clients.
 - **Four policy modes** (`read_only`, `safe_core`, `standard`, `full`) + per-tool/group deny/allow lists + three-strategy dry-run for every destructive operation.
-- **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and fixed-window throughput limiter. Neither layer can strand resources in the other.
-- **Observability built in** — Prometheus metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Shared-service deployments can isolate metrics onto a dedicated listener with `MCP_METRICS_BIND`.
+- **Bounded dispatch + three-layer rate limiting** — stdio dispatch semaphore, per-process concurrency + window limiter, and a per-`Principal.Subject` sub-layer so a noisy tenant cannot monopolise the global budget. Every rejection is labelled with `kind` (concurrency/window) and `scope` (global/per_token) in metrics.
+- **Progress notifications** — long-running report tools emit `notifications/progress` keyed off a client-supplied `_meta.progressToken`, driven per-page from `aggregateEntriesRange`.
+- **OAuth 2.1 Resource Server** — full RFC 9728 `.well-known/oauth-protected-resource` metadata + RFC 8707 resource-indicator binding + RFC 6750 `WWW-Authenticate` headers. Wired at every auth site; principal now travels on request context so enforcement + audit + rate limits all see the same identity.
+- **Observability built in** — Prometheus metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Shared-service deployments can isolate metrics onto a dedicated listener with `MCP_METRICS_BIND`. Optional OpenTelemetry tracing behind `-tags=otel` with spans on `mcp.tools/call` and `clockify.http`, W3C `traceparent` propagation to Clockify.
 - **PII-redacting structured logs** — every slog handler is wrapped in a recursive scrubber that masks 20+ secret-key patterns before they reach the encoder.
-- **Hardened Kubernetes reference manifests** — non-root distroless pod, read-only root FS, dropped ALL capabilities, NetworkPolicy (default-deny), PodDisruptionBudget, dedicated ServiceAccount, image pinned by version.
+- **Hardened Kubernetes reference manifests** — non-root distroless pod, read-only root FS, dropped ALL capabilities, NetworkPolicy (default-deny), PodDisruptionBudget, dedicated ServiceAccount, Prometheus Operator `ServiceMonitor` + `PrometheusRule` with multi-window burn-rate alerts for the 99.9% SLO, image pinned by version.
 - **Multi-arch container image pipeline** — buildx → Trivy scan → cosign keyless sign → SPDX SBOM → SLSA provenance attested to the registry.
 
 ## Quickstart
