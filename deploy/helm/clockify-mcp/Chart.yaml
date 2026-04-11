@@ -7,8 +7,8 @@ description: |
 type: application
 # Chart version tracks the MCP server semver exactly. Bump both together
 # at release time (cmd/clockify-mcp/main.go + this field).
-version: 0.7.1
-appVersion: "0.7.1"
+version: 0.8.0
+appVersion: "0.8.0"
 kubeVersion: ">=1.27.0-0"
 keywords:
   - clockify
