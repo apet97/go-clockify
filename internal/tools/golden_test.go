@@ -67,6 +67,49 @@ func TestGoldenTier1ToolList(t *testing.T) {
 			t.Fatalf("tool %d: expected %s, got %s", i, expected[i], names[i])
 		}
 	}
+
+	// Every Tier 1 descriptor must carry an OutputSchema after the
+	// Wave 1 sweep — clients depend on the typed envelope to validate
+	// tool results without scanning the data field.
+	for _, d := range reg {
+		if d.Tool.OutputSchema == nil {
+			t.Errorf("Tier 1 tool %s is missing OutputSchema", d.Tool.Name)
+			continue
+		}
+		props, ok := d.Tool.OutputSchema["properties"].(map[string]any)
+		if !ok {
+			t.Errorf("Tier 1 tool %s has malformed OutputSchema", d.Tool.Name)
+			continue
+		}
+		action, ok := props["action"].(map[string]any)
+		if !ok {
+			t.Errorf("Tier 1 tool %s OutputSchema missing action property", d.Tool.Name)
+			continue
+		}
+		if action["const"] != d.Tool.Name {
+			t.Errorf("Tier 1 tool %s OutputSchema action const = %v, want %s", d.Tool.Name, action["const"], d.Tool.Name)
+		}
+	}
+}
+
+// TestTier2OutputSchemasPresent verifies the lazy activation path
+// (Service.Tier2Handlers) decorates every Tier 2 tool with an
+// envelopeOpaque schema. Every Tier 2 group is exercised so we can
+// catch a missing decoration immediately.
+func TestTier2OutputSchemasPresent(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	for groupName := range Tier2Groups {
+		descs, ok := svc.Tier2Handlers(groupName)
+		if !ok {
+			t.Errorf("Tier2Handlers(%q) returned !ok", groupName)
+			continue
+		}
+		for _, d := range descs {
+			if d.Tool.OutputSchema == nil {
+				t.Errorf("Tier 2 tool %s in group %s missing OutputSchema", d.Tool.Name, groupName)
+			}
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
