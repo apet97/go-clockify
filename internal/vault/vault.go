@@ -10,9 +10,9 @@ import (
 )
 
 type Material struct {
-	APIKey     string
-	Workspace  string
-	BaseURL    string
+	APIKey    string
+	Workspace string
+	BaseURL   string
 }
 
 func Resolve(ref controlplane.CredentialRef) (Material, error) {

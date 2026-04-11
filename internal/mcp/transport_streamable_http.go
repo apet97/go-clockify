@@ -255,7 +255,7 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		w.Header().Set("Connection", "keep-alive")
 		ch, cancel := session.events.subscribe()
 		defer cancel()
-		fmt.Fprintf(w, ": session %s\n\n", session.id)
+		_, _ = fmt.Fprintf(w, ": session %s\n\n", session.id)
 		flusher.Flush()
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
@@ -275,8 +275,8 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 					"method":  event.method,
 					"params":  event.params,
 				})
-				fmt.Fprintf(w, "event: %s\n", event.method)
-				fmt.Fprintf(w, "data: %s\n\n", payload)
+				_, _ = fmt.Fprintf(w, "event: %s\n", event.method)
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", payload)
 				flusher.Flush()
 			}
 		}
