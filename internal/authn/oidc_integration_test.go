@@ -94,12 +94,25 @@ func TestOIDCAuthenticator_JWKSIntegration(t *testing.T) {
 		t.Errorf("mode = %q, want %q", princ.AuthMode, ModeOIDC)
 	}
 
-	// Tampered signature: flip a byte in the trailing segment.
+	// Tampered signature: decode the signature segment, XOR a middle byte
+	// with 0xFF to guarantee a change, and re-encode. The previous
+	// implementation overwrote the last 2 base64url characters with "AA",
+	// which was a silent no-op whenever the signature happened to end in 12
+	// zero bits (probability ~1/4096 per RSA-2048 signature) — an observed
+	// flake under CI reruns that masquerades as a sporadic regression.
 	parts := strings.Split(validToken, ".")
 	if len(parts) != 3 {
 		t.Fatalf("validToken not 3 parts")
 	}
-	tampered := parts[0] + "." + parts[1] + "." + parts[2][:len(parts[2])-2] + "AA"
+	sigBytes, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		t.Fatalf("decode signature: %v", err)
+	}
+	if len(sigBytes) == 0 {
+		t.Fatalf("signature bytes empty")
+	}
+	sigBytes[len(sigBytes)/2] ^= 0xFF
+	tampered := parts[0] + "." + parts[1] + "." + base64.RawURLEncoding.EncodeToString(sigBytes)
 	if _, err := authenticate(t, auth, tampered); err == nil {
 		t.Error("expected tampered signature to fail")
 	}
