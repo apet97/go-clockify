@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/jsonmergepatch"
@@ -48,6 +49,80 @@ func userResourceURI(workspaceID, userID string) string {
 		return ""
 	}
 	return fmt.Sprintf("clockify://workspace/%s/user/%s", workspaceID, userID)
+}
+
+// weeklyReportResourceURI builds the canonical resource URI for an
+// aggregated weekly report keyed by the ISO Monday YYYY-MM-DD date.
+// Matches the `clockify://workspace/{workspaceId}/report/weekly/{weekStart}`
+// template in ListResourceTemplates.
+func weeklyReportResourceURI(workspaceID, weekStart string) string {
+	if workspaceID == "" || weekStart == "" {
+		return ""
+	}
+	return fmt.Sprintf("clockify://workspace/%s/report/weekly/%s", workspaceID, weekStart)
+}
+
+// isoWeekStart returns the Monday 00:00 local time that starts the ISO
+// week containing t, localised to loc. Matches the semantics of
+// weekBounds() in reports.go — callers on both paths get the same
+// weekStart string when they format the result as YYYY-MM-DD.
+func isoWeekStart(t time.Time, loc *time.Location) time.Time {
+	if loc == nil {
+		loc = time.UTC
+	}
+	local := t.In(loc)
+	weekday := int(local.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -(weekday - 1))
+}
+
+// weeklyReportURIsForEntry returns the weekly-report URIs that should
+// be invalidated when a time entry at [startRaw, endRaw) is created or
+// mutated. Typically one URI; two when the entry spans two ISO weeks
+// (rare, e.g. a Sunday 23:00 → Monday 01:00 entry). Returns nil when
+// the start cannot be parsed so callers silently skip the emit — a
+// malformed timestamp should not block the primary entry-URI path.
+//
+// endRaw may be empty (running timer); in that case only the start
+// week is invalidated because the entry hasn't crossed a boundary yet.
+func weeklyReportURIsForEntry(workspaceID, startRaw, endRaw string, loc *time.Location) []string {
+	if workspaceID == "" || strings.TrimSpace(startRaw) == "" {
+		return nil
+	}
+	start, err := time.Parse(time.RFC3339, startRaw)
+	if err != nil {
+		return nil
+	}
+	startWeek := isoWeekStart(start, loc).Format("2006-01-02")
+	uris := []string{weeklyReportResourceURI(workspaceID, startWeek)}
+	if strings.TrimSpace(endRaw) == "" {
+		return uris
+	}
+	end, err := time.Parse(time.RFC3339, endRaw)
+	if err != nil {
+		return uris
+	}
+	endWeek := isoWeekStart(end, loc).Format("2006-01-02")
+	if endWeek != startWeek {
+		uris = append(uris, weeklyReportResourceURI(workspaceID, endWeek))
+	}
+	return uris
+}
+
+// emitEntryAndWeekly is a small convenience wrapper used by every
+// entry-mutating handler: emit the concrete entry URI, then fan out
+// to every weekly-report URI invalidated by the mutation.
+func (s *Service) emitEntryAndWeekly(ctx context.Context, wsID, entryID, startRaw, endRaw string) {
+	s.emitResourceUpdate(ctx, entryResourceURI(wsID, entryID))
+	loc := s.DefaultTimezone
+	if loc == nil {
+		loc = time.UTC
+	}
+	for _, uri := range weeklyReportURIsForEntry(wsID, startRaw, endRaw, loc) {
+		s.emitResourceUpdate(ctx, uri)
+	}
 }
 
 const clockifyResourceScheme = "clockify://"

@@ -90,16 +90,24 @@ func TestAddEntryEmitsFirstNotificationAsFormatNone(t *testing.T) {
 		t.Fatalf("AddEntry: %v", err)
 	}
 
+	// W4-04b: AddEntry now emits the concrete entry URI AND the weekly-
+	// report URI for the ISO week containing the entry's start. The
+	// entry on 2026-04-11 (Saturday) falls in the week starting
+	// 2026-04-06 (Monday).
 	calls := emit.snapshot()
-	if len(calls) != 1 {
-		t.Fatalf("expected 1 emit, got %d: %+v", len(calls), calls)
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 emits (entry + weekly-report), got %d: %+v", len(calls), calls)
 	}
-	want := "clockify://workspace/" + wsID + "/entry/" + entryID
-	if calls[0].URI != want {
-		t.Fatalf("URI = %q, want %q", calls[0].URI, want)
+	wantEntry := "clockify://workspace/" + wsID + "/entry/" + entryID
+	wantWeekly := "clockify://workspace/" + wsID + "/report/weekly/2026-04-06"
+	if calls[0].URI != wantEntry {
+		t.Fatalf("first URI = %q, want %q", calls[0].URI, wantEntry)
 	}
 	if calls[0].Delta.Format != "none" {
 		t.Fatalf("first emit should be format=none, got %q", calls[0].Delta.Format)
+	}
+	if calls[1].URI != wantWeekly {
+		t.Fatalf("second URI = %q, want %q", calls[1].URI, wantWeekly)
 	}
 }
 
@@ -173,13 +181,21 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 		t.Fatalf("UpdateEntry: %v", err)
 	}
 
+	// W4-04b: the entry-URI emit now has a sibling weekly-report emit.
+	// Filter to the entry URI for the existing merge-patch assertion.
 	calls := emit.snapshot()
-	if len(calls) != 1 {
-		t.Fatalf("expected 1 emit, got %d", len(calls))
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 emits (entry + weekly-report), got %d: %+v", len(calls), calls)
 	}
-	got := calls[0]
-	if got.URI != uri {
-		t.Fatalf("URI = %q, want %q", got.URI, uri)
+	var got *recordingEmitCall
+	for i := range calls {
+		if calls[i].URI == uri {
+			got = &calls[i]
+			break
+		}
+	}
+	if got == nil {
+		t.Fatalf("entry URI %q not emitted; got %+v", uri, calls)
 	}
 	if got.Delta.Format != "merge" {
 		t.Fatalf("format = %q, want merge", got.Delta.Format)

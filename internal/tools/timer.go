@@ -33,7 +33,7 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 	if projectID != "" {
 		meta["projectId"] = projectID
 	}
-	s.emitResourceUpdate(ctx, entryResourceURI(wsID, out.ID))
+	s.emitEntryAndWeekly(ctx, wsID, out.ID, out.TimeInterval.Start, out.TimeInterval.End)
 	return ok("clockify_start_timer", out, meta), nil
 }
 
@@ -54,7 +54,7 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	if err := s.Client.Patch(ctx, "/workspaces/"+wsID+"/user/"+user.ID+"/time-entries", payload, &out); err != nil {
 		return nil, err
 	}
-	s.emitResourceUpdate(ctx, entryResourceURI(wsID, out.ID))
+	s.emitEntryAndWeekly(ctx, wsID, out.ID, out.TimeInterval.Start, out.TimeInterval.End)
 	return ok("clockify_stop_timer", out, map[string]any{"workspaceId": wsID, "userId": user.ID}), nil
 }
 
