@@ -545,6 +545,9 @@ var (
 	ToolCallDuration *Histogram
 	// RateLimitRejections counts rate limiter rejections by kind.
 	RateLimitRejections *Counter
+	// Cancellations counts tools/call cancellations by reason
+	// (client_requested, timeout, context_cancelled).
+	Cancellations *Counter
 	// HTTPRequestsTotal counts HTTP requests by path, method, and status.
 	// Path is normalized at the call site to a bounded set (/mcp, /health,
 	// /ready, /metrics, /other) to prevent cardinality blowup from probes.
@@ -587,6 +590,11 @@ func init() {
 		"clockify_mcp_rate_limit_rejections_total",
 		"Rate limiter rejections by kind (concurrency, window).",
 		"kind",
+	)
+	Cancellations = Default.NewCounter(
+		"clockify_mcp_cancellations_total",
+		"tools/call cancellations by reason (client_requested, timeout, context_cancelled).",
+		"reason",
 	)
 	HTTPRequestsTotal = Default.NewCounter(
 		"clockify_mcp_http_requests_total",

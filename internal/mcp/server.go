@@ -167,6 +167,13 @@ type Server struct {
 	readyMu     sync.Mutex
 	readyCached bool
 	readyAt     time.Time
+
+	// inflight tracks cancellable contexts for in-flight tools/call
+	// requests, keyed by JSON-RPC request ID. notifications/cancelled
+	// looks up the ID and aborts the in-flight tool handler. Nil IDs
+	// (notifications) are not tracked.
+	inflightMu sync.Mutex
+	inflight   map[any]context.CancelFunc
 }
 
 // SetNotifier installs a notification sink. Transports call this during
@@ -201,7 +208,59 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 		Enforcement: enforcement,
 		Activator:   activator,
 		tools:       toolMap,
+		inflight:    make(map[any]context.CancelFunc),
 	}
+}
+
+// registerInflight stores a cancel func keyed by JSON-RPC request ID so
+// notifications/cancelled can abort the in-flight tool handler. Nil IDs
+// (notifications) and zero-value uninitialised maps are no-ops.
+func (s *Server) registerInflight(id any, cancel context.CancelFunc) {
+	if id == nil {
+		return
+	}
+	s.inflightMu.Lock()
+	if s.inflight == nil {
+		s.inflight = make(map[any]context.CancelFunc)
+	}
+	s.inflight[id] = cancel
+	s.inflightMu.Unlock()
+}
+
+// unregisterInflight removes a request from the inflight map. Idempotent.
+func (s *Server) unregisterInflight(id any) {
+	if id == nil {
+		return
+	}
+	s.inflightMu.Lock()
+	delete(s.inflight, id)
+	s.inflightMu.Unlock()
+}
+
+// cancelInflight cancels and removes an inflight request by ID. Returns
+// true when a matching request was found.
+func (s *Server) cancelInflight(id any) bool {
+	if id == nil {
+		return false
+	}
+	s.inflightMu.Lock()
+	cancel, ok := s.inflight[id]
+	if ok {
+		delete(s.inflight, id)
+	}
+	s.inflightMu.Unlock()
+	if ok {
+		cancel()
+	}
+	return ok
+}
+
+// InflightCount returns the number of tracked in-flight tools/call
+// requests. Used by tests to verify the map is cleaned up.
+func (s *Server) InflightCount() int {
+	s.inflightMu.Lock()
+	defer s.inflightMu.Unlock()
+	return len(s.inflight)
 }
 
 // Run processes JSON-RPC requests from r and writes responses to w.
@@ -353,6 +412,28 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	}
 }
 
+// handleCancelled processes a notifications/cancelled message by looking
+// up the request ID in the inflight map and aborting the corresponding
+// tool handler. Malformed payloads and unknown IDs are silently ignored
+// per the MCP spec — cancellation is best-effort.
+func (s *Server) handleCancelled(raw any) {
+	var p struct {
+		RequestID any    `json:"requestId"`
+		Reason    string `json:"reason,omitempty"`
+	}
+	if err := decodeParams(raw, &p); err != nil || p.RequestID == nil {
+		return
+	}
+	if !s.cancelInflight(p.RequestID) {
+		return
+	}
+	metrics.Cancellations.Inc("client_requested")
+	slog.Info("cancellation",
+		"request_id", p.RequestID,
+		"reason", p.Reason,
+	)
+}
+
 // toolNameFromRequest extracts the tool name from a tools/call Request for
 // log correlation. Falls back to "unknown" when params are missing or
 // malformed — this helper runs in the panic-recovery path so it must not
@@ -387,6 +468,9 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		resp.Result = s.handleInitialize(req.Params)
 	case "notifications/initialized":
 		return Response{}
+	case "notifications/cancelled":
+		s.handleCancelled(req.Params)
+		return Response{}
 	case "ping":
 		resp.Result = map[string]any{}
 	case "tools/list":
@@ -403,7 +487,17 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params"}
 			return resp
 		}
-		result, err := s.callTool(ctx, params)
+
+		// Register a cancellable child context so notifications/cancelled
+		// can abort an in-flight tool handler. The cancel func is removed
+		// from the inflight map before this case returns regardless of
+		// outcome.
+		callCtx, cancel := context.WithCancel(ctx)
+		s.registerInflight(req.ID, cancel)
+		defer s.unregisterInflight(req.ID)
+		defer cancel()
+
+		result, err := s.callTool(callCtx, params)
 		if err != nil {
 			// MCP spec: tool errors return content with isError: true
 			resp.Result = map[string]any{
@@ -597,9 +691,14 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	duration := time.Since(start)
 
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+		switch {
+		case errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded):
 			outcome = "timeout"
-		} else {
+			metrics.Cancellations.Inc("timeout")
+		case errors.Is(err, context.Canceled) || errors.Is(callCtx.Err(), context.Canceled):
+			outcome = "cancelled"
+			metrics.Cancellations.Inc("context_cancelled")
+		default:
 			outcome = "tool_error"
 		}
 		s.recordAudit(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
