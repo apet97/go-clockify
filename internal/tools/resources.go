@@ -7,8 +7,18 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/jsonmergepatch"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
+
+// diffResourceState computes the wire-format delta between two cached
+// serialisations of a subscribed resource. Thin wrapper around
+// jsonmergepatch.DiffOrFull that lives in the tools layer so
+// emitResourceUpdate doesn't reach into the sub-package directly for
+// every mutation path (easier to swap the differ later).
+func diffResourceState(prev, curr []byte) ([]byte, string, error) {
+	return jsonmergepatch.DiffOrFull(prev, curr)
+}
 
 const clockifyResourceScheme = "clockify://"
 
@@ -170,4 +180,92 @@ func encodeResource(uri string, payload any) ([]mcp.ResourceContents, error) {
 		MimeType: "application/json",
 		Text:     string(body),
 	}}, nil
+}
+
+// emitResourceUpdate re-reads the resource at uri through ResourceProvider,
+// diffs it against the last-cached serialisation (resourceCache), and
+// publishes a notifications/resources/updated with the smallest RFC 7396
+// merge patch, falling back to format=full when the target contains an
+// explicit null or format=none when there is no prior cached state.
+//
+// Silent no-op when:
+//   - s.EmitResourceUpdate hook is not wired (tests without a Server)
+//   - the resource has no active subscription (the hook delegates to
+//     Server.NotifyResourceUpdated which checks the subscription set)
+//
+// Failure modes (read error, marshal error, diff error) fall through to
+// emitting format=none so the subscribed client knows to re-fetch.
+// Deletes are signalled via emitResourceDeleted rather than this helper.
+func (s *Service) emitResourceUpdate(ctx context.Context, uri string) {
+	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
+		return
+	}
+	contents, err := s.ReadResource(ctx, uri)
+	if err != nil {
+		s.resourceCache.drop(uri)
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	newState := flattenResourceContents(contents)
+	if newState == nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	prevState, hadPrev := s.resourceCache.get(uri)
+	s.resourceCache.put(uri, newState)
+	if !hadPrev {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	patchBytes, format, err := diffResourceState(prevState, newState)
+	if err != nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	var patchValue any
+	if err := json.Unmarshal(patchBytes, &patchValue); err != nil {
+		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
+		return
+	}
+	s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: format, Patch: patchValue})
+}
+
+// emitResourceDeleted publishes a notifications/resources/updated with
+// format=deleted and drops the cached state so the next subscribe starts
+// from scratch. Use for confirmed deletes where re-reading would return
+// a 404 and make emitResourceUpdate emit format=none instead.
+func (s *Service) emitResourceDeleted(uri string) {
+	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
+		return
+	}
+	s.resourceCache.drop(uri)
+	s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "deleted"})
+}
+
+// flattenResourceContents joins the Text portions of a ResourceContents
+// slice into a single byte stream for diffing. Every Clockify resource
+// template today produces a single-element slice with JSON in Text, so
+// this is effectively a type-narrowing helper; the loop is future-proofing
+// for multi-part contents.
+func flattenResourceContents(contents []mcp.ResourceContents) []byte {
+	if len(contents) == 0 {
+		return nil
+	}
+	if len(contents) == 1 {
+		return []byte(contents[0].Text)
+	}
+	// Multi-part: concatenate inside a wrapping JSON array so the diff
+	// still operates on structured data rather than raw string concat.
+	parts := make([]any, 0, len(contents))
+	for _, c := range contents {
+		var decoded any
+		if json.Unmarshal([]byte(c.Text), &decoded) == nil {
+			parts = append(parts, decoded)
+		}
+	}
+	out, err := json.Marshal(parts)
+	if err != nil {
+		return nil
+	}
+	return out
 }

@@ -24,12 +24,21 @@ type Service struct {
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier
+	// EmitResourceUpdate publishes notifications/resources/updated for a URI
+	// with an optional delta envelope. Wired from runtime.go to
+	// Server.NotifyResourceUpdated so the subscription gate lives in the
+	// protocol core rather than in every mutation handler. nil = drop silently
+	// (tests without a Server wired).
+	EmitResourceUpdate func(uri string, delta mcp.ResourceUpdateDelta)
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
 	mu               sync.Mutex
 	cachedUser       *clockify.User
 	cachedWSID       string
+	// resourceCache stores the last-emitted state per subscribed URI so the
+	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
+	resourceCache *resourceStateCache
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was
@@ -158,7 +167,11 @@ type findAndUpdateArgs struct {
 }
 
 func New(client *clockify.Client, workspaceID string) *Service {
-	return &Service{Client: client, WorkspaceID: workspaceID}
+	return &Service{
+		Client:        client,
+		WorkspaceID:   workspaceID,
+		resourceCache: newResourceStateCache(1024),
+	}
 }
 
 // baseAnnotations returns the common annotation map every tool carries.

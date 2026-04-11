@@ -99,6 +99,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	server.Auditor = deps.auditor
 	server.ResourceProvider = service
 	service.Notifier = server
+	service.EmitResourceUpdate = server.NotifyResourceUpdated
 
 	service.ActivateGroup = func(_ context.Context, group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)
