@@ -19,10 +19,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 Same values surface as the raw manifests in `deploy/k8s/`. **Size:** M.
 
-### W2-06 — Kustomize overlays
-
-Split `deploy/k8s/` into `base/` + `overlays/{dev,staging,prod}`. **Size:** M.
-
 ## Tier 4 — verification depth
 
 ### W2-08 — Chaos harness
@@ -50,6 +46,46 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-06 — Kustomize base + overlays
+
+**Landed:** 2026-04-11 (Track C of the v0.7.0 development session). The
+nine flat manifests under `deploy/k8s/` have been reorganised into a
+Kustomize base + three environment overlays. The base is `kubectl apply
+-k deploy/k8s/base`-compatible and reproduces the pre-W2-06 flat stream.
+
+**Critical files shipped:**
+- `deploy/k8s/base/*.yaml` (9 files, moved via `git mv` from the flat
+  root) — configmap, deployment, networkpolicy, pdb, prometheus-rule,
+  secret.example, service, serviceaccount, servicemonitor. No content
+  changes.
+- `deploy/k8s/base/kustomization.yaml` (new) — lists all nine resources
+  under `resources:` and sets `namespace: clockify-mcp` as a belt-and-
+  braces transformer (the stock manifests already declare the namespace).
+- `deploy/k8s/overlays/dev/kustomization.yaml` — `namePrefix: dev-`, one
+  replica, smaller resource requests/limits, `MCP_LOG_LEVEL=debug`,
+  `CLOCKIFY_POLICY=read_only` so dev clusters cannot mutate Clockify
+  by accident.
+- `deploy/k8s/overlays/staging/kustomization.yaml` — `namePrefix:
+  staging-`, 3 replicas, `CLOCKIFY_POLICY=safe_core`, modern `labels:`
+  transformer (not deprecated `commonLabels`) adding
+  `app.kubernetes.io/environment=staging`.
+- `deploy/k8s/overlays/prod/kustomization.yaml` — 4 replicas, pinned
+  image tag `ghcr.io/apet97/go-clockify:0.7.0` via `images:`,
+  `MCP_STRICT_HOST_CHECK=1` appended to the deployment env,
+  `CLOCKIFY_POLICY=standard`, `labels:` transformer tagging
+  `environment=prod`.
+- `deploy/k8s/README.md` — rewritten to document the base/overlays
+  split, overlay summary table, and updated quickstart showing
+  `kubectl apply -k deploy/k8s/overlays/prod` as the primary path.
+
+**Acceptance (local).**
+- `kubectl kustomize deploy/k8s/base | kubeconform -strict` → 9
+  resources, 7 valid, 2 skipped (CRD-backed ServiceMonitor and
+  PrometheusRule).
+- Same result for each of the three overlays.
+- Prod overlay rendering shows: `replicas: 4`, `CLOCKIFY_POLICY: standard`,
+  `MCP_STRICT_HOST_CHECK` env var, `image: ghcr.io/apet97/go-clockify:0.7.0`.
 
 ### W2-07 — Release pipeline migration to goreleaser (closes W2-13)
 

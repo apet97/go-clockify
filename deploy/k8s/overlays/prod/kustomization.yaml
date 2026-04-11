@@ -1,0 +1,48 @@
+# deploy/k8s/overlays/prod — production overlay.
+#
+# Hardens the base for production:
+#   - 4 replicas so PDB minAvailable=1 leaves plenty of headroom.
+#   - Full resource requests/limits (match the base deployment).
+#   - CLOCKIFY_POLICY=standard (explicit; base default is the same).
+#   - MCP_STRICT_HOST_CHECK=1 so the server refuses requests whose
+#     Host header does not match the configured allowlist.
+#   - commonLabels: environment=prod so observability joins cleanly.
+#
+# Operators should replace the image tag below with a pinned release
+# digest before applying. The W2-12 runbook documents digest pinning.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+labels:
+  - pairs:
+      app.kubernetes.io/environment: prod
+    includeSelectors: false
+
+images:
+  - name: ghcr.io/apet97/go-clockify
+    newTag: "0.7.0"
+
+patches:
+  - target:
+      kind: Deployment
+      name: clockify-mcp
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 4
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: MCP_STRICT_HOST_CHECK
+          value: "1"
+  - target:
+      kind: ConfigMap
+      name: clockify-mcp-config
+    patch: |-
+      - op: replace
+        path: /data/CLOCKIFY_POLICY
+        value: "standard"

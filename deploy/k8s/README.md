@@ -1,11 +1,33 @@
 # Kubernetes reference manifests
 
 Stock YAML manifests for running `clockify-mcp` in HTTP mode on any vanilla
-Kubernetes cluster. No Helm, no Kustomize — copy, tweak, apply.
+Kubernetes cluster. As of W2-06 (v0.7.0) the manifests are organised as a
+Kustomize base + three environment overlays; operators who prefer raw
+`kubectl apply` can still `kubectl apply -k deploy/k8s/base` to get the
+pre-W2-06 flat stream back.
 
-## What's here
+## Layout
 
-| File | Role |
+```
+deploy/k8s/
+├── base/                # shared manifests
+│   ├── kustomization.yaml
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   ├── networkpolicy.yaml
+│   ├── pdb.yaml
+│   ├── prometheus-rule.yaml
+│   ├── secret.example.yaml
+│   ├── service.yaml
+│   ├── serviceaccount.yaml
+│   └── servicemonitor.yaml
+└── overlays/
+    ├── dev/             # smaller requests, debug logs, read_only policy
+    ├── staging/         # 3 replicas, safe_core policy, environment label
+    └── prod/            # 4 replicas, pinned image tag, strict host check
+```
+
+| Base manifest | Role |
 |---|---|
 | `deployment.yaml` | Deployment with hardened pod security, resource limits, and three probes (startup, liveness, readiness). |
 | `service.yaml` | ClusterIP service exposing port 8080 (`http`) for in-cluster clients and ingress controllers. |
@@ -20,6 +42,14 @@ Kubernetes cluster. No Helm, no Kustomize — copy, tweak, apply.
 The server runs in HTTP transport mode in-cluster. Stdio is reserved for
 local MCP clients (Claude Desktop, Cursor).
 
+## Overlay summary
+
+| Overlay | Replicas | Policy | Log level | Notes |
+|---|---|---|---|---|
+| `dev` | 1 | `read_only` | `debug` | Smaller CPU/memory requests so pods schedule on laptops. Safe default for iteration — the read-only policy makes it impossible to accidentally mutate Clockify state via a misconfigured client. |
+| `staging` | 3 | `safe_core` | `info` | Production-ish with canary-friendly replica count. `safe_core` policy blocks the most destructive tool classes while leaving the core read + write surface available. |
+| `prod` | 4 | `standard` | `info` | Pinned image tag (`0.7.0`), `MCP_STRICT_HOST_CHECK=1`, full resource requests. Replace `newTag` in `overlays/prod/kustomization.yaml` with a pinned digest before applying. |
+
 ## Quickstart
 
 ```bash
@@ -30,9 +60,11 @@ kubectl -n clockify-mcp create secret generic clockify-mcp-secrets \
   --from-literal=CLOCKIFY_API_KEY="$CLOCKIFY_API_KEY" \
   --from-literal=MCP_BEARER_TOKEN="$(openssl rand -base64 24)"
 
-kubectl apply -f deploy/k8s/configmap.yaml
-kubectl apply -f deploy/k8s/service.yaml
-kubectl apply -f deploy/k8s/deployment.yaml
+# Apply an overlay (choose dev/staging/prod based on environment):
+kubectl apply -k deploy/k8s/overlays/prod
+
+# Or apply the base directly if you prefer the pre-W2-06 flat stream:
+kubectl apply -k deploy/k8s/base
 
 kubectl -n clockify-mcp rollout status deployment/clockify-mcp
 ```
