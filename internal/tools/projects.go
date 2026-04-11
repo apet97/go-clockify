@@ -86,6 +86,7 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
+	s.emitResourceUpdate(ctx, projectResourceURI(wsID, project.ID))
 	meta := map[string]any{"workspaceId": wsID}
 	return ok("clockify_create_project", project, meta), nil
 }
