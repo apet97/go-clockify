@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Deploy render CI gate** (`.github/workflows/ci.yml`). New `deploy-render` job runs on every push: `kubectl kustomize deploy/k8s/base | kubeconform`, the same against each of the three overlays (`dev`, `staging`, `prod`), `helm lint deploy/helm/clockify-mcp`, and `helm template | kubeconform` twice (defaults + `metrics.serviceMonitor.enabled=true metrics.prometheusRule.enabled=true`). Catches any future regression in the deploy manifests before it lands on main.
 - **W2-13 — npm distribution restored under `@apet97` scope** (landed as part of W2-07 below). Six packages ship on every release: `@apet97/clockify-mcp-go` (dispatcher) plus `@apet97/clockify-mcp-go-{darwin-arm64,darwin-x64,linux-x64,linux-arm64,windows-x64}`. Users install the dispatcher via `npm install -g @apet97/clockify-mcp-go`; `optionalDependencies` auto-installs the right platform sibling; the `bin/clockify-mcp.js` shim resolves and exec's the native Go binary. Requires `NPM_TOKEN` repo secret scoped to `@apet97` with automation-token rights before the v0.7.0 tag is pushed.
 
 ### Changed
