@@ -38,6 +38,18 @@ func projectResourceURI(workspaceID, projectID string) string {
 	return fmt.Sprintf("clockify://workspace/%s/project/%s", workspaceID, projectID)
 }
 
+// userResourceURI builds the canonical resource URI for a user in a
+// workspace. Matches the `clockify://workspace/{workspaceId}/user/{userId}`
+// template advertised in ListResourceTemplates. Returns empty when either
+// piece is missing so tier 2 mutation handlers can safely skip the emit
+// step instead of publishing a malformed URI.
+func userResourceURI(workspaceID, userID string) string {
+	if workspaceID == "" || userID == "" {
+		return ""
+	}
+	return fmt.Sprintf("clockify://workspace/%s/user/%s", workspaceID, userID)
+}
+
 const clockifyResourceScheme = "clockify://"
 
 // ListResources returns a small, immediately-navigable set of concrete
