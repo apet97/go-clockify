@@ -13,64 +13,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 
 ## Tier 2 — observability & release-infra depth
 
-### W2-13 — npm distribution greenfield rebuild
-
-**Context.** The `publish-npm` job in `.github/workflows/release.yml` was
-deleted during the v0.6.1 re-cut because three independent problems made
-it impossible to run as written:
-
-1. **`NPM_TOKEN` was never set.** The `NODE_AUTH_TOKEN` env on `npm publish`
-   resolved to empty, causing `ENEEDAUTH` on v0.6.0. Root cause: the secret
-   was missing from the repo.
-
-2. **The `@anycli` scope is not owned by this project.** The platform-package
-   template at `npm/package.json.tmpl` hard-codes
-   `@anycli/clockify-mcp-go-PLATFORM`, but `@anycli` is the oclif/anycli org
-   on npm — not a scope anyone on this project controls. `npm view
-   @anycli/clockify-mcp-go` returns 404 because the package was never
-   published. Even with a valid token, publishing to a foreign scope fails.
-
-3. **The `Publish base package` step references a nonexistent directory.**
-   Line 174+ did `cd npm/clockify-mcp-go` and then `npm publish`, but the
-   repo only ships `npm/package.json.tmpl`; there is no
-   `npm/clockify-mcp-go/package.json`. The platform-package step would
-   have to succeed for the base-package step to run at all, and when it
-   ran it would fail on the missing `cd` target.
-
-In aggregate, npm distribution has never worked for this repo since the
-first line of the workflow was written. v0.6.0 was the first attempted
-publish and it failed at step 1. The hand-rolled npm wiring was deleted
-in the v0.6.1 cut rather than papered over so the broken state is not
-carried forward.
-
-**Files to recreate when this lands.**
-- `.github/workflows/release.yml` — author a fresh `publish-npm` job from
-  scratch; see the deletion comment for the checklist of what must be
-  present. The job must be a `needs:` dependency of `create-release` so
-  the GH Release waits for a successful npm push before going live (the
-  prior workflow let them race, which allowed partial releases).
-- `npm/package.json.tmpl` — update the scope from `@anycli` to whatever
-  scope the project actually controls (e.g. `@apet97/*` if this stays
-  personal, or a dedicated scope such as `@go-clockify/*`).
-- `npm/clockify-mcp-go/package.json` (new) — base package that depends on
-  the five platform packages via `optionalDependencies` keyed on the
-  same version. The existing `VERSION` placeholder pattern in the
-  template can be lifted for this base package too.
-- A `scripts/smoke-npm-dry-run.sh` or `.github/workflows/release-dry-run.yml`
-  (opt-in) that runs `npm publish --dry-run` against a tag to verify the
-  full matrix before tagging a real release. v0.6.0's partial failure
-  would have been caught by this.
-
-**Prerequisite (user action).** Decide the scope name and get an
-`npm` account + automation token with publish rights to it. Set as the
-`NPM_TOKEN` repo secret before the job is wired up.
-
-**Alternative path.** W2-07 (goreleaser migration) subsumes W2-13: goreleaser
-has a first-class npm publisher that handles scope, matrix, and token
-wiring end-to-end. If W2-07 lands first, close W2-13 as duplicate.
-
-**Size:** M (greenfield job + per-package scaffolding + dry-run harness).
-
 ## Tier 3 — deployment polish
 
 ### W2-05 — Helm chart under `deploy/helm/`
@@ -80,11 +22,6 @@ Same values surface as the raw manifests in `deploy/k8s/`. **Size:** M.
 ### W2-06 — Kustomize overlays
 
 Split `deploy/k8s/` into `base/` + `overlays/{dev,staging,prod}`. **Size:** M.
-
-### W2-07 — Goreleaser / release-please migration
-
-Replace the hand-rolled `release.yml`. Would also close W2-12 cleanly because
-release-please owns its own npm publish wiring. **Size:** M.
 
 ## Tier 4 — verification depth
 
@@ -113,6 +50,78 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-07 — Release pipeline migration to goreleaser (closes W2-13)
+
+**Landed:** 2026-04-11 (Track B of the v0.7.0 development session). The
+hand-rolled `build-binaries` + `create-release` matrix in
+`.github/workflows/release.yml` is replaced by a single goreleaser-driven
+job configured through a new `.goreleaser.yaml` at the repo root. Same
+binary filenames, same SBOM/signature/checksum filenames, same ldflags,
+same build matrix. Since goreleaser free does not ship an npm publisher,
+a companion `scripts/publish-npm.sh` consumes goreleaser's `dist/` output
+and publishes six packages under `@apet97/` — closing W2-13 in the same
+commit.
+
+**Critical files shipped:**
+- `.goreleaser.yaml` (new) — builds 5 platforms
+  (darwin/arm64, darwin/amd64, linux/amd64, linux/arm64, windows/amd64)
+  with the pre-W2-07 ldflags (`-s -w -X main.version={{.Tag}} -X
+  main.commit -X main.buildDate`) and `-trimpath`. Archive format is
+  `binary` (no tarball wrapper); naming template produces
+  `clockify-mcp-{os}-{arch}(.exe)` matching `docs/verification.md`
+  expectations. `checksum.name_template: SHA256SUMS.txt`,
+  `sboms` runs syft per archive into `{archive}.spdx.json`, `signs`
+  runs `cosign sign-blob --bundle={artifact}.sigstore.json` keyless
+  OIDC. `release:` uploads to the matching GH Release tag.
+- `.github/workflows/release.yml` — rewritten to a single `release` job
+  on `ubuntu-22.04` with `contents: write`, `id-token: write`,
+  `attestations: write`, `packages: write`. Steps: install go/node/cosign/syft
+  → `goreleaser release --clean` → stage binaries into `staging/` with
+  release asset names → `actions/attest-build-provenance` (so SLSA
+  subject names match what operators download) → invoke
+  `scripts/publish-npm.sh` if `NPM_TOKEN` is set. Graceful no-op when
+  `NPM_TOKEN` is absent so releases still ship without npm.
+- `scripts/publish-npm.sh` (new, executable) — bash driver that
+  iterates a 5-row platform table, stages each platform package from
+  `dist/clockify-mcp_{os}_{arch}_*/clockify-mcp[.exe]`, substitutes
+  placeholders in `npm/package.json.tmpl`, runs `npm publish --access
+  public`, then copies the base package from `npm/clockify-mcp-go/`,
+  substitutes `VERSION`, and publishes it last. Validates locally via
+  `NPM_CONFIG_DRY_RUN=true`.
+- `npm/package.json.tmpl` — scope changed from `@anycli` to `@apet97`,
+  `repository.url` normalised to `git+https://...` so npm doesn't
+  warn on publish.
+- `npm/clockify-mcp-go/package.json` (new) — the base dispatcher
+  package, depends on the 5 platform siblings via `optionalDependencies`
+  so npm only installs the one matching the user's os/cpu. `bin` maps
+  `clockify-mcp` to `bin/clockify-mcp.js`.
+- `npm/clockify-mcp-go/bin/clockify-mcp.js` (new, executable) — Node
+  dispatcher that resolves the correct platform package at runtime via
+  `require.resolve` and exec's the Go binary with `spawnSync`. Fails
+  loudly with actionable messages when no prebuilt matches the host
+  or when optionalDependencies failed to install.
+- `docs/adr/010-goreleaser-migration.md` (new) — ADR documenting the
+  invariants preserved, the decisions deliberately left out of scope
+  (docker image build, Homebrew tap, release-please), and why SLSA
+  attestation needs the staging copy.
+
+**Acceptance (local snapshot).**
+- `goreleaser check` passes.
+- `goreleaser release --snapshot --skip=publish --skip=sign --skip=sbom
+  --clean` produces 5 binaries in ~20 seconds. Archive names in
+  `dist/artifacts.json` match `clockify-mcp-{darwin-arm64,darwin-x64,
+  linux-x64,linux-arm64,windows-x64.exe}`. `dist/SHA256SUMS.txt`
+  references those exact filenames.
+- `NPM_CONFIG_DRY_RUN=true ./scripts/publish-npm.sh v0.7.0` publishes
+  6 packages via npm dry-run against the local dist/ with no errors.
+- Released binary `--version` prints `v0.7.0` (tag preserved via
+  `{{.Tag}}` in ldflags).
+
+**Verification gate (post-tag).** `gh release view v0.7.0 --json assets`
+must list every pre-W2-07 asset name, `gh attestation verify
+clockify-mcp-linux-x64 --repo apet97/go-clockify` must succeed, and
+`npm view @apet97/clockify-mcp-go versions` must include `0.7.0`.
 
 ### W2-04 — Tracing as a Go sub-module
 

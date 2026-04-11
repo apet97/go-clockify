@@ -5,198 +5,69 @@ on:
     tags: ["v*.*.*"]
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
-  build-binaries:
-    name: Build ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: darwin-arm64
-            os: macos-14
-            goos: darwin
-            goarch: arm64
-            platform: darwin-arm64
-          - target: darwin-amd64
-            os: macos-14
-            goos: darwin
-            goarch: amd64
-            platform: darwin-x64
-          - target: linux-amd64
-            os: ubuntu-22.04
-            goos: linux
-            goarch: amd64
-            platform: linux-x64
-          - target: linux-arm64
-            os: ubuntu-22.04
-            goos: linux
-            goarch: arm64
-            platform: linux-arm64
-          - target: windows-amd64
-            os: ubuntu-22.04
-            goos: windows
-            goarch: amd64
-            platform: windows-x64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.9"
-      - name: Compute binary filename
-        id: binary_meta
-        run: |
-          ext=""
-          if [ "${GOOS}" = "windows" ]; then ext=".exe"; fi
-          echo "filename=clockify-mcp-${PLATFORM}${ext}" >> "$GITHUB_OUTPUT"
-        env:
-          GOOS: ${{ matrix.goos }}
-          PLATFORM: ${{ matrix.platform }}
-      - name: Build binary
-        run: |
-          VERSION="${GITHUB_REF_NAME}"
-          COMMIT="${GITHUB_SHA}"
-          BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
-          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
-            -trimpath \
-            -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" \
-            -o "${BINARY_FILENAME}" \
-            ./cmd/clockify-mcp
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          BINARY_FILENAME: ${{ steps.binary_meta.outputs.filename }}
-      - name: Smoke-test (native builds only)
-        if: ${{ matrix.goos == 'darwin' || (matrix.goos == 'linux' && matrix.goarch == 'amd64') }}
-        run: |
-          BIN="${BINARY_FILENAME}"
-          VERSION="${GITHUB_REF_NAME}"
-          COMMIT="${GITHUB_SHA}"
-          BUILD_DATE="$(git show -s --format=%cI "$GITHUB_SHA")"
-          chmod +x "$BIN"
-          MCP_TRANSPORT=http \
-          MCP_HTTP_BIND=127.0.0.1:8091 \
-          MCP_BEARER_TOKEN=smoke-test-token-1234567890 \
-          CLOCKIFY_API_KEY=smoke-test-dummy \
-          ./"$BIN" &
-          PID=$!
-          sleep 2
-          # /health just reports server liveness — expect 200.
-          curl -sf http://127.0.0.1:8091/health || { kill "$PID" 2>/dev/null; exit 1; }
-          # /ready calls the Clockify API with the dummy key and will return
-          # 503; the smoke test only verifies the endpoint is reachable.
-          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8091/ready)
-          case "$code" in
-            200|503) ;;
-            *) echo "unexpected /ready status: $code"; kill "$PID" 2>/dev/null; exit 1 ;;
-          esac
-          metrics="$(curl -sf http://127.0.0.1:8091/metrics)"
-          expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
-          printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {
-            echo "missing expected build_info labels"
-            echo "$metrics"
-            kill "$PID" 2>/dev/null
-            exit 1
-          }
-          kill "$PID" 2>/dev/null || true
-        env:
-          BINARY_FILENAME: ${{ steps.binary_meta.outputs.filename }}
-      - name: Generate SBOM (SPDX)
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
-        with:
-          file: ${{ steps.binary_meta.outputs.filename }}
-          output-file: clockify-mcp-${{ matrix.platform }}.spdx.json
-          format: spdx-json
-          upload-artifact: false
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: binary-${{ matrix.platform }}
-          path: ${{ steps.binary_meta.outputs.filename }}
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: sbom-${{ matrix.platform }}
-          path: clockify-mcp-${{ matrix.platform }}.spdx.json
-
-  # publish-npm was removed from the v0.6.1 release cycle (tracked as W2-13).
-  #
-  # Why: the v0.6.0 cut exposed that (a) NPM_TOKEN was never set, (b) the
-  # target scope `@anycli/*` is not owned by this project, and (c) the
-  # `Publish base package` step referenced `npm/clockify-mcp-go/` which
-  # does not exist on disk. The npm distribution surface has never worked
-  # for this repo, so rather than carry broken wiring across releases it
-  # was deleted and filed as a greenfield backlog item. When W2-13 lands
-  # (or when the W2-07 goreleaser migration subsumes it), a fresh job
-  # should be authored from scratch with:
-  #   - a scope that this project actually owns,
-  #   - a concrete `npm/clockify-mcp-go/package.json` checked into git,
-  #   - explicit NPM_TOKEN wiring verified end-to-end in a dry-run tag,
-  #   - the `create-release` job updated to take it as a `needs:` so the
-  #     GH Release waits for npm publication before going live.
-  # The existing `npm/package.json.tmpl` is kept as a starting point for
-  # the platform-package layout when the job is rebuilt.
-
-  create-release:
-    name: Create GitHub Release
-    needs: build-binaries
+  release:
+    name: GoReleaser
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     permissions:
       contents: write
       id-token: write
       attestations: write
+      packages: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          path: artifacts/
+          fetch-depth: 0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
       - name: Install cosign
         uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
-      - name: Prepare release assets
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage release binaries for attestation
         run: |
-          mkdir -p release-assets
-          for dir in artifacts/binary-*; do
-            platform=$(basename "$dir" | sed 's/binary-//')
-            for bin in "$dir"/clockify-mcp-*; do
-              [ -f "$bin" ] || continue
-              dest="release-assets/$(basename "$bin")"
-              cp "$bin" "$dest"
-              chmod +x "$dest" 2>/dev/null || true
-            done
-          done
-          for dir in artifacts/sbom-*; do
-            [ -d "$dir" ] || continue
-            cp "$dir"/*.spdx.json release-assets/ 2>/dev/null || true
-          done
-          cd release-assets
-          sha256sum * > SHA256SUMS.txt
-      - name: Sign release binaries with cosign (keyless)
-        run: |
-          cd release-assets
-          for file in clockify-mcp-*; do
-            case "$file" in
-              *.sig|*.bundle|*.sigstore.json|*.spdx.json|SHA256SUMS.txt) continue ;;
-            esac
-            echo "Signing $file ..."
-            cosign sign-blob --yes \
-              --bundle "${file}.sigstore.json" \
-              "$file"
-          done
-          sha256sum * > SHA256SUMS.txt
-      - name: Generate build provenance attestation
+          set -euo pipefail
+          mkdir -p staging
+          cp dist/clockify-mcp_darwin_arm64_v8.0/clockify-mcp staging/clockify-mcp-darwin-arm64
+          cp dist/clockify-mcp_darwin_amd64_v1/clockify-mcp    staging/clockify-mcp-darwin-x64
+          cp dist/clockify-mcp_linux_amd64_v1/clockify-mcp     staging/clockify-mcp-linux-x64
+          cp dist/clockify-mcp_linux_arm64_v8.0/clockify-mcp   staging/clockify-mcp-linux-arm64
+          cp dist/clockify-mcp_windows_amd64_v1/clockify-mcp.exe staging/clockify-mcp-windows-x64.exe
+      - name: Generate SLSA build provenance attestation
         uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v1
         with:
           subject-path: |
-            release-assets/clockify-mcp-darwin-arm64
-            release-assets/clockify-mcp-darwin-x64
-            release-assets/clockify-mcp-linux-x64
-            release-assets/clockify-mcp-linux-arm64
-            release-assets/clockify-mcp-windows-x64.exe
-      - name: Create Release
-        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5 # v2.4.0
-        with:
-          generate_release_notes: true
-          files: release-assets/*
+            staging/clockify-mcp-darwin-arm64
+            staging/clockify-mcp-darwin-x64
+            staging/clockify-mcp-linux-x64
+            staging/clockify-mcp-linux-arm64
+            staging/clockify-mcp-windows-x64.exe
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN secret is not set — skipping npm publish."
+            echo "To enable npm distribution: set NPM_TOKEN in repo secrets"
+            echo "with an automation token scoped to @apet97 (see W2-13 notes)."
+            exit 0
+          fi
+          ./scripts/publish-npm.sh "$RELEASE_VERSION"
