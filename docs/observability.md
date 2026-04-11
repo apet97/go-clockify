@@ -26,11 +26,12 @@ a dedicated listener.
 
 | Name | Type | Labels | Description |
 |---|---|---|---|
-| `clockify_mcp_tool_calls_total` | counter | `tool`, `outcome` | Dispatches of `tools/call` by tool name and outcome. |
+| `clockify_mcp_tool_calls_total` | counter | `tool`, `outcome` | Dispatches of `tools/call` by tool name and outcome. Outcome is one of `success`, `tool_error`, `rate_limited`, `policy_denied`, `timeout`, `cancelled`, `dry_run`. |
 | `clockify_mcp_tool_call_duration_seconds` | histogram | `tool` | Dispatch duration in seconds. Buckets tuned to the 3s/10s SLO: `{0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 45}`. |
 | `clockify_mcp_http_requests_total` | counter | `path`, `method`, `status` | HTTP requests hitting the transport. `path` is normalized to `{/mcp, /health, /ready, /metrics, /other}`. |
 | `clockify_mcp_http_request_duration_seconds` | histogram | `path`, `method`, `status` | HTTP request duration. Buckets tuned for fast JSON-RPC: `{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}`. |
 | `clockify_mcp_rate_limit_rejections_total` | counter | `kind` | Rate limiter rejections. Kind is `concurrency` or `window`. |
+| `clockify_mcp_cancellations_total` | counter | `reason` | `tools/call` cancellations. `reason` is one of `client_requested` (peer sent `notifications/cancelled`), `timeout` (per-tool deadline expired), `context_cancelled` (parent context aborted, e.g. server shutdown). |
 | `clockify_mcp_protocol_errors_total` | counter | `code` | JSON-RPC protocol-level error responses by error code. `code` is the numeric JSON-RPC error code as a string, or a short reason for notification drops. |
 | `clockify_mcp_panics_recovered_total` | counter | `site` | Panics recovered from tool handlers or HTTP handlers. `site` is one of `stdio_tool_dispatch`, `http`. |
 | `clockify_mcp_inflight_tool_calls` | gauge | — | Current depth of the stdio dispatch semaphore. |

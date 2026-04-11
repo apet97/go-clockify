@@ -56,6 +56,11 @@ clockify-mcp
 | `MCP_SESSION_TTL` | No | `30m` | Session expiry for `streamable_http` |
 | `MCP_TENANT_CLAIM` | No | `tenant_id` | Tenant claim for OIDC |
 | `MCP_SUBJECT_CLAIM` | No | `sub` | Subject claim for OIDC |
+| `MCP_OIDC_ISSUER` | Yes (`oidc`) | — | OIDC issuer URL — must match the `iss` claim of every token |
+| `MCP_OIDC_AUDIENCE` | No | — | Optional `aud` value to enforce on every token |
+| `MCP_OIDC_JWKS_URL` | No | derived from `MCP_OIDC_ISSUER` | Override the JWKS document URL (defaults to `<issuer>/.well-known/jwks.json`) |
+| `MCP_OIDC_JWKS_PATH` | No | — | Read the JWKS doc from a local file instead of the network |
+| `MCP_RESOURCE_URI` | No | — | Canonical resource URI for OAuth 2.1 RS mode (RFC 8707). When set, every OIDC token must list this URI in its `aud` claim, and `/.well-known/oauth-protected-resource` is mounted on the streamable HTTP transport. |
 | `MCP_METRICS_BIND` | No | — | Dedicated metrics listener; recommended for `streamable_http` |
 | `MCP_LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` |
 
@@ -73,6 +78,16 @@ curl -X POST http://localhost:8080/mcp \
 The token is compared using constant-time comparison (`crypto/subtle`) to prevent timing attacks.
 
 Legacy HTTP mode is a compatibility JSON-RPC transport. It does not provide server-initiated streaming, session-backed notification delivery, or per-client initialization semantics. Clients should send `initialize` before the first `tools/call` after process start.
+
+### OAuth 2.1 Resource Server (`MCP_AUTH_MODE=oidc`)
+
+When `MCP_AUTH_MODE=oidc` is set on the streamable HTTP transport, the server validates inbound bearer tokens as JWTs against the issuer's JWKS document. With `MCP_RESOURCE_URI` configured:
+
+- The server enforces RFC 8707 resource indicator binding: every token's `aud` claim must contain the configured resource URI, independent of any `MCP_OIDC_AUDIENCE` match.
+- The unauthenticated `/.well-known/oauth-protected-resource` endpoint serves the RFC 9728 metadata document so clients can discover the authorization server and the canonical resource URI.
+- Every 401 response carries an RFC 6750 §3 `WWW-Authenticate` header of the form `Bearer realm="clockify-mcp", error="invalid_token", error_description="<reason>"` so well-behaved clients can refresh their token and retry.
+
+The JWKS document is fetched on demand and cached for 5 minutes. The fetch uses `http.DefaultClient` in production; tests inject an `httptest`-backed client via `authn.Config.HTTPClient`. RS256, RS384, RS512, ES256, ES384, and ES512 signatures are all supported.
 
 ## Current Semantics
 
@@ -104,6 +119,7 @@ This is acceptable for single-tenant compatibility deployments, but it is not a 
 | `/health` | GET | None | Health check (always 200) |
 | `/ready` | GET | None | Readiness check for the HTTP server and optional upstream Clockify probe; independent of MCP `initialize` state |
 | `/mcp/events` | GET | Transport auth + session | Server-initiated notifications for `streamable_http` |
+| `/.well-known/oauth-protected-resource` | GET, HEAD | None | OAuth 2.1 Protected Resource Metadata document (RFC 9728). Mounted on `streamable_http` only when `MCP_RESOURCE_URI` is set. Lists the resource URI, the authorization server (OIDC issuer), and the supported bearer methods. |
 
 ## Security Headers
 

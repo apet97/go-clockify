@@ -88,6 +88,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr) |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `MCP_RESOURCE_URI` | — | Canonical resource URI for OAuth 2.1 RS mode (RFC 8707). When set, every OIDC token must list this URI in its `aud` claim, and `/.well-known/oauth-protected-resource` is mounted on the streamable HTTP transport. |
 
 ## Architecture
 

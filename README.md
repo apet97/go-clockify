@@ -402,7 +402,7 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy
 - [Security Threat Model](docs/security-threat-model.md) — trust boundaries, session/tenant isolation, residual risks
 - [Stability Policy](docs/stability-policy.md) — compatibility tiers and deprecation rules
-- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap (Streamable HTTP completion, OAuth 2.1 RS, OTel tracing, tool `outputSchema` sweep, …)
+- [Wave 1 Backlog](docs/wave1-backlog.md) — curated next-iteration roadmap. **Landed**: cancellation map (W1-02), `outputSchema` sweep (W1-09), tier2 coverage push (W1-11), OAuth 2.1 Resource Server completion (W1-06). **Remaining**: Streamable HTTP completion (W1-01), progress notifications (W1-03), resources/prompts capabilities (W1-04/05), per-token rate limiting (W1-07), OTel tracing (W1-12), alerts/runbooks/manifests (W1-13/14), architecture + ADR docs (W1-15/16/17).
 
 ## Support
 
