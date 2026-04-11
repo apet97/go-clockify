@@ -22,11 +22,6 @@ commit SHA, mirroring how Wave 1 was tracked.
 `tests/chaos/` with kill-replica, drop-packet, and 429-storm scenarios via
 toxiproxy. **Size:** L.
 
-### W2-09 — Load harness
-
-`tests/load/` with a per-token tenant mix that reliably fires
-`ClockifyMCPFastBurn` in staging. **Size:** M.
-
 
 ### W2-11 — FIPS build target behind `-tags=fips`
 
@@ -39,6 +34,49 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-09 — Load harness at `tests/load/`
+
+**Landed:** 2026-04-11 (Track G of the v0.7.0 development session).
+Drives the three-layer rate limiter (global semaphore, global window,
+per-subject sub-layer) under four scenarios and encodes an explicit
+acceptance check for per-token isolation.
+
+**Critical files shipped:**
+- `tests/load/main.go` (new, `package main`) — in-process load driver
+  using `ratelimit.RateLimiter.AcquireForSubject` directly, which is
+  the same entry point `enforcement.Pipeline.BeforeCall` uses in
+  production. No Clockify credentials required. Scenarios are Go
+  struct literals in the `scenarios` map: `steady`, `burst`,
+  `tenant-mix`, `per-token-saturation`. Each scenario configures the
+  rate limiter programmatically via `NewWithAcquireTimeout` plus a
+  new `RateLimiter.SetPerTokenLimits` method added in the same commit.
+- `tests/load/README.md` (new) — scenario catalog, acceptance
+  criteria, regression symptoms.
+- `.github/workflows/load.yml` (new) — `workflow_dispatch` only,
+  never on PR critical path. Single job runs `go run ./tests/load
+  -scenario "$SCENARIO"` with the scenario input passed via `env:`
+  to avoid shell injection.
+- `internal/ratelimit/ratelimit.go` — new exported method
+  `SetPerTokenLimits(maxConcurrent, maxPerWindow)` so programmatic
+  consumers (the harness) can configure the per-subject sub-layer
+  without going through `FromEnv` + env-var mutation. Existing
+  `FromEnv` path is unchanged; no behaviour change for the production
+  server.
+
+**Local acceptance (recorded).**
+- `go run ./tests/load -scenario steady` — 5 tenants × 20 calls, all
+  100 succeed, 0 rejections, ~130 ms.
+- `go run ./tests/load -scenario burst` — 5 tenants × 50 calls, all
+  250 succeed at ~4000 qps per tenant, ~13 ms.
+- `go run ./tests/load -scenario tenant-mix` — 10 tenants, noisy
+  tenant-0 fires 150 calls and absorbs 70 per-token rejections
+  while quiet tenants get 30/30 each.
+- `go run ./tests/load -scenario per-token-saturation` — noisy
+  tenant-0 attempts 300, gets 40 through with 260 per-token
+  rejections; quiet tenants get 30/30 each with zero rejections.
+  Acceptance check prints `PASS — noisy tenant isolated; quiet
+  tenants kept flowing`.
 
 ### W2-10 — Mutation testing nightly via gremlins.dev
 

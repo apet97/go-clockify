@@ -140,6 +140,22 @@ func NewWithAcquireTimeout(maxConcurrent int, maxPerWindow int64, windowMillis i
 	return rl
 }
 
+// SetPerTokenLimits configures the per-subject sub-layer from an
+// outside-the-constructor site. FromEnv applies the same values by
+// reading CLOCKIFY_PER_TOKEN_{CONCURRENCY,RATE_LIMIT}; this setter
+// exists for programmatic consumers (notably the W2-09 load harness
+// at tests/load/) that need to drive the rate limiter without going
+// through environment variables. Call before any Acquire* so the
+// config is immutable during the call path. Setting either cap to
+// 0 disables that dimension of the per-subject layer.
+func (rl *RateLimiter) SetPerTokenLimits(maxConcurrent int, maxPerWindow int64) {
+	if rl == nil {
+		return
+	}
+	rl.perTokenMaxConcurrent = maxConcurrent
+	rl.perTokenMaxPerWindow = maxPerWindow
+}
+
 // Acquire reserves a slot. The returned function must be called to release
 // the slot when work is done. Returns an error if the concurrency or current
 // fixed-window limit would be exceeded.
