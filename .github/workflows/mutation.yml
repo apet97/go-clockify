@@ -1,0 +1,61 @@
+name: Mutation testing
+
+# W2-10 — nightly mutation testing via gremlins.dev. Runs on a daily
+# cron + manual workflow_dispatch only. Per-package floors live in
+# docs/testing/mutation-floors.md. workflow_dispatch inputs are
+# passed via env: (never directly interpolated into run:) so untrusted
+# strings cannot shell-inject.
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package path to target (default: all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pkg: internal/jsonschema
+            floor: 40
+          - pkg: internal/enforcement
+            floor: 40
+          - pkg: internal/ratelimit
+            floor: 40
+          - pkg: internal/mcp
+            floor: 35
+          - pkg: internal/truncate
+            floor: 40
+          - pkg: internal/tools
+            floor: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+      - name: Run gremlins unleash
+        env:
+          REQUESTED: ${{ github.event.inputs.package }}
+          PACKAGE: ${{ matrix.pkg }}
+          FLOOR: ${{ matrix.floor }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED:-}" ] && [ "$REQUESTED" != "$PACKAGE" ]; then
+            echo "workflow_dispatch requested '$REQUESTED' — skipping $PACKAGE"
+            exit 0
+          fi
+          gremlins unleash --threshold-efficacy "$FLOOR" "./$PACKAGE"

@@ -1,4 +1,4 @@
-.PHONY: build test cover fmt vet check clean lint
+.PHONY: build test cover fmt vet check clean lint mutation
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -25,3 +25,11 @@ check: fmt vet test
 
 clean:
 	rm -f clockify-mcp coverage.out
+
+# Local mutation testing via gremlins.dev (W2-10). Floors live in
+# docs/testing/mutation-floors.md; CI runs the same tool nightly.
+# Usage: `make mutation PKG=internal/jsonschema`
+PKG ?= internal/jsonschema
+mutation:
+	@which gremlins > /dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+	gremlins unleash ./$(PKG)

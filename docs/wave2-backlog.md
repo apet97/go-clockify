@@ -27,9 +27,6 @@ toxiproxy. **Size:** L.
 `tests/load/` with a per-token tenant mix that reliably fires
 `ClockifyMCPFastBurn` in staging. **Size:** M.
 
-### W2-10 — Mutation testing in nightly CI
-
-**Size:** L.
 
 ### W2-11 — FIPS build target behind `-tags=fips`
 
@@ -42,6 +39,46 @@ toxiproxy. **Size:** L.
 - Delta-sync resources on top of the subscription set from Phase E (W1-04)
 
 ## Landed
+
+### W2-10 — Mutation testing nightly via gremlins.dev
+
+**Landed:** 2026-04-11 (Track F of the v0.7.0 development session).
+
+**Tool substitution.** The plan called for `go-mutesting`
+(github.com/zimmski/go-mutesting). That tool depends on a 2019-era
+`golang.org/x/tools` and panics inside `go/types` when parsing Go 1.25
+source files. Verified locally — the failure is deterministic. As the
+session stop condition anticipated, this is a latent toolchain
+compatibility issue that was not in the recap. Rather than fork
+go-mutesting or patch `x/tools`, W2-10 ships on
+[`gremlins`](https://gremlins.dev/) (`github.com/go-gremlins/gremlins`)
+at `v0.6.0`. Gremlins is actively maintained, uses modern `x/tools`
+(v0.39.0), and loads Go 1.25 packages cleanly. Verified on
+`./internal/jsonschema` — dry-run found 42 runnable mutants with 100%
+mutator coverage.
+
+**Critical files shipped:**
+- `.github/workflows/mutation.yml` (new) — scheduled daily at 02:00 UTC
+  plus `workflow_dispatch` with an optional `package` input. Uses a
+  matrix of 6 packages, each with a per-package floor passed via env
+  vars (never interpolated into `run:` directly, to avoid shell
+  injection). `timeout-minutes: 45` hard-caps runaway jobs. Installs
+  gremlins via `go install`.
+- `docs/testing/mutation-floors.md` (new) — per-package floor table
+  with rationale, how to run locally, and how to interpret status
+  codes. Initial floors: 40% for jsonschema/enforcement/ratelimit/
+  truncate, 35% for mcp (protocol boilerplate is harder to kill), 30%
+  for tools (thin wrappers around the Clockify client). Floors are
+  ratcheted up as suites tighten — never lowered to paper over a
+  regression.
+- `Makefile` — new `mutation` target (`make mutation PKG=...`) that
+  installs gremlins if needed and runs `unleash` without a floor
+  (for local triage).
+
+**Out of scope.** The nightly workflow does not alert Slack/email on
+failure — GitHub Actions' native notification surface is the only
+signal. A follow-up can wire a webhook when the signal starts being
+actionable.
 
 ### W2-05 — Helm chart at `deploy/helm/clockify-mcp/`
 
