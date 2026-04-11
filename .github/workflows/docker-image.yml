@@ -26,7 +26,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write        # cosign attest pushes SBOM attestation + release asset uploads on tag
   packages: write
   id-token: write        # cosign keyless signing + attest-build-provenance
   attestations: write    # attest-build-provenance
