@@ -243,8 +243,81 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		if value, ok := in[i].Tool.Annotations["idempotentHint"].(bool); ok {
 			in[i].IdempotentHint = value
 		}
+		if in[i].Tool.InputSchema != nil {
+			tightenInputSchema(in[i].Tool.InputSchema)
+		}
 	}
 	return in
+}
+
+// tightenInputSchema mutates a JSON schema tree in place to meet the MCP
+// spec B2 requirements for Tier 1 + Tier 2 tools:
+//   - every object schema gets `additionalProperties: false` unless explicitly set
+//   - `page` and `page_size` integer properties gain `minimum`/`maximum` bounds
+//   - `start`/`end` properties whose description mentions RFC3339 gain
+//     `format: "date-time"`
+//   - `color` properties whose description mentions Hex gain the 6-hex pattern
+//
+// The walker handles nested objects and arrays (via `items`). It never
+// overwrites an explicit value — callers can opt out of any single rule
+// by setting it themselves.
+func tightenInputSchema(schema map[string]any) {
+	if schema == nil {
+		return
+	}
+	if typ, _ := schema["type"].(string); typ == "object" {
+		if _, set := schema["additionalProperties"]; !set {
+			schema["additionalProperties"] = false
+		}
+		if props, ok := schema["properties"].(map[string]any); ok {
+			for name, raw := range props {
+				prop, ok := raw.(map[string]any)
+				if !ok {
+					continue
+				}
+				applyPropertyConstraints(name, prop)
+				tightenInputSchema(prop)
+			}
+		}
+	}
+	if items, ok := schema["items"].(map[string]any); ok {
+		tightenInputSchema(items)
+	}
+}
+
+// applyPropertyConstraints adds spec-driven constraints to a single
+// property schema based on its name and description. Only untouched keys
+// are added — explicit values stay as declared.
+func applyPropertyConstraints(name string, prop map[string]any) {
+	switch name {
+	case "page":
+		if _, set := prop["minimum"]; !set {
+			prop["minimum"] = 1
+		}
+	case "page_size":
+		if _, set := prop["minimum"]; !set {
+			prop["minimum"] = 1
+		}
+		if _, set := prop["maximum"]; !set {
+			prop["maximum"] = 200
+		}
+	case "color":
+		if desc, _ := prop["description"].(string); strings.Contains(strings.ToLower(desc), "hex") {
+			if _, set := prop["pattern"]; !set {
+				prop["pattern"] = "^#[0-9a-fA-F]{6}$"
+			}
+		}
+	}
+	// Generic RFC3339 timestamp detection — any string property whose
+	// description calls out an RFC3339 timestamp gains format: date-time.
+	if typ, _ := prop["type"].(string); typ == "string" {
+		desc, _ := prop["description"].(string)
+		if desc != "" && strings.Contains(desc, "RFC3339") {
+			if _, set := prop["format"]; !set {
+				prop["format"] = "date-time"
+			}
+		}
+	}
 }
 
 func requiredSchema(field string) map[string]any {
