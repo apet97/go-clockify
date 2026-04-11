@@ -6,7 +6,9 @@
 
 image:
   repository: ghcr.io/apet97/go-clockify
-  tag: "0.7.0"
+  # Leave blank to track `.Chart.AppVersion` automatically.
+  # Pin to a specific tag if you need to override (e.g. fips image).
+  tag: ""
   pullPolicy: IfNotPresent
 
 # Number of replicas. The PDB (pdb.enabled below) pins minAvailable: 1
@@ -71,9 +73,22 @@ config:
   MCP_HTTP_MAX_BODY: "2097152"
 
 # Transport-specific env. Set strictHostCheck to "1" in prod.
+#
+# `mode` accepts:
+#   - "http"            — legacy POST-only JSON-RPC transport on :bind
+#   - "streamable_http" — 2025-03-26 Streamable HTTP with SSE on :bind
+#   - "grpc"            — bidirectional stream transport on :grpcBind
+#                         (requires the grpc build tag; see ADR 012)
+#
+# When mode=grpc, the HTTP health endpoints are NOT served, so the
+# readiness/liveness probes switch to a TCP socket probe on the gRPC
+# port. If you're running the default stdlib build (no -tags=grpc),
+# leaving mode=grpc will crash the container at startup — cmd/clockify-mcp
+# aborts via grpc_off.go.
 transport:
-  mode: "http"  # http or streamable_http (stdio is not supported in-cluster)
+  mode: "http"
   bind: ":8080"
+  grpcBind: ":9090"
   strictHostCheck: "0"
   logFormat: "json"
   logLevel: "info"
@@ -90,6 +105,8 @@ secrets:
 service:
   type: ClusterIP
   port: 8080
+  # Port used when transport.mode=grpc. Ignored for http modes.
+  grpcPort: 9090
 
 # NetworkPolicy — default-deny with two allowlist labels. Set
 # networkPolicy.enabled: false to opt out entirely.

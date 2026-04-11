@@ -20,6 +20,16 @@ does not expose public metrics by default; use `MCP_METRICS_BIND` and
 optionally `MCP_METRICS_AUTH_MODE=static_bearer` to isolate scrapes onto
 a dedicated listener.
 
+**Note on `MCP_TRANSPORT=grpc`:** the gRPC transport (ADR 012) binds
+a single listener on `MCP_GRPC_BIND` (default `:9090`) and serves
+no HTTP endpoints at all — `/health`, `/ready`, and `/metrics` are
+not available. To scrape metrics while running gRPC, set
+`MCP_METRICS_BIND=:9091` (Wave 5 backlog — not yet plumbed through
+the Helm chart, see `docs/audit-chart-vs-config.md`) or run a
+sidecar that exports to Prometheus. Kubernetes readiness probes
+should fall back to `tcpSocket` on the gRPC port until the server
+implements the gRPC health protocol.
+
 ## Metrics reference
 
 ### Server RED metrics

@@ -42,8 +42,13 @@ spec:
           env:
             - name: MCP_TRANSPORT
               value: {{ .Values.transport.mode | quote }}
+            {{- if eq .Values.transport.mode "grpc" }}
+            - name: MCP_GRPC_BIND
+              value: {{ .Values.transport.grpcBind | quote }}
+            {{- else }}
             - name: MCP_HTTP_BIND
               value: {{ .Values.transport.bind | quote }}
+            {{- end }}
             - name: MCP_LOG_FORMAT
               value: {{ .Values.transport.logFormat | quote }}
             - name: MCP_LOG_LEVEL
@@ -56,13 +61,43 @@ spec:
             - secretRef:
                 name: {{ include "clockify-mcp.secretName" . }}
           ports:
+            {{- if eq .Values.transport.mode "grpc" }}
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+            {{- else }}
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- if eq .Values.transport.mode "grpc" }}
+          # gRPC transport does not serve /health or /ready HTTP endpoints.
+          # Fall back to a TCP socket probe against the gRPC port. A proper
+          # grpc health protocol probe is W5 backlog.
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          startupProbe:
+            tcpSocket:
+              port: grpc
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          {{- else }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
@@ -85,3 +120,4 @@ spec:
               port: http
             failureThreshold: {{ .Values.probes.startup.failureThreshold }}
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          {{- end }}

@@ -228,6 +228,30 @@ sequenceDiagram
     H-->>C: Response
 ```
 
+## Deploying the gRPC transport
+
+The gRPC transport (ADR 012, `MCP_TRANSPORT=grpc`) is gated behind
+the `grpc` build tag and binds to a separate port via
+`MCP_GRPC_BIND` (default `:9090`). It does **not** serve the HTTP
+`/health`, `/ready`, or `/metrics` endpoints — those only exist on
+the HTTP transports. Kubernetes manifests that switch to gRPC mode
+must therefore:
+
+- Expose the `:9090` container/service port instead of `:8080`.
+- Replace HTTP `httpGet` liveness/readiness/startup probes with
+  `tcpSocket` probes on the gRPC port (gRPC health protocol support
+  is Wave 5 backlog).
+- Scrape metrics out-of-band via a sidecar or a second listener —
+  `MCP_METRICS_BIND=:9091` is the recommended pattern but is not yet
+  plumbed through the chart (see `docs/audit-chart-vs-config.md`).
+
+The bundled Helm chart at `deploy/helm/clockify-mcp/` encodes this
+switch automatically: set `transport.mode=grpc` on the chart and the
+deployment flips to the gRPC port + TCP probes. The Kustomize base at
+`deploy/k8s/base/` keeps HTTP as the default; operators who want gRPC
+can uncomment the `MCP_GRPC_BIND` / `grpc` service port blocks as a
+starting point.
+
 ## Related
 
 - [Wave 1 backlog](wave1-backlog.md) — curated remaining work and landed items

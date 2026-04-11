@@ -36,7 +36,7 @@ spec:
       containers:
         - name: clockify-mcp
           # Pin to an immutable tag. Bump on release; never use :latest in production.
-          image: ghcr.io/apet97/go-clockify:v0.5.0
+          image: ghcr.io/apet97/go-clockify:v0.8.0
           imagePullPolicy: IfNotPresent
           args: []
           env:
@@ -44,6 +44,14 @@ spec:
               value: http
             - name: MCP_HTTP_BIND
               value: ":8080"
+            # Uncomment the two lines below and switch MCP_TRANSPORT to "grpc"
+            # to run the gRPC transport (see ADR 012). The gRPC build requires
+            # an image built with -tags=grpc. When enabled, also adjust
+            # service.yaml to expose the grpc port and switch the probes to
+            # tcpSocket — see the Helm chart's deployment.yaml for the
+            # pattern, or docs/audit-chart-vs-config.md for the full gap list.
+            # - name: MCP_GRPC_BIND
+            #   value: ":9090"
             - name: MCP_LOG_FORMAT
               value: json
             - name: MCP_LOG_LEVEL
