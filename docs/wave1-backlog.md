@@ -10,6 +10,13 @@ the curated, priority-ordered subset of the plan that should land in Wave
 Each item names the file paths that need to change and the rough size
 ("S/M/L"). Pick by capacity and dependency, not by document order.
 
+## Landed (do not re-pick)
+
+- ✅ **W1-02** Cancellation map — `9e6a6ff` series, `internal/mcp/server.go`, `internal/metrics/metrics.go`, `cancel_test.go`. Notifications/cancelled wired end-to-end with `clockify_mcp_cancellations_total{reason}`.
+- ✅ **W1-09** `outputSchema` for every tool — Tier 1 + Tier 2 decorated via `tier1OutputSchemas` lookup + `applyOpaqueOutputSchemas`. Stdlib reflection-based generator at `internal/tools/schemagen.go`.
+- ✅ **W1-11** `internal/tools` coverage push — 38.9% → 52.0% via four Tier 2 sweep tests (invoices, expenses, groups_holidays, custom_fields).
+- ✅ **W1-06** OAuth 2.1 Resource Server completion — pluggable JWKS HTTP client, resource indicator binding, WWW-Authenticate header, `/.well-known/oauth-protected-resource` metadata document, integration test. `internal/authn` 65.9% → 88.2%.
+
 ---
 
 ## Tier 1: protocol completeness

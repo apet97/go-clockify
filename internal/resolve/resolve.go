@@ -8,7 +8,16 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
+// maxIDLength caps any ID we'll bother validating. Real Clockify IDs are
+// 24-char hex (BSON ObjectIDs). Anything longer than 128 bytes is either
+// a fuzz pathological input or an attempt to wedge the rune loop, both
+// of which we reject up front.
+const maxIDLength = 128
+
 func ValidateID(id, name string) error {
+	if len(id) > maxIDLength {
+		return fmt.Errorf("%s exceeds %d bytes", name, maxIDLength)
+	}
 	if strings.TrimSpace(id) == "" {
 		return fmt.Errorf("%s cannot be empty", name)
 	}
