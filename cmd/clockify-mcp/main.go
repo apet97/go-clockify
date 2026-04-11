@@ -9,20 +9,19 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
-	"time"
 
+	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/controlplane"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
-	"github.com/apet97/go-clockify/internal/enforcement"
 	logslog "github.com/apet97/go-clockify/internal/logging"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
-	"github.com/apet97/go-clockify/internal/tools"
 	"github.com/apet97/go-clockify/internal/truncate"
 )
 
@@ -103,44 +102,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
-	defer client.Close()
-	client.SetUserAgent("clockify-mcp-go/" + version)
-	service := tools.New(client, cfg.WorkspaceID)
-	if cfg.Timezone != "" {
-		loc, _ := time.LoadLocation(cfg.Timezone) // already validated in config.Load
-		service.DefaultTimezone = loc
+	deps := runtimeDeps{
+		cfg:       cfg,
+		dd:        dd,
+		dc:        dc,
+		tc:        tc,
+		rl:        rl,
+		policy:    pol,
+		bootstrap: bc,
 	}
-	service.DedupeConfig = &dd
-	service.PolicyDescribe = pol.Describe
-	service.ReportMaxEntries = cfg.ReportMaxEntries
-
-	registry := service.Registry()
-
-	// Set Tier 1 tool names on policy and bootstrap
-	tier1Names := make(map[string]bool, len(registry))
-	for _, d := range registry {
-		tier1Names[d.Tool.Name] = true
-	}
-	pol.SetTier1Tools(tier1Names)
-	bc.SetTier1Tools(tier1Names)
-
-	pipeline := &enforcement.Pipeline{
-		Policy:     pol,
-		Bootstrap:  &bc,
-		RateLimit:  rl,
-		DryRun:     dc,
-		Truncation: tc,
-	}
-	gate := &enforcement.Gate{
-		Policy:    pol,
-		Bootstrap: &bc,
-	}
-	server := mcp.NewServer(version, registry, pipeline, gate)
-	server.ToolTimeout = cfg.ToolTimeout
-	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
-	server.StrictHostCheck = cfg.StrictHostCheck
 
 	// Wire observability gauges. ReadyState uses the server's cached
 	// readiness snapshot so /metrics scrapes do not trigger upstream
@@ -149,6 +119,89 @@ func run() error {
 		func() float64 { return 1 },
 		version, commit, buildDate, runtime.Version(),
 	)
+
+	slog.Info("server_start",
+		"version", version,
+		"policy", string(pol.Mode),
+		"bootstrap", bc.Mode.String(),
+		"transport", cfg.Transport,
+		"workspace", cfg.WorkspaceID,
+		"config", cfg.Fingerprint(),
+	)
+
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	if cfg.MetricsBind != "" {
+		go func() {
+			if err := mcp.ServeMetrics(ctx, mcp.MetricsServerOptions{
+				Bind:        cfg.MetricsBind,
+				AuthMode:    cfg.MetricsAuthMode,
+				BearerToken: cfg.MetricsBearerToken,
+			}); err != nil {
+				slog.Error("metrics_server_error", "error", err.Error())
+				cancel()
+			}
+		}()
+	}
+
+	if cfg.Transport == "streamable_http" {
+		store, err := controlplane.Open(cfg.ControlPlaneDSN)
+		if err != nil {
+			return err
+		}
+		if err := bootstrapDefaultTenant(store, cfg); err != nil {
+			return err
+		}
+		authenticator, err := authn.New(authn.Config{
+			Mode:                 authn.Mode(cfg.AuthMode),
+			BearerToken:          cfg.BearerToken,
+			DefaultTenantID:      cfg.DefaultTenantID,
+			TenantClaim:          cfg.TenantClaim,
+			SubjectClaim:         cfg.SubjectClaim,
+			OIDCIssuer:           cfg.OIDCIssuer,
+			OIDCAudience:         cfg.OIDCAudience,
+			OIDCJWKSURL:          cfg.OIDCJWKSURL,
+			OIDCJWKSPath:         cfg.OIDCJWKSPath,
+			ForwardTenantHeader:  cfg.ForwardTenantHeader,
+			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
+			MTLSTenantHeader:     cfg.MTLSTenantHeader,
+		})
+		if err != nil {
+			return err
+		}
+		deps.auditor = controlPlaneAuditor{store: store}
+		var readyChecker func(context.Context) error
+		if cfg.APIKey != "" {
+			client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
+			defer client.Close()
+			readyChecker = func(ctx context.Context) error {
+				var user struct{ ID string }
+				return client.Get(ctx, "/user", nil, &user)
+			}
+		}
+		return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
+			Version:         version,
+			Bind:            cfg.HTTPBind,
+			MaxBodySize:     cfg.MaxBodySize,
+			AllowedOrigins:  cfg.AllowedOrigins,
+			AllowAnyOrigin:  cfg.AllowAnyOrigin,
+			StrictHostCheck: cfg.StrictHostCheck,
+			SessionTTL:      cfg.SessionTTL,
+			ReadyChecker:    readyChecker,
+			Authenticator:   authenticator,
+			ControlPlane:    store,
+			Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
+				return tenantRuntime(ctx, principal.TenantID, deps, store)
+			},
+		})
+	}
+
+	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
+	defer client.Close()
+	client.SetUserAgent("clockify-mcp-go/" + version)
+	service := newService(client, cfg.WorkspaceID, cfg.Timezone, dd, pol, cfg.ReportMaxEntries)
+	server := buildServer(version, deps, service, pol, &bc)
 	metrics.ReadyState.SetFunc(func() float64 {
 		if server.IsReadyCached() {
 			return 1
@@ -158,69 +211,6 @@ func run() error {
 	metrics.InFlightToolCalls.SetFunc(func() float64 {
 		return float64(server.InFlightToolCalls())
 	})
-
-	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
-		descriptors, ok := service.Tier2Handlers(group)
-		if !ok {
-			return tools.ActivationResult{}, fmt.Errorf("unknown group: %s", group)
-		}
-		if err := server.ActivateGroup(group, descriptors); err != nil {
-			return tools.ActivationResult{}, err
-		}
-		return tools.ActivationResult{
-			Kind:      "group",
-			Name:      group,
-			Group:     group,
-			ToolCount: len(descriptors),
-		}, nil
-	}
-
-	service.ActivateTool = func(name string) (tools.ActivationResult, error) {
-		if tier1Names[name] {
-			if err := server.ActivateTier1Tool(name); err != nil {
-				return tools.ActivationResult{}, err
-			}
-			return tools.ActivationResult{
-				Kind:      "tool",
-				Name:      name,
-				ToolCount: 1,
-			}, nil
-		}
-		for groupName := range tools.Tier2Groups {
-			descriptors, ok := service.Tier2Handlers(groupName)
-			if !ok {
-				continue
-			}
-			for _, d := range descriptors {
-				if d.Tool.Name != name {
-					continue
-				}
-				if err := server.ActivateGroup(groupName, descriptors); err != nil {
-					return tools.ActivationResult{}, err
-				}
-				return tools.ActivationResult{
-					Kind:      "tool",
-					Name:      name,
-					Group:     groupName,
-					ToolCount: len(descriptors),
-				}, nil
-			}
-		}
-		return tools.ActivationResult{}, fmt.Errorf("unknown tool: %s", name)
-	}
-
-	slog.Info("server_start",
-		"version", version,
-		"tools", len(registry),
-		"policy", string(pol.Mode),
-		"bootstrap", bc.Mode.String(),
-		"transport", cfg.Transport,
-		"workspace", cfg.WorkspaceID,
-	)
-
-	// Set up signal handling for graceful shutdown
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
 
 	if cfg.Transport == "http" {
 		if cfg.AllowAnyOrigin {
@@ -264,7 +254,7 @@ Usage: clockify-mcp [--version | --help]
 
 Environment Variables:
   Core:
-    CLOCKIFY_API_KEY          API key (required)
+    CLOCKIFY_API_KEY          API key (required for stdio/legacy http; optional for streamable_http)
     CLOCKIFY_WORKSPACE_ID     Workspace ID (auto-detected if only one)
     CLOCKIFY_BASE_URL         API base URL (default: https://api.clockify.me/api/v1)
     CLOCKIFY_TIMEZONE         IANA timezone for time parsing
@@ -293,13 +283,31 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT             stdio (default) or legacy http (non-streaming, shared process state)
+    MCP_TRANSPORT             stdio (default), legacy http, or streamable_http
+    MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
-    MCP_BEARER_TOKEN          Required for legacy HTTP mode; send as Authorization: Bearer <token>
+    MCP_BEARER_TOKEN          Required for static bearer auth; send as Authorization: Bearer <token>
     MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
     MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
     MCP_STRICT_HOST_CHECK     Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS
     MCP_HTTP_MAX_BODY         Positive max request body in bytes (default: 2097152)
+    MCP_METRICS_BIND          Optional dedicated metrics listener (recommended for streamable_http)
+    MCP_METRICS_AUTH_MODE     none (default) or static_bearer
+    MCP_METRICS_BEARER_TOKEN  Bearer token for dedicated metrics listener
+
+  Enterprise Shared-Service:
+    MCP_CONTROL_PLANE_DSN     Control-plane store DSN (memory, /path/file.json, or file:///path/file.json)
+    MCP_SESSION_TTL           Session TTL for streamable_http (default: 30m)
+    MCP_TENANT_CLAIM          Tenant claim name for OIDC (default: tenant_id)
+    MCP_SUBJECT_CLAIM         Subject claim name for OIDC (default: sub)
+    MCP_DEFAULT_TENANT_ID     Default tenant for static_bearer/forward_auth/mtls (default: default)
+    MCP_OIDC_ISSUER           Required issuer URL for OIDC auth
+    MCP_OIDC_AUDIENCE         Optional audience for OIDC auth
+    MCP_OIDC_JWKS_URL         Optional JWKS URL override
+    MCP_OIDC_JWKS_PATH        Optional local JWKS file for tests/dev
+    MCP_FORWARD_TENANT_HEADER Tenant header for forward_auth (default: X-Forwarded-Tenant)
+    MCP_FORWARD_SUBJECT_HEADER Subject header for forward_auth (default: X-Forwarded-User)
+    MCP_MTLS_TENANT_HEADER    Tenant header override for mtls (default: X-Tenant-ID)
 
   Logging:
     MCP_LOG_FORMAT            text (default) or json

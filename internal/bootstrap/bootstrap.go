@@ -23,6 +23,19 @@ type Config struct {
 	Tier1Names  map[string]bool // set post-registry via SetTier1Tools
 }
 
+func (c *Config) Clone() *Config {
+	if c == nil {
+		return nil
+	}
+	out := &Config{
+		Mode:        c.Mode,
+		CustomTools: cloneBoolMap(c.CustomTools),
+		ActiveTools: cloneBoolMap(c.ActiveTools),
+		Tier1Names:  cloneBoolMap(c.Tier1Names),
+	}
+	return out
+}
+
 // CatalogEntry describes a single tool for search/discovery.
 type CatalogEntry struct {
 	Name        string
@@ -169,6 +182,17 @@ func (c *Config) ActivateTools(names []string) {
 	for _, name := range names {
 		c.ActivateTool(name)
 	}
+}
+
+func cloneBoolMap(in map[string]bool) map[string]bool {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 // VisibleCount returns how many of the registered Tier 1 tool names pass IsVisible.

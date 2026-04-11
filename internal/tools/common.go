@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strings"
@@ -18,8 +19,8 @@ type Service struct {
 	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil = system timezone
 	DedupeConfig    *dedupe.Config        // optional, set during wiring
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
-	ActivateGroup   func(string) (ActivationResult, error)
-	ActivateTool    func(string) (ActivationResult, error)
+	ActivateGroup   func(context.Context, string) (ActivationResult, error)
+	ActivateTool    func(context.Context, string) (ActivationResult, error)
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
@@ -202,6 +203,21 @@ func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
 	ann["destructiveHint"] = true
 	ann["idempotentHint"] = false
 	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
+}
+
+func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
+	for i := range in {
+		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
+			in[i].ReadOnlyHint = value
+		}
+		if value, ok := in[i].Tool.Annotations["destructiveHint"].(bool); ok {
+			in[i].DestructiveHint = value
+		}
+		if value, ok := in[i].Tool.Annotations["idempotentHint"].(bool); ok {
+			in[i].IdempotentHint = value
+		}
+	}
+	return in
 }
 
 func requiredSchema(field string) map[string]any {

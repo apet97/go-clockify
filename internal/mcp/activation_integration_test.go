@@ -31,7 +31,7 @@ func TestSearchToolsActivateGroupViaMCP(t *testing.T) {
 	pipeline := &enforcement.Pipeline{Bootstrap: &bc}
 	gate := &enforcement.Gate{Bootstrap: &bc}
 	server := mcp.NewServer("test", registry, pipeline, gate)
-	service.ActivateGroup = func(group string) (tools.ActivationResult, error) {
+	service.ActivateGroup = func(_ context.Context, group string) (tools.ActivationResult, error) {
 		descriptors, ok := service.Tier2Handlers(group)
 		if !ok {
 			return tools.ActivationResult{}, fmt.Errorf("unknown group: %s", group)

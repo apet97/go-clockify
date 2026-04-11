@@ -11,14 +11,14 @@ SLOs/SLIs, suggested alerts, and the stable log event taxonomy.
 |---|---|---|
 | `GET /health` | Liveness probe. Returns 200 always while the process is alive. | None |
 | `GET /ready` | Readiness probe. Optionally runs an upstream health check (cached for a few seconds). Returns 200 or 503. | None |
-| `GET /metrics` | Prometheus text exposition format v0.0.4. | None (see note below) |
+| `GET /metrics` | Prometheus text exposition format v0.0.4. | None on the legacy shared listener; configurable on `MCP_METRICS_BIND` |
 | `POST /mcp` | JSON-RPC MCP endpoint. | Bearer |
 
-**Note on `/metrics` auth:** the metrics endpoint is exposed without
-bearer auth so that Prometheus scrapers can pull without a shared
-secret. Counters do not leak sensitive data (tool names are stable,
-label values are low-cardinality). If you need to gate metrics, do so
-at the network layer (NetworkPolicy, ingress filter, or a sidecar).
+**Note on `/metrics` auth:** legacy `MCP_TRANSPORT=http` keeps `/metrics`
+on the main listener for compatibility. `MCP_TRANSPORT=streamable_http`
+does not expose public metrics by default; use `MCP_METRICS_BIND` and
+optionally `MCP_METRICS_AUTH_MODE=static_bearer` to isolate scrapes onto
+a dedicated listener.
 
 ## Metrics reference
 

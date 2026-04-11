@@ -24,6 +24,19 @@ type Policy struct {
 	Tier1ToolNames map[string]bool // populated after registry construction
 }
 
+func (p *Policy) Clone() *Policy {
+	if p == nil {
+		return nil
+	}
+	return &Policy{
+		Mode:           p.Mode,
+		DeniedTools:    cloneBoolMap(p.DeniedTools),
+		DeniedGroups:   cloneBoolMap(p.DeniedGroups),
+		AllowedGroups:  cloneBoolMap(p.AllowedGroups),
+		Tier1ToolNames: cloneBoolMap(p.Tier1ToolNames),
+	}
+}
+
 func FromEnv() (*Policy, error) {
 	mode := Mode(strings.TrimSpace(strings.ToLower(os.Getenv("CLOCKIFY_POLICY"))))
 	if mode == "" {
@@ -182,6 +195,17 @@ func safeCoreWriteList() []string {
 		"clockify_switch_project",
 		"clockify_update_entry",
 	}
+}
+
+func cloneBoolMap(in map[string]bool) map[string]bool {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func isIntrospection(name string) bool {

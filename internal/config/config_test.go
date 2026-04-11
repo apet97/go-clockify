@@ -489,3 +489,38 @@ func TestLoadConcurrencyAcquireTimeoutOutOfRange(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadStreamableHTTPWithoutStaticAPIKey(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_TRANSPORT":         "streamable_http",
+		"MCP_AUTH_MODE":         "oidc",
+		"MCP_OIDC_ISSUER":       "https://issuer.example.com",
+		"MCP_CONTROL_PLANE_DSN": "memory",
+	})
+	os.Unsetenv("CLOCKIFY_API_KEY")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected streamable_http config to load without CLOCKIFY_API_KEY, got %v", err)
+	}
+	if cfg.Transport != "streamable_http" {
+		t.Fatalf("expected streamable_http, got %q", cfg.Transport)
+	}
+	if cfg.AuthMode != "oidc" {
+		t.Fatalf("expected oidc auth, got %q", cfg.AuthMode)
+	}
+}
+
+func TestLoadStreamableHTTPRequiresOIDCIssuer(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_TRANSPORT":         "streamable_http",
+		"MCP_AUTH_MODE":         "oidc",
+		"MCP_CONTROL_PLANE_DSN": "memory",
+	})
+	os.Unsetenv("CLOCKIFY_API_KEY")
+	os.Unsetenv("MCP_OIDC_ISSUER")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected missing OIDC issuer to fail")
+	}
+}

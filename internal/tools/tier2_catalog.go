@@ -27,5 +27,5 @@ func (s *Service) Tier2Handlers(groupName string) ([]mcp.ToolDescriptor, bool) {
 	if !ok {
 		return nil, false
 	}
-	return g.Builder(s), true
+	return normalizeDescriptors(g.Builder(s)), true
 }

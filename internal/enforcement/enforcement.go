@@ -31,6 +31,19 @@ type Pipeline struct {
 	Truncation truncate.Config
 }
 
+func (p *Pipeline) Clone() *Pipeline {
+	if p == nil {
+		return nil
+	}
+	return &Pipeline{
+		Policy:     p.Policy.Clone(),
+		Bootstrap:  p.Bootstrap.Clone(),
+		RateLimit:  p.RateLimit,
+		DryRun:     p.DryRun,
+		Truncation: p.Truncation,
+	}
+}
+
 // FilterTool reports whether a tool should be listed in tools/list.
 func (p *Pipeline) FilterTool(name string, hints mcp.ToolHints) bool {
 	if p.Bootstrap != nil && !p.Bootstrap.IsVisible(name) {
@@ -153,6 +166,16 @@ func (p *Pipeline) executeDryRun(ctx context.Context, action dryrun.Action, name
 type Gate struct {
 	Policy    *policy.Policy
 	Bootstrap *bootstrap.Config
+}
+
+func (g *Gate) Clone() *Gate {
+	if g == nil {
+		return nil
+	}
+	return &Gate{
+		Policy:    g.Policy.Clone(),
+		Bootstrap: g.Bootstrap.Clone(),
+	}
 }
 
 // IsGroupAllowed checks whether the policy permits activating a group.

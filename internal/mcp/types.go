@@ -47,6 +47,19 @@ type ToolHints struct {
 	Idempotent  bool
 }
 
+type AuditEvent struct {
+	Tool        string
+	Action      string
+	Outcome     string
+	Reason      string
+	ResourceIDs map[string]string
+	Metadata    map[string]string
+}
+
+type Auditor interface {
+	RecordAudit(AuditEvent)
+}
+
 // Activator handles dynamic tool activation (group enable, visibility toggle).
 // A nil Activator means activation is unrestricted.
 type Activator interface {

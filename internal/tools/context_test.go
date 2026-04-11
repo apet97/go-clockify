@@ -214,7 +214,7 @@ func TestSearchToolsIncludesTier2Groups(t *testing.T) {
 
 func TestSearchToolsActivateGroup(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	svc.ActivateGroup = func(name string) (ActivationResult, error) {
+	svc.ActivateGroup = func(_ context.Context, name string) (ActivationResult, error) {
 		if name != "invoices" {
 			return ActivationResult{}, fmt.Errorf("unexpected group %q", name)
 		}
@@ -238,7 +238,7 @@ func TestSearchToolsActivateGroup(t *testing.T) {
 
 func TestSearchToolsActivateTool(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	svc.ActivateTool = func(name string) (ActivationResult, error) {
+	svc.ActivateTool = func(_ context.Context, name string) (ActivationResult, error) {
 		if name != "clockify_send_invoice" {
 			return ActivationResult{}, fmt.Errorf("unexpected tool %q", name)
 		}

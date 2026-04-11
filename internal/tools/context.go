@@ -78,7 +78,7 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		if s.ActivateGroup == nil {
 			return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
 		}
-		result, err := s.ActivateGroup(activateGroup)
+		result, err := s.ActivateGroup(ctx, activateGroup)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
@@ -94,7 +94,7 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		if s.ActivateTool == nil {
 			return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
 		}
-		result, err := s.ActivateTool(activateTool)
+		result, err := s.ActivateTool(ctx, activateTool)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}

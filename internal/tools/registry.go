@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Service) Registry() []mcp.ToolDescriptor {
-	return []mcp.ToolDescriptor{
+	return normalizeDescriptors([]mcp.ToolDescriptor{
 		{Tool: toolRO("clockify_whoami", "Get current user and resolved workspace", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.WhoAmI(ctx) }},
 		{Tool: toolRO("clockify_list_workspaces", "List available Clockify workspaces", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.ListWorkspaces(ctx) }},
 		{Tool: toolRO("clockify_get_workspace", "Get the resolved workspace", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.GetWorkspace(ctx) }},
@@ -180,5 +180,5 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SearchTools(ctx, args)
 		}},
-	}
+	})
 }

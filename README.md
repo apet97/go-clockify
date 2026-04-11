@@ -10,7 +10,7 @@ Zero external dependencies. Single static binary. Every release is signed with c
 - **MCP protocol negotiation** — parses `InitializeParams`, negotiates against `{2025-06-18, 2025-03-26, 2024-11-05}`, advertises `tools.listChanged` only on transports that can actually push it, and returns an `instructions` string for agentic clients.
 - **Four policy modes** (`read_only`, `safe_core`, `standard`, `full`) + per-tool/group deny/allow lists + three-strategy dry-run for every destructive operation.
 - **Bounded dispatch + dual rate limiting** — stdio dispatch semaphore, per-process concurrency semaphore, and fixed-window throughput limiter. Neither layer can strand resources in the other.
-- **Observability built in** — `/metrics` endpoint exposes tool RED metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Histogram buckets are tuned to the documented SLO boundaries.
+- **Observability built in** — Prometheus metrics, upstream Clockify metrics, Go runtime + process metrics, panic counters, and protocol-error counters. Shared-service deployments can isolate metrics onto a dedicated listener with `MCP_METRICS_BIND`.
 - **PII-redacting structured logs** — every slog handler is wrapped in a recursive scrubber that masks 20+ secret-key patterns before they reach the encoder.
 - **Hardened Kubernetes reference manifests** — non-root distroless pod, read-only root FS, dropped ALL capabilities, NetworkPolicy (default-deny), PodDisruptionBudget, dedicated ServiceAccount, image pinned by version.
 - **Multi-arch container image pipeline** — buildx → Trivy scan → cosign keyless sign → SPDX SBOM → SLSA provenance attested to the registry.
@@ -226,13 +226,17 @@ See [docs/safe-usage.md](docs/safe-usage.md) for the complete safety guide.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_TRANSPORT` | `stdio` | `stdio` or legacy `http` (validated at startup) |
+| `MCP_TRANSPORT` | `stdio` | `stdio`, compatibility `http`, or session-aware `streamable_http` |
+| `MCP_AUTH_MODE` | transport-dependent | `static_bearer`, `oidc`, `forward_auth`, `mtls` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
-| `MCP_BEARER_TOKEN` | — | Required for HTTP mode (validated at startup); clients send `Authorization: Bearer <token>` |
+| `MCP_BEARER_TOKEN` | — | Required for `static_bearer`; clients send `Authorization: Bearer <token>` |
 | `MCP_ALLOWED_ORIGINS` | — | Comma-separated CORS origins (rejected if unset) |
 | `MCP_ALLOW_ANY_ORIGIN` | — | Set `1` to allow all origins |
 | `MCP_STRICT_HOST_CHECK` | — | Set `1` to enforce DNS rebinding protection: the inbound `Host` header must match `localhost`, `127.0.0.1`, `::1`, or a host in `MCP_ALLOWED_ORIGINS`. In strict mode, non-loopback hosts are rejected unless explicitly allowlisted. Default off to preserve reverse-proxy deployments that rewrite Host. |
 | `MCP_HTTP_MAX_BODY` | `2097152` | Positive max request body (bytes) |
+| `MCP_CONTROL_PLANE_DSN` | `memory` | Control-plane store for tenants, credential refs, sessions, and audit events (`streamable_http`) |
+| `MCP_SESSION_TTL` | `30m` | Session TTL for `streamable_http` |
+| `MCP_METRICS_BIND` | — | Dedicated metrics listener (recommended for `streamable_http`) |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr). All handlers are wrapped in a PII-redacting layer that scrubs secret keys (`authorization`, `api_key`, `bearer`, `token`, …) before encoding. |
 | `MCP_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 
@@ -295,7 +299,7 @@ docker compose up
 
 This starts the MCP server on port 8080 with a Caddy reverse proxy on port 443 for TLS termination. Edit `deploy/Caddyfile` to set your domain.
 
-HTTP mode remains the documented legacy POST JSON-RPC transport. It does not provide server-initiated streaming, session-backed notifications, or per-client initialization state. In shared HTTP deployments, `initialize`, negotiated protocol/client info, notifier behavior, and activated tool visibility are process-global today.
+Legacy `MCP_TRANSPORT=http` remains the documented compatibility POST JSON-RPC transport. It does not provide server-initiated streaming, session-backed notifications, or per-client initialization state. For shared-service deployments, use `MCP_TRANSPORT=streamable_http`.
 
 See [docs/http-transport.md](docs/http-transport.md) for the full HTTP transport guide.
 
@@ -336,6 +340,9 @@ CLOCKIFY_API_KEY=xxx go run ./cmd/clockify-mcp
 
 # Run server — legacy HTTP mode
 CLOCKIFY_API_KEY=xxx MCP_TRANSPORT=http MCP_BEARER_TOKEN=secret go run ./cmd/clockify-mcp
+
+# Run server — session-aware shared-service HTTP mode
+MCP_TRANSPORT=streamable_http MCP_AUTH_MODE=oidc MCP_OIDC_ISSUER=https://issuer.example.com MCP_CONTROL_PLANE_DSN=memory go run ./cmd/clockify-mcp
 
 # Build with explicit metadata
 go build -ldflags "-X main.version=v0.5.0 -X main.commit=$(git rev-parse HEAD) -X main.buildDate=$(git show -s --format=%cI HEAD)" ./cmd/clockify-mcp
@@ -393,6 +400,8 @@ Go 1.25.9, stdlib only — zero external dependencies. Module path: `github.com/
 - [HTTP Transport](docs/http-transport.md) — setup, auth, CORS, Docker
 - [Tool Annotations](docs/tool-annotations.md) — readOnlyHint, destructiveHint, idempotentHint
 - [Observability](docs/observability.md) — Prometheus metrics, SLOs, alert rules, log taxonomy
+- [Security Threat Model](docs/security-threat-model.md) — trust boundaries, session/tenant isolation, residual risks
+- [Stability Policy](docs/stability-policy.md) — compatibility tiers and deprecation rules
 
 ## Support
 

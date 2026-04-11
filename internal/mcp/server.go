@@ -157,6 +157,12 @@ type Server struct {
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
+	Auditor        Auditor
+	AuditTenantID  string
+	AuditSubject   string
+	AuditSessionID string
+	AuditTransport string
+
 	// readiness cache
 	readyMu     sync.Mutex
 	readyCached bool
@@ -526,6 +532,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	s.mu.RUnlock()
 	if !ok {
 		outcome = "tool_error"
+		s.recordAudit(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
 
@@ -565,11 +572,13 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 			default:
 				outcome = "tool_error"
 			}
+			s.recordAudit(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
 			return nil, err
 		}
 		if result != nil {
 			outcome = "dry_run"
+			s.recordAudit(params.Name, "tools/call", outcome, "dry_run_intercepted", params.Arguments, hints)
 			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
 			return result, nil
 		}
@@ -593,11 +602,13 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		} else {
 			outcome = "tool_error"
 		}
+		s.recordAudit(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
 	if !d.ReadOnlyHint {
+		s.recordAudit(params.Name, "tools/call", outcome, "", params.Arguments, hints)
 		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
 	}
 
@@ -693,6 +704,46 @@ func decodeParams(raw any, out any) error {
 		return err
 	}
 	return json.Unmarshal(b, out)
+}
+
+func (s *Server) recordAudit(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
+	if s.Auditor == nil || hints.ReadOnly {
+		return
+	}
+	s.Auditor.RecordAudit(AuditEvent{
+		Tool:        tool,
+		Action:      action,
+		Outcome:     outcome,
+		Reason:      reason,
+		ResourceIDs: resourceIDs(args),
+		Metadata: map[string]string{
+			"tenant_id":  s.AuditTenantID,
+			"subject":    s.AuditSubject,
+			"session_id": s.AuditSessionID,
+			"transport":  s.AuditTransport,
+		},
+	})
+}
+
+func resourceIDs(args map[string]any) map[string]string {
+	if len(args) == 0 {
+		return nil
+	}
+	ids := map[string]string{}
+	for k, v := range args {
+		if !strings.HasSuffix(strings.ToLower(k), "_id") {
+			continue
+		}
+		value, ok := v.(string)
+		if !ok || strings.TrimSpace(value) == "" {
+			continue
+		}
+		ids[k] = value
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return ids
 }
 
 func mustJSON(v any) string {

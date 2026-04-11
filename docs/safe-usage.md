@@ -54,11 +54,11 @@ Destructive tools support a `dry_run: true` parameter that previews the operatio
 
 | Strategy | When | Behavior | Side Effects? |
 |----------|------|----------|---------------|
-| **Confirm pattern** | `send_invoice`, `approve_timesheet`, etc. | Removes confirm flag and **executes the handler** — the result is wrapped in a dry-run envelope but the operation is performed | **Yes** — the tool runs against the Clockify API |
+| **Confirm pattern** | `send_invoice`, `approve_timesheet`, etc. | Removes confirm flag and returns a minimal preview envelope without executing the mutation | No |
 | **Preview (GET)** | `delete_entry`, `delete_invoice`, etc. | Calls the GET counterpart to show what would be deleted | No — read-only |
 | **Minimal fallback** | All other destructive tools | Echoes parameters back, no API call | No |
 
-> **Warning**: The confirm pattern strategy executes the real handler. It exists for tools like `send_invoice` and `approve_timesheet` where removing the confirm flag effectively makes the operation safe (the API requires explicit confirmation). If you need a guaranteed no-side-effect preview, only tools using the **Preview** or **Minimal fallback** strategies provide that.
+> **Note:** Confirm-pattern dry-runs do **not** execute the underlying mutation. They currently return a minimal preview envelope instead of calling the write handler.
 
 ### Example
 

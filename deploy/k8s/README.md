@@ -75,11 +75,14 @@ or the Deployment manifest.
 
 ## Observability
 
-The HTTP transport exposes three unauthenticated endpoints:
+Legacy `MCP_TRANSPORT=http` exposes three unauthenticated endpoints on the main listener:
 
 - `GET /health` — liveness (always 200 if the process is alive).
 - `GET /ready` — readiness (503 if the upstream Clockify API is unreachable).
 - `GET /metrics` — Prometheus text-format metrics.
+
+For `MCP_TRANSPORT=streamable_http`, prefer a dedicated metrics listener via
+`MCP_METRICS_BIND` and scrape that port instead of the public MCP listener.
 
 Structured JSON logs are written to stderr (`MCP_LOG_FORMAT=json`).
 

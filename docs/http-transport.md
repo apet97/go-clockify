@@ -2,17 +2,24 @@
 
 ## When to Use HTTP
 
-Use HTTP transport for:
-- Multi-user deployments
-- Centralized hosting
-- MCP clients that can speak the documented legacy POST JSON-RPC transport over HTTP
-- Server-side deployments behind a reverse proxy
+Use legacy `MCP_TRANSPORT=http` for:
+- Backward-compatible single-tenant HTTP deployments
+- Existing clients that only speak the documented POST JSON-RPC transport
+- Compatibility migrations where shared session isolation is not required
+
+Use `MCP_TRANSPORT=streamable_http` for:
+- Multi-user/shared-service deployments
+- Session-aware MCP over HTTP
+- Per-session tool activation and notification delivery
+- Enterprise deployments behind an ingress, gateway, or service mesh
 
 Use stdio (default) for:
 - Single-user desktop setups (Claude Desktop, Cursor)
 - Local development
 
 ## Quick Start
+
+Legacy HTTP:
 
 ```sh
 CLOCKIFY_API_KEY=your-key \
@@ -22,17 +29,34 @@ MCP_BEARER_TOKEN=your-secret-token \
 clockify-mcp
 ```
 
+Session-aware shared service:
+
+```sh
+MCP_TRANSPORT=streamable_http \
+MCP_AUTH_MODE=oidc \
+MCP_OIDC_ISSUER=https://issuer.example.com \
+MCP_CONTROL_PLANE_DSN=file:///var/lib/clockify-mcp/control-plane.json \
+MCP_METRICS_BIND=127.0.0.1:9091 \
+clockify-mcp
+```
+
 ## Configuration
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MCP_TRANSPORT` | No | `stdio` | Set to `http` for the legacy POST JSON-RPC transport |
+| `MCP_TRANSPORT` | No | `stdio` | `stdio`, compatibility `http`, or session-aware `streamable_http` |
+| `MCP_AUTH_MODE` | No | transport-dependent | `static_bearer`, `oidc`, `forward_auth`, `mtls` |
 | `MCP_HTTP_BIND` | Yes (http) | `:8080` | Bind address |
-| `MCP_BEARER_TOKEN` | Yes (http) | — | Bearer token for auth (`Authorization: Bearer <token>`) |
+| `MCP_BEARER_TOKEN` | Yes (`static_bearer`) | — | Bearer token for auth (`Authorization: Bearer <token>`) |
 | `MCP_ALLOWED_ORIGINS` | No | — | Comma-separated allowed browser origins |
 | `MCP_ALLOW_ANY_ORIGIN` | No | — | Set `1` to allow all origins |
 | `MCP_STRICT_HOST_CHECK` | No | — | Set `1` to require `Host` match `localhost`, `127.0.0.1`, `::1`, or a host from `MCP_ALLOWED_ORIGINS` |
 | `MCP_HTTP_MAX_BODY` | No | `2097152` | Positive max request body (bytes, default 2MB) |
+| `MCP_CONTROL_PLANE_DSN` | Yes (`streamable_http`) | `memory` | Control-plane store for tenants, credentials, sessions, and audit events |
+| `MCP_SESSION_TTL` | No | `30m` | Session expiry for `streamable_http` |
+| `MCP_TENANT_CLAIM` | No | `tenant_id` | Tenant claim for OIDC |
+| `MCP_SUBJECT_CLAIM` | No | `sub` | Subject claim for OIDC |
+| `MCP_METRICS_BIND` | No | — | Dedicated metrics listener; recommended for `streamable_http` |
 | `MCP_LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Authentication
@@ -48,7 +72,7 @@ curl -X POST http://localhost:8080/mcp \
 
 The token is compared using constant-time comparison (`crypto/subtle`) to prevent timing attacks.
 
-HTTP mode is a legacy stateless JSON-RPC transport. It does not provide server-initiated streaming, session-backed notification delivery, or per-client initialization semantics. Clients should send `initialize` before the first `tools/call` after process start.
+Legacy HTTP mode is a compatibility JSON-RPC transport. It does not provide server-initiated streaming, session-backed notification delivery, or per-client initialization semantics. Clients should send `initialize` before the first `tools/call` after process start.
 
 ## Current Semantics
 
@@ -59,7 +83,17 @@ Current HTTP behavior is intentionally capability-reduced rather than pretending
 - Tool activation and visibility changes are process-global.
 - Server-initiated notifications are not delivered; attempted `tools/list_changed` notifications are dropped and counted.
 
-This is safe for a shared legacy JSON-RPC endpoint, but it is not a session-aware MCP transport.
+This is acceptable for single-tenant compatibility deployments, but it is not a session-aware MCP transport and should not be treated as enterprise shared-service safe.
+
+## Streamable HTTP Semantics
+
+`MCP_TRANSPORT=streamable_http` creates an authenticated per-client session:
+
+- `initialize` creates a session-bound MCP server instance and returns `X-MCP-Session-ID`.
+- Subsequent `POST /mcp` requests must send `X-MCP-Session-ID`.
+- `GET /mcp/events` streams server notifications for that same session.
+- Negotiated protocol version, `clientInfo`, tool activation, notifier delivery, and audit correlation are all session-local.
+- Sessions expire after `MCP_SESSION_TTL` unless refreshed by activity.
 
 ## Endpoints
 
@@ -69,6 +103,7 @@ This is safe for a shared legacy JSON-RPC endpoint, but it is not a session-awar
 | `/mcp` | OPTIONS | None | CORS preflight |
 | `/health` | GET | None | Health check (always 200) |
 | `/ready` | GET | None | Readiness check for the HTTP server and optional upstream Clockify probe; independent of MCP `initialize` state |
+| `/mcp/events` | GET | Transport auth + session | Server-initiated notifications for `streamable_http` |
 
 ## Security Headers
 
@@ -117,19 +152,12 @@ Preflight `OPTIONS` requests do not require the bearer token.
 ## Known Limitations
 
 - **Tool list change notifications are not supported in HTTP mode.** `initialize` over HTTP intentionally omits `capabilities.tools.listChanged`, because the legacy POST transport cannot deliver `notifications/tools/list_changed`. When Tier 2 tool groups are activated via `clockify_search_tools`, HTTP clients should re-fetch `tools/list` after activating groups.
-- **HTTP state is shared across callers.** A later HTTP `initialize` call replaces the process-global negotiated client metadata, and activated tool visibility is shared across all HTTP callers using that server process.
+- **Legacy HTTP state is shared across callers.** A later HTTP `initialize` call replaces the process-global negotiated client metadata, and activated tool visibility is shared across all HTTP callers using that server process.
+- **`streamable_http` session state is replica-local.** Shared-service deployments must use sticky/session-affine routing so `X-MCP-Session-ID` stays on the owning replica.
 
 ## Migration Path to Streamable HTTP
 
-A correct Streamable HTTP implementation is intentionally out of scope for `MCP_TRANSPORT=http` today. Before introducing it, the MCP core needs session-scoped state for:
-
-- `initialized`
-- negotiated protocol version and `clientInfo`
-- notifier / server-initiated delivery
-- visible and activated tool state
-- session lifecycle tests for spec-correct stream transport behavior
-
-When that work lands, it should ship behind an explicit new transport mode instead of silently changing the meaning of `MCP_TRANSPORT=http`.
+Use `MCP_TRANSPORT=streamable_http` for all new shared-service deployments. Keep `MCP_TRANSPORT=http` only for compatibility with existing clients that cannot yet adopt session-aware HTTP.
 
 ## Structured Access Logging
 
