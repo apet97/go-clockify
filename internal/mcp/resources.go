@@ -157,6 +157,15 @@ type ResourceUpdateDelta struct {
 	Patch any
 }
 
+// HasResourceSubscription reports whether any client is currently subscribed
+// to uri. The tool layer calls this before re-reading a resource in
+// emitResourceUpdate so unsubscribed mutations don't pay for a redundant
+// ReadResource round-trip. Concurrent-safe (delegates to the internal
+// sync.Map).
+func (s *Server) HasResourceSubscription(uri string) bool {
+	return uri != "" && s.resourceSubs.has(uri)
+}
+
 // NotifyResourceUpdated publishes notifications/resources/updated if the URI
 // has an active subscription. Transports/tool handlers call this after a
 // mutation that invalidates a cached resource view. Safe to call before the

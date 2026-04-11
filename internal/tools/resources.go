@@ -295,14 +295,21 @@ func encodeResource(uri string, payload any) ([]mcp.ResourceContents, error) {
 //
 // Silent no-op when:
 //   - s.EmitResourceUpdate hook is not wired (tests without a Server)
-//   - the resource has no active subscription (the hook delegates to
-//     Server.NotifyResourceUpdated which checks the subscription set)
+//   - s.SubscriptionGate reports no active subscription for uri
+//     (W4-04c: short-circuit before ReadResource so the hot path pays
+//     no Clockify API round-trip for unsubscribed mutations)
 //
 // Failure modes (read error, marshal error, diff error) fall through to
 // emitting format=none so the subscribed client knows to re-fetch.
 // Deletes are signalled via emitResourceDeleted rather than this helper.
 func (s *Service) emitResourceUpdate(ctx context.Context, uri string) {
 	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
+		return
+	}
+	if s.SubscriptionGate != nil && !s.SubscriptionGate(uri) {
+		// Unsubscribed hot path: skip the ReadResource round-trip
+		// entirely. Even dropping the cache entry would be wrong here
+		// because no subscriber is tracking state; we simply no-op.
 		return
 	}
 	contents, err := s.ReadResource(ctx, uri)

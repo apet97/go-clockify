@@ -152,9 +152,9 @@ func TestAddEntry_CrossWeekSpanEmitsBothWeeklyReports(t *testing.T) {
 	}
 	// Assertion: the set of URIs is exactly {entry, weekly(N), weekly(N+1)}.
 	want := map[string]bool{
-		"clockify://workspace/" + wsID + "/entry/" + entryID:             true,
-		"clockify://workspace/" + wsID + "/report/weekly/2026-04-06":     true,
-		"clockify://workspace/" + wsID + "/report/weekly/2026-04-13":     true,
+		"clockify://workspace/" + wsID + "/entry/" + entryID:         true,
+		"clockify://workspace/" + wsID + "/report/weekly/2026-04-06": true,
+		"clockify://workspace/" + wsID + "/report/weekly/2026-04-13": true,
 	}
 	for _, c := range calls {
 		if !want[c.URI] {

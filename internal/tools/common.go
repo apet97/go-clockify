@@ -30,6 +30,13 @@ type Service struct {
 	// protocol core rather than in every mutation handler. nil = drop silently
 	// (tests without a Server wired).
 	EmitResourceUpdate func(uri string, delta mcp.ResourceUpdateDelta)
+	// SubscriptionGate reports whether any client is currently subscribed
+	// to a URI. When wired (runtime.go sets it to
+	// Server.HasResourceSubscription), emitResourceUpdate short-circuits
+	// before the ReadResource round-trip so unsubscribed mutations don't
+	// pay for a redundant fetch. nil = gate disabled; every emit pays for
+	// the re-read (W3-era behaviour, preserved for tests).
+	SubscriptionGate func(uri string) bool
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
