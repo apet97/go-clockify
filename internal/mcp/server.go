@@ -160,8 +160,8 @@ type Server struct {
 	encoderMu            sync.Mutex    // protects concurrent encoder writes
 	requestSeq           atomic.Int64  // monotonic request ID for log correlation
 
-	hub                notifierHub
-	setNotifierRemove  func() // cleanup from previous SetNotifier call
+	hub               notifierHub
+	setNotifierRemove func() // cleanup from previous SetNotifier call
 
 	// Negotiated client info. Populated on successful initialize; read by
 	// downstream log calls via NegotiatedProtocolVersion() / ClientInfo().
