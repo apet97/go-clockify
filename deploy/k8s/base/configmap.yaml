@@ -25,6 +25,9 @@ data:
   # CLOCKIFY_INSECURE: "0"
   # CLOCKIFY_DELTA_FORMAT: "merge"
   # MCP_GRPC_REAUTH_INTERVAL: ""
+  # MCP_GRPC_TLS_CERT: ""
+  # MCP_GRPC_TLS_KEY: ""
+  # MCP_MTLS_CA_CERT_PATH: ""
   # Auth (uncomment for non-default mode)
   # MCP_AUTH_MODE: ""
   # MCP_OIDC_ISSUER: ""

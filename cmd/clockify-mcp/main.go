@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"os"
@@ -299,10 +301,31 @@ func run() error {
 				return err
 			}
 		}
+		var grpcTLS *tls.Config
+		if cfg.GRPCTLSCert != "" {
+			cert, err := tls.LoadX509KeyPair(cfg.GRPCTLSCert, cfg.GRPCTLSKey)
+			if err != nil {
+				return fmt.Errorf("load gRPC TLS cert/key: %w", err)
+			}
+			grpcTLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+			if cfg.MTLSCACertPath != "" {
+				caCert, err := os.ReadFile(cfg.MTLSCACertPath)
+				if err != nil {
+					return fmt.Errorf("read mTLS CA cert: %w", err)
+				}
+				pool := x509.NewCertPool()
+				if !pool.AppendCertsFromPEM(caCert) {
+					return fmt.Errorf("mTLS CA cert: no valid PEM certificates found")
+				}
+				grpcTLS.ClientCAs = pool
+				grpcTLS.ClientAuth = tls.RequireAndVerifyClientCert
+			}
+		}
 		return serveGRPC(ctx, cfg.GRPCBind, server, grpcAuthenticator, grpcConfig{
 			reauthInterval:       cfg.GRPCReauthInterval,
 			forwardTenantHeader:  cfg.ForwardTenantHeader,
 			forwardSubjectHeader: cfg.ForwardSubjectHeader,
+			tlsConfig:            grpcTLS,
 		})
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)

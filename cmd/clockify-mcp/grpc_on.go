@@ -19,5 +19,6 @@ func serveGRPC(ctx context.Context, bind string, server *mcp.Server, auth authn.
 		ReauthInterval:       gcfg.reauthInterval,
 		ForwardTenantHeader:  gcfg.forwardTenantHeader,
 		ForwardSubjectHeader: gcfg.forwardSubjectHeader,
+		TLSConfig:            gcfg.tlsConfig,
 	})
 }

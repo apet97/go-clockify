@@ -71,6 +71,14 @@ type Config struct {
 	// GRPCReauthInterval is how often long-lived gRPC streams re-validate
 	// their auth token. 0 = disabled (per-stream validation only).
 	GRPCReauthInterval time.Duration
+
+	// GRPCTLSCert and GRPCTLSKey are paths to the server TLS cert and
+	// private key for the gRPC transport. Both must be set together.
+	GRPCTLSCert string
+	GRPCTLSKey  string
+	// MTLSCACertPath is the path to the CA cert for client certificate
+	// verification. Required when MCP_AUTH_MODE=mtls on gRPC.
+	MTLSCACertPath string
 }
 
 func Load() (Config, error) {
@@ -140,7 +148,8 @@ func Load() (Config, error) {
 			// static_bearer and oidc use Authorization metadata.
 			// forward_auth reads x-forwarded-* metadata keys.
 		case "mtls":
-			return Config{}, fmt.Errorf("MCP_AUTH_MODE=mtls is not yet supported on gRPC transport; use static_bearer, oidc, or forward_auth")
+			// Supported when the gRPC server is TLS-enabled
+			// (MCP_GRPC_TLS_CERT + MCP_GRPC_TLS_KEY set).
 		}
 	}
 
@@ -307,6 +316,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_REPORT_MAX_ENTRIES must be >= 0")
 		}
 		cfg.ReportMaxEntries = n
+	}
+
+	cfg.GRPCTLSCert = os.Getenv("MCP_GRPC_TLS_CERT")
+	cfg.GRPCTLSKey = os.Getenv("MCP_GRPC_TLS_KEY")
+	cfg.MTLSCACertPath = os.Getenv("MCP_MTLS_CA_CERT_PATH")
+	if (cfg.GRPCTLSCert == "") != (cfg.GRPCTLSKey == "") {
+		return Config{}, fmt.Errorf("MCP_GRPC_TLS_CERT and MCP_GRPC_TLS_KEY must both be set or both empty")
 	}
 
 	if v := os.Getenv("MCP_GRPC_REAUTH_INTERVAL"); v != "" {

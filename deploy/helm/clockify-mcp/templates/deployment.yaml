@@ -49,6 +49,18 @@ spec:
             - name: MCP_GRPC_REAUTH_INTERVAL
               value: {{ . | quote }}
             {{- end }}
+            {{- with $.Values.transport.grpcTlsCert }}
+            - name: MCP_GRPC_TLS_CERT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.transport.grpcTlsKey }}
+            - name: MCP_GRPC_TLS_KEY
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.transport.mtlsCaCertPath }}
+            - name: MCP_MTLS_CA_CERT_PATH
+              value: {{ . | quote }}
+            {{- end }}
             {{- else }}
             - name: MCP_HTTP_BIND
               value: {{ .Values.transport.bind | quote }}

@@ -2,7 +2,7 @@ package config
 
 import (
 	"os"
-	"strings"
+
 	"testing"
 )
 
@@ -369,21 +369,17 @@ func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 	}
 }
 
-// TestLoadTransportGRPCMTLSRejected documents the W4-03 stop condition:
-// mtls needs real TLS VerifiedChains that the synthetic request cannot
-// expose. Operators still front gRPC with an external mTLS terminator.
-func TestLoadTransportGRPCMTLSRejected(t *testing.T) {
+// TestLoadTransportGRPCMTLSAccepted verifies mtls is accepted on gRPC
+// (W5-05c: credentials.TLSInfo passthrough).
+func TestLoadTransportGRPCMTLSAccepted(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 		"MCP_TRANSPORT":    "grpc",
 		"MCP_AUTH_MODE":    "mtls",
 	})
 	_, err := Load()
-	if err == nil {
-		t.Fatal("expected gRPC + mtls to be rejected")
-	}
-	if !strings.Contains(err.Error(), "mtls") {
-		t.Fatalf("expected error mentioning mtls, got: %v", err)
+	if err != nil {
+		t.Fatalf("expected gRPC + mtls to be accepted, got: %v", err)
 	}
 }
 

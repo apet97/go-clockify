@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
 	"strings"
@@ -65,6 +66,7 @@ type grpcConfig struct {
 	reauthInterval       time.Duration
 	forwardTenantHeader  string
 	forwardSubjectHeader string
+	tlsConfig            *tls.Config
 }
 
 func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int) *tools.Service {

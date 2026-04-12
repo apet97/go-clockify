@@ -2,6 +2,7 @@ package grpctransport
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Options configures a Serve invocation. Bind is required; Server is the
@@ -35,6 +37,7 @@ type Options struct {
 	ReauthInterval       time.Duration
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
+	TLSConfig            *tls.Config
 }
 
 // Serve starts the gRPC transport on the given bind and blocks until ctx
@@ -67,11 +70,15 @@ func Serve(ctx context.Context, opts Options) error {
 		grpc.ForceServerCodec(bytesCodec{}),
 		grpc.MaxRecvMsgSize(opts.MaxRecvSize),
 	}
+	if opts.TLSConfig != nil {
+		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(opts.TLSConfig)))
+	}
 	if opts.Authenticator != nil {
 		serverOpts = append(serverOpts, grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator, authInterceptorConfig{
 			reauthInterval:       opts.ReauthInterval,
 			forwardTenantHeader:  opts.ForwardTenantHeader,
 			forwardSubjectHeader: opts.ForwardSubjectHeader,
+			mtls:                 opts.TLSConfig != nil && opts.TLSConfig.ClientAuth == tls.RequireAndVerifyClientCert,
 		})))
 	}
 	grpcSrv := grpc.NewServer(serverOpts...)

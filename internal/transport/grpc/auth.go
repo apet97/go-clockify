@@ -2,6 +2,7 @@ package grpctransport
 
 import (
 	"context"
+	"crypto/tls"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -12,7 +13,9 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -26,6 +29,7 @@ type authInterceptorConfig struct {
 	reauthInterval       time.Duration
 	forwardTenantHeader  string
 	forwardSubjectHeader string
+	mtls                 bool
 }
 
 func authStreamInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) grpc.StreamServerInterceptor {
@@ -38,6 +42,16 @@ func authStreamInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) 
 		synth, err := buildSynthRequest(md, cfg.forwardTenantHeader, cfg.forwardSubjectHeader)
 		if err != nil {
 			return err
+		}
+		if cfg.mtls {
+			if p, ok := peer.FromContext(ss.Context()); ok {
+				if tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo); ok {
+					synth.TLS = &tls.ConnectionState{
+						VerifiedChains:   tlsInfo.State.VerifiedChains,
+						PeerCertificates: tlsInfo.State.PeerCertificates,
+					}
+				}
+			}
 		}
 		principal, err := auth.Authenticate(ss.Context(), synth)
 		if err != nil {

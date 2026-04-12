@@ -90,6 +90,9 @@ transport:
   bind: ":8080"
   grpcBind: ":9090"
   grpcReauthInterval: ""  # MCP_GRPC_REAUTH_INTERVAL (Go duration, e.g. "60s")
+  grpcTlsCert: ""         # MCP_GRPC_TLS_CERT (path to server cert)
+  grpcTlsKey: ""          # MCP_GRPC_TLS_KEY (path to server private key)
+  mtlsCaCertPath: ""      # MCP_MTLS_CA_CERT_PATH (path to CA cert for client verification)
   strictHostCheck: "0"
   logFormat: "json"
   logLevel: "info"
