@@ -55,6 +55,94 @@ spec:
               value: {{ .Values.transport.logLevel | quote }}
             - name: MCP_STRICT_HOST_CHECK
               value: {{ .Values.transport.strictHostCheck | quote }}
+            {{- with .Values.clockify.workspaceId }}
+            - name: CLOCKIFY_WORKSPACE_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.baseUrl }}
+            - name: CLOCKIFY_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.timezone }}
+            - name: CLOCKIFY_TIMEZONE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.insecure }}
+            - name: CLOCKIFY_INSECURE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.mode }}
+            - name: MCP_AUTH_MODE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcIssuer }}
+            - name: MCP_OIDC_ISSUER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcAudience }}
+            - name: MCP_OIDC_AUDIENCE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcJwksUrl }}
+            - name: MCP_OIDC_JWKS_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcJwksPath }}
+            - name: MCP_OIDC_JWKS_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.resourceUri }}
+            - name: MCP_RESOURCE_URI
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.forwardTenantHeader }}
+            - name: MCP_FORWARD_TENANT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.forwardSubjectHeader }}
+            - name: MCP_FORWARD_SUBJECT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.mtlsTenantHeader }}
+            - name: MCP_MTLS_TENANT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.dsn }}
+            - name: MCP_CONTROL_PLANE_DSN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.sessionTtl }}
+            - name: MCP_SESSION_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.tenantClaim }}
+            - name: MCP_TENANT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.subjectClaim }}
+            - name: MCP_SUBJECT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.defaultTenantId }}
+            - name: MCP_DEFAULT_TENANT_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.cors.allowedOrigins }}
+            - name: MCP_ALLOWED_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.cors.allowAnyOrigin }}
+            - name: MCP_ALLOW_ANY_ORIGIN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.metricsEndpoint.bind }}
+            - name: MCP_METRICS_BIND
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.metricsEndpoint.authMode }}
+            - name: MCP_METRICS_AUTH_MODE
+              value: {{ . | quote }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "clockify-mcp.fullname" . }}-config

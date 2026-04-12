@@ -93,14 +93,53 @@ transport:
   logFormat: "json"
   logLevel: "info"
 
+# Core Clockify API knobs. Empty = server defaults.
+clockify:
+  workspaceId: ""     # CLOCKIFY_WORKSPACE_ID (auto-resolved if only one)
+  baseUrl: ""         # CLOCKIFY_BASE_URL (default: https://api.clockify.me/api/v1)
+  timezone: ""        # CLOCKIFY_TIMEZONE (default: system)
+  insecure: ""        # CLOCKIFY_INSECURE ("1" to allow non-loopback HTTP)
+
+# Authentication. Modes: static_bearer, oidc, forward_auth, mtls.
+# Empty = auto-detected per transport (see config.go).
+auth:
+  mode: ""                  # MCP_AUTH_MODE
+  oidcIssuer: ""            # MCP_OIDC_ISSUER
+  oidcAudience: ""          # MCP_OIDC_AUDIENCE
+  oidcJwksUrl: ""           # MCP_OIDC_JWKS_URL
+  oidcJwksPath: ""          # MCP_OIDC_JWKS_PATH (file mount)
+  resourceUri: ""           # MCP_RESOURCE_URI (OAuth 2.1 RS indicator)
+  forwardTenantHeader: ""   # MCP_FORWARD_TENANT_HEADER
+  forwardSubjectHeader: ""  # MCP_FORWARD_SUBJECT_HEADER
+  mtlsTenantHeader: ""      # MCP_MTLS_TENANT_HEADER
+
+# Streamable-HTTP control plane.
+controlPlane:
+  dsn: ""               # MCP_CONTROL_PLANE_DSN (default: memory)
+  sessionTtl: ""        # MCP_SESSION_TTL (default: 30m)
+  tenantClaim: ""       # MCP_TENANT_CLAIM (default: tenant_id)
+  subjectClaim: ""      # MCP_SUBJECT_CLAIM (default: sub)
+  defaultTenantId: ""   # MCP_DEFAULT_TENANT_ID (default: default)
+
+# CORS.
+cors:
+  allowedOrigins: ""    # MCP_ALLOWED_ORIGINS (comma-separated)
+  allowAnyOrigin: ""    # MCP_ALLOW_ANY_ORIGIN ("1" to allow all)
+
+# Metrics endpoint. Separate bind address from the main transport.
+metricsEndpoint:
+  bind: ""              # MCP_METRICS_BIND (empty = disabled)
+  authMode: ""          # MCP_METRICS_AUTH_MODE (default: none)
+
 # Secret values. By default the chart creates a placeholder Secret with
 # empty values so operators remember to inject real ones before applying.
 # Set create: false to use an external Secret (e.g. sealed-secrets).
 secrets:
   create: true
   name: ""  # defaults to "{fullname}-secrets"
-  clockifyApiKey: ""       # CLOCKIFY_API_KEY
-  mcpBearerToken: ""       # MCP_BEARER_TOKEN
+  clockifyApiKey: ""           # CLOCKIFY_API_KEY
+  mcpBearerToken: ""           # MCP_BEARER_TOKEN
+  metricsBearerToken: ""       # MCP_METRICS_BEARER_TOKEN
 
 service:
   type: ClusterIP

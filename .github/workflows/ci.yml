@@ -299,6 +299,8 @@ jobs:
             echo "--- $env overlay ---"
             kubectl kustomize "deploy/k8s/overlays/$env" | kubeconform -strict -summary -skip ServiceMonitor,PrometheusRule
           done
+      - name: Config parity gate
+        run: bash scripts/check-config-parity.sh
       - name: Helm lint
         run: helm lint deploy/helm/clockify-mcp
       - name: Render and validate Helm chart (defaults)

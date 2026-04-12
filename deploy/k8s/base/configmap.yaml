@@ -18,3 +18,30 @@ data:
   CLOCKIFY_BOOTSTRAP_MODE: "full_tier1"
   MCP_MAX_INFLIGHT_TOOL_CALLS: "64"
   MCP_HTTP_MAX_BODY: "2097152"
+  # Core Clockify API (uncomment and set as needed)
+  # CLOCKIFY_WORKSPACE_ID: ""
+  # CLOCKIFY_BASE_URL: "https://api.clockify.me/api/v1"
+  # CLOCKIFY_TIMEZONE: ""
+  # CLOCKIFY_INSECURE: "0"
+  # Auth (uncomment for non-default mode)
+  # MCP_AUTH_MODE: ""
+  # MCP_OIDC_ISSUER: ""
+  # MCP_OIDC_AUDIENCE: ""
+  # MCP_OIDC_JWKS_URL: ""
+  # MCP_RESOURCE_URI: ""
+  # MCP_FORWARD_TENANT_HEADER: ""
+  # MCP_FORWARD_SUBJECT_HEADER: ""
+  # MCP_MTLS_TENANT_HEADER: ""
+  # Control plane (streamable_http)
+  # MCP_CONTROL_PLANE_DSN: "memory"
+  # MCP_SESSION_TTL: "30m"
+  # MCP_TENANT_CLAIM: "tenant_id"
+  # MCP_SUBJECT_CLAIM: "sub"
+  # MCP_DEFAULT_TENANT_ID: "default"
+  # CORS
+  # MCP_ALLOWED_ORIGINS: ""
+  # MCP_ALLOW_ANY_ORIGIN: "0"
+  # MCP_STRICT_HOST_CHECK: "0"
+  # Metrics endpoint
+  # MCP_METRICS_BIND: ""
+  # MCP_METRICS_AUTH_MODE: "none"
