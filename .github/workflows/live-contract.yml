@@ -1,0 +1,164 @@
+name: Live contract
+
+# Nightly smoke of the Clockify upstream contract. Runs the build-tagged
+# e2e test suite (tests/e2e_live_test.go) against a dedicated sacrificial
+# workspace so upstream schema drift, auth changes, and response-shape
+# regressions surface as a GitHub issue with the label 'live-test-failure'
+# — NOT as silent CI pass on unrelated PRs.
+#
+# Secrets (set at the repository level):
+#
+#   CLOCKIFY_LIVE_API_KEY     API key for the sacrificial workspace only.
+#                             This workspace must never be used by humans.
+#   CLOCKIFY_LIVE_WORKSPACE_ID  Workspace id (passed to the server as
+#                             CLOCKIFY_WORKSPACE_ID).
+#
+# Repository variable:
+#
+#   CLOCKIFY_LIVE_WRITE_ENABLED  Set to "true" to run TestE2EMutating
+#                                (create/start/stop/delete). Omit or set
+#                                to "false" to run only read-path tests.
+#                                Acts as a kill-switch if the sacrificial
+#                                workspace needs a break from writes.
+#
+# All ${{ }} references to secrets/inputs/vars are placed inside env: blocks
+# rather than interpolated into run: commands so untrusted strings cannot
+# shell-inject (see github.blog/security/vulnerability-research).
+#
+# Issue workflow (see docs/live-tests.md):
+#
+#   - On failure: open a single rolling issue labelled 'live-test-failure'
+#     with a pointer to the failing run. `gh` is preinstalled on
+#     ubuntu-latest, so no third-party action is required.
+#   - On the next green run: auto-close every open issue with that label.
+#     The live-test-failure label is the exclusive signal — no polling
+#     dashboards, no Slack, just a GitHub issue that the maintainer sees.
+
+on:
+  schedule:
+    # 30 minutes after mutation.yml's nightly cron so the two jobs don't
+    # fight for runner quota.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      enable_writes:
+        description: "Run mutating tests (TestE2EMutating). Only enable against the sacrificial workspace."
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # A running nightly must never race another. If a manual dispatch fires
+  # while the cron is still executing, the new run is queued not started.
+  group: live-contract
+  cancel-in-progress: false
+
+jobs:
+  live-contract:
+    name: Live contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+
+      - name: Verify secrets are present
+        env:
+          API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+        run: |
+          if [ -z "${API_KEY:-}" ]; then
+            echo "::error::CLOCKIFY_LIVE_API_KEY secret is not set"
+            echo "Configure the secret under repo settings → Secrets → Actions."
+            echo "This workflow runs against a dedicated sacrificial workspace."
+            exit 1
+          fi
+
+      - name: Run read-only live tests (TestE2EReadOnly, TestE2EErrors)
+        env:
+          CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+          CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
+          CLOCKIFY_RUN_LIVE_E2E: "1"
+        run: |
+          go test -tags=livee2e -count=1 -timeout 5m \
+            -run '^TestE2E(ReadOnly|Errors)$' \
+            ./tests/...
+
+      - name: Run mutating live tests (TestE2EMutating)
+        # Gated on the repository variable so writes can be disabled
+        # without editing the workflow. Manual dispatch can also force
+        # writes on via the input, useful for debugging upstream bugs.
+        if: |
+          vars.CLOCKIFY_LIVE_WRITE_ENABLED == 'true' ||
+          github.event.inputs.enable_writes == 'true'
+        env:
+          CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+          CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
+          CLOCKIFY_RUN_LIVE_E2E: "1"
+        run: |
+          go test -tags=livee2e -count=1 -timeout 5m \
+            -run '^TestE2EMutating$' \
+            ./tests/...
+
+      - name: Open failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Avoid spamming: only open an issue if there isn't already one
+          # labelled live-test-failure still open. A single rolling issue
+          # per outage is easier to triage than one per night.
+          existing=$(gh issue list --label live-test-failure --state open --json number --jq '.[].number' | head -1)
+          if [ -n "${existing:-}" ]; then
+            gh issue comment "$existing" --body "Run ${WORKFLOW_URL} (attempt ${RUN_ATTEMPT}, sha ${SHA}) failed. Still open."
+            exit 0
+          fi
+          body=$(cat <<EOF
+          The nightly live contract test failed.
+
+          **Run:** ${WORKFLOW_URL}
+          **Attempt:** ${RUN_ATTEMPT}
+          **Commit:** ${SHA}
+
+          This workflow runs the build-tagged \`livee2e\` suite against
+          the dedicated sacrificial Clockify workspace. A failure usually
+          means one of:
+
+          1. Clockify response-shape drift (most common).
+          2. Clockify auth/permission change on the sacrificial workspace.
+          3. Genuine regression landed on \`main\` between runs.
+
+          See \`docs/live-tests.md\` for the triage playbook.
+
+          This issue will be closed automatically by the next green run.
+          EOF
+          )
+          gh issue create \
+            --title "live-contract: nightly run failed ($(date -u +%Y-%m-%d))" \
+            --label live-test-failure \
+            --body "$body"
+
+      - name: Close stale failure issues on green run
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          numbers=$(gh issue list --label live-test-failure --state open --json number --jq '.[].number')
+          if [ -z "${numbers:-}" ]; then
+            echo "no open live-test-failure issues to close"
+            exit 0
+          fi
+          while IFS= read -r n; do
+            [ -z "$n" ] && continue
+            gh issue close "$n" --comment "Closed automatically by green nightly run: ${WORKFLOW_URL}"
+          done <<< "$numbers"
