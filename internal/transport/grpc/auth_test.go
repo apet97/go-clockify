@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/authn"
+	"github.com/apet97/go-clockify/internal/metrics"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -73,6 +74,7 @@ func callInterceptor(t *testing.T, auth authn.Authenticator, md metadata.MD) (er
 
 func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	auth := fakeAuthenticator{wantToken: "correct"}
+	before := metrics.GRPCAuthRejectionsTotal.Get("missing_metadata")
 	// No incoming metadata at all — use a bare context.
 	stream := &mockServerStream{ctx: context.Background()}
 	interceptor := authStreamInterceptor(auth)
@@ -83,10 +85,14 @@ func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
 		t.Fatalf("expected Unauthenticated, got %v", err)
 	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("missing_metadata"); got != before+1 {
+		t.Fatalf("expected missing_metadata counter to increment by 1, got %d (before=%d)", got, before)
+	}
 }
 
 func TestAuthInterceptor_MissingAuthorization(t *testing.T) {
 	auth := fakeAuthenticator{wantToken: "correct"}
+	before := metrics.GRPCAuthRejectionsTotal.Get("missing_authorization")
 	err, seen := callInterceptor(t, auth, metadata.MD{})
 	if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
 		t.Fatalf("expected Unauthenticated, got %v", err)
@@ -94,13 +100,20 @@ func TestAuthInterceptor_MissingAuthorization(t *testing.T) {
 	if seen != nil {
 		t.Fatalf("handler should not have run; got principal %+v", seen)
 	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("missing_authorization"); got != before+1 {
+		t.Fatalf("expected missing_authorization counter to increment, got %d (before=%d)", got, before)
+	}
 }
 
 func TestAuthInterceptor_EmptyAuthorizationValue(t *testing.T) {
 	auth := fakeAuthenticator{wantToken: "correct"}
+	before := metrics.GRPCAuthRejectionsTotal.Get("empty_authorization")
 	err, _ := callInterceptor(t, auth, metadata.Pairs("authorization", ""))
 	if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
 		t.Fatalf("expected Unauthenticated on empty authorization, got %v", err)
+	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("empty_authorization"); got != before+1 {
+		t.Fatalf("expected empty_authorization counter to increment, got %d (before=%d)", got, before)
 	}
 }
 
@@ -137,12 +150,16 @@ func TestAuthInterceptor_HappyPathPropagatesPrincipal(t *testing.T) {
 
 func TestAuthInterceptor_AuthenticatorError(t *testing.T) {
 	auth := fakeAuthenticator{forceErr: errors.New("token expired")}
+	before := metrics.GRPCAuthRejectionsTotal.Get("auth_failed")
 	err, seen := callInterceptor(t, auth, metadata.Pairs("authorization", "Bearer whatever"))
 	if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
 		t.Fatalf("expected Unauthenticated on authenticator error, got %v", err)
 	}
 	if seen != nil {
 		t.Fatalf("handler should not run when authenticator fails; got %+v", seen)
+	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("auth_failed"); got != before+1 {
+		t.Fatalf("expected auth_failed counter to increment, got %d (before=%d)", got, before)
 	}
 }
 

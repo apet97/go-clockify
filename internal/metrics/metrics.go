@@ -572,6 +572,8 @@ var (
 	ProtocolErrorsTotal *Counter
 	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
 	PanicsRecoveredTotal *Counter
+	// GRPCAuthRejectionsTotal counts gRPC auth interceptor rejections by reason.
+	GRPCAuthRejectionsTotal *Counter
 )
 
 func init() {
@@ -645,6 +647,11 @@ func init() {
 		"clockify_mcp_panics_recovered_total",
 		"Panics recovered from tool handlers or HTTP handlers by site.",
 		"site",
+	)
+	GRPCAuthRejectionsTotal = Default.NewCounter(
+		"clockify_mcp_grpc_auth_rejections_total",
+		"gRPC auth interceptor rejections by reason.",
+		"reason",
 	)
 	registerRuntimeMetrics(Default)
 }

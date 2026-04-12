@@ -243,9 +243,10 @@ unrelated edits by hand.
   should work unchanged once multi-stream notifier fan-out lands).
 - Per-message auth re-validation so long-lived streams do not retain
   a principal past the token's `exp` claim.
-- `clockify_mcp_grpc_auth_rejections_total` counter for interceptor-
+- ~~`clockify_mcp_grpc_auth_rejections_total` counter for interceptor-
   level `codes.Unauthenticated` rejections (current metrics only
-  cover post-auth enforcement rejections).
+  cover post-auth enforcement rejections).~~
+  **Landed in W5-02b (2026-04-12).**
 - ~~Native gRPC health protocol probes so Kubernetes `readinessProbe`
   can use `grpc: { port: N }` instead of `tcpSocket`.~~
   **Landed in W5-02a (2026-04-12).**

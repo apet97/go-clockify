@@ -44,6 +44,7 @@ implements the gRPC health protocol.
 | `clockify_mcp_cancellations_total` | counter | `reason` | `tools/call` cancellations. `reason` is one of `client_requested` (peer sent `notifications/cancelled`), `timeout` (per-tool deadline expired), `context_cancelled` (parent context aborted, e.g. server shutdown). |
 | `clockify_mcp_protocol_errors_total` | counter | `code` | JSON-RPC protocol-level error responses by error code. `code` is the numeric JSON-RPC error code as a string, or a short reason for notification drops. |
 | `clockify_mcp_panics_recovered_total` | counter | `site` | Panics recovered from tool handlers or HTTP handlers. `site` is one of `stdio_tool_dispatch`, `http`. |
+| `clockify_mcp_grpc_auth_rejections_total` | counter | `reason` | gRPC auth interceptor rejections (requires `-tags=grpc` build). `reason` is one of `missing_metadata`, `missing_authorization`, `empty_authorization`, `auth_failed`. Only incremented on the gRPC transport; the counter exists but stays at zero on HTTP/stdio. |
 | `clockify_mcp_inflight_tool_calls` | gauge | — | Current depth of the stdio dispatch semaphore. |
 | `clockify_mcp_ready_state` | gauge | — | 1 when the cached readiness probe is passing, 0 otherwise. |
 | `clockify_mcp_build_info` | gauge | `version`, `commit`, `build_date`, `go_version` | Build metadata. Value is always 1. |

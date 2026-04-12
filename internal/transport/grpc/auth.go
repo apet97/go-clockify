@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/apet97/go-clockify/internal/authn"
+	"github.com/apet97/go-clockify/internal/metrics"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -36,16 +37,23 @@ func authStreamInterceptor(auth authn.Authenticator) grpc.StreamServerIntercepto
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		md, ok := metadata.FromIncomingContext(ss.Context())
 		if !ok {
+			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
 			return status.Error(codes.Unauthenticated, "missing gRPC metadata")
 		}
 		authHeaders := md.Get("authorization")
-		if len(authHeaders) == 0 || authHeaders[0] == "" {
+		if len(authHeaders) == 0 {
+			metrics.GRPCAuthRejectionsTotal.Inc("missing_authorization")
+			return status.Error(codes.Unauthenticated, "missing authorization metadata")
+		}
+		if authHeaders[0] == "" {
+			metrics.GRPCAuthRejectionsTotal.Inc("empty_authorization")
 			return status.Error(codes.Unauthenticated, "missing authorization metadata")
 		}
 		synth := &http.Request{Header: http.Header{}}
 		synth.Header.Set("Authorization", authHeaders[0])
 		principal, err := auth.Authenticate(ss.Context(), synth)
 		if err != nil {
+			metrics.GRPCAuthRejectionsTotal.Inc("auth_failed")
 			return status.Errorf(codes.Unauthenticated, "authentication failed: %v", err)
 		}
 		ctx := authn.WithPrincipal(ss.Context(), &principal)
