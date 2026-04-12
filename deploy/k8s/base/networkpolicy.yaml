@@ -1,0 +1,72 @@
+# NetworkPolicy hardens the clockify-mcp pods to the minimum required traffic.
+#
+# Ingress:
+#   - Port 8080/TCP from pods labelled `clockify-mcp-ingress-allowed=true`
+#     (typically your ingress controller or API gateway namespace). Update the
+#     podSelector / namespaceSelector below to match your cluster topology.
+#   - Port 8080/TCP from pods labelled `clockify-mcp-metrics-scraper=true`
+#     (e.g. the Prometheus pod / node exporter). Remove this rule if you run
+#     /metrics on a separate listener (see MCP_METRICS_BIND roadmap item).
+#
+# Egress:
+#   - DNS (UDP/TCP 53) to kube-dns in kube-system (required for Clockify FQDN
+#     resolution).
+#   - HTTPS (TCP 443) to any destination. Tighten this to your Clockify egress
+#     gateway or cluster-level FQDN policy if your CNI supports it.
+#
+# Everything else is denied implicitly by the default-deny posture once this
+# policy is applied.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clockify-mcp
+  namespace: clockify-mcp
+  labels:
+    app.kubernetes.io/name: clockify-mcp
+    app.kubernetes.io/component: server
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: clockify-mcp
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              clockify-mcp-ingress-allowed: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              clockify-mcp-metrics-scraper: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443

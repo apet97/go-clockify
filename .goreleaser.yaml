@@ -1,0 +1,172 @@
+# GoReleaser v2 config — clockify-mcp release pipeline (W2-07).
+#
+# Inputs: a pushed git tag matching v*.*.*.
+# Outputs in dist/:
+#   - 5 binaries (darwin-arm64/x64, linux-x64/arm64, windows-x64.exe)
+#   - SHA256SUMS.txt
+#   - 5 SPDX SBOMs (one per binary)
+#   - 5 cosign keyless sigstore bundles (one per binary)
+#
+# Invariants preserved from the pre-W2-07 hand-rolled release.yml:
+#   - Binary filenames: clockify-mcp-{darwin-arm64,darwin-x64,linux-x64,linux-arm64,windows-x64}(.exe)
+#   - SBOM filenames:  clockify-mcp-{platform}.spdx.json
+#   - Sig bundles:     clockify-mcp-{platform}(.exe).sigstore.json
+#   - Checksum file:   SHA256SUMS.txt
+#   - ldflags:         -s -w -X main.version -X main.commit -X main.buildDate
+#   - -trimpath, CGO_ENABLED=0
+#
+# Deliberately NOT migrated into goreleaser:
+#   - Container image builds — docker-image.yml stays separate (W2-12 fixed it).
+#   - SLSA build provenance — actions/attest-build-provenance runs as a
+#     separate post-goreleaser step in release.yml so the cosign bundle
+#     lineage stays byte-identical for operators running docs/verification.md.
+#   - npm publishing — goreleaser free does not ship an npm publisher;
+#     release.yml has a dedicated publish-npm job that consumes dist/
+#     after goreleaser completes. See W2-13 note in that job.
+#
+# See ADR 010 for the full rationale and the docs/verification.md compat matrix.
+
+version: 2
+
+project_name: clockify-mcp
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: clockify-mcp
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # The existing matrix intentionally skips windows/arm64.
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      # Use {{.Tag}} (not {{.Version}}) so the v-prefixed tag flows through
+      # to main.version — matches the pre-W2-07 hand-rolled behaviour that
+      # used ${GITHUB_REF_NAME} (e.g. "v0.7.0"), which operators see via
+      # the clockify_mcp_build_info gauge and the --version flag.
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  # W2-11 — FIPS 140-3 build target. Same matrix, same ldflags, plus
+  # the `fips` build tag (activates the crypto/fips140 startup assertion
+  # in cmd/clockify-mcp/fips_on.go) and GOFIPS140=latest at compile time
+  # so the binary ships with the frozen FIPS cryptographic module active.
+  # Archives are named clockify-mcp-fips-{os}-{arch} so operators can tell
+  # them apart from the default artifacts. See ADR 011.
+  - id: clockify-mcp-fips
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp-fips
+    env:
+      - CGO_ENABLED=0
+      - GOFIPS140=latest
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -tags=fips
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: clockify-mcp
+    ids:
+      - clockify-mcp
+    formats: [binary]
+    # Match the pre-W2-07 naming: amd64 → x64, arm64 → arm64.
+    # docs/verification.md operator commands reference these filenames.
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: clockify-mcp-fips
+    ids:
+      - clockify-mcp-fips
+    formats: [binary]
+    name_template: >-
+      {{ .ProjectName }}-fips-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+
+checksum:
+  name_template: SHA256SUMS.txt
+  algorithm: sha256
+
+sboms:
+  - id: archive-sbom
+    # archives with format: binary produce binary-type artifacts, not
+    # archive-type — use `artifacts: binary` so the sbom filter matches.
+    # The v0.7.0 release shipped without SBOMs because this was set to
+    # `archive` and nothing matched; v0.7.1 restores them.
+    artifacts: binary
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+    cmd: syft
+    args:
+      - $artifact
+      - --output
+      - spdx-json=$document
+
+signs:
+  - id: cosign-keyless
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    artifacts: binary
+    args:
+      - sign-blob
+      - --yes
+      - --bundle=${signature}
+      - ${artifact}
+    output: true
+
+release:
+  github:
+    owner: apet97
+    name: go-clockify
+  draft: false
+  prerelease: auto
+  # keep-existing silently skips any asset whose name already exists on
+  # the target release instead of 422'ing on duplicate upload. This makes
+  # `gh run rerun` on a tag-triggered Release workflow idempotent — the
+  # v0.7.1 cutover discovered that `mode: append` erroring on duplicates
+  # blocks the remaining steps (SLSA attestation, npm publish) from
+  # running during a rerun after NPM_TOKEN gets set. See the ADR 010 /
+  # W2-07 commit for context.
+  mode: keep-existing
+  name_template: "v{{ .Version }}"
+
+changelog:
+  disable: true
+
+snapshot:
+  version_template: "{{ .Tag }}-snapshot-{{ .ShortCommit }}"

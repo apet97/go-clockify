@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: clockify-mcp
+  namespace: clockify-mcp
+  labels:
+    app.kubernetes.io/name: clockify-mcp
+    prometheus: operator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: clockify-mcp
+  namespaceSelector:
+    matchNames:
+      - clockify-mcp
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: false
+      metricRelabelings:
+        # Drop high-cardinality per-test labels the exporter should never
+        # emit in production, so a misbehaving client cannot blow the
+        # Prometheus series budget.
+        - sourceLabels: [__name__]
+          regex: '.*_test_.*'
+          action: drop

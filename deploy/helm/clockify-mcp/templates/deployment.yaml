@@ -1,0 +1,228 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "clockify-mcp.fullname" . }}
+  labels:
+    {{- include "clockify-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    type: {{ .Values.strategy.type }}
+    {{- if eq .Values.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.strategy.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.strategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "clockify-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "clockify-mcp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      serviceAccountName: {{ include "clockify-mcp.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: clockify-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MCP_TRANSPORT
+              value: {{ .Values.transport.mode | quote }}
+            {{- if eq .Values.transport.mode "grpc" }}
+            - name: MCP_GRPC_BIND
+              value: {{ .Values.transport.grpcBind | quote }}
+            {{- with $.Values.transport.grpcReauthInterval }}
+            - name: MCP_GRPC_REAUTH_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.transport.grpcTlsCert }}
+            - name: MCP_GRPC_TLS_CERT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.transport.grpcTlsKey }}
+            - name: MCP_GRPC_TLS_KEY
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.transport.mtlsCaCertPath }}
+            - name: MCP_MTLS_CA_CERT_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- else }}
+            - name: MCP_HTTP_BIND
+              value: {{ .Values.transport.bind | quote }}
+            {{- end }}
+            - name: MCP_LOG_FORMAT
+              value: {{ .Values.transport.logFormat | quote }}
+            - name: MCP_LOG_LEVEL
+              value: {{ .Values.transport.logLevel | quote }}
+            - name: MCP_STRICT_HOST_CHECK
+              value: {{ .Values.transport.strictHostCheck | quote }}
+            {{- with .Values.clockify.workspaceId }}
+            - name: CLOCKIFY_WORKSPACE_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.baseUrl }}
+            - name: CLOCKIFY_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.timezone }}
+            - name: CLOCKIFY_TIMEZONE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.insecure }}
+            - name: CLOCKIFY_INSECURE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.deltaFormat }}
+            - name: CLOCKIFY_DELTA_FORMAT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.mode }}
+            - name: MCP_AUTH_MODE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcIssuer }}
+            - name: MCP_OIDC_ISSUER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcAudience }}
+            - name: MCP_OIDC_AUDIENCE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcJwksUrl }}
+            - name: MCP_OIDC_JWKS_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcJwksPath }}
+            - name: MCP_OIDC_JWKS_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.resourceUri }}
+            - name: MCP_RESOURCE_URI
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.forwardTenantHeader }}
+            - name: MCP_FORWARD_TENANT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.forwardSubjectHeader }}
+            - name: MCP_FORWARD_SUBJECT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.mtlsTenantHeader }}
+            - name: MCP_MTLS_TENANT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.dsn }}
+            - name: MCP_CONTROL_PLANE_DSN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.sessionTtl }}
+            - name: MCP_SESSION_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.tenantClaim }}
+            - name: MCP_TENANT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.subjectClaim }}
+            - name: MCP_SUBJECT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.controlPlane.defaultTenantId }}
+            - name: MCP_DEFAULT_TENANT_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.cors.allowedOrigins }}
+            - name: MCP_ALLOWED_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.cors.allowAnyOrigin }}
+            - name: MCP_ALLOW_ANY_ORIGIN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.metricsEndpoint.bind }}
+            - name: MCP_METRICS_BIND
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.metricsEndpoint.authMode }}
+            - name: MCP_METRICS_AUTH_MODE
+              value: {{ . | quote }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "clockify-mcp.fullname" . }}-config
+            - secretRef:
+                name: {{ include "clockify-mcp.secretName" . }}
+          ports:
+            {{- if eq .Values.transport.mode "grpc" }}
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+            {{- else }}
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- if eq .Values.transport.mode "grpc" }}
+          livenessProbe:
+            grpc:
+              port: {{ .Values.service.grpcPort }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            grpc:
+              port: {{ .Values.service.grpcPort }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          startupProbe:
+            grpc:
+              port: {{ .Values.service.grpcPort }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          {{- else }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.startup.path }}
+              port: http
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          {{- end }}

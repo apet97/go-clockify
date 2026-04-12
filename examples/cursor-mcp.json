@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "clockify": {
+      "command": "clockify-mcp",
+      "env": {
+        "CLOCKIFY_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}

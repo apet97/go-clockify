@@ -1,0 +1,261 @@
+name: Docker Image
+
+# Builds, scans, signs, and publishes the clockify-mcp container image.
+#
+# Triggers:
+#   - tag push v*.*.* → build + push + scan + sign + SBOM + provenance
+#   - main branch push → build + scan only (smoke test; no push)
+#   - pull request → build + scan only (security gate)
+#
+# Output:
+#   ghcr.io/apet97/go-clockify:<sha>          # every push to main
+#   ghcr.io/apet97/go-clockify:v<version>     # on tag
+#   ghcr.io/apet97/go-clockify:latest         # on tag (explicit, intentional)
+#
+# Push/tag builds are multi-arch (linux/amd64, linux/arm64), signed with
+# cosign keyless OIDC, attested with SLSA build provenance, and scanned with
+# Trivy. PR builds stay local and single-platform so the workflow can smoke-test
+# the actual image that Trivy scans. Scan failures on HIGH or CRITICAL
+# vulnerabilities block the workflow.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write        # cosign attest pushes SBOM attestation + release asset uploads on tag
+  packages: write
+  id-token: write        # cosign keyless signing + attest-build-provenance
+  attestations: write    # attest-build-provenance
+  security-events: write # required for SARIF upload
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/go-clockify
+  PR_IMAGE_NAME: clockify-mcp-pr:${{ github.sha }}
+
+jobs:
+  build-scan-sign:
+    name: Build, scan, sign
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up QEMU (multi-arch emulation)
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute build metadata
+        id: build_meta
+        run: |
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=clockify-mcp
+            org.opencontainers.image.description=Go MCP server for Clockify
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.version=${{ steps.build_meta.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.build_meta.outputs.build_date }}
+
+      - name: Build and push image
+        if: github.event_name != 'pull_request'
+        id: build
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.build_meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.build_meta.outputs.build_date }}
+
+      # buildx --load only supports a single-platform image. Keep PR validation
+      # local and single-platform so the smoke test and Trivy scan operate on
+      # the same bytes without pretending we shipped a multi-arch image.
+      - name: Build PR image
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.PR_IMAGE_NAME }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.build_meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.build_meta.outputs.build_date }}
+
+      - name: Smoke-test PR image
+        if: github.event_name == 'pull_request'
+        env:
+          IMAGE_REF: ${{ env.PR_IMAGE_NAME }}
+          VERSION: ${{ steps.build_meta.outputs.version }}
+          COMMIT: ${{ github.sha }}
+          BUILD_DATE: ${{ steps.build_meta.outputs.build_date }}
+        run: |
+          set -euo pipefail
+          cid="$(docker run -d --rm \
+            -p 127.0.0.1:8091:8080 \
+            -e CLOCKIFY_API_KEY=smoke-test-dummy \
+            -e MCP_BEARER_TOKEN=smoke-test-token-1234567890 \
+            "$IMAGE_REF")"
+          cleanup() {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8091/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf http://127.0.0.1:8091/health >/dev/null
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8091/ready)"
+          case "$code" in
+            200|503) ;;
+            *)
+              echo "unexpected /ready status: $code"
+              exit 1
+              ;;
+          esac
+
+          metrics="$(curl -sf http://127.0.0.1:8091/metrics)"
+          expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
+          printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {
+            echo "missing expected build_info labels"
+            echo "$metrics"
+            exit 1
+          }
+
+          test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.title" }}')" = "clockify-mcp"
+          test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$COMMIT"
+          test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "$BUILD_DATE"
+
+      - name: Trivy vulnerability scan (registry digest)
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Trivy vulnerability scan (PR mode)
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: ${{ env.PR_IMAGE_NAME }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: v2.4.1
+
+      - name: Sign image (keyless OIDC)
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE_REF"
+
+      - name: Generate image SBOM (SPDX)
+        if: github.event_name != 'pull_request'
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: clockify-mcp-image-sbom.spdx.json
+          upload-artifact: true
+
+      - name: Attach SBOM attestation
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: |
+          cosign attest --yes \
+            --predicate clockify-mcp-image-sbom.spdx.json \
+            --type spdxjson \
+            "$IMAGE_REF"
+
+      - name: Attest SLSA build provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Summarize
+        if: always()
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "## Docker Image"
+            echo ""
+            echo "**Digest:** \`${DIGEST}\`"
+            echo ""
+            echo "**Tags:**"
+            echo "\`\`\`"
+            echo "${TAGS}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

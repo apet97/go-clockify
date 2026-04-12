@@ -1,0 +1,39 @@
+# deploy/k8s/overlays/staging — staging / pre-production overlay.
+#
+# Production-ish in every respect except:
+#   - CLOCKIFY_POLICY=safe_core so canaries cannot trip the destructive
+#     tool surface by accident.
+#   - 3 replicas instead of 2 so rolling-update + PDB headroom is
+#     exercised during smoke tests.
+#   - An extra ConfigMap override that surfaces the env via an
+#     additional label so Prometheus can split staging from prod in
+#     dashboards.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+labels:
+  - pairs:
+      app.kubernetes.io/environment: staging
+    includeSelectors: false
+
+patches:
+  - target:
+      kind: Deployment
+      name: clockify-mcp
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: ConfigMap
+      name: clockify-mcp-config
+    patch: |-
+      - op: replace
+        path: /data/CLOCKIFY_POLICY
+        value: "safe_core"

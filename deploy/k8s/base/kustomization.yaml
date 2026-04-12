@@ -1,0 +1,28 @@
+# deploy/k8s/base — base Kustomize overlay for clockify-mcp.
+#
+# Every stock manifest that previously lived flat under deploy/k8s/ lives
+# here now. Overlays under deploy/k8s/overlays/{dev,staging,prod} patch
+# this base with environment-specific values. Operators who want raw
+# kubectl apply can `kubectl apply -k deploy/k8s/base` to reproduce the
+# pre-W2-06 flat manifest stream (modulo the ordering kubectl emits).
+#
+# The namespace is set here as a transformer so every resource lands in
+# the clockify-mcp namespace without repeating it in each manifest — the
+# stock manifests already declared the namespace explicitly, so this is
+# an idempotent belt-and-braces.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: clockify-mcp
+
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+  - prometheus-rule.yaml
+  - secret.example.yaml
+  - service.yaml
+  - serviceaccount.yaml
+  - servicemonitor.yaml

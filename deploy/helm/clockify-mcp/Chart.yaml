@@ -1,0 +1,23 @@
+apiVersion: v2
+name: clockify-mcp
+description: |
+  Stdlib-only Model Context Protocol server for Clockify.
+  Exposes 124 Clockify tools over HTTP or stdio for use with Claude
+  Desktop, Cursor, and other MCP clients.
+type: application
+# Chart version tracks the MCP server semver exactly. Bump both together
+# at release time (cmd/clockify-mcp/main.go + this field).
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.27.0-0"
+keywords:
+  - clockify
+  - mcp
+  - model-context-protocol
+  - time-tracking
+home: https://github.com/apet97/go-clockify
+sources:
+  - https://github.com/apet97/go-clockify
+maintainers:
+  - name: apet97
+    url: https://github.com/apet97

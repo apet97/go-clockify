@@ -1,0 +1,26 @@
+{
+  "name": "@apet97/clockify-mcp-go",
+  "version": "VERSION",
+  "description": "Clockify MCP Server (Go) — stdlib-only Model Context Protocol server for Clockify",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apet97/go-clockify.git"
+  },
+  "license": "MIT",
+  "bin": {
+    "clockify-mcp": "bin/clockify-mcp.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "optionalDependencies": {
+    "@apet97/clockify-mcp-go-darwin-arm64": "VERSION",
+    "@apet97/clockify-mcp-go-darwin-x64": "VERSION",
+    "@apet97/clockify-mcp-go-linux-x64": "VERSION",
+    "@apet97/clockify-mcp-go-linux-arm64": "VERSION",
+    "@apet97/clockify-mcp-go-windows-x64": "VERSION"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

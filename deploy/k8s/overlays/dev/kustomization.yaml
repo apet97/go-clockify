@@ -1,0 +1,49 @@
+# deploy/k8s/overlays/dev — development overlay.
+#
+# Patches the base to make local/dev clusters easier to iterate on:
+#   - Smaller CPU/memory requests so pods schedule on laptops.
+#   - MCP_LOG_LEVEL=debug so the full enforcement pipeline trace is
+#     visible on stderr.
+#   - MCP_STRICT_HOST_CHECK=0 so port-forwarding via arbitrary Host
+#     headers does not get rejected by the server.
+#   - CLOCKIFY_POLICY=read_only so dev clusters cannot accidentally
+#     mutate Clockify workspaces via a misconfigured client.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namePrefix: dev-
+
+patches:
+  - target:
+      kind: Deployment
+      name: clockify-mcp
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "50m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "32Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "250m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "128Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/env/3/value
+        value: "debug"
+  - target:
+      kind: ConfigMap
+      name: clockify-mcp-config
+    patch: |-
+      - op: replace
+        path: /data/CLOCKIFY_POLICY
+        value: "read_only"

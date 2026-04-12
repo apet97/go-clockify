@@ -1,0 +1,190 @@
+name: Reproducibility
+
+# Verify that every binary published with a release tag can be rebuilt
+# byte-for-byte from source on a clean runner. Runs automatically when a
+# release is published and can be dispatched manually against any tag.
+#
+# The recipe (see docs/reproducibility.md for full details):
+#
+#   1. Check out the repo at the release tag with full history so
+#      `git show -s` can resolve the commit timestamp.
+#   2. Install Go at the version recorded in go.mod (pinned to match the
+#      exact toolchain that produced the release).
+#   3. Extract the commit timestamp, convert it to UTC ISO 8601, and
+#      derive the ldflags the release used.
+#   4. Write a placeholder file under `dist/` so Go's VCS metadata
+#      reports `vcs.modified=true`, matching goreleaser's state at
+#      release time (goreleaser writes its own intermediate files to
+#      `dist/` before invoking `go build`, which marks the tree dirty).
+#   5. Rebuild with the exact ldflags and env matrix used by goreleaser
+#      (`-trimpath`, `CGO_ENABLED=0`, optional `-tags=fips` +
+#      `GOFIPS140=latest` for the FIPS builds).
+#   6. Download the matching asset from the release and compare sha256.
+#
+# A failure in this job means either (a) the release toolchain drifted,
+# (b) goreleaser added a new transform we haven't captured, or (c) the
+# build is genuinely non-reproducible on the target platform — in which
+# case docs/reproducibility.md should be updated to document the gap and
+# the matrix entry marked `continue-on-error: true` for that platform.
+#
+# Trigger model. `release: [published]` fires only when a release is
+# created by a human (UI) or a PAT-holding workflow. Releases created
+# via `GITHUB_TOKEN` (goreleaser-action's default in release.yml) do
+# NOT fire downstream workflow events — GitHub suppresses them to
+# prevent infinite workflow recursion. See:
+# https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+#
+# Because of that limitation, release.yml explicitly invokes this
+# workflow via `gh workflow run reproducibility.yml -f tag=<tag>` as
+# its final step. The `release: [published]` trigger is kept as a
+# safety net for UI-initiated releases. Manual `workflow_dispatch`
+# remains available for re-verifying any historical tag.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (e.g. v0.7.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.asset }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - asset: clockify-mcp-linux-x64
+            goos: linux
+            goarch: amd64
+            tags: ""
+            fips: ""
+          - asset: clockify-mcp-linux-arm64
+            goos: linux
+            goarch: arm64
+            tags: ""
+            fips: ""
+          - asset: clockify-mcp-darwin-x64
+            goos: darwin
+            goarch: amd64
+            tags: ""
+            fips: ""
+          - asset: clockify-mcp-darwin-arm64
+            goos: darwin
+            goarch: arm64
+            tags: ""
+            fips: ""
+          - asset: clockify-mcp-windows-x64.exe
+            goos: windows
+            goarch: amd64
+            tags: ""
+            fips: ""
+          - asset: clockify-mcp-fips-linux-x64
+            goos: linux
+            goarch: amd64
+            tags: "fips"
+            fips: "latest"
+          - asset: clockify-mcp-fips-linux-arm64
+            goos: linux
+            goarch: arm64
+            tags: "fips"
+            fips: "latest"
+          - asset: clockify-mcp-fips-darwin-x64
+            goos: darwin
+            goarch: amd64
+            tags: "fips"
+            fips: "latest"
+          - asset: clockify-mcp-fips-darwin-arm64
+            goos: darwin
+            goarch: arm64
+            tags: "fips"
+            fips: "latest"
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Checkout source at release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+      - name: Set up Go (match release toolchain)
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+      - name: Compute ldflags inputs
+        id: ldflags
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          ts=$(git show -s --format=%ct HEAD)
+          build_date=$(date -u -d "@${ts}" +%Y-%m-%dT%H:%M:%SZ)
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "build_date=${build_date}" >> "$GITHUB_OUTPUT"
+          echo "Reproducing ${TAG} at ${sha} (commit UTC ${build_date})"
+      - name: Induce goreleaser dirty-tree state
+        run: |
+          set -euo pipefail
+          # goreleaser creates dist/ and writes its own intermediate files
+          # before invoking `go build`, so Go's VCS stamping marks the tree
+          # dirty (vcs.modified=true, mod=v0.X.Y+dirty). Reproducing from a
+          # clean checkout would bake the opposite metadata into the binary
+          # and produce a different hash. Create a placeholder so `git
+          # status` reports the same dirty state.
+          mkdir -p dist
+          echo "reproducibility-workflow" > dist/.reproducibility-placeholder
+      - name: Rebuild asset
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+          GOFIPS140: ${{ matrix.fips }}
+          SHA: ${{ steps.ldflags.outputs.sha }}
+          BUILD_DATE: ${{ steps.ldflags.outputs.build_date }}
+          TAGS: ${{ matrix.tags }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+          ldflags="-s -w -X main.version=${TAG} -X main.commit=${SHA} -X main.buildDate=${BUILD_DATE}"
+          if [ -n "${TAGS}" ]; then
+            go build -trimpath "-tags=${TAGS}" -ldflags "${ldflags}" -o "/tmp/${ASSET}.local" ./cmd/clockify-mcp
+          else
+            go build -trimpath -ldflags "${ldflags}" -o "/tmp/${ASSET}.local" ./cmd/clockify-mcp
+          fi
+          ls -la "/tmp/${ASSET}.local"
+      - name: Download released asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+          gh release download "${TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "${ASSET}" \
+            --dir /tmp/released \
+            --clobber
+          ls -la "/tmp/released/${ASSET}"
+      - name: Compare sha256 of local vs released
+        env:
+          ASSET: ${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+          local_sha=$(sha256sum "/tmp/${ASSET}.local" | awk '{print $1}')
+          released_sha=$(sha256sum "/tmp/released/${ASSET}" | awk '{print $1}')
+          echo "local:    ${local_sha}"
+          echo "released: ${released_sha}"
+          if [ "${local_sha}" != "${released_sha}" ]; then
+            echo "::error::sha256 mismatch for ${ASSET}"
+            echo "Local rebuild does not match the published asset for ${ASSET}."
+            echo "Investigate with: cmp /tmp/${ASSET}.local /tmp/released/${ASSET}"
+            echo "And: diff <(go version -m /tmp/${ASSET}.local) <(go version -m /tmp/released/${ASSET})"
+            exit 1
+          fi
+          echo "| ${ASSET} | ${local_sha} | match |" >> "$GITHUB_STEP_SUMMARY"
