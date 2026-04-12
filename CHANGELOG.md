@@ -7,15 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-12
+
+> **v1.0.0 stability commitment:** The current API surface — tool names, resource URI templates, configuration env vars, delta-sync wire format, and JSON-RPC protocol behaviour — is now the v1 baseline. No breaking changes will be made without a major version bump to v2.0.0. Tier 2 tool groups, the RFC 6902 jsonpatch delta format, and the gRPC transport are considered stable at this release.
+
+Wave 5 complete. Closes all Wave 4 deferrals and cuts the first stable release.
+
 ### Added
+
+- **W5-02a — Native gRPC health protocol.** Hand-wired `grpc.health.v1.Health/Check` service so Kubernetes probes can use `grpc:` instead of `tcpSocket`. Background readiness poller (GET /user every 15s) for the gRPC transport. `mcp.Server.SetReadyCached(bool)` export.
+- **W5-02b — `clockify_mcp_grpc_auth_rejections_total` counter.** Prometheus counter with `reason` label for interceptor-level auth rejections (previously invisible to metrics).
+- **W5-02c — Multi-stream notifier fan-out.** `Server.AddNotifier(n) func()` registers per-stream notifiers; `Notify()` fans out to all. Fixes multi-client gRPC deployments where Client A's notifications stopped when Client B connected.
+- **W5-03 — Full Helm/Kustomize env-var parity.** All 22 missing env vars wired through Helm values + deployment template + Kustomize ConfigMap/Secret. Config-parity CI gate (`scripts/check-config-parity.sh`) prevents future drift.
+- **W5-04 — Complete delta-sync rollout.** DeleteEntry now invalidates weekly-report URIs (pre-delete GET). UpdateEntry cross-week moves invalidate both old and new weeks. Project + user mutation write-through (zero extra GETs on subscribed paths).
+- **W5-04d — RFC 6902 JSON Patch.** `internal/jsonpatch/` (~240 LOC) implements Diff + Apply. Wire via `CLOCKIFY_DELTA_FORMAT=jsonpatch`. Default remains RFC 7396 merge patch.
+- **W5-05a — Per-interval gRPC auth re-validation.** `MCP_GRPC_REAUTH_INTERVAL` (Go duration) re-validates tokens on long-lived streams. Cancels the stream context on failure.
+- **W5-05b — forward_auth on gRPC.** `x-forwarded-user` / `x-forwarded-tenant` metadata keys passthrough to the synthetic request.
+- **W5-05c — mTLS on gRPC.** `peer.FromContext` → `credentials.TLSInfo` → synthetic request TLS field. `MCP_GRPC_TLS_CERT`, `MCP_GRPC_TLS_KEY`, `MCP_MTLS_CA_CERT_PATH` env vars.
 
 ### Changed
 
-### Fixed
-
-### Security
-
-### Deprecated
+- Helm gRPC probes upgraded from `tcpSocket` to native `grpc:` (requires K8s ≥ 1.24, chart already requires ≥ 1.27).
+- `Server.notifier` replaced with `notifierHub` (multi-stream fan-out). `SetNotifier` is a compat shim.
+- gRPC transport uses `AddNotifier` + `defer remove()` instead of `SetNotifier`.
+- `forward_auth` and `mtls` auth modes now accepted on gRPC (previously rejected at config validation).
 
 ## [0.9.0] - 2026-04-12
 

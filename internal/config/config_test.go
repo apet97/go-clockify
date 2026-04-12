@@ -383,6 +383,57 @@ func TestLoadTransportGRPCMTLSAccepted(t *testing.T) {
 	}
 }
 
+func TestLoadDeltaFormat(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_DELTA_FORMAT": "jsonpatch",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("jsonpatch format should be accepted: %v", err)
+	}
+	if cfg.DeltaFormat != "jsonpatch" {
+		t.Fatalf("expected jsonpatch, got %q", cfg.DeltaFormat)
+	}
+}
+
+func TestLoadDeltaFormatInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_DELTA_FORMAT": "rfc999",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected invalid delta format to be rejected")
+	}
+}
+
+func TestLoadGRPCReauthInterval(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_TRANSPORT":             "grpc",
+		"MCP_GRPC_REAUTH_INTERVAL": "60s",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("60s reauth interval should be accepted: %v", err)
+	}
+	if cfg.GRPCReauthInterval.Seconds() != 60 {
+		t.Fatalf("expected 60s, got %v", cfg.GRPCReauthInterval)
+	}
+}
+
+func TestLoadGRPCTLSMismatch(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":   "test-key",
+		"MCP_GRPC_TLS_CERT": "/path/to/cert.pem",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected TLS cert without key to be rejected")
+	}
+}
+
 func TestLoadTransportStdioExplicit(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",

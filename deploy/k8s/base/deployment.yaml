@@ -36,7 +36,7 @@ spec:
       containers:
         - name: clockify-mcp
           # Pin to an immutable tag. Bump on release; never use :latest in production.
-          image: ghcr.io/apet97/go-clockify:v0.9.0
+          image: ghcr.io/apet97/go-clockify:v1.0.0
           imagePullPolicy: IfNotPresent
           args: []
           env:

@@ -39,7 +39,7 @@ import (
 // set (local `go run`, `go build` without flags), so the /metrics build_info
 // gauge always emits a sample.
 var (
-	version   = "0.9.0"
+	version   = "1.0.0"
 	commit    = "unknown"
 	buildDate = "unknown"
 )
