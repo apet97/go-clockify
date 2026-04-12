@@ -75,26 +75,23 @@ spec:
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           {{- if eq .Values.transport.mode "grpc" }}
-          # gRPC transport does not serve /health or /ready HTTP endpoints.
-          # Fall back to a TCP socket probe against the gRPC port. A proper
-          # grpc health protocol probe is W5 backlog.
           livenessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: {{ .Values.service.grpcPort }}
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
             failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: {{ .Values.service.grpcPort }}
             initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           startupProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: {{ .Values.service.grpcPort }}
             failureThreshold: {{ .Values.probes.startup.failureThreshold }}
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
           {{- else }}

@@ -874,6 +874,15 @@ func (s *Server) IsReadyCached() bool {
 	return s.readyCached
 }
 
+// SetReadyCached updates the cached readiness state. Transports that
+// lack an HTTP readiness endpoint (gRPC) call this after verifying
+// upstream connectivity so IsReadyCached reflects their state.
+func (s *Server) SetReadyCached(ready bool) {
+	s.readyMu.Lock()
+	s.readyCached = ready
+	s.readyMu.Unlock()
+}
+
 // ActivateGroup registers a group of tool descriptors dynamically and
 // sends a tools/list_changed notification to the client.
 func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) error {

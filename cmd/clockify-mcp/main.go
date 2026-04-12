@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
@@ -244,9 +245,31 @@ func run() error {
 	if cfg.Transport == "grpc" {
 		// gRPC transport is built only with -tags=grpc. The default build
 		// stub returns a clear error explaining the build-tag requirement.
-		// See ADR 012. Upstream readiness is not yet wired for gRPC because
-		// the transport has no HTTP-style /ready endpoint.
+		// See ADR 012.
 		//
+		// Wire upstream readiness: a lightweight GET /user call warms the
+		// cached readiness flag consumed by the native gRPC health protocol
+		// (grpc.health.v1.Health/Check). A background goroutine refreshes
+		// the cache every 15s so kubelet probes see fresh state.
+		go func() {
+			ticker := time.NewTicker(15 * time.Second)
+			defer ticker.Stop()
+			check := func() {
+				checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+				var user struct{ ID string }
+				server.SetReadyCached(client.Get(checkCtx, "/user", nil, &user) == nil)
+			}
+			check()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					check()
+				}
+			}
+		}()
 		// When MCP_AUTH_MODE is set, build the shared authn.Authenticator
 		// (same construction path as the streamable_http branch above) and
 		// let the gRPC transport install its auth stream interceptor. The

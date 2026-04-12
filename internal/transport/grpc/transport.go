@@ -58,6 +58,8 @@ func Serve(ctx context.Context, opts Options) error {
 
 	handler := &exchangeServer{srv: opts.Server}
 	desc := buildServiceDesc()
+	healthDesc := buildHealthServiceDesc()
+	hs := &healthServer{srv: opts.Server}
 
 	serverOpts := []grpc.ServerOption{
 		grpc.ForceServerCodec(bytesCodec{}),
@@ -68,6 +70,7 @@ func Serve(ctx context.Context, opts Options) error {
 	}
 	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)
+	grpcSrv.RegisterService(&healthDesc, hs)
 
 	ln, err := net.Listen("tcp", opts.Bind)
 	if err != nil {

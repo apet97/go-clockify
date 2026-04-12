@@ -246,11 +246,13 @@ unrelated edits by hand.
 - `clockify_mcp_grpc_auth_rejections_total` counter for interceptor-
   level `codes.Unauthenticated` rejections (current metrics only
   cover post-auth enforcement rejections).
-- Native gRPC health protocol probes so Kubernetes `readinessProbe`
-  can use `grpc: { port: N }` instead of `tcpSocket`.
+- ~~Native gRPC health protocol probes so Kubernetes `readinessProbe`
+  can use `grpc: { port: N }` instead of `tcpSocket`.~~
+  **Landed in W5-02a (2026-04-12).**
 
 ## Status
 
 Landed on `main` in the W3-04 commit of the 2026-04-11 session. Wave 3
 backlog T-4 moved to Landed. Amended 2026-04-12 by the W4-03 auth
-interceptor commit.
+interceptor commit. Amended 2026-04-12 by the W5-02a health protocol
+commit.
