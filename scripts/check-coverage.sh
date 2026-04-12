@@ -16,9 +16,27 @@
 
 set -euo pipefail
 
-GLOBAL_FLOOR="${COVERAGE_GLOBAL_FLOOR:-55}"
+GLOBAL_FLOOR="${COVERAGE_GLOBAL_FLOOR:-69}"
 COVERAGE_OUT="${COVERAGE_OUT:-coverage.out}"
-FLOORS_DEFAULT="internal/mcp=62 internal/config=78 internal/enforcement=85 internal/ratelimit=70 internal/logging=85 internal/jsonschema=85"
+# Per-package floors. Calibrated 2026-04-13 to ~1% below the measured
+# baseline so follow-up PRs ratchet upward; see docs/coverage-policy.md for
+# the rule ("no regressions, only ratchets"). Raising a floor is trivially
+# safe — lowering one requires explicit discussion in the PR description.
+FLOORS_DEFAULT="internal/mcp=70 \
+internal/tools=55 \
+internal/clockify=70 \
+internal/config=78 \
+internal/enforcement=85 \
+internal/ratelimit=80 \
+internal/logging=95 \
+internal/jsonschema=85 \
+internal/authn=85 \
+internal/policy=75 \
+internal/resolve=78 \
+internal/timeparse=88 \
+internal/truncate=90 \
+internal/tracing=95 \
+internal/vault=92"
 FLOORS="${COVERAGE_FLOORS:-$FLOORS_DEFAULT}"
 
 if [ -z "${COVERAGE_SKIP_RUN:-}" ]; then
