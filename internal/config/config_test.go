@@ -355,21 +355,17 @@ func TestLoadTransportGRPCOIDC(t *testing.T) {
 	}
 }
 
-// TestLoadTransportGRPCForwardAuthRejected documents the W4-03 stop
-// condition: forward_auth needs X-Forwarded-{User,Tenant} headers that
-// the synthetic request in the gRPC interceptor does not carry.
-func TestLoadTransportGRPCForwardAuthRejected(t *testing.T) {
+// TestLoadTransportGRPCForwardAuthAccepted verifies forward_auth is
+// accepted on gRPC (W5-05b: metadata passthrough).
+func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 		"MCP_TRANSPORT":    "grpc",
 		"MCP_AUTH_MODE":    "forward_auth",
 	})
 	_, err := Load()
-	if err == nil {
-		t.Fatal("expected gRPC + forward_auth to be rejected")
-	}
-	if !strings.Contains(err.Error(), "forward_auth") {
-		t.Fatalf("expected error mentioning forward_auth, got: %v", err)
+	if err != nil {
+		t.Fatalf("expected gRPC + forward_auth to be accepted, got: %v", err)
 	}
 }
 

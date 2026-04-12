@@ -61,6 +61,12 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) {
 	})
 }
 
+type grpcConfig struct {
+	reauthInterval       time.Duration
+	forwardTenantHeader  string
+	forwardSubjectHeader string
+}
+
 func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int) *tools.Service {
 	service := tools.New(client, workspaceID)
 	if timezone != "" {

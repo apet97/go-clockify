@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
@@ -21,14 +22,20 @@ import (
 // When reauthInterval > 0, a background goroutine re-validates the token
 // every interval. If re-validation fails, it cancels the stream context
 // so the Exchange loop exits cleanly with codes.Unauthenticated.
-func authStreamInterceptor(auth authn.Authenticator, reauthInterval time.Duration) grpc.StreamServerInterceptor {
+type authInterceptorConfig struct {
+	reauthInterval       time.Duration
+	forwardTenantHeader  string
+	forwardSubjectHeader string
+}
+
+func authStreamInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		md, ok := metadata.FromIncomingContext(ss.Context())
 		if !ok {
 			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
 			return status.Error(codes.Unauthenticated, "missing gRPC metadata")
 		}
-		synth, err := buildSynthRequest(md)
+		synth, err := buildSynthRequest(md, cfg.forwardTenantHeader, cfg.forwardSubjectHeader)
 		if err != nil {
 			return err
 		}
@@ -38,17 +45,17 @@ func authStreamInterceptor(auth authn.Authenticator, reauthInterval time.Duratio
 			return status.Errorf(codes.Unauthenticated, "authentication failed: %v", err)
 		}
 		ctx := authn.WithPrincipal(ss.Context(), &principal)
-		if reauthInterval > 0 {
+		if cfg.reauthInterval > 0 {
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithCancel(ctx)
 			defer cancel()
-			go reauthLoop(ctx, cancel, auth, synth, reauthInterval)
+			go reauthLoop(ctx, cancel, auth, synth, cfg.reauthInterval)
 		}
 		return handler(srv, &authServerStream{ServerStream: ss, ctx: ctx})
 	}
 }
 
-func buildSynthRequest(md metadata.MD) (*http.Request, error) {
+func buildSynthRequest(md metadata.MD, forwardTenantHeader, forwardSubjectHeader string) (*http.Request, error) {
 	authHeaders := md.Get("authorization")
 	if len(authHeaders) == 0 {
 		metrics.GRPCAuthRejectionsTotal.Inc("missing_authorization")
@@ -60,6 +67,16 @@ func buildSynthRequest(md metadata.MD) (*http.Request, error) {
 	}
 	synth := &http.Request{Header: http.Header{}}
 	synth.Header.Set("Authorization", authHeaders[0])
+	if forwardTenantHeader != "" {
+		if vals := md.Get(strings.ToLower(forwardTenantHeader)); len(vals) > 0 {
+			synth.Header.Set(forwardTenantHeader, vals[0])
+		}
+	}
+	if forwardSubjectHeader != "" {
+		if vals := md.Get(strings.ToLower(forwardSubjectHeader)); len(vals) > 0 {
+			synth.Header.Set(forwardSubjectHeader, vals[0])
+		}
+	}
 	return synth, nil
 }
 

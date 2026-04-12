@@ -69,7 +69,7 @@ func callInterceptor(t *testing.T, auth authn.Authenticator, md metadata.MD) (er
 		}
 		return nil
 	}
-	interceptor := authStreamInterceptor(auth, 0)
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{})
 	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler)
 	return err, seen
 }
@@ -79,7 +79,7 @@ func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	before := metrics.GRPCAuthRejectionsTotal.Get("missing_metadata")
 	// No incoming metadata at all — use a bare context.
 	stream := &mockServerStream{ctx: context.Background()}
-	interceptor := authStreamInterceptor(auth, 0)
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{})
 	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, func(any, grpc.ServerStream) error {
 		t.Fatalf("handler should not run when metadata is missing")
 		return nil
@@ -184,7 +184,7 @@ func TestReauthLoop_ExpiryClosesStream(t *testing.T) {
 		failAfter: 2,
 		principal: authn.Principal{Subject: "alice", TenantID: "acme", AuthMode: authn.ModeOIDC},
 	}
-	interceptor := authStreamInterceptor(auth, 50*time.Millisecond)
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{reauthInterval: 50 * time.Millisecond})
 	md := metadata.Pairs("authorization", "Bearer token")
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 	stream := &mockServerStream{ctx: ctx}
