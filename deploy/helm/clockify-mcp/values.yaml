@@ -89,6 +89,7 @@ transport:
   mode: "http"
   bind: ":8080"
   grpcBind: ":9090"
+  grpcReauthInterval: ""  # MCP_GRPC_REAUTH_INTERVAL (Go duration, e.g. "60s")
   strictHostCheck: "0"
   logFormat: "json"
   logLevel: "info"

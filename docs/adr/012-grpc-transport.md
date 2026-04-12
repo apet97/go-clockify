@@ -241,8 +241,9 @@ unrelated edits by hand.
   through the gRPC bidirectional channel (the existing
   `EmitProgress` helper already routes through `Server.notifier` and
   should work unchanged once multi-stream notifier fan-out lands).
-- Per-message auth re-validation so long-lived streams do not retain
-  a principal past the token's `exp` claim.
+- ~~Per-message auth re-validation so long-lived streams do not retain
+  a principal past the token's `exp` claim.~~ **Landed in W5-05a
+  (2026-04-12) as per-interval re-validation (MCP_GRPC_REAUTH_INTERVAL).**
 - ~~`clockify_mcp_grpc_auth_rejections_total` counter for interceptor-
   level `codes.Unauthenticated` rejections (current metrics only
   cover post-auth enforcement rejections).~~

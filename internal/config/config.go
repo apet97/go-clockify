@@ -67,6 +67,10 @@ type Config struct {
 	// DeltaFormat selects the resource notification diff algorithm.
 	// "merge" (default) = RFC 7396 merge patch. "jsonpatch" = RFC 6902.
 	DeltaFormat string
+
+	// GRPCReauthInterval is how often long-lived gRPC streams re-validate
+	// their auth token. 0 = disabled (per-stream validation only).
+	GRPCReauthInterval time.Duration
 }
 
 func Load() (Config, error) {
@@ -308,6 +312,14 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_REPORT_MAX_ENTRIES must be >= 0")
 		}
 		cfg.ReportMaxEntries = n
+	}
+
+	if v := os.Getenv("MCP_GRPC_REAUTH_INTERVAL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_GRPC_REAUTH_INTERVAL %q: %w", v, err)
+		}
+		cfg.GRPCReauthInterval = d
 	}
 
 	cfg.DeltaFormat = strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_DELTA_FORMAT")))

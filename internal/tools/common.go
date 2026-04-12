@@ -43,9 +43,9 @@ type Service struct {
 	// DeltaFormat selects the diff algorithm for resource notifications.
 	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
 	DeltaFormat string
-	mu               sync.Mutex
-	cachedUser       *clockify.User
-	cachedWSID       string
+	mu          sync.Mutex
+	cachedUser  *clockify.User
+	cachedWSID  string
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache

@@ -2,7 +2,9 @@ package grpctransport
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/metrics"
@@ -14,50 +16,68 @@ import (
 )
 
 // authStreamInterceptor returns a grpc.StreamServerInterceptor that bridges
-// the shared internal/authn Authenticator contract onto gRPC metadata. The
-// interceptor reads the `authorization` metadata key, wraps it in a synthetic
-// *http.Request so the existing Authenticator implementations keep working
-// without a transport-specific variant, and attaches the resulting Principal
-// to the stream context via authn.WithPrincipal so downstream enforcement
-// (rate limiting, policy, audit) can bucket by Principal.Subject.
+// the shared internal/authn Authenticator contract onto gRPC metadata.
 //
-// Supported auth modes: static_bearer, oidc. Both read only the Authorization
-// header and ignore TLS/peer state, so the synthetic request is a faithful
-// bridge. forward_auth needs additional headers and mtls needs real TLS
-// verified chains — both are rejected upstream in internal/config/config.go
-// before the interceptor is ever reached, so no runtime-mode guard is needed
-// here. See ADR 012 §auth for rationale.
-//
-// Validation lifetime: the interceptor fires once per stream open, not per
-// message. Long-lived streams accept an OIDC token that was valid at stream
-// start even after the token's `exp` elapses. Per-message re-validation is
-// Wave 5 backlog — not a regression because the pre-W4 contract was "no
-// gRPC auth at all".
-func authStreamInterceptor(auth authn.Authenticator) grpc.StreamServerInterceptor {
+// When reauthInterval > 0, a background goroutine re-validates the token
+// every interval. If re-validation fails, it cancels the stream context
+// so the Exchange loop exits cleanly with codes.Unauthenticated.
+func authStreamInterceptor(auth authn.Authenticator, reauthInterval time.Duration) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		md, ok := metadata.FromIncomingContext(ss.Context())
 		if !ok {
 			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
 			return status.Error(codes.Unauthenticated, "missing gRPC metadata")
 		}
-		authHeaders := md.Get("authorization")
-		if len(authHeaders) == 0 {
-			metrics.GRPCAuthRejectionsTotal.Inc("missing_authorization")
-			return status.Error(codes.Unauthenticated, "missing authorization metadata")
+		synth, err := buildSynthRequest(md)
+		if err != nil {
+			return err
 		}
-		if authHeaders[0] == "" {
-			metrics.GRPCAuthRejectionsTotal.Inc("empty_authorization")
-			return status.Error(codes.Unauthenticated, "missing authorization metadata")
-		}
-		synth := &http.Request{Header: http.Header{}}
-		synth.Header.Set("Authorization", authHeaders[0])
 		principal, err := auth.Authenticate(ss.Context(), synth)
 		if err != nil {
 			metrics.GRPCAuthRejectionsTotal.Inc("auth_failed")
 			return status.Errorf(codes.Unauthenticated, "authentication failed: %v", err)
 		}
 		ctx := authn.WithPrincipal(ss.Context(), &principal)
+		if reauthInterval > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
+			defer cancel()
+			go reauthLoop(ctx, cancel, auth, synth, reauthInterval)
+		}
 		return handler(srv, &authServerStream{ServerStream: ss, ctx: ctx})
+	}
+}
+
+func buildSynthRequest(md metadata.MD) (*http.Request, error) {
+	authHeaders := md.Get("authorization")
+	if len(authHeaders) == 0 {
+		metrics.GRPCAuthRejectionsTotal.Inc("missing_authorization")
+		return nil, status.Error(codes.Unauthenticated, "missing authorization metadata")
+	}
+	if authHeaders[0] == "" {
+		metrics.GRPCAuthRejectionsTotal.Inc("empty_authorization")
+		return nil, status.Error(codes.Unauthenticated, "missing authorization metadata")
+	}
+	synth := &http.Request{Header: http.Header{}}
+	synth.Header.Set("Authorization", authHeaders[0])
+	return synth, nil
+}
+
+func reauthLoop(ctx context.Context, cancel context.CancelFunc, auth authn.Authenticator, synth *http.Request, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := auth.Authenticate(ctx, synth); err != nil {
+				slog.Warn("grpc_reauth_failed", "error", err.Error())
+				metrics.GRPCAuthRejectionsTotal.Inc("reauth_expired")
+				cancel()
+				return
+			}
+		}
 	}
 }
 

@@ -28,10 +28,11 @@ import (
 // for the rationale. Leaving it nil preserves the Wave 3 behaviour of
 // relying on an external mTLS gateway / service mesh for authn.
 type Options struct {
-	Bind          string
-	Server        *mcp.Server
-	MaxRecvSize   int
-	Authenticator authn.Authenticator
+	Bind           string
+	Server         *mcp.Server
+	MaxRecvSize    int
+	Authenticator  authn.Authenticator
+	ReauthInterval time.Duration
 }
 
 // Serve starts the gRPC transport on the given bind and blocks until ctx
@@ -65,7 +66,7 @@ func Serve(ctx context.Context, opts Options) error {
 		grpc.MaxRecvMsgSize(opts.MaxRecvSize),
 	}
 	if opts.Authenticator != nil {
-		serverOpts = append(serverOpts, grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator)))
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator, opts.ReauthInterval)))
 	}
 	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)

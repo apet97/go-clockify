@@ -45,6 +45,10 @@ spec:
             {{- if eq .Values.transport.mode "grpc" }}
             - name: MCP_GRPC_BIND
               value: {{ .Values.transport.grpcBind | quote }}
+            {{- with $.Values.transport.grpcReauthInterval }}
+            - name: MCP_GRPC_REAUTH_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
             {{- else }}
             - name: MCP_HTTP_BIND
               value: {{ .Values.transport.bind | quote }}

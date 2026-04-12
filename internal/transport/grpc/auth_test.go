@@ -5,7 +5,9 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/metrics"
@@ -67,7 +69,7 @@ func callInterceptor(t *testing.T, auth authn.Authenticator, md metadata.MD) (er
 		}
 		return nil
 	}
-	interceptor := authStreamInterceptor(auth)
+	interceptor := authStreamInterceptor(auth, 0)
 	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler)
 	return err, seen
 }
@@ -77,7 +79,7 @@ func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	before := metrics.GRPCAuthRejectionsTotal.Get("missing_metadata")
 	// No incoming metadata at all — use a bare context.
 	stream := &mockServerStream{ctx: context.Background()}
-	interceptor := authStreamInterceptor(auth)
+	interceptor := authStreamInterceptor(auth, 0)
 	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, func(any, grpc.ServerStream) error {
 		t.Fatalf("handler should not run when metadata is missing")
 		return nil
@@ -160,6 +162,53 @@ func TestAuthInterceptor_AuthenticatorError(t *testing.T) {
 	}
 	if got := metrics.GRPCAuthRejectionsTotal.Get("auth_failed"); got != before+1 {
 		t.Fatalf("expected auth_failed counter to increment, got %d (before=%d)", got, before)
+	}
+}
+
+type countingAuthenticator struct {
+	calls     atomic.Int32
+	failAfter int32
+	principal authn.Principal
+}
+
+func (c *countingAuthenticator) Authenticate(_ context.Context, _ *http.Request) (authn.Principal, error) {
+	n := c.calls.Add(1)
+	if c.failAfter > 0 && n > c.failAfter {
+		return authn.Principal{}, errors.New("token expired")
+	}
+	return c.principal, nil
+}
+
+func TestReauthLoop_ExpiryClosesStream(t *testing.T) {
+	auth := &countingAuthenticator{
+		failAfter: 2,
+		principal: authn.Principal{Subject: "alice", TenantID: "acme", AuthMode: authn.ModeOIDC},
+	}
+	interceptor := authStreamInterceptor(auth, 50*time.Millisecond)
+	md := metadata.Pairs("authorization", "Bearer token")
+	ctx := metadata.NewIncomingContext(context.Background(), md)
+	stream := &mockServerStream{ctx: ctx}
+
+	handlerDone := make(chan error, 1)
+	handler := func(_ any, ss grpc.ServerStream) error {
+		<-ss.Context().Done()
+		return ss.Context().Err()
+	}
+	go func() {
+		handlerDone <- interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler)
+	}()
+
+	select {
+	case err := <-handlerDone:
+		if err != nil && !errors.Is(err, context.Canceled) {
+			t.Fatalf("handler returned unexpected error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("handler did not exit within 2s — reauth did not cancel context")
+	}
+
+	if auth.calls.Load() < 2 {
+		t.Fatalf("expected at least 2 auth calls, got %d", auth.calls.Load())
 	}
 }
 

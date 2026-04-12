@@ -299,7 +299,7 @@ func run() error {
 				return err
 			}
 		}
-		return serveGRPC(ctx, cfg.GRPCBind, server, grpcAuthenticator)
+		return serveGRPC(ctx, cfg.GRPCBind, server, grpcAuthenticator, cfg.GRPCReauthInterval)
 	}
 	return server.Run(ctx, os.Stdin, os.Stdout)
 }

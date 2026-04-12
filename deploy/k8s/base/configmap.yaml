@@ -24,6 +24,7 @@ data:
   # CLOCKIFY_TIMEZONE: ""
   # CLOCKIFY_INSECURE: "0"
   # CLOCKIFY_DELTA_FORMAT: "merge"
+  # MCP_GRPC_REAUTH_INTERVAL: ""
   # Auth (uncomment for non-default mode)
   # MCP_AUTH_MODE: ""
   # MCP_OIDC_ISSUER: ""
