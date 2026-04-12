@@ -111,20 +111,6 @@ func weeklyReportURIsForEntry(workspaceID, startRaw, endRaw string, loc *time.Lo
 	return uris
 }
 
-// emitEntryAndWeekly is a small convenience wrapper used by every
-// entry-mutating handler: emit the concrete entry URI, then fan out
-// to every weekly-report URI invalidated by the mutation.
-func (s *Service) emitEntryAndWeekly(ctx context.Context, wsID, entryID, startRaw, endRaw string) {
-	s.emitResourceUpdate(ctx, entryResourceURI(wsID, entryID))
-	loc := s.DefaultTimezone
-	if loc == nil {
-		loc = time.UTC
-	}
-	for _, uri := range weeklyReportURIsForEntry(wsID, startRaw, endRaw, loc) {
-		s.emitResourceUpdate(ctx, uri)
-	}
-}
-
 // emitEntryAndWeeklyWithState is the W4-04d write-through variant.
 // Callers that already have the post-API entry struct in hand pass
 // it here to skip the emit path's ReadResource round-trip for the
