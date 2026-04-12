@@ -196,10 +196,17 @@ The repository also ships [`deploy/docker-compose.yml`](deploy/docker-compose.ym
 ## Build and test
 
 ```sh
-make check   # gofmt + go vet + go test (CI equivalent)
+make check   # fast inner loop: gofmt + go vet + go test
+make verify  # full local pipeline: lint, coverage floors, fuzz-short,
+             # build-tag checks, HTTP smoke, k8s render, govulncheck
+             # (k8s/fips/vuln tiers auto-skip when their tools are missing)
 make cover   # coverage report
 make build   # binary with version from git tags
 ```
+
+`make verify` mirrors the PR-blocking CI jobs that can run on a laptop —
+see `CONTRIBUTING.md` for the exact list of checks it runs locally versus
+the full CI set.
 
 Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 

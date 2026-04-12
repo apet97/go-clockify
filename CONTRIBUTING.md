@@ -29,18 +29,42 @@ go test -v -run TestName ./internal/mcp/...
 
 ## Code Quality
 
-Before submitting a PR, ensure:
+Two local targets:
 
 ```sh
-# All-in-one (recommended)
-make check
-
-# Or individually:
-gofmt -w ./cmd ./internal ./tests
-go vet ./...
-go build ./...
-go test -race -count=1 ./...
+make check   # fast inner loop (seconds): gofmt + go vet + go test
+make verify  # full pipeline (minutes): mirrors PR-blocking CI jobs
 ```
+
+`make check` is for the edit-test cycle. `make verify` is what you run
+before opening a PR — it exercises every PR-blocking CI step that can
+run on a contributor laptop.
+
+### What `make verify` runs locally
+
+| Step | Tool | Local behavior |
+|---|---|---|
+| `fmt` | gofmt | always runs |
+| `vet` | go vet | always runs |
+| `lint` | golangci-lint | always runs (install via `brew install golangci-lint`) |
+| `test` | go test -race | always runs |
+| `cover-check` | go test -coverprofile + floors | always runs |
+| `fuzz-short` | go test -fuzz | 10s per target (CI uses 30s) |
+| `build-tags` | scripts/check-build-tags.sh | otel/grpc/pprof symbol + go.mod parity checks |
+| `http-smoke` | scripts/smoke-http.sh | builds binary, curls `/health` + `/ready` |
+| `config-parity` | scripts/check-config-parity.sh | env-var parity across config.go / Helm / Kustomize |
+| `verify-vuln` | govulncheck | **skips** with a warning if not installed |
+| `verify-k8s` | kubeconform + helm | **skips** with a warning if any tool missing |
+| `verify-fips` | GOFIPS140=latest | **soft-fails** locally if toolchain lacks FIPS support |
+
+### What CI runs that `make verify` does not
+
+- **Trivy container scan** — CI-only (Docker image workflow)
+- **Full 30s fuzz budget** — CI uses 30s per target; local uses 10s
+- **Mutation testing** — nightly workflow, not PR-blocking
+
+If `make verify` passes locally you have high confidence CI will pass, but
+the definitive answer always comes from the CI workflow on your PR.
 
 All checks must pass with no errors.
 
