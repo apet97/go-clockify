@@ -221,7 +221,7 @@ func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any
 	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/projects/"+projectID, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	s.emitResourceUpdate(ctx, projectResourceURI(wsID, projectID))
+	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_update_project_estimate", out, map[string]any{"workspaceId": wsID}), nil
 }
 
@@ -263,7 +263,7 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/projects/"+projectID+"/memberships", body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	s.emitResourceUpdate(ctx, projectResourceURI(wsID, projectID))
+	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_set_project_memberships", out, map[string]any{
 		"workspaceId": wsID,
 		"memberCount": len(memberships),
@@ -301,7 +301,7 @@ func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (Res
 			})
 			continue
 		}
-		s.emitResourceUpdate(ctx, projectResourceURI(wsID, pid))
+		s.emitResourceUpdateWithState(projectResourceURI(wsID, pid), out)
 		results = append(results, map[string]any{
 			"projectId": pid,
 			"archived":  true,

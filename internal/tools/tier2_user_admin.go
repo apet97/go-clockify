@@ -340,7 +340,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	s.emitResourceUpdate(ctx, userResourceURI(wsID, userID))
+	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
 	return ok("clockify_update_user_role", result, map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
@@ -380,7 +380,7 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	s.emitResourceUpdate(ctx, userResourceURI(wsID, userID))
+	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
 	return ok("clockify_deactivate_user", result, map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,

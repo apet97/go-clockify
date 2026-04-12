@@ -219,6 +219,12 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	loc := s.DefaultTimezone
+	if loc == nil {
+		loc = time.UTC
+	}
+	oldWeeklyURIs := weeklyReportURIsForEntry(wsID, existing.TimeInterval.Start, existing.TimeInterval.End, loc)
+
 	// Track changes
 	changedFields := make([]string, 0, 6)
 
@@ -303,6 +309,19 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	s.emitEntryAndWeeklyWithState(ctx, wsID, updated)
+	newWeeklyURIs := weeklyReportURIsForEntry(wsID, updated.TimeInterval.Start, updated.TimeInterval.End, loc)
+	for _, oldURI := range oldWeeklyURIs {
+		found := false
+		for _, newURI := range newWeeklyURIs {
+			if oldURI == newURI {
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.emitResourceUpdate(ctx, oldURI)
+		}
+	}
 	return ok("clockify_update_entry", updated, meta), nil
 }
 
@@ -318,11 +337,12 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	var entry clockify.TimeEntry
+	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, nil, &entry); err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	if dryrun.Enabled(args) {
-		var entry clockify.TimeEntry
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, nil, &entry); err != nil {
-			return ResultEnvelope{}, err
-		}
 		return ResultEnvelope{
 			OK:     true,
 			Action: "clockify_delete_entry",
@@ -336,6 +356,13 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	s.emitResourceDeleted(entryResourceURI(wsID, entryID))
+	loc := s.DefaultTimezone
+	if loc == nil {
+		loc = time.UTC
+	}
+	for _, uri := range weeklyReportURIsForEntry(wsID, entry.TimeInterval.Start, entry.TimeInterval.End, loc) {
+		s.emitResourceUpdate(ctx, uri)
+	}
 	return ok("clockify_delete_entry", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
 }
 
