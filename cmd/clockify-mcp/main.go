@@ -217,6 +217,7 @@ func run() error {
 	defer client.Close()
 	client.SetUserAgent("clockify-mcp-go/" + version)
 	service := newService(client, cfg.WorkspaceID, cfg.Timezone, dd, pol, cfg.ReportMaxEntries)
+	service.DeltaFormat = cfg.DeltaFormat
 	server := buildServer(version, deps, service, pol, &bc)
 	metrics.ReadyState.SetFunc(func() float64 {
 		if server.IsReadyCached() {

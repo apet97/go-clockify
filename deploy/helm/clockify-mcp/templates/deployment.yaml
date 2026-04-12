@@ -71,6 +71,10 @@ spec:
             - name: CLOCKIFY_INSECURE
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.clockify.deltaFormat }}
+            - name: CLOCKIFY_DELTA_FORMAT
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.auth.mode }}
             - name: MCP_AUTH_MODE
               value: {{ . | quote }}

@@ -9,15 +9,21 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/jsonmergepatch"
+	"github.com/apet97/go-clockify/internal/jsonpatch"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // diffResourceState computes the wire-format delta between two cached
-// serialisations of a subscribed resource. Thin wrapper around
-// jsonmergepatch.DiffOrFull that lives in the tools layer so
-// emitResourceUpdate doesn't reach into the sub-package directly for
-// every mutation path (easier to swap the differ later).
-func diffResourceState(prev, curr []byte) ([]byte, string, error) {
+// serialisations of a subscribed resource. When DeltaFormat is "jsonpatch",
+// the differ emits RFC 6902 ops; otherwise RFC 7396 merge patch.
+func (s *Service) diffResourceState(prev, curr []byte) ([]byte, string, error) {
+	if s.DeltaFormat == "jsonpatch" {
+		patchBytes, err := jsonpatch.Diff(prev, curr)
+		if err != nil {
+			return nil, "none", err
+		}
+		return patchBytes, "jsonpatch", nil
+	}
 	return jsonmergepatch.DiffOrFull(prev, curr)
 }
 
@@ -168,7 +174,7 @@ func (s *Service) emitResourceUpdateWithState(uri string, payload any) {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
 	}
-	patchBytes, format, err := diffResourceState(prevState, newState)
+	patchBytes, format, err := s.diffResourceState(prevState, newState)
 	if err != nil {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
@@ -385,7 +391,7 @@ func (s *Service) emitResourceUpdate(ctx context.Context, uri string) {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
 	}
-	patchBytes, format, err := diffResourceState(prevState, newState)
+	patchBytes, format, err := s.diffResourceState(prevState, newState)
 	if err != nil {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return

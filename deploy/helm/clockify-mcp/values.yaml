@@ -99,6 +99,7 @@ clockify:
   baseUrl: ""         # CLOCKIFY_BASE_URL (default: https://api.clockify.me/api/v1)
   timezone: ""        # CLOCKIFY_TIMEZONE (default: system)
   insecure: ""        # CLOCKIFY_INSECURE ("1" to allow non-loopback HTTP)
+  deltaFormat: ""     # CLOCKIFY_DELTA_FORMAT ("merge" or "jsonpatch", default: merge)
 
 # Authentication. Modes: static_bearer, oidc, forward_auth, mtls.
 # Empty = auto-detected per transport (see config.go).

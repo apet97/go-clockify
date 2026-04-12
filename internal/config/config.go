@@ -63,6 +63,10 @@ type Config struct {
 
 	// Hard cap on entries aggregated by report tools. 0 disables.
 	ReportMaxEntries int
+
+	// DeltaFormat selects the resource notification diff algorithm.
+	// "merge" (default) = RFC 7396 merge patch. "jsonpatch" = RFC 6902.
+	DeltaFormat string
 }
 
 func Load() (Config, error) {
@@ -304,6 +308,16 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_REPORT_MAX_ENTRIES must be >= 0")
 		}
 		cfg.ReportMaxEntries = n
+	}
+
+	cfg.DeltaFormat = strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_DELTA_FORMAT")))
+	if cfg.DeltaFormat == "" {
+		cfg.DeltaFormat = "merge"
+	}
+	switch cfg.DeltaFormat {
+	case "merge", "jsonpatch":
+	default:
+		return Config{}, fmt.Errorf("invalid CLOCKIFY_DELTA_FORMAT %q (must be merge or jsonpatch)", cfg.DeltaFormat)
 	}
 
 	return cfg, nil

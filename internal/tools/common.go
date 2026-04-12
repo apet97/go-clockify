@@ -40,6 +40,9 @@ type Service struct {
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
+	// DeltaFormat selects the diff algorithm for resource notifications.
+	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
+	DeltaFormat string
 	mu               sync.Mutex
 	cachedUser       *clockify.User
 	cachedWSID       string

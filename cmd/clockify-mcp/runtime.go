@@ -237,6 +237,7 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	}
 	bc := deps.bootstrap.Clone()
 	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries)
+	service.DeltaFormat = deps.cfg.DeltaFormat
 	server := buildServer(version, deps, service, pol, bc)
 	return &mcp.StreamableSessionRuntime{
 		Server:          server,
