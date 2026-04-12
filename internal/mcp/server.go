@@ -160,9 +160,8 @@ type Server struct {
 	encoderMu            sync.Mutex    // protects concurrent encoder writes
 	requestSeq           atomic.Int64  // monotonic request ID for log correlation
 
-	// notifier delivers server→client notifications. Set by the transport
-	// layer (stdio Run or HTTP ServeHTTP) at startup. nil = drop with a log.
-	notifier Notifier
+	hub                notifierHub
+	setNotifierRemove  func() // cleanup from previous SetNotifier call
 
 	// Negotiated client info. Populated on successful initialize; read by
 	// downstream log calls via NegotiatedProtocolVersion() / ClientInfo().
@@ -192,23 +191,29 @@ type Server struct {
 	inflight   map[any]context.CancelFunc
 }
 
-// SetNotifier installs a notification sink. Transports call this during
-// startup. Safe to call once per server lifetime; later calls replace the
-// sink without synchronisation, so transports must call before traffic flows.
-func (s *Server) SetNotifier(n Notifier) {
-	s.notifier = n
+// AddNotifier registers a notification sink and returns a function that
+// removes it. Multiple notifiers can coexist; Notify fans out to all of
+// them. Transports that multiplex clients (gRPC Exchange streams) should
+// call AddNotifier per-stream and defer the returned remove function.
+func (s *Server) AddNotifier(n Notifier) func() {
+	return s.hub.add(n)
 }
 
-// Notify forwards a server-initiated notification through the currently
-// installed Notifier. Drops silently when no notifier is wired. Satisfies
-// the Notifier interface so the tools layer can treat Server as its
-// notification sink without hard-coding the transport.
-func (s *Server) Notify(method string, params any) error {
-	n := s.notifier
-	if n == nil {
-		return nil
+// SetNotifier installs a notification sink, removing any previously
+// installed via SetNotifier. Transports that own a single client (stdio,
+// legacy HTTP) use this for backwards compatibility. Internally delegates
+// to AddNotifier.
+func (s *Server) SetNotifier(n Notifier) {
+	if s.setNotifierRemove != nil {
+		s.setNotifierRemove()
 	}
-	return n.Notify(method, params)
+	s.setNotifierRemove = s.hub.add(n)
+}
+
+// Notify forwards a server-initiated notification through all registered
+// notifiers. Returns nil when no notifiers are installed.
+func (s *Server) Notify(method string, params any) error {
+	return s.hub.notify(method, params)
 }
 
 // NegotiatedProtocolVersion returns the MCP protocol version agreed with the
@@ -308,8 +313,8 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.encoderMu.Unlock()
 	// Install the stdio notifier so activation events (tools/list_changed)
 	// flow back through the same thread-safe encoder the responses use.
-	if s.notifier == nil {
-		s.notifier = encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
+	if s.hub.len() == 0 {
+		s.SetNotifier(encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder})
 	}
 	s.advertiseListChanged.Store(true)
 
@@ -925,8 +930,7 @@ func (s *Server) ActivateTier1Tool(name string) error {
 // calls ActivateGroup directly without running a transport), the notification
 // is dropped and counted so the gap is visible in /metrics.
 func (s *Server) notifyToolsChanged() {
-	notifier := s.notifier
-	if notifier == nil {
+	if s.hub.len() == 0 {
 		metrics.ProtocolErrorsTotal.Inc("notification_dropped_no_notifier")
 		slog.Warn("notification_dropped",
 			"method", "notifications/tools/list_changed",
@@ -934,7 +938,7 @@ func (s *Server) notifyToolsChanged() {
 		)
 		return
 	}
-	if err := notifier.Notify("notifications/tools/list_changed", map[string]any{}); err != nil {
+	if err := s.Notify("notifications/tools/list_changed", map[string]any{}); err != nil {
 		slog.Warn("notification_failed",
 			"method", "notifications/tools/list_changed",
 			"error", err.Error(),

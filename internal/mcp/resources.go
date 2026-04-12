@@ -186,9 +186,6 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 	if uri == "" || !s.resourceSubs.has(uri) {
 		return
 	}
-	if s.notifier == nil {
-		return
-	}
 	params := map[string]any{"uri": uri}
 	if delta.Format != "" {
 		params["format"] = delta.Format
@@ -196,5 +193,5 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 			params["patch"] = delta.Patch
 		}
 	}
-	_ = s.notifier.Notify("notifications/resources/updated", params)
+	_ = s.Notify("notifications/resources/updated", params)
 }

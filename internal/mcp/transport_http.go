@@ -75,7 +75,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	// (tools/list_changed) are visibly dropped and counted instead of
 	// silently vanishing into a nil encoder. Real server→client streaming
 	// requires the Streamable HTTP (2025-03-26) transport rewrite.
-	if s.notifier == nil {
+	if s.hub.len() == 0 {
 		s.SetNotifier(droppingNotifier{})
 	}
 	s.advertiseListChanged.Store(false)
@@ -215,7 +215,7 @@ func (s *Server) checkReady(ctx context.Context) error {
 }
 
 func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
-	if s.notifier == nil {
+	if s.hub.len() == 0 {
 		s.SetNotifier(droppingNotifier{})
 	}
 	s.advertiseListChanged.Store(false)

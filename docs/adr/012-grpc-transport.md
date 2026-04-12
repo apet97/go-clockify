@@ -234,9 +234,9 @@ unrelated edits by hand.
 
 - ~~Authentication interceptor for `MCP_AUTH_MODE=static_bearer` and
   `MCP_AUTH_MODE=oidc` on gRPC.~~ **Landed in W4-03 (2026-04-12).**
-- Multi-stream notifier fan-out so server-initiated notifications
+- ~~Multi-stream notifier fan-out so server-initiated notifications
   reach every active `Exchange` stream rather than only the most
-  recently attached one.
+  recently attached one.~~ **Landed in W5-02c (2026-04-12).**
 - Streaming `notifications/progress` from long-running tool handlers
   through the gRPC bidirectional channel (the existing
   `EmitProgress` helper already routes through `Server.notifier` and

@@ -40,11 +40,10 @@ type Options struct {
 //
 // The transport exposes one bidirectional streaming method (Exchange) whose
 // frames are raw JSON-RPC 2.0 bytes marshalled via the bytesCodec. Each
-// client stream owns its own streamNotifier so server-initiated notifications
-// (tools/list_changed, notifications/progress, notifications/resources/updated)
-// land on the caller's stream and not on an unrelated one. The mcp.Server's
-// single Notifier field is overwritten per-stream; the last opened stream
-// wins for server-wide broadcasts. A multiplexing hub can be added later.
+// client stream registers its own streamNotifier via Server.AddNotifier so
+// server-initiated notifications (tools/list_changed, notifications/progress,
+// notifications/resources/updated) fan out to every active stream. The
+// notifier is automatically removed when the stream closes.
 func Serve(ctx context.Context, opts Options) error {
 	if opts.Bind == "" {
 		return errors.New("grpctransport: Bind is required")
@@ -119,10 +118,8 @@ type exchangeServer struct {
 func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 	ctx := stream.Context()
 	notifier := newStreamNotifier(stream)
-	// Install per-stream notifier. The stdio/HTTP transports also overwrite
-	// the notifier field, so this matches existing behaviour: the most
-	// recently attached transport wins for server-wide broadcasts.
-	e.srv.SetNotifier(notifier)
+	removeNotifier := e.srv.AddNotifier(notifier)
+	defer removeNotifier()
 
 	for {
 		if err := ctx.Err(); err != nil {
