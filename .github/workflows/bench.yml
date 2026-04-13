@@ -1,0 +1,237 @@
+name: Bench
+
+# Weekly benchmark regression detector. Runs the hot-path benchmarks
+# added in wave B B5 against a committed baseline; fails if any
+# benchmark's sec/op delta exceeds +20%, opening a single rolling
+# issue labelled `bench-regression` via the same self-heal pattern
+# as live-contract.yml and release-smoke.yml.
+#
+# The benchmarks are deliberately NOT on the PR critical path because
+# microbenchmarks flake on shared runners. A weekly cron with a
+# committed baseline catches >20% regressions without the PR noise.
+#
+# Hardware variance note: the committed baseline in
+# `internal/benchdata/baseline.txt` must be regenerated on the
+# ubuntu-latest runner hardware after any goarch change, because
+# absolute ns/op numbers don't transfer between CPUs. To bootstrap or
+# refresh the baseline, dispatch this workflow manually with
+# `regenerate-baseline: true` — it runs the benches, uploads the
+# output as an artifact, and skips the regression comparison. Then
+# download the artifact and commit it as `internal/benchdata/baseline.txt`.
+# See docs/performance.md for the procedure.
+#
+# All ${{ }} references to event payload / inputs / secrets go
+# through env: blocks per the workflow-injection guidance in
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+
+on:
+  schedule:
+    # Mondays 04:15 UTC — 15 min offset from release-smoke's Monday
+    # cron (03:00) and 1 hour 45 min after live-contract's nightly
+    # (02:30) so runner quota does not collide.
+    - cron: "15 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      regenerate-baseline:
+        description: "Run benches, upload as artifact, skip comparison. Use to bootstrap or refresh the committed baseline."
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bench:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+
+      - name: Install benchstat
+        run: go install golang.org/x/perf/cmd/benchstat@latest
+
+      - name: Run benchmarks
+        # count=10 to give benchstat enough samples for a 95%
+        # confidence interval (the 5-sample default emits "need >= 6"
+        # warnings). benchtime=100x keeps the wall-clock under one
+        # minute on ubuntu-latest.
+        run: |
+          set -euo pipefail
+          go test -bench=. -benchtime=100x -count=10 -run='^$' \
+            ./internal/timeparse ./internal/resolve \
+            ./internal/mcp ./internal/clockify \
+            > /tmp/bench-raw.txt 2>&1 || {
+              echo "::error::benchmark run failed"
+              cat /tmp/bench-raw.txt
+              exit 1
+            }
+          # Filter log-line noise (the mcp server bench emits slog INFO
+          # lines that contaminate per-benchmark output) while
+          # preserving per-package order so benchstat can parse it.
+          grep -E \
+            '^(goos|goarch|pkg|cpu|PASS|ok|Benchmark[A-Za-z_0-9]+-[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9.]+[[:space:]]+ns/op)' \
+            /tmp/bench-raw.txt > /tmp/bench-current.txt
+          echo "benchmarks collected:"
+          grep -c '^Benchmark' /tmp/bench-current.txt || true
+
+      - name: Upload bench output
+        # Always uploaded, both on bootstrap and on regression runs —
+        # the artifact is the recovery artifact whether you're
+        # updating the baseline or investigating a regression.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bench-current-${{ github.run_id }}
+          path: /tmp/bench-current.txt
+          retention-days: 30
+
+      - name: Compare against committed baseline
+        id: compare
+        if: github.event.inputs.regenerate-baseline != 'true'
+        env:
+          THRESHOLD_PCT: "20"
+        run: |
+          set -euo pipefail
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          if [ ! -s internal/benchdata/baseline.txt ]; then
+            echo "::error::internal/benchdata/baseline.txt missing or empty"
+            exit 1
+          fi
+          benchstat internal/benchdata/baseline.txt /tmp/bench-current.txt \
+            > /tmp/bench-delta.txt
+          echo "=== benchstat delta ==="
+          cat /tmp/bench-delta.txt
+          # Parse benchstat's text output for any row with a delta
+          # percentage > THRESHOLD_PCT. Benchstat writes deltas like
+          # "+12.34%" or "-8.90%" in the rightmost column of the
+          # per-metric tables; we scan for any positive percentage
+          # larger than the threshold. Negative deltas (speedups) are
+          # never a failure.
+          regressions=$(awk -v t="${THRESHOLD_PCT}" '
+            match($0, /\+([0-9]+(\.[0-9]+)?)%/, m) {
+              if (m[1]+0 > t+0) print $0
+            }
+          ' /tmp/bench-delta.txt)
+          if [ -n "${regressions:-}" ]; then
+            echo "::error::benchmark regression exceeds ${THRESHOLD_PCT}% threshold"
+            echo ""
+            echo "offending rows:"
+            echo "${regressions}"
+            {
+              echo "## Bench regression"
+              echo ""
+              echo "One or more benchmarks regressed by more than **${THRESHOLD_PCT}%**:"
+              echo ""
+              echo '```'
+              echo "${regressions}"
+              echo '```'
+              echo ""
+              echo "Full delta report:"
+              echo ""
+              echo '```'
+              cat /tmp/bench-delta.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "no benchmarks exceed ${THRESHOLD_PCT}% threshold"
+
+      - name: Summarize bootstrap run
+        if: github.event.inputs.regenerate-baseline == 'true'
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Baseline regeneration"
+            echo ""
+            echo "Bootstrap run complete. The current bench output is uploaded"
+            echo "as artifact \`bench-current-${RUN_ID}\`."
+            echo ""
+            echo "To refresh the committed baseline:"
+            echo ""
+            echo "1. Download the artifact from this run."
+            echo "2. Replace \`internal/benchdata/baseline.txt\` with the downloaded file."
+            echo "3. Commit the change under the prefix \`chore(bench): refresh baseline\`."
+            echo "4. The next scheduled bench run will compare against the new baseline."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open regression issue
+        if: failure() && github.event.inputs.regenerate-baseline != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SHA: ${{ github.sha }}
+          THRESHOLD_PCT: "20"
+        run: |
+          set -euo pipefail
+          # Self-heal: ensure the routing label exists. The || true
+          # swallows the "already exists" error so reruns are safe.
+          gh label create bench-regression \
+            --description "Weekly benchmark run found a hot-path regression" \
+            --color "fbca04" 2>/dev/null || true
+          existing=$(gh issue list --label bench-regression --state open --json number --jq '.[].number' | head -1)
+          if [ -n "${existing:-}" ]; then
+            gh issue comment "$existing" --body "Run ${WORKFLOW_URL} (attempt ${RUN_ATTEMPT}, sha ${SHA}) still regressed. Still open."
+            exit 0
+          fi
+          body=$(cat <<EOF
+          The weekly benchmark run detected a regression of more than
+          **${THRESHOLD_PCT}%** on one or more hot paths.
+
+          **Run:** ${WORKFLOW_URL}
+          **Attempt:** ${RUN_ATTEMPT}
+          **Commit:** ${SHA}
+
+          The "Compare against committed baseline" step in the run log
+          has the full benchstat delta. Common causes:
+
+          1. A hot-path allocation was added (check the \`B/op\` and
+             \`allocs/op\` deltas).
+          2. A slower algorithm was accepted under a correctness fix.
+          3. Runner variance (rare; benchstat's confidence interval
+             should filter this).
+
+          If the regression is intentional (e.g. a correctness fix
+          that trades throughput for safety), refresh the baseline
+          via \`gh workflow run bench.yml -f regenerate-baseline=true\`,
+          download the artifact, and commit it as
+          \`internal/benchdata/baseline.txt\`.
+
+          See \`docs/performance.md\` for the bootstrap procedure.
+
+          This issue will be closed automatically by the next green
+          bench run.
+          EOF
+          )
+          gh issue create \
+            --title "bench: weekly run regressed ($(date -u +%Y-%m-%d))" \
+            --label bench-regression \
+            --body "$body"
+
+      - name: Close stale regression issues on green run
+        if: success() && github.event.inputs.regenerate-baseline != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          numbers=$(gh issue list --label bench-regression --state open --json number --jq '.[].number')
+          if [ -z "${numbers:-}" ]; then
+            echo "no open bench-regression issues to close"
+            exit 0
+          fi
+          while IFS= read -r n; do
+            [ -z "$n" ] && continue
+            gh issue close "$n" --comment "Closed automatically by green bench run: ${WORKFLOW_URL}"
+          done <<< "$numbers"

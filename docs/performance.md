@@ -183,3 +183,57 @@ When the reference numbers shift by more than ~20% on the same
 hardware, retake the table and bump the "Date taken" row. Keep the
 old numbers in the commit message so an auditor can reconstruct the
 trend from `git log docs/performance.md`.
+
+## Automated regression detection
+
+`.github/workflows/bench.yml` runs the hot-path benchmarks (the ones
+listed in the "Reference numbers" table, sourced from the
+`*_bench_test.go` files under `internal/`) every Monday at
+04:15 UTC. It compares the fresh run against the committed baseline
+at `internal/benchdata/baseline.txt` via `benchstat` and fails the
+run — opening a rolling issue labelled `bench-regression` — when any
+benchmark regresses by more than **20%** on `sec/op`. Negative deltas
+(speedups) are never a failure.
+
+The 20% threshold is loose enough to tolerate runner variance on
+GitHub-hosted `ubuntu-latest` shared infrastructure. Microbenchmarks
+on shared runners flake — the threshold exists to catch meaningful
+shifts, not CPU noise. Tighten the threshold only after moving to a
+self-hosted runner with dedicated hardware.
+
+### Baseline hardware variance
+
+The committed baseline's `goos`/`goarch`/`cpu` header must match the
+CI runner hardware. Benchmarks run on a different CPU architecture
+produce numbers that can't be compared to the committed baseline at
+all. The seed baseline shipped in wave D was generated on Apple M1
+(darwin/arm64) — the first real scheduled run on
+`ubuntu-latest` will appear to regress on every metric, because the
+CPUs differ.
+
+### Bootstrap procedure (first run + intentional refresh)
+
+Whenever the baseline needs to be regenerated on runner hardware —
+either to bootstrap it the first time, after an upstream Go-runtime
+upgrade, or after an intentional perf change — follow this procedure:
+
+1. Dispatch the workflow with the regenerate input:
+   ```sh
+   gh workflow run bench.yml -f regenerate-baseline=true
+   ```
+2. Wait for the run to finish. The workflow runs the benches, uploads
+   the filtered output as the `bench-current-<run-id>` artifact, and
+   **skips** the regression comparison (so the run is green).
+3. Download the artifact:
+   ```sh
+   gh run download <run-id> -n bench-current-<run-id>
+   ```
+4. Replace `internal/benchdata/baseline.txt` with the downloaded
+   file, diff against the previous baseline so the commit message can
+   document the deltas, and commit under the conventional prefix
+   `chore(bench): refresh baseline`.
+5. The next scheduled run (or a manual dispatch without the
+   `regenerate-baseline` flag) will compare against the new baseline.
+
+The workflow file has more detail inline; see
+`.github/workflows/bench.yml`.
