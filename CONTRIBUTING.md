@@ -97,6 +97,8 @@ internal/
 4. Ensure all checks pass (fmt, vet, build, test)
 5. Open a PR with a clear description of what and why
 
+See [`GOVERNANCE.md`](GOVERNANCE.md) for who reviews and merges PRs.
+
 ## Commit Conventions
 
 Use conventional commit prefixes:
