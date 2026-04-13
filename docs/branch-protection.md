@@ -9,26 +9,44 @@ The snapshot exists so an auditor or external reviewer can see what
 the merge gate actually enforces without having admin access to the
 repository.
 
-Last reviewed: 2026-04-13 (wave-a B3).
+Last reviewed: 2026-04-14 (wave-d D5).
 
-## Protection rules on `main`
+> ⚠️ **Gap — protection is currently unconfigured.** As of the
+> 2026-04-14 audit (see `scripts/audit-branch-protection.sh`), `main`
+> has neither a classic branch-protection rule
+> (`GET /repos/{owner}/{repo}/branches/main/protection` returns
+> `404 Branch not protected`) nor a ruleset
+> (`GET /repos/{owner}/{repo}/rulesets` returns `[]`). A repo
+> administrator can push or force-push to `main` without triggering
+> any of the checks listed below. **The table in the next section
+> describes the intended protection target, not the state GitHub is
+> currently enforcing.** Enabling the target rules is tracked as a
+> follow-up from wave D; they must be applied via the GitHub UI or
+> via `gh api PUT /repos/{owner}/{repo}/branches/main/protection`
+> before this section can claim to be a post-hoc audit record.
 
-| Setting                                       | State    |
-|-----------------------------------------------|----------|
-| Require a pull request before merging         | Enabled  |
-| Required approvals                            | 0\*      |
-| Dismiss stale pull request approvals on push  | Enabled  |
-| Require review from Code Owners               | Enabled  |
-| Require status checks to pass before merging  | Enabled  |
-| Require branches to be up to date before merge| Enabled  |
-| Require conversation resolution before merge  | Enabled  |
-| Require signed commits                        | Enabled  |
-| Require linear history                        | Enabled  |
-| Require deployments to succeed                | Disabled |
-| Lock branch                                   | Disabled |
-| Restrict who can push to matching branches    | Enabled  |
-| Allow force pushes                            | Disabled |
-| Allow deletions                               | Disabled |
+## Intended protection rules on `main`
+
+The table describes the configuration this project is designed to
+run under. Until the gap above is closed, treat it as a target, not
+a snapshot of reality.
+
+| Setting                                       | Target state |
+|-----------------------------------------------|--------------|
+| Require a pull request before merging         | Enabled      |
+| Required approvals                            | 0\*          |
+| Dismiss stale pull request approvals on push  | Enabled      |
+| Require review from Code Owners               | Enabled      |
+| Require status checks to pass before merging  | Enabled      |
+| Require branches to be up to date before merge| Enabled      |
+| Require conversation resolution before merge  | Enabled      |
+| Require signed commits                        | Enabled      |
+| Require linear history                        | Enabled      |
+| Require deployments to succeed                | Disabled     |
+| Lock branch                                   | Disabled     |
+| Restrict who can push to matching branches    | Enabled      |
+| Allow force pushes                            | Disabled     |
+| Allow deletions                               | Disabled     |
 
 \* Required approvals is `0` because this is a single-maintainer
 project (see [`GOVERNANCE.md`](../GOVERNANCE.md)). When a second
@@ -37,8 +55,8 @@ enforcing dual review on the security-sensitive paths.
 
 ## Required status checks
 
-The following CI jobs are required to be green on a PR before it can
-merge to `main`:
+The following CI jobs are the target required-checks list for a PR
+to merge to `main`:
 
 - `Lint and test` — golangci-lint + race-enabled `go test ./...` +
   fuzz smoke + build-tags audit + http smoke + config parity
@@ -72,6 +90,21 @@ does not use); when invoked, the override must be documented in a PR
 or issue with the reason and the change must be reviewed in a
 follow-up PR. To date this has not been used.
 
+## How to audit
+
+Run:
+
+```sh
+bash scripts/audit-branch-protection.sh
+```
+
+This hits `gh api repos/{owner}/{repo}/branches/main/protection` and
+projects the fields the snapshot table covers. Any divergence from
+the target table above should be either reconciled (update the table
+in a PR labelled `governance-snapshot`) or fixed (re-apply the target
+rules via the GitHub UI). The script exits non-zero if the branch is
+unprotected, which is itself the signal to reconcile.
+
 ## How to update this file
 
 When a setting in the GitHub UI changes:
@@ -80,6 +113,8 @@ When a setting in the GitHub UI changes:
 2. Update the table above in the same PR (or in a follow-up labelled
    `governance-snapshot`).
 3. Bump the "Last reviewed" date.
+4. Re-run `scripts/audit-branch-protection.sh` to confirm the live
+   state matches.
 
 The CODEOWNERS file routes changes to this document through
 `@apet97`.
