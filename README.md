@@ -9,7 +9,7 @@ A [Model Context Protocol][mcp] server for [Clockify][clockify], written in Go. 
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI)
 - **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance
 
-[mcp]: https://modelcontextprotocol.io
+[mcp]: https://modelcontextprotocol.io/docs/getting-started/intro
 [clockify]: https://clockify.me
 
 ## Install
@@ -31,7 +31,7 @@ Verify:
 clockify-mcp --version
 ```
 
-Get a Clockify API key from [Profile → Advanced](https://app.clockify.me/user/preferences#advanced) and export it:
+Get a Clockify API key from [Profile → Advanced](https://app.clockify.me/user/preferences) and export it:
 
 ```sh
 export CLOCKIFY_API_KEY=your-key
@@ -222,7 +222,7 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 **No tools visible** — Check `CLOCKIFY_BOOTSTRAP_MODE`. In `minimal` mode most tools are hidden; use `clockify_search_tools` to discover them.
 
-**401 Unauthorized** — API key is invalid or expired. [Generate a new one](https://app.clockify.me/user/preferences#advanced).
+**401 Unauthorized** — API key is invalid or expired. [Generate a new one](https://app.clockify.me/user/preferences).
 
 **Multiple workspaces** — Set `CLOCKIFY_WORKSPACE_ID` explicitly.
 

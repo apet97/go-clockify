@@ -86,6 +86,14 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # Self-heal: ensure the routing label exists. Idempotent — the
+          # || true swallows the "already exists" error so reruns are
+          # safe. This is what saves the workflow when the label has
+          # never been used (first failure) or has been deleted out of
+          # band by an admin.
+          gh label create link-rot \
+            --description "Markdown link checker found broken links" \
+            --color "d73a4a" 2>/dev/null || true
           existing=$(gh issue list --label link-rot --state open --json number --jq '.[].number' | head -1)
           if [ -n "${existing:-}" ]; then
             gh issue comment "$existing" --body "Run ${WORKFLOW_URL} (attempt ${RUN_ATTEMPT}, sha ${SHA}) failed. Still open."

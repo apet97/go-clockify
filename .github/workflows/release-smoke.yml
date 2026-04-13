@@ -196,6 +196,12 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
+          # Self-heal: ensure the routing label exists before we try to
+          # apply it. || true swallows the "already exists" error so
+          # reruns are safe.
+          gh label create release-smoke-failure \
+            --description "Release-artifact verification failed" \
+            --color "b60205" 2>/dev/null || true
           # Avoid spamming: only open an issue if there isn't already
           # one labelled release-smoke-failure still open. A single
           # rolling issue per outage is easier to triage than one per

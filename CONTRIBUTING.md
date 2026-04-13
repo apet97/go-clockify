@@ -167,4 +167,4 @@ protocol version).
 
 ## Questions?
 
-Open a [discussion](https://github.com/apet97/go-clockify/discussions) or file an [issue](https://github.com/apet97/go-clockify/issues).
+File an [issue](https://github.com/apet97/go-clockify/issues).
