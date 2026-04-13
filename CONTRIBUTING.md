@@ -117,6 +117,46 @@ Use conventional commit prefixes:
 5. **Safety first** — Destructive tools must have policy + dry-run + tests
 6. **Graceful shutdown** — Respect context and drain in-flight requests
 
+## Go version pin
+
+This project pins to **Go 1.25.9** — the latest patch on the current
+minor at the time of this writing. We do not pin for a specific
+language feature or stdlib bug fix; we follow the principle "track
+the latest patch on the current minor, bump the minor on a documented
+cadence."
+
+The bump cadence is:
+
+- **Patch** (1.25.x → 1.25.y): within two weeks of upstream release,
+  to pick up runtime fixes and security patches.
+- **Minor** (1.25 → 1.26): within four weeks of upstream release,
+  after running `make verify` against the new toolchain locally.
+
+The pin lives in three places that must move together:
+
+1. `go.mod` — `go 1.25.9` directive on the second line.
+2. `.github/workflows/*.yml` — every `actions/setup-go` block uses
+   `go-version: "1.25.9"`. There are eleven of these today; a one-line
+   bump in any one of them without the others is a structural drift
+   bug.
+3. `deploy/Dockerfile` — `FROM golang:1.25-bookworm AS builder`. This
+   is intentionally a loose pin to the minor (not the patch) because
+   the Debian base image gets security updates that we want to inherit
+   automatically; the exact patch is bound at build time and recorded
+   in the SBOM.
+
+When bumping the pin, change all three in the same commit and run
+`make verify` end-to-end before opening the PR. The
+`scripts/check-build-tags.sh` script exercises every build-tag
+combination against the new toolchain; if any combination breaks,
+the bump is not safe.
+
+Why "track latest patch" rather than "stay on the LTS-equivalent"?
+Go has no LTS — every minor receives security fixes only until the
+next-next minor ships. Staying behind the current minor means falling
+out of the security-fix window faster than tracking the head, so the
+tightest pin is also the safest one.
+
 ## Releases
 
 Versioning, support window, deprecation policy, and the definition of
