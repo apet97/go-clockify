@@ -1,0 +1,137 @@
+name: Link check
+
+# Catches broken Markdown links across the repo before they reach
+# operators. Wave A discovered three runbook links in
+# deploy/k8s/README.md that 404'd because the runbooks did not exist;
+# wave B fixed the runbooks and added this workflow so the same class
+# of link rot blocks merge in the future.
+#
+# Scope: every *.md under the repo. node_modules/, dist/, vendor/,
+# and .git/ are excluded because they're either generated or
+# third-party.
+#
+# Failure mode mirrors live-contract.yml + release-smoke.yml:
+#   - On failure: open a single rolling issue labelled 'link-rot'
+#     with a link to the failing run.
+#   - On the next green run: auto-close every open issue with that
+#     label.
+#
+# All ${{ }} references go through env: blocks per the
+# workflow-injection guidance in
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/workflows/link-check.yml"
+      - ".lycheeignore"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/workflows/link-check.yml"
+      - ".lycheeignore"
+  schedule:
+    # Weekly Tuesday 03:30 UTC. Far enough away from release-smoke
+    # (Monday 03:00) and live-contract (nightly 02:30) that runner
+    # quota does not collide.
+    - cron: "30 3 * * 2"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: link-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lychee:
+    name: Lychee
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run lychee
+        id: lychee
+        # Pinned to a commit SHA per house style (see ci.yml,
+        # release.yml, live-contract.yml).
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        with:
+          args: >-
+            --no-progress
+            --max-concurrency 8
+            --include-fragments
+            --exclude-path node_modules
+            --exclude-path dist
+            --exclude-path vendor
+            --exclude-path .git
+            './**/*.md'
+          fail: true
+          format: markdown
+          jobSummary: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Open failure issue
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          existing=$(gh issue list --label link-rot --state open --json number --jq '.[].number' | head -1)
+          if [ -n "${existing:-}" ]; then
+            gh issue comment "$existing" --body "Run ${WORKFLOW_URL} (attempt ${RUN_ATTEMPT}, sha ${SHA}) failed. Still open."
+            exit 0
+          fi
+          body=$(cat <<EOF
+          The Markdown link checker failed.
+
+          **Run:** ${WORKFLOW_URL}
+          **Attempt:** ${RUN_ATTEMPT}
+          **Commit:** ${SHA}
+
+          One or more Markdown links in this repo no longer resolve.
+          The lychee step output (above) lists the offending paths
+          and target URLs. Common causes:
+
+          1. A doc was moved or renamed without updating links.
+          2. A new doc was added that references a file that does
+             not yet exist.
+          3. An external URL was retired or moved (rare; lychee
+             retries before failing).
+          4. A markdown anchor (\`#section\`) was renamed without
+             updating the references.
+
+          This issue will be closed automatically by the next green
+          run.
+          EOF
+          )
+          gh issue create \
+            --title "link-rot: Markdown link checker failed ($(date -u +%Y-%m-%d))" \
+            --label link-rot \
+            --body "$body"
+
+      - name: Close stale failure issues on green run
+        if: success() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          numbers=$(gh issue list --label link-rot --state open --json number --jq '.[].number')
+          if [ -z "${numbers:-}" ]; then
+            echo "no open link-rot issues to close"
+            exit 0
+          fi
+          while IFS= read -r n; do
+            [ -z "$n" ] && continue
+            gh issue close "$n" --comment "Closed automatically by green link-check run: ${WORKFLOW_URL}"
+          done <<< "$numbers"
