@@ -359,7 +359,7 @@ Usage: clockify-mcp [--version | --help]
 
 Environment Variables:
   Core:
-    CLOCKIFY_API_KEY          API key (required for stdio/legacy http; optional for streamable_http)
+    CLOCKIFY_API_KEY          API key (required for stdio/http; optional for streamable_http)
     CLOCKIFY_WORKSPACE_ID     Workspace ID (auto-detected if only one)
     CLOCKIFY_BASE_URL         API base URL (default: https://api.clockify.me/api/v1)
     CLOCKIFY_TIMEZONE         IANA timezone for time parsing
@@ -388,7 +388,7 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT             stdio (default), legacy http, streamable_http, or grpc
+    MCP_TRANSPORT             stdio (default), http, streamable_http, or grpc
     MCP_GRPC_BIND             gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
     MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
     MCP_HTTP_BIND             HTTP listen address (default: :8080)
