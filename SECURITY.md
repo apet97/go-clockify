@@ -2,10 +2,14 @@
 
 ## Supported Versions
 
-| Version | Supported           |
-|---------|---------------------|
-| 0.5.x   | Yes                 |
-| 0.4.x   | Security fixes only |
+| Version | Supported |
+|---------|-----------|
+| 1.0.x   | Yes       |
+
+The `0.x` line reached end-of-life when `v1.0.0` shipped. Security
+fixes will not be backported. See [docs/release-policy.md](docs/release-policy.md)
+for the full support window, deprecation policy, and definition of
+"breaking change" used by this project.
 
 ## Reporting a Vulnerability
 

@@ -117,6 +117,14 @@ Use conventional commit prefixes:
 5. **Safety first** — Destructive tools must have policy + dry-run + tests
 6. **Graceful shutdown** — Respect context and drain in-flight requests
 
+## Releases
+
+Versioning, support window, deprecation policy, and the definition of
+"breaking change" used by this project live in
+[docs/release-policy.md](docs/release-policy.md). Read it before
+proposing a change to a public surface (tools, env vars, CLI flags,
+protocol version).
+
 ## Questions?
 
 Open a [discussion](https://github.com/apet97/go-clockify/discussions) or file an [issue](https://github.com/apet97/go-clockify/issues).

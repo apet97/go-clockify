@@ -245,6 +245,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 - Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues)
 - Security vulnerabilities: [SECURITY.md](SECURITY.md)
 - Release history: [CHANGELOG.md](CHANGELOG.md)
+- Versioning, support window, breaking-change policy: [docs/release-policy.md](docs/release-policy.md)
 
 ## License
 
