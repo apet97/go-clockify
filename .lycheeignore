@@ -1,0 +1,14 @@
+# Allowlist for benign redirects lychee would otherwise report under
+# the weekly link-check run. This file is NOT a wildcard silence —
+# every entry is a specific URL whose redirect or inaccessibility is
+# expected and documented. Add a `# why:` comment above each entry.
+#
+# Format: one regular expression per line (lychee uses the `regex`
+# crate; plain strings match as substrings).
+
+# why: GitHub's security-advisories-new page redirects to /login when
+# lychee hits it unauthenticated, because creating an advisory
+# requires a signed-in session with repo admin. The final status is
+# 200 OK via the login page. This URL is referenced from SECURITY.md
+# as the canonical private-disclosure entry point; it doesn't move.
+^https://github\.com/apet97/go-clockify/security/advisories/new$
