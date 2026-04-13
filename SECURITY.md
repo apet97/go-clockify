@@ -68,7 +68,7 @@ The following are in scope:
 The HTTP transport does **not** terminate TLS. Production deployments MUST
 front the server with a TLS-terminating reverse proxy (Caddy, nginx, Envoy,
 Traefik, or a cloud load balancer). Without a proxy, the bearer token and all
-request/response bodies travel in plain HTTP. See `deploy/Caddyfile.example`
+request/response bodies travel in plain HTTP. See `deploy/Caddyfile`
 for a reference configuration that uses Caddy's automatic Let's Encrypt
 support.
 
