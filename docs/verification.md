@@ -89,6 +89,17 @@ keyless signature; only signatures produced by the goreleaser step in
 this repo's `release.yml` will satisfy the regex, so a lookalike
 binary signed by an attacker fails closed.
 
+### Bundle format (v1.0.0 vs v1.0.1+)
+
+`v1.0.0` was signed with the legacy rekor-bundle format and stores
+the signing certificate only in the transparency log, so re-verifying
+it offline with `cosign verify-blob --bundle` fails (cosign needs the
+embedded cert chain). `v1.0.1` and later are signed with
+`--new-bundle-format`, producing a sigstore v1 bundle that embeds the
+x509 certificate chain and verifies cleanly without an online Rekor
+lookup. The release workflow pins `cosign-release: v2.4.3` so future
+runs don't drift with the `cosign-installer` default.
+
 ## 3. Cosign signature on the container image
 
 The container image is built and signed by `docker-image.yml`, not
