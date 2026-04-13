@@ -8,8 +8,18 @@
 #     Host header does not match the configured allowlist.
 #   - commonLabels: environment=prod so observability joins cleanly.
 #
-# Operators should replace the image tag below with a pinned release
-# digest before applying. The W2-12 runbook documents digest pinning.
+# Image pinning policy (enforced by scripts/check-overlay-structure.sh):
+#   This overlay intentionally does NOT set `images:` / `newTag`.
+#   Prod operators are expected to pin a specific image digest at deploy
+#   time via:
+#
+#       kustomize edit set image \
+#           ghcr.io/apet97/go-clockify=ghcr.io/apet97/go-clockify@sha256:<digest>
+#
+#   or equivalent in their GitOps tooling. Pinning here would drift out
+#   of sync with every release — and did exactly that prior to wave-a A5,
+#   when the overlay was stuck at "0.7.0" while the base pointed at "v1.0.0".
+#   See docs/runbooks/w2-12-digest-pinning.md for the full workflow.
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -21,10 +31,6 @@ labels:
   - pairs:
       app.kubernetes.io/environment: prod
     includeSelectors: false
-
-images:
-  - name: ghcr.io/apet97/go-clockify
-    newTag: "0.7.0"
 
 patches:
   - target:

@@ -28,6 +28,9 @@ for env in dev staging prod; do
     kubectl kustomize "deploy/k8s/overlays/$env" | kubeconform -strict -summary -skip "$SKIP"
 done
 
+echo "== Overlay structure =="
+bash scripts/check-overlay-structure.sh
+
 echo "== Config parity =="
 bash scripts/check-config-parity.sh
 
