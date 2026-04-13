@@ -1,0 +1,262 @@
+name: Release smoke
+
+# Post-release smoke that re-verifies the supply chain artifacts every
+# published release produces, plus a weekly cron so delayed drift
+# (eventually-consistent attestation propagation, expired cosign roots,
+# accidental tag mutation) surfaces as a GitHub issue rather than as a
+# silent rot.
+#
+# Three independent verification steps, each in its own step so a single
+# failure does not mask the others:
+#
+#   1. gh attestation verify   — SLSA build provenance on the release
+#                                binary attached to the GitHub release.
+#                                Source: actions/attest-build-provenance
+#                                in release.yml.
+#   2. cosign verify-blob       — keyless cosign signature on the binary
+#                                via the .sigstore.json bundle goreleaser
+#                                wrote alongside it. Source: goreleaser
+#                                signs.cosign-keyless step driven by
+#                                release.yml.
+#   3. cosign verify            — keyless cosign signature on the
+#                                ghcr.io/apet97/go-clockify image at the
+#                                tag's digest. Source: docker-image.yml
+#                                cosign sign --yes step.
+#
+# All ${{ }} references to event payload, repo, and inputs are placed
+# inside env: blocks rather than interpolated into run: commands so
+# untrusted strings cannot shell-inject. See:
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+#
+# Issue workflow (mirrors live-contract.yml from wave-a A4):
+#
+#   - On failure: open a single rolling issue labelled
+#     'release-smoke-failure' with a pointer to the failing run. gh is
+#     preinstalled on ubuntu-latest, so no third-party action is needed.
+#   - On the next green run: auto-close every open issue with that
+#     label. The label is the exclusive signal — no Slack, no polling
+#     dashboards, just a GitHub issue the maintainer sees.
+
+on:
+  release:
+    types: [published]
+  schedule:
+    # Weekly Monday 03:00 UTC. Far enough away from release.yml,
+    # docker-image.yml, live-contract.yml, and reproducibility.yml that
+    # nothing fights for runner quota.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (e.g. v1.0.0). Defaults to latest if empty."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  attestations: read
+  packages: read
+  issues: write
+  id-token: write
+
+concurrency:
+  # A running smoke must never race another against the same tag. The
+  # weekly cron and a release dispatch can collide; queue, do not
+  # cancel.
+  group: release-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Verify release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: v2.4.1
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          case "${EVENT_NAME}" in
+            release)
+              tag="${RELEASE_TAG}"
+              ;;
+            workflow_dispatch)
+              if [ -n "${DISPATCH_TAG:-}" ]; then
+                tag="${DISPATCH_TAG}"
+              else
+                tag="$(gh release view --json tagName --jq .tagName)"
+              fi
+              ;;
+            schedule)
+              tag="$(gh release view --json tagName --jq .tagName)"
+              ;;
+            *)
+              echo "::error::unsupported event ${EVENT_NAME}"
+              exit 1
+              ;;
+          esac
+          if [ -z "${tag:-}" ]; then
+            echo "::error::could not resolve release tag"
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Verifying release artifacts for ${tag}"
+
+      - name: Download linux-x64 binary + sigstore bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cd artifacts
+          # Use linux-x64 as the canonical verification target. Any
+          # supported binary would work; picking one keeps the smoke
+          # fast. The other four binaries are signed by the same
+          # cosign-keyless run, so verifying one proves the signing
+          # path was healthy at release time.
+          gh release download "$TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern 'clockify-mcp-linux-x64' \
+            --pattern 'clockify-mcp-linux-x64.sigstore.json'
+          ls -l
+
+      - name: Verify SLSA build provenance attestation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # gh attestation verify reads from the GitHub attestation
+          # service. --owner pins the trust root to this org so a
+          # malicious lookalike binary fails closed.
+          gh attestation verify artifacts/clockify-mcp-linux-x64 \
+            --owner "${GITHUB_REPOSITORY_OWNER}"
+
+      - name: Verify cosign keyless signature on binary
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # The certificate identity is the goreleaser signing step
+          # running inside .github/workflows/release.yml at the tag.
+          # Pin the issuer to GitHub's OIDC endpoint and use a regex
+          # that matches any tag so the same workflow tracks future
+          # releases without edit.
+          cosign verify-blob \
+            --bundle artifacts/clockify-mcp-linux-x64.sigstore.json \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            artifacts/clockify-mcp-linux-x64
+
+      - name: Resolve container image digest
+        id: image
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/go-clockify:${TAG}"
+          digest="$(cosign triangulate --type digest "$ref")"
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Image digest: ${digest}"
+
+      - name: Verify cosign keyless signature on container image
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # The image is signed by docker-image.yml, NOT release.yml.
+          # The two workflows live in the same repo but the cosign
+          # certificate identity differs by workflow path.
+          cosign verify "$IMAGE_REF" \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/docker-image.yml@refs/tags/.*$" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            > /dev/null
+          echo "OK: cosign verify $IMAGE_REF"
+
+      - name: Open failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SHA: ${{ github.sha }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Avoid spamming: only open an issue if there isn't already
+          # one labelled release-smoke-failure still open. A single
+          # rolling issue per outage is easier to triage than one per
+          # failed run.
+          existing=$(gh issue list --label release-smoke-failure --state open --json number --jq '.[].number' | head -1)
+          if [ -n "${existing:-}" ]; then
+            gh issue comment "$existing" --body "Run ${WORKFLOW_URL} (attempt ${RUN_ATTEMPT}, sha ${SHA}, tag ${TAG:-unknown}) failed. Still open."
+            exit 0
+          fi
+          body=$(cat <<EOF
+          The release-smoke verification failed for tag \`${TAG:-unknown}\`.
+
+          **Run:** ${WORKFLOW_URL}
+          **Attempt:** ${RUN_ATTEMPT}
+          **Commit:** ${SHA}
+
+          This workflow re-verifies three supply-chain surfaces every
+          release produces:
+
+          1. \`gh attestation verify\` on the linux-x64 binary (SLSA
+             build provenance from \`release.yml\`).
+          2. \`cosign verify-blob\` on the linux-x64 binary using the
+             keyless sigstore bundle goreleaser wrote alongside it.
+          3. \`cosign verify\` on the multi-arch ghcr.io image at the
+             tag's digest (signed by \`docker-image.yml\`).
+
+          A failure usually means one of:
+
+          1. Cosign root rotation broke a previously-valid signature.
+          2. The attestation service has not yet propagated the
+             provenance for a freshly-published release. Retry in 10m.
+          3. The image tag was mutated after release (should never
+             happen — investigate ghcr.io activity log).
+          4. A genuine signing-pipeline regression landed in
+             \`release.yml\`, \`docker-image.yml\`, or
+             \`.goreleaser.yaml\`.
+
+          See \`docs/verification.md\` for the manual equivalent of
+          these checks.
+
+          This issue will be closed automatically by the next green run.
+          EOF
+          )
+          gh issue create \
+            --title "release-smoke: verification failed for ${TAG:-unknown} ($(date -u +%Y-%m-%d))" \
+            --label release-smoke-failure \
+            --body "$body"
+
+      - name: Close stale failure issues on green run
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          numbers=$(gh issue list --label release-smoke-failure --state open --json number --jq '.[].number')
+          if [ -z "${numbers:-}" ]; then
+            echo "no open release-smoke-failure issues to close"
+            exit 0
+          fi
+          while IFS= read -r n; do
+            [ -z "$n" ] && continue
+            gh issue close "$n" --comment "Closed automatically by green release-smoke run: ${WORKFLOW_URL}"
+          done <<< "$numbers"
