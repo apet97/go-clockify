@@ -236,6 +236,8 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 Reference Kubernetes manifests live in [`deploy/k8s/`](deploy/k8s/) and [`deploy/helm/`](deploy/helm/): Deployment (non-root distroless, read-only root FS, dropped capabilities), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and a PrometheusRule with burn-rate alerts for a 99.9% SLO.
 
+For a single-page operator overview that links the threat model, transports, auth modes, deployment targets, runbooks, and compliance posture, see [docs/production-readiness.md](docs/production-readiness.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
