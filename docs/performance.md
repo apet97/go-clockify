@@ -20,8 +20,8 @@ The numbers exist for two reasons:
 
 | Field          | Value                                  |
 |----------------|----------------------------------------|
-| Date taken     | 2026-04-13                             |
-| Branch         | `wave-a`                               |
+| Date taken     | 2026-04-14                             |
+| Branch         | `perf/fast-and-quality-wave-f`         |
 | Commit         | (this commit; check `git log -1`)      |
 | OS             | macOS 15 (Darwin 24.6.0)               |
 | Architecture   | `darwin/arm64`                         |
@@ -31,6 +31,24 @@ The numbers exist for two reasons:
 
 A linux/amd64 cloud VM will produce different absolute numbers but
 the *ratios* between the benchmarks should stay close to the reference.
+
+### Hardware vs. CI regression gate
+
+The numbers in this document were captured on the reference machine
+above (darwin/arm64, Apple M1). The weekly regression gate in
+`.github/workflows/bench.yml` runs on `ubuntu-latest` (linux/amd64)
+and compares against a committed baseline at
+`internal/benchdata/baseline.txt`. Absolute numbers differ between
+the two platforms by ~1.5-2× in either direction depending on the
+benchmark — the gate's 20% threshold works because the *ratios*
+between hot paths are stable across hardware. When wall-clock
+numbers in this document and the CI baseline disagree, **the CI
+baseline is authoritative for regression detection** and this
+document is authoritative for human understanding.
+
+To refresh `internal/benchdata/baseline.txt` on the CI hardware,
+dispatch `bench.yml` manually with `regenerate-baseline=true` and
+commit the uploaded artifact (procedure in the workflow comment).
 
 ## Hot-path microbenchmarks
 
@@ -49,27 +67,57 @@ compare across PRs with `benchstat`.
 | `BenchmarkDispatchInitialize`            | 19,101  | 6,517   | 98        |
 | `BenchmarkClient_Get` (localhost)        | 139,970 | 10,143  | 114       |
 | `BenchmarkClient_Post` (localhost)       | 125,575 | 12,818  | 135       |
-| `BenchmarkClockifyLogTime` (E5)          | 298,792 | 407,549 | 2,957     |
-| `BenchmarkClockifyStartTimer` (E5)       | 292,670 | 408,475 | 2,940     |
-| `BenchmarkClockifyStopTimer` (E5)        | 370,377 | 418,580 | 3,027     |
-| `BenchmarkClockifyAddEntry` (E5)         | 298,764 | 410,286 | 2,971     |
-| `BenchmarkClockifyUpdateEntry` (E5)      | 384,798 | 423,087 | 3,096     |
-| `BenchmarkClockifyFindAndUpdateEntry` (E5)| 524,513 | 435,057 | 3,196    |
+| `BenchmarkPipelineBeforeCall`            | 568     | 552     | 9         |
+| `BenchmarkAcquireForSubjectSteady`       | 554     | 552     | 9         |
+| `BenchmarkStaticBearer` (auth)           | 235     | 48      | 1         |
+| `BenchmarkOIDCVerifyCached` (auth)       | 53,774  | 5,384   | 86        |
+| `BenchmarkClockifyLogTime` (amortised)   | 104,728 | 22,905  | 296       |
+| `BenchmarkClockifyStartTimer` (amortised)| 71,608  | 22,569  | 278       |
+| `BenchmarkClockifyStopTimer` (amortised) | 72,164  | 21,027  | 254       |
+| `BenchmarkClockifyAddEntry` (amortised)  | 76,095  | 23,137  | 308       |
+| `BenchmarkClockifyUpdateEntry` (amortised)| 169,481 | 35,427  | 431      |
+| `BenchmarkClockifyFindAndUpdateEntry` (amortised) | 128,619 | 36,157 | 421 |
 
-The six `BenchmarkClockify*` rows are per-tool micro-benchmarks for the
-Tier-1 destructive write surface, added in wave E5. They drive one
-`tools/call` per iteration through the **full** dispatch pipeline
-(JSON-RPC parse → enforcement → handler → `clockify.Client.Post/Get/Put` →
-loopback `httptest`). They exist so a regression isolated to one
-write handler — say, an extra allocation in `UpdateEntry`'s
-fetch-then-merge path — is visible against a per-tool baseline rather
-than smeared across the generic dispatch numbers above. Source:
-`internal/tools/writes_bench_test.go`. Captured locally on
-darwin/arm64 (Apple M1, Go 1.25.9) via
-`go test -bench=BenchmarkClockify -benchmem -benchtime=1s -count=1
--run='^$' ./internal/tools/`. Each iteration finishes in well under
-1ms; `find_and_update_entry` is the slowest at ~525µs because it
-issues three upstream calls (GET `/user`, GET list, PUT entry).
+The `BenchmarkClockify*` rows are per-tool micro-benchmarks for the
+Tier-1 destructive write surface. They drive one `tools/call` per
+iteration through the **full** dispatch pipeline (JSON-RPC parse →
+enforcement → handler → `clockify.Client.Post/Get/Put` → loopback
+`httptest`). Source: `internal/tools/writes_bench_test.go`.
+
+**The "amortised" label** on those rows is load-bearing. Prior to the
+harness refactor in commit 70defbb (wave F), these benchmarks built
+a fresh `tools.Service` + rebuilt the full tool registry on every
+iteration, so 82% of the measured allocations came from
+`applyTier1OutputSchemas` / `schemaForType` / `structSchema` and
+the numbers were dominated by cold-start cost rather than the
+actual handler + HTTP path. The `testharness.BenchHarness` helper
+builds the stack once and reuses it — which is what a real
+long-running MCP server does — so the current rows reflect real
+per-dispatch cost (~250-430 allocs, ~70-170 µs) rather than
+cold-boot overhead (~3000 allocs, ~300-500 µs that the pre-wave-F
+numbers showed).
+
+`BenchmarkPipelineBeforeCall`, `BenchmarkAcquireForSubjectSteady`,
+`BenchmarkStaticBearer`, and `BenchmarkOIDCVerifyCached` were added
+in the same wave to measure the three hot-path layers every
+authenticated tools/call traverses: the enforcement pipeline, the
+three-tier rate limiter, and the authn verify step. Two
+observations the numbers make actionable:
+
+1. The rate limiter is ~97% of the enforcement pipeline's cost —
+   `BenchmarkAcquireForSubjectSteady` (554 ns) almost exactly
+   equals `BenchmarkPipelineBeforeCall` (568 ns). Future perf work
+   on "enforcement is slow" should start at ratelimit.
+2. OIDC verify is ~230× more expensive than static bearer
+   (53.8 µs vs 235 ns). The dominant cost is RSA-2048 signature
+   verification, not JWT parsing. Any JWKS-cache design work
+   needs to keep the verify call path cold-cache-free.
+
+All numbers in the table were captured locally via
+`go test -bench=. -benchmem -benchtime=1000x-3000x -count=1 -run='^$'
+./internal/...` with log filtering (`2>&1 | grep -E '^Benchmark'`)
+because slog output from the MCP server's initialize path
+interleaves with bench output on rerun.
 
 How to read this:
 
