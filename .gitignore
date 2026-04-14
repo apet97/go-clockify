@@ -1,0 +1,17 @@
+# Build artifacts
+clockify-mcp
+coverage.out
+dist/
+staging/
+
+# Editor and tool local state
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local-only assistant / IDE state — never committed
+.claude/
+.serena/
+.remember/
+.planning/

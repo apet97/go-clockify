@@ -1,6 +1,7 @@
 .PHONY: build test cover fmt vet check clean lint mutation \
         verify verify-core verify-vuln verify-k8s verify-fips \
-        cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity
+        cover-check fuzz-short build-tags http-smoke stdio-smoke \
+        secret-scan config-parity
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -84,6 +85,13 @@ http-smoke:
 
 stdio-smoke:
 	bash scripts/smoke-stdio.sh
+
+secret-scan:
+	@if ! command -v gitleaks >/dev/null 2>&1; then \
+		echo "gitleaks not installed; install via 'brew install gitleaks' or run scripts/gitleaks-install.sh"; \
+		exit 1; \
+	fi
+	gitleaks detect --no-git --source . --redact --config .gitleaks.toml
 
 config-parity:
 	bash scripts/check-config-parity.sh

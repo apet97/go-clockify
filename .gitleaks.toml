@@ -1,0 +1,91 @@
+# gitleaks configuration for clockify-mcp
+#
+# gitleaks ships with a solid default ruleset that catches the common
+# high-severity leaks (AWS keys, GCP keys, GitHub tokens, Slack tokens,
+# private keys, generic API-key patterns). We extend rather than replace
+# the defaults via `[extend]` so future upstream rule improvements flow
+# through automatically.
+#
+# Allowlists below declare paths and patterns that are KNOWN NOT TO BE
+# secrets. Every entry here must have a one-line justification; adding an
+# allowlist entry without a reason is how real leaks slip through.
+#
+# To validate locally:
+#   bash scripts/gitleaks-install.sh /tmp/gitleaks-bin
+#   /tmp/gitleaks-bin/gitleaks detect --no-git --redact --config .gitleaks.toml
+#
+# CI runs the same command from .github/workflows/ci.yml (secret-scan job).
+
+[extend]
+useDefault = true
+
+# ---- allowlist: local-only tool state ----
+#
+# These directories hold assistant / IDE / LSP cache state. They are
+# explicitly untracked (see .gitignore) but gitleaks' --no-git scan
+# walks the filesystem, so we exclude them here as a belt-and-braces
+# guard for local developer runs.
+[[allowlists]]
+description = "Local-only assistant and IDE state (not committed)"
+paths = [
+    '''^\.claude/.*''',
+    '''^\.serena/.*''',
+    '''^\.remember/.*''',
+    '''^\.planning/.*''',
+    '''^coverage\.out$''',
+    '''^dist/.*''',
+    '''^staging/.*''',
+]
+
+# ---- allowlist: paths ----
+#
+# Fuzz corpus and testdata entries are raw byte soups that sometimes
+# look like JWT-shaped strings to a regex scanner. They are committed
+# inputs, not secrets, and Wave D bootstrapped ~800 of them.
+[[allowlists]]
+description = "Fuzz corpus entries under testdata/fuzz are not secrets"
+paths = [
+    '''^internal/.*/testdata/fuzz/.*''',
+]
+
+# The smoke tests set a deliberately-dummy static bearer token so the
+# HTTP transport boots. It is a constant in scripts/ and is matched by
+# gitleaks' generic-high-entropy rule even though it will never be
+# accepted by any real API.
+[[allowlists]]
+description = "Smoke-test dummy bearer token"
+paths = [
+    '''^scripts/smoke-http\.sh$''',
+    '''^scripts/smoke-stdio\.sh$''',
+]
+
+# docs/verification.md and docs/live-tests.md document the shape of
+# sigstore bundles and JWT claims with example values. These are
+# deliberately-fake illustrative tokens.
+[[allowlists]]
+description = "Documented JWT / sigstore example values"
+paths = [
+    '''^docs/verification\.md$''',
+    '''^docs/live-tests\.md$''',
+]
+
+# The vendored go.sum lines match gitleaks' generic hex patterns because
+# they contain module-integrity hashes. Module hashes are not secrets.
+[[allowlists]]
+description = "Go module integrity hashes in go.sum"
+paths = [
+    '''go\.sum$''',
+]
+
+# Unit test fixtures. internal/config/config_test.go and
+# internal/authn/authn_test.go hard-code dummy bearer tokens with
+# deliberately-fake patterns like "1234567890abcdef" and
+# "abcdef0123456789" to exercise the config-loader and authn paths.
+# Every entry here was eyeball-verified to be a test constant, not a
+# real credential.
+[[allowlists]]
+description = "Dummy bearer tokens in config/authn unit tests"
+paths = [
+    '''^internal/config/config_test\.go$''',
+    '''^internal/authn/authn_test\.go$''',
+]

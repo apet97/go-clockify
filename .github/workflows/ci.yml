@@ -171,3 +171,36 @@ jobs:
         # in the scanner loop or response encoder would otherwise only
         # surface via user reports. Script takes no external input.
         run: bash scripts/smoke-stdio.sh
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    # Hard ceiling: the scan is ~2s on current repo size; 5min leaves
+    # headroom for repo growth or an unusually slow runner without
+    # letting a hung gitleaks monopolise the job.
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install pinned gitleaks
+        # scripts/gitleaks-install.sh downloads gitleaks directly from
+        # the upstream GitHub release with a SHA256-pinned tarball.
+        # Deliberately does NOT use a third-party action -- every
+        # `uses:` line is an extra supply-chain link, and gitleaks'
+        # rules come from the same repo as the binary, so pulling the
+        # binary directly via curl + sha256sum is strictly fewer moving
+        # parts than going through a gitleaks-action wrapper.
+        run: bash scripts/gitleaks-install.sh "$HOME/gitleaks-bin"
+      - name: Run gitleaks
+        # --no-git so the scan walks the working tree (same shape as
+        # what gets uploaded to a PR) rather than crawling git history
+        # on every push. History scans are expensive and duplicate what
+        # prior pushes already checked; new content is what matters.
+        # --redact so the CI log never prints a secret even if one is
+        # found. --config .gitleaks.toml pulls allowlists from the repo.
+        run: |
+          "$HOME/gitleaks-bin/gitleaks" detect \
+            --no-git \
+            --source . \
+            --redact \
+            --config .gitleaks.toml \
+            --exit-code 1
