@@ -70,6 +70,7 @@ jobs:
           go test -bench=. -benchtime=100x -count=10 -run='^$' \
             ./internal/timeparse ./internal/resolve \
             ./internal/mcp ./internal/clockify \
+            ./internal/enforcement ./internal/ratelimit ./internal/authn \
             > /tmp/bench-raw.txt 2>&1 || {
               echo "::error::benchmark run failed"
               cat /tmp/bench-raw.txt

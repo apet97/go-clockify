@@ -307,9 +307,10 @@ func TestSanitizeHeaderValue(t *testing.T) {
 // --- helpers ----------------------------------------------------------------
 
 // buildJWKS produces a JWKS document containing the supplied RSA public
-// key keyed by `kid`.
-func buildJWKS(t *testing.T, kid string, pub *rsa.PublicKey) []byte {
-	t.Helper()
+// key keyed by `kid`. Takes testing.TB so both tests and benchmarks can
+// reuse it.
+func buildJWKS(tb testing.TB, kid string, pub *rsa.PublicKey) []byte {
+	tb.Helper()
 	n := base64.RawURLEncoding.EncodeToString(pub.N.Bytes())
 	e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes())
 	doc := map[string]any{
@@ -324,15 +325,16 @@ func buildJWKS(t *testing.T, kid string, pub *rsa.PublicKey) []byte {
 	}
 	body, err := json.Marshal(doc)
 	if err != nil {
-		t.Fatalf("jwks marshal: %v", err)
+		tb.Fatalf("jwks marshal: %v", err)
 	}
 	return body
 }
 
 // signJWT crafts a compact-serialised RS256 JWT for the supplied claims
-// signed with the supplied key.
-func signJWT(t *testing.T, key *rsa.PrivateKey, kid string, claims map[string]any) string {
-	t.Helper()
+// signed with the supplied key. Takes testing.TB so both tests and
+// benchmarks can reuse it.
+func signJWT(tb testing.TB, key *rsa.PrivateKey, kid string, claims map[string]any) string {
+	tb.Helper()
 	header := map[string]any{"alg": "RS256", "typ": "JWT", "kid": kid}
 	hb, _ := json.Marshal(header)
 	cb, _ := json.Marshal(claims)
@@ -340,7 +342,7 @@ func signJWT(t *testing.T, key *rsa.PrivateKey, kid string, claims map[string]an
 	hash := sha256.Sum256([]byte(signing))
 	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hash[:])
 	if err != nil {
-		t.Fatalf("sign: %v", err)
+		tb.Fatalf("sign: %v", err)
 	}
 	return signing + "." + base64.RawURLEncoding.EncodeToString(sig)
 }
