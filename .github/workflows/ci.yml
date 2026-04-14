@@ -104,7 +104,7 @@ jobs:
         run: bash scripts/check-coverage.sh
 
   fuzz:
-    name: Fuzz (30s per target)
+    name: Fuzz
     runs-on: ubuntu-latest
     # Hard ceiling: if any target hangs, the whole job is killed after 8min
     # instead of occupying the runner for GitHub's default 6-hour timeout.

@@ -81,10 +81,10 @@ required-checks list on `main`, as reported by
 - `Coverage` — every per-package floor cleared, global floor cleared
   (driven by `scripts/check-coverage.sh`; ratchet rule in
   `docs/coverage-policy.md`).
-- `Fuzz (30s per target)` — the three `Fuzz*` targets run with a
-  count-based budget (the job name is historical from wave A; the
-  budget is now `-fuzztime=300000x`, not 30s wall-clock — see
-  `.github/workflows/ci.yml` and commit `a67ee39`).
+- `Fuzz` — the three `Fuzz*` targets run with a count-based budget
+  (`-fuzztime=300000x`) to sidestep the wall-clock race documented
+  in commit `a67ee39`. Previously named "Fuzz (30s per target)"
+  until the rename in wave E.
 - `Deploy render (k8s + helm)` — `kubectl kustomize` of every
   overlay parses cleanly, `scripts/check-overlay-structure.sh`
   blocks any overlay re-introducing an `images:` block, helm
