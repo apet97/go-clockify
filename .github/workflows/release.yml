@@ -43,6 +43,15 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify release asset count
+        # Structural gate against the v0.7.0 class of bug (goreleaser
+        # filter silently drops a whole artifact category). Fails the
+        # workflow before staging/attestation/npm if dist/ doesn't
+        # contain exactly the 28 files .goreleaser.yaml is contracted
+        # to produce. No untrusted input; calls an in-repo script
+        # with no arguments (it defaults to ./dist).
+        # See docs/runbooks/release-asset-count.md for triage.
+        run: bash scripts/check-release-assets.sh
       - name: Stage release binaries for attestation
         run: |
           set -euo pipefail
