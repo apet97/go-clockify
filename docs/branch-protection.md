@@ -9,44 +9,55 @@ The snapshot exists so an auditor or external reviewer can see what
 the merge gate actually enforces without having admin access to the
 repository.
 
-Last reviewed: 2026-04-14 (wave-d D5).
+Last reviewed: 2026-04-14 (wave-e E1).
 
-> ⚠️ **Gap — protection is currently unconfigured.** As of the
-> 2026-04-14 audit (see `scripts/audit-branch-protection.sh`), `main`
-> has neither a classic branch-protection rule
-> (`GET /repos/{owner}/{repo}/branches/main/protection` returns
-> `404 Branch not protected`) nor a ruleset
-> (`GET /repos/{owner}/{repo}/rulesets` returns `[]`). A repo
-> administrator can push or force-push to `main` without triggering
-> any of the checks listed below. **The table in the next section
-> describes the intended protection target, not the state GitHub is
-> currently enforcing.** Enabling the target rules is tracked as a
-> follow-up from wave D; they must be applied via the GitHub UI or
-> via `gh api PUT /repos/{owner}/{repo}/branches/main/protection`
-> before this section can claim to be a post-hoc audit record.
+> ✅ **Applied.** As of 2026-04-14 E1, `main` has a classic
+> branch-protection rule applied via
+> `gh api PUT repos/apet97/go-clockify/branches/main/protection`.
+> Run `bash scripts/audit-branch-protection.sh` to dump the live
+> state; the snapshot table below should track it one-for-one. Two
+> settings diverge from the original wave D aspiration; both are
+> documented below with their reason.
 
-## Intended protection rules on `main`
+## Applied protection rules on `main`
 
-The table describes the configuration this project is designed to
-run under. Until the gap above is closed, treat it as a target, not
-a snapshot of reality.
+| Setting                                       | Applied state     | Note |
+|-----------------------------------------------|-------------------|------|
+| Require a pull request before merging         | Enabled           |      |
+| Required approvals                            | 0\*               |      |
+| Dismiss stale pull request approvals on push  | Enabled           |      |
+| Require review from Code Owners               | Enabled           |      |
+| Require status checks to pass before merging  | Enabled           |      |
+| Require branches to be up to date before merge| Enabled           |      |
+| Require conversation resolution before merge  | Enabled           |      |
+| Require signed commits                        | **Disabled**      | †    |
+| Require linear history                        | Enabled           |      |
+| Require deployments to succeed                | Disabled          |      |
+| Lock branch                                   | Disabled          |      |
+| Restrict who can push to matching branches    | Disabled          | ‡    |
+| Allow force pushes                            | Disabled          |      |
+| Allow deletions                               | Disabled          |      |
+| Enforce for admins                            | Disabled          | §    |
 
-| Setting                                       | Target state |
-|-----------------------------------------------|--------------|
-| Require a pull request before merging         | Enabled      |
-| Required approvals                            | 0\*          |
-| Dismiss stale pull request approvals on push  | Enabled      |
-| Require review from Code Owners               | Enabled      |
-| Require status checks to pass before merging  | Enabled      |
-| Require branches to be up to date before merge| Enabled      |
-| Require conversation resolution before merge  | Enabled      |
-| Require signed commits                        | Enabled      |
-| Require linear history                        | Enabled      |
-| Require deployments to succeed                | Disabled     |
-| Lock branch                                   | Disabled     |
-| Restrict who can push to matching branches    | Enabled      |
-| Allow force pushes                            | Disabled     |
-| Allow deletions                               | Disabled     |
+† **Require signed commits** is disabled because this repository is
+currently maintained via HTTPS tokens without GPG or SSH commit
+signing configured locally. Turning this on without first setting up
+signing on the maintainer's machine would block every merge,
+including hotfix paths, with no recovery route short of disabling
+the rule again. Tracked for a future wave: set up SSH commit signing
+(`git config gpg.format ssh`), enroll the public key in GitHub, then
+flip this setting back on and ratchet.
+
+‡ **Restrict who can push to matching branches** is disabled because
+this is a single-maintainer repository (see `GOVERNANCE.md`). The
+other protection settings already prevent unauthorized push without
+needing an actor allow-list; turning restrictions on for a single
+user adds UI friction with no security benefit.
+
+§ **Enforce for admins** is disabled so the repository administrator
+can reach `main` during an incident without first disabling
+protection. Standard practice for single-maintainer projects; the
+trade-off is documented in the "Bypass policy" section below.
 
 \* Required approvals is `0` because this is a single-maintainer
 project (see [`GOVERNANCE.md`](../GOVERNANCE.md)). When a second
@@ -55,31 +66,47 @@ enforcing dual review on the security-sensitive paths.
 
 ## Required status checks
 
-The following CI jobs are the target required-checks list for a PR
-to merge to `main`:
+These are the exact GitHub check-run names currently in the
+required-checks list on `main`, as reported by
+`scripts/audit-branch-protection.sh`:
 
-- `Lint and test` — golangci-lint + race-enabled `go test ./...` +
-  fuzz smoke + build-tags audit + http smoke + config parity
-  (driven by `make verify-core`).
+- `Format` — `gofmt` parity.
+- `Vet` — `go vet ./...`.
+- `Lint` — `golangci-lint run ./...`.
+- `Vulncheck` — `govulncheck ./...`.
+- `Build` — cross-compile for every release target, plus the
+  build-tag matrix (default/otel/grpc/pprof/fips) via
+  `scripts/check-build-tags.sh`.
+- `Test` — race-enabled `go test ./...`.
 - `Coverage` — every per-package floor cleared, global floor cleared
   (driven by `scripts/check-coverage.sh`; ratchet rule in
   `docs/coverage-policy.md`).
-- `Deploy render` — `kubectl kustomize` of every overlay parses
-  cleanly, `scripts/check-overlay-structure.sh` blocks any overlay
-  re-introducing an `images:` block, helm template renders.
-- `Docker Image / Build, scan, sign` — the image builds, Trivy passes
-  on HIGH/CRITICAL, and (on tag) cosign signs and SBOM/SLSA attest.
-- `Reproducibility` — the binary built from the tagged commit matches
-  the binary published to the release.
+- `Fuzz (30s per target)` — the three `Fuzz*` targets run with a
+  count-based budget (the job name is historical from wave A; the
+  budget is now `-fuzztime=300000x`, not 30s wall-clock — see
+  `.github/workflows/ci.yml` and commit `a67ee39`).
+- `Deploy render (k8s + helm)` — `kubectl kustomize` of every
+  overlay parses cleanly, `scripts/check-overlay-structure.sh`
+  blocks any overlay re-introducing an `images:` block, helm
+  template renders.
+- `Test (HTTP smoke)` — `scripts/smoke-http.sh` and
+  `scripts/smoke-stdio.sh` exercise the HTTP and stdio transports
+  end-to-end against dummy credentials.
+- `Build, scan, sign` — the container image builds, Trivy passes on
+  HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
+- `Lychee` — external Markdown link check across the repo.
 
-`live-contract` and `release-smoke` are **not** PR-blocking. Live
-contract runs nightly against the sacrificial Clockify workspace and
-opens a `live-test-failure` issue on regression. Release smoke runs
-on tag publish and weekly thereafter and opens a
-`release-smoke-failure` issue on regression. Neither blocks a PR
-merge because their inputs (upstream Clockify, sigstore TUF root) are
-not under PR control — see `docs/live-tests.md` and
-`.github/workflows/release-smoke.yml` for the rationale.
+`Reproducibility`, `live-contract`, and `release-smoke` are **not**
+PR-blocking. Reproducibility triggers on release events, not pull
+requests, so a required PR check would never report and would
+silently deadlock every merge. Live contract runs nightly against
+the sacrificial Clockify workspace and opens a `live-test-failure`
+issue on regression. Release smoke runs on tag publish and weekly
+thereafter and opens a `release-smoke-failure` issue on regression.
+Neither blocks a PR merge because their inputs (upstream Clockify,
+sigstore TUF root) are not under PR control — see
+`docs/live-tests.md` and `.github/workflows/release-smoke.yml` for
+the rationale.
 
 ## Bypass policy
 
