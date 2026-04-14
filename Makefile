@@ -60,11 +60,21 @@ verify-fips:
 cover-check:
 	bash scripts/check-coverage.sh
 
-# Short fuzz budget for local runs. CI uses 30s per target (see ci.yml).
+# Short fuzz budget for local runs. Count-based (-fuzztime=Nx) instead
+# of duration-based (-fuzztime=Ns) to sidestep a Go fuzz engine race:
+# with -fuzztime=10s, workers mid-execution when the engine's internal
+# context deadline hit would bubble up as "context deadline exceeded"
+# and fail the target even though no input had actually crashed. The
+# race got worse once Wave D committed ~800 corpus seeds to testdata/
+# (baseline gathering eats several seconds before mutation starts).
+# Count-based budgets are deterministic: no timing race, ~0.7s per
+# target on a laptop at ~250k execs/sec.
+#
+# CI uses the same count via .github/workflows/ci.yml.
 fuzz-short:
-	go test -fuzz=FuzzParseDatetime -fuzztime=10s ./internal/timeparse
-	go test -fuzz=FuzzValidateID   -fuzztime=10s ./internal/resolve
-	go test -fuzz=FuzzJSONRPCParse -fuzztime=10s ./internal/mcp
+	go test -fuzz=FuzzParseDatetime -fuzztime=100000x -run='^$$' -timeout=90s ./internal/timeparse
+	go test -fuzz=FuzzValidateID   -fuzztime=100000x -run='^$$' -timeout=90s ./internal/resolve
+	go test -fuzz=FuzzJSONRPCParse -fuzztime=100000x -run='^$$' -timeout=90s ./internal/mcp
 
 build-tags:
 	SKIP_FIPS=1 bash scripts/check-build-tags.sh

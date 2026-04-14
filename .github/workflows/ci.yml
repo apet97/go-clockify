@@ -115,16 +115,27 @@ jobs:
         with:
           go-version: "1.25.9"
       - name: Run fuzz targets
-        # -fuzztime=30s gives the worker pool enough headroom for the growing
-        # FuzzJSONRPCParse corpus, which under Wave 3 started producing
-        # "context deadline exceeded" flakes at the former 20s budget even
-        # without a crashing input (the fuzzer was still discovering new
-        # coverage paths at the 20s mark). 3 targets * 30s ~= 90s worst
-        # case; still well under the 8min job ceiling.
+        # Count-based budget (-fuzztime=Nx) instead of duration-based
+        # (-fuzztime=Ns) to eliminate the "context deadline exceeded"
+        # flake class at its root. The old 30s budget was a patch over
+        # a 20s budget that itself was a patch over a 10s budget --
+        # each bump delayed the symptom without fixing the cause,
+        # which is that Go's fuzz engine cancels its internal context
+        # at exactly -fuzztime, and any worker still mid-execution
+        # surfaces the cancellation as a test failure even when no
+        # input actually crashed. Wave D's 800-entry committed corpus
+        # made this worse because baseline gathering now takes a
+        # meaningful slice of the duration budget before mutation
+        # starts. Count-based budgets have no timing race: the engine
+        # stops after N executions regardless of wall clock.
+        #
+        # 300_000 execs per target * ~250k execs/sec on GitHub Actions
+        # runners -> ~1.2s per target, total ~4s for the job plus
+        # build + baseline gathering. Well under the 8min job ceiling.
         run: |
-          go test -fuzz=FuzzParseDatetime -fuzztime=30s ./internal/timeparse
-          go test -fuzz=FuzzValidateID   -fuzztime=30s ./internal/resolve
-          go test -fuzz=FuzzJSONRPCParse -fuzztime=30s ./internal/mcp
+          go test -fuzz=FuzzParseDatetime -fuzztime=300000x -run='^$' -timeout=5m ./internal/timeparse
+          go test -fuzz=FuzzValidateID   -fuzztime=300000x -run='^$' -timeout=5m ./internal/resolve
+          go test -fuzz=FuzzJSONRPCParse -fuzztime=300000x -run='^$' -timeout=5m ./internal/mcp
 
   deploy-render:
     name: Deploy render (k8s + helm)
