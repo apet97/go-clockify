@@ -1,10 +1,15 @@
 name: Chaos harness
 
-# W2-08 — opt-in chaos harness. Triggered manually only; never on PR
-# critical path. See tests/chaos/README.md for the scenario catalog
-# and acceptance criteria. The workflow_dispatch scenario input is
-# passed via env: (SCENARIO) and quoted in run: so untrusted dispatch
-# strings cannot shell-inject.
+# W2-08 -- chaos harness. Triggered manually and on a weekly cron
+# so the failure-injection scenarios stay functional when the
+# dispatch / retry / rate-limit paths evolve. PR gate is untouched:
+# the cron runs against main and uploads artefacts for triage. The
+# scenario input from workflow_dispatch is passed via env: and
+# quoted in run: so untrusted strings cannot shell-inject. On
+# scheduled runs, github.event.inputs.scenario is empty; the env
+# fallback defaults to 'all' so the cron exercises every scenario.
+#
+# See tests/chaos/README.md for the scenario catalog.
 
 on:
   workflow_dispatch:
@@ -13,6 +18,10 @@ on:
         description: "Scenario name (429-storm, 503-burst, mid-body-reset, tls-handshake-fail, dns-fail, or 'all')"
         required: true
         default: all
+  schedule:
+    # Sunday 05:30 UTC -- 30 min after load.yml so runner contention
+    # and log timestamps are obvious during incident triage.
+    - cron: "30 5 * * 0"
 
 permissions:
   contents: read
@@ -21,7 +30,7 @@ jobs:
   chaos:
     name: Run scenario
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -29,7 +38,20 @@ jobs:
           go-version: "1.25.9"
       - name: Run scenario
         env:
-          SCENARIO: ${{ github.event.inputs.scenario }}
+          SCENARIO_INPUT: ${{ github.event.inputs.scenario }}
         run: |
           set -euo pipefail
-          go run ./tests/chaos -scenario "$SCENARIO"
+          mkdir -p /tmp/chaos-output
+          # SCENARIO_INPUT is empty on scheduled runs; default to
+          # 'all' so the cron exercises every failure-injection
+          # scenario and the artefact captures the full matrix.
+          SCENARIO="${SCENARIO_INPUT:-all}"
+          echo "scenario=$SCENARIO"
+          go run ./tests/chaos -scenario "$SCENARIO" | tee /tmp/chaos-output/run.log
+      - name: Upload chaos harness output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chaos-${{ github.run_id }}
+          path: /tmp/chaos-output/
+          retention-days: 90
