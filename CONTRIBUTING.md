@@ -97,7 +97,7 @@ internal/
 4. Ensure all checks pass (fmt, vet, build, test)
 5. Open a PR with a clear description of what and why
 
-See [`GOVERNANCE.md`](GOVERNANCE.md) for who reviews and merges PRs.
+See [`GOVERNANCE.md`](GOVERNANCE.md) for who reviews and merges PRs. Architectural decisions are recorded as ADRs under [`docs/adr/`](docs/adr/) — write a new one when a change is load-bearing, non-obvious, or cross-cutting.
 
 ## Commit Conventions
 

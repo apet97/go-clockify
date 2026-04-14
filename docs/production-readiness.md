@@ -16,7 +16,8 @@ through webhook URL parameters, (4) authentication bypass on the
 HTTP transport, (5) path traversal in ID validation, (6) CORS
 bypass, and (7) timing attacks on bearer-token comparison. The full
 list lives in [`SECURITY.md`](../SECURITY.md) under "Scope" with the
-mitigations under "Security Features".
+mitigations under "Security Features". Architectural rationale for the
+decisions that shape this threat model lives in [`docs/adr/`](adr/).
 
 ## Pick a transport
 
