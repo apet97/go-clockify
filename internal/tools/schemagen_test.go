@@ -100,7 +100,11 @@ type schemaTestStruct struct {
 	Inner       *schemaInner   `json:"inner,omitempty"`
 	NoTagField  string
 	Hidden      string `json:"-"`
-	unexported  string //nolint:unused
+	// unexported is deliberately present (and deliberately unused) to
+	// verify that schemaFor skips unexported fields when walking a
+	// struct. The linter directive silences the `unused` checker
+	// because removing the field would defeat the test it exists for.
+	unexported string //nolint:unused
 }
 
 type schemaInner struct {
