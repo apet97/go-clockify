@@ -69,16 +69,32 @@ jobs:
 
       - name: Check for live-test secrets
         id: secrets_check
-        # Fail-soft: when the sacrificial-workspace secrets are absent
-        # (e.g. fresh fork, secret rotation in progress) skip the live
-        # tests with a warning annotation instead of failing the run.
-        # A hard failure would open a rolling issue every night — the
-        # warning surfaces the skip without drowning the label queue.
+        # Fail-soft: when any of the sacrificial-workspace secrets is
+        # absent (e.g. fresh fork, secret rotation in progress) skip
+        # the live tests with a warning annotation instead of failing
+        # the run. A hard failure would open a rolling issue every
+        # night — the warning surfaces the skip without drowning the
+        # label queue.
+        #
+        # Both CLOCKIFY_LIVE_API_KEY and CLOCKIFY_LIVE_WORKSPACE_ID
+        # are checked here. Before the symmetric gate, only API_KEY
+        # was gated: a config that set API_KEY but omitted
+        # WORKSPACE_ID would fall through to the test runner and
+        # fail loudly with an unhelpful error instead of skipping
+        # cleanly. Checking both secrets together closes that gap.
         env:
           API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+          WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
         run: |
+          missing=""
           if [ -z "${API_KEY:-}" ]; then
-            echo "::warning::CLOCKIFY_LIVE_API_KEY not set; skipping live contract tests. See docs/live-tests.md to enable."
+            missing="${missing} CLOCKIFY_LIVE_API_KEY"
+          fi
+          if [ -z "${WORKSPACE_ID:-}" ]; then
+            missing="${missing} CLOCKIFY_LIVE_WORKSPACE_ID"
+          fi
+          if [ -n "${missing}" ]; then
+            echo "::warning::missing secrets:${missing}; skipping live contract tests. See docs/live-tests.md to enable."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
