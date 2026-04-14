@@ -1,6 +1,6 @@
 .PHONY: build test cover fmt vet check clean lint mutation \
         verify verify-core verify-vuln verify-k8s verify-fips \
-        cover-check fuzz-short build-tags http-smoke config-parity
+        cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -32,7 +32,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke config-parity
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity
 
 verify-vuln:
 	@if command -v govulncheck >/dev/null 2>&1; then \
@@ -71,6 +71,9 @@ build-tags:
 
 http-smoke:
 	bash scripts/smoke-http.sh
+
+stdio-smoke:
+	bash scripts/smoke-stdio.sh
 
 config-parity:
 	bash scripts/check-config-parity.sh

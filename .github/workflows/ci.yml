@@ -153,3 +153,10 @@ jobs:
         # Extracted to scripts/smoke-http.sh so `make verify-core` runs the
         # same /health + /ready probe.
         run: bash scripts/smoke-http.sh
+      - name: Smoke-test stdio transport
+        # Paired with smoke-http.sh above. Stdio is the MCP spec default
+        # transport (internal/mcp/server.go Run() -- newline-delimited
+        # JSON-RPC) and had no CI exercise prior to Wave D. A regression
+        # in the scanner loop or response encoder would otherwise only
+        # surface via user reports. Script takes no external input.
+        run: bash scripts/smoke-stdio.sh
