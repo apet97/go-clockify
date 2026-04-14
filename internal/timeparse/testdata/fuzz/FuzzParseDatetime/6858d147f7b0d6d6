@@ -1,0 +1,2 @@
+go test fuzz v1
+string("todAY ʙÉӃʤή́ģԖ̧۲هذžҏΔٺ:\u05cfѤҟڮٟ̂ݤ")

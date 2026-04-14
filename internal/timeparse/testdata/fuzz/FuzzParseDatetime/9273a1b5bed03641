@@ -1,0 +1,2 @@
+go test fuzz v1
+string("todAY \u2029 \u2029 ")

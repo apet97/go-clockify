@@ -1,0 +1,2 @@
+go test fuzz v1
+string("todAY \x92\x92\x8b")

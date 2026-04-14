@@ -1,0 +1,2 @@
+go test fuzz v1
+string("\u0097\u07bb\u0099\n\n\n\n\u05f9")

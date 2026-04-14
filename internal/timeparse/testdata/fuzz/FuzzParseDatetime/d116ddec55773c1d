@@ -1,0 +1,2 @@
+go test fuzz v1
+string("todAY \U0001294b\U00016d8b\U0003a94b:")

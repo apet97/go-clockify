@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"\x89aaaa\":0,\"method\" \n\n\n\n:\"\"}")

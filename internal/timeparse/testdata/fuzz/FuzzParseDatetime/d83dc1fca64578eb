@@ -1,0 +1,2 @@
+go test fuzz v1
+string("\u009e\u05f7\u07bc\u07b4\uf0cd\u00ad\u0089\uec7a")

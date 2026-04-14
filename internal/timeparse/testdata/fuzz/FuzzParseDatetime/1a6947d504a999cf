@@ -1,0 +1,2 @@
+go test fuzz v1
+string("todAY 𛋋𖥥\U000162cb𖥥𖥋:")

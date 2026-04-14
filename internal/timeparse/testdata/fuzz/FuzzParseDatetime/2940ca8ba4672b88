@@ -1,0 +1,2 @@
+go test fuzz v1
+string("AAA0\xda\xda\xda\xda\xdaA")
