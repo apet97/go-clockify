@@ -53,6 +53,12 @@ type StreamableHTTPOptions struct {
 	// for the streamable transport. Used by -tags=pprof to attach
 	// /debug/pprof/* alongside /mcp. nil = no extras, default path.
 	ExtraHandlers []ExtraHandler
+	// IdleGraceAfterDisconnect is the maximum time a session with zero
+	// active SSE subscribers may sit before the reaper evicts it early.
+	// Guards against orphaned-subscriber leaks where a client drops TCP
+	// mid-stream without DELETEing the session: SessionTTL alone would
+	// hold the entry for up to 30 minutes. Zero uses the 5 minute default.
+	IdleGraceAfterDisconnect time.Duration
 }
 
 type streamSession struct {
@@ -86,10 +92,15 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		return fmt.Errorf("streamable_http requires a session factory")
 	}
 
+	grace := opts.IdleGraceAfterDisconnect
+	if grace <= 0 {
+		grace = defaultIdleGraceAfterDisconnect
+	}
 	mgr := &streamSessionManager{
-		ttl:   opts.SessionTTL,
-		store: opts.ControlPlane,
-		items: map[string]*streamSession{},
+		ttl:                      opts.SessionTTL,
+		idleGraceAfterDisconnect: grace,
+		store:                    opts.ControlPlane,
+		items:                    map[string]*streamSession{},
 	}
 	go mgr.reapLoop(ctx)
 
@@ -372,11 +383,19 @@ func addSessionToInitializeResult(result any, sessionID string) any {
 	return out
 }
 
+// defaultIdleGraceAfterDisconnect is the shipped default for early eviction
+// of orphaned sessions — conservatively longer than any realistic SSE retry
+// backoff so a transient TCP blip does not drop a legitimate reconnecting
+// client, but much shorter than SessionTTL so dead sessions do not sit for
+// the full TTL holding memory and metric counters.
+const defaultIdleGraceAfterDisconnect = 5 * time.Minute
+
 type streamSessionManager struct {
-	mu    sync.Mutex
-	ttl   time.Duration
-	store *controlplane.Store
-	items map[string]*streamSession
+	mu                       sync.Mutex
+	ttl                      time.Duration
+	idleGraceAfterDisconnect time.Duration
+	store                    *controlplane.Store
+	items                    map[string]*streamSession
 }
 
 func (m *streamSessionManager) create(ctx context.Context, id string, principal authn.Principal, opts StreamableHTTPOptions) (*streamSession, error) {
@@ -484,20 +503,45 @@ func (m *streamSessionManager) reapLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			var expired []string
-			m.mu.Lock()
-			now := time.Now()
-			for id, session := range m.items {
-				if now.After(session.expiresAt) {
-					expired = append(expired, id)
-				}
-			}
-			m.mu.Unlock()
-			for _, id := range expired {
-				if session, err := m.get(id); err == nil {
-					m.destroy(id, session)
-				}
-			}
+			m.reapOnce(time.Now())
+		}
+	}
+}
+
+// reapOnce walks the session map and returns IDs that should be evicted
+// at `now`. Extracted from reapLoop so tests can drive eviction on a fake
+// clock without sleeping. Two eviction rules apply:
+//
+//  1. TTL expired — now > session.expiresAt. The original rule; evicts
+//     sessions whose last request is older than SessionTTL (30 min default).
+//  2. Orphaned subscriber — session has zero live SSE subscribers AND has
+//     not been touched within `idleGraceAfterDisconnect`. Closes the gap
+//     where a client drops TCP mid-stream without DELETEing the session:
+//     without this, the session sits holding memory and the server's
+//     notifier installation until TTL fires. The grace is sized to tolerate
+//     any realistic SSE retry backoff, so a legitimate reconnecting client
+//     that re-establishes within the grace is not dropped.
+//
+// destroy() is called outside the map lock because it takes m.mu itself
+// and additionally calls into the control-plane store.
+func (m *streamSessionManager) reapOnce(now time.Time) {
+	var evict []string
+	m.mu.Lock()
+	for id, session := range m.items {
+		if now.After(session.expiresAt) {
+			evict = append(evict, id)
+			continue
+		}
+		if m.idleGraceAfterDisconnect > 0 &&
+			session.events.SubscriberCount() == 0 &&
+			now.Sub(session.lastSeenAt) > m.idleGraceAfterDisconnect {
+			evict = append(evict, id)
+		}
+	}
+	m.mu.Unlock()
+	for _, id := range evict {
+		if session, err := m.get(id); err == nil {
+			m.destroy(id, session)
 		}
 	}
 }
@@ -541,20 +585,35 @@ type sessionEvent struct {
 	params any
 }
 
+// sessionEventHub multiplexes Server-Sent Events to any number of SSE
+// subscribers attached to a single streamable_http session. The backlog
+// is a fixed-capacity ring buffer so event append is zero-alloc in
+// steady state — the prior implementation reallocated the underlying
+// slice and deep-copied the live tail every time the cap was exceeded.
+//
+// Ring buffer invariants:
+//   - `backlog` is pre-allocated to backlogCap and is never grown.
+//   - `backlogLen` is the number of live events, 0 ≤ backlogLen ≤ cap.
+//   - `backlogStart` is the index of the oldest live event; events
+//     walk forward as (backlogStart+i) mod cap for 0 ≤ i < backlogLen.
+//   - Overflow overwrites the oldest event in place and advances
+//     backlogStart; event IDs are monotonic so the replay walk still
+//     returns events in order.
 type sessionEventHub struct {
-	mu          sync.Mutex
-	nextID      int
-	lastEventID uint64
-	subscribers map[int]chan sessionEvent
-	backlog     []sessionEvent
-	backlogCap  int
-	bufferCap   int
+	mu           sync.Mutex
+	nextID       int
+	lastEventID  uint64
+	subscribers  map[int]chan sessionEvent
+	backlog      []sessionEvent
+	backlogStart int
+	backlogLen   int
+	bufferCap    int
 }
 
 func newSessionEventHub(backlogCap, bufferCap int) *sessionEventHub {
 	return &sessionEventHub{
 		subscribers: map[int]chan sessionEvent{},
-		backlogCap:  backlogCap,
+		backlog:     make([]sessionEvent, backlogCap),
 		bufferCap:   bufferCap,
 	}
 }
@@ -564,10 +623,19 @@ func (h *sessionEventHub) Notify(method string, params any) error {
 	defer h.mu.Unlock()
 	h.lastEventID++
 	event := sessionEvent{id: h.lastEventID, method: method, params: params}
-	h.backlog = append(h.backlog, event)
-	if len(h.backlog) > h.backlogCap {
-		h.backlog = append([]sessionEvent(nil), h.backlog[len(h.backlog)-h.backlogCap:]...)
+
+	ringCap := len(h.backlog)
+	if ringCap > 0 {
+		idx := (h.backlogStart + h.backlogLen) % ringCap
+		h.backlog[idx] = event
+		if h.backlogLen < ringCap {
+			h.backlogLen++
+		} else {
+			// Ring full — overwrite oldest and slide the window forward.
+			h.backlogStart = (h.backlogStart + 1) % ringCap
+		}
 	}
+
 	for id, ch := range h.subscribers {
 		select {
 		case ch <- event:
@@ -584,14 +652,19 @@ func (h *sessionEventHub) subscribe() (<-chan sessionEvent, func()) {
 }
 
 // subscribeFrom replays backlog events with id > lastEventID (0 = replay all).
-// Events trimmed from the backlog are unrecoverable — SSE best-effort semantics.
+// Events trimmed from the ring buffer by overflow are unrecoverable — SSE
+// best-effort semantics. The replay walk iterates the live window in order
+// so Last-Event-ID based resumption receives events in the order they were
+// originally published.
 func (h *sessionEventHub) subscribeFrom(lastEventID uint64) (<-chan sessionEvent, func()) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	id := h.nextID
 	h.nextID++
 	ch := make(chan sessionEvent, h.bufferCap)
-	for _, event := range h.backlog {
+	ringCap := len(h.backlog)
+	for i := 0; i < h.backlogLen; i++ {
+		event := h.backlog[(h.backlogStart+i)%ringCap]
 		if event.id > lastEventID {
 			ch <- event
 		}
@@ -614,6 +687,16 @@ func (h *sessionEventHub) close() {
 		close(ch)
 		delete(h.subscribers, id)
 	}
+}
+
+// SubscriberCount reports the number of live SSE subscribers. Used by
+// the session reaper to detect orphaned sessions (zero subscribers past
+// the idle grace). Takes h.mu briefly so the count is consistent with
+// Notify/subscribe/close observers.
+func (h *sessionEventHub) SubscriberCount() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.subscribers)
 }
 
 func randomID() string {

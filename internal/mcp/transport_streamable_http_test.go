@@ -89,10 +89,10 @@ func TestStreamableHTTPSessionIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("session2 lookup: %v", err)
 	}
-	if len(s1.events.backlog) == 0 {
+	if s1.events.backlogLen == 0 {
 		t.Fatal("session1 should have a queued listChanged notification")
 	}
-	if len(s2.events.backlog) != 0 {
+	if s2.events.backlogLen != 0 {
 		t.Fatal("session2 should not receive session1 notifications")
 	}
 }
