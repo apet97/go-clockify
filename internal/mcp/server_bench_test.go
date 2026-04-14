@@ -68,6 +68,41 @@ func BenchmarkDispatchInitialize(b *testing.B) {
 	}
 }
 
+// BenchmarkDispatchToolsCall exercises the full tools/call path against
+// a no-op handler. Unlike BenchmarkDispatchToolsList this bench decodes
+// ToolCallParams out of the request envelope, so it's the canonical
+// measurement for the decodeParams optimization in G3a. A regression
+// in the marshal→unmarshal roundtrip, the callTool dispatch, or the
+// result envelope assembly surfaces here first.
+//
+// The handler returns a fixed map to keep mustJSON's cost stable
+// between runs — variation in marshaled payload size would obscure
+// the dispatcher-level delta we're trying to measure.
+func BenchmarkDispatchToolsCall(b *testing.B) {
+	server := newBenchServer(b, 1)
+	server.initialized.Store(true)
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params: ToolCallParams{
+			Name:      "bench_tool",
+			Arguments: map[string]any{"k": "v"},
+		},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
 // newBenchServer builds a minimal Server with `n` no-op tool
 // descriptors. Enforcement and Activator are nil — per the docs on
 // mcp.NewServer that means "no filtering" — so the bench measures

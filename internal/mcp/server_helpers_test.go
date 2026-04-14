@@ -55,8 +55,13 @@ func TestToolNameFromRequest(t *testing.T) {
 }
 
 // TestResourceIDs covers the audit helper that extracts every `*_id` field
-// (case-insensitive) from a tool's argument map. Non-string and empty values
-// are skipped; mismatched suffixes are ignored.
+// from a tool's argument map. The contract is case-sensitive on the "_id"
+// suffix — all tool schemas under internal/tools/ use snake_case lowercase
+// JSON tags, so uppercase variants like PROJECT_ID are not matched. Dropping
+// the strings.ToLower(k) pre-check removes a per-key allocation from the
+// audit hot path covered by BenchmarkPipelineBeforeCall.
+//
+// Non-string and empty values are skipped; mismatched suffixes are ignored.
 func TestResourceIDs(t *testing.T) {
 	t.Run("nil_args_returns_nil", func(t *testing.T) {
 		if got := resourceIDs(nil); got != nil {
@@ -68,10 +73,10 @@ func TestResourceIDs(t *testing.T) {
 			t.Fatalf("expected nil, got %+v", got)
 		}
 	})
-	t.Run("only_id_fields_present", func(t *testing.T) {
+	t.Run("lowercase_id_fields_matched", func(t *testing.T) {
 		args := map[string]any{
 			"entry_id":     "abc123",
-			"PROJECT_ID":   "proj-7",
+			"project_id":   "proj-7",
 			"description":  "ignored",
 			"tag":          "ignored",
 			"empty_id":     "   ",
@@ -81,8 +86,23 @@ func TestResourceIDs(t *testing.T) {
 		if len(got) != 2 {
 			t.Fatalf("expected 2 ids, got %+v", got)
 		}
-		if got["entry_id"] != "abc123" || got["PROJECT_ID"] != "proj-7" {
+		if got["entry_id"] != "abc123" || got["project_id"] != "proj-7" {
 			t.Fatalf("unexpected ids: %+v", got)
+		}
+	})
+	t.Run("uppercase_suffix_skipped", func(t *testing.T) {
+		// Case-sensitive contract: PROJECT_ID and Entry_Id do not match.
+		// Tool schemas must declare snake_case lowercase tags for the
+		// resource to surface in audit records; the enforcement CI grep
+		// (rg '"[a-z]*[A-Z][a-zA-Z]*_(I|i)d"' internal/tools/) guards
+		// against new schemas accidentally introducing such tags.
+		args := map[string]any{
+			"PROJECT_ID": "proj-7",
+			"Entry_Id":   "abc123",
+			"CLIENT_ID":  "client-1",
+		}
+		if got := resourceIDs(args); got != nil {
+			t.Fatalf("expected nil for uppercase suffixes, got %+v", got)
 		}
 	})
 	t.Run("only_skipped_returns_nil", func(t *testing.T) {

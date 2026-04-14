@@ -195,7 +195,7 @@ func TestTier2Dispatch_ProjectAdmin_ArchiveProjectsHappy(t *testing.T) {
 	if !strings.Contains(res.ResultText, "p-1") || !strings.Contains(res.ResultText, "p-2") {
 		t.Fatalf("archive result missing ids: %q", res.ResultText)
 	}
-	if !strings.Contains(res.ResultText, `"archived": true`) {
+	if !strings.Contains(res.ResultText, `"archived":true`) {
 		t.Fatalf("archive result missing archived flag: %q", res.ResultText)
 	}
 }
@@ -220,7 +220,7 @@ func TestTier2Dispatch_ProjectAdmin_ArchiveProjectsMixedFailure(t *testing.T) {
 	if !strings.Contains(res.ResultText, "p-fail") {
 		t.Fatalf("expected per-id failure entry for p-fail: %q", res.ResultText)
 	}
-	if !strings.Contains(res.ResultText, `"archived": false`) {
+	if !strings.Contains(res.ResultText, `"archived":false`) {
 		t.Fatalf("expected per-id failure flag in result: %q", res.ResultText)
 	}
 }
