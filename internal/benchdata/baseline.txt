@@ -83,3 +83,15 @@ BenchmarkClient_Post-4   	     100	    134859 ns/op	   10806 B/op	     133 alloc
 BenchmarkClient_Post-4   	     100	    132854 ns/op	   10768 B/op	     133 allocs/op
 PASS
 ok  	github.com/apet97/go-clockify/internal/clockify	0.276s
+goos: darwin
+goarch: arm64
+pkg: github.com/apet97/go-clockify/internal/tools
+cpu: Apple M1
+BenchmarkClockifyLogTime-8              	    4000	    298792 ns/op	  407549 B/op	    2957 allocs/op
+BenchmarkClockifyStartTimer-8           	    4034	    292670 ns/op	  408475 B/op	    2940 allocs/op
+BenchmarkClockifyStopTimer-8            	    3205	    370377 ns/op	  418580 B/op	    3027 allocs/op
+BenchmarkClockifyAddEntry-8             	    4066	    298764 ns/op	  410286 B/op	    2971 allocs/op
+BenchmarkClockifyUpdateEntry-8          	    3109	    384798 ns/op	  423087 B/op	    3096 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-8   	    2598	    524513 ns/op	  435057 B/op	    3196 allocs/op
+PASS
+ok  	github.com/apet97/go-clockify/internal/tools	7.565s

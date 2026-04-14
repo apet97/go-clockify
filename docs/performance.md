@@ -40,15 +40,36 @@ reference machine. They are deterministic and short (each finishes in
 under a second) so they are safe to run on a developer laptop and to
 compare across PRs with `benchstat`.
 
-| Benchmark                          | ns/op   | B/op    | allocs/op |
-|------------------------------------|---------|---------|-----------|
-| `BenchmarkParseDatetime`           | 873     | 316     | 7         |
-| `BenchmarkParseDuration`           | 185     | 65      | 2         |
-| `BenchmarkValidateID`              | 170     | 45      | 1         |
-| `BenchmarkDispatchToolsList`       | 6,553   | 1,737   | 21        |
-| `BenchmarkDispatchInitialize`      | 19,101  | 6,517   | 98        |
-| `BenchmarkClient_Get` (localhost)  | 139,970 | 10,143  | 114       |
-| `BenchmarkClient_Post` (localhost) | 125,575 | 12,818  | 135       |
+| Benchmark                                | ns/op   | B/op    | allocs/op |
+|------------------------------------------|---------|---------|-----------|
+| `BenchmarkParseDatetime`                 | 873     | 316     | 7         |
+| `BenchmarkParseDuration`                 | 185     | 65      | 2         |
+| `BenchmarkValidateID`                    | 170     | 45      | 1         |
+| `BenchmarkDispatchToolsList`             | 6,553   | 1,737   | 21        |
+| `BenchmarkDispatchInitialize`            | 19,101  | 6,517   | 98        |
+| `BenchmarkClient_Get` (localhost)        | 139,970 | 10,143  | 114       |
+| `BenchmarkClient_Post` (localhost)       | 125,575 | 12,818  | 135       |
+| `BenchmarkClockifyLogTime` (E5)          | 298,792 | 407,549 | 2,957     |
+| `BenchmarkClockifyStartTimer` (E5)       | 292,670 | 408,475 | 2,940     |
+| `BenchmarkClockifyStopTimer` (E5)        | 370,377 | 418,580 | 3,027     |
+| `BenchmarkClockifyAddEntry` (E5)         | 298,764 | 410,286 | 2,971     |
+| `BenchmarkClockifyUpdateEntry` (E5)      | 384,798 | 423,087 | 3,096     |
+| `BenchmarkClockifyFindAndUpdateEntry` (E5)| 524,513 | 435,057 | 3,196    |
+
+The six `BenchmarkClockify*` rows are per-tool micro-benchmarks for the
+Tier-1 destructive write surface, added in wave E5. They drive one
+`tools/call` per iteration through the **full** dispatch pipeline
+(JSON-RPC parse → enforcement → handler → `clockify.Client.Post/Get/Put` →
+loopback `httptest`). They exist so a regression isolated to one
+write handler — say, an extra allocation in `UpdateEntry`'s
+fetch-then-merge path — is visible against a per-tool baseline rather
+than smeared across the generic dispatch numbers above. Source:
+`internal/tools/writes_bench_test.go`. Captured locally on
+darwin/arm64 (Apple M1, Go 1.25.9) via
+`go test -bench=BenchmarkClockify -benchmem -benchtime=1s -count=1
+-run='^$' ./internal/tools/`. Each iteration finishes in well under
+1ms; `find_and_update_entry` is the slowest at ~525µs because it
+issues three upstream calls (GET `/user`, GET list, PUT entry).
 
 How to read this:
 

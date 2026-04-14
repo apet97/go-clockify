@@ -40,7 +40,11 @@ type FakeClockify struct {
 
 // NewFakeClockify constructs a counted httptest.Server fronting the supplied
 // handler. The server is automatically closed via t.Cleanup.
-func NewFakeClockify(t *testing.T, handler http.Handler) *FakeClockify {
+//
+// Accepts testing.TB so benchmarks (writes_bench_test.go) can reuse the same
+// fake-upstream wiring without duplicating the httptest plumbing. *testing.T
+// continues to satisfy testing.TB transparently for existing callers.
+func NewFakeClockify(t testing.TB, handler http.Handler) *FakeClockify {
 	t.Helper()
 	f := &FakeClockify{}
 	wrapped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +110,13 @@ type InvokeOpts struct {
 	// RequestID is the JSON-RPC request id. Defaults to 1; set this when a
 	// test needs to correlate multiple invocations in the same log stream.
 	RequestID int
+	// Client lets callers supply a pre-built clockify.Client whose HTTP
+	// transport is reused across many Invoke calls. Default behaviour is
+	// "construct a fresh client per call" (correct for tests where each
+	// case must be independent). Benchmarks pass a shared client so they
+	// don't burn an ephemeral port per iteration — without this the
+	// loopback exhausts its port range after a few thousand calls.
+	Client *clockify.Client
 }
 
 // InvokeResult captures everything a test wants to assert about one dispatch.
@@ -179,7 +190,7 @@ const (
 // Each Invoke gets a fresh server so independent calls can't leak state
 // through the dispatcher. Tests that want shared state across calls should
 // share the *FakeClockify upstream and assert on its RequestCount directly.
-func Invoke(t *testing.T, opts InvokeOpts) InvokeResult {
+func Invoke(t testing.TB, opts InvokeOpts) InvokeResult {
 	t.Helper()
 
 	if opts.Tool == "" {
@@ -201,8 +212,11 @@ func Invoke(t *testing.T, opts InvokeOpts) InvokeResult {
 		opts.RequestID = 1
 	}
 
-	client := clockify.NewClient(opts.ClockifyAPIKey, opts.Upstream.URL(), 5*time.Second, 0)
-	defer client.Close()
+	client := opts.Client
+	if client == nil {
+		client = clockify.NewClient(opts.ClockifyAPIKey, opts.Upstream.URL(), 5*time.Second, 0)
+		defer client.Close()
+	}
 
 	svc := tools.New(client, opts.WorkspaceID)
 	descriptors := svc.Registry()
@@ -342,7 +356,7 @@ func extractResultText(result map[string]any) (string, bool) {
 	return text, true
 }
 
-func mustMarshal(t *testing.T, v any) []byte {
+func mustMarshal(t testing.TB, v any) []byte {
 	t.Helper()
 	b, err := json.Marshal(v)
 	if err != nil {
