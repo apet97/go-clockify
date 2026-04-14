@@ -32,7 +32,7 @@ current to leave headroom for CI flakiness from incremental coverage drift.
 |---|---|---|
 | **Global** | **69%** | 69.0% |
 | `internal/mcp` | 70% | 71.2% |
-| `internal/tools` | 55% | 56.0% |
+| `internal/tools` | 63% | 64.2% |
 | `internal/clockify` | 70% | 72.8% |
 | `internal/config` | 78% | 80.1% |
 | `internal/enforcement` | 85% | 89.0% |

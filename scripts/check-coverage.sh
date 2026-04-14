@@ -23,7 +23,7 @@ COVERAGE_OUT="${COVERAGE_OUT:-coverage.out}"
 # the rule ("no regressions, only ratchets"). Raising a floor is trivially
 # safe — lowering one requires explicit discussion in the PR description.
 FLOORS_DEFAULT="internal/mcp=70 \
-internal/tools=55 \
+internal/tools=63 \
 internal/clockify=70 \
 internal/config=78 \
 internal/enforcement=85 \
