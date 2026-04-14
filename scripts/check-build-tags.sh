@@ -72,7 +72,12 @@ if [ -z "${FIPS_ONLY:-}" ]; then
     echo "== -tags=otel =="
     go build -tags=otel ./...
     go test -tags=otel -count=1 ./internal/tracing/...
-    (cd internal/tracing/otel && go build ./... && go vet ./...)
+    # Exercise the OTel sub-module tests in addition to the facade.
+    # The sub-module lives in its own go.mod so top-level `go test ./...`
+    # does not descend into it; this is the only place that runs
+    # `TestInstallEmitsSpanToOTLPEndpoint` and any other span-emission
+    # regression gates.
+    (cd internal/tracing/otel && go build ./... && go vet ./... && go test -count=1 ./...)
 
     echo "== -tags=grpc =="
     go build -tags=grpc ./...
