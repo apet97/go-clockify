@@ -71,6 +71,7 @@ jobs:
             ./internal/timeparse ./internal/resolve \
             ./internal/mcp ./internal/clockify \
             ./internal/enforcement ./internal/ratelimit ./internal/authn \
+            ./internal/tools \
             > /tmp/bench-raw.txt 2>&1 || {
               echo "::error::benchmark run failed"
               cat /tmp/bench-raw.txt

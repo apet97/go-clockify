@@ -117,6 +117,14 @@ type InvokeOpts struct {
 	// don't burn an ephemeral port per iteration — without this the
 	// loopback exhausts its port range after a few thousand calls.
 	Client *clockify.Client
+	// ActivateTier2Groups is the list of Tier-2 group names to register
+	// on the server via Server.ActivateGroup after initialize. Only
+	// honoured by NewBenchHarness; Invoke ignores this field because its
+	// fresh-per-call server doesn't need lazy activation for unit tests.
+	// Use this when a benchmark dispatches a Tier-2 tool (expenses,
+	// invoices, approvals, custom_fields, scheduling, ...). A group name
+	// that doesn't exist in Tier2Groups causes the harness to Fatal.
+	ActivateTier2Groups []string
 }
 
 // InvokeResult captures everything a test wants to assert about one dispatch.
@@ -414,6 +422,21 @@ func NewBenchHarness(tb testing.TB, opts InvokeOpts) *BenchHarness {
 	})
 	if _, err := server.DispatchMessage(context.Background(), initMsg); err != nil {
 		tb.Fatalf("testharness: initialize failed: %v", err)
+	}
+
+	// Tier-2 groups are lazily activated in production via Service.ActivateGroup;
+	// for benchmarks we inject them directly into the already-built server so
+	// harness.Call can dispatch to them without threading the search/activation
+	// path into every iteration. Matches the shape of the dispatch taken in
+	// activation_integration_test.go.
+	for _, group := range opts.ActivateTier2Groups {
+		descriptors, ok := svc.Tier2Handlers(group)
+		if !ok {
+			tb.Fatalf("testharness: unknown Tier-2 group %q", group)
+		}
+		if err := server.ActivateGroup(group, descriptors); err != nil {
+			tb.Fatalf("testharness: activate Tier-2 group %q: %v", group, err)
+		}
 	}
 
 	return &BenchHarness{
