@@ -31,6 +31,7 @@ package tools_test
 //	  -run='^$' ./internal/tools/...
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -85,34 +86,50 @@ func stubClockifyForWrites(b *testing.B) *testharness.FakeClockify {
 	}))
 }
 
-// invokeWriteBench runs the supplied tools/call through the full harness
-// once per benchmark iteration. The args map is rebuilt every iteration so
-// allocation accounting reflects the per-request cost the way it would in
-// production traffic — reusing one map across iterations would understate
+// invokeWriteBench runs the supplied tools/call through the full MCP
+// pipeline once per benchmark iteration. Setup (service, registry,
+// enforcement pipeline, server, initialized state) is built ONCE via
+// testharness.NewBenchHarness and reused across iterations so the
+// measured allocations reflect per-dispatch cost — not the cold-boot
+// cost of rebuilding the tool descriptor tree every call.
+//
+// Prior shape of this helper called testharness.Invoke inside b.Loop()
+// which rebuilt svc.Registry() every iteration; memory profiling
+// (go tool pprof -alloc_objects) showed 82% of per-iteration
+// allocations came from applyTier1OutputSchemas / schemaForType /
+// structSchema, completely dwarfing the actual handler + HTTP cost
+// the bench was supposed to be measuring. Amortising the setup strips
+// that noise.
+//
+// The args map is still rebuilt every iteration so allocation
+// accounting reflects the per-request cost the way production traffic
+// would pay it — reusing one map across iterations would understate
 // the dispatcher's real allocation floor.
 //
 // The clockify.Client is constructed once per benchmark and threaded
-// through InvokeOpts.Client so its keep-alive transport is reused across
-// all iterations. Constructing a fresh client per iteration burns an
-// ephemeral TCP port per upstream call (each handler issues 1–3 calls);
-// the OS exhausts the loopback port range within a few thousand
-// iterations and the bench starts failing with "can't assign requested
-// address" before the timer ever runs to convergence.
+// through InvokeOpts.Client so its keep-alive transport is reused
+// across all iterations. Constructing a fresh client per iteration
+// burns an ephemeral TCP port per upstream call (each handler issues
+// 1–3 calls); the OS exhausts the loopback port range within a few
+// thousand iterations and the bench starts failing with "can't assign
+// requested address" before the timer ever runs to convergence.
 func invokeWriteBench(b *testing.B, tool string, argsFn func() map[string]any) {
 	b.Helper()
 	upstream := stubClockifyForWrites(b)
 	client := clockify.NewClient("test-api-key", upstream.URL(), 5*time.Second, 0)
 	b.Cleanup(client.Close)
+
+	harness := testharness.NewBenchHarness(b, testharness.InvokeOpts{
+		PolicyMode: policy.Standard,
+		Upstream:   upstream,
+		Client:     client,
+	})
+	ctx := context.Background()
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		result := testharness.Invoke(b, testharness.InvokeOpts{
-			Tool:       tool,
-			Args:       argsFn(),
-			PolicyMode: policy.Standard,
-			Upstream:   upstream,
-			Client:     client,
-		})
+		result := harness.Call(ctx, tool, argsFn())
 		// Sanity check prevents the compiler from eliminating the call,
 		// and surfaces handler-side regressions (e.g. an upstream stub
 		// path drift) as a hard fail rather than a misleading "fast"

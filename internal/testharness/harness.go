@@ -276,6 +276,15 @@ func Invoke(t testing.TB, opts InvokeOpts) InvokeResult {
 
 	after := opts.Upstream.RequestCount()
 
+	return parseDispatchResult(t, raw, after > before)
+}
+
+// parseDispatchResult decodes the JSON-RPC response envelope from
+// server.DispatchMessage and classifies the outcome. Shared by Invoke
+// and BenchHarness.Call so both routes produce behaviourally identical
+// InvokeResult values.
+func parseDispatchResult(t testing.TB, raw []byte, upstreamHit bool) InvokeResult {
+	t.Helper()
 	var envelope mcp.Response
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		t.Fatalf("testharness: response unmarshal: %v (raw=%s)", err, string(raw))
@@ -283,7 +292,7 @@ func Invoke(t testing.TB, opts InvokeOpts) InvokeResult {
 
 	result := InvokeResult{
 		Raw:         raw,
-		UpstreamHit: after > before,
+		UpstreamHit: upstreamHit,
 	}
 
 	if envelope.Error != nil {
@@ -312,6 +321,134 @@ func Invoke(t testing.TB, opts InvokeOpts) InvokeResult {
 
 	result.Outcome = OutcomeSuccess
 	return result
+}
+
+// BenchHarness is an amortised variant of Invoke for benchmarks. It
+// builds the full MCP stack (tools.Service, Registry, enforcement
+// Pipeline, mcp.Server, initialized state) ONCE, then the Call method
+// dispatches a single tools/call through the already-wired server.
+//
+// Why this helper exists: memory profiling of the tier-1 write bench
+// (internal/tools/writes_bench_test.go) showed ~82% of per-iteration
+// allocations came from Service.Registry() — the bench was measuring
+// "cold server boot + one call" instead of "one call against a warm
+// server." Amortising the setup makes the measurement reflect real
+// per-dispatch cost the way production clients actually pay it.
+//
+// Production use of the full pipeline is NOT affected: the MCP server
+// already calls Registry exactly once at startup. This helper only
+// exists to stop benchmarks from paying that cost every iteration.
+//
+// Tests that assert policy / enforcement / auth properties must
+// continue to use Invoke — each test case needs an isolated pipeline
+// so that state (rate-limit counters, initialized flag) from a prior
+// assertion does not leak into the next one.
+type BenchHarness struct {
+	tb        testing.TB
+	server    *mcp.Server
+	upstream  *FakeClockify
+	requestID int
+}
+
+// NewBenchHarness wires the full MCP stack once and returns a handle
+// whose Call method reuses it across iterations. See the BenchHarness
+// doc for the rationale.
+//
+// opts.Tool is ignored at construction time (BenchHarness.Call takes
+// the tool name per dispatch); everything else mirrors Invoke's
+// defaults exactly so the measured path is identical.
+func NewBenchHarness(tb testing.TB, opts InvokeOpts) *BenchHarness {
+	tb.Helper()
+
+	if opts.Upstream == nil {
+		tb.Fatalf("testharness: Upstream is required (use NewFakeClockify)")
+	}
+	if opts.ClockifyAPIKey == "" {
+		opts.ClockifyAPIKey = "test-api-key"
+	}
+	if opts.WorkspaceID == "" {
+		opts.WorkspaceID = "test-workspace"
+	}
+	if opts.PolicyMode == "" {
+		opts.PolicyMode = policy.Standard
+	}
+	if opts.RequestID == 0 {
+		opts.RequestID = 1
+	}
+
+	client := opts.Client
+	if client == nil {
+		client = clockify.NewClient(opts.ClockifyAPIKey, opts.Upstream.URL(), 5*time.Second, 0)
+		tb.Cleanup(client.Close)
+	}
+
+	svc := tools.New(client, opts.WorkspaceID)
+	descriptors := svc.Registry()
+
+	pol := &policy.Policy{
+		Mode:        opts.PolicyMode,
+		DeniedTools: map[string]bool{},
+	}
+	for _, name := range opts.DeniedTools {
+		pol.DeniedTools[name] = true
+	}
+
+	pipeline := &enforcement.Pipeline{
+		Policy: pol,
+	}
+
+	server := mcp.NewServer("testharness-bench", descriptors, pipeline, nil)
+
+	// Flip the initialized flag once. Subsequent Call invocations reuse
+	// this state — just like a real MCP client that initializes once per
+	// session and then issues many tools/call messages.
+	initMsg := mustMarshal(tb, mcp.Request{
+		JSONRPC: "2.0",
+		ID:      opts.RequestID,
+		Method:  "initialize",
+		Params: map[string]any{
+			"protocolVersion": mcp.SupportedProtocolVersions[0],
+			"capabilities":    map[string]any{},
+			"clientInfo":      map[string]any{"name": "testharness-bench", "version": "0"},
+		},
+	})
+	if _, err := server.DispatchMessage(context.Background(), initMsg); err != nil {
+		tb.Fatalf("testharness: initialize failed: %v", err)
+	}
+
+	return &BenchHarness{
+		tb:        tb,
+		server:    server,
+		upstream:  opts.Upstream,
+		requestID: opts.RequestID + 1,
+	}
+}
+
+// Call dispatches one tools/call through the already-initialized MCP
+// server. The returned InvokeResult is shape-identical to the one from
+// Invoke. Call is safe to invoke from the benchmark's b.Loop() body.
+func (h *BenchHarness) Call(ctx context.Context, tool string, args map[string]any) InvokeResult {
+	h.tb.Helper()
+	h.requestID++
+
+	callMsg := mustMarshal(h.tb, mcp.Request{
+		JSONRPC: "2.0",
+		ID:      h.requestID,
+		Method:  "tools/call",
+		Params: mcp.ToolCallParams{
+			Name:      tool,
+			Arguments: args,
+		},
+	})
+
+	before := h.upstream.RequestCount()
+	raw, err := h.server.DispatchMessage(ctx, callMsg)
+	if err != nil {
+		h.tb.Fatalf("testharness: dispatch error for %s: %v", tool, err)
+	}
+	after := h.upstream.RequestCount()
+
+	return parseDispatchResult(h.tb, raw, after > before)
 }
 
 // classifyRPCError maps a JSON-RPC error code to our Outcome enum. -32602 is

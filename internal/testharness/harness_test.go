@@ -1,6 +1,7 @@
 package testharness_test
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -150,5 +151,63 @@ func TestInvoke_InvalidParams_SchemaFailure(t *testing.T) {
 	}
 	if result.UpstreamHit {
 		t.Fatalf("schema-rejected call reached upstream")
+	}
+}
+
+// TestBenchHarness_ReusesInitializedServer asserts the amortised path:
+// NewBenchHarness builds svc + registry + pipeline + mcp.Server and runs
+// initialize ONCE; each Call then dispatches against the already-warm
+// server. Two sequential successful calls prove the reuse is safe (if
+// Call accidentally re-sent initialize, the second one would fail with
+// the server's "already initialized" path).
+func TestBenchHarness_ReusesInitializedServer(t *testing.T) {
+	upstream := fakeClockifyAllOK(t)
+
+	harness := testharness.NewBenchHarness(t, testharness.InvokeOpts{
+		PolicyMode: policy.Standard,
+		Upstream:   upstream,
+	})
+	ctx := context.Background()
+
+	first := harness.Call(ctx, "clockify_delete_entry", map[string]any{"entry_id": "entry-1"})
+	if first.Outcome != testharness.OutcomeSuccess {
+		t.Fatalf("first Call outcome=%q err=%q raw=%s",
+			first.Outcome, first.ErrorMessage, string(first.Raw))
+	}
+	if !first.UpstreamHit {
+		t.Fatalf("first Call did not reach upstream")
+	}
+
+	second := harness.Call(ctx, "clockify_delete_entry", map[string]any{"entry_id": "entry-2"})
+	if second.Outcome != testharness.OutcomeSuccess {
+		t.Fatalf("second Call outcome=%q err=%q raw=%s",
+			second.Outcome, second.ErrorMessage, string(second.Raw))
+	}
+	if !second.UpstreamHit {
+		t.Fatalf("second Call did not reach upstream")
+	}
+}
+
+// TestBenchHarness_PolicyBlockStillEnforced asserts that running tools
+// through BenchHarness still traverses the enforcement pipeline — a
+// ReadOnly-mode bench of a destructive tool must be rejected before the
+// upstream is hit. This prevents a future refactor from accidentally
+// routing benchmark traffic around the policy gate.
+func TestBenchHarness_PolicyBlockStillEnforced(t *testing.T) {
+	upstream := fakeClockifyAllOK(t)
+
+	harness := testharness.NewBenchHarness(t, testharness.InvokeOpts{
+		PolicyMode: policy.ReadOnly,
+		Upstream:   upstream,
+	})
+	ctx := context.Background()
+
+	result := harness.Call(ctx, "clockify_delete_entry", map[string]any{"entry_id": "entry-1"})
+	if result.Outcome != testharness.OutcomePolicyDenied {
+		t.Fatalf("outcome=%q want %q raw=%s",
+			result.Outcome, testharness.OutcomePolicyDenied, string(result.Raw))
+	}
+	if result.UpstreamHit {
+		t.Fatalf("policy-denied call reached upstream")
 	}
 }
