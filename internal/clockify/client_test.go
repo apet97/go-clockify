@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -500,5 +501,71 @@ func TestPostWithBody(t *testing.T) {
 	}
 	if out["name"] != "test-project" {
 		t.Fatalf("unexpected name: %v", out["name"])
+	}
+}
+
+// TestConcurrentPutsShareBufPoolSafely drives 100 parallel Put calls
+// through a single client to stress the bodyBufPool against the race
+// detector. Each goroutine sends a unique payload and asserts the
+// upstream echoes that payload back intact — if the pool ever leaked
+// bytes between goroutines (for example by returning a buffer before
+// the encoder finished, or by reusing a buffer whose Bytes() slice
+// was still aliased by a prior caller), the upstream's assertion
+// would fail with a mismatched ID and the test would fail.
+//
+// Run with -race to catch any data races in the pool Get/Put paths.
+func TestConcurrentPutsShareBufPoolSafely(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		id, ok := body["id"].(string)
+		if !ok || id == "" {
+			t.Errorf("missing id in body: %#v", body)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		// Echo the id back in the response so each caller can verify
+		// its own payload wasn't swapped with a sibling goroutine's.
+		_, _ = fmt.Fprintf(w, `{"echoed":%q}`, id)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	defer c.Close()
+
+	const n = 100
+	var wg sync.WaitGroup
+	wg.Add(n)
+	errCh := make(chan error, n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			defer wg.Done()
+			id := fmt.Sprintf("id-%04d", i)
+			payload := map[string]any{"id": id, "pad": strconv.Itoa(i)}
+			var out map[string]any
+			if err := c.Put(context.Background(), "/items/"+id, payload, &out); err != nil {
+				errCh <- fmt.Errorf("goroutine %d: %w", i, err)
+				return
+			}
+			if got, _ := out["echoed"].(string); got != id {
+				errCh <- fmt.Errorf("goroutine %d: echoed=%q want %q", i, got, id)
+				return
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		t.Error(err)
 	}
 }

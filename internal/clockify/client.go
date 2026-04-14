@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/metrics"
@@ -21,6 +22,40 @@ import (
 // maxResponseBody is the maximum number of bytes read from API responses
 // to prevent OOM on unexpectedly large or malicious responses.
 const maxResponseBody = 10 * 1024 * 1024 // 10 MB
+
+// bodyBufPoolMaxCap caps the capacity of a bytes.Buffer we're willing
+// to return to the pool. A single oversized response would otherwise
+// pin a multi-MB allocation in the pool forever, which hurts working
+// set for services that handle one large report followed by many
+// small calls.
+const bodyBufPoolMaxCap = 64 * 1024
+
+// bodyBufPool reuses bytes.Buffer instances across HTTP request-body
+// marshalling and response-body reads. Each doJSON call acquires one
+// buffer for the request payload (if any) and one for the response
+// decode, returning both when it returns.
+//
+// Production effect: reduces per-call allocations on the hot tier-1
+// write path by ~1 allocation + ~400 bytes for the request payload
+// and another ~1 allocation for the response decoder state that used
+// to come from json.NewDecoder. See the bench delta in Commit 3's
+// message for measured numbers.
+var bodyBufPool = sync.Pool{
+	New: func() any { return new(bytes.Buffer) },
+}
+
+func getBodyBuf() *bytes.Buffer {
+	b := bodyBufPool.Get().(*bytes.Buffer)
+	b.Reset()
+	return b
+}
+
+func putBodyBuf(b *bytes.Buffer) {
+	if b.Cap() > bodyBufPoolMaxCap {
+		return
+	}
+	bodyBufPool.Put(b)
+}
 
 type Client struct {
 	apiKey     string
@@ -114,11 +149,20 @@ func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[s
 
 func (c *Client) doJSON(ctx context.Context, method, path string, query map[string]string, body any, out any) error {
 	var payload []byte
-	var err error
 	if body != nil {
-		payload, err = json.Marshal(body)
-		if err != nil {
+		buf := getBodyBuf()
+		defer putBodyBuf(buf)
+		// json.NewEncoder writes directly into the pooled buffer, avoiding
+		// the fresh []byte that json.Marshal would allocate. The encoder
+		// appends a trailing newline after the value; we slice it off so
+		// the wire format matches the pre-pool json.Marshal output
+		// byte-for-byte.
+		if err := json.NewEncoder(buf).Encode(body); err != nil {
 			return err
+		}
+		payload = buf.Bytes()
+		if n := len(payload); n > 0 && payload[n-1] == '\n' {
+			payload = payload[:n-1]
 		}
 	}
 
@@ -153,7 +197,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
-		err = c.doOnce(ctx, method, path, endpoint, query, payload, out)
+		err := c.doOnce(ctx, method, path, endpoint, query, payload, out)
 		if err == nil {
 			return nil
 		}
@@ -252,7 +296,17 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(out)
+	// Read the body into a pooled buffer, then unmarshal. Using
+	// json.NewDecoder here would allocate fresh internal scan state
+	// on every call; io.Copy into a reused buffer is cheaper for the
+	// small-response case that dominates tool traffic. The body size
+	// is still bounded by io.LimitReader(maxResponseBody).
+	respBuf := getBodyBuf()
+	defer putBodyBuf(respBuf)
+	if _, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody)); err != nil {
+		return err
+	}
+	return json.Unmarshal(respBuf.Bytes(), out)
 }
 
 func isRetryableStatus(code int) bool {
