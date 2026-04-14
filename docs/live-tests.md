@@ -37,6 +37,31 @@ Setting it up:
 5. Set the repo variable `CLOCKIFY_LIVE_WRITE_ENABLED` to `true` to
    enable the mutating test path.
 
+### Fail-soft skip behaviour (read this for fresh forks)
+
+When **either** `CLOCKIFY_LIVE_API_KEY` **or**
+`CLOCKIFY_LIVE_WORKSPACE_ID` is missing, the workflow exits the
+`secrets_check` step with `skip=true` and downstream test steps are
+gated off via their `if:` conditions. The nightly run reports
+**green** — not failed — and a `::warning::` annotation surfaces in
+the job summary naming the missing secret(s).
+
+This matters for anyone reading the Actions tab: **a green nightly
+does not by itself prove the live tests actually ran.** The
+honest signal is the warning annotation in the job summary. If
+someone forks this repo without copying the secrets, every
+nightly will be silently green with a warning, which is the
+intended behaviour — it avoids drowning the `live-test-failure`
+label queue with drift noise from unowned forks — but it is also
+the reason to skim the job summary periodically instead of
+trusting the green check alone.
+
+To force a failure when the secrets are missing (e.g. on an
+internal deployment where the secrets are required), turn the
+`::warning::` into a `::error::` and remove the `if: skip != 'true'`
+gating from the test steps. That's a deliberate policy choice, not
+the default.
+
 ## Secret rotation
 
 The API key should be rotated:
