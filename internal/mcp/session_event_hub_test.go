@@ -134,7 +134,17 @@ func TestSessionEventHub_NotifyConcurrentWithSubscribe(t *testing.T) {
 		subscribers        = 20
 	)
 
-	var subsWG, pubsWG sync.WaitGroup
+	var subsWG, pubsWG, ready sync.WaitGroup
+
+	// `ready` gates publishers on every subscriber having successfully
+	// called hub.subscribe(). Without this gate the scheduler can delay
+	// a subscriber past pubsWG.Wait() → hub.close(); a late subscriber
+	// would then register against a hub that has already been closed,
+	// its channel would never be closed again, and the test would hang
+	// in subsWG.Wait(). Observed as a 120s timeout in CI under the
+	// "Verify build-tag wiring" step (no -race, different scheduler
+	// timing than the race build).
+	ready.Add(subscribers)
 
 	for i := 0; i < subscribers; i++ {
 		subsWG.Add(1)
@@ -142,6 +152,7 @@ func TestSessionEventHub_NotifyConcurrentWithSubscribe(t *testing.T) {
 			defer subsWG.Done()
 			ch, cancel := hub.subscribe()
 			defer cancel()
+			ready.Done()
 			// Drain until the hub closes our channel — either Notify's
 			// non-blocking fan-out dropped us for being slow or
 			// hub.close() fired below.
@@ -149,6 +160,10 @@ func TestSessionEventHub_NotifyConcurrentWithSubscribe(t *testing.T) {
 			}
 		}()
 	}
+
+	// Wait for every subscriber to be registered before publishing so
+	// hub.close() later sees the full subscriber set.
+	ready.Wait()
 
 	for p := 0; p < publishers; p++ {
 		pubsWG.Add(1)
