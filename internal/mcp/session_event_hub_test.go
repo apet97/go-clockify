@@ -113,53 +113,57 @@ func TestSessionEventHub_ReplayRespectsLastEventID(t *testing.T) {
 }
 
 // TestSessionEventHub_NotifyConcurrentWithSubscribe exercises the
-// concurrent subscribe/notify path under race detector. The race is
-// non-deterministic but repeated runs under `go test -race` make
-// data-race regressions surface quickly.
+// concurrent subscribe/notify path under the race detector. It does not
+// assert delivery correctness (the ring buffer tests above cover order
+// and overflow); the goal is to get -race to observe overlapping
+// readers/writers on h.mu so a future data race regression fires here.
+//
+// Shape: bounded publishers emit a fixed number of events then exit,
+// bounded subscribers range over their channel until close. After all
+// publishers have drained, hub.close() releases any remaining
+// subscribers. wg.Wait() then joins everyone. This avoids the prior
+// busy-spin publisher shape that starved subscribers on low-GOMAXPROCS
+// CI runners and timed out at 120s with all goroutines blocked on
+// h.mu.
 func TestSessionEventHub_NotifyConcurrentWithSubscribe(t *testing.T) {
 	hub := newSessionEventHub(32, 16)
 
-	var wg sync.WaitGroup
-	// Publisher goroutine: notify continuously for the test duration.
-	stop := make(chan struct{})
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				_ = hub.Notify("concurrent", nil)
-			}
-		}
-	}()
+	const (
+		publishers         = 4
+		eventsPerPublisher = 50
+		subscribers        = 20
+	)
 
-	// Subscriber goroutines: subscribe, drain a few events, unsubscribe.
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
+	var subsWG, pubsWG sync.WaitGroup
+
+	for i := 0; i < subscribers; i++ {
+		subsWG.Add(1)
 		go func() {
-			defer wg.Done()
+			defer subsWG.Done()
 			ch, cancel := hub.subscribe()
-			drained := 0
-			for drained < 5 {
-				select {
-				case _, ok := <-ch:
-					if !ok {
-						return
-					}
-					drained++
-				case <-stop:
-					cancel()
-					return
-				}
+			defer cancel()
+			// Drain until the hub closes our channel — either Notify's
+			// non-blocking fan-out dropped us for being slow or
+			// hub.close() fired below.
+			for range ch {
 			}
-			cancel()
 		}()
 	}
 
-	// Let the workers run briefly, then stop.
-	close(stop)
-	wg.Wait()
+	for p := 0; p < publishers; p++ {
+		pubsWG.Add(1)
+		go func() {
+			defer pubsWG.Done()
+			for i := 0; i < eventsPerPublisher; i++ {
+				_ = hub.Notify("concurrent", nil)
+			}
+		}()
+	}
+
+	// Wait for publishers to finish emitting, then close all subscriber
+	// channels so the drain loops exit. subsWG then joins cleanly.
+	pubsWG.Wait()
+	hub.close()
+	subsWG.Wait()
 }
 

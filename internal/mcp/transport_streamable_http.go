@@ -661,7 +661,16 @@ func (h *sessionEventHub) subscribeFrom(lastEventID uint64) (<-chan sessionEvent
 	defer h.mu.Unlock()
 	id := h.nextID
 	h.nextID++
-	ch := make(chan sessionEvent, h.bufferCap)
+	// The channel buffer sizes the replay AND live-event headroom: we
+	// must be able to push every retained backlog entry without blocking
+	// (no reader has run yet — we are still inside the caller's
+	// subscribe() frame) AND leave bufferCap slots for concurrent Notify
+	// traffic that arrives before the subscriber starts draining.
+	// Using h.bufferCap alone deadlocks the replay whenever backlogLen
+	// exceeds bufferCap; sizing to bufferCap+backlogLen gives the same
+	// live-event envelope as before while making the replay push
+	// safe-by-construction. Bounded at bufferCap + backlogCap total.
+	ch := make(chan sessionEvent, h.bufferCap+h.backlogLen)
 	ringCap := len(h.backlog)
 	for i := 0; i < h.backlogLen; i++ {
 		event := h.backlog[(h.backlogStart+i)%ringCap]
