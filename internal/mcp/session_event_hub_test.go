@@ -181,4 +181,3 @@ func TestSessionEventHub_NotifyConcurrentWithSubscribe(t *testing.T) {
 	hub.close()
 	subsWG.Wait()
 }
-

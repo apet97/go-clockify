@@ -45,7 +45,14 @@ var bodyBufPool = sync.Pool{
 }
 
 func getBodyBuf() *bytes.Buffer {
-	b := bodyBufPool.Get().(*bytes.Buffer)
+	// Use the comma-ok form to satisfy errcheck/forcetypeassert. The
+	// pool's New returns *bytes.Buffer so the assertion is guaranteed
+	// to succeed in practice; the ok=false branch exists for lint
+	// compliance and defends against a future New function drift.
+	b, ok := bodyBufPool.Get().(*bytes.Buffer)
+	if !ok {
+		b = new(bytes.Buffer)
+	}
 	b.Reset()
 	return b
 }
