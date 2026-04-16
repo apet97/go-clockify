@@ -57,6 +57,7 @@ description = "Smoke-test dummy bearer token"
 paths = [
     '''^scripts/smoke-http\.sh$''',
     '''^scripts/smoke-stdio\.sh$''',
+    '''^\.github/workflows/docker-image\.yml$''',
 ]
 
 # docs/verification.md and docs/live-tests.md document the shape of
