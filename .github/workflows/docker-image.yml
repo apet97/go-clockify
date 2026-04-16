@@ -141,6 +141,7 @@ jobs:
             -p 127.0.0.1:8091:8080 \
             -e CLOCKIFY_API_KEY=smoke-test-dummy \
             -e MCP_BEARER_TOKEN=smoke-test-token-1234567890 \
+            -e MCP_HTTP_INLINE_METRICS_ENABLED=true \
             "$IMAGE_REF")"
           cleanup() {
             docker rm -f "$cid" >/dev/null 2>&1 || true
@@ -164,7 +165,7 @@ jobs:
               ;;
           esac
 
-          metrics="$(curl -sf http://127.0.0.1:8091/metrics)"
+          metrics="$(curl -sf -H "Authorization: Bearer smoke-test-token-1234567890" http://127.0.0.1:8091/metrics)"
           expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
           printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {
             echo "missing expected build_info labels"
