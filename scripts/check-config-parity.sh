@@ -37,7 +37,7 @@ for var in $env_vars; do
 
   echo "$helm_surface" | grep -q "$var" && in_helm=true
   echo "$k8s_surface" | grep -q "$var" && in_k8s=true
-  echo "$opt_out_list" | grep -qx "$var" && opted_out=true
+  echo "$opt_out_list" | grep -qE "^${var}([[:space:]]|$)" && opted_out=true
 
   if ! $in_helm && ! $opted_out; then
     echo "MISSING in Helm: $var" >&2
