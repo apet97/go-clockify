@@ -682,3 +682,146 @@ func TestLoadStreamableHTTPRequiresOIDCIssuer(t *testing.T) {
 		t.Fatal("expected missing OIDC issuer to fail")
 	}
 }
+
+func baseHTTPEnvs() map[string]string {
+	return map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_TRANSPORT":    "http",
+		"MCP_BEARER_TOKEN": "my-strong-token-1234567890",
+	}
+}
+
+func TestAuditDurabilityDefault(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AuditDurabilityMode != "best_effort" {
+		t.Fatalf("expected default best_effort, got %q", cfg.AuditDurabilityMode)
+	}
+}
+
+func TestAuditDurabilityFailClosed(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key", "MCP_AUDIT_DURABILITY": "fail_closed"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AuditDurabilityMode != "fail_closed" {
+		t.Fatalf("expected fail_closed, got %q", cfg.AuditDurabilityMode)
+	}
+}
+
+func TestAuditDurabilityInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key", "MCP_AUDIT_DURABILITY": "bogus"})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for invalid MCP_AUDIT_DURABILITY")
+	}
+}
+
+func TestHTTPLegacyPolicyDefault(t *testing.T) {
+	setEnvs(t, baseHTTPEnvs())
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPLegacyPolicy != "warn" {
+		t.Fatalf("expected default warn, got %q", cfg.HTTPLegacyPolicy)
+	}
+}
+
+func TestHTTPLegacyPolicyDeny(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_LEGACY_POLICY"] = "deny"
+	setEnvs(t, m)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPLegacyPolicy != "deny" {
+		t.Fatalf("expected deny, got %q", cfg.HTTPLegacyPolicy)
+	}
+}
+
+func TestHTTPLegacyPolicyInvalid(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_LEGACY_POLICY"] = "maybe"
+	setEnvs(t, m)
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for invalid MCP_HTTP_LEGACY_POLICY")
+	}
+}
+
+func TestHTTPInlineMetrics_DefaultDisabled(t *testing.T) {
+	setEnvs(t, baseHTTPEnvs())
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPInlineMetricsEnabled {
+		t.Fatal("expected inline metrics disabled by default")
+	}
+}
+
+func TestHTTPInlineMetrics_EnabledDefaultsToInheritBearer(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+	setEnvs(t, m)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.HTTPInlineMetricsEnabled {
+		t.Fatal("expected inline metrics enabled")
+	}
+	if cfg.HTTPInlineMetricsAuthMode != "inherit_main_bearer" {
+		t.Fatalf("expected default auth inherit_main_bearer, got %q", cfg.HTTPInlineMetricsAuthMode)
+	}
+}
+
+func TestHTTPInlineMetrics_StaticBearerRequiresToken(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+	m["MCP_HTTP_INLINE_METRICS_AUTH_MODE"] = "static_bearer"
+	setEnvs(t, m)
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error: static_bearer without token")
+	}
+}
+
+func TestHTTPInlineMetrics_StaticBearerShortToken(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+	m["MCP_HTTP_INLINE_METRICS_AUTH_MODE"] = "static_bearer"
+	m["MCP_HTTP_INLINE_METRICS_BEARER_TOKEN"] = "short"
+	setEnvs(t, m)
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error: static_bearer with short token")
+	}
+}
+
+func TestHTTPInlineMetrics_StaticBearerValidToken(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+	m["MCP_HTTP_INLINE_METRICS_AUTH_MODE"] = "static_bearer"
+	m["MCP_HTTP_INLINE_METRICS_BEARER_TOKEN"] = "metrics-bearer-token-long-enough"
+	setEnvs(t, m)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.HTTPInlineMetricsBearerToken != "metrics-bearer-token-long-enough" {
+		t.Fatalf("expected token, got %q", cfg.HTTPInlineMetricsBearerToken)
+	}
+}
+
+func TestHTTPInlineMetrics_InvalidAuthMode(t *testing.T) {
+	m := baseHTTPEnvs()
+	m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+	m["MCP_HTTP_INLINE_METRICS_AUTH_MODE"] = "bogus"
+	setEnvs(t, m)
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for invalid auth mode")
+	}
+}

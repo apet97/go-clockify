@@ -141,6 +141,10 @@ The essentials:
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP `static_bearer` mode |
 | `MCP_AUTH_MODE` | — | `static_bearer`, `oidc`, `forward_auth`, `mtls` |
+| `MCP_HTTP_LEGACY_POLICY` | `warn` | `warn`, `allow`, `deny` — controls `MCP_TRANSPORT=http` startup behaviour |
+| `MCP_AUDIT_DURABILITY` | `best_effort` | `best_effort` or `fail_closed` — audit persist failures abort tool calls when `fail_closed` |
+| `MCP_HTTP_INLINE_METRICS_ENABLED` | `false` | Set `1` to expose `/metrics` on the main HTTP listener; disabled by default |
+| `MCP_HTTP_INLINE_METRICS_AUTH_MODE` | `inherit_main_bearer` | `inherit_main_bearer`, `static_bearer`, or `none` |
 | `MCP_LOG_FORMAT` | `text` | `text` or `json` (stderr; PII-scrubbed) |
 
 Run `clockify-mcp --help` for the complete list (40+ variables covering concurrency, timeouts, control plane, metrics, and CORS).

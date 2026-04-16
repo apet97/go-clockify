@@ -24,7 +24,7 @@ decisions that shape this threat model lives in [`docs/adr/`](adr/).
 | Transport         | When to use                                                                              | Auth modes supported                                  |
 |-------------------|------------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `stdio` (default) | Local CLI clients (Claude Code, Claude Desktop, Cursor, Codex). Parent process is trusted; no inbound auth. | n/a — parent-process trust                            |
-| `http`            | Single-tenant HTTP service behind a reverse proxy that terminates TLS. Original transport, simpler than streamable_http. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
+| `http`            | Single-tenant HTTP service behind a reverse proxy that terminates TLS. **Legacy transport** — prefer `streamable_http` for new deployments. Set `MCP_HTTP_LEGACY_POLICY=deny` to gate against accidental use; `warn` (default) logs once at startup. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
 | `streamable_http` | Multi-tenant HTTP service serving spec-strict MCP clients (2025-03-26). Per-installation tokens, session resumption. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
 | `grpc`            | Bidirectional, low-latency clients on a private network. Build-tag opt-in (`-tags=grpc`); not in the default binary. | `static_bearer`, `oidc`                                |
 
@@ -132,6 +132,20 @@ you need a checklist for a third-party assessor, this is the list.
   `clockify_mcp_panics_recovered_total{site}`, and return a tool-error
   envelope instead of crashing the process. See
   [`SECURITY.md`](../SECURITY.md) "Security Features".
+- **Audit durability** — every non-read-only tool call emits an
+  `AuditEvent`. Persistence failures are logged at `ERROR` and
+  increment `clockify_mcp_audit_failures_total{reason="persist_error"}`.
+  Set `MCP_AUDIT_DURABILITY=fail_closed` to abort tool calls on audit
+  failure (default `best_effort` succeeds and alerts via metrics/logs).
+  See [`SECURITY.md`](../SECURITY.md) "Inline /metrics security" and
+  "Audit durability".
+- **Inline /metrics access control** — `/metrics` on the main HTTP
+  listener is off by default (`MCP_HTTP_INLINE_METRICS_ENABLED`). When
+  enabled, `inherit_main_bearer` (default) reuses the primary bearer
+  token; `static_bearer` accepts a separate token; `none` requires
+  explicit opt-in and logs a startup warning. Use `MCP_METRICS_BIND`
+  for the recommended side-channel listener in shared-service
+  deployments.
 - **PII-redacting logs** — the default slog handler is wrapped in
   `internal/logging.RedactingHandler`, which masks 20+ well-known
   secret-key patterns before encoding. See

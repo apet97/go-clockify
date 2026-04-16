@@ -178,6 +178,19 @@ type Server struct {
 	AuditSessionID string
 	AuditTransport string
 
+	// AuditDurabilityMode controls what happens when audit persistence fails
+	// for a non-read-only successful tool call.
+	//
+	//   "best_effort" (default): log the error and increment the failure metric;
+	//   do not fail the tool call. The mutation already happened; the operator
+	//   is alerted but the client sees success.
+	//
+	//   "fail_closed": return an error to the caller so the client knows the
+	//   mutation's audit trail is incomplete. The mutation still happened, but
+	//   reporting success when the audit write failed is suppressed.
+	//   Read-only operations are never affected regardless of this setting.
+	AuditDurabilityMode string
+
 	// readiness cache
 	readyMu     sync.Mutex
 	readyCached bool
@@ -774,7 +787,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	s.mu.RUnlock()
 	if !ok {
 		outcome = "tool_error"
-		s.recordAudit(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
+		s.recordAuditBestEffort(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
 
@@ -817,13 +830,13 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 			default:
 				outcome = "tool_error"
 			}
-			s.recordAudit(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+			s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
 			return nil, err
 		}
 		if result != nil {
 			outcome = "dry_run"
-			s.recordAudit(params.Name, "tools/call", outcome, "dry_run_intercepted", params.Arguments, hints)
+			s.recordAuditBestEffort(params.Name, "tools/call", outcome, "dry_run_intercepted", params.Arguments, hints)
 			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
 			return result, nil
 		}
@@ -852,13 +865,22 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		default:
 			outcome = "tool_error"
 		}
-		s.recordAudit(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+		// Audit the failure; best_effort always (the call failed; fail_closed
+		// only applies to successful mutations).
+		s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
 	if !d.ReadOnlyHint {
-		s.recordAudit(params.Name, "tools/call", outcome, "", params.Arguments, hints)
+		// For a successful non-read-only call, audit failure behavior depends
+		// on AuditDurabilityMode. In "fail_closed" mode, a persistence failure
+		// causes this function to return an error so the client knows the audit
+		// trail is incomplete. In "best_effort" mode (default), the failure is
+		// logged and counted but the call is reported as successful.
+		if auditErr := s.recordAuditWithDurability(params.Name, "tools/call", outcome, "", params.Arguments, hints); auditErr != nil {
+			return nil, auditErr
+		}
 		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
 	}
 
@@ -999,11 +1021,34 @@ func toolCallParamsFromMap(m map[string]any) ToolCallParams {
 	return p
 }
 
-func (s *Server) recordAudit(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
-	if s.Auditor == nil || hints.ReadOnly {
-		return
+// recordAuditBestEffort records an audit event and always returns nil.
+// Persistence failures are logged and metered but never propagated to the
+// caller. Use this for error-outcome calls (the mutation didn't succeed, so
+// failing the response on audit failure would be doubly confusing).
+func (s *Server) recordAuditBestEffort(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
+	_ = s.emitAudit(tool, action, outcome, reason, args, hints)
+}
+
+// recordAuditWithDurability records an audit event and returns an error when
+// AuditDurabilityMode is "fail_closed" and persistence fails. For read-only
+// hints or when the auditor is nil it is always a no-op.
+func (s *Server) recordAuditWithDurability(tool, action, outcome, reason string, args map[string]any, hints ToolHints) error {
+	auditErr := s.emitAudit(tool, action, outcome, reason, args, hints)
+	if auditErr != nil && s.AuditDurabilityMode == "fail_closed" {
+		return fmt.Errorf("audit persistence failed; mutation outcome unverifiable: %w", auditErr)
 	}
-	s.Auditor.RecordAudit(AuditEvent{
+	return nil
+}
+
+// emitAudit is the shared core: increments the attempt counter, calls the
+// Auditor, and on failure increments the failure counter and logs a structured
+// error. Returns the persistence error (or nil) so callers can act on it.
+func (s *Server) emitAudit(tool, action, outcome, reason string, args map[string]any, hints ToolHints) error {
+	if s.Auditor == nil || hints.ReadOnly {
+		return nil
+	}
+	metrics.AuditEventsTotal.Inc()
+	err := s.Auditor.RecordAudit(AuditEvent{
 		Tool:        tool,
 		Action:      action,
 		Outcome:     outcome,
@@ -1016,6 +1061,15 @@ func (s *Server) recordAudit(tool, action, outcome, reason string, args map[stri
 			"transport":  s.AuditTransport,
 		},
 	})
+	if err != nil {
+		metrics.AuditFailuresTotal.Inc("persist_error")
+		slog.Error("audit_persist_failed",
+			"tool", tool,
+			"outcome", outcome,
+			"error", err.Error(),
+		)
+	}
+	return err
 }
 
 // resourceIDs extracts resource identifiers from tool-call arguments

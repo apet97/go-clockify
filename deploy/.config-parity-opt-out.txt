@@ -1,0 +1,26 @@
+# Config parity opt-out
+#
+# Variables listed here are intentionally absent from the Helm values.yaml and
+# Kubernetes configmap.yaml.  Each entry carries a short justification so
+# reviewers understand the deliberate gap.
+#
+# Format:  VAR_NAME  — reason
+#
+# Wave-F (enterprise hardening) additions ─────────────────────────────────────
+#
+MCP_AUDIT_DURABILITY               — operator tunable at runtime; safe default
+                                     (best_effort) ships in the base image.
+                                     Helm operators who want fail_closed add it
+                                     as a plain env var override in their values.
+MCP_HTTP_LEGACY_POLICY             — only relevant when MCP_TRANSPORT=http.
+                                     New deployments use streamable_http.
+                                     Opt-in by setting in values.extraEnv.
+MCP_HTTP_INLINE_METRICS_ENABLED    — off by default; side-channel
+                                     MCP_METRICS_BIND is the recommended path
+                                     for shared-service metric scraping.
+MCP_HTTP_INLINE_METRICS_AUTH_MODE  — depends on MCP_HTTP_INLINE_METRICS_ENABLED;
+                                     not wired into Helm/k8s until the feature
+                                     is explicitly adopted.
+MCP_HTTP_INLINE_METRICS_BEARER_TOKEN — secret material; must be injected via
+                                     a Secret/ExternalSecret, not a ConfigMap.
+                                     Operators add it to values.extraSecretEnv.

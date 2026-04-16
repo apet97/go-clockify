@@ -72,6 +72,38 @@ type Config struct {
 	// their auth token. 0 = disabled (per-stream validation only).
 	GRPCReauthInterval time.Duration
 
+	// AuditDurabilityMode controls behavior when audit persistence fails for
+	// a successful non-read-only tool call.
+	// "best_effort" (default): log + metric; the call still reports success.
+	// "fail_closed": the call returns an error so the client knows the audit
+	// trail is incomplete. The mutation already happened; this prevents
+	// silent untracked mutations.
+	AuditDurabilityMode string
+
+	// HTTPInlineMetricsEnabled controls whether /metrics is mounted on the
+	// main HTTP listener when MCP_TRANSPORT=http. Default: false (disabled).
+	// The dedicated metrics listener (MCP_METRICS_BIND) is the preferred
+	// pattern; this is a compatibility escape hatch that requires explicit
+	// operator intent.
+	HTTPInlineMetricsEnabled bool
+	// HTTPInlineMetricsAuthMode governs auth for inline main-listener /metrics.
+	// "inherit_main_bearer" (default when enabled): require the same bearer
+	// token as the /mcp endpoint.
+	// "static_bearer": require a separate MCP_HTTP_INLINE_METRICS_BEARER_TOKEN.
+	// "none": unauthenticated — operator must opt in explicitly; startup warns.
+	HTTPInlineMetricsAuthMode string
+	// HTTPInlineMetricsBearerToken is the separate token for inline metrics
+	// when HTTPInlineMetricsAuthMode == "static_bearer".
+	HTTPInlineMetricsBearerToken string
+
+	// HTTPLegacyPolicy governs startup behavior when MCP_TRANSPORT=http.
+	// "warn" (default): emit structured startup warnings about legacy HTTP
+	// limitations and recommend streamable_http.
+	// "deny": refuse to start; operator must switch to streamable_http or
+	// explicitly set MCP_HTTP_LEGACY_POLICY=allow.
+	// "allow": permit startup without deny or warn behavior.
+	HTTPLegacyPolicy string
+
 	// GRPCTLSCert and GRPCTLSKey are paths to the server TLS cert and
 	// private key for the gRPC transport. Both must be set together.
 	GRPCTLSCert string
@@ -343,31 +375,85 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid CLOCKIFY_DELTA_FORMAT %q (must be merge or jsonpatch)", cfg.DeltaFormat)
 	}
 
+	// Audit durability mode
+	cfg.AuditDurabilityMode = strings.TrimSpace(os.Getenv("MCP_AUDIT_DURABILITY"))
+	if cfg.AuditDurabilityMode == "" {
+		cfg.AuditDurabilityMode = "best_effort"
+	}
+	switch cfg.AuditDurabilityMode {
+	case "best_effort", "fail_closed":
+	default:
+		return Config{}, fmt.Errorf("invalid MCP_AUDIT_DURABILITY %q: must be \"best_effort\" or \"fail_closed\"", cfg.AuditDurabilityMode)
+	}
+
+	// Inline /metrics on the main HTTP listener (MCP_TRANSPORT=http only)
+	inlineMetricsEnabled, err := optionalBoolEnv("MCP_HTTP_INLINE_METRICS_ENABLED")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.HTTPInlineMetricsEnabled = inlineMetricsEnabled
+	cfg.HTTPInlineMetricsAuthMode = strings.TrimSpace(os.Getenv("MCP_HTTP_INLINE_METRICS_AUTH_MODE"))
+	if cfg.HTTPInlineMetricsEnabled && cfg.HTTPInlineMetricsAuthMode == "" {
+		cfg.HTTPInlineMetricsAuthMode = "inherit_main_bearer"
+	}
+	switch cfg.HTTPInlineMetricsAuthMode {
+	case "", "inherit_main_bearer", "static_bearer", "none":
+	default:
+		return Config{}, fmt.Errorf("invalid MCP_HTTP_INLINE_METRICS_AUTH_MODE %q: must be \"inherit_main_bearer\", \"static_bearer\", or \"none\"", cfg.HTTPInlineMetricsAuthMode)
+	}
+	cfg.HTTPInlineMetricsBearerToken = strings.TrimSpace(os.Getenv("MCP_HTTP_INLINE_METRICS_BEARER_TOKEN"))
+	if cfg.HTTPInlineMetricsEnabled && cfg.HTTPInlineMetricsAuthMode == "static_bearer" {
+		if cfg.HTTPInlineMetricsBearerToken == "" {
+			return Config{}, fmt.Errorf("MCP_HTTP_INLINE_METRICS_BEARER_TOKEN is required when MCP_HTTP_INLINE_METRICS_AUTH_MODE=static_bearer")
+		}
+		if len(cfg.HTTPInlineMetricsBearerToken) < 16 {
+			return Config{}, fmt.Errorf("MCP_HTTP_INLINE_METRICS_BEARER_TOKEN must be at least 16 characters for security")
+		}
+	}
+	// Setting inline metrics options outside of legacy HTTP transport is a
+	// no-op at runtime but not a config error — operators may share config
+	// across environments.
+
+	// Legacy HTTP transport policy
+	cfg.HTTPLegacyPolicy = strings.TrimSpace(os.Getenv("MCP_HTTP_LEGACY_POLICY"))
+	if cfg.HTTPLegacyPolicy == "" {
+		cfg.HTTPLegacyPolicy = "warn"
+	}
+	switch cfg.HTTPLegacyPolicy {
+	case "allow", "warn", "deny":
+	default:
+		return Config{}, fmt.Errorf("invalid MCP_HTTP_LEGACY_POLICY %q: must be \"allow\", \"warn\", or \"deny\"", cfg.HTTPLegacyPolicy)
+	}
+
 	return cfg, nil
 }
 
 func (c Config) Fingerprint() map[string]any {
 	return map[string]any{
-		"transport":               c.Transport,
-		"auth_mode":               c.AuthMode,
-		"http_bind":               c.HTTPBind,
-		"grpc_bind":               c.GRPCBind,
-		"metrics_bind":            c.MetricsBind,
-		"metrics_auth_mode":       c.MetricsAuthMode,
-		"clockify_base_url":       c.BaseURL,
-		"workspace_id":            c.WorkspaceID,
-		"timezone":                c.Timezone,
-		"policy_claim_tenant":     c.TenantClaim,
-		"policy_claim_subject":    c.SubjectClaim,
-		"default_tenant_id":       c.DefaultTenantID,
-		"control_plane_dsn":       c.ControlPlaneDSN,
-		"session_ttl":             c.SessionTTL.String(),
-		"allow_any_origin":        c.AllowAnyOrigin,
-		"strict_host_check":       c.StrictHostCheck,
-		"http_max_body_bytes":     c.MaxBodySize,
-		"tool_timeout":            c.ToolTimeout.String(),
-		"max_inflight_tool_calls": c.MaxInFlightToolCalls,
-		"report_max_entries":      c.ReportMaxEntries,
+		"transport":                     c.Transport,
+		"auth_mode":                     c.AuthMode,
+		"http_bind":                     c.HTTPBind,
+		"grpc_bind":                     c.GRPCBind,
+		"metrics_bind":                  c.MetricsBind,
+		"metrics_auth_mode":             c.MetricsAuthMode,
+		"clockify_base_url":             c.BaseURL,
+		"workspace_id":                  c.WorkspaceID,
+		"timezone":                      c.Timezone,
+		"policy_claim_tenant":           c.TenantClaim,
+		"policy_claim_subject":          c.SubjectClaim,
+		"default_tenant_id":             c.DefaultTenantID,
+		"control_plane_dsn":             c.ControlPlaneDSN,
+		"session_ttl":                   c.SessionTTL.String(),
+		"allow_any_origin":              c.AllowAnyOrigin,
+		"strict_host_check":             c.StrictHostCheck,
+		"http_max_body_bytes":           c.MaxBodySize,
+		"tool_timeout":                  c.ToolTimeout.String(),
+		"max_inflight_tool_calls":       c.MaxInFlightToolCalls,
+		"report_max_entries":            c.ReportMaxEntries,
+		"audit_durability_mode":         c.AuditDurabilityMode,
+		"http_legacy_policy":            c.HTTPLegacyPolicy,
+		"http_inline_metrics_enabled":   c.HTTPInlineMetricsEnabled,
+		"http_inline_metrics_auth_mode": c.HTTPInlineMetricsAuthMode,
 	}
 }
 

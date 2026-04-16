@@ -38,15 +38,15 @@ type controlPlaneAuditor struct {
 	store *controlplane.Store
 }
 
-func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) {
+func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 	if a.store == nil {
-		return
+		return nil
 	}
 	tenantID := event.Metadata["tenant_id"]
 	subject := event.Metadata["subject"]
 	sessionID := event.Metadata["session_id"]
 	transport := event.Metadata["transport"]
-	_ = a.store.AppendAuditEvent(controlplane.AuditEvent{
+	return a.store.AppendAuditEvent(controlplane.AuditEvent{
 		ID:          fmt.Sprintf("%d-%s-%s", time.Now().UnixNano(), sessionID, event.Tool),
 		At:          time.Now().UTC(),
 		TenantID:    tenantID,
@@ -105,6 +105,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	server.MaxInFlightToolCalls = deps.cfg.MaxInFlightToolCalls
 	server.StrictHostCheck = deps.cfg.StrictHostCheck
 	server.Auditor = deps.auditor
+	server.AuditDurabilityMode = deps.cfg.AuditDurabilityMode
 	server.ResourceProvider = service
 	service.Notifier = server
 	service.EmitResourceUpdate = server.NotifyResourceUpdated

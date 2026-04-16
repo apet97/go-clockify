@@ -524,25 +524,33 @@ func (m *streamSessionManager) reapLoop(ctx context.Context) {
 //
 // destroy() is called outside the map lock because it takes m.mu itself
 // and additionally calls into the control-plane store.
+// reapEntry bundles an id+session pointer captured under the map lock so
+// destroy() can be called outside the lock without a second m.get() call.
+// m.get() uses real time.Now() (not the test's fake clock) and launches an
+// asynchronous destroy goroutine on expiry, which makes tests that pass a
+// fixed `now` non-deterministic. Capturing the pointer here avoids that.
+type reapEntry struct {
+	id      string
+	session *streamSession
+}
+
 func (m *streamSessionManager) reapOnce(now time.Time) {
-	var evict []string
+	var evict []reapEntry
 	m.mu.Lock()
 	for id, session := range m.items {
 		if now.After(session.expiresAt) {
-			evict = append(evict, id)
+			evict = append(evict, reapEntry{id, session})
 			continue
 		}
 		if m.idleGraceAfterDisconnect > 0 &&
 			session.events.SubscriberCount() == 0 &&
 			now.Sub(session.lastSeenAt) > m.idleGraceAfterDisconnect {
-			evict = append(evict, id)
+			evict = append(evict, reapEntry{id, session})
 		}
 	}
 	m.mu.Unlock()
-	for _, id := range evict {
-		if session, err := m.get(id); err == nil {
-			m.destroy(id, session)
-		}
+	for _, e := range evict {
+		m.destroy(e.id, e.session)
 	}
 }
 

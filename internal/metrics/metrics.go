@@ -574,6 +574,11 @@ var (
 	PanicsRecoveredTotal *Counter
 	// GRPCAuthRejectionsTotal counts gRPC auth interceptor rejections by reason.
 	GRPCAuthRejectionsTotal *Counter
+	// AuditEventsTotal counts audit-record attempts (all non-read-only calls).
+	AuditEventsTotal *Counter
+	// AuditFailuresTotal counts audit persistence failures by coarse reason class.
+	// Label "reason" uses a small fixed vocabulary: "persist_error".
+	AuditFailuresTotal *Counter
 )
 
 func init() {
@@ -651,6 +656,15 @@ func init() {
 	GRPCAuthRejectionsTotal = Default.NewCounter(
 		"clockify_mcp_grpc_auth_rejections_total",
 		"gRPC auth interceptor rejections by reason.",
+		"reason",
+	)
+	AuditEventsTotal = Default.NewCounter(
+		"clockify_mcp_audit_events_total",
+		"Audit record attempts for non-read-only tool calls.",
+	)
+	AuditFailuresTotal = Default.NewCounter(
+		"clockify_mcp_audit_failures_total",
+		"Audit persistence failures by coarse reason class.",
 		"reason",
 	)
 	registerRuntimeMetrics(Default)

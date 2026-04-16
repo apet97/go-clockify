@@ -115,8 +115,17 @@ type AuditEvent struct {
 	Metadata    map[string]string
 }
 
+// Auditor records non-read-only tool-call events for compliance and audit
+// trail purposes. RecordAudit returns an error when persistence fails so the
+// server can make the failure observable (log + metric) and optionally fail
+// the call when AuditDurabilityMode is "fail_closed".
+//
+// Rationale: a void return means persistence errors are silently lost.
+// Returning an error makes audit degradation visible without mandating that
+// every deployment fail-close on it — the server's AuditDurabilityMode field
+// controls the actual behavior.
 type Auditor interface {
-	RecordAudit(AuditEvent)
+	RecordAudit(AuditEvent) error
 }
 
 // Activator handles dynamic tool activation (group enable, visibility toggle).

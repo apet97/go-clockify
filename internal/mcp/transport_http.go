@@ -17,11 +17,40 @@ import (
 	"github.com/apet97/go-clockify/internal/metrics"
 )
 
+// InlineMetricsOptions controls whether and how /metrics is exposed on the
+// main HTTP listener when using the legacy HTTP transport (MCP_TRANSPORT=http).
+//
+// The dedicated metrics listener (MCP_METRICS_BIND / ServeMetrics) is the
+// preferred enterprise pattern because it separates the metrics scrape surface
+// from the MCP API surface. Inline metrics on the main listener require
+// explicit operator opt-in via MCP_HTTP_INLINE_METRICS_ENABLED=1 and an
+// explicit auth mode — they are disabled by default.
+type InlineMetricsOptions struct {
+	// Enabled: when false (default), /metrics is not mounted on the main
+	// HTTP listener. Set MCP_HTTP_INLINE_METRICS_ENABLED=1 to opt in.
+	Enabled bool
+	// AuthMode controls auth for the inline /metrics endpoint.
+	// "inherit_main_bearer": require the same bearer token as /mcp (default
+	//   when Enabled=true and no explicit auth mode is set).
+	// "static_bearer": require a separate BearerToken below.
+	// "none": unauthenticated — operator must opt in explicitly; startup warns.
+	AuthMode string
+	// BearerToken is used when AuthMode == "static_bearer".
+	BearerToken string
+	// MainBearerToken is the /mcp token reused when AuthMode == "inherit_main_bearer".
+	// Populated by ServeHTTP from the top-level bearerToken argument.
+	MainBearerToken string
+}
+
 // ServeHTTP starts an HTTP server that wraps the MCP server's handle() method.
 // It requires a non-empty bearerToken for authentication on the /mcp endpoint.
 // When allowAnyOrigin is false and allowedOrigins is empty, cross-origin requests
 // are rejected (secure default).
-func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) error {
+//
+// inlineMetrics controls whether /metrics is mounted on the main listener.
+// The default (InlineMetricsOptions{}) leaves /metrics absent — use the
+// dedicated metrics listener (ServeMetrics) for the recommended pattern.
+func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
 	if bearerToken == "" {
 		return fmt.Errorf("MCP_BEARER_TOKEN is required for HTTP transport")
 	}
@@ -31,11 +60,17 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	if maxBodySize <= 0 {
 		maxBodySize = 2097152 // 2 MB
 	}
+	// Wire the main bearer token for inherit_main_bearer so the handler
+	// resolves to the right secret without exposing it in InlineMetricsOptions
+	// before this call.
+	inlineMetrics.MainBearerToken = bearerToken
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", observeHTTP("/health", s.handleHealth))
 	mux.HandleFunc("GET /ready", observeHTTP("/ready", s.handleReady))
-	mux.HandleFunc("GET /metrics", observeHTTP("/metrics", handleMetrics))
+	if inlineMetrics.Enabled {
+		mux.HandleFunc("GET /metrics", observeHTTP("/metrics", inlineMetricsHandler(inlineMetrics)))
+	}
 	mcpHandler := s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize)
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", mcpHandler))
 	// Handle OPTIONS for CORS preflight on /mcp
@@ -86,14 +121,55 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	return nil
 }
 
-// handleMetrics exposes the Prometheus default registry. The endpoint is
-// unauthenticated by design so Prometheus scrapers do not need to be
-// configured with bearer tokens; access control on /metrics is expected to
-// be enforced at the network layer (e.g. service mesh / NetworkPolicy).
+// handleMetrics writes the Prometheus text format registry. Used by both the
+// dedicated metrics listener (ServeMetrics) and the inline handler below.
+// Auth is enforced by the callers, not here.
 func handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = metrics.Default.WriteTo(w)
+}
+
+// inlineMetricsHandler returns an http.HandlerFunc that serves /metrics on
+// the main HTTP listener according to the supplied InlineMetricsOptions auth
+// mode. It is only installed when InlineMetricsOptions.Enabled is true.
+//
+// Auth mode behaviour:
+//   - "inherit_main_bearer": require the main /mcp bearer token (opts.MainBearerToken).
+//   - "static_bearer": require opts.BearerToken.
+//   - "none": unauthenticated. Operator must opt in explicitly; main.go emits
+//     a startup warning when this mode is active.
+func inlineMetricsHandler(opts InlineMetricsOptions) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch opts.AuthMode {
+		case "inherit_main_bearer":
+			auth := r.Header.Get("Authorization")
+			if !strings.HasPrefix(auth, "Bearer ") {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.MainBearerToken)) != 1 {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+		case "static_bearer":
+			auth := r.Header.Get("Authorization")
+			if !strings.HasPrefix(auth, "Bearer ") {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.BearerToken)) != 1 {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+		case "none":
+			// Deliberately unauthenticated. Operator opted in explicitly.
+		default:
+			writeJSONError(w, http.StatusInternalServerError, "invalid inline metrics auth mode")
+			return
+		}
+		handleMetrics(w, r)
+	}
 }
 
 // statusRecorder captures the response status code so middleware can observe

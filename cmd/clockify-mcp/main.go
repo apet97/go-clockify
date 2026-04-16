@@ -232,8 +232,40 @@ func run() error {
 	})
 
 	if cfg.Transport == "http" {
+		// Legacy HTTP transport guardrails.
+		switch cfg.HTTPLegacyPolicy {
+		case "deny":
+			return fmt.Errorf(
+				"legacy HTTP transport is denied by MCP_HTTP_LEGACY_POLICY=deny; " +
+					"use MCP_TRANSPORT=streamable_http for spec-strict shared-service deployments, " +
+					"or set MCP_HTTP_LEGACY_POLICY=allow to permit legacy HTTP explicitly",
+			)
+		case "allow":
+			// Intentional; operator has acknowledged the tradeoffs. No warnings.
+		default: // "warn"
+			slog.Warn("legacy_http_transport",
+				"transport", "http",
+				"msg", "MCP_TRANSPORT=http is the legacy HTTP transport. "+
+					"Server-initiated notifications (tools/list_changed) are dropped. "+
+					"Use MCP_TRANSPORT=streamable_http for spec-strict shared-service deployments.",
+				"recommendation", "streamable_http",
+				"mitigation", "set MCP_HTTP_LEGACY_POLICY=allow to suppress this warning if legacy HTTP is intentional",
+			)
+		}
 		if cfg.AllowAnyOrigin {
-			slog.Warn("cors_any_origin", "msg", "MCP_ALLOW_ANY_ORIGIN=1 is set — all cross-origin requests will be accepted. This is not recommended for production.")
+			slog.Warn("risky_config",
+				"transport", "http",
+				"risk", "cors_any_origin",
+				"msg", "MCP_ALLOW_ANY_ORIGIN=1 — all cross-origin requests accepted. Not recommended for production.",
+			)
+		}
+		if cfg.HTTPInlineMetricsEnabled && cfg.HTTPInlineMetricsAuthMode == "none" {
+			slog.Warn("risky_config",
+				"transport", "http",
+				"risk", "inline_metrics_no_auth",
+				"msg", "MCP_HTTP_INLINE_METRICS_AUTH_MODE=none — /metrics on the main HTTP listener is unauthenticated. "+
+					"Consider inherit_main_bearer or static_bearer, or use the dedicated MCP_METRICS_BIND listener instead.",
+			)
 		}
 		// Wire upstream health check: lightweight GET /api/v1/user
 		server.ReadyChecker = func(ctx context.Context) error {
@@ -243,7 +275,14 @@ func run() error {
 		// Opt-in debug handlers (e.g. /debug/pprof/* under -tags=pprof).
 		// Default build returns nil so ServeHTTP sees an empty slice.
 		server.ExtraHTTPHandlers = pprofExtras()
-		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize)
+		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize,
+			mcp.InlineMetricsOptions{
+				Enabled:     cfg.HTTPInlineMetricsEnabled,
+				AuthMode:    cfg.HTTPInlineMetricsAuthMode,
+				BearerToken: cfg.HTTPInlineMetricsBearerToken,
+				// MainBearerToken is wired inside ServeHTTP from bearerToken.
+			},
+		)
 	}
 	if cfg.Transport == "grpc" {
 		// gRPC transport is built only with -tags=grpc. The default build
@@ -307,7 +346,7 @@ func run() error {
 			if err != nil {
 				return fmt.Errorf("load gRPC TLS cert/key: %w", err)
 			}
-			grpcTLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+			grpcTLS = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}
 			if cfg.MTLSCACertPath != "" {
 				caCert, err := os.ReadFile(cfg.MTLSCACertPath)
 				if err != nil {
@@ -388,18 +427,25 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT             stdio (default), http, streamable_http, or grpc
-    MCP_GRPC_BIND             gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
-    MCP_AUTH_MODE             static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
-    MCP_HTTP_BIND             HTTP listen address (default: :8080)
-    MCP_BEARER_TOKEN          Required for static bearer auth; send as Authorization: Bearer <token>
-    MCP_ALLOWED_ORIGINS       Comma-separated CORS origins
-    MCP_ALLOW_ANY_ORIGIN      Set 1 to allow all origins
-    MCP_STRICT_HOST_CHECK     Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS
-    MCP_HTTP_MAX_BODY         Positive max request body in bytes (default: 2097152)
-    MCP_METRICS_BIND          Optional dedicated metrics listener (recommended for streamable_http)
-    MCP_METRICS_AUTH_MODE     none (default) or static_bearer
-    MCP_METRICS_BEARER_TOKEN  Bearer token for dedicated metrics listener
+    MCP_TRANSPORT                        stdio (default), http, streamable_http, or grpc
+    MCP_GRPC_BIND                        gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
+    MCP_AUTH_MODE                        static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
+    MCP_HTTP_BIND                        HTTP listen address (default: :8080)
+    MCP_BEARER_TOKEN                     Required for static bearer auth; send as Authorization: Bearer <token>
+    MCP_ALLOWED_ORIGINS                  Comma-separated CORS origins
+    MCP_ALLOW_ANY_ORIGIN                 Set 1 to allow all origins
+    MCP_STRICT_HOST_CHECK                Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS
+    MCP_HTTP_MAX_BODY                    Positive max request body in bytes (default: 2097152)
+    MCP_METRICS_BIND                     Optional dedicated metrics listener (recommended for streamable_http)
+    MCP_METRICS_AUTH_MODE                none (default) or static_bearer
+    MCP_METRICS_BEARER_TOKEN             Bearer token for dedicated metrics listener
+    MCP_HTTP_LEGACY_POLICY               warn (default), allow, or deny — controls MCP_TRANSPORT=http startup behaviour
+    MCP_HTTP_INLINE_METRICS_ENABLED      Set 1 to expose /metrics on the main HTTP listener (default: off)
+    MCP_HTTP_INLINE_METRICS_AUTH_MODE    inherit_main_bearer (default), static_bearer, or none
+    MCP_HTTP_INLINE_METRICS_BEARER_TOKEN Separate bearer token for /metrics when auth mode is static_bearer
+
+  Audit:
+    MCP_AUDIT_DURABILITY      best_effort (default) or fail_closed — controls whether audit persist failures abort tool calls
 
   Enterprise Shared-Service:
     MCP_CONTROL_PLANE_DSN     Control-plane store DSN (memory, /path/file.json, or file:///path/file.json)
