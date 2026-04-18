@@ -166,6 +166,29 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	return nil
 }
 
+// applyOriginPolicy enforces the shared origin/CORS contract for every
+// streamable-HTTP route. POST /mcp and the SSE GET paths must answer the
+// same Origin checks so a browser client cannot bypass CORS by subscribing
+// to the event stream. Returns false when the request has already been
+// rejected and the caller must abort.
+func applyOriginPolicy(w http.ResponseWriter, r *http.Request, opts StreamableHTTPOptions) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	if !isOriginAllowed(origin, opts.AllowedOrigins, opts.AllowAnyOrigin) {
+		writeJSONError(w, http.StatusForbidden, "origin not allowed")
+		return false
+	}
+	if opts.AllowAnyOrigin {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Vary", "Origin")
+	}
+	return true
+}
+
 func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		applyHTTPBaselineHeaders(w)
@@ -173,17 +196,8 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			writeJSONError(w, http.StatusForbidden, "host not allowed")
 			return
 		}
-		if origin := r.Header.Get("Origin"); origin != "" {
-			if !isOriginAllowed(origin, opts.AllowedOrigins, opts.AllowAnyOrigin) {
-				writeJSONError(w, http.StatusForbidden, "origin not allowed")
-				return
-			}
-			if opts.AllowAnyOrigin {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-			} else {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Set("Vary", "Origin")
-			}
+		if !applyOriginPolicy(w, r, opts) {
+			return
 		}
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET")
@@ -267,6 +281,9 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		applyHTTPBaselineHeaders(w)
 		if opts.StrictHostCheck && !isHostAllowed(r.Host, opts.AllowedOrigins, opts.AllowAnyOrigin) {
 			writeJSONError(w, http.StatusForbidden, "host not allowed")
+			return
+		}
+		if !applyOriginPolicy(w, r, opts) {
 			return
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
