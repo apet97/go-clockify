@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -658,7 +659,18 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				"isError": true,
 			}
 		} else {
-			resp.Result = map[string]any{"content": []map[string]any{{"type": "text", "text": mustJSON(result)}}}
+			// Dual-emit per MCP 2025-06-18: text content preserves the wire
+			// contract for clients that still read content[0].text, and
+			// structuredContent surfaces the typed payload for clients that
+			// validate against the advertised outputSchema. structuredContent
+			// is only attached when the result marshals to a JSON object (the
+			// spec forbids arrays/scalars there); tools whose result is a
+			// slice or nil keep text-only output.
+			out := map[string]any{"content": []map[string]any{{"type": "text", "text": mustJSON(result)}}}
+			if structured, okStruct := structuredContentValue(result); okStruct {
+				out["structuredContent"] = structured
+			}
+			resp.Result = out
 		}
 	default:
 		resp.Error = &RPCError{Code: -32601, Message: fmt.Sprintf("method not found: %s", req.Method)}
@@ -1119,6 +1131,33 @@ func mustJSON(v any) string {
 		return fmt.Sprintf(`{"error":%q}`, err.Error())
 	}
 	return string(b)
+}
+
+// structuredContentValue reports whether v is safe to place in the MCP
+// structuredContent field. The spec restricts structuredContent to a JSON
+// object, so slices, scalars, nil, and non-string-keyed maps are rejected.
+// ResultEnvelope and map[string]any — the two shapes tool handlers actually
+// return today — both pass.
+func structuredContentValue(v any) (any, bool) {
+	if v == nil {
+		return nil, false
+	}
+	rv := reflect.ValueOf(v)
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
+		if rv.IsNil() {
+			return nil, false
+		}
+		rv = rv.Elem()
+	}
+	switch rv.Kind() {
+	case reflect.Struct:
+		return v, true
+	case reflect.Map:
+		if rv.Type().Key().Kind() == reflect.String {
+			return v, true
+		}
+	}
+	return nil, false
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.
