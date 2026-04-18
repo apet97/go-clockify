@@ -552,21 +552,26 @@ type reapEntry struct {
 }
 
 func (m *streamSessionManager) reapOnce(now time.Time) {
-	var evict []reapEntry
+	type reapReason struct {
+		reapEntry
+		reason string
+	}
+	var evict []reapReason
 	m.mu.Lock()
 	for id, session := range m.items {
 		if now.After(session.expiresAt) {
-			evict = append(evict, reapEntry{id, session})
+			evict = append(evict, reapReason{reapEntry{id, session}, "ttl"})
 			continue
 		}
 		if m.idleGraceAfterDisconnect > 0 &&
 			session.events.SubscriberCount() == 0 &&
 			now.Sub(session.lastSeenAt) > m.idleGraceAfterDisconnect {
-			evict = append(evict, reapEntry{id, session})
+			evict = append(evict, reapReason{reapEntry{id, session}, "orphan"})
 		}
 	}
 	m.mu.Unlock()
 	for _, e := range evict {
+		metrics.StreamableSessionsReapedTotal.Inc(e.reason)
 		m.destroy(e.id, e.session)
 	}
 }
@@ -665,6 +670,7 @@ func (h *sessionEventHub) Notify(method string, params any) error {
 		select {
 		case ch <- event:
 		default:
+			metrics.SSESubscriberDropsTotal.Inc("slow_subscriber")
 			close(ch)
 			delete(h.subscribers, id)
 		}
@@ -697,6 +703,17 @@ func (h *sessionEventHub) subscribeFrom(lastEventID uint64) (<-chan sessionEvent
 	// safe-by-construction. Bounded at bufferCap + backlogCap total.
 	ch := make(chan sessionEvent, h.bufferCap+h.backlogLen)
 	ringCap := len(h.backlog)
+	// Detect resume misses: client asked for Last-Event-ID=X, but the
+	// oldest retained event in the ring is > X+1, so events (X, oldest)
+	// were trimmed by ring overflow. SSE semantics accept the loss but
+	// operators should see it happen — bursty publishers outpacing a
+	// replay window are an early warning of under-sized backlogCap.
+	if lastEventID > 0 && h.backlogLen > 0 {
+		oldest := h.backlog[h.backlogStart%ringCap].id
+		if oldest > lastEventID+1 {
+			metrics.SSEReplayMissesTotal.Inc()
+		}
+	}
 	for i := 0; i < h.backlogLen; i++ {
 		event := h.backlog[(h.backlogStart+i)%ringCap]
 		if event.id > lastEventID {

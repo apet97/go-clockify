@@ -579,6 +579,21 @@ var (
 	// AuditFailuresTotal counts audit persistence failures by coarse reason class.
 	// Label "reason" uses a small fixed vocabulary: "persist_error".
 	AuditFailuresTotal *Counter
+	// SSESubscriberDropsTotal counts SSE subscribers dropped because the
+	// hub's non-blocking publish saw their channel full. Reason vocabulary:
+	// "slow_subscriber" (the only emit site today; added so future
+	// eviction paths like close-on-auth-change can label themselves).
+	SSESubscriberDropsTotal *Counter
+	// SSEReplayMissesTotal counts Last-Event-ID resumes that asked for a
+	// position older than the live backlog ring. The client will miss
+	// events between lastEventID and the oldest retained event — this
+	// signals operator-facing lost-event risk even though SSE semantics
+	// accept it.
+	SSEReplayMissesTotal *Counter
+	// StreamableSessionsReapedTotal counts sessions evicted by the
+	// streamable HTTP session reaper. Reason vocabulary: "ttl" (TTL
+	// expired) and "orphan" (no subscribers past the idle grace).
+	StreamableSessionsReapedTotal *Counter
 )
 
 func init() {
@@ -665,6 +680,20 @@ func init() {
 	AuditFailuresTotal = Default.NewCounter(
 		"clockify_mcp_audit_failures_total",
 		"Audit persistence failures by coarse reason class.",
+		"reason",
+	)
+	SSESubscriberDropsTotal = Default.NewCounter(
+		"clockify_mcp_sse_subscriber_drops_total",
+		"SSE subscribers evicted by the hub because the publish channel was full, by reason.",
+		"reason",
+	)
+	SSEReplayMissesTotal = Default.NewCounter(
+		"clockify_mcp_sse_replay_misses_total",
+		"Last-Event-ID resumes that requested a position older than the live backlog ring; client loses events between lastEventID and the oldest retained id.",
+	)
+	StreamableSessionsReapedTotal = Default.NewCounter(
+		"clockify_mcp_sessions_reaped_total",
+		"Streamable HTTP sessions reclaimed by the reaper, by reason (ttl, orphan).",
 		"reason",
 	)
 	registerRuntimeMetrics(Default)
