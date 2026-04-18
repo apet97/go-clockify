@@ -141,6 +141,13 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// B3: start the per-subject reaper so the subjects map can't grow
+	// unbounded in long-lived multi-tenant deployments. Defaults: 1h
+	// idle TTL swept every 5m. Override via CLOCKIFY_SUBJECT_IDLE_TTL
+	// and CLOCKIFY_SUBJECT_SWEEP_INTERVAL. Nil receiver (limiter
+	// disabled) is a no-op.
+	rl.StartSubjectReaper(ctx, subjectSweepInterval(), subjectIdleTTL())
+
 	// Install the OTel exporter when built with -tags=otel and
 	// OTEL_EXPORTER_OTLP_ENDPOINT is set. Default build is a no-op. See ADR 009.
 	otelShutdown := installOTel(ctx)
@@ -414,6 +421,31 @@ func isKnownLogLevel(s string) bool {
 		return true
 	}
 	return false
+}
+
+// subjectIdleTTL returns the cutoff at which a per-subject rate limiter
+// entry becomes eligible for reap. 0 disables reaping entirely.
+// Default 1h keeps steady-state memory bounded without being so
+// aggressive that bursty subjects with hour-between-calls patterns
+// pay repeat allocation cost.
+func subjectIdleTTL() time.Duration {
+	if v := strings.TrimSpace(os.Getenv("CLOCKIFY_SUBJECT_IDLE_TTL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return 1 * time.Hour
+}
+
+// subjectSweepInterval is how often the background reaper runs. 0
+// disables. Default 5m balances reap latency against goroutine wakes.
+func subjectSweepInterval() time.Duration {
+	if v := strings.TrimSpace(os.Getenv("CLOCKIFY_SUBJECT_SWEEP_INTERVAL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return 5 * time.Minute
 }
 
 func printHelp() {

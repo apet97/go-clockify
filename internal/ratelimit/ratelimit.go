@@ -49,11 +49,17 @@ type RateLimiter struct {
 
 // subjectLimiter tracks one Principal.Subject's window counter and
 // concurrency semaphore. Fields mirror the global RateLimiter shape.
+//
+// lastSeenMillis is the monotonic (wall-clock) epoch millis at which
+// this subject last issued an acquire. ReapIdleSubjects uses it to
+// evict entries idle past the configured TTL so the subjects map does
+// not grow unbounded in long-lived multi-tenant deployments.
 type subjectLimiter struct {
-	semaphore    chan struct{}
-	windowCount  atomic.Int64
-	windowStart  atomic.Int64
-	maxPerWindow int64
+	semaphore      chan struct{}
+	windowCount    atomic.Int64
+	windowStart    atomic.Int64
+	lastSeenMillis atomic.Int64
+	maxPerWindow   int64
 }
 
 type ConcurrencyLimitError struct {
@@ -274,12 +280,14 @@ func (rl *RateLimiter) AcquireForSubject(ctx context.Context, subject string) (f
 }
 
 func (rl *RateLimiter) subjectLimiterFor(subject string) *subjectLimiter {
+	nowMillis := time.Now().UnixMilli()
 	// Warm path: RLock-protected lookup. Skips the creation branch on
 	// every call after the first per subject, which is >99% of traffic
 	// in steady state. Measured via BenchmarkAcquireForSubjectSteady.
 	rl.subjectsMu.RLock()
 	if existing, ok := rl.subjects[subject]; ok {
 		rl.subjectsMu.RUnlock()
+		existing.lastSeenMillis.Store(nowMillis)
 		return existing
 	}
 	rl.subjectsMu.RUnlock()
@@ -293,6 +301,7 @@ func (rl *RateLimiter) subjectLimiterFor(subject string) *subjectLimiter {
 		rl.subjects = map[string]*subjectLimiter{}
 	}
 	if existing, ok := rl.subjects[subject]; ok {
+		existing.lastSeenMillis.Store(nowMillis)
 		return existing
 	}
 	var sem chan struct{}
@@ -303,9 +312,72 @@ func (rl *RateLimiter) subjectLimiterFor(subject string) *subjectLimiter {
 		semaphore:    sem,
 		maxPerWindow: rl.perTokenMaxPerWindow,
 	}
-	sub.windowStart.Store(time.Now().UnixMilli())
+	sub.windowStart.Store(nowMillis)
+	sub.lastSeenMillis.Store(nowMillis)
 	rl.subjects[subject] = sub
 	return sub
+}
+
+// ReapIdleSubjects removes per-subject entries whose last acquire
+// happened before now.Add(-maxIdle). Returns the number of entries
+// evicted. Exposed for tests; production deployments start the
+// background reaper via StartSubjectReaper.
+//
+// An entry that is mid-acquire (holds a semaphore slot) is skipped —
+// dropping it would strand the outstanding release. Callers with a
+// stuck subject should tune acquireTimeout rather than rely on reap.
+func (rl *RateLimiter) ReapIdleSubjects(now time.Time, maxIdle time.Duration) int {
+	if rl == nil || maxIdle <= 0 {
+		return 0
+	}
+	cutoff := now.Add(-maxIdle).UnixMilli()
+	rl.subjectsMu.Lock()
+	defer rl.subjectsMu.Unlock()
+	evicted := 0
+	for name, sub := range rl.subjects {
+		if sub.lastSeenMillis.Load() > cutoff {
+			continue
+		}
+		if len(sub.semaphore) > 0 {
+			continue
+		}
+		delete(rl.subjects, name)
+		evicted++
+	}
+	return evicted
+}
+
+// StartSubjectReaper runs a background goroutine that reaps idle
+// subject limiters every `interval`, evicting any entry untouched for
+// longer than `maxIdle`. It returns immediately; the goroutine exits
+// when ctx is done. Nil receiver is a no-op.
+func (rl *RateLimiter) StartSubjectReaper(ctx context.Context, interval, maxIdle time.Duration) {
+	if rl == nil || interval <= 0 || maxIdle <= 0 {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				rl.ReapIdleSubjects(now, maxIdle)
+			}
+		}
+	}()
+}
+
+// SubjectCount returns the current number of tracked per-subject
+// limiters. Exposed for metrics and tests; O(1) under the read lock.
+func (rl *RateLimiter) SubjectCount() int {
+	if rl == nil {
+		return 0
+	}
+	rl.subjectsMu.RLock()
+	defer rl.subjectsMu.RUnlock()
+	return len(rl.subjects)
 }
 
 // acquire is the per-subject equivalent of RateLimiter.Acquire with the same
