@@ -166,6 +166,17 @@ func run() error {
 	}
 
 	if cfg.Transport == "streamable_http" {
+		// C1: streamable_http against a dev-only control-plane backend
+		// (in-memory or file://) must be an explicit choice, not a
+		// silent default. The file + memory stores rewrite the whole
+		// state on every session touch and every audit append, and
+		// neither survives a multi-process deployment. Production
+		// shape (Postgres, landing in B1) is the default expectation
+		// here; dev / local reproductions opt in with
+		// MCP_ALLOW_DEV_BACKEND=1.
+		if isDevControlPlaneDSN(cfg.ControlPlaneDSN) && os.Getenv("MCP_ALLOW_DEV_BACKEND") != "1" {
+			return fmt.Errorf("MCP_TRANSPORT=streamable_http with MCP_CONTROL_PLANE_DSN=%q (dev backend) is disallowed by default; set MCP_ALLOW_DEV_BACKEND=1 to acknowledge the single-process limits, or point MCP_CONTROL_PLANE_DSN at a production backend", cfg.ControlPlaneDSN)
+		}
 		// B5: cap the in-memory audit slice on the file-backed store
 		// so long-lived dev deployments can't grow unbounded before
 		// Postgres (B1) becomes the production path. Zero disables.
@@ -450,6 +461,28 @@ func subjectSweepInterval() time.Duration {
 		}
 	}
 	return 5 * time.Minute
+}
+
+// isDevControlPlaneDSN reports whether dsn names one of the dev-only
+// control-plane backends. "memory" / "memory://" keep state in process
+// memory; a bare path or "file://..." rewrites a JSON file on every
+// mutation. Neither is correct for a multi-process production
+// deployment of streamable_http; C1 fails closed unless the operator
+// acknowledges the tradeoff via MCP_ALLOW_DEV_BACKEND=1.
+func isDevControlPlaneDSN(dsn string) bool {
+	trimmed := strings.TrimSpace(dsn)
+	if trimmed == "" || trimmed == "memory" || trimmed == "memory://" {
+		return true
+	}
+	if strings.HasPrefix(trimmed, "file://") {
+		return true
+	}
+	// A bare path with no scheme (resolvePath accepts these) is also a
+	// file-backed store — treat it the same as file://.
+	if !strings.Contains(trimmed, "://") {
+		return true
+	}
+	return false
 }
 
 func printHelp() {
