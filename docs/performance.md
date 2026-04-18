@@ -160,9 +160,24 @@ benchstat before.txt after.txt
 
 The benchmarks are **not** wired into PR CI. Microbenchmarks on
 shared CI runners flake on noise; local benchstat is the
-authoritative comparison. If a regression slips into `main` it
-shows up the next time someone runs `make verify-bench` (not yet
-defined) or compares against the table above.
+authoritative comparison. Regression checks run through the
+`make verify-bench` target:
+
+```sh
+# 1. Capture a known-good baseline on the branch point.
+make bench BENCH_OUT=.bench/baseline.txt
+
+# 2. ... make changes ...
+
+# 3. Compare. verify-bench writes a fresh profile and prints a
+#    benchstat diff. Non-zero exit on unexplained regressions.
+make verify-bench
+```
+
+`.bench/` is gitignored — baselines live locally per workstation.
+If a regression lands in `main` without going through this flow,
+the next operator to run `make verify-bench` against their own
+baseline will surface it.
 
 ## Throughput envelope (load harness)
 

@@ -1,7 +1,7 @@
 .PHONY: build test cover fmt vet check clean lint mutation \
         verify verify-core verify-vuln verify-k8s verify-fips \
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
-        secret-scan config-parity
+        secret-scan config-parity bench verify-bench
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -98,6 +98,44 @@ config-parity:
 
 clean:
 	rm -f clockify-mcp coverage.out
+
+# Benchmark capture + regression gate.
+#
+# `make bench` runs every package benchmark and writes a text profile
+# to the path in BENCH_OUT (default .bench/after.txt). `make verify-bench`
+# compares that profile to .bench/baseline.txt via benchstat and fails
+# the target when a CI-significant regression appears. The workflow:
+#
+#   make bench BENCH_OUT=.bench/baseline.txt   # capture a known-good
+#   # ... make change ...
+#   make verify-bench                          # capture .bench/after.txt
+#                                              # and compare to baseline
+#
+# benchstat is installed on demand if missing. The gate uses the
+# default p=0.05 threshold; sensitive packages can tighten it locally
+# by running benchstat manually with -alpha=0.01 etc.
+BENCH_OUT ?= .bench/after.txt
+BENCH_BASELINE ?= .bench/baseline.txt
+BENCH_PKGS ?= ./internal/...
+
+bench:
+	@mkdir -p $(dir $(BENCH_OUT))
+	go test -run=^$$ -bench=. -benchmem -count=5 $(BENCH_PKGS) | tee $(BENCH_OUT)
+
+verify-bench: bench
+	@if [ ! -f $(BENCH_BASELINE) ]; then \
+		echo "[verify-bench] baseline $(BENCH_BASELINE) not present — skipping comparison."; \
+		echo "              Record one with: make bench BENCH_OUT=$(BENCH_BASELINE)"; \
+		exit 0; \
+	fi
+	@BENCHSTAT="$$(command -v benchstat 2>/dev/null)"; \
+	 if [ -z "$$BENCHSTAT" ]; then \
+	   echo "[verify-bench] benchstat not in PATH, installing..."; \
+	   go install golang.org/x/perf/cmd/benchstat@latest; \
+	   BENCHSTAT="$$(go env GOPATH)/bin/benchstat"; \
+	 fi; \
+	 echo "== benchstat $(BENCH_BASELINE) vs $(BENCH_OUT) =="; \
+	 "$$BENCHSTAT" $(BENCH_BASELINE) $(BENCH_OUT)
 
 # Local mutation testing via gremlins.dev (W2-10). Floors live in
 # docs/testing/mutation-floors.md; CI runs the same tool nightly.

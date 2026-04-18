@@ -3,6 +3,9 @@ clockify-mcp
 coverage.out
 dist/
 staging/
+# Bench profiles captured by `make bench` / `make verify-bench` (D3).
+# Local-only — baselines live per workstation, not in the repo.
+.bench/
 
 # Editor and tool local state
 .idea/
