@@ -24,19 +24,21 @@ decisions that shape this threat model lives in [`docs/adr/`](adr/).
 | Transport         | When to use                                                                              | Auth modes supported                                  |
 |-------------------|------------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `stdio` (default) | Local CLI clients (Claude Code, Claude Desktop, Cursor, Codex). Parent process is trusted; no inbound auth. | n/a — parent-process trust                            |
-| `http`            | Single-tenant HTTP service behind a reverse proxy that terminates TLS. **Legacy transport** — prefer `streamable_http` for new deployments. Set `MCP_HTTP_LEGACY_POLICY=deny` to gate against accidental use; `warn` (default) logs once at startup. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
+| `http`            | Single-tenant HTTP service behind a reverse proxy that terminates TLS. **Legacy transport** — prefer `streamable_http` for new deployments. Set `MCP_HTTP_LEGACY_POLICY=deny` to gate against accidental use; `warn` (default) logs once at startup. | `static_bearer`, `oidc`, `forward_auth` — `mtls` is rejected at config load (no native TLS listener; terminate TLS upstream and use `forward_auth`) |
 | `streamable_http` | Multi-tenant HTTP service serving spec-strict MCP clients (2025-03-26). Per-installation tokens, session resumption. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
-| `grpc`            | Bidirectional, low-latency clients on a private network. Build-tag opt-in (`-tags=grpc`); not in the default binary. | `static_bearer`, `oidc`                                |
+| `grpc`            | Bidirectional, low-latency clients on a private network. Build-tag opt-in (`-tags=grpc`); not in the default binary. | `static_bearer`, `oidc`, `forward_auth`, `mtls` (mTLS needs `MCP_GRPC_TLS_CERT`/`_KEY`) |
 
 Set with `MCP_TRANSPORT={stdio,http,streamable_http,grpc}`. Validation
 lives in [`internal/config/config.go`](../internal/config/config.go).
+Coverage for every supported / unsupported cell is locked down by
+[`TestTransportAuthMatrix`](../internal/config/transport_auth_matrix_test.go).
 
 ## Pick an auth mode (HTTP / gRPC transports only)
 
 | Mode            | When to use                                                                              | What it trusts                                         |
 |-----------------|------------------------------------------------------------------------------------------|--------------------------------------------------------|
 | `static_bearer` | A small, fixed set of clients. ≥16-char shared secret distributed out of band.           | The `MCP_BEARER_TOKEN` env var (compared with `crypto/subtle`). |
-| `oidc`          | Clients can present a JWT signed by an OIDC provider you trust (Auth0, Okta, Keycloak).  | `MCP_OIDC_ISSUER`'s JWKS endpoint and configured audience. |
+| `oidc`          | Clients can present a JWT signed by an OIDC provider you trust (Auth0, Okta, Keycloak).  | `MCP_OIDC_ISSUER`'s JWKS endpoint and configured audience. Cached verify TTL caps at `MCP_OIDC_VERIFY_CACHE_TTL` (default 60s, clamped to `[1s, 5m]`). Larger values amortise verify cost; revocation then takes up to that TTL to propagate. |
 | `forward_auth`  | An upstream reverse proxy (Caddy, Envoy, Traefik) already authenticates and forwards the result via a header. | `MCP_FORWARD_AUTH_HEADER` set by a trusted proxy.    |
 | `mtls`          | Both ends present X.509 certs against a private CA. Highest assurance, highest setup cost. | The TLS client cert presented to the listener.        |
 

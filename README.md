@@ -140,7 +140,9 @@ The essentials:
 | `MCP_TRANSPORT` | `stdio` | `stdio`, `http`, `streamable_http`, or `grpc` |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP `static_bearer` mode |
-| `MCP_AUTH_MODE` | — | `static_bearer`, `oidc`, `forward_auth`, `mtls` |
+| `MCP_AUTH_MODE` | — | `static_bearer`, `oidc`, `forward_auth`, `mtls` (mTLS rejected with `MCP_TRANSPORT=http`; terminate TLS upstream and use `forward_auth`) |
+| `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | Cached OIDC verify ceiling, clamped to `[1s, 5m]`; larger values trade revocation latency for verify cost |
+| `MCP_ALLOW_DEV_BACKEND` | — | Set `1` to permit `streamable_http` against `memory`/`file` control-plane backends (single-process only) |
 | `MCP_HTTP_LEGACY_POLICY` | `warn` | `warn`, `allow`, `deny` — controls `MCP_TRANSPORT=http` startup behaviour |
 | `MCP_AUDIT_DURABILITY` | `best_effort` | `best_effort` or `fail_closed` — audit persist failures abort tool calls when `fail_closed` |
 | `MCP_HTTP_INLINE_METRICS_ENABLED` | `false` | Set `1` to expose `/metrics` on the main HTTP listener; disabled by default |
