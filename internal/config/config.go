@@ -37,7 +37,13 @@ type Config struct {
 
 	// Enterprise shared-service
 	ControlPlaneDSN string
-	SessionTTL      time.Duration
+	// ControlPlaneAuditCap is the max number of audit events retained
+	// in the file-backed control-plane store. 0 keeps the historical
+	// unbounded behaviour; non-zero enables FIFO eviction. Wired from
+	// MCP_CONTROL_PLANE_AUDIT_CAP. Postgres deployments ignore this
+	// field in favour of time-based retention (B2).
+	ControlPlaneAuditCap int
+	SessionTTL           time.Duration
 	TenantClaim     string
 	SubjectClaim    string
 	DefaultTenantID string
@@ -242,6 +248,13 @@ func Load() (Config, error) {
 	cfg.ControlPlaneDSN = strings.TrimSpace(os.Getenv("MCP_CONTROL_PLANE_DSN"))
 	if cfg.ControlPlaneDSN == "" {
 		cfg.ControlPlaneDSN = "memory"
+	}
+	if v := strings.TrimSpace(os.Getenv("MCP_CONTROL_PLANE_AUDIT_CAP")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return Config{}, fmt.Errorf("invalid MCP_CONTROL_PLANE_AUDIT_CAP %q: must be a non-negative integer", v)
+		}
+		cfg.ControlPlaneAuditCap = n
 	}
 	cfg.SessionTTL = 30 * time.Minute
 	if raw := strings.TrimSpace(os.Getenv("MCP_SESSION_TTL")); raw != "" {

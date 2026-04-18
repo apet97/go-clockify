@@ -166,7 +166,11 @@ func run() error {
 	}
 
 	if cfg.Transport == "streamable_http" {
-		store, err := controlplane.Open(cfg.ControlPlaneDSN)
+		// B5: cap the in-memory audit slice on the file-backed store
+		// so long-lived dev deployments can't grow unbounded before
+		// Postgres (B1) becomes the production path. Zero disables.
+		store, err := controlplane.Open(cfg.ControlPlaneDSN,
+			controlplane.WithAuditCap(cfg.ControlPlaneAuditCap))
 		if err != nil {
 			return err
 		}

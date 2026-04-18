@@ -76,9 +76,34 @@ type Store struct {
 	mu    sync.Mutex
 	path  string
 	state State
+	// auditCap, when > 0, caps the in-memory AuditEvents slice so the
+	// file-backed store cannot grow unbounded on long-lived dev
+	// deployments. On append past the cap the oldest event is dropped
+	// (FIFO) before the write. Zero preserves the historical
+	// unbounded behaviour for back-compat.
+	//
+	// B5 rationale: the file store is the dev/offline fallback — the
+	// production path is Postgres (B1) with time-based retention (B2).
+	// The cap here is the pre-migration safety net for operators
+	// running streamable_http on file-backed state.
+	auditCap int
 }
 
-func Open(dsn string) (*Store, error) {
+// Option configures the Store at construction. Passed to Open; tests
+// and runtime paths add options without widening Open's signature.
+type Option func(*Store)
+
+// WithAuditCap caps the in-memory AuditEvents slice at n entries. Zero
+// or negative disables the cap. See Store.auditCap for the rationale.
+func WithAuditCap(n int) Option {
+	return func(s *Store) {
+		if n > 0 {
+			s.auditCap = n
+		}
+	}
+}
+
+func Open(dsn string, opts ...Option) (*Store, error) {
 	path, err := resolvePath(dsn)
 	if err != nil {
 		return nil, err
@@ -91,6 +116,9 @@ func Open(dsn string) (*Store, error) {
 			Sessions:       map[string]SessionRecord{},
 			AuditEvents:    []AuditEvent{},
 		},
+	}
+	for _, o := range opts {
+		o(s)
 	}
 	if path == "" {
 		return s, nil
@@ -221,5 +249,14 @@ func (s *Store) AppendAuditEvent(event AuditEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.AuditEvents = append(s.state.AuditEvents, event)
+	if s.auditCap > 0 && len(s.state.AuditEvents) > s.auditCap {
+		drop := len(s.state.AuditEvents) - s.auditCap
+		// Trim from the front (oldest-first) using a fresh slice so
+		// the backing array doesn't keep the dropped entries alive
+		// past the next GC.
+		kept := make([]AuditEvent, s.auditCap)
+		copy(kept, s.state.AuditEvents[drop:])
+		s.state.AuditEvents = kept
+	}
 	return s.persistLocked()
 }
