@@ -40,6 +40,20 @@ func TestToolContractMatrix(t *testing.T) {
 		"clockify_find_and_update_entry": true, "clockify_create_project": true, "clockify_create_client": true,
 		"clockify_create_tag": true, "clockify_create_task": true,
 	}
+	// D1: drift guard for the contract-matrix policy lists. Every name
+	// here must resolve to a real registered tool; a rename in the
+	// registry that doesn't update these maps would silently leave the
+	// policy assertion no-op'd for the renamed tool.
+	for name := range introspection {
+		if _, ok := all[name]; !ok {
+			t.Fatalf("introspection list references %q but it is not in the registry", name)
+		}
+	}
+	for name := range safeCoreWrites {
+		if _, ok := all[name]; !ok {
+			t.Fatalf("safeCoreWrites list references %q but it is not in the registry", name)
+		}
+	}
 
 	for name, contract := range all {
 		assertBoolAnnotation(t, name, contract.annotations, "readOnlyHint", contract.readOnly)
