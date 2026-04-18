@@ -6,12 +6,29 @@ import (
 	"time"
 )
 
-// oidcVerifyCacheMaxTTL is the hard ceiling on how long a cached verify
-// result may live. Kept shorter than any realistic JWKS key rotation
-// window so a rotated key naturally invalidates within one tick — we
-// do not hook the JWKS refresh path directly to avoid cross-component
-// coupling; the ceiling provides the same correctness guarantee.
+// oidcVerifyCacheMaxTTL is the default hard ceiling on how long a cached
+// verify result may live. Kept shorter than any realistic JWKS key
+// rotation window so a rotated key naturally invalidates within one
+// tick — we do not hook the JWKS refresh path directly to avoid
+// cross-component coupling; the ceiling provides the same correctness
+// guarantee.
+//
+// Operators can override via authn.Config.OIDCVerifyCacheTTL (exposed
+// as MCP_OIDC_VERIFY_CACHE_TTL at config load). The tradeoff is
+// explicit: larger values amortise the 53.8µs verify cost further but
+// extend the window after a token is revoked before the next
+// Authenticate call re-checks the claims.
 const oidcVerifyCacheMaxTTL = 60 * time.Second
+
+// oidcVerifyCacheMinTTL and oidcVerifyCacheTTLCeiling bracket the
+// operator-configurable TTL. Below the minimum the cache adds no value
+// (every hot-path request still pays the verify cost); above the
+// ceiling the revocation window is long enough that operators should
+// consciously pick a longer value rather than have it silently applied.
+const (
+	oidcVerifyCacheMinTTL     = 1 * time.Second
+	oidcVerifyCacheTTLCeiling = 5 * time.Minute
+)
 
 // oidcVerifyCacheSize is the bounded entry cap. At 1024 entries of
 // Principal+timestamp (~200B each) the cache occupies ~200KB steady
@@ -53,15 +70,29 @@ type oidcVerifyCache struct {
 	mu      sync.Mutex
 	entries map[[sha256.Size]byte]oidcVerifyCacheEntry
 	max     int
+	// maxTTL is the effective ceiling applied in put(). Resolved at
+	// construction from Config.OIDCVerifyCacheTTL, clamped to
+	// [oidcVerifyCacheMinTTL, oidcVerifyCacheTTLCeiling].
+	maxTTL time.Duration
 }
 
-func newOIDCVerifyCache(max int) *oidcVerifyCache {
+func newOIDCVerifyCache(max int, maxTTL time.Duration) *oidcVerifyCache {
 	if max <= 0 {
 		max = oidcVerifyCacheSize
+	}
+	if maxTTL <= 0 {
+		maxTTL = oidcVerifyCacheMaxTTL
+	}
+	if maxTTL < oidcVerifyCacheMinTTL {
+		maxTTL = oidcVerifyCacheMinTTL
+	}
+	if maxTTL > oidcVerifyCacheTTLCeiling {
+		maxTTL = oidcVerifyCacheTTLCeiling
 	}
 	return &oidcVerifyCache{
 		entries: make(map[[sha256.Size]byte]oidcVerifyCacheEntry, max),
 		max:     max,
+		maxTTL:  maxTTL,
 	}
 }
 
@@ -96,7 +127,11 @@ func (c *oidcVerifyCache) put(token string, principal Principal, tokenExp int64,
 	if c == nil {
 		return
 	}
-	expiresAt := now.Add(oidcVerifyCacheMaxTTL)
+	ttl := c.maxTTL
+	if ttl <= 0 {
+		ttl = oidcVerifyCacheMaxTTL
+	}
+	expiresAt := now.Add(ttl)
 	if tokenExp > 0 {
 		tokenExpires := time.Unix(tokenExp, 0)
 		if tokenExpires.Before(expiresAt) {

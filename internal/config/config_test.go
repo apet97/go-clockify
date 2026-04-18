@@ -2,8 +2,8 @@ package config
 
 import (
 	"os"
-
 	"testing"
+	"time"
 )
 
 func TestValidateBaseURL(t *testing.T) {
@@ -823,5 +823,62 @@ func TestHTTPInlineMetrics_InvalidAuthMode(t *testing.T) {
 	setEnvs(t, m)
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for invalid auth mode")
+	}
+}
+
+// --- OIDC verify-cache TTL --------------------------------------------------
+
+func TestOIDCVerifyCacheTTL_Default(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OIDCVerifyCacheTTL != 0 {
+		t.Fatalf("unset TTL should leave config at 0 (authn picks default), got %s", cfg.OIDCVerifyCacheTTL)
+	}
+}
+
+func TestOIDCVerifyCacheTTL_Custom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":            "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL":   "90s",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OIDCVerifyCacheTTL != 90*time.Second {
+		t.Fatalf("expected 90s, got %s", cfg.OIDCVerifyCacheTTL)
+	}
+}
+
+func TestOIDCVerifyCacheTTL_BelowMinRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":            "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL":   "500ms",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for TTL below 1s")
+	}
+}
+
+func TestOIDCVerifyCacheTTL_AboveMaxRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":            "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL":   "10m",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for TTL above 5m")
+	}
+}
+
+func TestOIDCVerifyCacheTTL_InvalidDurationRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":            "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL":   "carrots",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for unparseable duration")
 	}
 }

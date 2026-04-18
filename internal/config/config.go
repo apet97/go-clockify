@@ -49,7 +49,14 @@ type Config struct {
 	// MCP server. When set, every OIDC token must list this URI in its
 	// audience claim — RFC 8707 / MCP OAuth 2.1 resource indicator
 	// binding. Wired from MCP_RESOURCE_URI.
-	OIDCResourceURI      string
+	OIDCResourceURI string
+	// OIDCVerifyCacheTTL is the hard ceiling on cached OIDC verify
+	// results. Larger values amortise the per-request verify cost but
+	// extend the window before a revoked token is re-checked. Zero
+	// selects the conservative 60s default baked into authn; values
+	// outside [1s, 5m] are clamped at the authn layer. Wired from
+	// MCP_OIDC_VERIFY_CACHE_TTL.
+	OIDCVerifyCacheTTL   time.Duration
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
@@ -256,6 +263,16 @@ func Load() (Config, error) {
 	cfg.OIDCJWKSURL = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_URL"))
 	cfg.OIDCJWKSPath = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_PATH"))
 	cfg.OIDCResourceURI = strings.TrimSpace(os.Getenv("MCP_RESOURCE_URI"))
+	if v := strings.TrimSpace(os.Getenv("MCP_OIDC_VERIFY_CACHE_TTL")); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_OIDC_VERIFY_CACHE_TTL %q: %w", v, err)
+		}
+		if d < time.Second || d > 5*time.Minute {
+			return Config{}, fmt.Errorf("MCP_OIDC_VERIFY_CACHE_TTL must be between 1s and 5m, got %s", d)
+		}
+		cfg.OIDCVerifyCacheTTL = d
+	}
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))

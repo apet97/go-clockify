@@ -10,7 +10,7 @@ import (
 // by an in-TTL get returns the cached principal, and a get for an
 // unknown token returns a miss.
 func TestOIDCVerifyCache_HitAndMiss(t *testing.T) {
-	cache := newOIDCVerifyCache(16)
+	cache := newOIDCVerifyCache(16, 0)
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	p := Principal{Subject: "alice", TenantID: "acme", AuthMode: ModeOIDC}
 	cache.put("token-a", p, now.Add(10*time.Second).Unix(), now)
@@ -34,7 +34,7 @@ func TestOIDCVerifyCache_HitAndMiss(t *testing.T) {
 // an expired token must not be served from cache past its stated
 // lifetime.
 func TestOIDCVerifyCache_ExpiresOnTokenExp(t *testing.T) {
-	cache := newOIDCVerifyCache(16)
+	cache := newOIDCVerifyCache(16, 0)
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	tokenExp := now.Add(5 * time.Second).Unix()
 	cache.put("token-a", Principal{Subject: "alice"}, tokenExp, now)
@@ -61,7 +61,7 @@ func TestOIDCVerifyCache_ExpiresOnTokenExp(t *testing.T) {
 // the entry past oidcVerifyCacheMaxTTL — this is the JWKS rotation
 // safety margin.
 func TestOIDCVerifyCache_CeilingTTL(t *testing.T) {
-	cache := newOIDCVerifyCache(16)
+	cache := newOIDCVerifyCache(16, 0)
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	// Token exp = 1 hour from now. Cache TTL should be capped at
 	// oidcVerifyCacheMaxTTL regardless.
@@ -79,13 +79,57 @@ func TestOIDCVerifyCache_CeilingTTL(t *testing.T) {
 	}
 }
 
+// TestOIDCVerifyCache_ConfigurableTTL asserts the operator-configurable
+// ceiling: a custom maxTTL replaces the default, clamping below the
+// token's own exp. Before A4 the ceiling was a hardcoded const and
+// operators had no knob.
+func TestOIDCVerifyCache_ConfigurableTTL(t *testing.T) {
+	// 5s ceiling — well below the 60s default.
+	cache := newOIDCVerifyCache(16, 5*time.Second)
+	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+	tokenExp := now.Add(1 * time.Hour).Unix()
+	cache.put("token-a", Principal{Subject: "alice"}, tokenExp, now)
+
+	if _, ok := cache.get("token-a", now.Add(4*time.Second)); !ok {
+		t.Fatal("expected hit inside custom 5s ceiling")
+	}
+	if _, ok := cache.get("token-a", now.Add(6*time.Second)); ok {
+		t.Fatal("expected miss past custom 5s ceiling — default 60s must not apply")
+	}
+}
+
+// TestOIDCVerifyCache_TTLClamping asserts that values outside the
+// [min, ceiling] bracket are clamped at construction. Operators who
+// accidentally pass 0 get the conservative default; values above 5m
+// get pinned to 5m so we don't silently extend the revocation window.
+func TestOIDCVerifyCache_TTLClamping(t *testing.T) {
+	cases := []struct {
+		name string
+		in   time.Duration
+		want time.Duration
+	}{
+		{"zero_picks_default", 0, oidcVerifyCacheMaxTTL},
+		{"below_min_clamped_up", 100 * time.Millisecond, oidcVerifyCacheMinTTL},
+		{"above_ceiling_clamped_down", 10 * time.Minute, oidcVerifyCacheTTLCeiling},
+		{"in_range_respected", 90 * time.Second, 90 * time.Second},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := newOIDCVerifyCache(16, tc.in)
+			if cache.maxTTL != tc.want {
+				t.Fatalf("maxTTL = %s, want %s", cache.maxTTL, tc.want)
+			}
+		})
+	}
+}
+
 // TestOIDCVerifyCache_BoundedSize asserts the cache refuses to grow
 // beyond its configured max. Eviction is random (Go map iteration
 // order) so the test asserts the invariant, not which specific entry
 // survives.
 func TestOIDCVerifyCache_BoundedSize(t *testing.T) {
 	const max = 4
-	cache := newOIDCVerifyCache(max)
+	cache := newOIDCVerifyCache(max, 0)
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	tokenExp := now.Add(10 * time.Minute).Unix()
 
@@ -123,7 +167,7 @@ func TestOIDCVerifyCache_NilReceiverSafe(t *testing.T) {
 // cache with a stale entry that would be immediately evicted on the
 // next get — wasted work for no benefit.
 func TestOIDCVerifyCache_RefusesExpiredWrite(t *testing.T) {
-	cache := newOIDCVerifyCache(16)
+	cache := newOIDCVerifyCache(16, 0)
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	expired := now.Add(-1 * time.Minute).Unix()
 

@@ -177,6 +177,7 @@ func run() error {
 			OIDCJWKSURL:          cfg.OIDCJWKSURL,
 			OIDCJWKSPath:         cfg.OIDCJWKSPath,
 			OIDCResourceURI:      cfg.OIDCResourceURI,
+			OIDCVerifyCacheTTL:   cfg.OIDCVerifyCacheTTL,
 			ForwardTenantHeader:  cfg.ForwardTenantHeader,
 			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
 			MTLSTenantHeader:     cfg.MTLSTenantHeader,

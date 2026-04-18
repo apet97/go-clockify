@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"os"
@@ -61,6 +62,14 @@ type Config struct {
 	// claim — token-binding to the protected resource. Empty disables the
 	// extra check (back-compat with the simple OIDCAudience match).
 	OIDCResourceURI string
+	// OIDCVerifyCacheTTL is the hard ceiling on cached verify results.
+	// Zero selects the default (oidcVerifyCacheMaxTTL); values are
+	// clamped to [oidcVerifyCacheMinTTL, oidcVerifyCacheTTLCeiling].
+	// Larger values amortise the ~54µs verify cost further, but extend
+	// the window after a token is revoked before the next Authenticate
+	// call re-checks the claims. Operators should pick this
+	// consciously; the default stays conservative at 60s.
+	OIDCVerifyCacheTTL time.Duration
 	// HTTPClient overrides the JWKS fetcher's transport. Tests inject
 	// httptest-backed clients here; production code leaves it nil and
 	// uses http.DefaultClient.
@@ -204,6 +213,17 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	if cfg.OIDCJWKSURL == "" && cfg.OIDCJWKSPath == "" {
 		cfg.OIDCJWKSURL = strings.TrimRight(cfg.OIDCIssuer, "/") + "/.well-known/jwks.json"
 	}
+	// Surface the revocation-window tradeoff when operators raise the
+	// ceiling past the conservative default. The cache clamps the value
+	// itself; the log just makes the operator's choice visible in audit
+	// output so we don't hide a longer revocation window behind a quiet
+	// env var.
+	if cfg.OIDCVerifyCacheTTL > oidcVerifyCacheMaxTTL {
+		slog.Warn("oidc_verify_cache_ttl_above_default",
+			"ttl", cfg.OIDCVerifyCacheTTL,
+			"default", oidcVerifyCacheMaxTTL,
+			"note", "cached verify results live longer; revocation propagates only after ttl expires")
+	}
 	return oidcAuthenticator{
 		cfg: cfg,
 		cache: &jwksCache{
@@ -211,7 +231,7 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 			path:   cfg.OIDCJWKSPath,
 			client: cfg.HTTPClient,
 		},
-		verifyCache: newOIDCVerifyCache(oidcVerifyCacheSize),
+		verifyCache: newOIDCVerifyCache(oidcVerifyCacheSize, cfg.OIDCVerifyCacheTTL),
 	}, nil
 }
 
