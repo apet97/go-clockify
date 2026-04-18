@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/metrics"
 )
 
@@ -43,16 +44,29 @@ type InlineMetricsOptions struct {
 }
 
 // ServeHTTP starts an HTTP server that wraps the MCP server's handle() method.
-// It requires a non-empty bearerToken for authentication on the /mcp endpoint.
-// When allowAnyOrigin is false and allowedOrigins is empty, cross-origin requests
-// are rejected (secure default).
+// Auth is delegated to the supplied authn.Authenticator — for legacy
+// deployments operators pass a static-bearer authenticator built from
+// MCP_BEARER_TOKEN; enterprise deployments can pass OIDC/forward_auth/mTLS
+// authenticators through the same seam. bearerToken remains non-empty
+// only because inline-metrics inheritance reuses it; nil authenticator +
+// empty bearerToken is rejected so the handler never runs unauthenticated.
+//
+// When allowAnyOrigin is false and allowedOrigins is empty, cross-origin
+// requests are rejected (secure default).
 //
 // inlineMetrics controls whether /metrics is mounted on the main listener.
 // The default (InlineMetricsOptions{}) leaves /metrics absent — use the
 // dedicated metrics listener (ServeMetrics) for the recommended pattern.
-func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
-	if bearerToken == "" {
-		return fmt.Errorf("MCP_BEARER_TOKEN is required for HTTP transport")
+func (s *Server) ServeHTTP(ctx context.Context, bind string, authenticator authn.Authenticator, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
+	if authenticator == nil {
+		if bearerToken == "" {
+			return fmt.Errorf("MCP_BEARER_TOKEN is required for HTTP transport when no authenticator is supplied")
+		}
+		auth, err := authn.New(authn.Config{Mode: authn.ModeStaticBearer, BearerToken: bearerToken})
+		if err != nil {
+			return fmt.Errorf("build static-bearer authenticator: %w", err)
+		}
+		authenticator = auth
 	}
 	if bind == "" {
 		bind = ":8080"
@@ -62,7 +76,10 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	}
 	// Wire the main bearer token for inherit_main_bearer so the handler
 	// resolves to the right secret without exposing it in InlineMetricsOptions
-	// before this call.
+	// before this call. Empty bearerToken here means the operator runs
+	// OIDC/forward_auth/mTLS; inherit_main_bearer is not meaningful in
+	// that mode and the caller is responsible for choosing a different
+	// metrics AuthMode.
 	inlineMetrics.MainBearerToken = bearerToken
 
 	mux := http.NewServeMux()
@@ -71,7 +88,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind, bearerToken string, allowe
 	if inlineMetrics.Enabled {
 		mux.HandleFunc("GET /metrics", observeHTTP("/metrics", inlineMetricsHandler(inlineMetrics)))
 	}
-	mcpHandler := s.handleMCP(bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize)
+	mcpHandler := s.handleMCP(authenticator, allowedOrigins, allowAnyOrigin, maxBodySize)
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", mcpHandler))
 	// Handle OPTIONS for CORS preflight on /mcp
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", mcpHandler))
@@ -290,7 +307,7 @@ func (s *Server) checkReady(ctx context.Context) error {
 	return err
 }
 
-func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
+func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
 	if s.hub.len() == 0 {
 		s.SetNotifier(droppingNotifier{})
 	}
@@ -359,19 +376,18 @@ func (s *Server) handleMCP(bearerToken string, allowedOrigins []string, allowAny
 			return
 		}
 
-		// 2. Bearer auth — constant-time comparison
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Bearer ") {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "reason", "missing_bearer_prefix", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
+		// 2. Auth — delegate to the supplied authn.Authenticator. This
+		// matches the streamable_http transport and unlocks OIDC /
+		// forward_auth / mTLS on the legacy HTTP path. Static-bearer
+		// deployments still reach constant-time compare via the
+		// staticBearerAuthenticator branch.
+		principal, err := authenticator.Authenticate(r.Context(), r)
+		if err != nil {
+			authn.WriteUnauthorized(w, "invalid_token", err.Error())
+			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "reason", "auth_failed", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
 			return
 		}
-		token := strings.TrimPrefix(auth, "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(token), []byte(bearerToken)) != 1 {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
-			return
-		}
+		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 
 		// 3. Body size limit
 		r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)

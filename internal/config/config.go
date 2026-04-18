@@ -191,6 +191,14 @@ func Load() (Config, error) {
 			// (MCP_GRPC_TLS_CERT + MCP_GRPC_TLS_KEY set).
 		}
 	}
+	// Legacy HTTP transport accepts the full auth matrix except mtls:
+	// mTLS authenticates off r.TLS.VerifiedChains, and the legacy HTTP
+	// path does not wire its own TLS listener. Fail at config load so
+	// operators see the mismatch up front instead of every request
+	// 401'ing at runtime.
+	if cfg.Transport == "http" && cfg.AuthMode == "mtls" {
+		return Config{}, fmt.Errorf("MCP_AUTH_MODE=mtls is not supported with MCP_TRANSPORT=http (no native TLS wiring); terminate TLS in a reverse proxy and use MCP_AUTH_MODE=forward_auth, or use MCP_TRANSPORT=grpc with MCP_GRPC_TLS_CERT/MCP_GRPC_TLS_KEY")
+	}
 
 	cfg.HTTPBind = os.Getenv("MCP_HTTP_BIND")
 	if cfg.HTTPBind == "" {

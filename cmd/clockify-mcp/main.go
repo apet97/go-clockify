@@ -276,7 +276,31 @@ func run() error {
 		// Opt-in debug handlers (e.g. /debug/pprof/* under -tags=pprof).
 		// Default build returns nil so ServeHTTP sees an empty slice.
 		server.ExtraHTTPHandlers = pprofExtras()
-		return server.ServeHTTP(ctx, cfg.HTTPBind, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize,
+		// Build the authenticator from cfg so legacy HTTP honours the full
+		// auth matrix (static_bearer, oidc, forward_auth, mtls) instead of
+		// bearer-only. Empty AuthMode defaults to static_bearer inside
+		// authn.New, matching prior behaviour.
+		legacyAuthnCfg := authn.Config{
+			Mode:                 authn.Mode(cfg.AuthMode),
+			BearerToken:          cfg.BearerToken,
+			DefaultTenantID:      cfg.DefaultTenantID,
+			TenantClaim:          cfg.TenantClaim,
+			SubjectClaim:         cfg.SubjectClaim,
+			OIDCIssuer:           cfg.OIDCIssuer,
+			OIDCAudience:         cfg.OIDCAudience,
+			OIDCJWKSURL:          cfg.OIDCJWKSURL,
+			OIDCJWKSPath:         cfg.OIDCJWKSPath,
+			OIDCResourceURI:      cfg.OIDCResourceURI,
+			OIDCVerifyCacheTTL:   cfg.OIDCVerifyCacheTTL,
+			ForwardTenantHeader:  cfg.ForwardTenantHeader,
+			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
+			MTLSTenantHeader:     cfg.MTLSTenantHeader,
+		}
+		legacyAuth, err := authn.New(legacyAuthnCfg)
+		if err != nil {
+			return fmt.Errorf("build legacy HTTP authenticator: %w", err)
+		}
+		return server.ServeHTTP(ctx, cfg.HTTPBind, legacyAuth, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize,
 			mcp.InlineMetricsOptions{
 				Enabled:     cfg.HTTPInlineMetricsEnabled,
 				AuthMode:    cfg.HTTPInlineMetricsAuthMode,

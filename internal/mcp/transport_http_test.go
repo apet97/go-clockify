@@ -8,9 +8,32 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/authn"
 )
 
 const testBearerToken = "test-secret-token"
+
+// testBearerAuth builds a static-bearer authenticator scoped to
+// testBearerToken. The legacy handleMCP tests all authenticate against
+// this same token; the helper lets them pass an authenticator without
+// open-coding authn.New in every case.
+func testBearerAuth(t testing.TB) authn.Authenticator {
+	t.Helper()
+	return testAuthWithToken(t, testBearerToken)
+}
+
+// testAuthWithToken builds a static-bearer authenticator for tests that
+// use a custom token (typically to avoid collision between a shared
+// suite-level token and a case-local token).
+func testAuthWithToken(t testing.TB, token string) authn.Authenticator {
+	t.Helper()
+	a, err := authn.New(authn.Config{Mode: authn.ModeStaticBearer, BearerToken: token})
+	if err != nil {
+		t.Fatalf("build test authenticator: %v", err)
+	}
+	return a
+}
 
 func newTestServer() *Server {
 	return NewServer("test", []ToolDescriptor{{
@@ -124,7 +147,7 @@ func TestReadyUpstreamHealthy(t *testing.T) {
 func TestCORSVaryOriginHeader(t *testing.T) {
 	s := newTestServer()
 	s.initialized.Store(true)
-	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://app.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -143,7 +166,7 @@ func TestCORSVaryOriginHeader(t *testing.T) {
 func TestCORSNoVaryOnWildcard(t *testing.T) {
 	s := newTestServer()
 	s.initialized.Store(true)
-	handler := s.handleMCP(testBearerToken, nil, true, 2097152) // allowAnyOrigin=true
+	handler := s.handleMCP(testBearerAuth(t), nil, true, 2097152) // allowAnyOrigin=true
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -158,7 +181,7 @@ func TestCORSNoVaryOnWildcard(t *testing.T) {
 
 func TestPreflightMaxAge(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://app.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
@@ -172,7 +195,7 @@ func TestPreflightMaxAge(t *testing.T) {
 
 func TestMCPUnauthorized(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), nil, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -186,7 +209,7 @@ func TestMCPUnauthorized(t *testing.T) {
 
 func TestMCPRejectsTokenWithoutBearerPrefix(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), nil, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -200,7 +223,7 @@ func TestMCPRejectsTokenWithoutBearerPrefix(t *testing.T) {
 
 func TestMCPAuthorized(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, true, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -225,7 +248,7 @@ func TestMCPAuthorized(t *testing.T) {
 
 func TestHTTPInitializeOmitsListChangedCapability(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, true, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`))
@@ -264,7 +287,7 @@ func TestHTTPInitializeOmitsListChangedCapability(t *testing.T) {
 
 func TestMCPCORSBlocked(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -280,7 +303,7 @@ func TestMCPCORSBlocked(t *testing.T) {
 func TestMCPCORSAllowed(t *testing.T) {
 	s := newTestServer()
 	s.initialized.Store(true)
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -298,7 +321,7 @@ func TestMCPCORSAllowed(t *testing.T) {
 
 func TestMCPMethodNotAllowed(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, nil, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), nil, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
@@ -312,7 +335,7 @@ func TestMCPMethodNotAllowed(t *testing.T) {
 
 func TestMCPCORSPreflight(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
@@ -335,7 +358,7 @@ func TestMCPCORSPreflight(t *testing.T) {
 
 func TestMCPCORSPreflightBlocked(t *testing.T) {
 	s := newTestServer()
-	handler := s.handleMCP(testBearerToken, []string{"https://allowed.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://allowed.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
@@ -356,7 +379,7 @@ func TestHTTPToolsCall(t *testing.T) {
 		ReadOnlyHint: true,
 	}}, nil, nil)
 	const bearer = "test-bearer-token-1234"
-	handler := s.handleMCP(bearer, nil, true, 2097152)
+	handler := s.handleMCP(testAuthWithToken(t, bearer), nil, true, 2097152)
 
 	initRec := httptest.NewRecorder()
 	initReq := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`))
@@ -419,7 +442,7 @@ func TestHTTPToolsCallRequiresInitialize(t *testing.T) {
 	}}, nil, nil)
 
 	const bearer = "test-bearer-token-1234"
-	handler := s.handleMCP(bearer, nil, true, 2097152)
+	handler := s.handleMCP(testAuthWithToken(t, bearer), nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
 	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"test_tool","arguments":{}}}`
@@ -460,7 +483,7 @@ func TestHTTPToolsList(t *testing.T) {
 	s.initialized.Store(true)
 
 	const bearer = "test-bearer-token-1234"
-	handler := s.handleMCP(bearer, nil, true, 2097152)
+	handler := s.handleMCP(testAuthWithToken(t, bearer), nil, true, 2097152)
 
 	rec := httptest.NewRecorder()
 	body := `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`
@@ -510,7 +533,7 @@ func TestHTTPBodyTooLarge(t *testing.T) {
 
 	const bearer = "test-bearer-token-1234"
 	// Set a very small max body size (64 bytes)
-	handler := s.handleMCP(bearer, nil, true, 64)
+	handler := s.handleMCP(testAuthWithToken(t, bearer), nil, true, 64)
 
 	// Create a body that exceeds the limit
 	largeBody := strings.Repeat("x", 256)
@@ -528,7 +551,7 @@ func TestHTTPBodyTooLarge(t *testing.T) {
 func TestHTTPStrictHostCheckRejectsZeroAddress(t *testing.T) {
 	s := newTestServer()
 	s.StrictHostCheck = true
-	handler := s.handleMCP(testBearerToken, []string{"https://app.example.com"}, false, 2097152)
+	handler := s.handleMCP(testBearerAuth(t), []string{"https://app.example.com"}, false, 2097152)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
@@ -557,7 +580,7 @@ func TestHTTPStrictHostCheckAllowsLoopbackAndAllowlistedHosts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newTestServer()
 			s.StrictHostCheck = true
-			handler := s.handleMCP(testBearerToken, tt.allowed, false, 2097152)
+			handler := s.handleMCP(testBearerAuth(t), tt.allowed, false, 2097152)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
