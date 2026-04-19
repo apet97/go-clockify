@@ -33,6 +33,30 @@ func TestClientGetSuccess(t *testing.T) {
 	}
 }
 
+func TestClientGetNormalizesPath(t *testing.T) {
+	for _, path := range []string{"/user", "user"} {
+		t.Run(path, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/user" {
+					t.Fatalf("path = %q, want /user", r.URL.Path)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"ok":true}`))
+			}))
+			defer ts.Close()
+
+			c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+			var out map[string]any
+			if err := c.Get(context.Background(), path, nil, &out); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if out["ok"] != true {
+				t.Fatalf("unexpected response: %#v", out)
+			}
+		})
+	}
+}
+
 func TestClientAPIError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "nope", http.StatusUnauthorized)

@@ -403,7 +403,19 @@ func joinPtr(prefix, name string) string {
 
 func escapePtr(s string) string {
 	// RFC 6901: ~ → ~0, / → ~1 (order matters).
-	out := make([]byte, 0, len(s))
+	// Fast path: check if escaping is needed before allocating.
+	needsEscaping := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '~' || s[i] == '/' {
+			needsEscaping = true
+			break
+		}
+	}
+	if !needsEscaping {
+		return s
+	}
+
+	out := make([]byte, 0, len(s)+2)
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case '~':

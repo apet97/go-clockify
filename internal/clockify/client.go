@@ -237,6 +237,9 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		metrics.UpstreamRequestDuration.Observe(time.Since(start).Seconds(), endpoint, method)
 	}()
 
+	if path != "" && path[0] != '/' {
+		path = "/" + path
+	}
 	u, err := url.Parse(c.baseURL + path)
 	if err != nil {
 		return err

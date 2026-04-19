@@ -1,5 +1,5 @@
 # Build artifacts
-clockify-mcp
+/clockify-mcp
 coverage.out
 dist/
 staging/

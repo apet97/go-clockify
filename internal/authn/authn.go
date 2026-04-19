@@ -501,11 +501,21 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decode rsa e: %w", err)
 		}
-		exp := 0
-		for _, b := range eb {
-			exp = exp<<8 + int(b)
+		if len(eb) == 0 {
+			return nil, fmt.Errorf("rsa exponent 'e' is empty")
 		}
-		return &rsa.PublicKey{N: new(big.Int).SetBytes(nb), E: exp}, nil
+		maxInt := uint64(^uint(0) >> 1)
+		var exp uint64
+		for _, b := range eb {
+			if exp > (maxInt-uint64(b))>>8 {
+				return nil, fmt.Errorf("rsa exponent 'e' overflows int")
+			}
+			exp = exp<<8 + uint64(b)
+		}
+		if exp == 0 {
+			return nil, fmt.Errorf("rsa exponent 'e' must be positive")
+		}
+		return &rsa.PublicKey{N: new(big.Int).SetBytes(nb), E: int(exp)}, nil
 	case "EC":
 		xb, err := base64.RawURLEncoding.DecodeString(x)
 		if err != nil {

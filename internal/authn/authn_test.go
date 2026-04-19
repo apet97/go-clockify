@@ -15,6 +15,8 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -426,6 +428,32 @@ func TestJWKPublicKey(t *testing.T) {
 	}
 	if _, err := jwkPublicKey("RSA", "$$bad$$", rsaE, "", "", ""); err == nil {
 		t.Fatal("expected RSA n decode error")
+	}
+	if _, err := jwkPublicKey("RSA", rsaN, "", "", "", ""); err == nil {
+		t.Fatal("expected RSA empty exponent error")
+	}
+	if _, err := jwkPublicKey("RSA", rsaN, base64.RawURLEncoding.EncodeToString([]byte{0}), "", "", ""); err == nil {
+		t.Fatal("expected RSA zero exponent error")
+	}
+	if strconv.IntSize >= 64 {
+		largeExp := uint64(1<<32 + 3)
+		largeExpBytes := new(big.Int).SetUint64(largeExp).Bytes()
+		got, err := jwkPublicKey("RSA", rsaN, base64.RawURLEncoding.EncodeToString(largeExpBytes), "", "", "")
+		if err != nil {
+			t.Fatalf("RSA large exponent: %v", err)
+		}
+		rk, ok := got.(*rsa.PublicKey)
+		if !ok {
+			t.Fatalf("RSA large exponent type: got %T", got)
+		}
+		if rk.E != int(largeExp) {
+			t.Fatalf("RSA large exponent mismatch: got %d want %d", rk.E, largeExp)
+		}
+	}
+	overflowExp := make([]byte, strconv.IntSize/8+1)
+	overflowExp[0] = 0x01
+	if _, err := jwkPublicKey("RSA", rsaN, base64.RawURLEncoding.EncodeToString(overflowExp), "", "", ""); err == nil || !strings.Contains(err.Error(), "overflows int") {
+		t.Fatalf("expected RSA exponent overflow error, got %v", err)
 	}
 	if _, err := jwkPublicKey("EC", "", "", "$$bad$$", ecY, "P-256"); err == nil {
 		t.Fatal("expected EC x decode error")

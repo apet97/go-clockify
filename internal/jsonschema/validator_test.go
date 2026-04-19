@@ -335,6 +335,26 @@ func TestValidatePointerEscaping(t *testing.T) {
 	}
 }
 
+func TestValidatePointerEscapingMixedSpecialChars(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"a~/b": map[string]any{"type": "string"},
+		},
+	}
+	err := Validate(schema, map[string]any{"a~/b": 1})
+	if err == nil {
+		t.Fatal("expected type error")
+	}
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("want *ValidationError, got %T", err)
+	}
+	if ve.Pointer != "/a~0~1b" {
+		t.Errorf("pointer = %q, want /a~0~1b (RFC 6901 escaped)", ve.Pointer)
+	}
+}
+
 func TestValidateUnknownPropertyOnEmptyProperties(t *testing.T) {
 	// additionalProperties:false with no declared properties — every key rejected.
 	schema := map[string]any{

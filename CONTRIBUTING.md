@@ -49,7 +49,7 @@ run on a contributor laptop.
 | `lint` | golangci-lint | always runs (install via `brew install golangci-lint`) |
 | `test` | go test -race | always runs |
 | `cover-check` | go test -coverprofile + floors | always runs |
-| `fuzz-short` | go test -fuzz | 10s per target (CI uses 30s) |
+| `fuzz-short` | go test -fuzz | 100000 executions per target (CI uses 300000) |
 | `build-tags` | scripts/check-build-tags.sh | otel/grpc/pprof symbol + go.mod parity checks |
 | `http-smoke` | scripts/smoke-http.sh | builds binary, curls `/health` + `/ready` |
 | `config-parity` | scripts/check-config-parity.sh | env-var parity across config.go / Helm / Kustomize |
@@ -60,7 +60,7 @@ run on a contributor laptop.
 ### What CI runs that `make verify` does not
 
 - **Trivy container scan** — CI-only (Docker image workflow)
-- **Full 30s fuzz budget** — CI uses 30s per target; local uses 10s
+- **Higher count-based fuzz budget** — CI uses 300000 executions per target; local uses 100000
 - **Mutation testing** — nightly workflow, not PR-blocking
 
 If `make verify` passes locally you have high confidence CI will pass, but
@@ -73,7 +73,7 @@ All checks must pass with no errors.
 ```
 cmd/clockify-mcp/     Entrypoint — wires all layers
 internal/
-  mcp/                Protocol core — pure JSON-RPC/MCP engine, Enforcement/Activator interfaces
+  mcp/                Protocol core — pure JSON-RPC/MCP engine (modular: server, tools, resources, audit, prompts)
   clockify/           HTTP client (connection pooling, retry/backoff, pagination)
   tools/              All 124 tool handlers (Tier 1 registry + Tier 2 lazy groups)
   enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
