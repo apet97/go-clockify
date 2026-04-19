@@ -358,6 +358,12 @@ func (h *streamableHarness) CallTool(ctx context.Context, name string, args map[
 	return h.call(ctx, "tools/call", params)
 }
 
+// CallToolAsync fires the POST in a goroutine and returns immediately.
+// Cancellation tests rely on this shape: they need to issue the in-flight
+// request, then send a separate cancel POST on a different connection
+// before the first POST returns. Running sendRequest synchronously would
+// block the caller for the full handler duration — exactly what we want
+// to cancel.
 func (h *streamableHarness) CallToolAsync(ctx context.Context, name string, args map[string]any) (int, <-chan Response, error) {
 	id := h.nextID()
 	ch := make(chan Response, 1)
@@ -368,12 +374,11 @@ func (h *streamableHarness) CallToolAsync(ctx context.Context, name string, args
 	if args != nil {
 		params["arguments"] = args
 	}
-	if err := h.sendRequest(ctx, id, "tools/call", params); err != nil {
-		h.mu.Lock()
-		delete(h.pending, id)
-		h.mu.Unlock()
-		return 0, nil, err
-	}
+	go func() {
+		if err := h.sendRequest(ctx, id, "tools/call", params); err != nil {
+			h.deliver(id, Response{ID: id, Error: &RPCError{Code: -32603, Message: err.Error()}})
+		}
+	}()
 	return id, ch, nil
 }
 

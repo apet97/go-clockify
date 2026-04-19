@@ -114,6 +114,32 @@ func MockTool(name string, handler mcp.ToolHandler) mcp.ToolDescriptor {
 	}
 }
 
+// BlockingTool returns a ToolDescriptor whose handler signals start on
+// the given channel, then blocks until its context is cancelled. The
+// handler returns the context's error, so a successful cancellation
+// surfaces as an RPC error with code=-32603 (internal error carrying
+// context.Canceled) or an isError=true result. Used by cancellation
+// parity tests to prove that Cancel() / ctx cancellation actually
+// aborts in-flight work rather than sitting there until the per-tool
+// 45s timeout.
+func BlockingTool(name string, started chan<- struct{}) mcp.ToolDescriptor {
+	return mcp.ToolDescriptor{
+		Tool: mcp.Tool{
+			Name:        name,
+			Description: "Blocking tool " + name + " — blocks until context cancelled",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			select {
+			case started <- struct{}{}:
+			default:
+			}
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+	}
+}
+
 // encodeRequest marshals a JSON-RPC 2.0 request with id, method, and params.
 func encodeRequest(id int, method string, params any) ([]byte, error) {
 	envelope := map[string]any{
