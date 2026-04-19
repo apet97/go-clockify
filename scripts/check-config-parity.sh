@@ -30,14 +30,21 @@ if [ -f "$OPT_OUT" ]; then
 fi
 
 missing=0
+# Use here-strings instead of `echo | grep -q`. Under `set -o pipefail`
+# grep -q exits as soon as it finds a match, and the SIGPIPE sent back
+# to echo makes the pipeline exit non-zero — which then flipped the
+# `&& in_helm=true` assignment into a no-op. Symptom was a broken-pipe
+# write error followed by a spurious "MISSING in Helm" for a variable
+# that was actually present. Locally fast enough to hide; CI runners
+# hit it every time.
 for var in $env_vars; do
   in_helm=false
   in_k8s=false
   opted_out=false
 
-  echo "$helm_surface" | grep -q "$var" && in_helm=true
-  echo "$k8s_surface" | grep -q "$var" && in_k8s=true
-  echo "$opt_out_list" | grep -qE "^${var}([[:space:]]|$)" && opted_out=true
+  if grep -q "$var" <<< "$helm_surface"; then in_helm=true; fi
+  if grep -q "$var" <<< "$k8s_surface"; then in_k8s=true; fi
+  if grep -qE "^${var}([[:space:]]|$)" <<< "$opt_out_list"; then opted_out=true; fi
 
   if ! $in_helm && ! $opted_out; then
     echo "MISSING in Helm: $var" >&2

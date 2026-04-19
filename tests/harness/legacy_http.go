@@ -99,7 +99,7 @@ func (h *legacyHTTPHarness) do(ctx context.Context, method string, params any) (
 	if err != nil {
 		return Response{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusRequestEntityTooLarge {
 		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
 	}

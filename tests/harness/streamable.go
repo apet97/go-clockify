@@ -148,7 +148,7 @@ func (h *streamableHarness) Initialize(ctx context.Context) (Response, error) {
 	if err != nil {
 		return Response{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if sid := resp.Header.Get("X-MCP-Session-ID"); sid != "" {
 		h.sessionID = sid
 	} else {
@@ -201,7 +201,7 @@ func (h *streamableHarness) openSSE() error {
 // parseSSE consumes `event:` / `data:` frame pairs from the SSE stream.
 // Response IDs trigger pending-channel fan-out; notifications go to h.notifs.
 func (h *streamableHarness) parseSSE(resp *http.Response) {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	scanner := bufio.NewScanner(resp.Body)
 	buf := make([]byte, 0, 1<<20)
 	scanner.Buffer(buf, 1<<24)
