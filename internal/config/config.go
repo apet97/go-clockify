@@ -43,7 +43,13 @@ type Config struct {
 	// MCP_CONTROL_PLANE_AUDIT_CAP. Postgres deployments ignore this
 	// field in favour of time-based retention (B2).
 	ControlPlaneAuditCap int
-	SessionTTL           time.Duration
+	// ControlPlaneAuditRetention caps the age of retained audit
+	// events. The B2 reaper calls Store.RetainAudit(ctx, retention)
+	// on a one-hour ticker; events with `at < now - retention` are
+	// removed from the backend. Zero disables retention. Wired from
+	// MCP_CONTROL_PLANE_AUDIT_RETENTION; default 720h (30 days).
+	ControlPlaneAuditRetention time.Duration
+	SessionTTL                 time.Duration
 	TenantClaim     string
 	SubjectClaim    string
 	DefaultTenantID string
@@ -255,6 +261,17 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("invalid MCP_CONTROL_PLANE_AUDIT_CAP %q: must be a non-negative integer", v)
 		}
 		cfg.ControlPlaneAuditCap = n
+	}
+	cfg.ControlPlaneAuditRetention = 720 * time.Hour
+	if raw := strings.TrimSpace(os.Getenv("MCP_CONTROL_PLANE_AUDIT_RETENTION")); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_CONTROL_PLANE_AUDIT_RETENTION %q: %w", raw, err)
+		}
+		if d != 0 && (d < time.Hour || d > 8760*time.Hour) {
+			return Config{}, fmt.Errorf("MCP_CONTROL_PLANE_AUDIT_RETENTION must be 0 or between 1h and 8760h, got %s", d)
+		}
+		cfg.ControlPlaneAuditRetention = d
 	}
 	cfg.SessionTTL = 30 * time.Minute
 	if raw := strings.TrimSpace(os.Getenv("MCP_SESSION_TTL")); raw != "" {

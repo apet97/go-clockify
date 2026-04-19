@@ -188,6 +188,14 @@ func run() error {
 		if err := bootstrapDefaultTenant(store, cfg); err != nil {
 			return err
 		}
+		// B2: audit retention reaper. Drives store.RetainAudit on a
+		// fixed interval so the control-plane audit log does not grow
+		// unbounded under long-running streamable_http deployments.
+		// Runs only when retention is configured (>0); zero turns the
+		// feature off without affecting the reaper loop goroutine.
+		if cfg.ControlPlaneAuditRetention > 0 {
+			go retainAuditLoop(ctx, store, cfg.ControlPlaneAuditRetention, time.Hour)
+		}
 		authnCfg := authn.Config{
 			Mode:                 authn.Mode(cfg.AuthMode),
 			BearerToken:          cfg.BearerToken,
