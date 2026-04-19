@@ -594,6 +594,12 @@ var (
 	// streamable HTTP session reaper. Reason vocabulary: "ttl" (TTL
 	// expired) and "orphan" (no subscribers past the idle grace).
 	StreamableSessionsReapedTotal *Counter
+	// AuditEventsRetainedTotal counts audit events removed
+	// (outcome="deleted", value = rows per tick) or errored
+	// (outcome="error", incremented once per failed tick) by the
+	// control-plane audit retention reaper. Driven by the B2 reaper
+	// that honours MCP_CONTROL_PLANE_AUDIT_RETENTION.
+	AuditEventsRetainedTotal *Counter
 )
 
 func init() {
@@ -695,6 +701,11 @@ func init() {
 		"clockify_mcp_sessions_reaped_total",
 		"Streamable HTTP sessions reclaimed by the reaper, by reason (ttl, orphan).",
 		"reason",
+	)
+	AuditEventsRetainedTotal = Default.NewCounter(
+		"clockify_mcp_audit_events_retained_total",
+		"Audit events removed (outcome=deleted) or errored (outcome=error) by the retention reaper.",
+		"outcome",
 	)
 	registerRuntimeMetrics(Default)
 }
