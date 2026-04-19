@@ -59,6 +59,36 @@ the pin happens at deploy time. See
 [`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md)
 for the deploy-time pinning workflow (Kustomize edit, Argo CD, Flux).
 
+## Pick a control-plane backend
+
+The control plane holds tenants, credential references, sessions, and
+the audit log. Pick via `MCP_CONTROL_PLANE_DSN`:
+
+| Scheme               | Backend                                 | When to use                                                                                                                            |
+|----------------------|-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| `memory`             | In-process map, discarded at shutdown   | Unit tests, `go run`, single-user stdio. Never for `streamable_http`.                                                                  |
+| `file://<path>`      | Single JSON file, whole-state rewrite   | Single-operator local demo. Blocked by the C1 guard for `streamable_http` unless `MCP_ALLOW_DEV_BACKEND=1` (single-process only).       |
+| `postgres://<dsn>`   | pgx-backed, forward-only migrations     | Shared-service `streamable_http`, HA, any deployment where more than one clockify-mcp process talks to the same tenants or audit log. |
+
+The Postgres backend is gated behind `-tags=postgres` because pgx is
+not in the default binary's dependency graph (ADR 0001). To run
+against Postgres:
+
+```sh
+go build -tags=postgres -o clockify-mcp ./cmd/clockify-mcp
+export MCP_TRANSPORT=streamable_http
+export MCP_CONTROL_PLANE_DSN='postgres://user:pass@db.example.com/clockify_mcp?sslmode=require'
+./clockify-mcp
+```
+
+Migrations are embedded in the binary and applied under a
+`pg_advisory_lock` at startup, so multiple clockify-mcp instances can
+start against the same database concurrently. Schema evolution is
+forward-only; the applier refuses to boot if the database reports a
+schema version the binary does not know about (ADR 0011). The file
+and memory stores are the dev / offline fallback and are not
+recommended for any multi-process deployment.
+
 ## Upgrade path
 
 Versioning, support window, deprecation flow, and the definition of
