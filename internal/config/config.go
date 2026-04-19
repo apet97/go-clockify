@@ -30,7 +30,7 @@ type Config struct {
 	AllowedOrigins     []string
 	AllowAnyOrigin     bool
 	StrictHostCheck    bool
-	MaxBodySize        int64
+	MaxMessageSize     int64
 	MetricsBind        string
 	MetricsAuthMode    string
 	MetricsBearerToken string
@@ -93,8 +93,8 @@ type Config struct {
 
 	// AuditDurabilityMode controls behavior when audit persistence fails for
 	// a successful non-read-only tool call.
-	// "best_effort": log + metric; the call still reports success.
-	// "fail_closed" (default): the call returns an error so the client knows the audit
+	// "best_effort" (default): log + metric; the call still reports success.
+	// "fail_closed": the call returns an error so the client knows the audit
 	// trail is incomplete. The mutation already happened; this prevents
 	// silent untracked mutations.
 	AuditDurabilityMode string
@@ -232,25 +232,25 @@ func Load() (Config, error) {
 		}
 	}
 	cfg.MetricsBind = strings.TrimSpace(os.Getenv("MCP_METRICS_BIND"))
-	if cfg.MetricsBind == "" {
-		cfg.MetricsBind = ":9091"
-	}
 	cfg.MetricsAuthMode = strings.TrimSpace(os.Getenv("MCP_METRICS_AUTH_MODE"))
-	if cfg.MetricsAuthMode == "" {
-		cfg.MetricsAuthMode = "static_bearer"
-	}
-	switch cfg.MetricsAuthMode {
-	case "none", "static_bearer":
-	default:
-		return Config{}, fmt.Errorf("invalid MCP_METRICS_AUTH_MODE %q", cfg.MetricsAuthMode)
-	}
-	cfg.MetricsBearerToken = strings.TrimSpace(os.Getenv("MCP_METRICS_BEARER_TOKEN"))
-	if cfg.MetricsAuthMode == "static_bearer" {
-		if cfg.MetricsBearerToken == "" {
-			return Config{}, fmt.Errorf("MCP_METRICS_BEARER_TOKEN is required when MCP_METRICS_AUTH_MODE=static_bearer")
+
+	if cfg.MetricsBind != "" {
+		if cfg.MetricsAuthMode == "" {
+			cfg.MetricsAuthMode = "static_bearer"
 		}
-		if len(cfg.MetricsBearerToken) < 16 {
-			return Config{}, fmt.Errorf("MCP_METRICS_BEARER_TOKEN must be at least 16 characters for security")
+		switch cfg.MetricsAuthMode {
+		case "none", "static_bearer":
+		default:
+			return Config{}, fmt.Errorf("invalid MCP_METRICS_AUTH_MODE %q", cfg.MetricsAuthMode)
+		}
+		cfg.MetricsBearerToken = strings.TrimSpace(os.Getenv("MCP_METRICS_BEARER_TOKEN"))
+		if cfg.MetricsAuthMode == "static_bearer" {
+			if cfg.MetricsBearerToken == "" {
+				return Config{}, fmt.Errorf("MCP_METRICS_BEARER_TOKEN is required when MCP_METRICS_AUTH_MODE=static_bearer")
+			}
+			if len(cfg.MetricsBearerToken) < 16 {
+				return Config{}, fmt.Errorf("MCP_METRICS_BEARER_TOKEN must be at least 16 characters for security")
+			}
 		}
 	}
 
@@ -341,19 +341,23 @@ func Load() (Config, error) {
 	}
 	cfg.StrictHostCheck = strictHostCheck
 
-	cfg.MaxBodySize = 2097152 // 2 MB default
-	if mbs := os.Getenv("MCP_HTTP_MAX_BODY"); mbs != "" {
+	cfg.MaxMessageSize = 4194304 // 4 MB default
+	mbs := os.Getenv("MCP_MAX_MESSAGE_SIZE")
+	if mbs == "" {
+		mbs = os.Getenv("MCP_HTTP_MAX_BODY") // deprecated fallback
+	}
+	if mbs != "" {
 		v, err := strconv.ParseInt(mbs, 10, 64)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid MCP_HTTP_MAX_BODY: %w", err)
+			return Config{}, fmt.Errorf("invalid MCP_MAX_MESSAGE_SIZE: %w", err)
 		}
 		if v <= 0 {
-			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be greater than 0")
+			return Config{}, fmt.Errorf("MCP_MAX_MESSAGE_SIZE must be greater than 0")
 		}
-		if v > 52428800 {
-			return Config{}, fmt.Errorf("MCP_HTTP_MAX_BODY must be at most 50 MB (52428800)")
+		if v > 104857600 {
+			return Config{}, fmt.Errorf("MCP_MAX_MESSAGE_SIZE must be at most 100 MB")
 		}
-		cfg.MaxBodySize = v
+		cfg.MaxMessageSize = v
 	}
 
 	// Tool timeout
@@ -436,7 +440,7 @@ func Load() (Config, error) {
 	// Audit durability mode
 	cfg.AuditDurabilityMode = strings.TrimSpace(os.Getenv("MCP_AUDIT_DURABILITY"))
 	if cfg.AuditDurabilityMode == "" {
-		cfg.AuditDurabilityMode = "fail_closed"
+		cfg.AuditDurabilityMode = "best_effort"
 	}
 	switch cfg.AuditDurabilityMode {
 	case "best_effort", "fail_closed":
@@ -514,7 +518,7 @@ func (c Config) Fingerprint() map[string]any {
 		"session_ttl":                   c.SessionTTL.String(),
 		"allow_any_origin":              c.AllowAnyOrigin,
 		"strict_host_check":             c.StrictHostCheck,
-		"http_max_body_bytes":           c.MaxBodySize,
+		"max_message_size":              c.MaxMessageSize,
 		"tool_timeout":                  c.ToolTimeout.String(),
 		"max_inflight_tool_calls":       c.MaxInFlightToolCalls,
 		"report_max_entries":            c.ReportMaxEntries,

@@ -48,7 +48,7 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 	return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
 		Version:           r.version,
 		Bind:              r.cfg.HTTPBind,
-		MaxBodySize:       r.cfg.MaxBodySize,
+		MaxBodySize:       r.cfg.MaxMessageSize,
 		AllowedOrigins:    r.cfg.AllowedOrigins,
 		AllowAnyOrigin:    r.cfg.AllowAnyOrigin,
 		StrictHostCheck:   r.cfg.StrictHostCheck,

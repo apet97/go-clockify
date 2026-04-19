@@ -61,7 +61,7 @@ func (r *Runtime) runLegacyHTTP(ctx context.Context, client *clockify.Client, se
 	if err != nil {
 		return fmt.Errorf("build legacy HTTP authenticator: %w", err)
 	}
-	return server.ServeHTTP(ctx, r.cfg.HTTPBind, legacyAuth, r.cfg.BearerToken, r.cfg.AllowedOrigins, r.cfg.AllowAnyOrigin, r.cfg.MaxBodySize,
+	return server.ServeHTTP(ctx, r.cfg.HTTPBind, legacyAuth, r.cfg.BearerToken, r.cfg.AllowedOrigins, r.cfg.AllowAnyOrigin, r.cfg.MaxMessageSize,
 		mcp.InlineMetricsOptions{
 			Enabled:     r.cfg.HTTPInlineMetricsEnabled,
 			AuthMode:    r.cfg.HTTPInlineMetricsAuthMode,

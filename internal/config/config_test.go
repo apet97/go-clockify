@@ -203,65 +203,81 @@ func TestLoadStrictHostCheckInvalidReturnsError(t *testing.T) {
 	}
 }
 
-func TestLoadMaxBodySizeDefault(t *testing.T) {
+func TestLoadMaxMessageSizeDefault(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",
 	})
+	os.Unsetenv("MCP_MAX_MESSAGE_SIZE")
 	os.Unsetenv("MCP_HTTP_MAX_BODY")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MaxBodySize != 2097152 {
-		t.Fatalf("expected 2097152 default, got %d", cfg.MaxBodySize)
+	if cfg.MaxMessageSize != 4194304 {
+		t.Fatalf("expected 4194304 default, got %d", cfg.MaxMessageSize)
 	}
 }
 
-func TestLoadMaxBodySizeCustom(t *testing.T) {
+func TestLoadMaxMessageSizeCustom(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":  "test-key",
-		"MCP_HTTP_MAX_BODY": "4194304",
+		"CLOCKIFY_API_KEY":     "test-key",
+		"MCP_MAX_MESSAGE_SIZE": "8388608",
 	})
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MaxBodySize != 4194304 {
-		t.Fatalf("expected 4194304, got %d", cfg.MaxBodySize)
+	if cfg.MaxMessageSize != 8388608 {
+		t.Fatalf("expected 8388608, got %d", cfg.MaxMessageSize)
 	}
 }
 
-func TestLoadMaxBodySizeInvalidReturnsError(t *testing.T) {
+func TestLoadMaxMessageSizeLegacyFallback(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":  "test-key",
-		"MCP_HTTP_MAX_BODY": "not-a-number",
+		"MCP_HTTP_MAX_BODY": "2097152",
 	})
-	_, err := Load()
-	if err == nil {
-		t.Fatal("expected error for invalid MCP_HTTP_MAX_BODY")
+	os.Unsetenv("MCP_MAX_MESSAGE_SIZE")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxMessageSize != 2097152 {
+		t.Fatalf("expected 2097152, got %d", cfg.MaxMessageSize)
 	}
 }
 
-func TestLoadMaxBodySizeZeroReturnsError(t *testing.T) {
+func TestLoadMaxMessageSizeInvalidReturnsError(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":  "test-key",
-		"MCP_HTTP_MAX_BODY": "0",
+		"CLOCKIFY_API_KEY":     "test-key",
+		"MCP_MAX_MESSAGE_SIZE": "not-a-number",
 	})
 	_, err := Load()
 	if err == nil {
-		t.Fatal("expected error for zero MCP_HTTP_MAX_BODY")
+		t.Fatal("expected error for invalid MCP_MAX_MESSAGE_SIZE")
 	}
 }
 
-func TestLoadMaxBodySizeTooLargeReturnsError(t *testing.T) {
+func TestLoadMaxMessageSizeZeroReturnsError(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":  "test-key",
-		"MCP_HTTP_MAX_BODY": "99999999999",
+		"CLOCKIFY_API_KEY":     "test-key",
+		"MCP_MAX_MESSAGE_SIZE": "0",
 	})
 	_, err := Load()
 	if err == nil {
-		t.Fatal("expected error for MCP_HTTP_MAX_BODY exceeding 50MB")
+		t.Fatal("expected error for zero MCP_MAX_MESSAGE_SIZE")
+	}
+}
+
+func TestLoadMaxMessageSizeTooLargeReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"MCP_MAX_MESSAGE_SIZE": "99999999999",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for MCP_MAX_MESSAGE_SIZE exceeding 100MB")
 	}
 }
 
@@ -698,8 +714,8 @@ func TestAuditDurabilityDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AuditDurabilityMode != "fail_closed" {
-		t.Fatalf("expected default fail_closed, got %q", cfg.AuditDurabilityMode)
+	if cfg.AuditDurabilityMode != "best_effort" {
+		t.Fatalf("expected default best_effort, got %q", cfg.AuditDurabilityMode)
 	}
 }
 

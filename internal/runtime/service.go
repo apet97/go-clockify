@@ -102,6 +102,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = deps.cfg.ToolTimeout
 	server.MaxInFlightToolCalls = deps.cfg.MaxInFlightToolCalls
+	server.MaxMessageSize = deps.cfg.MaxMessageSize
 	server.StrictHostCheck = deps.cfg.StrictHostCheck
 	server.Auditor = deps.auditor
 	server.AuditDurabilityMode = deps.cfg.AuditDurabilityMode

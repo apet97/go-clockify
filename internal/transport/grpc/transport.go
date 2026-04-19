@@ -58,7 +58,11 @@ func Serve(ctx context.Context, opts Options) error {
 		return errors.New("grpctransport: Server is required")
 	}
 	if opts.MaxRecvSize <= 0 {
-		opts.MaxRecvSize = 2 * 1024 * 1024
+		if opts.Server != nil && opts.Server.MaxMessageSize > 0 {
+			opts.MaxRecvSize = int(opts.Server.MaxMessageSize)
+		} else {
+			opts.MaxRecvSize = 4194304
+		}
 	}
 
 	handler := &exchangeServer{srv: opts.Server}

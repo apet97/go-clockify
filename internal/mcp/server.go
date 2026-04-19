@@ -131,6 +131,7 @@ type Server struct {
 	// Acquired before the goroutine is created so bursty input cannot
 	// amplify goroutine count. 0 = unlimited.
 	MaxInFlightToolCalls int
+	MaxMessageSize       int64
 
 	// StrictHostCheck enables DNS rebinding protection on the HTTP
 	// transport: the inbound Host header must match either a loopback
@@ -318,7 +319,11 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 
 	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 1024*1024)
+	maxMsg := int(s.MaxMessageSize)
+	if maxMsg <= 0 {
+		maxMsg = 4194304
+	}
+	scanner.Buffer(buf, maxMsg)
 	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)
 	s.encoderMu.Unlock()

@@ -218,7 +218,7 @@ Environment Variables:
     CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
 
   Transport:
-    MCP_TRANSPORT                        stdio (default), http, streamable_http, or grpc
+    MCP_TRANSPORT                        stdio (default), streamable_http, grpc, or http (legacy POST-only, deprecated)
     MCP_GRPC_BIND                        gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
     MCP_AUTH_MODE                        static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
     MCP_HTTP_BIND                        HTTP listen address (default: :8080)

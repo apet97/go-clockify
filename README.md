@@ -137,7 +137,7 @@ The essentials:
 | `CLOCKIFY_DEDUPE_MODE` | `warn` | Duplicate detection: `warn`, `block`, `off` |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per 60s window (`0` disables) |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | `full_tier1`, `minimal`, `custom` |
-| `MCP_TRANSPORT` | `stdio` | `stdio`, `http`, `streamable_http`, or `grpc` |
+| `MCP_TRANSPORT` | `stdio` | `stdio`, `streamable_http`, `grpc`, or `http` (legacy POST-only, deprecated) |
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_BEARER_TOKEN` | — | Required for HTTP `static_bearer` mode |
 | `MCP_AUTH_MODE` | — | `static_bearer`, `oidc`, `forward_auth`, `mtls` (mTLS rejected with `MCP_TRANSPORT=http`; terminate TLS upstream and use `forward_auth`) |
