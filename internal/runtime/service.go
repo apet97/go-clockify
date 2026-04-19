@@ -1,8 +1,7 @@
-package main
+package runtime
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os"
 	"strings"
@@ -23,6 +22,12 @@ import (
 	"github.com/apet97/go-clockify/internal/vault"
 )
 
+// runtimeDeps bundles config-derived state shared by every transport:
+// rate limit, dedupe/dry-run/truncation knobs, policy + bootstrap, and
+// the auditor hook that streamable_http attaches its control-plane
+// audit sink to. The `version` field carries the build-time ldflag
+// value so tenantRuntime can set a per-client User-Agent without
+// reaching back into package main.
 type runtimeDeps struct {
 	cfg       config.Config
 	dd        dedupe.Config
@@ -32,6 +37,7 @@ type runtimeDeps struct {
 	policy    *policy.Policy
 	bootstrap bootstrap.Config
 	auditor   mcp.Auditor
+	version   string
 }
 
 type controlPlaneAuditor struct {
@@ -60,13 +66,6 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 		ResourceIDs: event.ResourceIDs,
 		Metadata:    event.Metadata,
 	})
-}
-
-type grpcConfig struct {
-	reauthInterval       time.Duration
-	forwardTenantHeader  string
-	forwardSubjectHeader string
-	tlsConfig            *tls.Config
 }
 
 func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int) *tools.Service {
@@ -220,7 +219,7 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 		workspaceID = tenant.WorkspaceID
 	}
 	client := clockify.NewClient(material.APIKey, baseURL, deps.cfg.RequestTimeout, deps.cfg.MaxRetries)
-	client.SetUserAgent("clockify-mcp-go/" + version)
+	client.SetUserAgent("clockify-mcp-go/" + deps.version)
 
 	pol := deps.policy.Clone()
 	if tenant.PolicyMode != "" {
@@ -247,7 +246,7 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	bc := deps.bootstrap.Clone()
 	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries)
 	service.DeltaFormat = deps.cfg.DeltaFormat
-	server := buildServer(version, deps, service, pol, bc)
+	server := buildServer(deps.version, deps, service, pol, bc)
 	return &mcp.StreamableSessionRuntime{
 		Server:          server,
 		Close:           client.Close,

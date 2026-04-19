@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,19 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apet97/go-clockify/internal/authn"
-	"github.com/apet97/go-clockify/internal/bootstrap"
-	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
-	"github.com/apet97/go-clockify/internal/dedupe"
-	"github.com/apet97/go-clockify/internal/dryrun"
 	logslog "github.com/apet97/go-clockify/internal/logging"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/metrics"
-	"github.com/apet97/go-clockify/internal/policy"
-	"github.com/apet97/go-clockify/internal/ratelimit"
 	svcruntime "github.com/apet97/go-clockify/internal/runtime"
-	"github.com/apet97/go-clockify/internal/truncate"
 )
 
 // version, commit, and buildDate are populated at build time via ldflags:
@@ -91,38 +81,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
-	pol, err := policy.FromEnv()
+	rt, err := svcruntime.New(cfg, svcruntime.NewOpts{
+		Version:       version,
+		ExtraHandlers: pprofExtras(),
+	})
 	if err != nil {
 		return err
 	}
 
-	rl := ratelimit.FromEnvWithAcquireTimeout(cfg.ConcurrencyAcquireTimeout)
-	tc := truncate.ConfigFromEnv()
-	dc := dryrun.ConfigFromEnv()
-
-	bc, err := bootstrap.ConfigFromEnv()
-	if err != nil {
-		return err
-	}
-
-	dd, err := dedupe.ConfigFromEnv()
-	if err != nil {
-		return err
-	}
-	deps := runtimeDeps{
-		cfg:       cfg,
-		dd:        dd,
-		dc:        dc,
-		tc:        tc,
-		rl:        rl,
-		policy:    pol,
-		bootstrap: bc,
-	}
-
-	// Wire observability gauges. ReadyState uses the server's cached
-	// readiness snapshot so /metrics scrapes do not trigger upstream
-	// Clockify probes; scrapers that need a fresh probe should hit /ready.
+	// BuildInfo is a process-level gauge wired once here. ReadyState /
+	// InFlightToolCalls are rewired per-transport inside Runtime.Run
+	// once the server is built.
 	metrics.BuildInfo.SetFunc(
 		func() float64 { return 1 },
 		version, commit, buildDate, runtime.Version(),
@@ -130,14 +99,13 @@ func run() error {
 
 	slog.Info("server_start",
 		"version", version,
-		"policy", string(pol.Mode),
-		"bootstrap", bc.Mode.String(),
+		"policy", string(rt.Policy().Mode),
+		"bootstrap", rt.Bootstrap().Mode.String(),
 		"transport", cfg.Transport,
 		"workspace", cfg.WorkspaceID,
 		"config", cfg.Fingerprint(),
 	)
 
-	// Set up signal handling for graceful shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -146,7 +114,7 @@ func run() error {
 	// idle TTL swept every 5m. Override via CLOCKIFY_SUBJECT_IDLE_TTL
 	// and CLOCKIFY_SUBJECT_SWEEP_INTERVAL. Nil receiver (limiter
 	// disabled) is a no-op.
-	rl.StartSubjectReaper(ctx, subjectSweepInterval(), subjectIdleTTL())
+	rt.RateLimit().StartSubjectReaper(ctx, subjectSweepInterval(), subjectIdleTTL())
 
 	// Install the OTel exporter when built with -tags=otel and
 	// OTEL_EXPORTER_OTLP_ENDPOINT is set. Default build is a no-op. See ADR 009.
@@ -165,252 +133,7 @@ func run() error {
 		}()
 	}
 
-	if cfg.Transport == "streamable_http" {
-		// C1/B5 both live inside runtime.BuildStore now: it enforces
-		// the fail-closed dev-backend guard and honours
-		// MCP_CONTROL_PLANE_AUDIT_CAP for the file store. See ADR 0011.
-		store, err := svcruntime.BuildStore(cfg)
-		if err != nil {
-			return err
-		}
-		if err := bootstrapDefaultTenant(store, cfg); err != nil {
-			return err
-		}
-		// B2: audit retention reaper. Drives store.RetainAudit on a
-		// fixed interval so the control-plane audit log does not grow
-		// unbounded under long-running streamable_http deployments.
-		// Runs only when retention is configured (>0); zero turns the
-		// feature off without affecting the reaper loop goroutine.
-		if cfg.ControlPlaneAuditRetention > 0 {
-			go svcruntime.RetainAuditLoop(ctx, store, cfg.ControlPlaneAuditRetention, time.Hour)
-		}
-		authnCfg := authn.Config{
-			Mode:                 authn.Mode(cfg.AuthMode),
-			BearerToken:          cfg.BearerToken,
-			DefaultTenantID:      cfg.DefaultTenantID,
-			TenantClaim:          cfg.TenantClaim,
-			SubjectClaim:         cfg.SubjectClaim,
-			OIDCIssuer:           cfg.OIDCIssuer,
-			OIDCAudience:         cfg.OIDCAudience,
-			OIDCJWKSURL:          cfg.OIDCJWKSURL,
-			OIDCJWKSPath:         cfg.OIDCJWKSPath,
-			OIDCResourceURI:      cfg.OIDCResourceURI,
-			OIDCVerifyCacheTTL:   cfg.OIDCVerifyCacheTTL,
-			ForwardTenantHeader:  cfg.ForwardTenantHeader,
-			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
-			MTLSTenantHeader:     cfg.MTLSTenantHeader,
-		}
-		authenticator, err := authn.New(authnCfg)
-		if err != nil {
-			return err
-		}
-		protectedResource := authn.ProtectedResourceHandler(authnCfg)
-		deps.auditor = controlPlaneAuditor{store: store}
-		var readyChecker func(context.Context) error
-		if cfg.APIKey != "" {
-			client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
-			defer client.Close()
-			readyChecker = func(ctx context.Context) error {
-				var user struct{ ID string }
-				return client.Get(ctx, "/user", nil, &user)
-			}
-		}
-		return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
-			Version:           version,
-			Bind:              cfg.HTTPBind,
-			MaxBodySize:       cfg.MaxBodySize,
-			AllowedOrigins:    cfg.AllowedOrigins,
-			AllowAnyOrigin:    cfg.AllowAnyOrigin,
-			StrictHostCheck:   cfg.StrictHostCheck,
-			SessionTTL:        cfg.SessionTTL,
-			ReadyChecker:      readyChecker,
-			Authenticator:     authenticator,
-			ControlPlane:      store,
-			ProtectedResource: protectedResource,
-			ExtraHandlers:     pprofExtras(),
-			Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
-				return tenantRuntime(ctx, principal.TenantID, deps, store)
-			},
-		})
-	}
-
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
-	defer client.Close()
-	client.SetUserAgent("clockify-mcp-go/" + version)
-	service := newService(client, cfg.WorkspaceID, cfg.Timezone, dd, pol, cfg.ReportMaxEntries)
-	service.DeltaFormat = cfg.DeltaFormat
-	server := buildServer(version, deps, service, pol, &bc)
-	metrics.ReadyState.SetFunc(func() float64 {
-		if server.IsReadyCached() {
-			return 1
-		}
-		return 0
-	})
-	metrics.InFlightToolCalls.SetFunc(func() float64 {
-		return float64(server.InFlightToolCalls())
-	})
-
-	if cfg.Transport == "http" {
-		// Legacy HTTP transport guardrails.
-		switch cfg.HTTPLegacyPolicy {
-		case "deny":
-			return fmt.Errorf(
-				"legacy HTTP transport is denied by MCP_HTTP_LEGACY_POLICY=deny; " +
-					"use MCP_TRANSPORT=streamable_http for spec-strict shared-service deployments, " +
-					"or set MCP_HTTP_LEGACY_POLICY=allow to permit legacy HTTP explicitly",
-			)
-		case "allow":
-			// Intentional; operator has acknowledged the tradeoffs. No warnings.
-		default: // "warn"
-			slog.Warn("legacy_http_transport",
-				"transport", "http",
-				"msg", "MCP_TRANSPORT=http is the legacy HTTP transport. "+
-					"Server-initiated notifications (tools/list_changed) are dropped. "+
-					"Use MCP_TRANSPORT=streamable_http for spec-strict shared-service deployments.",
-				"recommendation", "streamable_http",
-				"mitigation", "set MCP_HTTP_LEGACY_POLICY=allow to suppress this warning if legacy HTTP is intentional",
-			)
-		}
-		if cfg.AllowAnyOrigin {
-			slog.Warn("risky_config",
-				"transport", "http",
-				"risk", "cors_any_origin",
-				"msg", "MCP_ALLOW_ANY_ORIGIN=1 — all cross-origin requests accepted. Not recommended for production.",
-			)
-		}
-		if cfg.HTTPInlineMetricsEnabled && cfg.HTTPInlineMetricsAuthMode == "none" {
-			slog.Warn("risky_config",
-				"transport", "http",
-				"risk", "inline_metrics_no_auth",
-				"msg", "MCP_HTTP_INLINE_METRICS_AUTH_MODE=none — /metrics on the main HTTP listener is unauthenticated. "+
-					"Consider inherit_main_bearer or static_bearer, or use the dedicated MCP_METRICS_BIND listener instead.",
-			)
-		}
-		// Wire upstream health check: lightweight GET /api/v1/user
-		server.ReadyChecker = func(ctx context.Context) error {
-			var user struct{ ID string }
-			return client.Get(ctx, "/user", nil, &user)
-		}
-		// Opt-in debug handlers (e.g. /debug/pprof/* under -tags=pprof).
-		// Default build returns nil so ServeHTTP sees an empty slice.
-		server.ExtraHTTPHandlers = pprofExtras()
-		// Build the authenticator from cfg so legacy HTTP honours the full
-		// auth matrix (static_bearer, oidc, forward_auth, mtls) instead of
-		// bearer-only. Empty AuthMode defaults to static_bearer inside
-		// authn.New, matching prior behaviour.
-		legacyAuthnCfg := authn.Config{
-			Mode:                 authn.Mode(cfg.AuthMode),
-			BearerToken:          cfg.BearerToken,
-			DefaultTenantID:      cfg.DefaultTenantID,
-			TenantClaim:          cfg.TenantClaim,
-			SubjectClaim:         cfg.SubjectClaim,
-			OIDCIssuer:           cfg.OIDCIssuer,
-			OIDCAudience:         cfg.OIDCAudience,
-			OIDCJWKSURL:          cfg.OIDCJWKSURL,
-			OIDCJWKSPath:         cfg.OIDCJWKSPath,
-			OIDCResourceURI:      cfg.OIDCResourceURI,
-			OIDCVerifyCacheTTL:   cfg.OIDCVerifyCacheTTL,
-			ForwardTenantHeader:  cfg.ForwardTenantHeader,
-			ForwardSubjectHeader: cfg.ForwardSubjectHeader,
-			MTLSTenantHeader:     cfg.MTLSTenantHeader,
-		}
-		legacyAuth, err := authn.New(legacyAuthnCfg)
-		if err != nil {
-			return fmt.Errorf("build legacy HTTP authenticator: %w", err)
-		}
-		return server.ServeHTTP(ctx, cfg.HTTPBind, legacyAuth, cfg.BearerToken, cfg.AllowedOrigins, cfg.AllowAnyOrigin, cfg.MaxBodySize,
-			mcp.InlineMetricsOptions{
-				Enabled:     cfg.HTTPInlineMetricsEnabled,
-				AuthMode:    cfg.HTTPInlineMetricsAuthMode,
-				BearerToken: cfg.HTTPInlineMetricsBearerToken,
-				// MainBearerToken is wired inside ServeHTTP from bearerToken.
-			},
-		)
-	}
-	if cfg.Transport == "grpc" {
-		// gRPC transport is built only with -tags=grpc. The default build
-		// stub returns a clear error explaining the build-tag requirement.
-		// See ADR 012.
-		//
-		// Wire upstream readiness: a lightweight GET /user call warms the
-		// cached readiness flag consumed by the native gRPC health protocol
-		// (grpc.health.v1.Health/Check). A background goroutine refreshes
-		// the cache every 15s so kubelet probes see fresh state.
-		go func() {
-			ticker := time.NewTicker(15 * time.Second)
-			defer ticker.Stop()
-			check := func() {
-				checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-				defer cancel()
-				var user struct{ ID string }
-				server.SetReadyCached(client.Get(checkCtx, "/user", nil, &user) == nil)
-			}
-			check()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					check()
-				}
-			}
-		}()
-		// When MCP_AUTH_MODE is set, build the shared authn.Authenticator
-		// (same construction path as the streamable_http branch above) and
-		// let the gRPC transport install its auth stream interceptor. The
-		// config layer already rejects forward_auth/mtls for grpc, so only
-		// static_bearer and oidc reach here.
-		var grpcAuthenticator authn.Authenticator
-		if cfg.AuthMode != "" {
-			authnCfg := authn.Config{
-				Mode:                 authn.Mode(cfg.AuthMode),
-				BearerToken:          cfg.BearerToken,
-				DefaultTenantID:      cfg.DefaultTenantID,
-				TenantClaim:          cfg.TenantClaim,
-				SubjectClaim:         cfg.SubjectClaim,
-				OIDCIssuer:           cfg.OIDCIssuer,
-				OIDCAudience:         cfg.OIDCAudience,
-				OIDCJWKSURL:          cfg.OIDCJWKSURL,
-				OIDCJWKSPath:         cfg.OIDCJWKSPath,
-				OIDCResourceURI:      cfg.OIDCResourceURI,
-				ForwardTenantHeader:  cfg.ForwardTenantHeader,
-				ForwardSubjectHeader: cfg.ForwardSubjectHeader,
-				MTLSTenantHeader:     cfg.MTLSTenantHeader,
-			}
-			var err error
-			grpcAuthenticator, err = authn.New(authnCfg)
-			if err != nil {
-				return err
-			}
-		}
-		var grpcTLS *tls.Config
-		if cfg.GRPCTLSCert != "" {
-			cert, err := tls.LoadX509KeyPair(cfg.GRPCTLSCert, cfg.GRPCTLSKey)
-			if err != nil {
-				return fmt.Errorf("load gRPC TLS cert/key: %w", err)
-			}
-			grpcTLS = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}
-			if cfg.MTLSCACertPath != "" {
-				caCert, err := os.ReadFile(cfg.MTLSCACertPath)
-				if err != nil {
-					return fmt.Errorf("read mTLS CA cert: %w", err)
-				}
-				pool := x509.NewCertPool()
-				if !pool.AppendCertsFromPEM(caCert) {
-					return fmt.Errorf("mTLS CA cert: no valid PEM certificates found")
-				}
-				grpcTLS.ClientCAs = pool
-				grpcTLS.ClientAuth = tls.RequireAndVerifyClientCert
-			}
-		}
-		return serveGRPC(ctx, cfg.GRPCBind, server, grpcAuthenticator, grpcConfig{
-			reauthInterval:       cfg.GRPCReauthInterval,
-			forwardTenantHeader:  cfg.ForwardTenantHeader,
-			forwardSubjectHeader: cfg.ForwardSubjectHeader,
-			tlsConfig:            grpcTLS,
-		})
-	}
-	return server.Run(ctx, os.Stdin, os.Stdout)
+	return rt.Run(ctx)
 }
 
 func parseLogLevel(s string) slog.Level {
