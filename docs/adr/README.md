@@ -21,10 +21,11 @@ from `git log` and inline code comments.
 | 0008 | gRPC auth via stream interceptor | [0008-grpc-auth-interceptor.md](0008-grpc-auth-interceptor.md) |
 | 0009 | Resource delta-sync subscriptions | [0009-resource-delta-sync.md](0009-resource-delta-sync.md) |
 | 0010 | Metrics stack direction (proposed) | [0010-metrics-stack-direction.md](0010-metrics-stack-direction.md) |
+| 0011 | Control-plane schema versioning | [0011-controlplane-schema-versioning.md](0011-controlplane-schema-versioning.md) |
 
-ADRs 0001–0009 are **Accepted**. 0010 is **Proposed** — it captures
-the design surface around whether to keep the homegrown metrics
-facade or move to OpenTelemetry metrics; no code change yet.
+ADRs 0001–0009 and 0011 are **Accepted**. 0010 is **Proposed** — it
+captures the design surface around whether to keep the homegrown
+metrics facade or move to OpenTelemetry metrics; no code change yet.
 
 New ADRs should follow the MADR 3.0 template (status / context /
 decision / consequences / alternatives / references) used by the
