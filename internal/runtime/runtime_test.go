@@ -1,4 +1,4 @@
-package main
+package runtime
 
 import "testing"
 
@@ -21,8 +21,8 @@ func TestIsDevControlPlaneDSN(t *testing.T) {
 		{"mysql://db", false},
 	}
 	for _, tc := range cases {
-		if got := isDevControlPlaneDSN(tc.dsn); got != tc.dev {
-			t.Errorf("isDevControlPlaneDSN(%q) = %v, want %v", tc.dsn, got, tc.dev)
+		if got := IsDevControlPlaneDSN(tc.dsn); got != tc.dev {
+			t.Errorf("IsDevControlPlaneDSN(%q) = %v, want %v", tc.dsn, got, tc.dev)
 		}
 	}
 }

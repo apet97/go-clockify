@@ -1,4 +1,4 @@
-package main
+package runtime
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 )
 
 // fakeRetainStore satisfies controlplane.Store just enough for the
-// reaper: every other method returns a zero value or nil so the test
-// does not depend on the control-plane state shape. RetainAudit is
-// scripted per call.
+// reaper tests: every other method returns a zero value / nil so the
+// tests do not depend on the full control-plane state shape.
+// RetainAudit is scripted per call.
 type fakeRetainStore struct {
-	calls    []time.Duration
-	deleted  int
-	err      error
+	calls      []time.Duration
+	deleted    int
+	err        error
 	lastMaxAge time.Duration
 }
 
@@ -66,7 +66,7 @@ func TestRetainAuditLoop_ExitsOnCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
-		retainAuditLoop(ctx, fake, 1*time.Hour, 50*time.Millisecond)
+		RetainAuditLoop(ctx, fake, 1*time.Hour, 50*time.Millisecond)
 		close(done)
 	}()
 	// The loop runs one immediate pass then waits on the ticker.
@@ -87,7 +87,7 @@ func TestRetainAuditLoop_ExitsOnCancel(t *testing.T) {
 // goroutine loop entirely so the retention knob can be disabled.
 func TestRetainAuditLoop_NoopWhenMaxAgeZero(t *testing.T) {
 	fake := &fakeRetainStore{}
-	retainAuditLoop(context.Background(), fake, 0, time.Millisecond)
+	RetainAuditLoop(context.Background(), fake, 0, time.Millisecond)
 	if len(fake.calls) != 0 {
 		t.Fatalf("expected zero calls when maxAge=0, got %d", len(fake.calls))
 	}

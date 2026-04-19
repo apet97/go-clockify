@@ -1,4 +1,4 @@
-package main
+package runtime
 
 import (
 	"context"
@@ -9,22 +9,17 @@ import (
 	"github.com/apet97/go-clockify/internal/metrics"
 )
 
-// retainAuditLoop is the background reaper for the control-plane
+// RetainAuditLoop is the background reaper for the control-plane
 // audit log. It wakes on a fixed interval, asks the store to drop
 // events older than maxAge, and updates
-// clockify_mcp_audit_events_retained_total. Mirrors the session reaper
-// pattern in internal/mcp/transport_streamable_http.go:515-526 — one
-// ticker, one ctx.Done() branch, one synchronous step per tick.
+// clockify_mcp_audit_events_retained_total. Mirrors the session
+// reaper pattern in internal/mcp/transport_streamable_http.go:515-526
+// — one ticker, one ctx.Done() branch, one synchronous step per tick.
 //
-// Exits silently when ctx is cancelled. Returning from main.run()
-// waits on no one, so the reaper goroutine is orphaned at shutdown by
-// design; its last in-flight RetainAudit is bounded by the store's
-// own per-op timeout and never holds open external resources.
-//
-// Folds into internal/runtime/retain.go when C2.2 extracts the
-// runtime; keeping it next to main.go for now so the B2 commit is
-// legible in isolation.
-func retainAuditLoop(ctx context.Context, store controlplane.Store, maxAge, interval time.Duration) {
+// Exits silently when ctx is cancelled. The last in-flight
+// RetainAudit is bounded by the store's own per-op timeout and never
+// holds open external resources.
+func RetainAuditLoop(ctx context.Context, store controlplane.Store, maxAge, interval time.Duration) {
 	if maxAge <= 0 || interval <= 0 {
 		return
 	}
