@@ -75,11 +75,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both the file store and the Postgres store.
   `clockify_mcp_audit_events_retained_total{outcome="deleted|error"}`
   exposes the per-tick outcome.
-- **`internal/runtime` scaffold (C2).** Dev-backend predicate,
+- **`internal/runtime` scaffold (C2.1).** Dev-backend predicate,
   control-plane store construction (C1 fail-closed guard included),
   and the retention reaper moved out of `cmd/clockify-mcp` so the
-  boot-time plumbing is unit-testable and reusable. The transport
-  dispatch itself stays in `main.go` for this pass.
+  boot-time plumbing is unit-testable and reusable.
+- **Transport dispatch extraction (C2.2).** The streamable_http,
+  legacy http, grpc, and stdio arms now live in
+  `internal/runtime/{streamable,legacy_http,grpc,grpc_stub,stdio}.go`
+  behind `Runtime.Run(ctx)`. `cmd/clockify-mcp/main.go` is a
+  ~120-line boot shim (logging, signals, OTel, metrics listener,
+  BuildInfo gauge) that delegates the rest. gRPC stays behind
+  `//go:build grpc` with a stub for the default binary so the
+  ADR 0012 stdlib-only guarantee holds. `auth.go:buildAuthnConfig`
+  deduplicates the three previously drifting `authn.Config`
+  constructions (grpc had omitted `MTLSTenantHeader` and
+  `OIDCVerifyCacheTTL`).
 
 ### Added (infrastructure)
 
@@ -121,15 +131,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MCP_CONTROL_PLANE_AUDIT_CAP`, and
   `MCP_CONTROL_PLANE_AUDIT_RETENTION` are documented in the
   README env-var table.
-
-### Known remaining (follow-up session)
-
-- **C2.2 — full transport dispatch extraction.** The
-  streamable_http / legacy_http / grpc / stdio branches still live
-  in `cmd/clockify-mcp/main.go`; the scaffolding landed under
-  `internal/runtime` (C2.1) but the transport switch has not yet
-  moved. Follow-up commit will extract them behind
-  `runtime.Run(ctx)` with the same semantics.
 
 ## [1.0.0] - 2026-04-12
 
