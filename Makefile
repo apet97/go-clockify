@@ -3,7 +3,8 @@
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         secret-scan config-parity bench verify-bench \
         build-postgres test-postgres \
-        gen-tool-catalog catalog-drift doc-parity config-doc-parity
+        gen-tool-catalog catalog-drift doc-parity config-doc-parity \
+        repo-hygiene
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -35,7 +36,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity catalog-drift doc-parity config-doc-parity
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity catalog-drift doc-parity config-doc-parity repo-hygiene
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -51,6 +52,12 @@ doc-parity:
 # -mode=all && git add README.md cmd/clockify-mcp/help_generated.go
 config-doc-parity:
 	bash scripts/check-config-doc-parity.sh
+
+# repo-hygiene fails on tracked OS / editor / coverage junk. See
+# scripts/check-repo-hygiene.sh for the exact pattern list; .gitignore
+# keeps future stages clean.
+repo-hygiene:
+	bash scripts/check-repo-hygiene.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool

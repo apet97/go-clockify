@@ -11,7 +11,16 @@ staging/
 .idea/
 .vscode/
 *.swp
+*.swo
 *~
+
+# OS clutter. The repo-hygiene CI gate (scripts/check-repo-hygiene.sh)
+# fails on any of these slipping through; keep the ignore list in sync.
+.DS_Store
+Thumbs.db
+desktop.ini
+*.orig
+*.prof
 
 # Local-only assistant / IDE state — never committed
 .claude/

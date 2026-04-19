@@ -153,6 +153,18 @@ jobs:
         # cannot merge. Input is the static script path, not event data.
         run: bash scripts/check-config-doc-parity.sh
 
+  repo-hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check for tracked OS / editor / coverage junk
+        # Fails if any .DS_Store, swap file, coverage.out, or *.prof
+        # slips into HEAD. Keeps the repo tree clean by automation
+        # rather than discipline alone. Input is the static script
+        # path, not event data.
+        run: bash scripts/check-repo-hygiene.sh
+
   deploy-render:
     name: Deploy render (k8s + helm)
     runs-on: ubuntu-latest

@@ -116,6 +116,8 @@ func RenderREADMETable(specs []config.EnvSpec) string {
 		fmt.Fprintf(&buf, "| `%s` | `%s` | %s |\n", s.Name, def, help)
 	}
 	buf.WriteString(readmeEndMarker)
-	buf.WriteString("\n")
+	// No trailing newline: the README copy already ends with a newline
+	// separating the table from the paragraph that follows; adding our
+	// own would accumulate a blank line on every regeneration.
 	return buf.String()
 }
