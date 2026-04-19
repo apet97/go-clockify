@@ -3,7 +3,7 @@
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         secret-scan config-parity bench verify-bench \
         build-postgres test-postgres \
-        gen-tool-catalog catalog-drift
+        gen-tool-catalog catalog-drift doc-parity
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -35,7 +35,15 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity catalog-drift
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity catalog-drift doc-parity
+
+# doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
+# in docs/ exists in the source, every tool name surfaces in the
+# generated catalog, and no TODO/FIXME/TBD markers are left in
+# operator-facing docs. See scripts/check-doc-parity.sh for the
+# exact heuristics.
+doc-parity:
+	bash scripts/check-doc-parity.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool

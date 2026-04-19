@@ -42,7 +42,7 @@ The blessed production profile for shared services is documented in [Production 
 |-----------------|------------------------------------------------------------------------------------------|--------------------------------------------------------|
 | `static_bearer` | A small, fixed set of clients. ≥16-char shared secret distributed out of band.           | The `MCP_BEARER_TOKEN` env var (compared with `crypto/subtle`). |
 | `oidc`          | Clients can present a JWT signed by an OIDC provider you trust (Auth0, Okta, Keycloak).  | `MCP_OIDC_ISSUER`'s JWKS endpoint and configured audience. Cached verify TTL caps at `MCP_OIDC_VERIFY_CACHE_TTL` (default 60s, clamped to `[1s, 5m]`). Larger values amortise verify cost; revocation then takes up to that TTL to propagate. |
-| `forward_auth`  | An upstream reverse proxy (Caddy, Envoy, Traefik) already authenticates and forwards the result via a header. | `MCP_FORWARD_AUTH_HEADER` set by a trusted proxy.    |
+| `forward_auth`  | An upstream reverse proxy (Caddy, Envoy, Traefik) already authenticates and forwards the result via a header. | `MCP_FORWARD_SUBJECT_HEADER` and `MCP_FORWARD_TENANT_HEADER` set by a trusted proxy. |
 | `mtls`          | Both ends present X.509 certs against a private CA. Highest assurance, highest setup cost. | The TLS client cert presented to the listener.        |
 
 Set with `MCP_AUTH_MODE=…`. Auth-failure triage lives in

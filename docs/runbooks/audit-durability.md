@@ -71,7 +71,7 @@ kubectl -n clockify-mcp exec deploy/clockify-mcp -- \
 
 # Control-plane backend health (file store)
 kubectl -n clockify-mcp exec deploy/clockify-mcp -- \
-  df -h "$MCP_CONTROL_PLANE_FILE_PATH"
+  df -h "${MCP_CONTROL_PLANE_DSN#file://}"
 ```
 
 ## 4. Immediate mitigation
@@ -94,7 +94,7 @@ kubectl -n clockify-mcp rollout restart deploy/clockify-mcp
 ```sh
 # Check the backing volume
 kubectl -n clockify-mcp exec deploy/clockify-mcp -- \
-  df -h "$MCP_CONTROL_PLANE_FILE_PATH"
+  df -h "${MCP_CONTROL_PLANE_DSN#file://}"
 
 # If full, expand the PV or lower MCP_CONTROL_PLANE_AUDIT_CAP to
 # force FIFO eviction at a lower threshold.

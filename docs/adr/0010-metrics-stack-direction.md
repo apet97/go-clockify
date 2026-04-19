@@ -71,7 +71,7 @@ Explicit non-decisions:
   operator-facing comment documenting label cardinality up front.
 - Dashboards and alert rules in `deploy/` stay Prometheus-native;
   operators who want OTLP today export from Prometheus.
-- When the OTel adapter lands (ADR TBD), the decision table above
+- When the OTel adapter lands via a follow-up ADR, the decision table above
   gets a new row — "OTel adapter live since vX.Y" — and the
   facade's `Registry.WriteTo` grows a second consumer. No behaviour
   change for operators who stay on the Prometheus scrape.

@@ -55,7 +55,7 @@ Design elements:
     than the snapshot).
   - `deleted` — resource was removed.
   - RFC 6902 JSON Patch is also available as an alternative format
-    (W5-04d, opt-in via `MCP_DELTA_FORMAT=jsonpatch`).
+    (W5-04d, opt-in via `CLOCKIFY_DELTA_FORMAT=jsonpatch`).
 - **Spec compatibility.** The extension is additive: clients that
   only read `uri` keep working. No MCP protocol version bump is
   required. The wire-format extension is documented in the
@@ -111,7 +111,7 @@ Design elements:
   Exposing internal subscription state is fine because the gate
   is intended to be observable.
 - The default delta format is `merge` (RFC 7396). Operators who
-  prefer RFC 6902 JSON Patch can set `MCP_DELTA_FORMAT=jsonpatch`,
+  prefer RFC 6902 JSON Patch can set `CLOCKIFY_DELTA_FORMAT=jsonpatch`,
   but the wire format is otherwise identical so clients negotiate
   per-notification rather than per-session.
 

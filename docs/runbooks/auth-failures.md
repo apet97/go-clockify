@@ -134,7 +134,8 @@ with the rejection reason in the structured log.
 - [ ] **Forward-auth header drift.** `MCP_AUTH_MODE=forward_auth`
   trusts a header set by an upstream proxy. If the proxy was
   reconfigured to send a different header, every request fails
-  closed. Check the proxy config and `MCP_FORWARD_AUTH_HEADER`.
+  closed. Check the proxy config and both
+  `MCP_FORWARD_SUBJECT_HEADER` + `MCP_FORWARD_TENANT_HEADER`.
 - [ ] **CORS mistakenly diagnosed as auth.** A browser client that
   is blocked by CORS can present as "401" in the client UI even
   though the server returned 403 + CORS-rejection. Check
