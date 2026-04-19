@@ -50,9 +50,15 @@ func (s *Server) emitAudit(tool, action, outcome, reason string, args map[string
 	})
 	if err != nil {
 		metrics.AuditFailuresTotal.Inc("persist_error")
+		// audit_outcome is the canonical field operators filter on:
+		//   "not_durable" → mutation happened, audit write failed (best_effort)
+		//                  or returned to caller (fail_closed). See
+		//                  docs/runbooks/audit-durability.md for recovery.
 		slog.Error("audit_persist_failed",
 			"tool", tool,
 			"outcome", outcome,
+			"audit_outcome", "not_durable",
+			"durability_mode", s.AuditDurabilityMode,
 			"error", err.Error(),
 		)
 	}
