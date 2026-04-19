@@ -4,7 +4,7 @@
         secret-scan config-parity bench verify-bench \
         build-postgres test-postgres \
         gen-tool-catalog catalog-drift doc-parity config-doc-parity \
-        repo-hygiene
+        repo-hygiene release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -136,6 +136,34 @@ config-parity:
 
 clean:
 	rm -f clockify-mcp coverage.out
+
+# release-check composes every pre-ship gate into one laptop-runnable
+# target. Humans run this before tagging; CI runs equivalent steps
+# across the jobs in ci.yml + release.yml. A single green
+# "release-check: OK — shippable" line is the one-word answer to
+# "is this repo shippable right now?".
+#
+# Skips optional tiers (vuln/k8s/fips) when their tools are absent —
+# verify-* tiers print a skip notice and return 0 — so the gate
+# still runs on a minimal toolchain.
+release-check:
+	@echo "== release-check: formatting, vet, lint =="
+	$(MAKE) fmt vet lint
+	@echo "== release-check: tests + coverage floors =="
+	$(MAKE) cover-check
+	@echo "== release-check: config + doc parity =="
+	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift
+	@echo "== release-check: hygiene + build-tag wiring =="
+	$(MAKE) repo-hygiene build-tags http-smoke stdio-smoke
+	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
+	go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
+	@echo "== release-check: deploy render =="
+	@if command -v kubectl >/dev/null 2>&1 && command -v kubeconform >/dev/null 2>&1 && command -v helm >/dev/null 2>&1; then \
+		bash scripts/check-k8s-render.sh; \
+	else \
+		echo "[release-check] kubectl/kubeconform/helm missing — skipping k8s render (CI runs the full check)."; \
+	fi
+	@echo "release-check: OK — shippable"
 
 # Benchmark capture + regression gate.
 #
