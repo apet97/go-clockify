@@ -115,6 +115,24 @@ var scenarios = map[string]scenario{
 		perTokMaxConcurrent: 4,
 		perTokMaxPerWindow:  40,
 	},
+	"ratelimit-reap-correctness": {
+		description: "2 tenants; noisy tenant[0] saturates its per-token budget, " +
+			"idles past one rate-limit window, then resumes. After the reap, " +
+			"the noisy tenant must regain full budget; the cold tenant must " +
+			"be unaffected throughout. Uses reapTwoPhase below.",
+		tenants:             2,
+		callsPerQuiet:       20,
+		pacingQuiet:         2 * time.Millisecond,
+		noisyIdx:            0,
+		noisyFactor:         5,
+		pacingNoisy:         1 * time.Millisecond,
+		globalMaxConcurrent: 50,
+		globalMaxPerWindow:  1000,
+		// Short window so the reap completes in seconds, not minutes.
+		windowMillis:        1_500,
+		perTokMaxConcurrent: 8,
+		perTokMaxPerWindow:  20,
+	},
 }
 
 type tenantResult struct {
@@ -159,6 +177,11 @@ func main() {
 	)
 	rl.SetPerTokenLimits(sc.perTokMaxConcurrent, sc.perTokMaxPerWindow)
 
+	if *scenarioName == "ratelimit-reap-correctness" {
+		runReapTwoPhase(*scenarioName, rl, &sc)
+		return
+	}
+
 	results := make([]*tenantResult, sc.tenants)
 	var wg sync.WaitGroup
 	start := time.Now()
@@ -173,6 +196,63 @@ func main() {
 
 	printResults(*scenarioName, elapsed, results)
 	checkAcceptance(*scenarioName, results)
+}
+
+// runReapTwoPhase runs the scenario in two phases separated by an
+// idle window so the per-token budget reaper can expire the noisy
+// tenant's window. Phase 1: noisy tenant saturates; cold tenant runs
+// unaffected. Idle: everyone sleeps for >1 window. Phase 2: noisy
+// tenant runs again and must observe substantially fewer per-token
+// rejections (budget reaped) while the cold tenant remains unaffected.
+func runReapTwoPhase(name string, rl *ratelimit.RateLimiter, sc *scenario) {
+	phase := func(label string) []*tenantResult {
+		res := make([]*tenantResult, sc.tenants)
+		var wg sync.WaitGroup
+		for i := 0; i < sc.tenants; i++ {
+			res[i] = &tenantResult{subject: fmt.Sprintf("tenant-%d", i)}
+			wg.Add(1)
+			go runTenant(&wg, rl, sc, i, res[i])
+		}
+		wg.Wait()
+		fmt.Printf("--- %s ---\n", label)
+		printResults(name+":"+label, 0, res)
+		return res
+	}
+
+	p1 := phase("phase1")
+	// Sleep past one full window so the rate-limit window slides
+	// forward and the noisy tenant's exhausted budget re-opens.
+	idle := time.Duration(sc.windowMillis)*time.Millisecond + 250*time.Millisecond
+	fmt.Printf("idling %s for reap window ...\n\n", idle)
+	time.Sleep(idle)
+	p2 := phase("phase2")
+
+	var p1Noisy, p2Noisy int64
+	var p1Cold, p2Cold int64
+	for _, r := range p1 {
+		if r.subject == "tenant-0" {
+			p1Noisy = r.rejectedPerToken
+		} else {
+			p1Cold += r.rejectedPerToken
+		}
+	}
+	for _, r := range p2 {
+		if r.subject == "tenant-0" {
+			p2Noisy = r.rejectedPerToken
+		} else {
+			p2Cold += r.rejectedPerToken
+		}
+	}
+	fmt.Println("=== acceptance check (ratelimit-reap-correctness) ===")
+	fmt.Printf("phase1 noisy per-token rejections: %d\n", p1Noisy)
+	fmt.Printf("phase2 noisy per-token rejections: %d (should be <= phase1)\n", p2Noisy)
+	fmt.Printf("phase1+phase2 cold per-token rejections: %d / %d (should stay near 0)\n", p1Cold, p2Cold)
+	if p1Noisy > 0 && p2Noisy <= p1Noisy && p1Cold == 0 && p2Cold == 0 {
+		fmt.Println("PASS — noisy tenant's budget reaped after idle window; cold tenant unaffected")
+		return
+	}
+	fmt.Println("FAIL — reap/isolation not observed")
+	log.Fatal("ratelimit-reap-correctness acceptance check failed")
 }
 
 func runTenant(wg *sync.WaitGroup, rl *ratelimit.RateLimiter, sc *scenario, idx int, out *tenantResult) {

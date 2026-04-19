@@ -34,6 +34,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -51,11 +52,12 @@ type scenarioResult struct {
 type scenarioFunc func() scenarioResult
 
 var scenarios = map[string]scenarioFunc{
-	"429-storm":          run429Storm,
-	"503-burst":          run503Burst,
-	"mid-body-reset":     runMidBodyReset,
-	"tls-handshake-fail": runTLSHandshakeFail,
-	"dns-fail":           runDNSFail,
+	"429-storm":            run429Storm,
+	"503-burst":            run503Burst,
+	"mid-body-reset":       runMidBodyReset,
+	"tls-handshake-fail":   runTLSHandshakeFail,
+	"dns-fail":             runDNSFail,
+	"upstream-429-concurrent": runUpstream429Concurrent,
 }
 
 func main() {
@@ -290,6 +292,75 @@ func runDNSFail() scenarioResult {
 	}
 	res.pass = true
 	res.notes = fmt.Sprintf("error surfaced in %s: %v", elapsed, err)
+	return res
+}
+
+// runUpstream429Concurrent fires N concurrent GETs against a server
+// whose first M attempts return 429 + Retry-After: 1 and everything
+// after that returns 200. Each caller must honour the Retry-After and
+// eventually succeed. The total wall-clock must stay bounded by a
+// small multiple of Retry-After — if it scales linearly with the
+// caller count then retries are serialising and the client is
+// holding a shared lock across the backoff, which would make
+// concurrent 429 handling effectively sequential in production.
+func runUpstream429Concurrent() scenarioResult {
+	const (
+		callers       = 10
+		initialStorms = 12 // roughly 1.2× callers so each caller hits ≥1 storm
+	)
+	var totalAttempts atomic.Int64
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := totalAttempts.Add(1)
+		if n <= initialStorms {
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"code":429,"message":"rate limited"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"ok"}`))
+	}))
+	defer ts.Close()
+
+	start := time.Now()
+	var wg sync.WaitGroup
+	errs := make([]error, callers)
+	for i := range callers {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			c := clockify.NewClient("api-key", ts.URL, 10*time.Second, 3)
+			defer c.Close()
+			var out struct{ ID string }
+			if err := c.Get(context.Background(), "/user", nil, &out); err != nil {
+				errs[idx] = err
+			}
+		}(i)
+	}
+	wg.Wait()
+	elapsed := time.Since(start)
+
+	res := scenarioResult{
+		name:        "upstream-429-concurrent",
+		description: fmt.Sprintf("%d concurrent callers racing through a Retry-After:1 storm", callers),
+		elapsed:     elapsed,
+	}
+	for i, err := range errs {
+		if err != nil {
+			res.notes = fmt.Sprintf("caller %d failed: %v", i, err)
+			return res
+		}
+	}
+	// Wall-clock ceiling: if every retry were serialised we'd expect
+	// ~callers × Retry-After. Parallel backoffs should complete in
+	// a single Retry-After ± jitter. 5s is a conservative ceiling
+	// that still catches a pathological serial implementation.
+	if elapsed > 5*time.Second {
+		res.notes = fmt.Sprintf("wall-clock %s exceeds bound; retries may be serialising across callers", elapsed)
+		return res
+	}
+	res.pass = true
+	res.notes = fmt.Sprintf("%d callers succeeded in %s; %d total upstream attempts", callers, elapsed, totalAttempts.Load())
 	return res
 }
 
