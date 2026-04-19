@@ -16,6 +16,47 @@ The following matrix shows supported authentication modes for each transport.
 *   **`mtls` for `http`:** Not supported directly. Terminate TLS upstream and use `forward_auth` to pass user context.
 *   **`grpc`:** Requires building with `-tags=grpc`.
 
+## Production-readiness classification
+
+"✅" above means a combination is functionally supported. This
+table classifies combinations by production suitability — a
+combination can be supported in principle but still be the wrong
+choice for a given shape of deployment.
+
+| Deployment shape | Transport | Auth | Control-plane | Classification |
+|------------------|-----------|------|---------------|----------------|
+| Single user, laptop subprocess | `stdio` | n/a | `memory` | ✅ Recommended |
+| Small team, shared HTTP endpoint | `streamable_http` | `static_bearer` | `file://` | ✅ Recommended |
+| Small team, shared HTTP endpoint | `http` (legacy) | `static_bearer` | `file://` | ⚠️ Tolerated (no server-initiated notifications) |
+| Multi-tenant shared service | `streamable_http` | `oidc` | `postgres://` | ✅ Recommended |
+| Multi-tenant shared service | `streamable_http` | `forward_auth` | `postgres://` | ⚠️ Tolerated (proxy owns identity; double-check header stripping) |
+| Multi-tenant shared service | `http` (legacy) | any | any | ❌ Unsupported (no per-session notifications) |
+| Multi-tenant shared service | any | `static_bearer` | any | ❌ Unsupported (no per-user identity) |
+| Private mesh, low-latency RPC | `grpc` | `oidc` or `mtls` | `postgres://` | ✅ Recommended |
+| Any | any | any | `memory` (ENVIRONMENT=prod) | ❌ Fails closed at startup |
+
+Legend:
+
+- **✅ Recommended** — The documented deployment profile uses
+  this combination; CI smoke tests cover it; runbooks reference
+  it by name. Pick one of these unless you have a specific
+  reason to deviate.
+- **⚠️ Tolerated** — Functionally works; release tests cover
+  it; but the combination has a known sharp edge (missing
+  notifications, external trust boundary, etc.). Safe to run if
+  you understand the tradeoff.
+- **❌ Unsupported** — Either blocked at startup (e.g. `memory`
+  backend with `ENVIRONMENT=prod`) or actively discouraged
+  because the security/operational posture cannot be made
+  production-grade without a different combination.
+
+Every "Recommended" row has a corresponding file under
+`docs/deploy/`:
+
+- `docs/deploy/profile-local-stdio.md`
+- `docs/deploy/profile-single-tenant-http.md`
+- `docs/deploy/production-profile-shared-service.md`
+
 ## Supported MCP Clients
 
 `clockify-mcp-go` is tested against the following MCP-compliant clients.
