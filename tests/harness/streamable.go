@@ -62,6 +62,7 @@ func NewStreamable(ctx context.Context, opts Options) (Transport, error) {
 
 	h := &streamableHarness{
 		opts:    opts,
+		srv:     srv,
 		bearer:  bearer,
 		ln:      ln,
 		addr:    addr,
@@ -97,6 +98,7 @@ func NewStreamable(ctx context.Context, opts Options) (Transport, error) {
 
 type streamableHarness struct {
 	opts      Options
+	srv       *mcp.Server
 	bearer    string
 	ln        net.Listener
 	addr      string
@@ -119,6 +121,8 @@ type streamableHarness struct {
 }
 
 func (h *streamableHarness) Name() string { return "streamable_http" }
+
+func (h *streamableHarness) SharedServer() (*mcp.Server, bool) { return h.srv, true }
 
 func (h *streamableHarness) nextID() int { return int(atomic.AddInt64(&h.idSeq, 1)) }
 

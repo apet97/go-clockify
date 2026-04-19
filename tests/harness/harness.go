@@ -51,6 +51,15 @@ type Options struct {
 	Tools []mcp.ToolDescriptor
 }
 
+// ServerSharer is an optional interface implemented by transports whose
+// underlying mcp.Server is reachable from the test body — used for
+// firing server-initiated notifications in parity tests. stdio and
+// streamable HTTP implement it directly; legacy HTTP and gRPC return
+// (nil, false) so tests can skip.
+type ServerSharer interface {
+	SharedServer() (*mcp.Server, bool)
+}
+
 // Transport is the contract every transport adapter satisfies. Callers
 // issue Initialize → ListTools → CallTool and optionally Cancel; tests
 // that need to assert server-initiated notifications read from

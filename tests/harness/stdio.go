@@ -8,6 +8,8 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // NewStdio constructs a TransportHarness wrapping an mcp.Server.Run loop
@@ -24,6 +26,7 @@ func NewStdio(ctx context.Context, opts Options) (Transport, error) {
 
 	h := &stdioHarness{
 		opts:    opts,
+		srv:     srv,
 		clientW: clientW,
 		clientR: clientR,
 		serverR: serverR,
@@ -43,6 +46,7 @@ func NewStdio(ctx context.Context, opts Options) (Transport, error) {
 
 type stdioHarness struct {
 	opts      Options
+	srv       *mcp.Server
 	clientW   io.WriteCloser
 	clientR   io.ReadCloser
 	serverR   io.ReadCloser
@@ -60,6 +64,8 @@ type stdioHarness struct {
 }
 
 func (h *stdioHarness) Name() string { return "stdio" }
+
+func (h *stdioHarness) SharedServer() (*mcp.Server, bool) { return h.srv, true }
 
 func (h *stdioHarness) nextID() int { return int(atomic.AddInt64(&h.idSeq, 1)) }
 
