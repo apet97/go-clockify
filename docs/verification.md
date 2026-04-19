@@ -176,7 +176,7 @@ the open issue is the exclusive failure signal.
   and the threat model they protect against.
 - [`docs/release-policy.md`](release-policy.md) — versioning, support
   window, and the contract operators rely on.
-- [`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md)
+- [`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md)
   — deploy-time digest pinning policy for the prod overlay.
 - [`docs/release/deploy-readiness-checklist.md`](release/deploy-readiness-checklist.md)
   — mandatory manual checklist for production-ready deployments.

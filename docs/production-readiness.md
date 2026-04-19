@@ -59,7 +59,7 @@ Set with `MCP_AUTH_MODE=…`. Auth-failure triage lives in
 
 Image tags are not pinned in the `prod` Kustomize overlay by design —
 the pin happens at deploy time. See
-[`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md)
+[`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md)
 for the deploy-time pinning workflow (Kustomize edit, Argo CD, Flux).
 
 ## Pick a control-plane backend
@@ -110,7 +110,7 @@ an Argo CD / Flux parameter change against an already-deployed
 overlay — no in-tree YAML edit is required.
 
 The deploy-time pinning policy and the Argo CD / Flux examples live
-in [`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md).
+in [`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md).
 
 ## Operational runbooks
 
@@ -120,7 +120,7 @@ Triage flows for operational classes:
 - [`clockify-upstream-outage.md`](runbooks/clockify-upstream-outage.md) — upstream outage drill and response.
 - [`postgres-restore-drill.md`](runbooks/postgres-restore-drill.md) — database restore procedures.
 - [`auth-failures.md`](runbooks/auth-failures.md) — auth triage.
-- [`w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md) — image pinning policy.
+- [`image-digest-pinning.md`](runbooks/image-digest-pinning.md) — image pinning policy.
 
 ## Testing and Verification
 - [Soak Testing and Profiling](testing/soak-and-profile.md)

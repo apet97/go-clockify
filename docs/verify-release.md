@@ -166,5 +166,5 @@ If any step non-zeroes, the rollout does not proceed.
   minors.
 - `deploy/k8s/README.md` — how to pin a digest into the Helm
   chart / Kustomize overlay.
-- `docs/runbooks/w2-12-digest-pinning.md` — incident runbook
+- `docs/runbooks/image-digest-pinning.md` — incident runbook
   for when a tag moves unexpectedly.

@@ -1,16 +1,32 @@
 # clockify-mcp-go
 
-A [Model Context Protocol][mcp] server for [Clockify][clockify], written in Go. Connect any MCP client — Claude Code, Claude Desktop, Cursor, Codex, or anything else that speaks MCP — to your Clockify workspace and let it log time, run reports, and manage projects on your behalf.
+> A production-grade [Model Context Protocol][mcp] server for [Clockify][clockify] — plug any MCP client into your time-tracking workspace and let it log time, run reports, and manage projects on your behalf.
 
-- **124 tools** — 33 always-on (timer, entries, projects, reports, …) + 91 on-demand (invoices, scheduling, approvals, admin, …)
-- **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface
-- **Four policy modes** — `read_only`, `safe_core`, `standard`, `full` — plus a dry-run preview for every destructive tool
-- **Streamable HTTP + stdio + opt-in gRPC** — stdio by default, streamable HTTP 2025-03-26 for shared services, gRPC behind a build tag
-- **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI)
-- **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance
+[![Go Reference](https://pkg.go.dev/badge/github.com/apet97/go-clockify.svg)](https://pkg.go.dev/github.com/apet97/go-clockify)
+[![Go version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](go.mod)
+[![Release](https://img.shields.io/github/v/release/apet97/go-clockify?color=7e57c2)](https://github.com/apet97/go-clockify/releases)
+[![MCP protocol](https://img.shields.io/badge/MCP-2025--06--18-4b0082)](https://modelcontextprotocol.io/specification)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anything else that speaks MCP.
+
+## Highlights
+
+- **124 tools** — 33 always-on (timer, entries, projects, reports, …) plus 91 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
+- **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
+- **Four policy modes** — `read_only`, `safe_core`, `standard`, `full` — plus a dry-run preview for every destructive tool.
+- **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
+- **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
+- **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance.
 
 [mcp]: https://modelcontextprotocol.io/docs/getting-started/intro
 [clockify]: https://clockify.me
+
+## Contents
+
+- [Install](#install) · [Connect a client](#connect-to-an-mcp-client) · [Tool tiers](#tool-tiers) · [Policy modes](#policy-modes) · [Configuration](#configuration)
+- [Common workflows](#common-workflows) · [Architecture](#architecture) · [Docker](#docker) · [Build and test](#build-and-test)
+- [Compatibility](#compatibility) · [Troubleshooting](#troubleshooting) · [Deployment](#deployment) · [Contributing](#contributing)
 
 ## Install
 

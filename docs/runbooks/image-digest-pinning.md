@@ -1,4 +1,4 @@
-# W2-12 — Image digest pinning at deploy time
+# Image digest pinning at deploy time
 
 ## Why this runbook exists
 

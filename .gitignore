@@ -27,3 +27,8 @@ desktop.ini
 .serena/
 .remember/
 .planning/
+# Per-workstation assistant context files. Contributors may keep
+# their own CLAUDE.md / AGENTS.md at the repo root; they're not
+# part of the shipped project.
+CLAUDE.md
+AGENTS.md

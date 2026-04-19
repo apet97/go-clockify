@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Async gRPC Exchange dispatch.** `internal/transport/grpc/transport.go`
+  now dispatches each inbound frame in its own goroutine and funnels
+  all outbound frames through a single send-pump goroutine. A
+  `notifications/cancelled` queued behind an in-flight `tools/call`
+  now reaches the dispatcher immediately rather than waiting for the
+  blocking handler to return. gRPC rows are re-enabled in the
+  cancellation and `tools/list_changed` parity suites, giving those
+  contracts full-transport coverage.
+- **SSE `Last-Event-ID` resume parity test.** `tests/sse_resume_test.go`
+  drives the streamable HTTP server through a drop-and-reconnect
+  cycle, proving that `sessionEventHub`'s ring buffer replays the
+  exact gap a client missed while disconnected.
+- **Raw-send harness primitive + malformed-JSON parity.**
+  `Transport.SendRaw` is now part of the `tests/harness` contract
+  on stdio, legacy HTTP, streamable HTTP, and gRPC.
+  `TestSizeLimit_MalformedJSONParity` sends a deliberately invalid
+  frame and asserts every transport surfaces JSON-RPC parse error
+  `-32700`. Closes the third boundary the size-limit suite had
+  deferred alongside at-limit and over-limit.
+
 - **Structured tool responses (A1).** Every successful `tools/call`
   now emits `structuredContent` alongside the existing text content
   block, validating against the tool's advertised `outputSchema`.
@@ -122,6 +142,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 
+- **Runbook rename.** `docs/runbooks/w2-12-digest-pinning.md` is now
+  `docs/runbooks/image-digest-pinning.md`. Content unchanged; the
+  internal wave label is dropped from the filename and title so the
+  runbook reads as a durable operator doc rather than a ticket
+  reference. The three callers in `docs/production-readiness.md`,
+  `docs/verification.md`, and `docs/verify-release.md` follow.
 - Auth × transport matrix in `docs/production-readiness.md` and
   `README.md` now matches the code. mTLS-on-legacy-http is
   documented as rejected; OIDC TTL + dev-backend knobs are
