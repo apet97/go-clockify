@@ -318,11 +318,20 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	}
 
 	scanner := bufio.NewScanner(r)
-	buf := make([]byte, 0, 64*1024)
 	maxMsg := int(s.MaxMessageSize)
 	if maxMsg <= 0 {
 		maxMsg = 4194304
 	}
+	// Size the initial buffer to 64 KiB or maxMsg, whichever is smaller.
+	// Passing a larger initial buffer than maxMsg silently defeats the
+	// limit because bufio.Scanner only consults max when it needs to grow
+	// beyond the initial buffer. Before this, a 64 KiB initial capacity
+	// plus maxMsg = 4 KiB meant the scanner happily consumed 64 KiB lines.
+	initial := 64 * 1024
+	if maxMsg < initial {
+		initial = maxMsg
+	}
+	buf := make([]byte, 0, initial)
 	scanner.Buffer(buf, maxMsg)
 	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)

@@ -38,11 +38,23 @@ func NewStdio(ctx context.Context, opts Options) (Transport, error) {
 	h.runCtx, h.runCancel = context.WithCancel(ctx)
 	go func() {
 		_ = srv.Run(h.runCtx, serverR, serverW)
+		// When Run exits (ctx cancelled, or scanner failed on an
+		// oversize frame), close both pipe halves so the client side
+		// unblocks: the readLoop sees EOF and drains pending channels
+		// with a transport-down error, and any pending Write on
+		// clientW fails with io.ErrClosedPipe instead of hanging.
+		_ = serverW.Close()
+		_ = serverR.CloseWithError(errTransportDown)
 		close(h.done)
 	}()
 	go h.readLoop()
 	return h, nil
 }
+
+// errTransportDown is the sentinel error returned by the server-side
+// pipe reader after Run exits, so writes on the client side unblock
+// with a distinguishable error rather than a generic io.ErrClosedPipe.
+var errTransportDown = fmt.Errorf("stdio transport shut down (possibly oversize frame)")
 
 type stdioHarness struct {
 	opts      Options
@@ -105,6 +117,21 @@ func (h *stdioHarness) readLoop() {
 			close(ch)
 		}
 	}
+	// Scanner exited — server closed or errored (e.g. on oversize frame).
+	// Flush every pending channel with a synthetic transport-down error so
+	// callers see "something went wrong" rather than hanging until ctx.
+	h.mu.Lock()
+	for id, ch := range h.pending {
+		delete(h.pending, id)
+		err := scanner.Err()
+		msg := "stdio transport closed"
+		if err != nil {
+			msg = "stdio transport error: " + err.Error()
+		}
+		ch <- Response{ID: id, Error: &RPCError{Code: -32603, Message: msg}}
+		close(ch)
+	}
+	h.mu.Unlock()
 }
 
 func (h *stdioHarness) send(method string, params any) (int, <-chan Response, error) {
@@ -121,12 +148,24 @@ func (h *stdioHarness) send(method string, params any) (int, <-chan Response, er
 	}
 	h.pending[id] = ch
 	h.mu.Unlock()
-	if _, err := h.clientW.Write(b); err != nil {
-		h.mu.Lock()
-		delete(h.pending, id)
-		h.mu.Unlock()
-		return 0, nil, err
-	}
+	// Run the write in a goroutine so an unbounded-blocking Pipe write
+	// (e.g. when the server goroutine has already exited on an oversize
+	// frame error) surfaces as a transport error in the response channel
+	// after the run context expires, instead of deadlocking the caller.
+	go func() {
+		if _, werr := h.clientW.Write(b); werr != nil {
+			h.mu.Lock()
+			ch2, ok := h.pending[id]
+			if ok {
+				delete(h.pending, id)
+			}
+			h.mu.Unlock()
+			if ok {
+				ch2 <- Response{ID: id, Error: &RPCError{Code: -32603, Message: "stdio write failed: " + werr.Error()}}
+				close(ch2)
+			}
+		}
+	}()
 	return id, ch, nil
 }
 
