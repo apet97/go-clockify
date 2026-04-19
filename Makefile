@@ -2,7 +2,8 @@
         verify verify-core verify-vuln verify-k8s verify-fips \
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         secret-scan config-parity bench verify-bench \
-        build-postgres test-postgres
+        build-postgres test-postgres \
+        gen-tool-catalog catalog-drift
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -34,7 +35,21 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke config-parity catalog-drift
+
+# gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
+# live registry. Run after adding, removing, or changing any tool
+# descriptor (including InputSchema edits) — the catalog-drift gate
+# refuses to merge an unrefreshed catalog.
+gen-tool-catalog:
+	go run ./scripts/gen-tool-catalog -out docs
+
+# catalog-drift re-runs gen-tool-catalog and fails if the working
+# tree diverges from what's committed. Wired into verify-core so a
+# PR that forgets to regenerate is caught before merge.
+catalog-drift: gen-tool-catalog
+	@git diff --exit-code -- docs/tool-catalog.json docs/tool-catalog.md \
+	 || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale — run \`make gen-tool-catalog\` and commit"; exit 1; }
 
 verify-vuln:
 	@if command -v govulncheck >/dev/null 2>&1; then \

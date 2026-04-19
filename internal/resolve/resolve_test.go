@@ -214,6 +214,59 @@ func TestImprovedErrorMultiple(t *testing.T) {
 	}
 }
 
+// TestResolveProjectID_RejectsPrefixMatch verifies the strict-name-search
+// contract: a user asking for "My" must not resolve to "MyProject" even
+// if the server returns a permissive search result. The local
+// exactMatches pass demands full equality; anything looser would be a
+// security regression (prefix-based privilege escalation).
+func TestResolveProjectID_RejectsPrefixMatch(t *testing.T) {
+	// Simulate a server that ignored strict-name-search and returned
+	// prefix matches anyway.
+	projects := []map[string]any{
+		{"id": "aaa111bbb222ccc333ddd444", "name": "MyProject"},
+		{"id": "bbb222ccc333ddd444eee555", "name": "MyProjectTwo"},
+	}
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(projects)
+	})
+	defer cleanup()
+
+	_, err := ResolveProjectID(context.Background(), client, "ws123", "My")
+	if err == nil {
+		t.Fatal("expected prefix 'My' not to resolve to MyProject* via loose match")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error (strict contract), got: %v", err)
+	}
+}
+
+// TestResolveProjectID_CaseFoldingContract confirms the resolver's
+// documented case-insensitive exact-match behaviour: an input that
+// differs only in case must still resolve to the single matching
+// project. This is intentionally lenient (operators rarely care about
+// case) but is tied to the exactMatches contract via strings.EqualFold
+// — if someone replaces EqualFold with strings.Compare a regression
+// would silently break existing integrations.
+func TestResolveProjectID_CaseFoldingContract(t *testing.T) {
+	projects := []map[string]any{
+		{"id": "aaa111bbb222ccc333ddd444", "name": "MyProject"},
+	}
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(projects)
+	})
+	defer cleanup()
+
+	id, err := ResolveProjectID(context.Background(), client, "ws123", "myproject")
+	if err != nil {
+		t.Fatalf("expected case-folded match to resolve, got: %v", err)
+	}
+	if id != "aaa111bbb222ccc333ddd444" {
+		t.Fatalf("expected MyProject ID, got %s", id)
+	}
+}
+
 // FuzzValidateID feeds random strings into ValidateID and requires that it
 // never panics. Errors are expected for malicious input.
 func FuzzValidateID(f *testing.F) {
