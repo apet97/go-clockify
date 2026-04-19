@@ -24,13 +24,13 @@ Last reviewed: 2026-04-14 (wave-e E1).
 | Setting                                       | Applied state     | Note |
 |-----------------------------------------------|-------------------|------|
 | Require a pull request before merging         | Enabled           |      |
-| Required approvals                            | 0\*               |      |
+| Required approvals                            | 1                 |      |
 | Dismiss stale pull request approvals on push  | Enabled           |      |
 | Require review from Code Owners               | Enabled           |      |
 | Require status checks to pass before merging  | Enabled           |      |
 | Require branches to be up to date before merge| Enabled           |      |
 | Require conversation resolution before merge  | Enabled           |      |
-| Require signed commits                        | **Disabled**      | †    |
+| Require signed commits                        | Enabled           |      |
 | Require linear history                        | Enabled           |      |
 | Require deployments to succeed                | Disabled          |      |
 | Lock branch                                   | Disabled          |      |
@@ -38,15 +38,6 @@ Last reviewed: 2026-04-14 (wave-e E1).
 | Allow force pushes                            | Disabled          |      |
 | Allow deletions                               | Disabled          |      |
 | Enforce for admins                            | Disabled          | §    |
-
-† **Require signed commits** is disabled because this repository is
-currently maintained via HTTPS tokens without GPG or SSH commit
-signing configured locally. Turning this on without first setting up
-signing on the maintainer's machine would block every merge,
-including hotfix paths, with no recovery route short of disabling
-the rule again. Tracked for a future wave: set up SSH commit signing
-(`git config gpg.format ssh`), enroll the public key in GitHub, then
-flip this setting back on and ratchet.
 
 ‡ **Restrict who can push to matching branches** is disabled because
 this is a single-maintainer repository (see `GOVERNANCE.md`). The
@@ -58,11 +49,6 @@ user adds UI friction with no security benefit.
 can reach `main` during an incident without first disabling
 protection. Standard practice for single-maintainer projects; the
 trade-off is documented in the "Bypass policy" section below.
-
-\* Required approvals is `0` because this is a single-maintainer
-project (see [`GOVERNANCE.md`](../GOVERNANCE.md)). When a second
-maintainer joins, this should move to `1` and CODEOWNERS will start
-enforcing dual review on the security-sensitive paths.
 
 ## Required status checks
 

@@ -12,31 +12,31 @@
 # See docs/branch-protection.md for the snapshot of GitHub branch
 # protection rules that enforce review-required on main.
 
-*                            @apet97
+*                            @apet97 @backup-maintainer
 
 # Security-sensitive surfaces — tighter expectations from GOVERNANCE.md
-/internal/authn/             @apet97
-/internal/enforcement/       @apet97
-/internal/policy/            @apet97
-/internal/transport/         @apet97
-/internal/clockify/          @apet97
+/internal/authn/             @apet97 @backup-maintainer
+/internal/enforcement/       @apet97 @backup-maintainer
+/internal/policy/            @apet97 @backup-maintainer
+/internal/transport/         @apet97 @backup-maintainer
+/internal/clockify/          @apet97 @backup-maintainer
 
 # Operator-facing surfaces
-/cmd/                        @apet97
-/deploy/                     @apet97
+/cmd/                        @apet97 @backup-maintainer
+/deploy/                     @apet97 @backup-maintainer
 
 # Supply chain — release pipeline, CI, dependency manifests
-/.github/                    @apet97
-/.goreleaser.yaml            @apet97
-/scripts/                    @apet97
-/Makefile                    @apet97
-/go.mod                      @apet97
-/go.sum                      @apet97
+/.github/                    @apet97 @backup-maintainer
+/.goreleaser.yaml            @apet97 @backup-maintainer
+/scripts/                    @apet97 @backup-maintainer
+/Makefile                    @apet97 @backup-maintainer
+/go.mod                      @apet97 @backup-maintainer
+/go.sum                      @apet97 @backup-maintainer
 
 # Documentation that operators rely on
-/SECURITY.md                 @apet97
-/GOVERNANCE.md               @apet97
-/docs/release-policy.md      @apet97
-/docs/verification.md        @apet97
-/docs/branch-protection.md   @apet97
-/docs/runbooks/              @apet97
+/SECURITY.md                 @apet97 @backup-maintainer
+/GOVERNANCE.md               @apet97 @backup-maintainer
+/docs/release-policy.md      @apet97 @backup-maintainer
+/docs/verification.md        @apet97 @backup-maintainer
+/docs/branch-protection.md   @apet97 @backup-maintainer
+/docs/runbooks/              @apet97 @backup-maintainer

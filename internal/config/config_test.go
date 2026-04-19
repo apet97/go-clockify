@@ -35,6 +35,7 @@ func TestValidateBaseURL(t *testing.T) {
 // setEnvs is a test helper that sets multiple env vars and returns a cleanup function.
 func setEnvs(t *testing.T, envs map[string]string) {
 	t.Helper()
+	t.Setenv("MCP_METRICS_AUTH_MODE", "none")
 	for k, v := range envs {
 		t.Setenv(k, v)
 	}
@@ -697,8 +698,8 @@ func TestAuditDurabilityDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AuditDurabilityMode != "best_effort" {
-		t.Fatalf("expected default best_effort, got %q", cfg.AuditDurabilityMode)
+	if cfg.AuditDurabilityMode != "fail_closed" {
+		t.Fatalf("expected default fail_closed, got %q", cfg.AuditDurabilityMode)
 	}
 }
 

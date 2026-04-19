@@ -93,8 +93,8 @@ type Config struct {
 
 	// AuditDurabilityMode controls behavior when audit persistence fails for
 	// a successful non-read-only tool call.
-	// "best_effort" (default): log + metric; the call still reports success.
-	// "fail_closed": the call returns an error so the client knows the audit
+	// "best_effort": log + metric; the call still reports success.
+	// "fail_closed" (default): the call returns an error so the client knows the audit
 	// trail is incomplete. The mutation already happened; this prevents
 	// silent untracked mutations.
 	AuditDurabilityMode string
@@ -232,9 +232,12 @@ func Load() (Config, error) {
 		}
 	}
 	cfg.MetricsBind = strings.TrimSpace(os.Getenv("MCP_METRICS_BIND"))
+	if cfg.MetricsBind == "" {
+		cfg.MetricsBind = ":9091"
+	}
 	cfg.MetricsAuthMode = strings.TrimSpace(os.Getenv("MCP_METRICS_AUTH_MODE"))
 	if cfg.MetricsAuthMode == "" {
-		cfg.MetricsAuthMode = "none"
+		cfg.MetricsAuthMode = "static_bearer"
 	}
 	switch cfg.MetricsAuthMode {
 	case "none", "static_bearer":
@@ -433,7 +436,7 @@ func Load() (Config, error) {
 	// Audit durability mode
 	cfg.AuditDurabilityMode = strings.TrimSpace(os.Getenv("MCP_AUDIT_DURABILITY"))
 	if cfg.AuditDurabilityMode == "" {
-		cfg.AuditDurabilityMode = "best_effort"
+		cfg.AuditDurabilityMode = "fail_closed"
 	}
 	switch cfg.AuditDurabilityMode {
 	case "best_effort", "fail_closed":
@@ -478,6 +481,16 @@ func Load() (Config, error) {
 	case "allow", "warn", "deny":
 	default:
 		return Config{}, fmt.Errorf("invalid MCP_HTTP_LEGACY_POLICY %q: must be \"allow\", \"warn\", or \"deny\"", cfg.HTTPLegacyPolicy)
+	}
+
+	// Production-strict enforcement
+	if os.Getenv("ENVIRONMENT") == "prod" {
+		if !strings.HasPrefix(cfg.ControlPlaneDSN, "postgres://") {
+			return Config{}, fmt.Errorf("in production (ENVIRONMENT=prod), MCP_CONTROL_PLANE_DSN must be a postgres:// URI")
+		}
+		if os.Getenv("MCP_ALLOW_DEV_BACKEND") == "1" {
+			return Config{}, fmt.Errorf("in production (ENVIRONMENT=prod), MCP_ALLOW_DEV_BACKEND=1 is prohibited")
+		}
 	}
 
 	return cfg, nil

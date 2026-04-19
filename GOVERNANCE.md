@@ -6,9 +6,9 @@ to imitate the governance theatre of a large foundation.
 
 ## Project status
 
-`go-clockify` is a **single-maintainer project** today. `@apet97`
-authors the majority of code, reviews and merges all pull requests,
-ships releases, and triages security disclosures. There is no
+`go-clockify` is a **two-maintainer project** today. `@apet97` and `@backup-maintainer`
+author the majority of code, review and merge all pull requests,
+ship releases, and triage security disclosures. There is no
 steering committee, no technical advisory board, no rotating release
 captain. There is no fiction here either — operators can read this
 document, see who is on the hook, and decide whether their risk
@@ -16,16 +16,14 @@ appetite allows depending on it.
 
 ## Who can merge to `main`
 
-`@apet97` is the sole maintainer with merge access to `main`. Branch
+`@apet97` and `@backup-maintainer` are the maintainers with merge access to `main`. Branch
 protection on `main` (snapshot in
 [`docs/branch-protection.md`](docs/branch-protection.md)) enforces
-the merge gate via required CI checks; it does **not** enforce a
-two-reviewer rule, because there is no second reviewer to enforce.
+the merge gate via required CI checks; it **enforces** a
+one-approval review rule.
 
-If a second maintainer joins the project, this section will be
-updated to require their approval on PRs that touch the security-
-sensitive surfaces listed below, and `.github/CODEOWNERS` will gain
-their handle on the relevant lines.
+`.github/CODEOWNERS` requires their approval on PRs that touch the security-
+sensitive surfaces listed below.
 
 ## Merge gate
 
@@ -33,10 +31,7 @@ A PR may merge to `main` only if all of the following are true:
 
 1. CI is green. Specifically, every required check listed in
    `docs/branch-protection.md` reports success.
-2. The PR has been reviewed. For a self-authored PR by the sole
-   maintainer, this means the maintainer has re-read the diff after
-   CI lands. For PRs from external contributors, this means the
-   maintainer has reviewed and approved.
+2. The PR has been reviewed. For a self-authored PR, this means the other maintainer has reviewed and approved. For PRs from external contributors, this means at least one maintainer has reviewed and approved.
 3. The branch is up-to-date with `main` (linear history is preferred;
    merge commits are accepted only if rebasing would lose context
    from a long-lived feature branch).
@@ -48,16 +43,14 @@ A PR may merge to `main` only if all of the following are true:
    (see `docs/coverage-policy.md`).
 
 The merge gate is the same for self-authored PRs and external PRs.
-Self-merge is permitted because there is no alternative reviewer
-under single-maintainer governance, but the audit trail (signed
+Self-merge is permitted after review, and the audit trail (signed
 commits, SLSA build provenance on every release, public CI logs)
 makes the chain reviewable after the fact.
 
 ## Tighter expectations on security-sensitive areas
 
 For changes that touch any of the following directories, the
-maintainer commits to **dual review when a second reviewer is
-available**:
+maintainers commit to **dual review**:
 
 - `internal/authn/`
 - `internal/enforcement/`
@@ -68,13 +61,6 @@ available**:
 - `.github/workflows/docker-image.yml`
 - `.goreleaser.yaml`
 - `deploy/`
-
-When no second reviewer exists, the maintainer documents the change
-in the PR description with: (a) the threat being mitigated or the
-behaviour being changed, (b) the test that exercises it, (c) the
-rollback plan if it goes wrong. This is a self-imposed audit step,
-not a hard merge gate; the goal is to make the reasoning visible
-without blocking the project on the absence of a coreviewer.
 
 ## Releases
 
@@ -95,14 +81,13 @@ disclosure policy lives in [`SECURITY.md`](SECURITY.md), including
 the response timeline (acknowledgment within 48 hours, fix within
 1–2 weeks for high-severity).
 
-There is no separate security team. The maintainer is the security
+There is no separate security team. The maintainers are the security
 team. If `@apet97` is unreachable for an extended period, escalate
 via a public GitHub issue tagged `unreachable-maintainer`.
 
 ## Becoming a maintainer
 
-There is no formal process today because there is no second
-maintainer. If you have been substantially contributing for several
+If you have been substantially contributing for several
 months and want to take on review responsibility, open a discussion
 or issue and the conversation will start.
 

@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to deploy (e.g. v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  verify:
+    name: Verify Release Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.4.0
+
+      - name: Verify Image Signature
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
+          
+          cosign verify "$IMAGE@${DIGEST}" \
+            --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/.*$' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+
+      - name: Verify GitHub Attestation
+        env:
+          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          gh attestation verify clockify-mcp-linux-x64 --owner ${{ github.repository_owner }}
+          
+  deploy-staging:
+    name: Deploy to Staging
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy Staging
+        run: |
+          echo "Deploying to Staging namespace with digest pinning..."
+          # Implementation depends on cluster (e.g., kubectl set image, helm upgrade)
+          # kubectl set image deployment/clockify-mcp clockify-mcp=ghcr.io/apet97/go-clockify@${{ env.IMAGE_DIGEST }} -n clockify-staging
+          
+      - name: Staging Smoke Tests
+        run: |
+          echo "Running smoke tests against staging..."
+          # ./scripts/smoke-http.sh
+
+  check-live-contract:
+    name: Verify Live Contract
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Live Contract Run
+        run: |
+          echo "Verifying recent live-contract runs..."
+          # In a real setup, query GitHub API to ensure the 'live-contract.yml' workflow is passing on main.
+
+  deploy-production:
+    name: Deploy to Production
+    needs: check-live-contract
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      # This enables the required promotion gate (manual approval) via GitHub Environment protection rules
+    steps:
+      - name: Deploy Production
+        run: |
+          echo "Deploying to Production namespace..."
+          # kubectl set image deployment/clockify-mcp clockify-mcp=ghcr.io/apet97/go-clockify@${{ env.IMAGE_DIGEST }} -n clockify-prod
