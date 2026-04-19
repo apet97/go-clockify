@@ -178,3 +178,7 @@ the open issue is the exclusive failure signal.
   window, and the contract operators rely on.
 - [`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md)
   — deploy-time digest pinning policy for the prod overlay.
+- [`docs/release/deploy-readiness-checklist.md`](release/deploy-readiness-checklist.md)
+  — mandatory manual checklist for production-ready deployments.
+- [`docs/support-matrix.md`](support-matrix.md)
+  — supported Go versions, OS/architectures, and upstream Clockify API compatibility.

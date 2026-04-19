@@ -2,28 +2,37 @@
 
 This document defines the single blessed production profile for deploying `clockify-mcp` as a shared service. It prioritizes reliability, security, and strict observability over flexibility.
 
-## Required Environment Variables
+## Canonical Configuration
 
 For a production deployment, the following environment variables MUST be configured exactly as shown:
 
 ```env
+# Transport: Spec-strict streamable HTTP (MCP 2025-03-26+)
 MCP_TRANSPORT=streamable_http
-MCP_CONTROL_PLANE_DSN=postgres://...
+
+# Control Plane: Postgres is mandatory for multi-process / HA
+MCP_CONTROL_PLANE_DSN=postgres://user:pass@db-host:5432/clockify_mcp?sslmode=verify-full
+
+# Auth: OIDC with JWT verification
 MCP_AUTH_MODE=oidc
+MCP_OIDC_ISSUER=https://auth.example.com/
+MCP_OIDC_AUDIENCE=clockify-mcp-shared
+
+# Observability: Dedicated metrics port
 MCP_METRICS_BIND=:9091
-MCP_METRICS_AUTH_MODE=static_bearer
 MCP_HTTP_INLINE_METRICS_ENABLED=false
+
+# Safety and Compliance
 MCP_AUDIT_DURABILITY=fail_closed
 CLOCKIFY_POLICY=safe_core
-MCP_STRICT_HOST_CHECK=1
 ```
 
 ## TLS Proxy Requirements
 
-`clockify-mcp` does **not** terminate TLS itself. It must be deployed behind a TLS-terminating reverse proxy.
-*   **Exposure:** The proxy should only expose the `/mcp` endpoints and the readiness/liveness health endpoints to the public internet (or internal network, depending on use case).
+`clockify-mcp` does **not** terminate TLS itself. It must be deployed behind a TLS-terminating reverse proxy (e.g., Caddy, Envoy, or NGINX).
+*   **Exposure:** The proxy should only expose the `/mcp` endpoints and the readiness/liveness health endpoints to the public internet.
 *   **Metrics:** The metrics port (`:9091`) must **never** be exposed publicly.
-*   **CORS/Origins:** Set explicit values for `MCP_ALLOWED_ORIGINS` at the proxy or application level. Do not use `MCP_ALLOW_ANY_ORIGIN=true`.
+*   **Headers:** Use `forward_auth` if the proxy handles OIDC and passes user context via headers.
 
 ## Database Constraints
 
@@ -36,7 +45,7 @@ MCP_STRICT_HOST_CHECK=1
 Deployments must use digest-pinned images. See the deployment verification runbook for details on `cosign` and `gh attestation` verification before rollout.
 
 ### Rollback
-If a rollout fails, revert to the previous working image digest. Do not attempt to fix issues by manually editing deployment YAML files in the cluster to use different mutable tags.
+If a rollout fails, revert to the previous working image digest. Do not attempt to fix issues by manually editing deployment YAML files in the cluster.
 
 ## Health and Readiness Endpoints
 

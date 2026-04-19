@@ -28,10 +28,13 @@ decisions that shape this threat model lives in [`docs/adr/`](adr/).
 | `streamable_http` | Multi-tenant HTTP service serving spec-strict MCP clients (2025-03-26). Per-installation tokens, session resumption. | `static_bearer`, `oidc`, `forward_auth`, `mtls`       |
 | `grpc`            | Bidirectional, low-latency clients on a private network. Build-tag opt-in (`-tags=grpc`); not in the default binary. | `static_bearer`, `oidc`, `forward_auth`, `mtls` (mTLS needs `MCP_GRPC_TLS_CERT`/`_KEY`) |
 
-Set with `MCP_TRANSPORT={stdio,http,streamable_http,grpc}`. Validation
+Set with `MCP_TRANSPORT={stdio,http,streamable_http,grpc}`. See the [Support Matrix](support-matrix.md) for transport and auth compatibility. Validation
 lives in [`internal/config/config.go`](../internal/config/config.go).
 Coverage for every supported / unsupported cell is locked down by
 [`TestTransportAuthMatrix`](../internal/config/transport_auth_matrix_test.go).
+
+## Production Profile
+The blessed production profile for shared services is documented in [Production Profile: Shared Service](deploy/production-profile-shared-service.md).
 
 ## Pick an auth mode (HTTP / gRPC transports only)
 
@@ -111,21 +114,19 @@ in [`docs/runbooks/w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md).
 
 ## Operational runbooks
 
-Triage flows for the four most common operational classes:
+Triage flows for operational classes:
 
-- [`rate-limit-saturation.md`](runbooks/rate-limit-saturation.md) —
-  local concurrency or per-window saturation, plus the upstream
-  Clockify quota case.
-- [`clockify-upstream-outage.md`](runbooks/clockify-upstream-outage.md)
-  — upstream 5xx, DNS failure, TLS handshake failure, egress
-  network-policy regression. Includes the read-only-fallback flow.
-- [`auth-failures.md`](runbooks/auth-failures.md) — inbound
-  static_bearer / OIDC / forward_auth / mTLS rejection, upstream
-  API-key expiration, and the most-common misdiagnoses
-  (CORS as auth, init-handshake gating, webhook validation).
-- [`w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md) —
-  deploy-time image-pin policy and the structural guard that
-  enforces it.
+- [`rate-limit-saturation.md`](runbooks/rate-limit-saturation.md) — local/upstream quota saturation.
+- [`clockify-upstream-outage.md`](runbooks/clockify-upstream-outage.md) — upstream outage drill and response.
+- [`postgres-restore-drill.md`](runbooks/postgres-restore-drill.md) — database restore procedures.
+- [`auth-failures.md`](runbooks/auth-failures.md) — auth triage.
+- [`w2-12-digest-pinning.md`](runbooks/w2-12-digest-pinning.md) — image pinning policy.
+
+## Testing and Verification
+- [Soak Testing and Profiling](testing/soak-and-profile.md)
+- [Live Contract Testing](live-tests.md)
+- [Verification Guide](verification.md)
+- [Deploy-Readiness Checklist](release/deploy-readiness-checklist.md)
 
 ## Compliance posture
 

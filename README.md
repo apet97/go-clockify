@@ -247,6 +247,13 @@ Reference Kubernetes manifests live in [`deploy/k8s/`](deploy/k8s/) and [`deploy
 
 For a single-page operator overview that links the threat model, transports, auth modes, deployment targets, runbooks, and compliance posture, see [docs/production-readiness.md](docs/production-readiness.md).
 
+### Production Resources
+- [Production Profile: Shared Service](docs/deploy/production-profile-shared-service.md)
+- [Support Matrix](docs/support-matrix.md)
+- [Client Compatibility](docs/clients.md)
+- [Deploy-Readiness Checklist](docs/release/deploy-readiness-checklist.md)
+- [Operator Guides](docs/operators/) (Shared Service vs Self-Hosted)
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

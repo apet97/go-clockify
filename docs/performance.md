@@ -241,6 +241,33 @@ above ~256 on a single process risks tail latency from goroutine
 scheduling pressure; horizontal scaling is the right answer at that
 point.
 
+### Load Harness vs. Capacity Planning
+
+It is critical to distinguish between what the **load harness**
+(`tests/load/`) proves and what **capacity planning** requires:
+
+- **The Load Harness proves** that the multi-layer rate limiter correctly
+  isolates tenants and protects the system from internal saturation
+  (e.g., a "noisy neighbor" scenario). It validates the logic of
+  `CLOCKIFY_RATE_LIMIT` and `MCP_MAX_INFLIGHT_TOOL_CALLS` but does NOT
+  simulate the upstream Clockify API's actual performance or latency.
+- **Capacity Planning** must account for the **upstream Clockify quota**.
+  If your Clockify workspace has a global rate limit (typically
+  expressed in requests per minute across all API keys), your
+  `CLOCKIFY_RATE_LIMIT` across all MCP replicas should not exceed it.
+
+### Suggested Production Values
+
+For a production deployment, use these values as a starting point and
+tune based on observed metrics (`clockify_mcp_rate_limit_rejections_total`):
+
+| User Population | `CLOCKIFY_RATE_LIMIT` | `MCP_MAX_INFLIGHT_TOOL_CALLS` | Notes |
+|-----------------|-----------------------|-------------------------------|-------|
+| **Small** (<20 users) | `120/min` | `64` | Standard developer team; fits well within default Clockify quotas. |
+| **Medium** (20-100 users) | `600/min` | `128` | Department-level usage. Ensure your Clockify plan supports this volume. |
+| **Large** (100-500 users) | `1200/min` | `256` | Multi-replica deployment recommended (e.g. 2-3 replicas). |
+| **Enterprise** (>500 users)| `2400/min` | `512` (Aggregate) | Scaling horizontally is mandatory. Limit each replica to `256` inflight. |
+
 `CLOCKIFY_RATE_LIMIT` should always be set with the upstream
 Clockify quota in mind — exceed it and the upstream will start
 returning `429`s, which the local rate limiter cannot prevent. See

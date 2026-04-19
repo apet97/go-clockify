@@ -1,0 +1,105 @@
+# Prometheus alerting rules for Clockify MCP Production Readiness.
+# This file provides a starter set of alerts based on internal metrics.
+
+groups:
+  - name: clockify-mcp.alerts
+    rules:
+      # --- Readiness ---
+      - alert: ClockifyMCPNotReady
+        expr: clockify_mcp_ready_state == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Clockify MCP instance not ready"
+          description: "Instance has been in non-ready state for more than 2 minutes."
+
+      # --- Tool Call Health ---
+      - alert: ClockifyMCPHighToolErrorRate
+        expr: |
+          sum(rate(clockify_mcp_tool_calls_total{outcome=~"tool_error|timeout"}[5m]))
+          /
+          sum(rate(clockify_mcp_tool_calls_total{outcome!="policy_denied"}[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High tool call error rate (>5%)"
+          description: "Tool calls are failing at an elevated rate on {{ $labels.instance }}."
+
+      - alert: ClockifyMCPHighLatency
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(clockify_mcp_tool_call_duration_seconds_bucket[10m]))) > 15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated p99 tool latency"
+          description: "p99 latency for tool calls is above 15s for 10 minutes."
+
+      # --- Rate Limiting ---
+      - alert: ClockifyMCPRateLimitSaturation
+        expr: |
+          sum(rate(clockify_mcp_rate_limit_rejections_total[5m]))
+          /
+          sum(rate(clockify_mcp_tool_calls_total[5m]))
+          > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limit saturation"
+          description: "More than 10% of tool calls are being rejected by the rate limiter."
+
+      # --- Audit & Security ---
+      - alert: ClockifyMCPAuditFailure
+        expr: rate(clockify_mcp_audit_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Audit persistence failure"
+          description: "The server is unable to persist audit logs. This may violate compliance requirements."
+
+      - alert: ClockifyMCPAuthFailures
+        expr: |
+          sum(rate(clockify_mcp_http_requests_total{status="401"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated authentication failures"
+          description: "More than 1 auth failure per second detected (possible credential expiry or brute force)."
+
+      # --- Stability ---
+      - alert: ClockifyMCPPanicRecovery
+        expr: rate(clockify_mcp_panics_recovered_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Server panic recovered"
+          description: "A panic was recovered at {{ $labels.site }}. Investigation required."
+
+      # --- SSE & Session Anomalies ---
+      - alert: ClockifyMCPSSEDrops
+        expr: rate(clockify_mcp_sse_subscriber_drops_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSE subscribers being dropped"
+          description: "SSE subscribers are being dropped due to slow consumption (buffer full)."
+
+      - alert: ClockifyMCPSessionAnomalies
+        expr: |
+          rate(clockify_mcp_sse_replay_misses_total[5m]) > 0
+          or
+          rate(clockify_mcp_sessions_reaped_total{reason="orphan"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSE/Session anomalies detected"
+          description: "Replay misses or high orphan session reaping rate detected."

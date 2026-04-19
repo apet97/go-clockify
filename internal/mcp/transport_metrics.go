@@ -21,26 +21,7 @@ func ServeMetrics(ctx context.Context, opts MetricsServerOptions) error {
 	if strings.TrimSpace(opts.Bind) == "" {
 		return nil
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /metrics", observeHTTP("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		switch opts.AuthMode {
-		case "", "none":
-		case "static_bearer":
-			auth := r.Header.Get("Authorization")
-			if !strings.HasPrefix(auth, "Bearer ") {
-				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-				return
-			}
-			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.BearerToken)) != 1 {
-				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-				return
-			}
-		default:
-			writeJSONError(w, http.StatusInternalServerError, "invalid metrics auth mode")
-			return
-		}
-		handleMetrics(w, r)
-	}))
+	mux := metricsMux(opts)
 	srv := &http.Server{
 		Addr:              opts.Bind,
 		Handler:           mux,
@@ -64,4 +45,28 @@ func ServeMetrics(ctx context.Context, opts MetricsServerOptions) error {
 		return err
 	}
 	return nil
+}
+
+func metricsMux(opts MetricsServerOptions) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /metrics", observeHTTP("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		switch opts.AuthMode {
+		case "", "none":
+		case "static_bearer":
+			auth := r.Header.Get("Authorization")
+			if !strings.HasPrefix(auth, "Bearer ") {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.BearerToken)) != 1 {
+				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+		default:
+			writeJSONError(w, http.StatusInternalServerError, "invalid metrics auth mode")
+			return
+		}
+		handleMetrics(w, r)
+	}))
+	return mux
 }

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -210,8 +211,18 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	if cfg.OIDCIssuer == "" {
 		return nil, fmt.Errorf("oidc auth requires MCP_OIDC_ISSUER")
 	}
+	u, err := url.Parse(cfg.OIDCIssuer)
+	if err != nil || u.Scheme == "" {
+		return nil, fmt.Errorf("invalid MCP_OIDC_ISSUER %q (must be absolute URL with scheme)", cfg.OIDCIssuer)
+	}
 	if cfg.OIDCJWKSURL == "" && cfg.OIDCJWKSPath == "" {
 		cfg.OIDCJWKSURL = strings.TrimRight(cfg.OIDCIssuer, "/") + "/.well-known/jwks.json"
+	}
+	if cfg.OIDCJWKSURL != "" {
+		uj, err := url.Parse(cfg.OIDCJWKSURL)
+		if err != nil || uj.Scheme == "" {
+			return nil, fmt.Errorf("invalid OIDCJWKSURL %q (must be absolute URL with scheme)", cfg.OIDCJWKSURL)
+		}
 	}
 	// Surface the revocation-window tradeoff when operators raise the
 	// ceiling past the conservative default. The cache clamps the value
