@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
+	"github.com/apet97/go-clockify/internal/mcp"
 	grpctransport "github.com/apet97/go-clockify/internal/transport/grpc"
 
 	"google.golang.org/grpc"
@@ -67,7 +68,7 @@ func NewGRPC(ctx context.Context, opts Options) (Transport, error) {
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return lis.DialContext(ctx)
 		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // nosemgrep
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(harnessBytesCodec{})),
 	)
 	if err != nil {
@@ -78,6 +79,7 @@ func NewGRPC(ctx context.Context, opts Options) (Transport, error) {
 
 	h := &grpcHarness{
 		opts:      opts,
+		srv:       srv,
 		conn:      conn,
 		lis:       lis,
 		runCtx:    runCtx,
@@ -100,6 +102,7 @@ func NewGRPC(ctx context.Context, opts Options) (Transport, error) {
 
 type grpcHarness struct {
 	opts      Options
+	srv       *mcp.Server
 	conn      *grpc.ClientConn
 	lis       *bufconn.Listener
 	runCtx    context.Context
@@ -122,6 +125,12 @@ type grpcHarness struct {
 }
 
 func (h *grpcHarness) Name() string { return "grpc" }
+
+// SharedServer exposes the per-harness mcp.Server so parity tests can
+// fire server-initiated notifications (tools/list_changed, progress,
+// etc.) through the notifier hub. The registered streamNotifier will
+// deliver them over the Exchange stream.
+func (h *grpcHarness) SharedServer() (*mcp.Server, bool) { return h.srv, true }
 
 func (h *grpcHarness) nextID() int { return int(atomic.AddInt64(&h.idSeq, 1)) }
 

@@ -20,12 +20,12 @@ import (
 // Legacy HTTP is excluded by design: its POST-only request/response
 // model has no server→client stream, so the server drops list_changed
 // via droppingNotifier. Clients of legacy HTTP must re-poll tools/list
-// on their own schedule. gRPC is excluded for the same reason as
-// cancellation — the Exchange loop serialises dispatch.
+// on their own schedule.
 func TestListChanged_ParityAcrossTransports(t *testing.T) {
 	cases := map[string]harness.Factory{
 		"stdio":           harness.NewStdio,
 		"streamable_http": harness.NewStreamable,
+		"grpc":            harness.NewGRPC,
 	}
 
 	for name, factory := range cases {

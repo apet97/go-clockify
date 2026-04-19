@@ -20,17 +20,11 @@ import (
 // Legacy HTTP is deliberately excluded: its request/response model has no
 // cancellation channel once the POST is in-flight. Client-side ctx
 // cancellation is covered by net/http tests in the stdlib.
-//
-// gRPC is also excluded today: internal/transport/grpc/transport.go's
-// Exchange loop dispatches messages synchronously, so a cancellation
-// frame queued behind an in-flight blocking handler is not read until
-// after the handler returns. Fixing that requires a goroutine-per-frame
-// dispatcher with a single-writer SendMsg pump — tracked separately. The
-// stdio and streamable paths already prove the cancellation contract.
 func TestCancellation_AbortsInflightHandler(t *testing.T) {
 	cases := map[string]harness.Factory{
 		"stdio":           harness.NewStdio,
 		"streamable_http": harness.NewStreamable,
+		"grpc":            harness.NewGRPC,
 	}
 
 	for name, factory := range cases {

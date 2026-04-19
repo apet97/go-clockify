@@ -135,18 +135,61 @@ type exchangeServer struct {
 // Exchange runs the JSON-RPC loop for one client stream. It installs a
 // per-stream Notifier on the shared mcp.Server so server-initiated messages
 // reach this caller, then reads frames until the client closes (io.EOF) or
-// the RPC context cancels. Each inbound frame is dispatched via
-// mcp.Server.DispatchMessage and the reply (if any) sent back on the same
-// stream.
+// the RPC context cancels.
 //
-// Errors from DispatchMessage terminate the stream with a gRPC Unknown
-// status; individual tool errors are already encoded inside the reply body
-// per the MCP spec (result.isError) and never surface here.
+// Each inbound frame is dispatched in its own goroutine via
+// mcp.Server.DispatchMessage so a long-running tools/call does not block
+// reads of subsequent frames — critically, notifications/cancelled can
+// reach the dispatcher while a handler is still blocked. All outbound
+// frames (dispatch replies and server-initiated notifications) funnel
+// through a single send-pump goroutine because grpc.ServerStream requires
+// single-writer semantics.
+//
+// Errors from DispatchMessage are logged and the stream continues: dispatch
+// errors mean a json.Marshal of the response failed, which is unexpected
+// but not worth terminating every other in-flight request on the stream.
+// Individual tool errors are already encoded inside the reply body per the
+// MCP spec (result.isError) and never surface here.
 func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 	ctx := stream.Context()
-	notifier := newStreamNotifier(stream)
+
+	// Buffered send channel absorbs notification bursts without stalling
+	// the hub; 64 is headroom for typical notification fan-out (metrics
+	// events, list_changed, progress). The capacity is not load-bearing —
+	// Notify blocks on ctx when full.
+	sends := make(chan []byte, 64)
+	sendDone := make(chan error, 1)
+
+	// Single-writer send pump. Every stream.SendMsg call on this stream
+	// flows through here.
+	go func() {
+		defer close(sendDone)
+		for frame := range sends {
+			if err := stream.SendMsg(&frame); err != nil {
+				sendDone <- err
+				// Drain any remaining queued frames so senders don't
+				// block forever after the stream has failed.
+				for range sends {
+				}
+				return
+			}
+		}
+	}()
+
+	notifier := newStreamNotifier(ctx, sends)
 	removeNotifier := e.srv.AddNotifier(notifier)
 	defer removeNotifier()
+
+	var wg sync.WaitGroup
+	defer func() {
+		// Wait for every dispatch goroutine to finish pushing (or giving
+		// up via ctx) before closing the send channel, then wait for the
+		// pump to drain. Returning earlier would race the pump into
+		// SendMsg-after-close which gRPC treats as a hard error.
+		wg.Wait()
+		close(sends)
+		<-sendDone
+	}()
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -162,34 +205,37 @@ func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 		if len(frame) == 0 {
 			continue
 		}
-		reply, dispatchErr := e.srv.DispatchMessage(ctx, frame)
-		if dispatchErr != nil {
-			// DispatchMessage only returns an error if json.Marshal of the
-			// response fails — that's genuinely unexpected and worth
-			// surfacing as a stream-level failure.
-			return fmt.Errorf("dispatch: %w", dispatchErr)
-		}
-		if reply == nil {
-			// Notification from the client (no id) — no reply required.
-			continue
-		}
-		if err := stream.SendMsg(&reply); err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func(f []byte) {
+			defer wg.Done()
+			reply, derr := e.srv.DispatchMessage(ctx, f)
+			if derr != nil {
+				slog.Error("grpc_dispatch_error", "err", derr)
+				return
+			}
+			if reply == nil {
+				// Notification from the client (no id) — no reply.
+				return
+			}
+			select {
+			case sends <- reply:
+			case <-ctx.Done():
+			}
+		}(frame)
 	}
 }
 
-// streamNotifier wraps a grpc.ServerStream as an mcp.Notifier. Notifications
-// are encoded as JSON-RPC 2.0 notification objects (jsonrpc+method+params, no
-// id) and sent via the same bytesCodec as request/response frames. A mutex
-// guards SendMsg because grpc server streams require single-writer semantics.
+// streamNotifier adapts an mcp.Notifier onto the per-stream send channel.
+// Encoding produces a JSON-RPC 2.0 notification object (jsonrpc+method+params,
+// no id); the send pump handles single-writer serialisation onto the
+// underlying grpc.ServerStream.
 type streamNotifier struct {
-	stream grpc.ServerStream
-	mu     sync.Mutex
+	ctx   context.Context
+	sends chan<- []byte
 }
 
-func newStreamNotifier(stream grpc.ServerStream) *streamNotifier {
-	return &streamNotifier{stream: stream}
+func newStreamNotifier(ctx context.Context, sends chan<- []byte) *streamNotifier {
+	return &streamNotifier{ctx: ctx, sends: sends}
 }
 
 func (n *streamNotifier) Notify(method string, params any) error {
@@ -204,7 +250,14 @@ func (n *streamNotifier) Notify(method string, params any) error {
 	if err != nil {
 		return fmt.Errorf("grpctransport: notify marshal: %w", err)
 	}
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	return n.stream.SendMsg(&payload)
+	// Block on the send channel rather than dropping: a full queue means
+	// SendMsg is slow, and dropping would violate the notifier's "best
+	// effort in order" contract with the hub. ctx.Done is the escape
+	// hatch so a dead stream cannot hold the notifier hub forever.
+	select {
+	case n.sends <- payload:
+		return nil
+	case <-n.ctx.Done():
+		return n.ctx.Err()
+	}
 }
