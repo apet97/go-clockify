@@ -40,7 +40,7 @@ type StreamableHTTPOptions struct {
 	SessionTTL      time.Duration
 	ReadyChecker    func(context.Context) error
 	Authenticator   authn.Authenticator
-	ControlPlane    *controlplane.Store
+	ControlPlane    controlplane.Store
 	Factory         StreamableSessionFactory
 	// ProtectedResource is the unauthenticated handler for the
 	// /.well-known/oauth-protected-resource metadata document. When
@@ -411,7 +411,7 @@ type streamSessionManager struct {
 	mu                       sync.Mutex
 	ttl                      time.Duration
 	idleGraceAfterDisconnect time.Duration
-	store                    *controlplane.Store
+	store                    controlplane.Store
 	items                    map[string]*streamSession
 }
 

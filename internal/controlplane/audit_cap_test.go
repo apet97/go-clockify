@@ -20,11 +20,12 @@ func TestAppendAuditEvent_CapEvictsOldest(t *testing.T) {
 			t.Fatalf("Append %d: %v", i, err)
 		}
 	}
-	if got := len(store.state.AuditEvents); got != 3 {
+	dev := store.(*DevFileStore)
+	if got := len(dev.state.AuditEvents); got != 3 {
 		t.Fatalf("expected 3 retained events after cap, got %d", got)
 	}
-	first := store.state.AuditEvents[0].ID
-	last := store.state.AuditEvents[2].ID
+	first := dev.state.AuditEvents[0].ID
+	last := dev.state.AuditEvents[2].ID
 	if first != id(2) || last != id(4) {
 		t.Fatalf("expected [2,3,4] retained, got first=%q last=%q", first, last)
 	}
@@ -44,7 +45,8 @@ func TestAppendAuditEvent_NoCapUnbounded(t *testing.T) {
 			t.Fatalf("Append %d: %v", i, err)
 		}
 	}
-	if got := len(store.state.AuditEvents); got != 50 {
+	dev := store.(*DevFileStore)
+	if got := len(dev.state.AuditEvents); got != 50 {
 		t.Fatalf("expected 50 retained (no cap), got %d", got)
 	}
 }
@@ -68,12 +70,13 @@ func TestAppendAuditEvent_CapPersistsAcrossLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reopen: %v", err)
 	}
-	if got := len(reopened.state.AuditEvents); got != 2 {
+	reopenedDev := reopened.(*DevFileStore)
+	if got := len(reopenedDev.state.AuditEvents); got != 2 {
 		t.Fatalf("expected 2 retained after reload, got %d", got)
 	}
-	if reopened.state.AuditEvents[0].ID != id(4) || reopened.state.AuditEvents[1].ID != id(5) {
+	if reopenedDev.state.AuditEvents[0].ID != id(4) || reopenedDev.state.AuditEvents[1].ID != id(5) {
 		t.Fatalf("expected ids [4,5], got [%q,%q]",
-			reopened.state.AuditEvents[0].ID, reopened.state.AuditEvents[1].ID)
+			reopenedDev.state.AuditEvents[0].ID, reopenedDev.state.AuditEvents[1].ID)
 	}
 }
 

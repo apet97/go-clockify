@@ -35,7 +35,7 @@ type runtimeDeps struct {
 }
 
 type controlPlaneAuditor struct {
-	store *controlplane.Store
+	store controlplane.Store
 }
 
 func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
@@ -160,7 +160,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	return server
 }
 
-func bootstrapDefaultTenant(store *controlplane.Store, cfg config.Config) error {
+func bootstrapDefaultTenant(store controlplane.Store, cfg config.Config) error {
 	if cfg.APIKey == "" || store == nil {
 		return nil
 	}
@@ -195,7 +195,7 @@ func depsafePolicyMode() policy.Mode {
 	return mode
 }
 
-func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, store *controlplane.Store) (*mcp.StreamableSessionRuntime, error) {
+func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, store controlplane.Store) (*mcp.StreamableSessionRuntime, error) {
 	tenant, ok := store.Tenant(principalTenant)
 	if !ok {
 		return nil, fmt.Errorf("tenant %q not found in control plane", principalTenant)

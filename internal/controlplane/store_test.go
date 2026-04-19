@@ -16,8 +16,12 @@ func TestOpenMemory(t *testing.T) {
 			if err != nil {
 				t.Fatalf("open: %v", err)
 			}
-			if s.path != "" {
-				t.Fatalf("expected memory store, got path %q", s.path)
+			dev, ok := s.(*DevFileStore)
+			if !ok {
+				t.Fatalf("memory DSN %q did not yield *DevFileStore, got %T", dsn, s)
+			}
+			if dev.path != "" {
+				t.Fatalf("expected memory store, got path %q", dev.path)
 			}
 			// Ensure the Store can take writes without erroring even though
 			// there is no disk backing.

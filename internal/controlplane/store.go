@@ -72,7 +72,65 @@ type State struct {
 	AuditEvents    []AuditEvent             `json:"audit_events"`
 }
 
-type Store struct {
+// Store is the durable backend for the control plane. B1 lifted this
+// from a concrete struct to an interface so an external backend
+// (Postgres, behind -tags=postgres) can register alongside the built-in
+// file/memory store. See RegisterOpener for the dispatch mechanism.
+type Store interface {
+	Tenant(id string) (TenantRecord, bool)
+	PutTenant(record TenantRecord) error
+	CredentialRef(id string) (CredentialRef, bool)
+	PutCredentialRef(record CredentialRef) error
+	Session(id string) (SessionRecord, bool)
+	PutSession(record SessionRecord) error
+	DeleteSession(id string) error
+	AppendAuditEvent(event AuditEvent) error
+	// Close releases backend-owned resources (pgxpool, file handles).
+	// DevFileStore has nothing to release and returns nil.
+	Close() error
+}
+
+// Opener is the factory signature registered by external backends.
+// Modules that ship under a build tag (e.g. `-tags=postgres`) call
+// RegisterOpener from an init() to become dispatchable via Open.
+type Opener func(dsn string, opts ...Option) (Store, error)
+
+var (
+	openersMu sync.Mutex
+	openers   = map[string]Opener{}
+)
+
+// RegisterOpener registers an opener for the given DSN scheme. Panics
+// on double-register so wiring bugs surface at startup rather than
+// silently overwriting a prior registration.
+func RegisterOpener(scheme string, fn Opener) {
+	if fn == nil {
+		panic("controlplane: RegisterOpener called with nil fn")
+	}
+	openersMu.Lock()
+	defer openersMu.Unlock()
+	if _, exists := openers[scheme]; exists {
+		panic("controlplane: duplicate opener for scheme " + scheme)
+	}
+	openers[scheme] = fn
+}
+
+func lookupOpener(scheme string) (Opener, bool) {
+	openersMu.Lock()
+	defer openersMu.Unlock()
+	fn, ok := openers[scheme]
+	return fn, ok
+}
+
+// DevFileStore is the file/memory-backed implementation of Store. It
+// is the dev/offline fallback; production deployments should register
+// an external backend (Postgres) via RegisterOpener and select it
+// through the DSN scheme. The C1 guard in cmd/clockify-mcp/main.go
+// refuses to start the streamable_http transport against this store
+// unless MCP_ALLOW_DEV_BACKEND=1 is set, because the JSON file-rewrite
+// write pattern and the in-process mutex do not survive a
+// multi-process deployment.
+type DevFileStore struct {
 	mu    sync.Mutex
 	path  string
 	state State
@@ -89,26 +147,64 @@ type Store struct {
 	auditCap int
 }
 
-// Option configures the Store at construction. Passed to Open; tests
-// and runtime paths add options without widening Open's signature.
-type Option func(*Store)
+// Option configures a DevFileStore at construction. External backends
+// parse configuration from DSN query parameters, so Options do not
+// apply to them.
+type Option func(*DevFileStore)
 
 // WithAuditCap caps the in-memory AuditEvents slice at n entries. Zero
-// or negative disables the cap. See Store.auditCap for the rationale.
+// or negative disables the cap. See DevFileStore.auditCap for the
+// rationale.
 func WithAuditCap(n int) Option {
-	return func(s *Store) {
+	return func(s *DevFileStore) {
 		if n > 0 {
 			s.auditCap = n
 		}
 	}
 }
 
-func Open(dsn string, opts ...Option) (*Store, error) {
+// Open returns a Store appropriate for the DSN. Built-in schemes:
+// "" (alias for memory), "memory", "memory://", "file://<path>", or a
+// bare filesystem path — all produce a DevFileStore. Any other scheme
+// dispatches to an opener registered via RegisterOpener; if none is
+// registered the error explicitly names the scheme and points the
+// operator at the matching build tag.
+func Open(dsn string, opts ...Option) (Store, error) {
+	scheme := dsnScheme(dsn)
+	if scheme != "" && scheme != "file" && scheme != "memory" {
+		fn, ok := lookupOpener(scheme)
+		if !ok {
+			return nil, fmt.Errorf("controlplane: unsupported DSN scheme %q; if this is Postgres rebuild the binary with -tags=postgres", scheme)
+		}
+		return fn(dsn, opts...)
+	}
+	return openDevFile(dsn, opts...)
+}
+
+// dsnScheme extracts the scheme component. Returns "" for the memory
+// DSN forms ("" / "memory") and for bare filesystem paths.
+func dsnScheme(dsn string) string {
+	dsn = strings.TrimSpace(dsn)
+	if dsn == "" || dsn == "memory" {
+		return ""
+	}
+	scheme, _, ok := strings.Cut(dsn, "://")
+	if !ok {
+		return ""
+	}
+	return scheme
+}
+
+// Compile-time assertion that DevFileStore satisfies Store. Keeps the
+// interface and the file impl from drifting without failing tests.
+var _ Store = (*DevFileStore)(nil)
+
+func openDevFile(dsn string, opts ...Option) (Store, error) {
 	path, err := resolvePath(dsn)
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{
+	s := &DevFileStore{
 		path: path,
 		state: State{
 			Tenants:        map[string]TenantRecord{},
@@ -150,7 +246,7 @@ func resolvePath(dsn string) (string, error) {
 	return dsn, nil
 }
 
-func (s *Store) load() error {
+func (s *DevFileStore) load() error {
 	b, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -179,7 +275,7 @@ func (s *Store) load() error {
 	return nil
 }
 
-func (s *Store) persistLocked() error {
+func (s *DevFileStore) persistLocked() error {
 	if s.path == "" {
 		return nil
 	}
@@ -196,56 +292,56 @@ func (s *Store) persistLocked() error {
 	return nil
 }
 
-func (s *Store) Tenant(id string) (TenantRecord, bool) {
+func (s *DevFileStore) Tenant(id string) (TenantRecord, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tenant, ok := s.state.Tenants[id]
 	return tenant, ok
 }
 
-func (s *Store) PutTenant(record TenantRecord) error {
+func (s *DevFileStore) PutTenant(record TenantRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.Tenants[record.ID] = record
 	return s.persistLocked()
 }
 
-func (s *Store) CredentialRef(id string) (CredentialRef, bool) {
+func (s *DevFileStore) CredentialRef(id string) (CredentialRef, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ref, ok := s.state.CredentialRefs[id]
 	return ref, ok
 }
 
-func (s *Store) PutCredentialRef(record CredentialRef) error {
+func (s *DevFileStore) PutCredentialRef(record CredentialRef) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.CredentialRefs[record.ID] = record
 	return s.persistLocked()
 }
 
-func (s *Store) PutSession(record SessionRecord) error {
+func (s *DevFileStore) PutSession(record SessionRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.Sessions[record.ID] = record
 	return s.persistLocked()
 }
 
-func (s *Store) Session(id string) (SessionRecord, bool) {
+func (s *DevFileStore) Session(id string) (SessionRecord, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	record, ok := s.state.Sessions[id]
 	return record, ok
 }
 
-func (s *Store) DeleteSession(id string) error {
+func (s *DevFileStore) DeleteSession(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.state.Sessions, id)
 	return s.persistLocked()
 }
 
-func (s *Store) AppendAuditEvent(event AuditEvent) error {
+func (s *DevFileStore) AppendAuditEvent(event AuditEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.AuditEvents = append(s.state.AuditEvents, event)
@@ -260,3 +356,8 @@ func (s *Store) AppendAuditEvent(event AuditEvent) error {
 	}
 	return s.persistLocked()
 }
+
+// Close releases backend-owned resources. DevFileStore has no
+// goroutines, no connection pool, and no OS handles held between
+// calls, so Close is a no-op that always returns nil.
+func (s *DevFileStore) Close() error { return nil }
