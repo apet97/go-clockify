@@ -56,6 +56,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADR 0010 — metrics stack direction (E3, proposed).** Keep the
   homegrown metrics facade for v0.x; revisit with an OTel adapter
   on the ADR 0006 pattern at v1.0.
+- **Postgres control-plane backend (B1).** pgx-backed
+  `controlplane.Store` implementation lives in a dedicated
+  `internal/controlplane/postgres` sub-module behind `-tags=postgres`
+  so the default binary stays stdlib-only (ADR 0001). Selected by
+  `MCP_CONTROL_PLANE_DSN=postgres://...`; migrations are embedded,
+  run under a `pg_advisory_lock`, and version-tracked in a
+  `schema_migrations` table. testcontainers-based integration tests
+  cover round-trip, migration idempotence, and concurrent writes.
+- **Control-plane schema compat guard (E2, ADR 0011).** The applier
+  refuses to boot when the database reports a schema newer than the
+  embedded migrations, protecting against silent rollback over a
+  forward-only change. Integration test plants a bogus version and
+  asserts the refuse-to-start error.
+- **`RetainAudit(ctx, maxAge)` on Store + retention reaper (B2).**
+  `MCP_CONTROL_PLANE_AUDIT_RETENTION` (default 720h, range 1h–8760h,
+  0 disables) drives a 1h ticker that drops old audit events from
+  both the file store and the Postgres store.
+  `clockify_mcp_audit_events_retained_total{outcome="deleted|error"}`
+  exposes the per-tick outcome.
+- **`internal/runtime` scaffold (C2).** Dev-backend predicate,
+  control-plane store construction (C1 fail-closed guard included),
+  and the retention reaper moved out of `cmd/clockify-mcp` so the
+  boot-time plumbing is unit-testable and reusable. The transport
+  dispatch itself stays in `main.go` for this pass.
+
+### Added (infrastructure)
+
+- **ADR 0011 — control-plane schema versioning.** Forward-only
+  embedded migrations + refuse-to-boot-on-future-schema, with
+  `internal/controlplane/COMPAT.md` tracking every version and
+  interface addition.
+- **`-tags=postgres` CI gate.** `scripts/check-build-tags.sh`
+  asserts zero pgx symbols / zero pgx rows in the default build
+  and that `-tags=postgres` actually links pgx.
+- **`Makefile` targets** `build-postgres` and `test-postgres` for
+  the sub-module.
 
 ### Changed
 
@@ -66,6 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `controlplane.WithAuditCap(n)` to cap the file-backed audit
   slice; back-compat: zero args keeps the historical unbounded
   behaviour.
+- **`controlplane.Store` is now an interface** (B1.0). The
+  file-backed implementation is renamed to `DevFileStore`; external
+  backends (Postgres today) plug in via `RegisterOpener`. Callers
+  that typed `*controlplane.Store` switch to the interface type;
+  in-package tests type-assert to `*DevFileStore` when they need
+  unexported state. A `Close()` method releases backend-owned
+  resources (pool, handles); the file store returns nil.
 
 ### Docs
 
@@ -73,13 +116,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `README.md` now matches the code. mTLS-on-legacy-http is
   documented as rejected; OIDC TTL + dev-backend knobs are
   listed in the main env-var table.
+- `docs/production-readiness.md` gains a "Pick a control-plane
+  backend" section. `MCP_CONTROL_PLANE_DSN`,
+  `MCP_CONTROL_PLANE_AUDIT_CAP`, and
+  `MCP_CONTROL_PLANE_AUDIT_RETENTION` are documented in the
+  README env-var table.
 
 ### Known remaining (follow-up session)
 
-- Postgres control-plane backend (B1), audit retention / compaction
-  (B2), `cmd/clockify-mcp/main.go` → `internal/runtime` split (C2),
-  and versioned persistence subsystem (E2) are still open. See the
-  roadmap at `/Users/15x/.claude/plans/a-deeper-read-changes-hidden-jellyfish.md`.
+- **C2.2 — full transport dispatch extraction.** The
+  streamable_http / legacy_http / grpc / stdio branches still live
+  in `cmd/clockify-mcp/main.go`; the scaffolding landed under
+  `internal/runtime` (C2.1) but the transport switch has not yet
+  moved. Follow-up commit will extract them behind
+  `runtime.Run(ctx)` with the same semantics.
 
 ## [1.0.0] - 2026-04-12
 
