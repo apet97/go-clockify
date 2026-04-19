@@ -1,7 +1,8 @@
 .PHONY: build test cover fmt vet check clean lint mutation \
         verify verify-core verify-vuln verify-k8s verify-fips \
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
-        secret-scan config-parity bench verify-bench
+        secret-scan config-parity bench verify-bench \
+        build-postgres test-postgres
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -144,3 +145,15 @@ PKG ?= internal/jsonschema
 mutation:
 	@which gremlins > /dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 	gremlins unleash ./$(PKG)
+
+# Postgres control-plane backend (ADR 0011). The Postgres impl lives in
+# internal/controlplane/postgres with its own go.mod so the default
+# binary stays stdlib-only per ADR 0001. `build-postgres` compiles the
+# tagged binary; `test-postgres` runs the sub-module's integration
+# suite (requires Docker for testcontainers-go).
+build-postgres:
+	go build -tags=postgres ./...
+	cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...
+
+test-postgres:
+	cd internal/controlplane/postgres && go test -tags=postgres,integration -count=1 -timeout 180s ./...

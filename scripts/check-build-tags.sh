@@ -20,9 +20,10 @@ TMP_DEFAULT="${TMPROOT%/}/clockify-mcp-default"
 TMP_GRPC="${TMPROOT%/}/clockify-mcp-grpc"
 TMP_PPROF="${TMPROOT%/}/clockify-mcp-pprof"
 TMP_FIPS="${TMPROOT%/}/clockify-mcp-fips"
+TMP_PG="${TMPROOT%/}/clockify-mcp-postgres"
 
 cleanup() {
-    rm -f "$TMP_DEFAULT" "$TMP_GRPC" "$TMP_PPROF" "$TMP_FIPS"
+    rm -f "$TMP_DEFAULT" "$TMP_GRPC" "$TMP_PPROF" "$TMP_FIPS" "$TMP_PG"
 }
 trap cleanup EXIT
 
@@ -54,18 +55,25 @@ if [ -z "${FIPS_ONLY:-}" ]; then
     check_symbol_absent "$TMP_DEFAULT" opentelemetry "opentelemetry"
     check_symbol_absent "$TMP_DEFAULT" 'net/http/pprof' "net/http/pprof"
     check_symbol_absent "$TMP_DEFAULT" 'google.golang.org/grpc' "google.golang.org/grpc"
+    check_symbol_absent "$TMP_DEFAULT" 'jackc/pgx' "jackc/pgx"
 
     echo "== go.mod parity =="
     otel_rows=$(grep -c 'go.opentelemetry.io' go.mod || true)
     grpc_rows=$(grep -c 'google.golang.org/grpc' go.mod || true)
+    pgx_rows=$(grep -c 'jackc/pgx' go.mod || true)
     printf 'go.opentelemetry.io rows: %s\n' "$otel_rows"
     printf 'google.golang.org/grpc rows: %s\n' "$grpc_rows"
+    printf 'jackc/pgx rows: %s\n' "$pgx_rows"
     if [ "$otel_rows" -ne 0 ]; then
         echo "FAIL: go.mod leaked OpenTelemetry rows (ADR 009)" >&2
         exit 1
     fi
     if [ "$grpc_rows" -ne 0 ]; then
         echo "FAIL: go.mod leaked gRPC rows (ADR 012)" >&2
+        exit 1
+    fi
+    if [ "$pgx_rows" -ne 0 ]; then
+        echo "FAIL: go.mod leaked jackc/pgx rows (ADR 0001 / ADR 0011)" >&2
         exit 1
     fi
 
@@ -93,6 +101,12 @@ if [ -z "${FIPS_ONLY:-}" ]; then
 
     echo "== -tags=pprof,otel =="
     go build -tags=pprof,otel ./...
+
+    echo "== -tags=postgres =="
+    go build -tags=postgres ./...
+    (cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...)
+    go build -tags=postgres -o "$TMP_PG" ./cmd/clockify-mcp
+    check_symbol_present "$TMP_PG" 'jackc/pgx' "jackc/pgx"
 fi
 
 if [ -n "${SKIP_FIPS:-}" ]; then
