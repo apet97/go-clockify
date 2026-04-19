@@ -52,11 +52,11 @@ type scenarioResult struct {
 type scenarioFunc func() scenarioResult
 
 var scenarios = map[string]scenarioFunc{
-	"429-storm":            run429Storm,
-	"503-burst":            run503Burst,
-	"mid-body-reset":       runMidBodyReset,
-	"tls-handshake-fail":   runTLSHandshakeFail,
-	"dns-fail":             runDNSFail,
+	"429-storm":               run429Storm,
+	"503-burst":               run503Burst,
+	"mid-body-reset":          runMidBodyReset,
+	"tls-handshake-fail":      runTLSHandshakeFail,
+	"dns-fail":                runDNSFail,
 	"upstream-429-concurrent": runUpstream429Concurrent,
 }
 

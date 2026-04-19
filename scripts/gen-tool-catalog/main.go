@@ -35,16 +35,16 @@ import (
 // membership so consumers can filter by read/write/destructive or
 // tier without parsing Markdown.
 type catalogTool struct {
-	Name            string         `json:"name"`
-	Description     string         `json:"description,omitempty"`
-	Group           string         `json:"group"`
-	Tier            int            `json:"tier"`
-	ReadOnly        bool           `json:"read_only"`
-	Destructive     bool           `json:"destructive"`
-	Idempotent      bool           `json:"idempotent"`
-	InputSchema     map[string]any `json:"input_schema,omitempty"`
-	OutputSchema    map[string]any `json:"output_schema,omitempty"`
-	Annotations     map[string]any `json:"annotations,omitempty"`
+	Name         string         `json:"name"`
+	Description  string         `json:"description,omitempty"`
+	Group        string         `json:"group"`
+	Tier         int            `json:"tier"`
+	ReadOnly     bool           `json:"read_only"`
+	Destructive  bool           `json:"destructive"`
+	Idempotent   bool           `json:"idempotent"`
+	InputSchema  map[string]any `json:"input_schema,omitempty"`
+	OutputSchema map[string]any `json:"output_schema,omitempty"`
+	Annotations  map[string]any `json:"annotations,omitempty"`
 }
 
 type catalog struct {
@@ -120,13 +120,10 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		return err
-	}
-	return nil
+	return enc.Encode(v)
 }
 
 func writeMarkdown(path string, c catalog) error {

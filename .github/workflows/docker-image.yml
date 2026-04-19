@@ -31,6 +31,7 @@ permissions:
   id-token: write        # cosign keyless signing + attest-build-provenance
   attestations: write    # attest-build-provenance
   security-events: write # required for SARIF upload
+  actions: read          # required by codeql-action/upload-sarif to read workflow run metadata
 
 env:
   REGISTRY: ghcr.io
