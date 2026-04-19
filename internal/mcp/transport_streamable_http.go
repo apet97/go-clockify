@@ -31,8 +31,13 @@ type StreamableSessionRuntime struct {
 type StreamableSessionFactory func(context.Context, authn.Principal, string) (*StreamableSessionRuntime, error)
 
 type StreamableHTTPOptions struct {
-	Version         string
-	Bind            string
+	Version string
+	Bind    string
+	// Listener, if non-nil, is used in place of net.Listen("tcp", Bind).
+	// Primarily for tests that need to know the bound port before the
+	// server starts accepting. Bind is still consulted for the logged
+	// startup address when Listener is nil.
+	Listener        net.Listener
 	MaxBodySize     int64
 	AllowedOrigins  []string
 	AllowAnyOrigin  bool
@@ -73,7 +78,7 @@ type streamSession struct {
 }
 
 func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error {
-	if opts.Bind == "" {
+	if opts.Listener == nil && opts.Bind == "" {
 		opts.Bind = ":8080"
 	}
 	if opts.MaxBodySize <= 0 {
@@ -155,11 +160,15 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		_ = srv.Shutdown(shutdownCtx)
 		mgr.closeAll()
 	}()
-	slog.Info("streamable_http_start", "bind", opts.Bind, "session_ttl", opts.SessionTTL.String())
-	ln, err := net.Listen("tcp", opts.Bind)
-	if err != nil {
-		return fmt.Errorf("listen streamable_http: %w", err)
+	ln := opts.Listener
+	if ln == nil {
+		var err error
+		ln, err = net.Listen("tcp", opts.Bind)
+		if err != nil {
+			return fmt.Errorf("listen streamable_http: %w", err)
+		}
 	}
+	slog.Info("streamable_http_start", "bind", ln.Addr().String(), "session_ttl", opts.SessionTTL.String())
 	if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 		return err
 	}

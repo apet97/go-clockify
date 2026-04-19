@@ -30,7 +30,12 @@ import (
 // for the rationale. Leaving it nil preserves the Wave 3 behaviour of
 // relying on an external mTLS gateway / service mesh for authn.
 type Options struct {
-	Bind                 string
+	Bind string
+	// Listener, if non-nil, is used in place of net.Listen("tcp", Bind).
+	// Enables tests to use bufconn or ephemeral-port TCP listeners and
+	// learn the bound address before the server accepts. When Listener
+	// is nil, Bind is required.
+	Listener             net.Listener
 	Server               *mcp.Server
 	MaxRecvSize          int
 	Authenticator        authn.Authenticator
@@ -51,8 +56,8 @@ type Options struct {
 // notifications/resources/updated) fan out to every active stream. The
 // notifier is automatically removed when the stream closes.
 func Serve(ctx context.Context, opts Options) error {
-	if opts.Bind == "" {
-		return errors.New("grpctransport: Bind is required")
+	if opts.Listener == nil && opts.Bind == "" {
+		return errors.New("grpctransport: Bind or Listener is required")
 	}
 	if opts.Server == nil {
 		return errors.New("grpctransport: Server is required")
@@ -89,9 +94,13 @@ func Serve(ctx context.Context, opts Options) error {
 	grpcSrv.RegisterService(&desc, handler)
 	grpcSrv.RegisterService(&healthDesc, hs)
 
-	ln, err := net.Listen("tcp", opts.Bind)
-	if err != nil {
-		return fmt.Errorf("grpctransport: listen %s: %w", opts.Bind, err)
+	ln := opts.Listener
+	if ln == nil {
+		var err error
+		ln, err = net.Listen("tcp", opts.Bind)
+		if err != nil {
+			return fmt.Errorf("grpctransport: listen %s: %w", opts.Bind, err)
+		}
 	}
 
 	go func() {
@@ -110,7 +119,7 @@ func Serve(ctx context.Context, opts Options) error {
 		}
 	}()
 
-	slog.Info("grpc_start", "bind", opts.Bind)
+	slog.Info("grpc_start", "bind", ln.Addr().String())
 	if err := grpcSrv.Serve(ln); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 		return err
 	}

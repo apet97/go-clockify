@@ -58,6 +58,32 @@ type InlineMetricsOptions struct {
 // The default (InlineMetricsOptions{}) leaves /metrics absent — use the
 // dedicated metrics listener (ServeMetrics) for the recommended pattern.
 func (s *Server) ServeHTTP(ctx context.Context, bind string, authenticator authn.Authenticator, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
+	if bind == "" {
+		bind = ":8080"
+	}
+	ln, err := net.Listen("tcp", bind)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", bind, err)
+	}
+	return s.serveHTTP(ctx, ln, authenticator, bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize, inlineMetrics)
+}
+
+// ServeHTTPListener is the listener-injection counterpart of ServeHTTP. It
+// takes ownership of an already-open net.Listener (callers should use
+// net.Listen("tcp", "127.0.0.1:0") to get an ephemeral port) and runs the
+// same middleware stack until ctx is cancelled. Primarily for tests that
+// need to know the bound port before the server starts accepting.
+func (s *Server) ServeHTTPListener(ctx context.Context, ln net.Listener, authenticator authn.Authenticator, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
+	if ln == nil {
+		return fmt.Errorf("ServeHTTPListener: listener must not be nil")
+	}
+	return s.serveHTTP(ctx, ln, authenticator, bearerToken, allowedOrigins, allowAnyOrigin, maxBodySize, inlineMetrics)
+}
+
+// serveHTTP is the shared implementation for ServeHTTP and ServeHTTPListener.
+// It assumes ln is already open; the public wrappers own the net.Listen
+// decision (or lack thereof).
+func (s *Server) serveHTTP(ctx context.Context, ln net.Listener, authenticator authn.Authenticator, bearerToken string, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, inlineMetrics InlineMetricsOptions) error {
 	if authenticator == nil {
 		if bearerToken == "" {
 			return fmt.Errorf("MCP_BEARER_TOKEN is required for HTTP transport when no authenticator is supplied")
@@ -67,9 +93,6 @@ func (s *Server) ServeHTTP(ctx context.Context, bind string, authenticator authn
 			return fmt.Errorf("build static-bearer authenticator: %w", err)
 		}
 		authenticator = auth
-	}
-	if bind == "" {
-		bind = ":8080"
 	}
 	if maxBodySize <= 0 {
 		maxBodySize = 2097152 // 2 MB
@@ -97,7 +120,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind string, authenticator authn
 	mountExtras(mux, s.ExtraHTTPHandlers)
 
 	srv := &http.Server{
-		Addr:              bind,
+		Addr:              ln.Addr().String(),
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -117,11 +140,7 @@ func (s *Server) ServeHTTP(ctx context.Context, bind string, authenticator authn
 		}
 	}()
 
-	slog.Info("http_start", "bind", bind)
-	ln, err := net.Listen("tcp", bind)
-	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", bind, err)
-	}
+	slog.Info("http_start", "bind", ln.Addr().String())
 
 	// Install the legacy-POST notification sink so activation events
 	// (tools/list_changed) are visibly dropped and counted instead of
