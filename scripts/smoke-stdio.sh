@@ -48,6 +48,7 @@ REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n{"jsonrpc
 set +e
 printf '%s' "$REQUESTS" \
     | MCP_TRANSPORT=stdio \
+      MCP_METRICS_AUTH_MODE=none \
       CLOCKIFY_API_KEY=smoke-test-dummy \
       "$BIN" \
       >"$OUT" 2>"$ERR"

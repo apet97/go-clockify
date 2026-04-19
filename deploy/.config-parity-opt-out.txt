@@ -33,4 +33,6 @@ MCP_ALLOW_DEV_BACKEND              — safety guard against using file/memory in
 MCP_CONTROL_PLANE_AUDIT_CAP        — advanced tuning; use extraEnv if needed.
 MCP_CONTROL_PLANE_AUDIT_RETENTION  — advanced tuning; use extraEnv if needed.
 MCP_OIDC_VERIFY_CACHE_TTL          — advanced tuning; default is safe.
+CLOCKIFY_TOOL_TIMEOUT              — advanced tuning; default is safe.
+
 

@@ -38,11 +38,10 @@ func TestForwardAuthHardening(t *testing.T) {
 		req.Header.Set("X-Forwarded-User", "hacker")
 
 		result, err := auth.Authenticate(context.Background(), req)
-		if err == nil || result.Subject == "hacker" {
-			// This is a bit tricky as Authenticate for static_bearer expects
-			// a Bearer token in Authorization header.
-			// The point is that Subject should not be "hacker" just because
-			// the header is present.
+		if err == nil {
+			if result.Subject == "hacker" {
+				t.Fatal("X-Forwarded-User header was trusted in static_bearer mode")
+			}
 		}
 	})
 
