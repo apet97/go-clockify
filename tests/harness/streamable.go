@@ -283,7 +283,7 @@ func (h *streamableHarness) sendRequest(ctx context.Context, id int, method stri
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusRequestEntityTooLarge {
 		h.deliver(id, Response{ID: id, Error: &RPCError{Code: -32001, Message: "request body too large"}})
 		return nil
