@@ -50,13 +50,13 @@ type Config struct {
 	// MCP_CONTROL_PLANE_AUDIT_RETENTION; default 720h (30 days).
 	ControlPlaneAuditRetention time.Duration
 	SessionTTL                 time.Duration
-	TenantClaim     string
-	SubjectClaim    string
-	DefaultTenantID string
-	OIDCIssuer      string
-	OIDCAudience    string
-	OIDCJWKSURL     string
-	OIDCJWKSPath    string
+	TenantClaim                string
+	SubjectClaim               string
+	DefaultTenantID            string
+	OIDCIssuer                 string
+	OIDCAudience               string
+	OIDCJWKSURL                string
+	OIDCJWKSPath               string
 	// OIDCResourceURI is the canonical URI clients use to address this
 	// MCP server. When set, every OIDC token must list this URI in its
 	// audience claim — RFC 8707 / MCP OAuth 2.1 resource indicator

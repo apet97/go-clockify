@@ -841,8 +841,8 @@ func TestOIDCVerifyCacheTTL_Default(t *testing.T) {
 
 func TestOIDCVerifyCacheTTL_Custom(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":            "test-key",
-		"MCP_OIDC_VERIFY_CACHE_TTL":   "90s",
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL": "90s",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -855,8 +855,8 @@ func TestOIDCVerifyCacheTTL_Custom(t *testing.T) {
 
 func TestOIDCVerifyCacheTTL_BelowMinRejected(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":            "test-key",
-		"MCP_OIDC_VERIFY_CACHE_TTL":   "500ms",
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL": "500ms",
 	})
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for TTL below 1s")
@@ -865,8 +865,8 @@ func TestOIDCVerifyCacheTTL_BelowMinRejected(t *testing.T) {
 
 func TestOIDCVerifyCacheTTL_AboveMaxRejected(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":            "test-key",
-		"MCP_OIDC_VERIFY_CACHE_TTL":   "10m",
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL": "10m",
 	})
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for TTL above 5m")
@@ -875,8 +875,8 @@ func TestOIDCVerifyCacheTTL_AboveMaxRejected(t *testing.T) {
 
 func TestOIDCVerifyCacheTTL_InvalidDurationRejected(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":            "test-key",
-		"MCP_OIDC_VERIFY_CACHE_TTL":   "carrots",
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_OIDC_VERIFY_CACHE_TTL": "carrots",
 	})
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for unparseable duration")

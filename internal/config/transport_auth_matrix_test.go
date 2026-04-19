@@ -48,8 +48,8 @@ func TestTransportAuthMatrix(t *testing.T) {
 
 		// --- streamable_http ----------------------------------------
 		{"streamable_http", "static_bearer", map[string]string{
-			"MCP_BEARER_TOKEN":        bearer,
-			"MCP_CONTROL_PLANE_DSN":   "memory",
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "memory",
 		}, "ok"},
 		{"streamable_http", "oidc", map[string]string{
 			"MCP_OIDC_ISSUER":       "https://issuer.example",
