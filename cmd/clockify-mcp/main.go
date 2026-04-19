@@ -182,78 +182,10 @@ func subjectSweepInterval() time.Duration {
 	return 5 * time.Minute
 }
 
+// printHelp emits the --help banner. The environment-variable catalog is
+// rendered from internal/config/AllSpecs() via cmd/gen-config-docs and
+// embedded as generatedHelp in help_generated.go. Regenerate after any
+// EnvSpec edit with: go run ./cmd/gen-config-docs -mode=all
 func printHelp() {
-	fmt.Fprintf(os.Stderr, `clockify-mcp v%s — MCP server for Clockify
-
-Usage: clockify-mcp [--version | --help]
-
-Environment Variables:
-  Core:
-    CLOCKIFY_API_KEY          API key (required for stdio/http; optional for streamable_http)
-    CLOCKIFY_WORKSPACE_ID     Workspace ID (auto-detected if only one)
-    CLOCKIFY_BASE_URL         API base URL (default: https://api.clockify.me/api/v1)
-    CLOCKIFY_TIMEZONE         IANA timezone for time parsing
-    CLOCKIFY_INSECURE         Set to 1 to allow non-HTTPS base URLs
-
-  Safety:
-    CLOCKIFY_POLICY           read_only, safe_core, standard (default), full
-    CLOCKIFY_DRY_RUN          Dry-run for destructive tools (default: enabled)
-    CLOCKIFY_DENY_TOOLS       Comma-separated tools to block
-    CLOCKIFY_DENY_GROUPS      Comma-separated groups to block
-    CLOCKIFY_ALLOW_GROUPS     Comma-separated allowed groups
-    CLOCKIFY_DEDUPE_MODE      warn (default), block, off
-    CLOCKIFY_DEDUPE_LOOKBACK  Recent entries to check (default: 25)
-    CLOCKIFY_OVERLAP_CHECK    Overlapping entry detection (default: true)
-
-  Performance:
-    CLOCKIFY_MAX_CONCURRENT        Concurrent tool call limit, 0=off (default: 10)
-    CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT  Time to wait for a concurrency slot (default: 100ms)
-    CLOCKIFY_RATE_LIMIT            Tool calls per fixed 60s window, 0=off (default: 120)
-    CLOCKIFY_TOKEN_BUDGET          Response token budget, 0=off (default: 8000)
-    MCP_MAX_INFLIGHT_TOOL_CALLS    Stdio dispatch goroutine cap, 0=off (default: 64)
-    CLOCKIFY_REPORT_MAX_ENTRIES    Hard cap on entries aggregated by report tools, 0=off (default: 10000)
-
-  Bootstrap:
-    CLOCKIFY_BOOTSTRAP_MODE   full_tier1 (default), minimal, custom
-    CLOCKIFY_BOOTSTRAP_TOOLS  Tool list for custom mode
-
-  Transport:
-    MCP_TRANSPORT                        stdio (default), streamable_http, grpc, or http (legacy POST-only, deprecated)
-    MCP_GRPC_BIND                        gRPC listen address when MCP_TRANSPORT=grpc (default: :9090, requires -tags=grpc)
-    MCP_AUTH_MODE                        static_bearer, oidc, forward_auth, mtls (grpc: static_bearer+oidc only)
-    MCP_HTTP_BIND                        HTTP listen address (default: :8080)
-    MCP_BEARER_TOKEN                     Required for static bearer auth; send as Authorization: Bearer <token>
-    MCP_ALLOWED_ORIGINS                  Comma-separated CORS origins
-    MCP_ALLOW_ANY_ORIGIN                 Set 1 to allow all origins
-    MCP_STRICT_HOST_CHECK                Set 1 to require Host match localhost/127.0.0.1/::1 or MCP_ALLOWED_ORIGINS
-    MCP_HTTP_MAX_BODY                    Positive max request body in bytes (default: 2097152)
-    MCP_METRICS_BIND                     Optional dedicated metrics listener (recommended for streamable_http)
-    MCP_METRICS_AUTH_MODE                none (default) or static_bearer
-    MCP_METRICS_BEARER_TOKEN             Bearer token for dedicated metrics listener
-    MCP_HTTP_LEGACY_POLICY               warn (default), allow, or deny — controls MCP_TRANSPORT=http startup behaviour
-    MCP_HTTP_INLINE_METRICS_ENABLED      Set 1 to expose /metrics on the main HTTP listener (default: off)
-    MCP_HTTP_INLINE_METRICS_AUTH_MODE    inherit_main_bearer (default), static_bearer, or none
-    MCP_HTTP_INLINE_METRICS_BEARER_TOKEN Separate bearer token for /metrics when auth mode is static_bearer
-
-  Audit:
-    MCP_AUDIT_DURABILITY      best_effort (default) or fail_closed — controls whether audit persist failures abort tool calls
-
-  Enterprise Shared-Service:
-    MCP_CONTROL_PLANE_DSN     Control-plane store DSN (memory, /path/file.json, or file:///path/file.json)
-    MCP_SESSION_TTL           Session TTL for streamable_http (default: 30m)
-    MCP_TENANT_CLAIM          Tenant claim name for OIDC (default: tenant_id)
-    MCP_SUBJECT_CLAIM         Subject claim name for OIDC (default: sub)
-    MCP_DEFAULT_TENANT_ID     Default tenant for static_bearer/forward_auth/mtls (default: default)
-    MCP_OIDC_ISSUER           Required issuer URL for OIDC auth
-    MCP_OIDC_AUDIENCE         Optional audience for OIDC auth
-    MCP_OIDC_JWKS_URL         Optional JWKS URL override
-    MCP_OIDC_JWKS_PATH        Optional local JWKS file for tests/dev
-    MCP_FORWARD_TENANT_HEADER Tenant header for forward_auth (default: X-Forwarded-Tenant)
-    MCP_FORWARD_SUBJECT_HEADER Subject header for forward_auth (default: X-Forwarded-User)
-    MCP_MTLS_TENANT_HEADER    Tenant header override for mtls (default: X-Tenant-ID)
-
-  Logging:
-    MCP_LOG_FORMAT            text (default) or json
-    MCP_LOG_LEVEL             debug, info (default), warn, error
-`, version)
+	fmt.Fprintf(os.Stderr, "clockify-mcp v%s — MCP server for Clockify\n\nUsage: clockify-mcp [--version | --help]\n\n%s", version, generatedHelp)
 }
