@@ -26,7 +26,7 @@ func TestOIDCHardening(t *testing.T) {
 
 	// 3. Authenticate with mismatched audience should fail
 	// This requires a mock JWKS server or a pre-populated cache.
-	// For this unit test, we'll verify the config loading logic and 
+	// For this unit test, we'll verify the config loading logic and
 	// basic structural properties.
 }
 
@@ -36,12 +36,12 @@ func TestForwardAuthHardening(t *testing.T) {
 		auth, _ := New(Config{Mode: ModeStaticBearer, BearerToken: "token1234"})
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("X-Forwarded-User", "hacker")
-		
+
 		result, err := auth.Authenticate(context.Background(), req)
 		if err == nil || result.Subject == "hacker" {
-			// This is a bit tricky as Authenticate for static_bearer expects 
+			// This is a bit tricky as Authenticate for static_bearer expects
 			// a Bearer token in Authorization header.
-			// The point is that Subject should not be "hacker" just because 
+			// The point is that Subject should not be "hacker" just because
 			// the header is present.
 		}
 	})
@@ -68,7 +68,7 @@ func TestForwardAuthHardening(t *testing.T) {
 	t.Run("missing_headers_fails", func(t *testing.T) {
 		auth, _ := New(Config{Mode: ModeForwardAuth})
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		
+
 		_, err := auth.Authenticate(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error for missing forward-auth headers")

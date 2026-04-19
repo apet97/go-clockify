@@ -26,6 +26,7 @@ go build -o "$BIN" ./cmd/clockify-mcp
 MCP_TRANSPORT=http \
 MCP_HTTP_BIND="127.0.0.1:$PORT" \
 MCP_BEARER_TOKEN=smoke-test-token-1234567890 \
+MCP_METRICS_AUTH_MODE=none \
 CLOCKIFY_API_KEY=smoke-test-dummy \
 "$BIN" &
 PID=$!

@@ -24,3 +24,13 @@ MCP_HTTP_INLINE_METRICS_AUTH_MODE  — depends on MCP_HTTP_INLINE_METRICS_ENABLE
 MCP_HTTP_INLINE_METRICS_BEARER_TOKEN — secret material; must be injected via
                                      a Secret/ExternalSecret, not a ConfigMap.
                                      Operators add it to values.extraSecretEnv.
+ENVIRONMENT                        — usually set via a constant or a different
+                                     mechanism in CI/CD; not a primary runtime
+                                     config for Helm/k8s users today.
+MCP_ALLOW_DEV_BACKEND              — safety guard against using file/memory in
+                                     prod; excluded from templates to nudge
+                                     users toward Postgres for k8s.
+MCP_CONTROL_PLANE_AUDIT_CAP        — advanced tuning; use extraEnv if needed.
+MCP_CONTROL_PLANE_AUDIT_RETENTION  — advanced tuning; use extraEnv if needed.
+MCP_OIDC_VERIFY_CACHE_TTL          — advanced tuning; default is safe.
+

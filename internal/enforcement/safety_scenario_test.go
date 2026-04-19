@@ -24,16 +24,16 @@ func (m *mockAuditor) RecordAudit(event mcp.AuditEvent) error {
 
 func TestSafetyScenarios(t *testing.T) {
 	tests := []struct {
-		name           string
-		toolName       string
-		hints          mcp.ToolHints
-		policy         *policy.Policy
-		dryRunEnabled  bool
-		args           map[string]any
-		handler        mcp.ToolHandler
-		expectError    string
-		expectDryRun   bool
-		expectAudited  bool
+		name            string
+		toolName        string
+		hints           mcp.ToolHints
+		policy          *policy.Policy
+		dryRunEnabled   bool
+		args            map[string]any
+		handler         mcp.ToolHandler
+		expectError     string
+		expectDryRun    bool
+		expectAudited   bool
 		auditDurability string
 	}{
 		{
@@ -66,23 +66,23 @@ func TestSafetyScenarios(t *testing.T) {
 			expectError: "multiple projects match 'Ambiguous'",
 		},
 		{
-			name:          "audit_on_successful_non_readonly_call",
-			toolName:      "clockify_add_entry",
-			hints:         mcp.ToolHints{ReadOnly: false},
-			policy:        standardPolicy(),
-			args:          map[string]any{"description": "work"},
+			name:     "audit_on_successful_non_readonly_call",
+			toolName: "clockify_add_entry",
+			hints:    mcp.ToolHints{ReadOnly: false},
+			policy:   standardPolicy(),
+			args:     map[string]any{"description": "work"},
 			handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return map[string]any{"id": "e1"}, nil
 			},
 			expectAudited: true,
 		},
 		{
-			name:            "audit_fail_closed_aborts_on_persist_error",
-			toolName:        "clockify_add_entry",
-			hints:           mcp.ToolHints{ReadOnly: false},
-			policy:          standardPolicy(),
-			args:            map[string]any{"description": "work"},
-			handler:         func(ctx context.Context, args map[string]any) (any, error) {
+			name:     "audit_fail_closed_aborts_on_persist_error",
+			toolName: "clockify_add_entry",
+			hints:    mcp.ToolHints{ReadOnly: false},
+			policy:   standardPolicy(),
+			args:     map[string]any{"description": "work"},
+			handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return map[string]any{"id": "e1"}, nil
 			},
 			auditDurability: "fail_closed",
