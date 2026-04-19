@@ -1,6 +1,7 @@
 package controlplane
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -85,6 +86,12 @@ type Store interface {
 	PutSession(record SessionRecord) error
 	DeleteSession(id string) error
 	AppendAuditEvent(event AuditEvent) error
+	// RetainAudit drops audit events older than maxAge and returns the
+	// number removed. Called periodically by the retention reaper
+	// (B2); maxAge <= 0 is a no-op. Implementations must respect ctx
+	// cancellation and must not leave the store in an inconsistent
+	// state on partial failure.
+	RetainAudit(ctx context.Context, maxAge time.Duration) (int, error)
 	// Close releases backend-owned resources (pgxpool, file handles).
 	// DevFileStore has nothing to release and returns nil.
 	Close() error
@@ -355,6 +362,39 @@ func (s *DevFileStore) AppendAuditEvent(event AuditEvent) error {
 		s.state.AuditEvents = kept
 	}
 	return s.persistLocked()
+}
+
+// RetainAudit drops audit events older than maxAge from the in-memory
+// slice and rewrites the file. Complementary to the WithAuditCap
+// hard-limit: the cap protects against bursty writes between reaper
+// ticks, retention enforces the time window. maxAge <= 0 is a no-op
+// so operators can disable retention by clearing the env var.
+func (s *DevFileStore) RetainAudit(ctx context.Context, maxAge time.Duration) (int, error) {
+	if maxAge <= 0 {
+		return 0, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	kept := make([]AuditEvent, 0, len(s.state.AuditEvents))
+	for _, e := range s.state.AuditEvents {
+		if e.At.Before(cutoff) {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	dropped := len(s.state.AuditEvents) - len(kept)
+	if dropped == 0 {
+		return 0, nil
+	}
+	s.state.AuditEvents = kept
+	if err := s.persistLocked(); err != nil {
+		return 0, err
+	}
+	return dropped, nil
 }
 
 // Close releases backend-owned resources. DevFileStore has no

@@ -1,6 +1,7 @@
 package controlplane
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -172,6 +173,83 @@ func TestUnknownLookups(t *testing.T) {
 	}
 	if _, ok := s.Session("missing"); ok {
 		t.Fatal("expected missing session to return ok=false")
+	}
+}
+
+// TestDevFileStore_RetainAudit_DropsOldEvents seeds four events with
+// varying ages and asserts that RetainAudit drops the ones older than
+// the cutoff, reports the correct count, and persists the reduced set.
+func TestDevFileStore_RetainAudit_DropsOldEvents(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	now := time.Now().UTC()
+	events := []AuditEvent{
+		{ID: "old-1", At: now.Add(-48 * time.Hour)},
+		{ID: "old-2", At: now.Add(-24*time.Hour - time.Minute)},
+		{ID: "fresh-1", At: now.Add(-1 * time.Hour)},
+		{ID: "fresh-2", At: now.Add(-10 * time.Second)},
+	}
+	for _, e := range events {
+		if err := s.AppendAuditEvent(e); err != nil {
+			t.Fatalf("append %s: %v", e.ID, err)
+		}
+	}
+
+	dropped, err := s.RetainAudit(context.Background(), 24*time.Hour)
+	if err != nil {
+		t.Fatalf("RetainAudit: %v", err)
+	}
+	if dropped != 2 {
+		t.Fatalf("expected 2 dropped, got %d", dropped)
+	}
+
+	dev := s.(*DevFileStore)
+	if got := len(dev.state.AuditEvents); got != 2 {
+		t.Fatalf("expected 2 retained, got %d", got)
+	}
+	for _, e := range dev.state.AuditEvents {
+		if e.ID == "old-1" || e.ID == "old-2" {
+			t.Fatalf("old event %q survived retention", e.ID)
+		}
+	}
+
+	// Reopening from disk must see the pruned set — RetainAudit
+	// persists through the file store's normal mutex+rewrite path.
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	reopenedDev := reopened.(*DevFileStore)
+	if got := len(reopenedDev.state.AuditEvents); got != 2 {
+		t.Fatalf("expected 2 retained after reload, got %d", got)
+	}
+}
+
+// TestDevFileStore_RetainAudit_ZeroMaxAge is a no-op: the reaper may
+// pass zero when retention is disabled, and RetainAudit must not drop
+// anything in that case.
+func TestDevFileStore_RetainAudit_ZeroMaxAge(t *testing.T) {
+	s, err := Open("memory")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	now := time.Now().UTC()
+	for i := 0; i < 3; i++ {
+		if err := s.AppendAuditEvent(AuditEvent{
+			ID: "e", At: now.Add(-time.Duration(i) * 24 * time.Hour),
+		}); err != nil {
+			t.Fatalf("append: %v", err)
+		}
+	}
+	dropped, err := s.RetainAudit(context.Background(), 0)
+	if err != nil {
+		t.Fatalf("RetainAudit: %v", err)
+	}
+	if dropped != 0 {
+		t.Fatalf("expected 0 dropped with maxAge=0, got %d", dropped)
 	}
 }
 

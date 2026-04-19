@@ -210,6 +210,22 @@ func (s *Store) DeleteSession(id string) error {
 	return err
 }
 
+// RetainAudit deletes audit events older than maxAge. Returns the row
+// count removed. maxAge <= 0 is a no-op (matches DevFileStore so the
+// reaper can safely drive both backends through the same interface
+// method).
+func (s *Store) RetainAudit(ctx context.Context, maxAge time.Duration) (int, error) {
+	if maxAge <= 0 {
+		return 0, nil
+	}
+	cutoff := time.Now().Add(-maxAge).UTC()
+	tag, err := s.pool.Exec(ctx, `DELETE FROM audit_events WHERE at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 func (s *Store) AppendAuditEvent(event controlplane.AuditEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
 	defer cancel()
