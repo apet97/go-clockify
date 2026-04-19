@@ -409,6 +409,40 @@ func (h *streamableHarness) Cancel(ctx context.Context, requestID int) error {
 
 func (h *streamableHarness) Notifications() <-chan Response { return h.notifs }
 
+// SendRaw POSTs raw bytes to /mcp carrying the established session ID.
+// The server's parse-error handler runs after auth but before session
+// lookup (see transport_streamable_http.go), so a malformed frame
+// returns 200 with code=-32700 on the POST body. 413 follows the same
+// mapping as ordinary requests.
+func (h *streamableHarness) SendRaw(ctx context.Context, frame []byte) (Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url+"/mcp", bytes.NewReader(frame))
+	if err != nil {
+		return Response{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+h.bearer)
+	if h.sessionID != "" {
+		req.Header.Set("X-MCP-Session-ID", h.sessionID)
+	}
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return Response{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode == http.StatusRequestEntityTooLarge {
+		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d body=%s", resp.StatusCode, string(body))}}, nil
+	}
+	var out Response
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return Response{}, fmt.Errorf("decode streamable SendRaw response: %w", err)
+	}
+	return out, nil
+}
+
 func (h *streamableHarness) MaxSupportedSize() int64 {
 	if h.opts.MaxMessageSize > 0 {
 		return h.opts.MaxMessageSize

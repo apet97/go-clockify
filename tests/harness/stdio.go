@@ -33,6 +33,7 @@ func NewStdio(ctx context.Context, opts Options) (Transport, error) {
 		serverW: serverW,
 		pending: map[int]chan Response{},
 		notifs:  make(chan Response, 16),
+		raws:    make(chan Response, 4),
 		done:    make(chan struct{}),
 	}
 	h.runCtx, h.runCancel = context.WithCancel(ctx)
@@ -72,7 +73,13 @@ type stdioHarness struct {
 	mu      sync.Mutex
 	pending map[int]chan Response
 	notifs  chan Response
-	closed  bool
+	// raws receives anonymous server responses (no id, no method —
+	// typically the -32700 parse-error frame a malformed request
+	// triggers). SendRaw holds rawMu for the duration of a raw
+	// exchange and reads from this channel.
+	raws   chan Response
+	rawMu  sync.Mutex
+	closed bool
 }
 
 func (h *stdioHarness) Name() string { return "stdio" }
@@ -115,6 +122,17 @@ func (h *stdioHarness) readLoop() {
 		if ok {
 			ch <- r
 			close(ch)
+			continue
+		}
+		// No pending match. An anonymous error frame (no id, Error set)
+		// is the parse-error reply to a SendRaw; forward it on raws so
+		// the caller can assert on it. Other unmatched frames are late
+		// duplicates and silently dropped to preserve prior behaviour.
+		if r.ID == 0 && r.Method == "" && r.Error != nil {
+			select {
+			case h.raws <- r:
+			default:
+			}
 		}
 	}
 	// Scanner exited — server closed or errored (e.g. on oversize frame).
@@ -223,6 +241,33 @@ func (h *stdioHarness) Cancel(_ context.Context, requestID int) error {
 }
 
 func (h *stdioHarness) Notifications() <-chan Response { return h.notifs }
+
+// SendRaw writes raw bytes (plus a trailing newline for line-delimited
+// framing) to the server and waits for the server's anonymous error
+// reply. Only one SendRaw runs at a time per harness; concurrent calls
+// serialise on rawMu. Pending matched responses are unaffected.
+func (h *stdioHarness) SendRaw(ctx context.Context, frame []byte) (Response, error) {
+	h.rawMu.Lock()
+	defer h.rawMu.Unlock()
+	// Drain any stale raws from prior exchanges before writing.
+	select {
+	case <-h.raws:
+	default:
+	}
+	buf := frame
+	if len(buf) == 0 || buf[len(buf)-1] != '\n' {
+		buf = append(append([]byte{}, frame...), '\n')
+	}
+	if _, err := h.clientW.Write(buf); err != nil {
+		return Response{}, fmt.Errorf("stdio SendRaw write: %w", err)
+	}
+	select {
+	case r := <-h.raws:
+		return r, nil
+	case <-ctx.Done():
+		return Response{}, ctx.Err()
+	}
+}
 
 func (h *stdioHarness) MaxSupportedSize() int64 {
 	if h.opts.MaxMessageSize > 0 {

@@ -158,6 +158,35 @@ func (h *legacyHTTPHarness) Cancel(_ context.Context, _ int) error { return nil 
 
 func (h *legacyHTTPHarness) Notifications() <-chan Response { return nil }
 
+// SendRaw POSTs raw bytes to /mcp and decodes the response body. Parse
+// errors come back synchronously on the POST with status 200 and an
+// envelope carrying code=-32700; 413 still maps to the over-size
+// carve-out shared with the ordinary do() path.
+func (h *legacyHTTPHarness) SendRaw(ctx context.Context, frame []byte) (Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url, bytes.NewReader(frame))
+	if err != nil {
+		return Response{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+h.bearer)
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return Response{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode == http.StatusRequestEntityTooLarge {
+		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d", resp.StatusCode)}}, nil
+	}
+	var out Response
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return Response{}, fmt.Errorf("decode legacy SendRaw response: %w", err)
+	}
+	return out, nil
+}
+
 func (h *legacyHTTPHarness) MaxSupportedSize() int64 {
 	if h.opts.MaxMessageSize > 0 {
 		return h.opts.MaxMessageSize

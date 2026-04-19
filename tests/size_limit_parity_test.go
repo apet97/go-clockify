@@ -79,3 +79,53 @@ func TestSizeLimit_ParityAcrossTransports(t *testing.T) {
 		})
 	}
 }
+
+// TestSizeLimit_MalformedJSONParity sends a deliberately invalid frame
+// through each transport's raw-send primitive and asserts the server
+// surfaces JSON-RPC parse error -32700. Fills the third boundary the
+// size-limit plan called out (at-limit / over-limit / malformed); the
+// first two are covered above, this one pins the last.
+//
+// "Malformed" here is a request missing its closing brace — a shape
+// json.Unmarshal rejects outright. The server's DispatchMessage and
+// each HTTP handler convert that to {"jsonrpc":"2.0","error":{"code":
+// -32700,"message":"invalid JSON"}}.
+func TestSizeLimit_MalformedJSONParity(t *testing.T) {
+	cases := allFactories()
+	for name, factory := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			h, err := factory(ctx, harness.Options{
+				BearerToken: strings.Repeat("m", 16),
+			})
+			if err != nil {
+				if errors.Is(err, harness.ErrGRPCUnavailable) {
+					t.Skip("gRPC harness unavailable")
+				}
+				t.Fatalf("factory: %v", err)
+			}
+			defer func() { _ = h.Close() }()
+
+			if _, err := h.Initialize(ctx); err != nil {
+				t.Fatalf("initialize: %v", err)
+			}
+
+			// Intentionally malformed: missing closing brace.
+			malformed := []byte(`{"jsonrpc":"2.0","id":99,"method":"tools/list"`)
+			resp, err := h.SendRaw(ctx, malformed)
+			if err != nil {
+				t.Fatalf("%s: SendRaw returned transport error: %v", h.Name(), err)
+			}
+			if resp.Error == nil {
+				t.Fatalf("%s: malformed JSON returned non-error response: %+v", h.Name(), resp)
+			}
+			if resp.Error.Code != -32700 {
+				t.Fatalf("%s: expected parse error -32700, got code=%d msg=%q",
+					h.Name(), resp.Error.Code, resp.Error.Message)
+			}
+		})
+	}
+}

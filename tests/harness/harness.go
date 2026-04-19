@@ -78,6 +78,17 @@ type Transport interface {
 	// Legacy HTTP returns nil — callers must handle the nil case
 	// explicitly rather than blocking forever on <-nil.
 	Notifications() <-chan Response
+	// SendRaw delivers arbitrary bytes through the transport's framing
+	// layer without wrapping them in a JSON-RPC envelope and returns
+	// the decoded server reply. Intended for malformed-JSON / parse-
+	// error boundary tests; not for normal call flow.
+	//
+	// Line-delimited transports (stdio, gRPC) send the bytes verbatim
+	// and read the next anonymous error frame. HTTP transports POST
+	// the bytes as the request body and decode the HTTP response. Only
+	// one SendRaw at a time per harness instance — serialisation is
+	// enforced internally.
+	SendRaw(ctx context.Context, frame []byte) (Response, error)
 	MaxSupportedSize() int64
 	Close() error
 }

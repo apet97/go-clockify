@@ -87,6 +87,7 @@ func NewGRPC(ctx context.Context, opts Options) (Transport, error) {
 		done:      done,
 		pending:   map[int]chan Response{},
 		notifs:    make(chan Response, 32),
+		raws:      make(chan Response, 4),
 		bearer:    bearer,
 		maxRecv:   int64(maxRecv),
 	}
@@ -121,7 +122,13 @@ type grpcHarness struct {
 	mu      sync.Mutex
 	pending map[int]chan Response
 	notifs  chan Response
-	closed  bool
+	// raws mirrors the stdio harness: the server's parse-error reply
+	// to a malformed request has no id, so the pending-map lookup
+	// misses and the frame would otherwise be dropped. SendRaw
+	// serialises through rawMu and reads from raws.
+	raws   chan Response
+	rawMu  sync.Mutex
+	closed bool
 }
 
 func (h *grpcHarness) Name() string { return "grpc" }
@@ -188,6 +195,16 @@ func (h *grpcHarness) readLoop() {
 		if ok {
 			ch <- r
 			close(ch)
+			continue
+		}
+		// Unmatched frame. An anonymous error frame is the parse-error
+		// reply to SendRaw — forward it on raws. Other unmatched frames
+		// are late duplicates; drop.
+		if r.ID == 0 && r.Method == "" && r.Error != nil {
+			select {
+			case h.raws <- r:
+			default:
+			}
 		}
 	}
 }
@@ -279,6 +296,31 @@ func (h *grpcHarness) Cancel(_ context.Context, requestID int) error {
 }
 
 func (h *grpcHarness) Notifications() <-chan Response { return h.notifs }
+
+// SendRaw pushes bytes through the bidi stream without JSON-wrapping.
+// The server's DispatchMessage returns the -32700 envelope when the
+// frame fails to unmarshal, and the gRPC transport forwards it on the
+// same stream. The harness readLoop routes that anonymous error frame
+// onto raws (see the readLoop edit above).
+func (h *grpcHarness) SendRaw(ctx context.Context, frame []byte) (Response, error) {
+	h.rawMu.Lock()
+	defer h.rawMu.Unlock()
+	// Drain stale raws from any prior exchange.
+	select {
+	case <-h.raws:
+	default:
+	}
+	payload := append([]byte{}, frame...)
+	if err := h.stream.SendMsg(&payload); err != nil {
+		return Response{}, fmt.Errorf("grpc SendRaw: %w", err)
+	}
+	select {
+	case r := <-h.raws:
+		return r, nil
+	case <-ctx.Done():
+		return Response{}, ctx.Err()
+	}
+}
 
 func (h *grpcHarness) MaxSupportedSize() int64 { return h.maxRecv }
 
