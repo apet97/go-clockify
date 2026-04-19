@@ -248,6 +248,110 @@ func TestLoadMaxMessageSizeLegacyFallback(t *testing.T) {
 	}
 }
 
+func TestLoadStreamableHTTPAllowsEmptyAPIKey(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_TRANSPORT":    "streamable_http",
+		"MCP_METRICS_BIND": "",
+		"MCP_OIDC_ISSUER":  "https://example.com",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AuthMode != "oidc" {
+		t.Fatalf("expected default auth mode oidc, got %q", cfg.AuthMode)
+	}
+}
+
+func TestLoadInvalidBaseURLReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"CLOCKIFY_BASE_URL": "://invalid", // This triggers url.Parse error
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid base URL")
+	}
+}
+
+func TestLoadMetricsValidation(t *testing.T) {
+	t.Run("valid_static_bearer", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":         "test-key",
+			"MCP_METRICS_BIND":         ":9091",
+			"MCP_METRICS_BEARER_TOKEN": "1234567890123456",
+		})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.MetricsBind != ":9091" {
+			t.Fatalf("expected :9091, got %q", cfg.MetricsBind)
+		}
+	})
+
+	t.Run("invalid_auth_mode", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":      "test-key",
+			"MCP_METRICS_BIND":      ":9091",
+			"MCP_METRICS_AUTH_MODE": "invalid",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for invalid auth mode")
+		}
+	})
+
+	t.Run("missing_bearer_token", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":      "test-key",
+			"MCP_METRICS_BIND":      ":9091",
+			"MCP_METRICS_AUTH_MODE": "static_bearer",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for missing bearer token")
+		}
+	})
+
+	t.Run("short_bearer_token", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":         "test-key",
+			"MCP_METRICS_BIND":         ":9091",
+			"MCP_METRICS_AUTH_MODE":    "static_bearer",
+			"MCP_METRICS_BEARER_TOKEN": "short",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for short bearer token")
+		}
+	})
+}
+
+func TestLoadMaxMessageSizeLegacyFallbackInvalidReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "not-a-number",
+	})
+	os.Unsetenv("MCP_MAX_MESSAGE_SIZE")
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid MCP_HTTP_MAX_BODY")
+	}
+}
+
+func TestLoadMaxMessageSizeLegacyFallbackZeroReturnsError(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_HTTP_MAX_BODY": "0",
+	})
+	os.Unsetenv("MCP_MAX_MESSAGE_SIZE")
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for zero MCP_HTTP_MAX_BODY")
+	}
+}
+
 func TestLoadMaxMessageSizeInvalidReturnsError(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":     "test-key",

@@ -70,7 +70,7 @@ config:
   CLOCKIFY_REPORT_MAX_ENTRIES: "10000"
   CLOCKIFY_BOOTSTRAP_MODE: "full_tier1"
   MCP_MAX_INFLIGHT_TOOL_CALLS: "64"
-  MCP_HTTP_MAX_BODY: "2097152"
+  MCP_MAX_MESSAGE_SIZE: "4194304"
 
 # Transport-specific env. Set strictHostCheck to "1" in prod.
 #
