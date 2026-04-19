@@ -227,6 +227,18 @@ func (sr *statusRecorder) Write(b []byte) (int, error) {
 	return sr.ResponseWriter.Write(b)
 }
 
+// Flush exposes the underlying writer's Flusher so streaming handlers
+// (e.g. streamable HTTP SSE) can force-ship frames even when wrapped by
+// observeHTTPH. Without this forward, type-asserting the writer to
+// http.Flusher would fail and the SSE GET /mcp route would return
+// "streaming unsupported" because embedding ResponseWriter does not
+// lift the Flusher interface onto statusRecorder.
+func (sr *statusRecorder) Flush() {
+	if f, ok := sr.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // observeHTTP wraps a HandlerFunc with metrics and panic recovery, recording
 // both the HTTPRequestsTotal counter and HTTPRequestDuration histogram against
 // a fixed, bounded path label. Use this for every mux route so /metrics
