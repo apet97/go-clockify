@@ -95,10 +95,46 @@ if [ "${#expected[@]}" -ne "$EXPECTED_COUNT" ]; then
     exit 3
 fi
 
-# Pass 1: every expected file must exist.
+# Goreleaser 2.x places raw binaries in per-build subdirectories
+# (dist/clockify-mcp_linux_amd64_v1/clockify-mcp) and their cosign
+# .sigstore.json siblings alongside them. SBOMs and SHA256SUMS.txt
+# land at dist/ top level. The script used to assume everything was
+# flat; v1.0.1's release workflow hit this and the 18 binary+sig
+# assets were flagged missing even though goreleaser had already
+# uploaded them under their correct published names.
+#
+# The authoritative mapping from "expected release asset name" to
+# "local path goreleaser wrote" lives in dist/artifacts.json (the
+# .name field vs the .path field). When that file exists we prefer
+# it; otherwise we fall back to a recursive filesystem walk that
+# accepts matches at any depth under dist/.
+
+artifacts_json="$DIST/artifacts.json"
+
+# Pass 1: every expected file must exist somewhere under dist/.
 missing=()
 for name in "${expected[@]}"; do
-    if [ ! -e "$DIST/$name" ]; then
+    found=0
+    if [ -f "$artifacts_json" ]; then
+        # Look for a .name match in artifacts.json and verify the
+        # corresponding .path exists on disk. jq is present on the
+        # ubuntu-22.04 runner image by default.
+        if command -v jq >/dev/null 2>&1; then
+            path=$(jq -r --arg n "$name" \
+                '.[] | select(.name == $n) | .path' \
+                "$artifacts_json" 2>/dev/null | head -n 1)
+            if [ -n "$path" ] && [ -f "$path" ]; then
+                found=1
+            fi
+        fi
+    fi
+    if [ "$found" -eq 0 ]; then
+        # Fallback: recursive find by basename.
+        if find "$DIST" -type f -name "$name" -print -quit | grep -q .; then
+            found=1
+        fi
+    fi
+    if [ "$found" -eq 0 ]; then
         missing+=("$name")
     fi
 done
@@ -114,27 +150,44 @@ if [ "${#missing[@]}" -gt 0 ]; then
     exit 1
 fi
 
-# Pass 2: count the top-level artifacts in dist/ that match the naming
-# shape and assert the count is exactly EXPECTED_COUNT. This catches
-# accidental additions (a new SBOM format, a rogue matrix entry, a
-# duplicate archive format) that pass 1 wouldn't see.
-#
-# The glob `clockify-mcp-*` matches final artifacts (dashes) but NOT
-# goreleaser's per-build scratch directories (underscores, e.g.
-# `clockify-mcp_darwin_arm64_v8.0/`). `-d` is skipped just in case a
-# future goreleaser version names a scratch dir with a dash.
-found_count=0
-found_names=()
-shopt -s nullglob
-for f in "$DIST"/clockify-mcp-* "$DIST"/SHA256SUMS.txt; do
-    [ -d "$f" ] && continue
-    found_count=$((found_count + 1))
-    found_names+=("$(basename "$f")")
-done
-shopt -u nullglob
+# Pass 2: count distinct published artifact names to catch accidental
+# additions (extra SBOM format, rogue matrix entry, duplicate archive
+# format). When artifacts.json is present we count its .name entries
+# filtered to the clockify-mcp prefix + SHA256SUMS.txt; otherwise we
+# walk dist/ recursively and deduplicate by basename.
+# Published-artifact name shape:
+#   SHA256SUMS.txt
+#   clockify-mcp[-fips]-<os>-<arch>[.exe][.spdx.json|.sigstore.json]
+# Goreleaser's intermediate binary IDs `clockify-mcp` and
+# `clockify-mcp-fips` (no os/arch suffix) are NOT published assets and
+# must be filtered out of the count.
+ASSET_RE='^(clockify-mcp(-fips)?-(darwin|linux|windows)-(arm64|x64)(\.exe)?(\.spdx\.json|\.sigstore\.json)?|SHA256SUMS\.txt)$'
+
+if [ -f "$artifacts_json" ] && command -v jq >/dev/null 2>&1; then
+    found_names=()
+    while IFS= read -r n; do
+        found_names+=("$n")
+    done < <(jq -r '.[].name' "$artifacts_json" | sort -u | grep -E "$ASSET_RE")
+    found_count=${#found_names[@]}
+else
+    declare -A seen
+    found_count=0
+    found_names=()
+    while IFS= read -r f; do
+        base="$(basename "$f")"
+        if [[ ! "$base" =~ $ASSET_RE ]]; then
+            continue
+        fi
+        if [ -z "${seen[$base]:-}" ]; then
+            seen[$base]=1
+            found_count=$((found_count + 1))
+            found_names+=("$base")
+        fi
+    done < <(find "$DIST" -type f)
+fi
 
 if [ "$found_count" -ne "$EXPECTED_COUNT" ]; then
-    printf 'FAIL: found %d matching top-level files in %s, expected %d\n' \
+    printf 'FAIL: found %d matching release artefacts under %s, expected %d\n' \
         "$found_count" "$DIST" "$EXPECTED_COUNT" >&2
     echo "Artifact shape drift. Listing below:" >&2
     for n in "${found_names[@]}"; do

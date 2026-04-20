@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet. Open the next version here._
 
+## [1.0.2] - 2026-04-20
+
+### Fixed
+
+- **Release pipeline.** `scripts/check-release-assets.sh` now
+  understands goreleaser 2.x's per-build output layout. Previous
+  versions assumed every artefact sat at `dist/` top level, which
+  was true for goreleaser 1.x but not 2.x — the latter places raw
+  binaries and cosign sigstore bundles under per-build subdirs
+  (`dist/clockify-mcp_linux_amd64_v1/clockify-mcp`). The v1.0.1
+  release workflow hit this and the script flagged 18 of 28 assets
+  as missing even though goreleaser had already published them
+  under their correct names. The fix consults `dist/artifacts.json`
+  for the name→path mapping when available, falls back to a
+  recursive filesystem walk, and uses a precise regex to
+  distinguish published assets from intermediate binary IDs. v1.0.1
+  did ship its 28 assets to the GH Release but the post-check
+  failure blocked npm publish + SLSA attestation; v1.0.2 is the
+  clean end-to-end release.
+
 ## [1.0.1] - 2026-04-20
 
 > **Scope note.** The eight days between v1.0.0 and v1.0.1 accumulated
