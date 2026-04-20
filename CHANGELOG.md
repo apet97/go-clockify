@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet. Open the next version here._
+
+## [1.0.1] - 2026-04-20
+
+> **Scope note.** The eight days between v1.0.0 and v1.0.1 accumulated
+> a large volume of backwards-compatible work — EnvSpec registry,
+> Postgres control-plane backend, expanded auth matrix, audit
+> retention reaper, transport parity matrix, async gRPC dispatch,
+> SSE resume verification, and a full pre-ship gate (`make
+> release-check`). No public API changed; tool names, resource URI
+> templates, env-var surface, and protocol behaviour remain the v1
+> baseline. The patch version reflects the absence of breaking
+> changes, not the size of the delta.
+
 ### Added
 
 - **Async gRPC Exchange dispatch.** `internal/transport/grpc/transport.go`
