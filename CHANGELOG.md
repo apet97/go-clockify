@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet. Open the next version here._
 
+## [1.0.3] - 2026-04-20
+
+### Fixed
+
+- **Release workflow continues past SLSA attestation failure.**
+  `actions/attest-build-provenance` hard-fails on user-owned
+  private repositories (GitHub feature gate). `release.yml`'s
+  attestation step is now `continue-on-error: true`, same treatment
+  as `docker-image.yml`. Attestations activate automatically if
+  the repo moves to an org or goes public.
+
+### Context
+
+v1.0.1 and v1.0.2 both published 28 signed+SBOM'd assets to the
+GitHub Release but never reached npm or completed SLSA attestation
+because a downstream step in the release workflow killed the
+pipeline under `set -e`. v1.0.3 is the first release to complete
+the full pipeline — GitHub Release, cosign signatures, SBOMs, npm
+publish, and reproducibility trigger. Code-wise v1.0.3 and v1.0.2
+are identical except for this CHANGELOG entry and the workflow
+fix.
+
 ## [1.0.2] - 2026-04-20
 
 ### Fixed

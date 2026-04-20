@@ -62,6 +62,12 @@ jobs:
           cp dist/clockify-mcp_linux_arm64_v8.0/clockify-mcp   staging/clockify-mcp-linux-arm64
           cp dist/clockify-mcp_windows_amd64_v1/clockify-mcp.exe staging/clockify-mcp-windows-x64.exe
       - name: Generate SLSA build provenance attestation
+        # Attestation is unavailable for user-owned private repos —
+        # GitHub's feature gate. continue-on-error keeps the rest of
+        # the release pipeline (npm publish, reproducibility trigger)
+        # running. When the repo flips to public (or moves under an
+        # org), attestations activate automatically.
+        continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
