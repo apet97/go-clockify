@@ -23,11 +23,13 @@ the knobs were not sized for.
 - `clockify_mcp_inflight_tool_calls` pinned near
   `MCP_MAX_INFLIGHT_TOOL_CALLS` for >5 minutes.
 - `clockify_mcp_tool_call_duration_seconds` p99 climbs by >2x baseline.
-- HTTP `429` responses from `api.clockify.me` visible in the structured
-  log as `level=ERROR msg=clockify_request error="upstream rate
-  limited"`.
-- A single client (identified by bearer token / auth subject in the
-  redacted logs) accounts for >50% of recent tool calls.
+- Upstream Clockify `429 Too Many Requests` responses show up in
+  `msg=tool_call` errors and in
+  `clockify_upstream_requests_total{status="4xx"}` /
+  `clockify_upstream_retries_total{reason="rate_limited"}`.
+- A single client appears to dominate recent traffic. For write-heavy
+  workloads use audit / session metadata; for read-heavy abuse use
+  ingress logs, because there is no per-subject Prometheus series.
 
 ## 2. Where to look first
 
@@ -38,9 +40,14 @@ curl -sf http://<host>:8080/metrics | grep -E '^clockify_mcp_(inflight|rate_limi
 # Per-tool call counts (which tools are hot?)
 curl -sf http://<host>:8080/metrics | grep '^clockify_mcp_tool_calls_total'
 
-# Recent ERROR-level logs
+# Upstream 4xx / retry pressure
+curl -sf http://<host>:8080/metrics \
+  | grep -E '^clockify_(upstream_requests_total|upstream_retries_total)'
+
+# Recent tool-call failures
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
-  | grep -E 'level=(ERROR|WARN) msg=(rate_limit|clockify_request|tool_call_rejected)'
+  | grep 'msg=tool_call' \
+  | grep -E '429 Too Many Requests|rate limit|context deadline exceeded'
 ```
 
 ## 3. Immediate mitigation
@@ -89,15 +96,16 @@ batched workflow.
 
 Work this list top-to-bottom; the most common causes are first.
 
-- [ ] **Misbehaving client.** Did a single auth subject show up at the
-  top of `clockify_mcp_tool_calls_total{auth_subject=...}` after
-  the saturation began? If yes, talk to that client team — usually
-  a polling loop with no backoff. Mitigation: throttle the client
-  in their own code, not in the server.
+- [ ] **Misbehaving client.** There is no `auth_subject` label on
+  `clockify_mcp_tool_calls_total`. For write-heavy traffic, query
+  recent audit or control-plane session data by `subject`; for
+  read-heavy traffic, use ingress / reverse-proxy logs to identify
+  the caller. If one client dominates, fix their polling / backoff
+  loop rather than masking it in the server.
 - [ ] **Resolution cache miss storm.** A schema change or an ID
   rotation can invalidate the resolve-cache, causing every tool
   call to issue extra Clockify lookups. Symptoms: spike in
-  `clockify_mcp_http_requests_total` per tool call, no
+  `clockify_upstream_requests_total` per tool call, no
   corresponding spike in unique tool calls. Fix: deploy the
   schema-aware cache key.
 - [ ] **Retry storm.** A network blip causes the client SDK to retry

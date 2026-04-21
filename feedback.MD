@@ -1,79 +1,67 @@
 # Clockify MCP Review
 
-## Overall Assessment
+Date: 2026-04-22
 
-This is a mature, production-oriented MCP server, not a thin demo wrapper around the Clockify API. The repo shows strong architectural discipline, unusually deep safety controls, and clear operator thinking throughout the transport, auth, metrics, audit, and deployment layers.
+## Findings
 
-The repository shape is a real strength. The protocol core, Clockify client, tool surface, and enforcement/runtime layers are separated cleanly enough that the system still reads coherently despite the overall size. That matters here because the project is already operating at a fairly large scope: 124 tools, 11 activatable Tier 2 groups, built-in resources, prompts, multiple transports, and multiple deployment profiles.
+### 1. High: `docs/policy/production-tool-scope.md` still documents tools that do not exist
 
-My main takeaway is that this repo already looks serious enough to ship and maintain, but it has a few high-value contract and documentation drifts that will confuse MCP clients and operators faster than the underlying code will fail.
+The production policy doc is advertising a public tool surface that does not match the server's actual registry.
 
-## What's Strong
+- `docs/policy/production-tool-scope.md:10-18` names `clockify_get_current_timer`, `clockify_get_summary_report`, `clockify_get_detailed_report`, `clockify_update_project`, `clockify_add_user_to_workspace`, and `clockify_remove_user_from_workspace`.
+- The Tier 1 registry in `internal/tools/registry.go:9-181` exposes `clockify_timer_status`, `clockify_summary_report`, and `clockify_detailed_report` instead.
+- The checked-in catalog in `docs/tool-catalog.json` confirms the current public surface is 33 Tier 1 tools plus 91 Tier 2 tools, for 124 total, with Tier 2 activation via `clockify_search_tools` and `activate_group` / `activate_tool`.
 
-- The layered architecture is solid and easy to reason about in the key integration points: `internal/mcp/server.go`, `internal/runtime/runtime.go`, `internal/tools/registry.go`, and `internal/enforcement/enforcement.go`.
-- The safety and ops posture is well above the bar for a typical MCP server. Policy modes, dry-run support, rate limiting, audit durability behavior, metrics exposure, transport/auth matrix handling, and operator deployment guides all show deliberate engineering rather than afterthought hardening.
-- The project has strong quality discipline. I verified locally that `gofmt -l .`, `go vet ./...`, and `go test ./...` all passed.
-- The repo also has meaningful test breadth for this category of project. At the time of review it contains 241 Go files and 129 `_test.go` files, which matches the impression of a heavily exercised codebase rather than a lightly validated integration.
-- The deployment docs are notably stronger than average. In particular, `docs/deploy/profile-local-stdio.md` gives a clean fast-path for the common single-user case instead of forcing every reader through shared-service complexity first.
+This is more than naming drift. Operators use this document to decide what is safe to expose in production, so stale names here can lead to incorrect allowlists, confusing client guidance, and false expectations about what the server supports.
 
-## Concrete Issues To Fix First
+### 2. High: runbooks and upgrade docs still point operators at log events the implementation does not emit
 
-### 1. Activation naming drift is the highest-value UX/docs bug
+Several operator-facing docs instruct maintainers to grep for stale log event names that do not appear in the current codebase.
 
-The actual public activation surface is `clockify_search_tools` with `activate_group` / `activate_tool` parameters in `internal/tools/registry.go:176`.
+- `docs/runbooks/auth-failures.md:27-30,40,101` references `auth_rejected` and `clockify_request`.
+- `docs/runbooks/rate-limit-saturation.md:27,43` references `clockify_request` and `tool_call_rejected`.
+- `docs/runbooks/clockify-upstream-outage.md:18,40` references `clockify_request`.
+- `docs/upgrade-checklist.md:113-116` references `protocol_version_negotiated` and `clockify_request`.
 
-But several agent-facing and generated surfaces still tell consumers to use nonexistent tools:
+The implementation currently emits:
 
-- `internal/mcp/server.go:43` references `clockify_activate_group` / `clockify_activate_tool`
-- `scripts/gen-tool-catalog/main.go:135` generates the same incorrect names
-- `docs/tool-catalog.md:7` publishes the same incorrect names
+- `http_request` in `internal/mcp/transport_http.go:367-419,459-466`
+- `tool_call` in `internal/mcp/tools.go:92-155`
+- `initialize` in `internal/mcp/server.go:737-742`
 
-This is the most important issue to fix first because `ServerInstructions` directly shapes agent behavior during MCP initialization. If the initialization guidance is wrong, an otherwise capable client will systematically try the wrong commands.
+A repository-wide search under `internal/` and `cmd/` found no emitted `clockify_request`, `auth_rejected`, `tool_call_rejected`, or `protocol_version_negotiated` events. That makes the current incident guidance unreliable: the recommended grep patterns will not match the logs maintainers actually have during an outage or auth failure.
 
-### 2. npm package naming drift is an onboarding-breaker
+### 3. Medium: the doc-parity guard is too noisy to catch real public-surface drift reliably
 
-The README currently tells users to install and configure the npm wrapper as `@anycli/clockify-mcp-go`:
+The repository already has a parity guard, but its current behavior weakens it enough that the stale docs above can survive.
 
-- `README.md:37`
-- `README.md:117`
+- `scripts/check-doc-parity.sh:107-128` treats any `clockify_*` token in docs as a tool reference.
+- The same script downgrades unknown tool references to warnings instead of failures.
+- Running `./scripts/check-doc-parity.sh` passed overall, but it warned on both real stale tool names and obvious false positives such as `clockify_request` and `clockify_admin`.
 
-But the actual package metadata points to `@apet97/clockify-mcp-go`:
+That combination creates warning noise without enforcing the public contract. In practice, maintainers have to manually separate genuine tool drift from unrelated strings that happen to share the `clockify_` prefix, which reduces the script's value as a release gate.
 
-- `npm/clockify-mcp-go/package.json:2`
+## Strengths
 
-That is not a cosmetic typo. It is a broken first-run path for users following the documented npm install flow, and MCP users usually experience this as "server will not start" rather than a clear packaging problem.
-
-### 3. The dry-run contract described in docs/instructions does not match runtime behavior
-
-Some user-facing text implies destructive operations default to preview when `dry_run` is omitted:
-
-- `docs/clients.md:24`
-- `internal/mcp/server.go:47`
-
-But the implementation only enables the dry-run interceptor when `dry_run` is present and explicitly `true`:
-
-- `internal/dryrun/dryrun.go:112`
-- `internal/tools/entries.go:345`
-
-That means the current runtime contract is narrower than the documented contract. The fastest fix is to align the docs and server instructions to the current implementation unless the intended product behavior is actually to change the runtime semantics. Right now the mismatch is more dangerous than either choice by itself.
-
-## Strategic Improvements
-
-- Split the top-level onboarding path more aggressively between "single-user stdio quick start" and "shared-service/operator deployment". The repo already has a good fast-path in `docs/deploy/profile-local-stdio.md:1`, but the main README still exposes a lot of operator surface area very early.
-- Add more task-oriented workflows and examples. With 124 tools and Tier 2 activation, the biggest usability challenge is not capability but discovery. More examples around activation, safe-write flows, and common reporting/admin tasks would lower that cost substantially.
-- Add a semantic docs-surface consistency check in CI for public names and contracts. Install package names, activation names, and safety-contract text should not be allowed to drift independently across README content, generated docs, and `ServerInstructions`.
+- The architecture is well layered. The MCP protocol layer, runtime, Clockify client, tool registry, and enforcement pipeline are separated cleanly enough to stay understandable despite the size of the project.
+- The safety posture is strong. Policy modes, dry-run support, rate limiting, auditing, auth transport handling, and operator deployment guidance are all well above the usual bar for an MCP integration.
+- The quality gates are healthy. The repo currently presents as a maintained, test-heavy production service rather than a thin API wrapper.
 
 ## Validation Notes
 
-- This review is based on static repository inspection plus local non-mutating verification.
-- Checks run locally:
-  - `gofmt -l .`
-  - `go vet ./...`
-  - `go test ./...`
-- All three checks passed during review.
-- I did not perform a live Clockify workspace/API exercise, so this feedback is grounded in repository truth and local verification rather than live-product behavior against a real account.
+This review is based on static repository inspection and local non-mutating verification only. It does not claim live validation against a real Clockify workspace or API key.
 
-## Assumptions
+Checks run locally:
 
-- The deliverable requested here is a feedback document, not code fixes.
-- The goal is to evaluate the MCP implementation as it exists in this repository today, using local evidence and local verification only.
+- `gofmt -l .` -> passed with no output
+- `go vet ./...` -> passed
+- `go test ./...` -> passed
+- `./scripts/check-doc-parity.sh` -> passed with warnings; the warnings mixed real stale tool references with false positives caused by broad `clockify_*` matching
+- `./scripts/check-config-doc-parity.sh` -> passed
+- `./scripts/check-config-parity.sh` -> passed
+
+## Scope
+
+- Audience: maintainers and operators, not end users
+- Deliverable: review feedback only; no code or public API changes are proposed in this pass
+- Review baseline: repository state as inspected on 2026-04-22

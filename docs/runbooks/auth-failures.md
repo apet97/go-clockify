@@ -24,24 +24,30 @@ layer is failing.
 - HTTP transport: clients see `401 Unauthorized` or `403 Forbidden`
   on every tool call.
 - Structured logs show one of:
-  - `level=WARN msg=auth_rejected reason="missing bearer"`
-  - `level=WARN msg=auth_rejected reason="bearer mismatch"`
-  - `level=WARN msg=auth_rejected reason="oidc_verify_failed"`
-  - `level=ERROR msg=clockify_request status_code=401`
-- gRPC transport: `clockify_mcp_grpc_auth_rejections_total` rises.
-- Upstream Clockify auth failure: every tool call fails with
-  `status_code=401` from `api.clockify.me`.
+  - `level=WARN msg=http_request status=401 reason=auth_failed`
+  - `level=WARN msg=http_request status=403 reason=cors_rejected`
+  - `level=WARN msg=tool_call error="clockify ... 401 Unauthorized ..."`
+- gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|reauth_expired"}` rises.
+- Upstream Clockify auth failure: `msg=tool_call` errors consistently
+  include `401 Unauthorized` from `api.clockify.me` across multiple
+  tools.
 
 ## 2. Where to look first
 
 ```sh
-# Which layer is rejecting?
+# Inbound HTTP rejections
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
-  | grep -E 'msg=(auth_rejected|clockify_request).*(401|403|reason=)'
+  | grep 'msg=http_request' \
+  | grep -E 'status=401|status=403|reason=(auth_failed|cors_rejected)'
+
+# Upstream Clockify auth failures
+kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
+  | grep 'msg=tool_call' \
+  | grep '401 Unauthorized'
 
 # Inbound rejection counters
 curl -sf http://<host>:8080/metrics \
-  | grep -E '^clockify_mcp_(http_requests|grpc_auth_rejections)_total\{.*(401|403)'
+  | grep -E '^clockify_mcp_(http_requests_total|grpc_auth_rejections_total)'
 
 # Confirm the inbound bearer token is set
 kubectl -n clockify-mcp get deploy/clockify-mcp -o yaml \
@@ -98,8 +104,9 @@ Restore `oidc` after the issuer recovers.
 
 ### Upstream: `CLOCKIFY_API_KEY` expiration
 
-If `clockify_request status_code=401` errors are universal, the
-upstream API key has been rotated, revoked, or expired. Mitigation:
+If `msg=tool_call` errors consistently include `401 Unauthorized`
+from Clockify across multiple tools, the upstream API key has been
+rotated, revoked, or expired. Mitigation:
 
 ```sh
 # Generate a new key in the Clockify dashboard
@@ -115,15 +122,18 @@ kubectl -n clockify-mcp rollout restart deploy/clockify-mcp
 
 If `MCP_AUTH_MODE=mtls` is in use on the gRPC transport, check the
 client certificate's expiration and the trust bundle in the server.
-mTLS rejections appear as `clockify_mcp_grpc_auth_rejections_total`
-with the rejection reason in the structured log.
+Initial rejections increment
+`clockify_mcp_grpc_auth_rejections_total{reason="auth_failed"}`.
+Only periodic re-authentication failures emit a structured log
+record (`msg=grpc_reauth_failed`).
 
 ## 4. Root-cause checklist
 
 - [ ] **Token leak.** Was the failing client's token shared in a
   channel that exposed it? If yes, rotate immediately and run a
-  retroactive audit of `clockify_mcp_http_requests_total` for any
-  unfamiliar client identity.
+  retroactive check of ingress / reverse-proxy logs for unfamiliar
+  client identity. `clockify_mcp_http_requests_total` confirms the
+  rejection volume, but it does not identify the caller.
 - [ ] **Upstream key expiration.** Clockify API keys do not expire
   by default but can be revoked from the dashboard. Confirm with
   the workspace admin.
@@ -140,11 +150,13 @@ with the rejection reason in the structured log.
   is blocked by CORS can present as "401" in the client UI even
   though the server returned 403 + CORS-rejection. Check
   `MCP_ALLOWED_ORIGINS` and the structured log for
-  `msg=cors_rejected` rather than `msg=auth_rejected`.
+  `msg=http_request reason=cors_rejected` rather than an auth
+  failure.
 - [ ] **Init-handshake gating.** A client that sends `tools/call`
   before `initialize` gets `-32002 server not initialized`, which
-  some clients render as "auth failure". Confirm via the structured
-  log: the rejection reason will be `init_required`, not auth.
+  some clients render as "auth failure". Confirm via the client
+  transcript or raw JSON-RPC response; there is no dedicated
+  `init_required` server log event today.
 - [ ] **Webhook URL validation rejection.** A `webhooks_create`
   call against an HTTP-only or private-IP target is rejected at
   validation time. Logs show `webhook URL rejected`. This is not

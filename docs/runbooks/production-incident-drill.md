@@ -61,7 +61,7 @@ following within the first five minutes:
 **Target: 30 minutes from drill start to "green dashboard."**
 
 "Green dashboard" means:
-- `clockify_mcp_tool_calls_total{outcome="error"}` is
+- `clockify_mcp_tool_calls_total{outcome="tool_error"}` is
   back within 10% of baseline over the last 5 minutes.
 - `clockify_mcp_audit_failures_total{reason="persist_error"}`
   has stopped rising.

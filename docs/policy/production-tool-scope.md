@@ -7,15 +7,15 @@ This document defines the scope of tools supported for production deployment and
 Tools are categorized based on their impact on data and their required privilege level.
 
 ### 1. Agent-Safe Tools (Safe for general use)
-*   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_get_current_timer`.
+*   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_timer_status`.
 *   **Contextual Information:** `clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`, `clockify_get_workspace`.
-*   **Reporting (Read-Only):** `clockify_get_summary_report`, `clockify_get_detailed_report`.
+*   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`.
 *   **Discovery:** `clockify_list_projects`, `clockify_list_tasks`, `clockify_list_clients`.
 
 ### 2. Admin-Only / Sensitive Tools
-*   **Management:** `clockify_create_project`, `clockify_create_client`, `clockify_update_project`.
+*   **Management:** `clockify_create_project`, `clockify_create_client`, and Tier 2 project-admin tools such as `clockify_update_project_estimate`, `clockify_archive_projects`, and `clockify_set_project_memberships`.
 *   **Financials (Tier 2):** `clockify_create_invoice`, `clockify_delete_invoice`.
-*   **User Admin (Tier 2):** `clockify_add_user_to_workspace`, `clockify_remove_user_from_workspace`.
+*   **User / Group Admin (Tier 2):** `clockify_add_user_to_group`, `clockify_remove_user_from_group`, `clockify_update_user_role`, `clockify_deactivate_user`, plus group-admin tools such as `clockify_create_user_group_admin` and `clockify_delete_user_group_admin`.
 
 ### 3. Unsupported / High-Risk (Blocked in Production)
 *   **Destructive Operations:** Large-scale deletions are generally discouraged for LLM agents.

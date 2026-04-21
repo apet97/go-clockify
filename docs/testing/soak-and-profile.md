@@ -14,7 +14,7 @@ Soak testing involves running the application under expected load for an extende
 ### Key Metrics to Monitor
 -   `process_resident_memory_bytes`: Look for a steady upward trend (potential leak).
 -   `go_goroutines`: Ensure the count stabilizes and doesn't grow unbounded.
--   `clockify_mcp_request_duration_seconds`: Monitor for latency degradation over time.
+-   `clockify_mcp_tool_call_duration_seconds`: Monitor for latency degradation over time.
 
 ## Profiling with `pprof`
 

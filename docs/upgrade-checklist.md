@@ -108,12 +108,12 @@ rollout:
 
 - `clockify_mcp_audit_failures_total` is rising against a
   previously-zero baseline.
-- `clockify_mcp_tool_calls_total{outcome="error"}` rises more
+- `clockify_mcp_tool_calls_total{outcome="tool_error"}` rises more
   than 10% over the pre-rollout baseline.
 - The new protocol version negotiation rejects a client that
-  worked on the old version (check the `msg=protocol_version_negotiated`
-  log line).
-- Any `clockify_request status_code=401` spike (your bearer
+  worked on the old version (check the `msg=initialize` log line
+  for `protocol_version=` and `requested_version=`).
+- Any `msg=http_request status=401 reason=auth_failed` spike (your bearer
   rotation may have landed without the client config catching
   up — see `docs/runbooks/auth-failures.md`).
 

@@ -18,10 +18,10 @@
 #      deploy/.config-parity-opt-out.txt. A doc referencing a
 #      removed env var misleads operators.
 #   2. Every tool name referenced in operator-facing docs or README.md
-#      exists in
-#      docs/tool-catalog.json OR is explicitly marked as a planned
-#      future name. Prevents runbooks pointing at tools we never
-#      shipped or already removed.
+#      exists in docs/tool-catalog.json. ADR narrative is excluded so
+#      hypothetical rename examples do not trigger false positives.
+#      Prevents runbooks pointing at tools we never shipped or already
+#      removed.
 #   3. Public-surface banned strings do not appear in shipped
 #      docs/README.
 #   4. README npm compatibility matches the published npm package's
@@ -109,22 +109,23 @@ if [ -f "$CATALOG_FILE" ]; then
   known_tools=$(grep -oE '"name": *"clockify_[a-z0-9_]+"' "$CATALOG_FILE" \
                 | sed 's/"name": *"//;s/"//' | sort -u)
 
+  strict_tool_files=(README.md)
+  while IFS= read -r -d '' file; do
+    strict_tool_files+=("$file")
+  done < <(find docs -type f -name '*.md' ! -path 'docs/adr/*' -print0)
+
   referenced_tools=$(
-    {
-      grep -rhoE '\bclockify_[a-z0-9_]{3,}' "${DOC_DIRS[@]}" 2>/dev/null
-      grep -hoE '\bclockify_[a-z0-9_]{3,}' "${DOC_FILES_TOP[@]}" 2>/dev/null
-    } | sort -u || true
+    grep -hoE '\bclockify_[a-z0-9_]{3,}' "${strict_tool_files[@]}" 2>/dev/null \
+      | sort -u || true
   )
 
   for tool in $referenced_tools; do
-    # Skip common non-tool prefixes that share the clockify_ stem.
+    # Skip common non-tool prefixes / snippets that share the clockify_ stem.
     case "$tool" in
-      clockify_mcp*|clockify_outage*|clockify_upstream*|clockify_policy|clockify_api_key*) continue ;;
+      clockify_mcp*|clockify_outage*|clockify_upstream*|clockify_policy|clockify_api_key*|clockify_admin) continue ;;
     esac
     if echo "$known_tools" | grep -qx "$tool"; then continue; fi
-    warn "tool referenced in docs but not in $CATALOG_FILE: $tool"
-    # Downgraded to warn (not fail) because internal narrative may
-    # reference tools in transition. Flip to err after v1.0 GA.
+    err "tool referenced in operator docs but not in $CATALOG_FILE: $tool"
   done
 else
   warn "$CATALOG_FILE missing — run 'make gen-tool-catalog'"

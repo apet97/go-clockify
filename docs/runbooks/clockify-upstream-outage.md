@@ -14,9 +14,11 @@ recover.
 
 - `clockify_mcp_tool_call_duration_seconds` p50 climbs to the
   upstream timeout (`CLOCKIFY_TOOL_TIMEOUT`, default 45s).
-- `clockify_mcp_tool_calls_total{status="error"}` rises sharply.
-- Structured logs show repeated `level=ERROR msg=clockify_request
-  status_code=5XX` or `error="context deadline exceeded"`.
+- `clockify_mcp_tool_calls_total{outcome="tool_error"}` and
+  `clockify_mcp_tool_calls_total{outcome="timeout"}` rise sharply.
+- Structured logs show repeated `msg=tool_call` errors containing
+  `502 Bad Gateway`, `503 Service Unavailable`, `504 Gateway Timeout`,
+  or `context deadline exceeded`.
 - `status.clockify.me` reports an incident.
 - `/ready` returns `503` (the readiness probe checks upstream
   reachability and flips to not-ready when consecutive checks fail).
@@ -31,13 +33,18 @@ curl -sf https://status.clockify.me/api/v2/status.json | jq .
 curl -i -H "X-Api-Key: $CLOCKIFY_LIVE_API_KEY" \
   https://api.clockify.me/api/v1/workspaces
 
-# Our error rate
+# Our tool error rate
 curl -sf http://<host>:8080/metrics \
-  | grep -E '^clockify_mcp_tool_calls_total\{.*status="error".*\}'
+  | grep -E '^clockify_mcp_tool_calls_total\{.*outcome="(tool_error|timeout)".*\}'
+
+# Upstream 5xx / retries
+curl -sf http://<host>:8080/metrics \
+  | grep -E '^clockify_(upstream_requests_total|upstream_retries_total)'
 
 # Recent error logs
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
-  | grep 'level=ERROR msg=clockify_request'
+  | grep 'msg=tool_call' \
+  | grep -E 'Bad Gateway|Service Unavailable|Gateway Timeout|context deadline exceeded'
 ```
 
 ## 3. Immediate mitigation
@@ -78,7 +85,8 @@ Restore the default after the upstream recovers.
 Open a `clockify-upstream-outage` issue with the start time and a
 link to the `status.clockify.me` incident. Update it as the
 upstream recovers. Resolve when `clockify_mcp_tool_calls_total`
-error rate is back to baseline for >15 minutes.
+`outcome="tool_error"|outcome="timeout"` rate is back to baseline
+for >15 minutes.
 
 ## 4. Root-cause checklist
 
