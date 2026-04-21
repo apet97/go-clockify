@@ -141,8 +141,34 @@ jobs:
           # gh attestation verify reads from the GitHub attestation
           # service. --owner pins the trust root to this org so a
           # malicious lookalike binary fails closed.
-          gh attestation verify artifacts/clockify-mcp-linux-x64 \
-            --owner "${GITHUB_REPOSITORY_OWNER}"
+          #
+          # On user-owned private repositories the attestation
+          # service returns "Feature not available for user-owned
+          # private repositories" (HTTP 404). release.yml's
+          # attest-build-provenance step is continue-on-error for
+          # the same reason (commit 6f4f748), so on that account
+          # tier no attestation is actually produced and verifying
+          # a missing attestation cannot succeed.
+          #
+          # We treat the narrow "feature not available" / HTTP 404
+          # outcome as SKIPPED (::notice::); the two mandatory
+          # cosign checks below still gate the smoke. Every other
+          # failure mode (signature mismatch, missing bundle,
+          # wrong owner, expired root) stays fatal. See
+          # docs/adr/0013-private-repo-slsa-posture.md for rationale.
+          log=$(mktemp)
+          if gh attestation verify artifacts/clockify-mcp-linux-x64 \
+              --owner "${GITHUB_REPOSITORY_OWNER}" >"$log" 2>&1; then
+            cat "$log"
+            exit 0
+          fi
+          cat "$log"
+          if grep -qE 'Feature not available for user-owned private repositor|HTTP 404' "$log"; then
+            echo "::notice title=SLSA attestation skipped::GitHub attestation service is unavailable for user-owned private repositories. cosign blob + image checks remain mandatory. See docs/adr/0013-private-repo-slsa-posture.md."
+            exit 0
+          fi
+          echo "::error::gh attestation verify failed with a non-skippable error. See log above."
+          exit 1
 
       - name: Verify cosign keyless signature on binary
         env:
