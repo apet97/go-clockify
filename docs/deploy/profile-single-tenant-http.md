@@ -108,9 +108,9 @@ server {
   origin; a wildcard here + a misconfigured proxy is how
   cross-origin sessions leak.
 - `safe_core` policy is the recommended default: deletes and
-  destructive writes are restricted; every mutation still runs
-  through the dry-run interceptor unless the caller opts into
-  `dry_run: false`.
+  destructive writes are restricted; clients should preview
+  destructive operations with `dry_run: true` before executing
+  intentionally with `dry_run: false` or omission.
 
 ## Operational checklist
 

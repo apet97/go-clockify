@@ -21,7 +21,7 @@ Most clients fetch the list of available tools at startup using `tools/list`.
 ### Safety and Destructive Operations
 `clockify-mcp-go` provides safety hints in tool definitions (`destructiveHint: true`).
 - Clients like Claude Desktop may display a confirmation dialog before executing a destructive tool (e.g., `clockify_delete_entry`).
-- The `CLOCKIFY_DRY_RUN` environment variable (default: `enabled`) adds a server-side safety layer by defaulting to a preview if the `dry_run` parameter is omitted.
+- The `CLOCKIFY_DRY_RUN` environment variable (default: `enabled`) enables server-side preview support for destructive tools when the caller sends `dry_run:true`. If `dry_run` is omitted or `false`, the mutation executes.
 
 ### Resource Templates
 The server exposes `clockify://` URI templates.

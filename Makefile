@@ -66,12 +66,21 @@ repo-hygiene:
 gen-tool-catalog:
 	go run ./scripts/gen-tool-catalog -out docs
 
-# catalog-drift re-runs gen-tool-catalog and fails if the working
-# tree diverges from what's committed. Wired into verify-core so a
-# PR that forgets to regenerate is caught before merge.
-catalog-drift: gen-tool-catalog
-	@git diff --exit-code -- docs/tool-catalog.json docs/tool-catalog.md \
-	 || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale — run \`make gen-tool-catalog\` and commit"; exit 1; }
+# catalog-drift re-runs gen-tool-catalog and fails if the generated
+# docs change relative to the current working tree contents. Wired
+# into verify-core so a PR that forgets to regenerate is caught
+# before merge, while still allowing local validation on a branch
+# with legitimate README / docs edits in flight.
+catalog-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp docs/tool-catalog.json "$$tmpdir/tool-catalog.json.before"; \
+	 cp docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before"; \
+	 $(MAKE) --no-print-directory gen-tool-catalog >/dev/null; \
+	 diff -q docs/tool-catalog.json "$$tmpdir/tool-catalog.json.before" >/dev/null \
+	  && diff -q docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before" >/dev/null \
+	  || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale — run \`make gen-tool-catalog\` and commit"; \
+	       diff -u "$$tmpdir/tool-catalog.md.before" docs/tool-catalog.md | head -80; exit 1; }
 
 verify-vuln:
 	@if command -v govulncheck >/dev/null 2>&1; then \

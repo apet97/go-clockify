@@ -2,7 +2,8 @@ package tools_test
 
 // Activation-path micro-benchmarks. These measure the cost of
 // materialising a Tier-2 group's descriptor slice — the step that
-// runs when a client invokes clockify_activate_group. It is
+// runs when a client activates a Tier-2 group via
+// clockify_search_tools { "activate_group": "<group>" }. It is
 // distinct from the dispatch benches in writes_bench_test.go and
 // tier2_writes_bench_test.go, which exercise a full tools/call
 // through the enforcement pipeline.

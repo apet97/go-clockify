@@ -13,7 +13,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 - **124 tools** — 33 always-on (timer, entries, projects, reports, …) plus 91 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
-- **Four policy modes** — `read_only`, `safe_core`, `standard`, `full` — plus a dry-run preview for every destructive tool.
+- **Four policy modes** — `read_only`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
 - **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance.
@@ -23,9 +23,14 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Contents
 
-- [Install](#install) · [Connect a client](#connect-to-an-mcp-client) · [Tool tiers](#tool-tiers) · [Policy modes](#policy-modes) · [Configuration](#configuration)
+- [Start Here](#start-here) · [Install](#install) · [Connect a client](#connect-to-an-mcp-client) · [Tool tiers](#tool-tiers) · [Policy modes](#policy-modes) · [Configuration](#configuration)
 - [Common workflows](#common-workflows) · [Architecture](#architecture) · [Docker](#docker) · [Build and test](#build-and-test)
 - [Compatibility](#compatibility) · [Troubleshooting](#troubleshooting) · [Deployment](#deployment) · [Contributing](#contributing)
+
+## Start Here
+
+- **Local single-user subprocess:** Follow the install and client-wiring sections below, then use [docs/deploy/profile-local-stdio.md](docs/deploy/profile-local-stdio.md) as the canonical runtime profile.
+- **Shared-service / operator-managed deployment:** Start with [docs/deploy/production-profile-shared-service.md](docs/deploy/production-profile-shared-service.md), [docs/operators/](docs/operators/), and [docs/production-readiness.md](docs/production-readiness.md).
 
 ## Install
 
@@ -34,7 +39,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 go install github.com/apet97/go-clockify/cmd/clockify-mcp@latest
 
 # npm (prebuilt binaries)
-npx @anycli/clockify-mcp-go
+npx @apet97/clockify-mcp-go
 
 # Or download a prebuilt binary from Releases:
 # https://github.com/apet97/go-clockify/releases
@@ -53,6 +58,8 @@ export CLOCKIFY_API_KEY=your-key
 ```
 
 ## Connect to an MCP client
+
+The examples below are the local stdio path: your MCP client launches `clockify-mcp` as a subprocess and forwards `CLOCKIFY_API_KEY` in its environment.
 
 ### Claude Code (CLI)
 
@@ -114,7 +121,7 @@ If you installed via `npm`/`npx`, swap the command for:
 ```json
 {
   "command": "npx",
-  "args": ["@anycli/clockify-mcp-go"]
+  "args": ["@apet97/clockify-mcp-go"]
 }
 ```
 
@@ -149,7 +156,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_API_KEY` | `—` | API key (required for stdio/http/grpc; optional for streamable_http) |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | Initial tool surface |
 | `CLOCKIFY_DEDUPE_MODE` | `warn` | Duplicate entry detection |
-| `CLOCKIFY_DRY_RUN` | `enabled` | Dry-run preview for destructive tools |
+| `CLOCKIFY_DRY_RUN` | `enabled` | Enable dry-run preview support for destructive tools when callers pass dry_run:true |
 | `CLOCKIFY_POLICY` | `standard` | Tool-access policy tier |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per 60s window (0=disabled) |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |
@@ -194,11 +201,11 @@ Log time retroactively:
 → clockify_log_time { "project": "Project Alpha", "start": "today 9:00", "end": "today 11:00", "description": "Code review" }
 ```
 
-Dry-run a destructive operation:
+Discover a Tier 2 domain or tool:
 
 ```
-→ clockify_delete_entry { "entry_id": "abc123", "dry_run": true }
-← { "dry_run": true, "preview": { "id": "abc123", "description": "Meeting" }, "note": "No changes were made." }
+→ clockify_search_tools { "query": "invoice" }
+← { "count": 6, "all_results": [ { "type": "group", "name": "invoices" }, { "type": "tool", "name": "clockify_send_invoice" } ] }
 ```
 
 Activate a Tier 2 domain:
@@ -206,6 +213,27 @@ Activate a Tier 2 domain:
 ```
 → clockify_search_tools { "activate_group": "invoices" }
 ← { "activated": "invoices", "tool_count": 12 }
+```
+
+Optionally activate a single Tier 2 tool:
+
+```
+→ clockify_search_tools { "activate_tool": "clockify_send_invoice" }
+← { "activated": "clockify_send_invoice", "group": "invoices", "tool_count": 12 }
+```
+
+Preview a destructive operation first:
+
+```
+→ clockify_delete_entry { "entry_id": "abc123", "dry_run": true }
+← { "dry_run": true, "preview": { "id": "abc123", "description": "Meeting" }, "note": "No changes were made." }
+```
+
+Execute after preview:
+
+```
+→ clockify_delete_entry { "entry_id": "abc123", "dry_run": false }
+← { "ok": true, "action": "clockify_delete_entry", "data": { "deleted": true, "entryId": "abc123" } }
 ```
 
 ## Architecture
@@ -247,7 +275,7 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 |-----------|---------|
 | MCP Protocol | `2025-06-18` (back-compat: `2025-03-26`, `2024-11-05`) |
 | Go | 1.25.9+ |
-| Node.js (npm wrapper) | 16+ |
+| Node.js (npm wrapper) | 18+ |
 
 ## Troubleshooting
 

@@ -40,11 +40,12 @@ Tool tiers:
   - Tier 1 tools are registered at startup and visible in tools/list.
   - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
   - Use 'clockify_search_tools' to discover tools by keyword or group name.
-  - Use 'clockify_activate_group' or 'clockify_activate_tool' to enable Tier 2 tools before calling them.
+  - Activate Tier 2 tools with 'clockify_search_tools' using 'activate_group' or 'activate_tool' before calling them.
 
 Safety:
   - The server supports four policy modes: read_only, safe_core, standard (default), full.
-  - Destructive tools run through a dry-run interceptor by default; pass dry_run:true to preview, dry_run:false to execute.
+  - Destructive tools support dry-run previews when you pass dry_run:true.
+  - Omit dry_run or pass dry_run:false to execute the mutation.
   - Use 'clockify_policy_info' to inspect the active policy and dry-run configuration.
   - Tool arguments that reference entities by name (project, client, tag, user) are resolved strictly; ambiguous matches are rejected rather than guessed.
 

@@ -12,15 +12,21 @@
 # Checks performed (all non-fatal warnings print, only the strict
 # ones below fail the gate):
 #
-#   1. Every env var referenced in docs/ appears in config.go OR is
+#   1. Every env var referenced in docs/ or README.md appears in
+#      config.go OR is
 #      explicitly listed as deprecated in
 #      deploy/.config-parity-opt-out.txt. A doc referencing a
 #      removed env var misleads operators.
-#   2. Every tool name referenced in operator-facing docs exists in
+#   2. Every tool name referenced in operator-facing docs or README.md
+#      exists in
 #      docs/tool-catalog.json OR is explicitly marked as a planned
 #      future name. Prevents runbooks pointing at tools we never
 #      shipped or already removed.
-#   3. No dangling TODO / TBD / FIXME / XXX in
+#   3. Public-surface banned strings do not appear in shipped
+#      docs/README.
+#   4. README npm compatibility matches the published npm package's
+#      engine requirement.
+#   5. No dangling TODO / TBD / FIXME / XXX in
 #      docs/runbooks/, docs/deploy/, docs/adr/, or the top-level
 #      operator docs. These markers signal unfinished operator
 #      guidance and belong in issue tracker or PRs, not in shipped
@@ -39,7 +45,8 @@ CONFIG_FILE="internal/config/config.go"
 CATALOG_FILE="docs/tool-catalog.json"
 OPT_OUT="deploy/.config-parity-opt-out.txt"
 DOC_DIRS=(docs/runbooks docs/deploy docs/adr docs)
-DOC_FILES_TOP=(docs/support-matrix.md docs/upgrade-checklist.md docs/verify-release.md docs/production-readiness.md)
+DOC_FILES_TOP=(README.md docs/support-matrix.md docs/upgrade-checklist.md docs/verify-release.md docs/production-readiness.md docs/clients.md)
+NPM_PACKAGE_JSON="npm/clockify-mcp-go/package.json"
 
 fail=0
 
@@ -76,9 +83,11 @@ if [ -f "$OPT_OUT" ]; then
   opt_out_list=$(grep -v '^#' "$OPT_OUT" | grep -v '^$' | awk '{print $1}' || true)
 fi
 
-# Find every MCP_* / CLOCKIFY_* token in docs
+# Find every MCP_* / CLOCKIFY_* token in docs/README
 referenced_vars=$(grep -rhoE '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' \
                    "${DOC_DIRS[@]}" 2>/dev/null | sort -u || true)
+referenced_vars="$referenced_vars"$'\n'"$(grep -hoE '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' "${DOC_FILES_TOP[@]}" 2>/dev/null | sort -u || true)"
+referenced_vars=$(printf "%s\n" "$referenced_vars" | sort -u | sed '/^$/d')
 
 for var in $referenced_vars; do
   if echo "$known_vars" | grep -qx "$var"; then continue; fi
@@ -100,8 +109,12 @@ if [ -f "$CATALOG_FILE" ]; then
   known_tools=$(grep -oE '"name": *"clockify_[a-z0-9_]+"' "$CATALOG_FILE" \
                 | sed 's/"name": *"//;s/"//' | sort -u)
 
-  referenced_tools=$(grep -rhoE '\bclockify_[a-z0-9_]{3,}' \
-                      "${DOC_DIRS[@]}" 2>/dev/null | sort -u || true)
+  referenced_tools=$(
+    {
+      grep -rhoE '\bclockify_[a-z0-9_]{3,}' "${DOC_DIRS[@]}" 2>/dev/null
+      grep -hoE '\bclockify_[a-z0-9_]{3,}' "${DOC_FILES_TOP[@]}" 2>/dev/null
+    } | sort -u || true
+  )
 
   for tool in $referenced_tools; do
     # Skip common non-tool prefixes that share the clockify_ stem.
@@ -118,7 +131,49 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. TODO / TBD / FIXME / XXX check
+# 3. Banned stale public-surface strings
+# ---------------------------------------------------------------------------
+
+banned_strings=(
+  "clockify_activate_group"
+  "clockify_activate_tool"
+  "@anycli/clockify-mcp-go"
+  "defaulting to a preview if the \`dry_run\` parameter is omitted"
+  "Destructive tools run through a dry-run interceptor by default"
+  "through the dry-run interceptor unless the caller opts into"
+)
+
+for needle in "${banned_strings[@]}"; do
+  hits=$(grep -rnF "$needle" "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null || true)
+  if [ -n "$hits" ]; then
+    while IFS= read -r line; do
+      err "banned stale public-surface string found: $line"
+    done <<< "$hits"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+# 4. README npm compatibility must match published package engines
+# ---------------------------------------------------------------------------
+
+if [ ! -f "$NPM_PACKAGE_JSON" ]; then
+  err "npm package file missing: $NPM_PACKAGE_JSON"
+else
+  readme_node=$(grep -E '^\| Node\.js \(npm wrapper\) \|' README.md | sed -E 's/.*\| ([0-9]+)\+ \|/\1/' | tr -d '[:space:]')
+  package_node=$(grep -E '"node": *">=[0-9]+"' "$NPM_PACKAGE_JSON" | sed -E 's/.*">=([0-9]+)".*/\1/' | tr -d '[:space:]')
+  if [ -z "$readme_node" ]; then
+    err "README.md missing Node.js (npm wrapper) compatibility row"
+  fi
+  if [ -z "$package_node" ]; then
+    err "$NPM_PACKAGE_JSON missing node engine declaration"
+  fi
+  if [ -n "$readme_node" ] && [ -n "$package_node" ] && [ "$readme_node" != "$package_node" ]; then
+    err "README Node.js (npm wrapper) compatibility ($readme_node+) does not match $NPM_PACKAGE_JSON (>=${package_node})"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 5. TODO / TBD / FIXME / XXX check
 # ---------------------------------------------------------------------------
 
 dangling=$(grep -rnE '\b(TODO|TBD|FIXME|XXX)\b' "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null \

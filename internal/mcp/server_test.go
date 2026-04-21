@@ -35,6 +35,24 @@ func TestInitializeAndToolsList(t *testing.T) {
 	}
 }
 
+func TestServerInstructionsPublicContract(t *testing.T) {
+	if !strings.Contains(ServerInstructions, "clockify_search_tools") {
+		t.Fatalf("ServerInstructions should reference clockify_search_tools: %q", ServerInstructions)
+	}
+	if !strings.Contains(ServerInstructions, "activate_group") || !strings.Contains(ServerInstructions, "activate_tool") {
+		t.Fatalf("ServerInstructions should mention activate_group and activate_tool: %q", ServerInstructions)
+	}
+	if strings.Contains(ServerInstructions, "clockify_activate_group") || strings.Contains(ServerInstructions, "clockify_activate_tool") {
+		t.Fatalf("ServerInstructions contains stale activation tool names: %q", ServerInstructions)
+	}
+	if !strings.Contains(ServerInstructions, "dry_run:true") || !strings.Contains(ServerInstructions, "dry_run:false") {
+		t.Fatalf("ServerInstructions should describe dry_run:true preview and dry_run:false execution: %q", ServerInstructions)
+	}
+	if strings.Contains(ServerInstructions, "dry-run interceptor by default") {
+		t.Fatalf("ServerInstructions contains stale dry-run-default wording: %q", ServerInstructions)
+	}
+}
+
 // FuzzJSONRPCParse feeds random byte sequences into the JSON-RPC Request
 // decoder and ensures it never panics. Malformed requests should produce
 // errors, not crashes.

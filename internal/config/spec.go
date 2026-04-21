@@ -30,7 +30,7 @@ func AllSpecs() []EnvSpec {
 
 		// --- Safety ---
 		{Name: "CLOCKIFY_POLICY", Group: "Safety", Enum: []string{"read_only", "safe_core", "standard", "full"}, Default: "standard", Help: "Tool-access policy tier", EssentialDoc: true},
-		{Name: "CLOCKIFY_DRY_RUN", Group: "Safety", Default: "enabled", Help: "Dry-run preview for destructive tools", EssentialDoc: true},
+		{Name: "CLOCKIFY_DRY_RUN", Group: "Safety", Default: "enabled", Help: "Enable dry-run preview support for destructive tools when callers pass dry_run:true", EssentialDoc: true},
 		{Name: "CLOCKIFY_DEDUPE_MODE", Group: "Safety", Enum: []string{"warn", "block", "off"}, Default: "warn", Help: "Duplicate entry detection", EssentialDoc: true},
 		{Name: "CLOCKIFY_DEDUPE_LOOKBACK", Group: "Safety", Default: "25", Help: "Recent entries to scan for duplicates"},
 		{Name: "CLOCKIFY_OVERLAP_CHECK", Group: "Safety", Default: "true", Help: "Overlapping entry detection"},

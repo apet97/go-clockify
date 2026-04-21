@@ -21,9 +21,15 @@ set -euo pipefail
 
 echo "== config-doc-parity =="
 
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+cp README.md "$tmpdir/README.md.before"
+cp cmd/clockify-mcp/help_generated.go "$tmpdir/help_generated.go.before"
+
 go run ./cmd/gen-config-docs -mode=all
 
-if ! git diff --quiet -- README.md cmd/clockify-mcp/help_generated.go; then
+if ! diff -q README.md "$tmpdir/README.md.before" >/dev/null || \
+   ! diff -q cmd/clockify-mcp/help_generated.go "$tmpdir/help_generated.go.before" >/dev/null; then
   echo >&2 "[fail] config-doc-parity: generated docs are out of sync with internal/config/spec.go"
   echo >&2
   echo >&2 "       Fix:"
@@ -31,7 +37,8 @@ if ! git diff --quiet -- README.md cmd/clockify-mcp/help_generated.go; then
   echo >&2 "         git add README.md cmd/clockify-mcp/help_generated.go"
   echo >&2
   echo >&2 "       Diff:"
-  git --no-pager diff -- README.md cmd/clockify-mcp/help_generated.go | head -80 >&2 || true
+  diff -u "$tmpdir/README.md.before" README.md | head -80 >&2 || true
+  diff -u "$tmpdir/help_generated.go.before" cmd/clockify-mcp/help_generated.go | head -80 >&2 || true
   exit 1
 fi
 
