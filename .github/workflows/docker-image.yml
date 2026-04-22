@@ -243,15 +243,11 @@ jobs:
             "$IMAGE_REF"
 
       - name: Attest SLSA build provenance
-        # Attestation is unavailable for user-owned private
-        # repositories — GitHub's feature gate. Make this step
-        # non-fatal so the main-branch build pipeline stays green;
-        # when the repo is flipped to public (or moved under an
-        # org), attestations activate automatically. The release
-        # workflow (tag-triggered) still attests binaries; this
-        # step covers the main-branch container image build.
+        # Repo is public (2026-04-22) — attestation is mandatory
+        # on every published image now. The release workflow
+        # (tag-triggered) attests binaries; this step covers the
+        # main-branch container image build.
         if: github.event_name != 'pull_request'
-        continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

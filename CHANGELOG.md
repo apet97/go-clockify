@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **SLSA attestation is now mandatory on release.** The repo
+  flipped to public on 2026-04-22, which unblocked the GitHub
+  attestation service for this account tier.
+  `actions/attest-build-provenance` in `release.yml` and
+  `docker-image.yml` is no longer `continue-on-error: true`; the
+  `gh attestation verify` step in `release-smoke.yml` no longer
+  treats HTTP 404 as a skip. A missing or invalid attestation
+  will now fail the release or the smoke. ADR-0013 is marked
+  superseded; the workaround it documented is no longer live.
+
 ### Added
 
 - **Canonical deployment profiles (`--profile=<name>`).** Five
