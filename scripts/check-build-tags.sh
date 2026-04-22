@@ -102,6 +102,13 @@ if [ -z "${FIPS_ONLY:-}" ]; then
     echo "== -tags=pprof,otel =="
     go build -tags=pprof,otel ./...
 
+    echo "== -tags=grpc,otel =="
+    # Combinatorial: gRPC transport plus OTel exporters. Verifies the
+    # otel interceptor path compiles when both tags are active — this
+    # matters because the OTel wiring is a thin adapter over a stdlib
+    # fallback, and the adapter only shows up under -tags=otel.
+    go build -tags=grpc,otel ./...
+
     echo "== -tags=postgres =="
     go build -tags=postgres ./...
     (cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...)
@@ -125,3 +132,10 @@ if ! echo "$output" | grep -q "fips140_enabled"; then
     exit 1
 fi
 go test -tags=fips -count=1 -timeout 120s ./...
+
+echo "== -tags=fips,grpc (GOFIPS140=latest) =="
+# Combinatorial: FIPS + gRPC. Verifies that the gRPC transport
+# builds cleanly under GOFIPS140 — a real risk path because the
+# gRPC dependency chain transitively pulls in crypto choices
+# that need the FIPS-capable primitives.
+go build -tags=fips,grpc ./...
