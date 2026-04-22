@@ -36,3 +36,10 @@ MCP_OIDC_VERIFY_CACHE_TTL          — advanced tuning; default is safe.
 CLOCKIFY_TOOL_TIMEOUT              — advanced tuning; default is safe.
 MCP_HTTP_MAX_BODY                  — deprecated legacy fallback for MCP_MAX_MESSAGE_SIZE
 CLOCKIFY_DELTA_FORMAT              — advanced tuning; default "merge" is safe.
+MCP_PROFILE                        — invocation-time selector for the five
+                                     canonical deployment shapes. Helm users
+                                     typically override individual values
+                                     rather than delegate to a profile;
+                                     operators who do want a profile add it
+                                     via values.extraEnv (same pattern as
+                                     ENVIRONMENT above). See ADR-0015.
