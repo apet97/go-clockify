@@ -85,6 +85,16 @@ jobs:
           # signed.
           cosign-release: v2.4.3
 
+      - name: Authenticate to ghcr.io
+        # The container image published by docker-image.yml is private
+        # on user-owned repos. cosign triangulate + cosign verify both
+        # need registry auth to read the manifest. The GITHUB_TOKEN has
+        # read:packages via the `packages: read` permission declared at
+        # the top of this workflow.
+        run: echo "${GITHUB_TOKEN}" | cosign login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Resolve release tag
         id: tag
         env:
