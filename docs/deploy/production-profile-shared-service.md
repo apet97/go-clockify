@@ -1,5 +1,14 @@
 # Production Profile: Shared Service
 
+> Apply with `clockify-mcp --profile=shared-service` (or
+> `clockify-mcp --profile=prod-postgres` to add `ENVIRONMENT=prod`
+> enforcement in one shot) or `MCP_PROFILE=shared-service`. Example
+> env file:
+> [`deploy/examples/env.shared-service.example`](../../deploy/examples/env.shared-service.example).
+> See also: [`internal/config/profile.go`](../../internal/config/profile.go)
+> for the pinned defaults, [ADR-0015](../adr/0015-profile-centric-configuration.md)
+> for the design rationale.
+
 This document defines the single blessed production profile for deploying `clockify-mcp` as a shared service. It prioritizes reliability, security, and strict observability over flexibility.
 
 ## Canonical Configuration
