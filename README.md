@@ -1,6 +1,6 @@
 # clockify-mcp-go
 
-> A production-grade [Model Context Protocol][mcp] server for [Clockify][clockify] — plug any MCP client into your time-tracking workspace and let it log time, run reports, and manage projects on your behalf.
+> A [Model Context Protocol][mcp] server for [Clockify][clockify] — plug any MCP client into your time-tracking workspace and let it log time, run reports, and manage projects on your behalf.
 
 [![Go version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](go.mod)
 [![Release](https://img.shields.io/github/v/release/apet97/go-clockify?color=7e57c2)](https://github.com/apet97/go-clockify/releases)

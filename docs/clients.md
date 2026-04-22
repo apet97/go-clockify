@@ -7,7 +7,7 @@ This document provides guidance on how various Model Context Protocol (MCP) clie
 | Client | Connection Mode | Stability | Notes |
 |--------|-----------------|-----------|-------|
 | Claude Code | `stdio` | Tier 1 | Full support for all tools and resources. |
-| Claude Desktop | `stdio` | Tier 1 | Best-in-class support for tool rendering. |
+| Claude Desktop | `stdio` | Tier 1 | Renders tool confirmation dialogs for `destructiveHint: true` tools. |
 | Cursor | `stdio` | Tier 1 | Supports via `.cursor/mcp.json`. |
 | Codex | `stdio` | Tier 1 | Lightweight CLI. |
 

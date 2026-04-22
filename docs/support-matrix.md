@@ -47,8 +47,10 @@ Legend:
   you understand the tradeoff.
 - **❌ Unsupported** — Either blocked at startup (e.g. `memory`
   backend with `ENVIRONMENT=prod`) or actively discouraged
-  because the security/operational posture cannot be made
-  production-grade without a different combination.
+  because the security/operational posture of the combination
+  fails at least one of: fail-closed audit, authenticated
+  transport, multi-process-safe control plane, or deny-default
+  legacy HTTP.
 
 Every "Recommended" row has a corresponding file under
 `docs/deploy/`:
