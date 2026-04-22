@@ -59,11 +59,17 @@ jobs:
         with:
           go-version: "1.25.9"
       - name: Run govulncheck
-        # Install from master so the binary's bundled go/types supports the
-        # module's current Go directive (go1.25). The last tagged release
-        # (v1.1.4) was built with go1.24 and refuses to parse go1.25 code.
+        # Pin to a specific golang.org/x/vuln commit so supply-chain
+        # auditors can point at what actually ran. The last tagged
+        # release (v1.1.4) was built with go1.24 and refuses to
+        # parse go1.25 code; pinning @master is too volatile for a
+        # production CI gate. Revisit once a tagged release supports
+        # go1.25 — tracked as a Wave L follow-up issue.
+        #
+        # SHA resolved 2026-04-22 against
+        # https://github.com/golang/vuln/commits/master.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@master
+          go install golang.org/x/vuln/cmd/govulncheck@5499630db5f896778f084a8b3720910426de5c53
           govulncheck ./...
 
   build:
