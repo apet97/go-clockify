@@ -105,5 +105,10 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_LOG_LEVEL", Group: "Logging", Enum: []string{"debug", "info", "warn", "error"}, Default: "info", Help: "Log level"},
 		{Name: "MCP_LOG_FORMAT", Group: "Logging", Enum: []string{"text", "json"}, Default: "text", Help: "Log format (stderr; PII-scrubbed)", EssentialDoc: true},
 		{Name: "ENVIRONMENT", Group: "Deploy", Help: "Set to 'prod' to enforce postgres:// DSN"},
+
+		// --- Profile ---
+		{Name: "MCP_PROFILE", Group: "Profile", Enum: ProfileNames(),
+			Help:         "Apply a bundle of pinned defaults for a named deployment shape; explicit env overrides still win",
+			EssentialDoc: true},
 	}
 }

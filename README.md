@@ -178,6 +178,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_METRICS_BEARER_TOKEN` | `—` | Bearer token (>=16 chars) for static_bearer metrics |
 | `MCP_METRICS_BIND` | `—` | Dedicated metrics listener (optional; recommended for streamable_http) |
 | `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | OIDC verify cache TTL [1s,5m] |
+| `MCP_PROFILE` | `—` | Apply a bundle of pinned defaults for a named deployment shape; explicit env overrides still win |
 | `MCP_TRANSPORT` | `stdio` | Transport mode; http is legacy POST-only (deprecated) |
 <!-- CONFIG-TABLE END -->
 
