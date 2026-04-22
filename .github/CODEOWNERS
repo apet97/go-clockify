@@ -1,42 +1,50 @@
 # CODEOWNERS — declares review responsibility for go-clockify.
 #
-# This is a single-maintainer project today, so every entry resolves
-# to the same owner. The per-area entries are kept for two reasons:
-#   1. They give a future co-maintainer a clean diff target. Adding
-#      a second handle to one of these lines is a one-line PR.
-#   2. They make ownership *visible* to GitHub's CODEOWNERS UI on
-#      every PR — auditors can see at a glance which directories
-#      route through review.
+# This is a single-maintainer project today (see GOVERNANCE.md); every
+# entry resolves to `@apet97`. The per-area entries are kept for two
+# reasons:
+#   1. They give a future co-maintainer a clean diff target. Adding a
+#      second handle to one of these lines is a one-line PR.
+#   2. They make ownership *visible* to GitHub's CODEOWNERS UI on every
+#      PR — auditors can see at a glance which directories route
+#      through review, even when review is self-review.
+#
+# The former `@backup-maintainer` placeholder was dropped in Wave J
+# (2026-04-22) after a governance audit found it was not a real GitHub
+# handle and contradicted the single-maintainer reality in
+# docs/production-readiness.md and docs/branch-protection.md. See
+# docs/adr/0016-single-maintainer-governance.md for the rationale.
 #
 # See GOVERNANCE.md for the human policy this file implements.
 # See docs/branch-protection.md for the snapshot of GitHub branch
 # protection rules that enforce review-required on main.
 
-*                            @apet97 @backup-maintainer
+*                            @apet97
 
-# Security-sensitive surfaces — tighter expectations from GOVERNANCE.md
-/internal/authn/             @apet97 @backup-maintainer
-/internal/enforcement/       @apet97 @backup-maintainer
-/internal/policy/            @apet97 @backup-maintainer
-/internal/transport/         @apet97 @backup-maintainer
-/internal/clockify/          @apet97 @backup-maintainer
+# Security-sensitive surfaces — tighter self-review expectations from GOVERNANCE.md
+/internal/authn/             @apet97
+/internal/enforcement/       @apet97
+/internal/policy/            @apet97
+/internal/transport/         @apet97
+/internal/clockify/          @apet97
 
 # Operator-facing surfaces
-/cmd/                        @apet97 @backup-maintainer
-/deploy/                     @apet97 @backup-maintainer
+/cmd/                        @apet97
+/deploy/                     @apet97
 
 # Supply chain — release pipeline, CI, dependency manifests
-/.github/                    @apet97 @backup-maintainer
-/.goreleaser.yaml            @apet97 @backup-maintainer
-/scripts/                    @apet97 @backup-maintainer
-/Makefile                    @apet97 @backup-maintainer
-/go.mod                      @apet97 @backup-maintainer
-/go.sum                      @apet97 @backup-maintainer
+/.github/                    @apet97
+/.goreleaser.yaml            @apet97
+/scripts/                    @apet97
+/Makefile                    @apet97
+/go.mod                      @apet97
+/go.sum                      @apet97
 
 # Documentation that operators rely on
-/SECURITY.md                 @apet97 @backup-maintainer
-/GOVERNANCE.md               @apet97 @backup-maintainer
-/docs/release-policy.md      @apet97 @backup-maintainer
-/docs/verification.md        @apet97 @backup-maintainer
-/docs/branch-protection.md   @apet97 @backup-maintainer
-/docs/runbooks/              @apet97 @backup-maintainer
+/SECURITY.md                 @apet97
+/GOVERNANCE.md               @apet97
+/SUPPORT.md                  @apet97
+/docs/release-policy.md      @apet97
+/docs/verification.md        @apet97
+/docs/branch-protection.md   @apet97
+/docs/runbooks/              @apet97
