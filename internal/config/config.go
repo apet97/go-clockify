@@ -320,8 +320,22 @@ func Load() (Config, error) {
 	if cfg.AuthMode == "oidc" && cfg.Transport == "streamable_http" && cfg.OIDCIssuer == "" {
 		return Config{}, fmt.Errorf("MCP_OIDC_ISSUER is required when MCP_TRANSPORT=streamable_http and MCP_AUTH_MODE=oidc")
 	}
-	if cfg.Transport == "streamable_http" && cfg.ControlPlaneDSN == "" {
-		return Config{}, fmt.Errorf("MCP_CONTROL_PLANE_DSN is required for streamable_http")
+	// Fail-closed dev-backend guard for streamable_http. A dev DSN
+	// (memory/file/bare path) cannot back a multi-process deployment
+	// correctly — session state, audit events, and rate-limit counters
+	// diverge across replicas. Require an explicit acknowledgement so
+	// an operator who wants the single-process path knows they are on
+	// it. See docs/adr/0014-prod-fail-closed-defaults.md.
+	//
+	// Belt + suspenders: runtime.BuildStore repeats the same check so
+	// a caller that bypasses Load() (e.g. a custom wiring path) still
+	// refuses to start against a dev DSN.
+	if cfg.Transport == "streamable_http" &&
+		IsDevControlPlaneDSN(cfg.ControlPlaneDSN) &&
+		os.Getenv("MCP_ALLOW_DEV_BACKEND") != "1" {
+		return Config{}, fmt.Errorf(
+			"MCP_TRANSPORT=streamable_http with MCP_CONTROL_PLANE_DSN=%q (dev backend) is disallowed by default; set MCP_ALLOW_DEV_BACKEND=1 to acknowledge the single-process limits, or point MCP_CONTROL_PLANE_DSN at a production backend (postgres://...)",
+			cfg.ControlPlaneDSN)
 	}
 
 	if origins := os.Getenv("MCP_ALLOWED_ORIGINS"); origins != "" {
@@ -437,10 +451,20 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid CLOCKIFY_DELTA_FORMAT %q (must be merge or jsonpatch)", cfg.DeltaFormat)
 	}
 
-	// Audit durability mode
+	// Audit durability mode. Default is "best_effort" in dev so the
+	// out-of-the-box path works without a persistent store; in
+	// production (ENVIRONMENT=prod) the default flips to "fail_closed"
+	// so an audit-persist failure aborts the caller instead of silently
+	// recording a lost event. An explicit MCP_AUDIT_DURABILITY=best_effort
+	// in prod is still honoured — the operator has chosen it deliberately.
+	// See docs/adr/0014-prod-fail-closed-defaults.md.
 	cfg.AuditDurabilityMode = strings.TrimSpace(os.Getenv("MCP_AUDIT_DURABILITY"))
 	if cfg.AuditDurabilityMode == "" {
-		cfg.AuditDurabilityMode = "best_effort"
+		if os.Getenv("ENVIRONMENT") == "prod" {
+			cfg.AuditDurabilityMode = "fail_closed"
+		} else {
+			cfg.AuditDurabilityMode = "best_effort"
+		}
 	}
 	switch cfg.AuditDurabilityMode {
 	case "best_effort", "fail_closed":
@@ -476,10 +500,20 @@ func Load() (Config, error) {
 	// no-op at runtime but not a config error — operators may share config
 	// across environments.
 
-	// Legacy HTTP transport policy
+	// Legacy HTTP transport policy. Default is "warn" in dev so the
+	// legacy path keeps working with a visible deprecation log; in
+	// production (ENVIRONMENT=prod) the default flips to "deny" so a
+	// prod server using MCP_TRANSPORT=http refuses to start without
+	// an explicit MCP_HTTP_LEGACY_POLICY=allow acknowledgement. This
+	// matches the streamable_http fail-closed guard above. See
+	// docs/adr/0014-prod-fail-closed-defaults.md.
 	cfg.HTTPLegacyPolicy = strings.TrimSpace(os.Getenv("MCP_HTTP_LEGACY_POLICY"))
 	if cfg.HTTPLegacyPolicy == "" {
-		cfg.HTTPLegacyPolicy = "warn"
+		if os.Getenv("ENVIRONMENT") == "prod" {
+			cfg.HTTPLegacyPolicy = "deny"
+		} else {
+			cfg.HTTPLegacyPolicy = "warn"
+		}
 	}
 	switch cfg.HTTPLegacyPolicy {
 	case "allow", "warn", "deny":

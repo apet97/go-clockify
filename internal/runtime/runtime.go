@@ -10,7 +10,6 @@ package runtime
 
 import (
 	"context"
-	"strings"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -126,30 +125,4 @@ func (r *Runtime) Run(ctx context.Context) error {
 		return r.runGRPC(ctx, client, server)
 	}
 	return r.runStdio(ctx, server)
-}
-
-// IsDevControlPlaneDSN reports whether dsn names one of the dev-only
-// control-plane backends. "memory" / "memory://" keep state in process
-// memory; a bare path or "file://..." rewrites a JSON file on every
-// mutation. Neither is correct for a multi-process production
-// deployment of streamable_http; C1 fails closed unless the operator
-// acknowledges the tradeoff via MCP_ALLOW_DEV_BACKEND=1.
-//
-// Extracted from cmd/clockify-mcp so other packages (runtime builders,
-// tests, future transports) can share the same predicate without
-// re-importing main.
-func IsDevControlPlaneDSN(dsn string) bool {
-	trimmed := strings.TrimSpace(dsn)
-	if trimmed == "" || trimmed == "memory" || trimmed == "memory://" {
-		return true
-	}
-	if strings.HasPrefix(trimmed, "file://") {
-		return true
-	}
-	// A bare path with no scheme (resolvePath accepts these) is also a
-	// file-backed store — treat it the same as file://.
-	if !strings.Contains(trimmed, "://") {
-		return true
-	}
-	return false
 }

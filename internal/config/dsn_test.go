@@ -1,10 +1,11 @@
-package runtime
+package config
 
 import "testing"
 
-// TestIsDevControlPlaneDSN locks the C1 predicate: memory, empty,
-// file://, and bare paths are dev; anything with an explicit
-// non-file scheme (postgres://, mysql://, etc.) is production.
+// TestIsDevControlPlaneDSN locks the predicate shared by Load() and
+// runtime.BuildStore. memory, empty, and any file:// (or bare path)
+// DSN is dev-only; only an explicit non-file scheme (e.g. postgres://)
+// is treated as production-capable.
 func TestIsDevControlPlaneDSN(t *testing.T) {
 	cases := []struct {
 		dsn string

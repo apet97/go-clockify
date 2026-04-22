@@ -9,8 +9,12 @@ import (
 )
 
 // BuildStore opens the control-plane store for the given config and
-// enforces the C1 fail-closed guard: streamable_http against a
-// dev-only backend (memory/file) requires MCP_ALLOW_DEV_BACKEND=1.
+// enforces the C1 fail-closed guard as defence-in-depth: streamable_http
+// against a dev-only backend (memory/file) requires
+// MCP_ALLOW_DEV_BACKEND=1. The primary guard lives in config.Load() so
+// operators see the error at startup, not at first request; this
+// second check catches any caller that bypasses Load().
+//
 // The file-backed store honours cfg.ControlPlaneAuditCap; the
 // Postgres backend ignores it and relies on the B2 retention reaper
 // instead (see RetainAuditLoop).
@@ -20,7 +24,7 @@ import (
 // transports.
 func BuildStore(cfg config.Config) (controlplane.Store, error) {
 	if cfg.Transport == "streamable_http" &&
-		IsDevControlPlaneDSN(cfg.ControlPlaneDSN) &&
+		config.IsDevControlPlaneDSN(cfg.ControlPlaneDSN) &&
 		os.Getenv("MCP_ALLOW_DEV_BACKEND") != "1" {
 		return nil, fmt.Errorf("MCP_TRANSPORT=streamable_http with MCP_CONTROL_PLANE_DSN=%q (dev backend) is disallowed by default; set MCP_ALLOW_DEV_BACKEND=1 to acknowledge the single-process limits, or point MCP_CONTROL_PLANE_DSN at a production backend", cfg.ControlPlaneDSN)
 	}
