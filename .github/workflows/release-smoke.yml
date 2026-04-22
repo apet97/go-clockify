@@ -208,7 +208,15 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/go-clockify:${TAG}"
+          # docker-image.yml's metadata-action uses pattern={{version}}
+          # which strips the leading `v` — the ghcr.io image tag is the
+          # bare semver (e.g. 1.0.3), not the git ref (v1.0.3). The
+          # goreleaser sigstore bundles live under the git ref, so the
+          # cosign verify-blob step above keeps the v-prefix; only the
+          # container manifest lookup needs the stripped form. Passing
+          # the raw git tag here produced MANIFEST_UNKNOWN on v1.0.3.
+          image_tag="${TAG#v}"
+          ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/go-clockify:${image_tag}"
           digest="$(cosign triangulate --type digest "$ref")"
           echo "ref=${ref}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
