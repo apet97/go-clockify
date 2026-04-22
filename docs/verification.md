@@ -192,6 +192,6 @@ the open issue is the exclusive failure signal.
 - [`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md)
   — deploy-time digest pinning policy for the prod overlay.
 - [`docs/release/deploy-readiness-checklist.md`](release/deploy-readiness-checklist.md)
-  — mandatory manual checklist for production-ready deployments.
+  — manual checklist to run before promoting a release.
 - [`docs/support-matrix.md`](support-matrix.md)
   — supported Go versions, OS/architectures, and upstream Clockify API compatibility.
