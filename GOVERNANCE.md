@@ -6,61 +6,95 @@ to imitate the governance theatre of a large foundation.
 
 ## Project status
 
-`go-clockify` is a **two-maintainer project** today. `@apet97` and `@backup-maintainer`
-author the majority of code, review and merge all pull requests,
-ship releases, and triage security disclosures. There is no
-steering committee, no technical advisory board, no rotating release
-captain. There is no fiction here either — operators can read this
-document, see who is on the hook, and decide whether their risk
-appetite allows depending on it.
+`go-clockify` is a **single-maintainer project today**. `@apet97` is
+the sole maintainer: author of the majority of code, reviewer and
+merger of every pull request, release signer, and security-disclosure
+first responder. There is no second maintainer, no steering
+committee, no technical advisory board, no rotating release captain.
+
+This matches the reality reflected elsewhere in the repo:
+
+- [`.github/CODEOWNERS`](.github/CODEOWNERS) lists `@apet97` as the
+  sole owner for every directory.
+- [`docs/production-readiness.md`](docs/production-readiness.md#governance)
+  labels this a single-maintainer project with self-merge permitted.
+- [`docs/branch-protection.md`](docs/branch-protection.md) documents
+  why the "Restrict who can push to matching branches" rule is
+  disabled (one user; no security benefit from an allow-list of one).
+
+This document is the single source of truth for that decision; the
+alternatives cited above reference back here.
+
+Operators evaluating whether to depend on `go-clockify`:
+you can read this document, see who is on the hook, and decide
+whether the audit trail that does exist (signed commits, public CI
+logs, SLSA build provenance where available, the release-smoke
+workflow) is sufficient for your risk appetite.
 
 ## Who can merge to `main`
 
-`@apet97` and `@backup-maintainer` are the maintainers with merge access to `main`. Branch
+`@apet97` is the only maintainer with merge access to `main`. Branch
 protection on `main` (snapshot in
 [`docs/branch-protection.md`](docs/branch-protection.md)) enforces
-the merge gate via required CI checks; it **enforces** a
-one-approval review rule.
+the merge gate via required CI checks and a one-approval review
+rule. Self-approval is permitted — it has to be, because there is
+nobody else to approve.
 
-`.github/CODEOWNERS` requires their approval on PRs that touch the security-
-sensitive surfaces listed below.
+`.github/CODEOWNERS` lists `@apet97` as the owner of every path;
+this is a stylistic declaration today (one-of-one), kept because it
+gives a future co-maintainer a clean diff target: adding a second
+handle to the per-path entries is a one-line PR per path rather
+than a ground-up rewrite.
 
 ## Merge gate
 
 A PR may merge to `main` only if all of the following are true:
 
 1. CI is green. Specifically, every required check listed in
-   `docs/branch-protection.md` reports success.
-2. The PR has been reviewed. For a self-authored PR, this means the other maintainer has reviewed and approved. For PRs from external contributors, this means at least one maintainer has reviewed and approved.
-3. The branch is up-to-date with `main` (linear history is preferred;
-   merge commits are accepted only if rebasing would lose context
-   from a long-lived feature branch).
-4. Commits are signed (or, where signing is not yet enforced by
-   branch protection, the maintainer has visually confirmed the
-   author).
-5. The change does not lower a coverage floor without an explicit
+   [`docs/branch-protection.md`](docs/branch-protection.md) reports
+   success.
+2. The branch is up-to-date with `main` (linear history is required;
+   see branch-protection.md).
+3. Commits are signed (required-signatures enforcement is on).
+4. The change does not lower a coverage floor without an explicit
    note in the PR body explaining why
-   (see `docs/coverage-policy.md`).
+   (see [`docs/coverage-policy.md`](docs/coverage-policy.md)).
+5. The PR has at least one approval. For a self-authored PR, this
+   means the maintainer reviewing against the checklist below
+   and self-approving. No-op at one-maintainer scale, but the
+   branch-protection rule stays because the audit trail of an
+   explicit approval click is meaningful.
 
 The merge gate is the same for self-authored PRs and external PRs.
-Self-merge is permitted after review, and the audit trail (signed
-commits, SLSA build provenance on every release, public CI logs)
-makes the chain reviewable after the fact.
+The audit trail (signed commits, SLSA build provenance on every
+release, public CI logs, release-smoke nightly verification) makes
+the chain reviewable after the fact.
 
-## Tighter expectations on security-sensitive areas
+## Tighter self-review expectations on security-sensitive areas
 
-For changes that touch any of the following directories, the
-maintainers commit to **dual review**:
+Until a second maintainer joins, "dual review" on sensitive areas
+is an aspiration rather than a mechanism. Today the expectation is
+**self-review against the sensitive-area checklist**: the PR body
+explicitly calls out which sensitive path is touched and how the
+change was validated. The sensitive paths that trigger this
+expectation are:
 
-- `internal/authn/`
-- `internal/enforcement/`
-- `internal/policy/`
-- `internal/transport/`
-- `internal/clockify/`
-- `.github/workflows/release.yml`
-- `.github/workflows/docker-image.yml`
-- `.goreleaser.yaml`
-- `deploy/`
+- `internal/authn/` — authentication and JWT verification.
+- `internal/enforcement/` — policy enforcement matrix.
+- `internal/policy/` — policy definitions.
+- `internal/transport/` — transport adapters (gRPC, streamable HTTP).
+- `internal/clockify/` — HTTP client and auth headers.
+- `.github/workflows/release.yml` — the release pipeline.
+- `.github/workflows/docker-image.yml` — the image pipeline.
+- `.goreleaser.yaml` — the release orchestrator.
+- `deploy/` — operator-facing deploy manifests.
+
+When a second maintainer joins, the sensitive-path list in
+`.github/CODEOWNERS` will switch on two required approvals via a
+CODEOWNERS entry change; until then, sensitive-path PRs are
+self-reviewed against this list and the rationale is documented in
+the PR body via the checkbox in
+`.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Releases
 
@@ -81,19 +115,26 @@ disclosure policy lives in [`SECURITY.md`](SECURITY.md), including
 the response timeline (acknowledgment within 48 hours, fix within
 1–2 weeks for high-severity).
 
-There is no separate security team. The maintainers are the security
+There is no separate security team. The maintainer is the security
 team. If `@apet97` is unreachable for an extended period, escalate
 via a public GitHub issue tagged `unreachable-maintainer`.
 
 ## Becoming a maintainer
 
-If you have been substantially contributing for several
-months and want to take on review responsibility, open a discussion
-or issue and the conversation will start.
+If you have been substantially contributing for several months and
+want to take on review responsibility, open a discussion or issue
+and the conversation will start. A second maintainer is an explicit
+goal (tracked in Wave L's second-maintainer-onboarding issue); this
+document gets a mechanical rewrite to "two-maintainer" on that
+event.
 
 ## Changes to this document
 
-Changes to this document follow the normal merge gate. Operators who
-depend on `go-clockify` and want to be notified of governance
+Changes to this document follow the normal merge gate. Operators
+who depend on `go-clockify` and want to be notified of governance
 changes should watch the repository for releases and read each
-release's CHANGELOG entry.
+release's CHANGELOG entry. The rationale for each change lives in
+`docs/adr/` so future readers can trace why the policy is what it
+is — see
+[ADR-0016](docs/adr/0016-single-maintainer-governance.md) for the
+single-maintainer decision.
