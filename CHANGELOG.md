@@ -7,17 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+_Nothing yet. Open the next version here._
 
-- **SLSA attestation is now mandatory on release.** The repo
-  flipped to public on 2026-04-22, which unblocked the GitHub
-  attestation service for this account tier.
-  `actions/attest-build-provenance` in `release.yml` and
-  `docker-image.yml` is no longer `continue-on-error: true`; the
-  `gh attestation verify` step in `release-smoke.yml` no longer
-  treats HTTP 404 as a skip. A missing or invalid attestation
-  will now fail the release or the smoke. ADR-0013 is marked
-  superseded; the workaround it documented is no longer live.
+## [1.1.0] - 2026-04-22
+
+> **Scope note.** First minor release after v1.0.0 (2026-04-12).
+> Lands the profile-centric configuration model, the `doctor`
+> subcommand, governance alignment, the toolchain + build-tag
+> matrix tightening, and the public-repo flip that makes SLSA
+> attestation a mandatory gate.
 
 ### Added
 
@@ -37,17 +35,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   text/tabwriter report. Exit code 0 on clean Load(), 2 on a
   Load() error. Takes the same `--profile=<name>` flag as the
   server.
-- **ADR 0015** codifies the profile-centric config model.
+- **`SUPPORT.md`** at repo root covers where to ask questions,
+  response expectations (best effort, no SLA), v1.x wire-format
+  stability guarantee, and the version support matrix.
+- **Build-tag matrix workflow.** New
+  `.github/workflows/build-matrix.yml` runs compile-only checks
+  on six tag combinations (`grpc`, `fips`, `otel`, `pprof`,
+  `grpc,otel`, `fips,grpc`) on every push, PR, and weekly cron.
+- **Four new ADRs.** ADR-0013 (private-repo SLSA posture;
+  superseded at release time), ADR-0014 (prod fail-closed
+  defaults), ADR-0015 (profile-centric configuration model),
+  ADR-0016 (single-maintainer governance reality).
 
 ### Changed
 
+- **SLSA attestation is now mandatory on release.** The repo
+  flipped to public on 2026-04-22, which unblocked the GitHub
+  attestation service for this account tier.
+  `actions/attest-build-provenance` in `release.yml` and
+  `docker-image.yml` is no longer `continue-on-error: true`; the
+  `gh attestation verify` step in `release-smoke.yml` no longer
+  treats HTTP 404 as a skip. A missing or invalid attestation
+  will now fail the release or the smoke. ADR-0013 is marked
+  superseded; the workaround it documented is no longer live.
+- **Production fail-closed defaults (`ENVIRONMENT=prod`).**
+  With `ENVIRONMENT=prod` unset values of
+  `MCP_HTTP_LEGACY_POLICY` resolve to `deny` (was `warn`) and
+  `MCP_AUDIT_DURABILITY` resolves to `fail_closed` (was
+  `best_effort`). Explicit operator values always win. ADR-0014
+  captures the rationale. Load() also fails closed at the
+  streamable_http + dev-DSN boundary without the explicit
+  `MCP_ALLOW_DEV_BACKEND=1` acknowledgement.
+- **Governance documentation aligned on single-maintainer
+  reality.** `GOVERNANCE.md`, `.github/CODEOWNERS`, the PR
+  template, and the new `SUPPORT.md` now tell one consistent
+  story. Drops the `@backup-maintainer` placeholder that never
+  resolved to a real handle. ADR-0016 codifies the decision.
 - **Release smoke strips the `v` prefix before ghcr lookup.**
   `docker-image.yml` publishes semver tags without the leading
   `v` (via the metadata-action `{{version}}` pattern), so
   `release-smoke.yml` now normalises the tag before calling
-  `cosign triangulate`. Closes the last of the four layers
-  tracked under issue #7; on-release and weekly-cron smoke
-  runs now succeed against `v1.0.3`.
+  `cosign triangulate`. Closed the last layer tracked under
+  issue #7.
+- **Release smoke authenticates to ghcr.io.** Added a
+  `cosign login ghcr.io` step so the container manifest lookup
+  works after the visibility switch paths were proven.
+- **Release smoke cosign version aligned with release signer.**
+  Bumped cosign-installer to match `release.yml`'s v2.4.3 so
+  the verifier can read the `--new-bundle-format` bundles the
+  signer writes.
+- **govulncheck pinned to a commit SHA** instead of `@master`,
+  for supply-chain reproducibility. Tracked to revisit once a
+  tagged release supports go1.25.
+
+### Fixed
+
+- **Issue #7 closed.** The four-layer smoke failure (SLSA 404
+  on private repos, cosign format skew, ghcr auth, tag prefix)
+  was resolved across PRs #16, #18, #19, #20.
+
+### Security
+
+- Streamable HTTP fail-closed guard at config load time
+  prevents multi-process deployments from silently running
+  against an in-memory control plane. The existing runtime
+  guard remains as defence-in-depth.
 
 ## [1.0.3] - 2026-04-20
 
