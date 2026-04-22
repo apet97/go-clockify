@@ -57,6 +57,19 @@ attestation has not yet propagated through GitHub's storage (this is
 eventually consistent — retry in 10 minutes for a freshly published
 release).
 
+> **Note — user-owned private repositories.** `gh attestation verify`
+> returns "Feature not available for user-owned private repositories"
+> (HTTP 404) when the repository is private and owned by a user
+> account rather than an organization or a public repo. In that
+> account tier the GitHub attestation service is not active, so
+> `release.yml`'s `actions/attest-build-provenance` step runs with
+> `continue-on-error: true` and no attestation is produced. The
+> release-smoke workflow treats this narrow outcome as **skipped**
+> (surfaced as a `::notice::`); the two mandatory cosign checks
+> below remain the gate. See
+> [`docs/adr/0013-private-repo-slsa-posture.md`](adr/0013-private-repo-slsa-posture.md)
+> for the rationale and the upgrade path.
+
 ## 2. Cosign keyless signature on the binary
 
 Goreleaser's `signs.cosign-keyless` step writes a sigstore bundle
