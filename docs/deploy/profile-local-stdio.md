@@ -1,5 +1,12 @@
 # Deployment profile: local stdio
 
+> Apply with `clockify-mcp --profile=local-stdio` or
+> `MCP_PROFILE=local-stdio`. Example env file:
+> [`deploy/examples/env.local-stdio.example`](../../deploy/examples/env.local-stdio.example).
+> See also: [`internal/config/profile.go`](../../internal/config/profile.go)
+> for the pinned defaults, [ADR-0015](../adr/0015-profile-centric-configuration.md)
+> for the design rationale.
+
 A single-user deployment where `clockify-mcp` runs as a subprocess
 of one MCP client (Claude Code, Claude Desktop, Cursor, Codex). No
 HTTP endpoints, no auth on the transport layer, no audit store —

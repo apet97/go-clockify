@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet. Open the next version here._
+### Added
+
+- **Canonical deployment profiles (`--profile=<name>`).** Five
+  code-enforced profiles — `local-stdio`,
+  `single-tenant-http`, `shared-service`,
+  `private-network-grpc`, `prod-postgres` — bundle the pinned
+  defaults for each supported deployment shape. Apply via
+  `clockify-mcp --profile=<name>` or `MCP_PROFILE=<name>`.
+  Explicit env overrides always win; the Wave H fail-closed
+  guards run unchanged. Each profile has a matching
+  `deploy/examples/env.<name>.example` file and a doc in
+  `docs/deploy/profile-<name>.md`.
+- **`clockify-mcp doctor` subcommand.** Audits the effective
+  configuration, attributing every spec'd env var as
+  `explicit` / `profile` / `default` / `empty` via a
+  text/tabwriter report. Exit code 0 on clean Load(), 2 on a
+  Load() error. Takes the same `--profile=<name>` flag as the
+  server.
+- **ADR 0015** codifies the profile-centric config model.
+
+### Changed
+
+- **Release smoke strips the `v` prefix before ghcr lookup.**
+  `docker-image.yml` publishes semver tags without the leading
+  `v` (via the metadata-action `{{version}}` pattern), so
+  `release-smoke.yml` now normalises the tag before calling
+  `cosign triangulate`. Closes the last of the four layers
+  tracked under issue #7; on-release and weekly-cron smoke
+  runs now succeed against `v1.0.3`.
 
 ## [1.0.3] - 2026-04-20
 

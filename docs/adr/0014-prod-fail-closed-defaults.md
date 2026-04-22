@@ -90,7 +90,7 @@ demands fail-closed, so we gate that flip on `ENVIRONMENT`.
 - Three silent hazards turn into load-time errors or environment-
   aware defaults. Nothing about the default dev UX changes;
   everything about the default prod UX tightens.
-- The "Wave C" TODO in
+- The "Wave C" follow-up placeholder in
   `internal/config/transport_auth_matrix_test.go` is closed. The
   silent-memory-fallback is now an actively-asserted failure.
 - Error messages name the escape hatches. An operator who hits
@@ -133,9 +133,9 @@ demands fail-closed, so we gate that flip on `ENVIRONMENT`.
   `internal/config/dsn_test.go` absorbs the cases.
 
 `internal/config/transport_auth_matrix_test.go`:
-- The "Wave C" TODO is replaced with three explicit assertions
-  (dev DSN without flag → fails; dev DSN with flag → ok;
-  postgres DSN → ok).
+- The "Wave C" follow-up placeholder is replaced with three
+  explicit assertions (dev DSN without flag → fails; dev DSN
+  with flag → ok; postgres DSN → ok).
 
 `internal/config/prod_defaults_test.go` (new):
 - Locks the two environment-aware defaults (`AuditDurability`,

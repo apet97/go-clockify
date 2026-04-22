@@ -40,6 +40,17 @@ func main() {
 	// the module is not active. See ADR 011.
 	fipsStartupCheck()
 
+	// Honour --profile=<name> from anywhere in the argv tail by
+	// translating it into MCP_PROFILE before the config package reads
+	// the env. The env form MCP_PROFILE=<name> keeps working for
+	// container / systemd operators; --profile is the flag form for
+	// interactive use.
+	for _, a := range os.Args[1:] {
+		if name, ok := strings.CutPrefix(a, "--profile="); ok {
+			_ = os.Setenv("MCP_PROFILE", name)
+		}
+	}
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "--version", "-v":
@@ -48,6 +59,8 @@ func main() {
 		case "--help", "-h":
 			printHelp()
 			os.Exit(0)
+		case "doctor":
+			os.Exit(runDoctor(os.Args[2:]))
 		}
 	}
 
@@ -187,5 +200,22 @@ func subjectSweepInterval() time.Duration {
 // embedded as generatedHelp in help_generated.go. Regenerate after any
 // EnvSpec edit with: go run ./cmd/gen-config-docs -mode=all
 func printHelp() {
-	fmt.Fprintf(os.Stderr, "clockify-mcp v%s — MCP server for Clockify\n\nUsage: clockify-mcp [--version | --help]\n\n%s", version, generatedHelp)
+	// Writes to stderr never fail in any actionable way at this call
+	// site — if the OS-level write has gone south, help-text drops
+	// are the least of our problems. Explicit _, _ = satisfies the
+	// errcheck linter.
+	w := os.Stderr
+	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — MCP server for Clockify\n\n", version)
+	_, _ = fmt.Fprintln(w, "Usage:")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] Audit effective configuration (exit 0=OK, 2=ERROR)")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --version | -v            Print version and exit")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --help    | -h            Print this help and exit")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Profiles (set via --profile or MCP_PROFILE):")
+	for _, p := range config.AllProfiles() {
+		_, _ = fmt.Fprintf(w, "  %-24s %s\n", p.Name, p.Summary)
+	}
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprint(w, generatedHelp)
 }

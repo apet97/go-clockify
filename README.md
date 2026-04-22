@@ -29,8 +29,19 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Start Here
 
-- **Local single-user subprocess:** Follow the install and client-wiring sections below, then use [docs/deploy/profile-local-stdio.md](docs/deploy/profile-local-stdio.md) as the canonical runtime profile.
-- **Shared-service / operator-managed deployment:** Start with [docs/deploy/production-profile-shared-service.md](docs/deploy/production-profile-shared-service.md), [docs/operators/](docs/operators/), and [docs/production-readiness.md](docs/production-readiness.md).
+Pick a deployment profile and invoke the binary with `--profile=<name>` (or `MCP_PROFILE=<name>`). The profile applies a bundle of pinned defaults; explicit env overrides still win.
+
+| Profile | Shape | Doc | Example env |
+|---------|-------|-----|-------------|
+| `local-stdio` | single user, stdio subprocess | [profile-local-stdio.md](docs/deploy/profile-local-stdio.md) | [env.local-stdio.example](deploy/examples/env.local-stdio.example) |
+| `single-tenant-http` | one team, streamable HTTP + static bearer | [profile-single-tenant-http.md](docs/deploy/profile-single-tenant-http.md) | [env.single-tenant-http.example](deploy/examples/env.single-tenant-http.example) |
+| `shared-service` | multi-tenant, postgres + OIDC, audit fail-closed | [production-profile-shared-service.md](docs/deploy/production-profile-shared-service.md) | [env.shared-service.example](deploy/examples/env.shared-service.example) |
+| `private-network-grpc` | gRPC + mTLS behind a private perimeter (`-tags=grpc`) | [profile-private-network-grpc.md](docs/deploy/profile-private-network-grpc.md) | [env.private-network-grpc.example](deploy/examples/env.private-network-grpc.example) |
+| `prod-postgres` | alias of `shared-service` with `ENVIRONMENT=prod` | see shared-service doc | — |
+
+Not sure which profile matches your environment? Run `clockify-mcp doctor` — it prints every env var's effective value, its source (explicit / profile / default / empty), and whether `Load()` would succeed at startup. Exit code is 0 on a clean load and 2 on an error.
+
+Operators upgrading from before Wave I: see [docs/production-readiness.md](docs/production-readiness.md) and [docs/operators/](docs/operators/) for the deeper production checklist — profiles shortcut the common cases but do not replace ops review for critical deployments.
 
 ## Install
 
@@ -178,6 +189,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_METRICS_BEARER_TOKEN` | `—` | Bearer token (>=16 chars) for static_bearer metrics |
 | `MCP_METRICS_BIND` | `—` | Dedicated metrics listener (optional; recommended for streamable_http) |
 | `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | OIDC verify cache TTL [1s,5m] |
+| `MCP_PROFILE` | `—` | Apply a bundle of pinned defaults for a named deployment shape; explicit env overrides still win |
 | `MCP_TRANSPORT` | `stdio` | Transport mode; http is legacy POST-only (deprecated) |
 <!-- CONFIG-TABLE END -->
 

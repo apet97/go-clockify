@@ -133,6 +133,17 @@ type Config struct {
 }
 
 func Load() (Config, error) {
+	// Apply the selected deployment profile first so every subsequent
+	// os.Getenv in this function sees profile defaults for any key
+	// the operator did not set explicitly. Explicit values always
+	// win because applyProfile only writes to unset keys. Profile is
+	// opt-in: with MCP_PROFILE empty the behaviour is unchanged.
+	if name := strings.TrimSpace(os.Getenv("MCP_PROFILE")); name != "" {
+		if _, err := applyProfile(name); err != nil {
+			return Config{}, err
+		}
+	}
+
 	cfg := Config{
 		APIKey:      os.Getenv("CLOCKIFY_API_KEY"),
 		WorkspaceID: os.Getenv("CLOCKIFY_WORKSPACE_ID"),

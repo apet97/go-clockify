@@ -1,5 +1,12 @@
 # Deployment profile: single-tenant HTTP
 
+> Apply with `clockify-mcp --profile=single-tenant-http` or
+> `MCP_PROFILE=single-tenant-http`. Example env file:
+> [`deploy/examples/env.single-tenant-http.example`](../../deploy/examples/env.single-tenant-http.example).
+> See also: [`internal/config/profile.go`](../../internal/config/profile.go)
+> for the pinned defaults, [ADR-0015](../adr/0015-profile-centric-configuration.md)
+> for the design rationale.
+
 A deployment where `clockify-mcp` runs as a long-lived HTTP
 service behind a TLS-terminating reverse proxy, servicing one
 workspace for one team. Identity is a shared bearer token; audit

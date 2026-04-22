@@ -10,6 +10,7 @@ import (
 )
 
 var groupOrder = []string{
+	"Profile",
 	"Core",
 	"Safety",
 	"Performance",
