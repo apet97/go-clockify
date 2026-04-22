@@ -41,7 +41,7 @@ Pick a deployment profile and invoke the binary with `--profile=<name>` (or `MCP
 
 Not sure which profile matches your environment? Run `clockify-mcp doctor` — it prints every env var's effective value, its source (explicit / profile / default / empty), and whether `Load()` would succeed at startup. Exit code is 0 on a clean load and 2 on an error.
 
-Operators upgrading from before Wave I: see [docs/production-readiness.md](docs/production-readiness.md) and [docs/operators/](docs/operators/) for the deeper production checklist — profiles shortcut the common cases but do not replace ops review for critical deployments.
+Operators upgrading from before Wave I: see [the operator overview](docs/production-readiness.md) and [docs/operators/](docs/operators/) for the deeper production checklist — profiles shortcut the common cases but do not replace ops review for critical deployments.
 
 ## Install
 
@@ -307,10 +307,10 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 Reference Kubernetes manifests live in [`deploy/k8s/`](deploy/k8s/) and [`deploy/helm/`](deploy/helm/): Deployment (non-root distroless, read-only root FS, dropped capabilities), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and a PrometheusRule with burn-rate alerts for a 99.9% SLO.
 
-For a single-page operator overview that links the threat model, transports, auth modes, deployment targets, runbooks, and compliance posture, see [docs/production-readiness.md](docs/production-readiness.md).
+For a single-page operator overview that links the threat model, transports, auth modes, deployment targets, runbooks, and compliance posture, see [the operator overview](docs/production-readiness.md).
 
-### Production Resources
-- [Production Profile: Shared Service](docs/deploy/production-profile-shared-service.md)
+### Operator resources
+- [Shared Service profile](docs/deploy/production-profile-shared-service.md)
 - [Support Matrix](docs/support-matrix.md)
 - [Client Compatibility](docs/clients.md)
 - [Deploy-Readiness Checklist](docs/release/deploy-readiness-checklist.md)
