@@ -25,12 +25,14 @@ on:
     branches: [main]
     paths:
       - "**/*.md"
+      - "**/*.MD"
       - ".github/workflows/link-check.yml"
       - ".lycheeignore"
   pull_request:
     branches: [main]
     paths:
       - "**/*.md"
+      - "**/*.MD"
       - ".github/workflows/link-check.yml"
       - ".lycheeignore"
   schedule:
