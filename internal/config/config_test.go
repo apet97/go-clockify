@@ -250,9 +250,11 @@ func TestLoadMaxMessageSizeLegacyFallback(t *testing.T) {
 
 func TestLoadStreamableHTTPAllowsEmptyAPIKey(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"MCP_TRANSPORT":    "streamable_http",
-		"MCP_METRICS_BIND": "",
-		"MCP_OIDC_ISSUER":  "https://example.com",
+		"MCP_TRANSPORT":         "streamable_http",
+		"MCP_METRICS_BIND":      "",
+		"MCP_OIDC_ISSUER":       "https://example.com",
+		"MCP_CONTROL_PLANE_DSN": "memory",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -775,6 +777,7 @@ func TestLoadStreamableHTTPWithoutStaticAPIKey(t *testing.T) {
 		"MCP_AUTH_MODE":         "oidc",
 		"MCP_OIDC_ISSUER":       "https://issuer.example.com",
 		"MCP_CONTROL_PLANE_DSN": "memory",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	os.Unsetenv("CLOCKIFY_API_KEY")
 
@@ -795,6 +798,7 @@ func TestLoadStreamableHTTPRequiresOIDCIssuer(t *testing.T) {
 		"MCP_TRANSPORT":         "streamable_http",
 		"MCP_AUTH_MODE":         "oidc",
 		"MCP_CONTROL_PLANE_DSN": "memory",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	os.Unsetenv("CLOCKIFY_API_KEY")
 	os.Unsetenv("MCP_OIDC_ISSUER")

@@ -47,31 +47,49 @@ func TestTransportAuthMatrix(t *testing.T) {
 		{"http", "static_bearer", nil, "MCP_BEARER_TOKEN is required for static bearer auth"},
 
 		// --- streamable_http ----------------------------------------
+		// streamable_http against a dev DSN (memory / file / bare path)
+		// requires an explicit MCP_ALLOW_DEV_BACKEND=1 acknowledgement
+		// from the operator. Without it, Load() fails closed so the
+		// operator sees the mismatch on startup instead of at first
+		// request. See docs/adr/0014-prod-fail-closed-defaults.md.
 		{"streamable_http", "static_bearer", map[string]string{
 			"MCP_BEARER_TOKEN":      bearer,
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"streamable_http", "oidc", map[string]string{
 			"MCP_OIDC_ISSUER":       "https://issuer.example",
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"streamable_http", "oidc", map[string]string{
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "MCP_OIDC_ISSUER is required"},
 		{"streamable_http", "forward_auth", map[string]string{
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"streamable_http", "mtls", map[string]string{
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
-		// streamable_http with no MCP_CONTROL_PLANE_DSN silently falls
-		// back to "memory" — tracked by Wave C (fail-closed dev
-		// defaults) which will force the operator to acknowledge this
-		// when running a production-shaped config. Until then, asserts
-		// OK so regressions of the silent-memory-fallback are still
-		// visible to this test.
+		// Dev DSN without the ack flag — fails closed with a message
+		// that names both escape hatches (flag or postgres://).
+		{"streamable_http", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "memory",
+		}, "dev backend) is disallowed by default"},
+		// Empty DSN (defaulted to "memory" by Load) with no ack flag —
+		// same fail-closed path; proves the silent-memory-fallback is
+		// gone.
 		{"streamable_http", "static_bearer", map[string]string{
 			"MCP_BEARER_TOKEN": bearer,
+		}, "dev backend) is disallowed by default"},
+		// Production DSN (postgres://) always passes without the flag.
+		{"streamable_http", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "postgres://user:pw@db.example:5432/mcp",
 		}, "ok"},
 
 		// --- grpc ---------------------------------------------------
@@ -102,6 +120,7 @@ func TestTransportAuthMatrix(t *testing.T) {
 				"MCP_BEARER_TOKEN", "MCP_CONTROL_PLANE_DSN", "MCP_OIDC_ISSUER",
 				"MCP_OIDC_AUDIENCE", "MCP_OIDC_JWKS_URL", "MCP_OIDC_JWKS_PATH",
 				"MCP_RESOURCE_URI", "MCP_OIDC_VERIFY_CACHE_TTL",
+				"MCP_ALLOW_DEV_BACKEND",
 			} {
 				if _, present := envs[k]; !present {
 					t.Setenv(k, "")
