@@ -161,7 +161,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per 60s window (0=disabled) |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |
 | `MCP_ALLOW_DEV_BACKEND` | `—` | Permit memory/file backends for streamable_http (single-process only) |
-| `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour |
+| `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod) |
 | `MCP_AUTH_MODE` | `—` | Authentication mode (per-transport support varies; see matrix) |
 | `MCP_CONTROL_PLANE_AUDIT_CAP` | `0` | File/memory audit cap (0=unbounded). Postgres uses retention instead. |
 | `MCP_CONTROL_PLANE_AUDIT_RETENTION` | `720h` | Audit retention [1h,8760h]; 0=off |
@@ -170,7 +170,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_HTTP_BIND` | `:8080` | HTTP listen address |
 | `MCP_HTTP_INLINE_METRICS_AUTH_MODE` | `inherit_main_bearer` | Auth mode for inline /metrics |
 | `MCP_HTTP_INLINE_METRICS_ENABLED` | `0` | Expose /metrics on the main HTTP listener |
-| `MCP_HTTP_LEGACY_POLICY` | `warn` | Legacy HTTP startup behaviour |
+| `MCP_HTTP_LEGACY_POLICY` | `warn` | Legacy HTTP startup behaviour (defaults to deny when ENVIRONMENT=prod) |
 | `MCP_HTTP_MAX_BODY` | `4194304` | **Deprecated — use `MCP_MAX_MESSAGE_SIZE`.** Deprecated alias for MCP_MAX_MESSAGE_SIZE |
 | `MCP_LOG_FORMAT` | `text` | Log format (stderr; PII-scrubbed) |
 | `MCP_MAX_MESSAGE_SIZE` | `4194304` | Max request size in bytes (primary knob); 0 < N <= 104857600 |

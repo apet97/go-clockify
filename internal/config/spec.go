@@ -63,7 +63,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_ALLOWED_ORIGINS", Group: "Transport", AppliesTo: []string{"http", "streamable_http"}, Help: "Comma-separated CORS origins"},
 		{Name: "MCP_ALLOW_ANY_ORIGIN", Group: "Transport", Enum: []string{"0", "1"}, Default: "0", Help: "Allow all origins"},
 		{Name: "MCP_STRICT_HOST_CHECK", Group: "Transport", Enum: []string{"0", "1"}, Default: "0", Help: "Require Host header match"},
-		{Name: "MCP_HTTP_LEGACY_POLICY", Group: "Transport", Enum: []string{"allow", "warn", "deny"}, Default: "warn", Help: "Legacy HTTP startup behaviour", EssentialDoc: true},
+		{Name: "MCP_HTTP_LEGACY_POLICY", Group: "Transport", Enum: []string{"allow", "warn", "deny"}, Default: "warn", Help: "Legacy HTTP startup behaviour (defaults to deny when ENVIRONMENT=prod)", EssentialDoc: true},
 
 		// --- Auth ---
 		{Name: "MCP_AUTH_MODE", Group: "Auth", Enum: []string{"static_bearer", "oidc", "forward_auth", "mtls"}, Help: "Authentication mode (per-transport support varies; see matrix)", EssentialDoc: true},
@@ -99,7 +99,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_CONTROL_PLANE_AUDIT_RETENTION", Group: "ControlPlane", Default: "720h", Help: "Audit retention [1h,8760h]; 0=off", EssentialDoc: true},
 		{Name: "MCP_SESSION_TTL", Group: "ControlPlane", Default: "30m", AppliesTo: []string{"streamable_http"}, Help: "Session TTL [1m,24h]"},
 		{Name: "MCP_ALLOW_DEV_BACKEND", Group: "ControlPlane", Enum: []string{"0", "1"}, Help: "Permit memory/file backends for streamable_http (single-process only)", EssentialDoc: true},
-		{Name: "MCP_AUDIT_DURABILITY", Group: "Audit", Enum: []string{"best_effort", "fail_closed"}, Default: "best_effort", Help: "Audit persist-failure behaviour", EssentialDoc: true},
+		{Name: "MCP_AUDIT_DURABILITY", Group: "Audit", Enum: []string{"best_effort", "fail_closed"}, Default: "best_effort", Help: "Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod)", EssentialDoc: true},
 
 		// --- Logging / Deploy ---
 		{Name: "MCP_LOG_LEVEL", Group: "Logging", Enum: []string{"debug", "info", "warn", "error"}, Default: "info", Help: "Log level"},
