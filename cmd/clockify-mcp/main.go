@@ -200,17 +200,22 @@ func subjectSweepInterval() time.Duration {
 // embedded as generatedHelp in help_generated.go. Regenerate after any
 // EnvSpec edit with: go run ./cmd/gen-config-docs -mode=all
 func printHelp() {
-	fmt.Fprintf(os.Stderr, "clockify-mcp v%s — MCP server for Clockify\n\n", version)
-	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
-	fmt.Fprintln(os.Stderr, "  clockify-mcp doctor [--profile=<name>] Audit effective configuration (exit 0=OK, 2=ERROR)")
-	fmt.Fprintln(os.Stderr, "  clockify-mcp --version | -v            Print version and exit")
-	fmt.Fprintln(os.Stderr, "  clockify-mcp --help    | -h            Print this help and exit")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Profiles (set via --profile or MCP_PROFILE):")
+	// Writes to stderr never fail in any actionable way at this call
+	// site — if the OS-level write has gone south, help-text drops
+	// are the least of our problems. Explicit _, _ = satisfies the
+	// errcheck linter.
+	w := os.Stderr
+	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — MCP server for Clockify\n\n", version)
+	_, _ = fmt.Fprintln(w, "Usage:")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] Audit effective configuration (exit 0=OK, 2=ERROR)")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --version | -v            Print version and exit")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --help    | -h            Print this help and exit")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Profiles (set via --profile or MCP_PROFILE):")
 	for _, p := range config.AllProfiles() {
-		fmt.Fprintf(os.Stderr, "  %-24s %s\n", p.Name, p.Summary)
+		_, _ = fmt.Fprintf(w, "  %-24s %s\n", p.Name, p.Summary)
 	}
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprint(os.Stderr, generatedHelp)
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprint(w, generatedHelp)
 }

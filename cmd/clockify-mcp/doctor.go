@@ -50,26 +50,32 @@ func runDoctor(_ []string) int {
 	cfg, cfgErr := config.Load()
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	defer w.Flush()
+	// pf wraps fmt.Fprintf so the errcheck linter is satisfied.
+	// Writes to stdout via tabwriter never produce an actionable
+	// error at this call site — if stdout is broken, the process
+	// has bigger problems than a doctor report.
+	pf := func(format string, args ...any) { _, _ = fmt.Fprintf(w, format, args...) }
+	pln := func(s string) { _, _ = fmt.Fprintln(w, s) }
+	defer func() { _ = w.Flush() }()
 
-	fmt.Fprintln(w, "clockify-mcp doctor — effective configuration audit")
-	fmt.Fprintln(w, "")
+	pln("clockify-mcp doctor — effective configuration audit")
+	pln("")
 	if profile != nil {
-		fmt.Fprintf(w, "Profile:\t%s\t%s\n", profile.Name, profile.Summary)
+		pf("Profile:\t%s\t%s\n", profile.Name, profile.Summary)
 	} else if preLoad["MCP_PROFILE"] != "" {
-		fmt.Fprintf(w, "Profile:\t%s\t(unknown — see error below)\n", preLoad["MCP_PROFILE"])
+		pf("Profile:\t%s\t(unknown — see error below)\n", preLoad["MCP_PROFILE"])
 	} else {
-		fmt.Fprintf(w, "Profile:\t(none)\tExplicit env only; see --help for --profile options\n")
+		pf("Profile:\t(none)\tExplicit env only; see --help for --profile options\n")
 	}
-	fmt.Fprintln(w, "")
+	pln("")
 
 	if cfgErr != nil {
-		fmt.Fprintf(w, "Load() result:\tERROR\t%s\n", cfgErr.Error())
+		pf("Load() result:\tERROR\t%s\n", cfgErr.Error())
 	} else {
-		fmt.Fprintf(w, "Load() result:\tOK\ttransport=%s; auth=%s; audit=%s\n",
+		pf("Load() result:\tOK\ttransport=%s; auth=%s; audit=%s\n",
 			cfg.Transport, cfg.AuthMode, cfg.AuditDurabilityMode)
 	}
-	fmt.Fprintln(w, "")
+	pln("")
 
 	// Group specs by their EnvSpec.Group in the same display order
 	// gen-config-docs uses, then alphabetise within each group.
@@ -93,8 +99,8 @@ func runDoctor(_ []string) int {
 			continue
 		}
 		sort.Slice(specs, func(i, j int) bool { return specs[i].Name < specs[j].Name })
-		fmt.Fprintf(w, "--- %s ---\n", g)
-		fmt.Fprintln(w, "Variable\tEffective\tSource")
+		pf("--- %s ---\n", g)
+		pln("Variable\tEffective\tSource")
 		for _, s := range specs {
 			effective := strings.TrimSpace(os.Getenv(s.Name))
 			source := attributeSource(s, preLoad[s.Name], profileKeys)
@@ -102,9 +108,9 @@ func runDoctor(_ []string) int {
 			if display == "" {
 				display = "—"
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\n", s.Name, display, source)
+			pf("%s\t%s\t%s\n", s.Name, display, source)
 		}
-		fmt.Fprintln(w, "")
+		pln("")
 	}
 
 	if cfgErr != nil {
