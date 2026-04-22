@@ -322,10 +322,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support
 
+- Adoption expectations, response-time posture, `v1.x` wire-format stability guarantee: [SUPPORT.md](SUPPORT.md)
+- Governance (single-maintainer, merge gate, sensitive-area self-review): [GOVERNANCE.md](GOVERNANCE.md)
+- Security vulnerabilities: [SECURITY.md](SECURITY.md) (private disclosure channel)
 - Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues)
-- Security vulnerabilities: [SECURITY.md](SECURITY.md)
-- Release history: [CHANGELOG.md](CHANGELOG.md)
+- Release history: [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/apet97/go-clockify/releases)
 - Versioning, support window, breaking-change policy: [docs/release-policy.md](docs/release-policy.md)
+- Documentation map: [docs/README.md](docs/README.md)
 
 ## License
 
