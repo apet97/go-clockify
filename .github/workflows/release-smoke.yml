@@ -77,7 +77,13 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
         with:
-          cosign-release: v2.4.1
+          # Must match release.yml's cosign-release. v2.4.1 verifier
+          # cannot read bundles produced by the v2.4.3 signer — cosign
+          # reports "bundle does not contain cert for verification" on
+          # the newer --new-bundle-format output. Keep both workflows
+          # pinned to the same minor so smoke verifies what release
+          # signed.
+          cosign-release: v2.4.3
 
       - name: Resolve release tag
         id: tag
