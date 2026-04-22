@@ -9,28 +9,29 @@ The snapshot exists so an auditor or external reviewer can see what
 the merge gate actually enforces without having admin access to the
 repository.
 
-Last reviewed: 2026-04-14 (wave-e E1).
+Last reviewed: 2026-04-22 (post repo-visibility flip + Wave M).
 
-> ✅ **Applied.** As of 2026-04-14 E1, `main` has a classic
-> branch-protection rule applied via
-> `gh api PUT repos/apet97/go-clockify/branches/main/protection`.
+> ✅ **Applied.** `main` has a classic branch-protection rule applied
+> via `gh api PUT repos/apet97/go-clockify/branches/main/protection`.
 > Run `bash scripts/audit-branch-protection.sh` to dump the live
-> state; the snapshot table below should track it one-for-one. Two
-> settings diverge from the original wave D aspiration; both are
-> documented below with their reason.
+> state; the snapshot table below should track it one-for-one.
+> Four settings diverge from the original wave-E aspiration — all
+> four are a direct consequence of the single-maintainer reality
+> documented in [`GOVERNANCE.md`](../GOVERNANCE.md) and
+> [`docs/adr/0016`](adr/0016-single-maintainer-governance.md).
 
 ## Applied protection rules on `main`
 
 | Setting                                       | Applied state     | Note |
 |-----------------------------------------------|-------------------|------|
 | Require a pull request before merging         | Enabled           |      |
-| Required approvals                            | 1                 |      |
+| Required approvals                            | 0                 | ¶    |
 | Dismiss stale pull request approvals on push  | Enabled           |      |
-| Require review from Code Owners               | Enabled           |      |
+| Require review from Code Owners               | Disabled          | ¶    |
 | Require status checks to pass before merging  | Enabled           |      |
 | Require branches to be up to date before merge| Enabled           |      |
 | Require conversation resolution before merge  | Enabled           |      |
-| Require signed commits                        | Enabled           |      |
+| Require signed commits                        | Disabled          | ★    |
 | Require linear history                        | Enabled           |      |
 | Require deployments to succeed                | Disabled          |      |
 | Lock branch                                   | Disabled          |      |
@@ -39,11 +40,32 @@ Last reviewed: 2026-04-14 (wave-e E1).
 | Allow deletions                               | Disabled          |      |
 | Enforce for admins                            | Disabled          | §    |
 
+¶ **Required approvals = 0** and **Code-owner reviews disabled**
+because this is a single-maintainer repository. GitHub hard-blocks
+authors from approving their own pull requests; with one maintainer
+and CODEOWNERS listing only that maintainer, any non-zero approval
+requirement combined with code-owner enforcement means no PR can ever
+merge. The merge gate at one-of-one scale is: **CI green + linear
+history + conversation resolution**. When a second maintainer joins
+(tracked in Wave L issue #26), both settings flip: approvals = 1
+and code-owner reviews back on. The CODEOWNERS file still lists
+paths so ownership is visible in the GitHub UI on every PR.
+
+★ **Require signed commits = Disabled** because the maintainer's
+primary workflow does not have a local GPG/SSH signing key set up
+and API-authored commits on user-owned accounts are not web-flow
+signed. Squash-merge commits on `main` ARE signed by GitHub's
+web-flow bot when merged via the UI/API, so the history of `main`
+itself is effectively fully-signed even though the PR-branch
+commits that get squashed are not. Re-enable once local signing
+is configured (tracked in Wave L — the "signing setup" follow-up
+is worth a dedicated issue if this churns).
+
 ‡ **Restrict who can push to matching branches** is disabled because
-this is a single-maintainer repository (see `GOVERNANCE.md`). The
-other protection settings already prevent unauthorized push without
-needing an actor allow-list; turning restrictions on for a single
-user adds UI friction with no security benefit.
+this is a single-maintainer repository. The other protection
+settings already prevent unauthorized push without needing an actor
+allow-list; turning restrictions on for a single user adds UI
+friction with no security benefit.
 
 § **Enforce for admins** is disabled so the repository administrator
 can reach `main` during an incident without first disabling
@@ -81,6 +103,18 @@ required-checks list on `main`, as reported by
 - `Build, scan, sign` — the container image builds, Trivy passes on
   HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
 - `Lychee` — external Markdown link check across the repo.
+- `Build -tags=grpc` — Wave K compile-only cell for the gRPC
+  transport.
+- `Build -tags=fips` — Wave K compile-only cell for the FIPS build.
+- `Build -tags=otel` — Wave K compile-only cell for the OTel
+  exporter wiring.
+- `Build -tags=pprof` — Wave K compile-only cell for the pprof
+  handlers.
+- `Build -tags=grpc,otel` — Wave K combinatorial covering the
+  gRPC + OTel interceptor adapter path.
+- `Build -tags=fips,grpc` — Wave K combinatorial covering the FIPS
+  + gRPC dependency chain (the risky one, because gRPC transitively
+  pulls in crypto choices that must be FIPS-capable).
 
 `Reproducibility`, `live-contract`, and `release-smoke` are **not**
 PR-blocking. Reproducibility triggers on release events, not pull
