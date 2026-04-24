@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/controlplane"
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 func TestStreamableHTTPSessionIsolation(t *testing.T) {
@@ -103,9 +106,12 @@ func initializeStreamSession(t *testing.T, handler http.Handler, body string) st
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	handler.ServeHTTP(rec, req)
-	sessionID := rec.Header().Get("X-MCP-Session-ID")
+	sessionID := rec.Header().Get(MCPSessionIDHeader)
 	if sessionID == "" {
 		t.Fatal("missing session id header")
+	}
+	if legacy := rec.Header().Get(LegacyMCPSessionIDHeader); legacy != sessionID {
+		t.Fatalf("legacy session id header = %q, want %q", legacy, sessionID)
 	}
 	return sessionID
 }
@@ -115,13 +121,43 @@ func callStreamSession(t *testing.T, handler http.Handler, sessionID, body strin
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 	handler.ServeHTTP(rec, req)
 	var resp Response
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	return resp
+}
+
+type failingSessionStore struct {
+	controlplane.Store
+	mu          sync.Mutex
+	putCalls    int
+	failPutOn   map[int]bool
+	failDeletes bool
+}
+
+func (s *failingSessionStore) PutSession(record controlplane.SessionRecord) error {
+	s.mu.Lock()
+	s.putCalls++
+	call := s.putCalls
+	fail := s.failPutOn[call]
+	s.mu.Unlock()
+	if fail {
+		return errors.New("put session failed")
+	}
+	return s.Store.PutSession(record)
+}
+
+func (s *failingSessionStore) DeleteSession(id string) error {
+	s.mu.Lock()
+	fail := s.failDeletes
+	s.mu.Unlock()
+	if fail {
+		return errors.New("delete session failed")
+	}
+	return s.Store.DeleteSession(id)
 }
 
 // newTestStreamableStack builds a minimal streamable HTTP stack wired for
@@ -168,6 +204,204 @@ func newTestStreamableStack(t *testing.T) (*streamSessionManager, StreamableHTTP
 	return mgr, opts
 }
 
+func TestStreamableSessionHeaderAndStatusCodes(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	handler := streamableRPCHandler(opts, mgr)
+	events := streamableEventsHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+	sessionID := rec.Header().Get(MCPSessionIDHeader)
+	if sessionID == "" {
+		t.Fatalf("missing canonical session header: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get(LegacyMCPSessionIDHeader); got != sessionID {
+		t.Fatalf("legacy session header = %q, want %q", got, sessionID)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing session status = %d, want 400", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, "does-not-exist")
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("invalid session status = %d, want 404", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	events.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing SSE session status = %d, want 400", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, "does-not-exist")
+	events.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("invalid SSE session status = %d, want 404", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":4,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(LegacyMCPSessionIDHeader, sessionID)
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("legacy header status = %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStreamableNotificationOnlyPostAccepted(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	handler := streamableRPCHandler(opts, mgr)
+	sessionID := initializeStreamSession(t, handler, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","method":"notifications/initialized"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202 body=%q", rec.Code, rec.Body.String())
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", rec.Body.String())
+	}
+}
+
+func TestStreamableInitializeRequiresID(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+	if rec.Header().Get(MCPSessionIDHeader) != "" {
+		t.Fatal("initialize notification must not create a session")
+	}
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Error == nil || resp.Error.Code != -32600 {
+		t.Fatalf("expected -32600, got %+v", resp.Error)
+	}
+}
+
+func TestStreamableSessionPersistenceFailures(t *testing.T) {
+	t.Run("create_failure_aborts_session", func(t *testing.T) {
+		mgr, opts := newTestStreamableStack(t)
+		base := mgr.store
+		store := &failingSessionStore{Store: base, failPutOn: map[int]bool{1: true}}
+		mgr.store = store
+		opts.ControlPlane = store
+		closed := false
+		opts.Factory = func(_ context.Context, principal authn.Principal, _ string) (*StreamableSessionRuntime, error) {
+			server := NewServer("test", nil, nil, nil)
+			return &StreamableSessionRuntime{
+				Server:   server,
+				Close:    func() { closed = true },
+				TenantID: principal.TenantID,
+			}, nil
+		}
+		handler := streamableRPCHandler(opts, mgr)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+		req.Header.Set("Authorization", "Bearer "+testBearerToken)
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500", rec.Code)
+		}
+		if !closed {
+			t.Fatal("runtime close was not called")
+		}
+		if len(mgr.items) != 0 {
+			t.Fatalf("session leaked after create failure: %d", len(mgr.items))
+		}
+	})
+
+	t.Run("sync_failure_aborts_initialized_session", func(t *testing.T) {
+		mgr, opts := newTestStreamableStack(t)
+		base := mgr.store
+		store := &failingSessionStore{Store: base, failPutOn: map[int]bool{2: true}}
+		mgr.store = store
+		opts.ControlPlane = store
+		closed := false
+		opts.Factory = func(_ context.Context, principal authn.Principal, _ string) (*StreamableSessionRuntime, error) {
+			server := NewServer("test", nil, nil, nil)
+			return &StreamableSessionRuntime{
+				Server:   server,
+				Close:    func() { closed = true },
+				TenantID: principal.TenantID,
+			}, nil
+		}
+		handler := streamableRPCHandler(opts, mgr)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+		req.Header.Set("Authorization", "Bearer "+testBearerToken)
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500", rec.Code)
+		}
+		if !closed {
+			t.Fatal("runtime close was not called")
+		}
+		if len(mgr.items) != 0 {
+			t.Fatalf("session leaked after sync failure: %d", len(mgr.items))
+		}
+	})
+
+	t.Run("touch_and_delete_failures_are_observable_best_effort", func(t *testing.T) {
+		mgr, opts := newTestStreamableStack(t)
+		base := mgr.store
+		store := &failingSessionStore{Store: base, failPutOn: map[int]bool{3: true}}
+		mgr.store = store
+		opts.ControlPlane = store
+		handler := streamableRPCHandler(opts, mgr)
+		sessionID := initializeStreamSession(t, handler, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
+
+		baseMetric := metrics.StreamableSessionStoreErrorsTotal.Get("touch")
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+		req.Header.Set("Authorization", "Bearer "+testBearerToken)
+		req.Header.Set(MCPSessionIDHeader, sessionID)
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("touch failure should be best-effort, got status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if got := metrics.StreamableSessionStoreErrorsTotal.Get("touch") - baseMetric; got < 1 {
+			t.Fatalf("expected touch metric increment, got %d", got)
+		}
+
+		store.mu.Lock()
+		store.failDeletes = true
+		store.mu.Unlock()
+		baseMetric = metrics.StreamableSessionStoreErrorsTotal.Get("delete")
+		session, _ := mgr.get(sessionID)
+		mgr.destroy(sessionID, session)
+		if got := metrics.StreamableSessionStoreErrorsTotal.Get("delete") - baseMetric; got < 1 {
+			t.Fatalf("expected delete metric increment, got %d", got)
+		}
+	})
+}
+
 // TestStreamableUnifiedRouteSSE verifies that GET /mcp serves the SSE stream
 // (the spec-canonical location per MCP Streamable HTTP 2025-03-26 §3.3),
 // including the new per-event `id:` line required for Last-Event-ID resumability.
@@ -198,7 +432,7 @@ func TestStreamableUnifiedRouteSSE(t *testing.T) {
 		t.Fatalf("new request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 	req.Header.Set("Accept", "text/event-stream")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -248,7 +482,7 @@ func TestStreamableEventsBackCompatAlias(t *testing.T) {
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/mcp/events", nil)
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -274,7 +508,7 @@ func TestStreamableProtocolVersionMismatch(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 	req.Header.Set("Mcp-Protocol-Version", "1999-01-01")
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -292,7 +526,7 @@ func TestStreamableProtocolVersionMismatch(t *testing.T) {
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/list"}`))
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 	req.Header.Set("Mcp-Protocol-Version", "2024-11-05")
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -310,7 +544,7 @@ func TestStreamableProtocolVersionAbsent(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("absent header: status %d body %s", rec.Code, rec.Body.String())

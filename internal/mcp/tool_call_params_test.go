@@ -1,7 +1,6 @@
 package mcp
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -71,7 +70,10 @@ func TestToolCallParamsFromMap_MatchesDecodeParams(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fast := toolCallParamsFromMap(tc.in)
+			fast, err := toolCallParamsFromMap(tc.in)
+			if err != nil {
+				t.Fatalf("toolCallParamsFromMap: %v", err)
+			}
 
 			var slow ToolCallParams
 			if err := decodeParams(tc.in, &slow); err != nil {
@@ -101,35 +103,17 @@ func TestToolCallParamsFromMap_MatchesDecodeParams(t *testing.T) {
 	}
 }
 
-// TestToolCallParamsFromMap_GracefullyHandlesWrongTypes documents the
-// new contract explicitly: when a client sends the right key with the
-// wrong type, the fast path leaves the struct field zero-valued rather
-// than returning an error. The downstream callTool routing then
-// surfaces the problem as "tool not found" or a per-handler validation
-// failure. json.Unmarshal's default behaviour would return a type-error
-// for the same input, but both routes produce a -32602-class failure
-// to the client, so the observable contract is the same.
-func TestToolCallParamsFromMap_GracefullyHandlesWrongTypes(t *testing.T) {
+// TestToolCallParamsFromMap_RejectsWrongTypes documents the protocol
+// contract: malformed tools/call params are JSON-RPC invalid params, not
+// silently-zeroed tool execution requests.
+func TestToolCallParamsFromMap_RejectsWrongTypes(t *testing.T) {
 	// Malformed JSON shape: name is a number, arguments is a string.
-	// The fast path must not panic and must yield a zero struct.
 	in := map[string]any{
 		"name":      float64(42),
 		"arguments": "not-a-map",
 		"_meta":     "not-a-map",
 	}
-	p := toolCallParamsFromMap(in)
-	if p.Name != "" {
-		t.Errorf("wrong-type name: got %q, want empty", p.Name)
-	}
-	if p.Arguments != nil {
-		t.Errorf("wrong-type arguments: got %v, want nil", p.Arguments)
-	}
-	if p.Meta != nil {
-		t.Errorf("wrong-type meta: got %v, want nil", p.Meta)
-	}
-	// Sanity: the decoded struct round-trips through encoding/json
-	// without error, proving it is a valid zero value.
-	if _, err := json.Marshal(p); err != nil {
-		t.Errorf("zero struct should marshal cleanly: %v", err)
+	if _, err := toolCallParamsFromMap(in); err == nil {
+		t.Fatal("expected wrong-type fields to be rejected")
 	}
 }

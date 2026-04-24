@@ -176,11 +176,11 @@ func startStreamableForTest(t *testing.T, ctx context.Context) (*mcp.Server, str
 	}
 	_, _ = io.Copy(io.Discard, resp.Body)
 	_ = resp.Body.Close()
-	sessionID := resp.Header.Get("X-MCP-Session-ID")
+	sessionID := resp.Header.Get(mcp.MCPSessionIDHeader)
 	if sessionID == "" {
 		runCancel()
 		_ = ln.Close()
-		t.Fatalf("initialize: no X-MCP-Session-ID header")
+		t.Fatalf("initialize: no %s header", mcp.MCPSessionIDHeader)
 	}
 
 	stop := func() {
@@ -203,7 +203,7 @@ func openSSE(t *testing.T, ctx context.Context, baseURL, bearer, sessionID, last
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/mcp", nil)
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+bearer)
-	req.Header.Set("X-MCP-Session-ID", sessionID)
+	req.Header.Set(mcp.MCPSessionIDHeader, sessionID)
 	if lastEventID != "" {
 		req.Header.Set("Last-Event-ID", lastEventID)
 	}

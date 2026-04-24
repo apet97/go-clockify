@@ -123,12 +123,11 @@ func TestE2E_InvalidToolName_ReturnsRPCError(t *testing.T) {
 			if err != nil {
 				t.Fatalf("tools/call: %v", err)
 			}
-			// An "unknown tool" can surface either as a JSON-RPC error
-			// envelope or as a Result whose structured body contains an
-			// isError=true flag (legacy tool-returned-error shape). Accept
-			// either, reject any path that reports success.
-			if resp.Error == nil && len(resp.Result) == 0 {
-				t.Fatalf("%s: expected error envelope or result with isError=true for unknown tool, got %+v", h.Name(), resp)
+			if resp.Error == nil {
+				t.Fatalf("%s: expected JSON-RPC error for unknown tool, got %+v", h.Name(), resp)
+			}
+			if resp.Error.Code != -32602 {
+				t.Fatalf("%s: expected -32602 for unknown tool, got %+v", h.Name(), resp.Error)
 			}
 		})
 	}

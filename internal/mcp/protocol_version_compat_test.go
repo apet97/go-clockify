@@ -27,6 +27,7 @@ func TestProtocolVersion_NegotiationTable(t *testing.T) {
 		want      string
 	}{
 		{"empty_defaults_newest", "", SupportedProtocolVersions[0]},
+		{"2025-11-25_echoed", "2025-11-25", "2025-11-25"},
 		{"2025-06-18_echoed", "2025-06-18", "2025-06-18"},
 		{"2025-03-26_echoed", "2025-03-26", "2025-03-26"},
 		{"2024-11-05_echoed", "2024-11-05", "2024-11-05"},

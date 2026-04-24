@@ -151,20 +151,11 @@ func TestParity_ToolsCallUnknown_ReturnsError(t *testing.T) {
 		if err != nil {
 			t.Fatalf("tools/call: %v", err)
 		}
-		if resp.Error == nil && len(resp.Result) == 0 {
-			t.Fatal("expected RPC error or isError result for unknown tool, got silent success")
+		if resp.Error == nil {
+			t.Fatalf("expected RPC error for unknown tool, got result %s", string(resp.Result))
 		}
-		if resp.Error != nil {
-			return
-		}
-		var body struct {
-			IsError bool `json:"isError"`
-		}
-		if err := json.Unmarshal(resp.Result, &body); err != nil {
-			t.Fatalf("decode tools/call result: %v", err)
-		}
-		if !body.IsError {
-			t.Fatalf("unknown tool should set isError=true, got body %s", string(resp.Result))
+		if resp.Error.Code != -32602 {
+			t.Fatalf("expected -32602 for unknown tool, got %+v", resp.Error)
 		}
 	})
 }

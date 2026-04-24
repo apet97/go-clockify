@@ -26,6 +26,7 @@ import (
 // that cannot downgrade will treat that as an error and disconnect, which is
 // the spec-compliant behaviour.
 var SupportedProtocolVersions = []string{
+	"2025-11-25",
 	"2025-06-18",
 	"2025-03-26",
 	"2024-11-05",
@@ -449,7 +450,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 					if resp.Error != nil {
 						metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
 					}
-					if r.ID != nil || resp.Error != nil {
+					if r.ID != nil {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
@@ -462,7 +463,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			if resp.Error != nil {
 				metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
 			}
-			if req.ID == nil && resp.Error == nil && resp.Result == nil {
+			if req.ID == nil {
 				continue
 			}
 			if err := s.writeResponse(resp); err != nil {
@@ -497,7 +498,7 @@ func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error
 	if resp.Error != nil {
 		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
 	}
-	if req.ID == nil && resp.Error == nil && resp.Result == nil {
+	if req.ID == nil {
 		return nil, nil
 	}
 	return json.Marshal(resp)
@@ -554,6 +555,11 @@ func (s *Server) writeResponse(resp Response) error {
 func (s *Server) handle(ctx context.Context, req Request) Response {
 	resp := Response{JSONRPC: "2.0", ID: req.ID}
 
+	if requiresInitialized(req.Method) && !s.initialized.Load() {
+		resp.Error = &RPCError{Code: -32002, Message: "server not initialized: send initialize first"}
+		return resp
+	}
+
 	switch req.Method {
 	case "initialize":
 		resp.Result = s.handleInitialize(req.Params)
@@ -609,12 +615,6 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			resp.Result = result
 		}
 	case "tools/call":
-		// Guard: reject tools/call before initialization (spec compliance)
-		if !s.initialized.Load() {
-			resp.Error = &RPCError{Code: -32002, Message: "server not initialized: send initialize first"}
-			return resp
-		}
-
 		var params ToolCallParams
 		// Fast path: when req.Params arrived via top-level JSON decode it
 		// is already map[string]any, so we skip the json.Marshal →
@@ -625,9 +625,18 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		// client that wraps params in a json.RawMessage) so malformed
 		// payloads still fail with the same -32602 error.
 		if m, ok := req.Params.(map[string]any); ok {
-			params = toolCallParamsFromMap(m)
+			var err error
+			params, err = toolCallParamsFromMap(m)
+			if err != nil {
+				resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: " + err.Error()}
+				return resp
+			}
 		} else if err := decodeParams(req.Params, &params); err != nil {
 			resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params"}
+			return resp
+		}
+		if strings.TrimSpace(params.Name) == "" {
+			resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: name must be a non-empty string"}
 			return resp
 		}
 
@@ -650,6 +659,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			// failing field goes in error.data.pointer so clients can
 			// locate the offender without string parsing.
 			var ipe *InvalidParamsError
+			var ute *UnknownToolError
 			if errors.As(err, &ipe) {
 				data := map[string]any{}
 				if ipe.Pointer != "" {
@@ -660,6 +670,10 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 					Message: ipe.Error(),
 					Data:    data,
 				}
+				return resp
+			}
+			if errors.As(err, &ute) {
+				resp.Error = &RPCError{Code: -32602, Message: ute.Error()}
 				return resp
 			}
 			// MCP spec: tool errors return content with isError: true
@@ -689,6 +703,15 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 	}
 
 	return resp
+}
+
+func requiresInitialized(method string) bool {
+	switch method {
+	case "initialize", "notifications/initialized", "notifications/cancelled", "ping":
+		return false
+	default:
+		return true
+	}
 }
 
 // handleInitialize parses the InitializeParams, negotiates the protocol
@@ -800,33 +823,44 @@ func decodeParams(raw any, out any) error {
 // decoders (prompts/get, resources/read, …) still call decodeParams.
 //
 // Behaviour relative to json.Unmarshal:
-//   - Wrong-type name / arguments / _meta fields are silently ignored
-//     and leave the target struct zero-valued for that field. The
-//     downstream callTool logic surfaces a missing name as "tool not
-//     found" (-32601), the same error code json.Unmarshal would have
-//     produced via the generic -32602 "invalid params" path on a type
-//     mismatch.
+//   - Wrong-type name / arguments / _meta fields are rejected instead of
+//     being silently zeroed so malformed tools/call requests surface as
+//     JSON-RPC -32602 invalid params.
 //   - Extra keys in m are ignored, matching json.Unmarshal's default.
 //   - Progress token is taken verbatim so clients supplying a string
 //     or number both round-trip untouched.
 //
 // See FuzzToolCallParamsFromMap for the equivalence guard against
 // json.Unmarshal on random maps.
-func toolCallParamsFromMap(m map[string]any) ToolCallParams {
+func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 	var p ToolCallParams
-	if name, ok := m["name"].(string); ok {
-		p.Name = name
+	rawName, ok := m["name"]
+	if !ok {
+		return p, fmt.Errorf("name must be a non-empty string")
 	}
-	if args, ok := m["arguments"].(map[string]any); ok {
+	name, ok := rawName.(string)
+	if !ok || strings.TrimSpace(name) == "" {
+		return p, fmt.Errorf("name must be a non-empty string")
+	}
+	p.Name = name
+	if rawArgs, ok := m["arguments"]; ok {
+		args, ok := rawArgs.(map[string]any)
+		if !ok {
+			return p, fmt.Errorf("arguments must be an object")
+		}
 		p.Arguments = args
 	}
-	if meta, ok := m["_meta"].(map[string]any); ok {
+	if rawMeta, ok := m["_meta"]; ok {
+		meta, ok := rawMeta.(map[string]any)
+		if !ok {
+			return p, fmt.Errorf("_meta must be an object")
+		}
 		p.Meta = &RequestMeta{}
 		if tok, ok := meta["progressToken"]; ok {
 			p.Meta.ProgressToken = tok
 		}
 	}
-	return p
+	return p, nil
 }
 
 // mustJSON serialises a tool's return value into the string payload of
@@ -876,6 +910,12 @@ func structuredContentValue(v any) (any, bool) {
 func validateRequest(req Request) *RPCError {
 	if req.JSONRPC != "2.0" {
 		return &RPCError{Code: -32600, Message: "invalid request: jsonrpc must be \"2.0\""}
+	}
+	if strings.TrimSpace(req.Method) == "" {
+		return &RPCError{Code: -32600, Message: "invalid request: method must be a non-empty string"}
+	}
+	if req.Method == "initialize" && req.ID == nil {
+		return &RPCError{Code: -32600, Message: "invalid request: initialize must include an id"}
 	}
 	if req.ID != nil {
 		switch req.ID.(type) {

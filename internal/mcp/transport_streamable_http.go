@@ -30,6 +30,11 @@ type StreamableSessionRuntime struct {
 
 type StreamableSessionFactory func(context.Context, authn.Principal, string) (*StreamableSessionRuntime, error)
 
+const (
+	MCPSessionIDHeader       = "MCP-Session-Id"
+	LegacyMCPSessionIDHeader = "X-MCP-Session-ID"
+)
+
 type StreamableHTTPOptions struct {
 	Version string
 	Bind    string
@@ -210,7 +215,7 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-MCP-Session-ID")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Session-Id, X-MCP-Session-ID, MCP-Protocol-Version")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -250,16 +255,15 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 				writeJSONError(w, http.StatusInternalServerError, err.Error())
 				return
 			}
-			w.Header().Set("X-MCP-Session-ID", session.id)
 		} else {
-			sessionID := stringsTrimSpace(r.Header.Get("X-MCP-Session-ID"))
+			sessionID := sessionIDFromRequest(r)
 			if sessionID == "" {
-				writeJSONError(w, http.StatusUnauthorized, "missing session id")
+				writeJSONError(w, http.StatusBadRequest, "missing session id")
 				return
 			}
 			session, err = mgr.get(sessionID)
 			if err != nil {
-				writeJSONError(w, http.StatusUnauthorized, "invalid session")
+				writeJSONError(w, http.StatusNotFound, "invalid session")
 				return
 			}
 			if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
@@ -274,10 +278,22 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 				return
 			}
 		}
-		mgr.touch(session.id)
+		if req.Method != "initialize" {
+			mgr.touch(session.id)
+		}
 		resp := session.server.handle(r.Context(), req)
+		if req.ID == nil {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
 		if req.Method == "initialize" {
-			mgr.syncInitializeState(session)
+			if err := mgr.syncInitializeState(session); err != nil {
+				mgr.destroy(session.id, session)
+				writeJSONError(w, http.StatusInternalServerError, "session persistence failed")
+				return
+			}
+			w.Header().Set(MCPSessionIDHeader, session.id)
+			w.Header().Set(LegacyMCPSessionIDHeader, session.id)
 			resp.Result = addSessionToInitializeResult(resp.Result, session.id)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -301,14 +317,14 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 			return
 		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
-		sessionID := stringsTrimSpace(r.Header.Get("X-MCP-Session-ID"))
+		sessionID := sessionIDFromRequest(r)
 		if sessionID == "" {
-			writeJSONError(w, http.StatusUnauthorized, "missing session id")
+			writeJSONError(w, http.StatusBadRequest, "missing session id")
 			return
 		}
 		session, err := mgr.get(sessionID)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid session")
+			writeJSONError(w, http.StatusNotFound, "invalid session")
 			return
 		}
 		if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
@@ -448,7 +464,7 @@ func (m *streamSessionManager) create(ctx context.Context, id string, principal 
 	m.mu.Lock()
 	m.items[id] = session
 	m.mu.Unlock()
-	_ = m.store.PutSession(controlplane.SessionRecord{
+	if err := m.putSession("create", controlplane.SessionRecord{
 		ID:              id,
 		TenantID:        runtime.TenantID,
 		Subject:         principal.Subject,
@@ -458,7 +474,13 @@ func (m *streamSessionManager) create(ctx context.Context, id string, principal 
 		LastSeenAt:      session.lastSeenAt,
 		WorkspaceID:     runtime.WorkspaceID,
 		ClockifyBaseURL: runtime.ClockifyBaseURL,
-	})
+	}); err != nil {
+		m.mu.Lock()
+		delete(m.items, id)
+		m.mu.Unlock()
+		session.closeRuntime()
+		return nil, err
+	}
 	return session, nil
 }
 
@@ -497,15 +519,15 @@ func (m *streamSessionManager) touch(id string) {
 		ClockifyBaseURL: session.runtime.ClockifyBaseURL,
 	}
 	m.mu.Unlock()
-	_ = m.store.PutSession(record)
+	_ = m.putSession("touch", record)
 }
 
-func (m *streamSessionManager) syncInitializeState(session *streamSession) {
+func (m *streamSessionManager) syncInitializeState(session *streamSession) error {
 	if session == nil {
-		return
+		return nil
 	}
 	name, version := session.server.ClientInfo()
-	_ = m.store.PutSession(controlplane.SessionRecord{
+	return m.putSession("sync_initialize", controlplane.SessionRecord{
 		ID:              session.id,
 		TenantID:        session.runtime.TenantID,
 		Subject:         session.principal.Subject,
@@ -519,6 +541,40 @@ func (m *streamSessionManager) syncInitializeState(session *streamSession) {
 		WorkspaceID:     session.runtime.WorkspaceID,
 		ClockifyBaseURL: session.runtime.ClockifyBaseURL,
 	})
+}
+
+func (m *streamSessionManager) putSession(operation string, record controlplane.SessionRecord) error {
+	if m.store == nil {
+		return nil
+	}
+	if err := m.store.PutSession(record); err != nil {
+		recordStreamableSessionStoreError(operation, record.ID, err)
+		return err
+	}
+	return nil
+}
+
+func (m *streamSessionManager) deleteSession(operation, id string) error {
+	if m.store == nil {
+		return nil
+	}
+	if err := m.store.DeleteSession(id); err != nil {
+		recordStreamableSessionStoreError(operation, id, err)
+		return err
+	}
+	return nil
+}
+
+func recordStreamableSessionStoreError(operation, sessionID string, err error) {
+	if err == nil {
+		return
+	}
+	metrics.StreamableSessionStoreErrorsTotal.Inc(operation)
+	slog.Warn("streamable_session_store_error",
+		"operation", operation,
+		"session_id", sessionID,
+		"error", err.Error(),
+	)
 }
 
 func (m *streamSessionManager) reapLoop(ctx context.Context) {
@@ -593,10 +649,8 @@ func (m *streamSessionManager) destroy(id string, session *streamSession) {
 		return
 	}
 	session.events.close()
-	if session.runtime != nil && session.runtime.Close != nil {
-		session.runtime.Close()
-	}
-	_ = m.store.DeleteSession(id)
+	session.closeRuntime()
+	_ = m.deleteSession("delete", id)
 }
 
 func (m *streamSessionManager) closeAll() {
@@ -611,10 +665,14 @@ func (m *streamSessionManager) closeAll() {
 	m.mu.Unlock()
 	for i, item := range items {
 		item.events.close()
-		if item.runtime != nil && item.runtime.Close != nil {
-			item.runtime.Close()
-		}
-		_ = m.store.DeleteSession(ids[i])
+		item.closeRuntime()
+		_ = m.deleteSession("close_all", ids[i])
+	}
+}
+
+func (s *streamSession) closeRuntime() {
+	if s != nil && s.runtime != nil && s.runtime.Close != nil {
+		s.runtime.Close()
 	}
 }
 
@@ -624,11 +682,13 @@ type sessionEvent struct {
 	params any
 }
 
-// sessionEventHub multiplexes Server-Sent Events to any number of SSE
-// subscribers attached to a single streamable_http session. The backlog
-// is a fixed-capacity ring buffer so event append is zero-alloc in
-// steady state — the prior implementation reallocated the underlying
-// slice and deep-copied the live tail every time the cap was exceeded.
+// sessionEventHub delivers Server-Sent Events to the active SSE subscriber
+// attached to a single streamable_http session. A new subscription replaces
+// and closes older subscriptions so each server JSON-RPC message is delivered
+// on one stream only. The backlog is a fixed-capacity ring buffer so event
+// append is zero-alloc in steady state — the prior implementation reallocated
+// the underlying slice and deep-copied the live tail every time the cap was
+// exceeded.
 //
 // Ring buffer invariants:
 //   - `backlog` is pre-allocated to backlogCap and is never grown.
@@ -683,6 +743,7 @@ func (h *sessionEventHub) Notify(method string, params any) error {
 			close(ch)
 			delete(h.subscribers, id)
 		}
+		break
 	}
 	return nil
 }
@@ -701,6 +762,10 @@ func (h *sessionEventHub) subscribeFrom(lastEventID uint64) (<-chan sessionEvent
 	defer h.mu.Unlock()
 	id := h.nextID
 	h.nextID++
+	for existingID, existing := range h.subscribers {
+		close(existing)
+		delete(h.subscribers, existingID)
+	}
 	// The channel buffer sizes the replay AND live-event headroom: we
 	// must be able to push every retained backlog entry without blocking
 	// (no reader has run yet — we are still inside the caller's
@@ -767,4 +832,11 @@ func randomID() string {
 
 func stringsTrimSpace(s string) string {
 	return strings.TrimSpace(s)
+}
+
+func sessionIDFromRequest(r *http.Request) string {
+	if sid := stringsTrimSpace(r.Header.Get(MCPSessionIDHeader)); sid != "" {
+		return sid
+	}
+	return stringsTrimSpace(r.Header.Get(LegacyMCPSessionIDHeader))
 }

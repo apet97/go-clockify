@@ -467,6 +467,27 @@ func TestHTTPToolsCallRequiresInitialize(t *testing.T) {
 	}
 }
 
+func TestHTTPNotificationOnlyPostAccepted(t *testing.T) {
+	s := newTestServer()
+	s.initialized.Store(true)
+
+	const bearer = "test-bearer-token-1234"
+	handler := s.handleMCP(testAuthWithToken(t, bearer), nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","method":"notifications/initialized"}`))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", rec.Body.String())
+	}
+}
+
 func TestHTTPToolsList(t *testing.T) {
 	s := NewServer("test", []ToolDescriptor{
 		{

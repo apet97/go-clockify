@@ -24,7 +24,7 @@ func TestInitializeAndToolsList(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, `"protocolVersion":"2025-06-18"`) {
+	if !strings.Contains(got, `"protocolVersion":"`+SupportedProtocolVersions[0]+`"`) {
 		t.Fatalf("missing initialize response: %s", got)
 	}
 	if !strings.Contains(got, `"listChanged":true`) {

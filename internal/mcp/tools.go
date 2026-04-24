@@ -14,6 +14,17 @@ import (
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
+type UnknownToolError struct {
+	Name string
+}
+
+func (e *UnknownToolError) Error() string {
+	if strings.TrimSpace(e.Name) == "" {
+		return "unknown tool"
+	}
+	return fmt.Sprintf("unknown tool: %s", e.Name)
+}
+
 func (s *Server) listTools() []Tool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -59,7 +70,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	if !ok {
 		outcome = "tool_error"
 		s.recordAuditBestEffort(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
-		return nil, fmt.Errorf("unknown tool: %s", params.Name)
+		return nil, &UnknownToolError{Name: params.Name}
 	}
 
 	if params.Arguments == nil {

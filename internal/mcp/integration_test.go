@@ -129,7 +129,7 @@ func TestFullMCPHandshake(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map result, got %T", initResp.Result)
 	}
-	if resultMap["protocolVersion"] != "2025-06-18" {
+	if resultMap["protocolVersion"] != SupportedProtocolVersions[0] {
 		t.Fatalf("unexpected protocol version: %v", resultMap["protocolVersion"])
 	}
 	serverInfo, _ := resultMap["serverInfo"].(map[string]any)
@@ -172,6 +172,7 @@ func TestFullMCPHandshake(t *testing.T) {
 
 func TestUnknownMethodReturnsError(t *testing.T) {
 	server := NewServer("test", nil, nil, nil)
+	server.initialized.Store(true)
 	input := `{"jsonrpc":"2.0","id":1,"method":"bogus/method","params":{}}`
 
 	var out strings.Builder
@@ -209,23 +210,14 @@ func TestUnknownToolReturnsError(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	// Tool errors now use isError per MCP spec
-	resultMap, ok := resp.Result.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map result, got %T", resp.Result)
+	if resp.Error == nil {
+		t.Fatalf("expected JSON-RPC error for unknown tool, got result %+v", resp.Result)
 	}
-	isErr, _ := resultMap["isError"].(bool)
-	if !isErr {
-		t.Fatal("expected isError=true for unknown tool")
+	if resp.Error.Code != -32602 {
+		t.Fatalf("expected -32602, got %d", resp.Error.Code)
 	}
-	content, _ := resultMap["content"].([]any)
-	if len(content) == 0 {
-		t.Fatal("expected content in error response")
-	}
-	textObj, _ := content[0].(map[string]any)
-	text, _ := textObj["text"].(string)
-	if !strings.Contains(text, "unknown tool") {
-		t.Fatalf("expected 'unknown tool' in error text, got %q", text)
+	if !strings.Contains(resp.Error.Message, "unknown tool") {
+		t.Fatalf("expected 'unknown tool' in error message, got %q", resp.Error.Message)
 	}
 }
 
@@ -646,6 +638,70 @@ func TestNotificationsInitializedNoResponse(t *testing.T) {
 	result := strings.TrimSpace(out.String())
 	if result != "" {
 		t.Fatalf("expected no output for notifications/initialized, got %q", result)
+	}
+}
+
+func TestNotificationPingNoResponse(t *testing.T) {
+	server := NewServer("test", nil, nil, nil)
+	input := `{"jsonrpc":"2.0","method":"ping"}`
+
+	var out strings.Builder
+	if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+	if result := strings.TrimSpace(out.String()); result != "" {
+		t.Fatalf("expected no output for ping notification, got %q", result)
+	}
+}
+
+func TestDispatchMessageNotificationNoResponse(t *testing.T) {
+	server := NewServer("test", nil, nil, nil)
+	out, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","method":"ping"}`))
+	if err != nil {
+		t.Fatalf("dispatch failed: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected nil response for notification, got %s", string(out))
+	}
+}
+
+func TestRequestsBeforeInitializeAreRejected(t *testing.T) {
+	for _, method := range []string{"tools/list", "resources/list", "prompts/list", "unknown/method"} {
+		t.Run(method, func(t *testing.T) {
+			server := NewServer("test", nil, nil, nil)
+			input := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":%q}`, method)
+
+			var out strings.Builder
+			if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+				t.Fatalf("run failed: %v", err)
+			}
+
+			var resp Response
+			if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if resp.Error == nil || resp.Error.Code != -32002 {
+				t.Fatalf("expected -32002 before initialize, got %+v", resp.Error)
+			}
+		})
+	}
+}
+
+func TestMissingMethodInvalidRequest(t *testing.T) {
+	server := NewServer("test", nil, nil, nil)
+	input := `{"jsonrpc":"2.0","id":1}`
+
+	var out strings.Builder
+	if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	var resp Response
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Error == nil || resp.Error.Code != -32600 {
+		t.Fatalf("expected -32600, got %+v", resp.Error)
 	}
 }
 

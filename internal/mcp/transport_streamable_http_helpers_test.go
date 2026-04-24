@@ -111,6 +111,37 @@ func TestSessionEventHubClose(t *testing.T) {
 	}
 }
 
+func TestSessionEventHubNewSubscriberReplacesOld(t *testing.T) {
+	hub := newSessionEventHub(4, 4)
+	first, cancelFirst := hub.subscribe()
+	defer cancelFirst()
+	second, cancelSecond := hub.subscribe()
+	defer cancelSecond()
+
+	if _, open := <-first; open {
+		t.Fatal("first subscriber should be closed when second subscriber attaches")
+	}
+
+	if err := hub.Notify("event", nil); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case got := <-second:
+		if got.method != "event" {
+			t.Fatalf("got %q want event", got.method)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for active subscriber event")
+	}
+	select {
+	case extra, open := <-first:
+		if open {
+			t.Fatalf("inactive subscriber received event: %+v", extra)
+		}
+	default:
+	}
+}
+
 // TestSessionEventHubLastEventIDReplay verifies subscribeFrom filters the
 // backlog to events with id strictly greater than lastEventID.
 func TestSessionEventHubLastEventIDReplay(t *testing.T) {
@@ -172,25 +203,23 @@ func TestSessionEventHubLastEventIDFutureSkip(t *testing.T) {
 	}
 }
 
-// TestSessionEventHubCancelSubscriber removes one subscriber via its cancel
-// function and verifies the others continue to receive events.
+// TestSessionEventHubCancelSubscriber removes the active subscriber via its
+// cancel function and verifies later publishes are buffered for a future
+// subscriber rather than delivered to the cancelled channel.
 func TestSessionEventHubCancelSubscriber(t *testing.T) {
 	hub := newSessionEventHub(0, 4)
-	chKeep, cancelKeep := hub.subscribe()
-	defer cancelKeep()
-	_, cancelDrop := hub.subscribe()
-	cancelDrop() // drop second subscriber
+	ch, cancel := hub.subscribe()
+	cancel()
 
 	if err := hub.Notify("event", nil); err != nil {
 		t.Fatal(err)
 	}
-	got := <-chKeep
-	if got.method != "event" {
-		t.Fatalf("got %q want event", got.method)
+	if _, open := <-ch; open {
+		t.Fatal("cancelled subscriber channel should be closed")
 	}
 
 	// Calling cancel twice should be safe.
-	cancelDrop()
+	cancel()
 }
 
 // TestApplyHTTPBaselineHeaders verifies every defense-in-depth header is set.

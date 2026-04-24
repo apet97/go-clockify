@@ -149,10 +149,10 @@ func (h *streamableHarness) Initialize(ctx context.Context) (Response, error) {
 		return Response{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if sid := resp.Header.Get("X-MCP-Session-ID"); sid != "" {
+	if sid := resp.Header.Get(mcp.MCPSessionIDHeader); sid != "" {
 		h.sessionID = sid
 	} else {
-		return Response{}, fmt.Errorf("initialize: no X-MCP-Session-ID header")
+		return Response{}, fmt.Errorf("initialize: no %s header", mcp.MCPSessionIDHeader)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d", resp.StatusCode)}}, nil
@@ -178,7 +178,7 @@ func (h *streamableHarness) openSSE() error {
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+h.bearer)
-	req.Header.Set("X-MCP-Session-ID", h.sessionID)
+	req.Header.Set(mcp.MCPSessionIDHeader, h.sessionID)
 	// No timeout on the SSE client — the underlying response body is a
 	// long-lived stream. client.Timeout would kill the stream prematurely.
 	resp, err := (&http.Client{}).Do(req)
@@ -278,7 +278,7 @@ func (h *streamableHarness) sendRequest(ctx context.Context, id int, method stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+h.bearer)
-	req.Header.Set("X-MCP-Session-ID", h.sessionID)
+	req.Header.Set(mcp.MCPSessionIDHeader, h.sessionID)
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return err
@@ -398,7 +398,7 @@ func (h *streamableHarness) Cancel(ctx context.Context, requestID int) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+h.bearer)
-	req.Header.Set("X-MCP-Session-ID", h.sessionID)
+	req.Header.Set(mcp.MCPSessionIDHeader, h.sessionID)
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return err
@@ -422,7 +422,7 @@ func (h *streamableHarness) SendRaw(ctx context.Context, frame []byte) (Response
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+h.bearer)
 	if h.sessionID != "" {
-		req.Header.Set("X-MCP-Session-ID", h.sessionID)
+		req.Header.Set(mcp.MCPSessionIDHeader, h.sessionID)
 	}
 	resp, err := h.client.Do(req)
 	if err != nil {

@@ -451,6 +451,18 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 
 		// 5. Handle using existing server logic
 		resp := s.handle(r.Context(), req)
+		if req.ID == nil {
+			w.WriteHeader(http.StatusAccepted)
+			slog.Info("http_request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"rpc_method", req.Method,
+				"status", http.StatusAccepted,
+				"req_id", reqID,
+				"duration_ms", time.Since(start).Milliseconds(),
+			)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)

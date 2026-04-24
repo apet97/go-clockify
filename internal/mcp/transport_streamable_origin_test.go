@@ -27,7 +27,7 @@ func TestStreamableSSE_OriginRejected(t *testing.T) {
 	initReq.Header.Set("Origin", "https://allowed.example")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, initReq)
-	sessionID := rec.Header().Get("X-MCP-Session-ID")
+	sessionID := rec.Header().Get(MCPSessionIDHeader)
 	if sessionID == "" {
 		t.Fatalf("initialize failed: status=%d body=%s", rec.Code, rec.Body.String())
 	}
@@ -36,7 +36,7 @@ func TestStreamableSSE_OriginRejected(t *testing.T) {
 	// POST behaviour.
 	badReq := httptest.NewRequest(http.MethodGet, "/mcp", nil)
 	badReq.Header.Set("Authorization", "Bearer "+testBearerToken)
-	badReq.Header.Set("X-MCP-Session-ID", sessionID)
+	badReq.Header.Set(MCPSessionIDHeader, sessionID)
 	badReq.Header.Set("Origin", "https://evil.example")
 	badReq.Header.Set("Accept", "text/event-stream")
 	rec = httptest.NewRecorder()
@@ -66,7 +66,7 @@ func TestStreamableSSE_OriginAllowedSetsCORS(t *testing.T) {
 	initReq.Header.Set("Origin", "https://allowed.example")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, initReq)
-	sessionID := rec.Header().Get("X-MCP-Session-ID")
+	sessionID := rec.Header().Get(MCPSessionIDHeader)
 	if sessionID == "" {
 		t.Fatalf("initialize failed: status=%d body=%s", rec.Code, rec.Body.String())
 	}
@@ -76,7 +76,7 @@ func TestStreamableSSE_OriginAllowedSetsCORS(t *testing.T) {
 	// check ran. Using a bogus session avoids opening a long-lived stream.
 	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("X-MCP-Session-ID", "does-not-exist")
+	req.Header.Set(MCPSessionIDHeader, "does-not-exist")
 	req.Header.Set("Origin", "https://allowed.example")
 	req.Header.Set("Accept", "text/event-stream")
 	rec = httptest.NewRecorder()

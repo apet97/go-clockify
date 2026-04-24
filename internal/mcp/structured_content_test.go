@@ -17,7 +17,10 @@ func callToolViaRun(t *testing.T, server *Server, toolName string, args map[stri
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "tools/call",
-		"params":  map[string]any{"name": toolName, "arguments": args},
+		"params":  map[string]any{"name": toolName},
+	}
+	if args != nil {
+		payload["params"].(map[string]any)["arguments"] = args
 	}
 	// Initialize first so tools/call is accepted.
 	inputLines := []string{
