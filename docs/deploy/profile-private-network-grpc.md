@@ -56,27 +56,71 @@ the full set, either `config.Load()` rejects the configuration or
 
 ## Build requirement
 
-The gRPC transport lives behind the `grpc` build tag. Binaries in
-our `docker-image.yml` image builds include it; a `go build`
-without `-tags=grpc` does not. If `clockify-mcp` exits with
-`MCP_TRANSPORT=grpc requires -tags=grpc at build time`, rebuild
-with the tag or use a published image.
+The gRPC transport lives behind the `grpc` build tag and is **not**
+included in the default `clockify-mcp` binary or the default Docker
+image (built without `-tags=grpc`). Operators have two supported
+paths to a gRPC-capable build:
+
+1. **(Recommended)** Download a first-class published artifact from
+   the GitHub release the deploy is rolling out:
+   - `clockify-mcp-grpc-linux-x64` / `clockify-mcp-grpc-linux-arm64`
+     for single-process gRPC.
+   - `clockify-mcp-grpc-postgres-linux-x64` /
+     `clockify-mcp-grpc-postgres-linux-arm64` for HA gRPC with the
+     pgx-backed control-plane store. The hosted-launch checklist
+     contracts on these names.
+   These ship with the same SBOM + cosign sigstore + SLSA
+   attestation chain as the default and Postgres binaries; the
+   `scripts/check-release-assets.sh` post-goreleaser gate refuses to
+   ship a release that drops them.
+
+2. **(Self-build)** Compile from a tagged source tree:
+
+   ```sh
+   go build -tags=grpc          ./cmd/clockify-mcp     # private-network gRPC, no postgres
+   go build -tags=grpc,postgres ./cmd/clockify-mcp     # HA gRPC + pgx control plane
+   ```
+
+   Or build a custom container image:
+
+   ```sh
+   docker build \
+     --build-arg GO_TAGS=grpc,postgres \
+     -f deploy/Dockerfile \
+     -t clockify-mcp:grpc-postgres .
+   ```
+
+   Self-builds bypass the cosign / SLSA chain and should be reserved
+   for emergency rollouts; document the deviation in the deploy PR.
+
+If `clockify-mcp` exits with `MCP_TRANSPORT=grpc requires
+-tags=grpc at build time`, the running binary is the default build
+— switch to a `-grpc` artifact or rebuild with the tag.
 
 ## Security model
 
 - The caller's identity is the Subject/SAN of their client
-  certificate. Tenant extraction defaults to `X-Tenant-ID` in the
-  request metadata; override with `MCP_MTLS_TENANT_HEADER` if
-  your CA encodes tenant elsewhere.
+  certificate. Tenant extraction defaults to
+  `MCP_MTLS_TENANT_SOURCE=cert`, which reads URI SAN
+  `clockify-mcp://tenant/<id>` or `spiffe://*/tenant/<id>`, then
+  falls back to Subject Organization. `X-Tenant-ID` request
+  metadata is **ignored** unless the operator explicitly sets
+  `MCP_MTLS_TENANT_SOURCE=header` or `header_or_cert`; those modes
+  invert the trust model and are only acceptable behind a proxy
+  that strips client-supplied tenant headers.
 - The server cert / key must be PEM files readable by the process
   user. Paths come from `MCP_GRPC_TLS_CERT` and
   `MCP_GRPC_TLS_KEY`.
 - The client CA bundle (`MCP_MTLS_CA_CERT_PATH`) must contain
   every CA whose certs you trust. Revoke via your CA's CRL /
   OCSP, not by editing the bundle.
-- There is no inbound network listener for OIDC, forward-auth,
-  or static-bearer. Those auth modes are ignored under this
-  profile (Load() will reject them in gRPC transport).
+- This profile defaults to `MCP_AUTH_MODE=mtls`. Other gRPC auth
+  modes (static_bearer, OIDC, forward_auth) exist for specialised
+  deployments — they are not the recommended private-network
+  posture. If you override auth mode, re-run `clockify-mcp doctor
+  --strict` and document the deployment threat model in the deploy
+  PR; the profile's `MCP_REQUIRE_MTLS_TENANT=1` invariant only
+  applies to mTLS.
 
 ## Control plane
 

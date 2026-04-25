@@ -13,6 +13,9 @@ changes break customer integrations without anyone noticing.
 | `TestE2EReadOnly`  (whoami, get_workspace, list_projects) | ✅ | ✅ |
 | `TestE2EErrors`    (invalid ID, missing args) | ✅ | ✅ |
 | `TestE2EMutating`  (create_client → create_project → start_timer → stop_timer → delete_entry, with full cleanup) | ❌ | ✅ |
+| `TestLiveDryRunDoesNotMutate`                         (MCP-path: confirms `clockify_delete_entry` with `dry_run:true` previews instead of deleting) | ❌ | ✅ |
+| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`   (MCP-path: confirms `time_tracking_safe` rejects `clockify_create_project` before the handler runs) | ❌ | ✅ |
+| `TestLiveCreateUpdateDeleteEntryAuditPhases`          (MCP-path + Postgres: confirms each non-read-only call writes both intent and outcome rows) | ❌ | ✅ *(also requires `MCP_LIVE_CONTROL_PLANE_DSN`)* |
 
 The read-only tests are always enabled because they have no side effects.
 The mutating tests are gated by a repository variable so writes can be
@@ -36,6 +39,28 @@ Setting it up:
    - `CLOCKIFY_LIVE_WORKSPACE_ID`
 5. Set the repo variable `CLOCKIFY_LIVE_WRITE_ENABLED` to `true` to
    enable the mutating test path.
+6. (Audit-phase test only) Provision a sacrificial Postgres database
+   the audit-phase contract test can write to and store its DSN as
+   the repo secret `MCP_LIVE_CONTROL_PLANE_DSN`. Setup steps:
+   - Spin up a small Postgres instance (RDS, Cloud SQL, fly.io, a
+     `postgres:16-alpine` container — anything reachable from the
+     GitHub-hosted runner). Do **not** use a production database,
+     even one with separate schemas; the test's cleanup drops every
+     `audit_events` row matching its synthesised `session_id`, but a
+     migration mistake would still affect that pool.
+   - Create a dedicated database (e.g. `cp_live_audit`) and
+     a least-privileged role limited to that database's
+     `audit_events`, `tenants`, `credential_refs`, `sessions`, and
+     `schema_migrations` tables (the production opener auto-applies
+     migrations on first connect, so `CREATE` privileges are
+     required).
+   - DSN format: `postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require`.
+     `?sslmode=disable` is acceptable for ephemeral test instances.
+   - (Optional, paid-launch posture) Set the repo variable
+     `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` so a missing DSN fails
+     the nightly instead of skipping with a `::warning::`. Leave it
+     unset during onboarding; flip it on once the secret is wired
+     and the test has been observed running green.
 
 ### Fail-soft skip behaviour (read this for fresh forks)
 
@@ -139,32 +164,50 @@ entities named `AG_TEST_<timestamp>_*`.
 
 ## Required live coverage before paid hosted launch
 
-The live workflow currently exercises read-only and basic mutating
-flows against a sacrificial workspace. The hardening wave for the
-public hosted launch identified three additional contracts that
-must hold against a real Clockify account before paid traffic is
-accepted, but they are not yet wired into `tests/` because they
-require destructive scenarios that today's harness does not cleanly
-support. Track them as launch-blocking follow-ups; do not ship paid
-hosted access until each is either implemented in `livee2e` or
-explicitly deferred with a documented exception in the deploy PR.
+The launch-blocking MCP-path safety contracts are now implemented
+and wired into the nightly workflow alongside the long-standing
+read-only and mutating suites:
 
-| Contract test | What it must prove | Why it matters |
+| Contract test | What it proves | Where it lives |
 |---|---|---|
-| `TestLiveDryRunDoesNotMutate` | When a destructive tool is invoked with `dry_run:true`, no Clockify API mutation is observed (no entry / project / client appears in the workspace). | The dry-run preview is a documented safety contract in `internal/dryrun/`. A regression that silently sends the mutation anyway looks identical to an end user but breaks every "preview before commit" workflow downstream. |
-| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | With `CLOCKIFY_POLICY=time_tracking_safe`, calling `clockify_create_project` returns the policy-deny response and never reaches the upstream API. | `time_tracking_safe` is the AI-facing default for the shared-service profile (see `docs/deploy/production-profile-shared-service.md`). A drift that leaks workspace-level writes through under that policy fails the very promise the profile was added to make. |
-| `TestLiveCreateUpdateDeleteEntryAuditPhases` | A full create→update→delete cycle on a single time entry persists six audit rows in the control plane: three `intent` + three `outcome`, in order, with the correct outcome strings (`succeeded` / `failed`). | The two-phase audit (intent + outcome) is the load-bearing primitive behind `MCP_AUDIT_DURABILITY=fail_closed`. If the runtime auditor's ID synthesis collapses pairs in a real Postgres backend, the audit trail is silently incomplete — the very class of incident the hardening wave closed at the unit level. |
+| `TestLiveDryRunDoesNotMutate` | When `clockify_delete_entry` is invoked with `dry_run:true` through the MCP enforcement pipeline, the destructive handler never runs, the response carries the dry-run envelope, and the entry still exists upstream. | `tests/e2e_live_mcp_test.go` |
+| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | With `CLOCKIFY_POLICY=time_tracking_safe`, calling `clockify_create_project` through the MCP path returns a policy-deny error and the project is never created upstream. | `tests/e2e_live_mcp_test.go` |
+| `TestLiveCreateUpdateDeleteEntryAuditPhases` | A real create→update→delete entry cycle, driven through the MCP server and persisted to a Postgres-backed control plane, lands six rows in `audit_events` (3 `intent` + 3 `outcome`, paired per tool, with `outcome=success` on the outcome row and distinct `external_id`s). | `internal/controlplane/postgres/live_audit_phases_test.go` (build tags `postgres,livee2e`) |
 
-Implementing these tests means extending `tests/` (or whichever
-package owns `livee2e`) to assert against the Clockify response
-shape *and* the control-plane store directly. The control-plane
-side wants a Postgres DSN under the same gating as the existing
-mutating tests (`CLOCKIFY_LIVE_WRITE_ENABLED=true`).
+All three tests share the same `CLOCKIFY_LIVE_WRITE_ENABLED=true`
+write-gate as `TestE2EMutating`. The audit-phase test additionally
+requires `MCP_LIVE_CONTROL_PLANE_DSN` pointing at a sacrificial
+Postgres database that has had the controlplane migrations applied
+(the test reuses the production opener, which auto-migrates on
+first connect).
 
-If a test cannot be implemented safely against the sacrificial
-workspace before launch, file an issue, link it from the deploy
-PR, and explicitly call out which guarantee will not be live-tested
-for the launch window.
+### Skip behaviour when secrets are missing
+
+| Missing secret/var | What happens |
+|---|---|
+| `CLOCKIFY_LIVE_API_KEY` / `CLOCKIFY_LIVE_WORKSPACE_ID` | Whole live job skips with a `::warning::` (fork-friendly fail-soft); on the main repo it is a hard failure (see `live-contract.yml`). |
+| `CLOCKIFY_LIVE_WRITE_ENABLED != "true"` | Mutating + MCP-path safety + audit-phase tests all skip; read-only tests still run. |
+| `MCP_LIVE_CONTROL_PLANE_DSN` | Audit-phase test skips with a `::warning::`. The other safety tests still run. Set the repo variable `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` to make missing DSN a hard failure on the main repo. |
+
+### Running locally
+
+The audit-phase test requires Postgres locally:
+
+```sh
+export CLOCKIFY_API_KEY='...'
+export CLOCKIFY_WORKSPACE_ID='...'
+export CLOCKIFY_RUN_LIVE_E2E=1
+export CLOCKIFY_LIVE_WRITE_ENABLED=true
+export MCP_LIVE_CONTROL_PLANE_DSN='postgres://cp:cp@localhost:5432/cp_live_audit?sslmode=disable'
+# Read/write/dry-run/policy contracts:
+go test -tags=livee2e -count=1 -timeout 10m \
+  -run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$' \
+  ./tests/...
+# Audit-phase contract (separate sub-module — must run from there):
+( cd internal/controlplane/postgres && \
+  go test -tags=postgres,livee2e -count=1 -timeout 10m \
+    -run '^TestLiveCreateUpdateDeleteEntryAuditPhases$' ./... )
+```
 
 ## Why not just run in PR CI?
 

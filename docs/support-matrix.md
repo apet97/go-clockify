@@ -38,7 +38,15 @@ The following matrix shows supported authentication modes for each transport.
     stripping any client copy. `header_or_cert` is a migration-only
     hybrid. Pair with `MCP_REQUIRE_MTLS_TENANT=1` in hosted
     deployments to fail closed when no tenant can be derived.
-*   **`grpc`:** Requires building with `-tags=grpc`.
+*   **`grpc`:** Lives behind the `grpc` build tag. Operators have
+    two supported paths: download a published
+    `clockify-mcp-grpc-linux-{x64,arm64}` /
+    `clockify-mcp-grpc-postgres-linux-{x64,arm64}` artifact (same
+    SBOM + cosign + SLSA chain as the default and Postgres binaries),
+    or build their own with `go build -tags=grpc[,postgres]` /
+    `docker build --build-arg GO_TAGS=grpc[,postgres]`. The default
+    `clockify-mcp` binary and default Docker image do not include
+    gRPC.
 
 ## Production-readiness classification
 

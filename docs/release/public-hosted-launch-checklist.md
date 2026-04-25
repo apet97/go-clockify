@@ -60,7 +60,7 @@ Operators can either:
   - native streamable mTLS via `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` + `MCP_MTLS_CA_CERT_PATH` with `MCP_AUTH_MODE=mtls`
 
 ## Storage
-- [ ] Hosted deploy uses `clockify-mcp-postgres-linux-{x64,arm64}` (or a self-built `-tags=postgres` binary documented in the deploy PR)
+- [ ] Hosted deploy uses `clockify-mcp-postgres-linux-{x64,arm64}` (or `clockify-mcp-grpc-postgres-linux-{x64,arm64}` if the private-network gRPC profile is in play; or a self-built `-tags=postgres` / `-tags=grpc,postgres` binary documented in the deploy PR)
 - [ ] Migration 002_audit_phase applied and backend reachable (`clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` exits 0)
 - [ ] Audit retention (`MCP_CONTROL_PLANE_AUDIT_RETENTION`) set per compliance
 - [ ] Backup / restore runbook tested in staging within the last 90 days
@@ -78,10 +78,15 @@ check — strict posture passing on the default binary is *not* a substitute.
 - [ ] Release smoke (tag-driven) green for the version being shipped
 - [ ] SLSA build provenance attested for the image digest you're rolling out
 - [ ] Container image pinned by digest in the deployment manifest (no `:latest`)
-- [ ] Live coverage gaps tracked or closed before paid traffic
-      (`TestLiveDryRunDoesNotMutate`, `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`,
-      `TestLiveCreateUpdateDeleteEntryAuditPhases` — see
-      [`docs/live-tests.md`](../live-tests.md#required-live-coverage-before-paid-hosted-launch))
+- [ ] Live hosted-safety tests green on the most recent nightly:
+      `TestLiveDryRunDoesNotMutate`,
+      `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`,
+      `TestLiveCreateUpdateDeleteEntryAuditPhases`
+      (these are wired into `.github/workflows/live-contract.yml`;
+      see [`docs/live-tests.md`](../live-tests.md#required-live-coverage-before-paid-hosted-launch))
+- [ ] `MCP_LIVE_CONTROL_PLANE_DSN` set and `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`
+      so an unset DSN fails the nightly (otherwise the audit-phase test
+      skips silently with a `::warning::`)
 
 ## Governance
 - [ ] At least one non-author review on the deploy PR
