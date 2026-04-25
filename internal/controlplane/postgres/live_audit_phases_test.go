@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/apet97/go-clockify/internal/auditbridge"
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
@@ -106,13 +107,13 @@ func mustDataMap(t *testing.T, result map[string]any) map[string]any {
 	return data
 }
 
-// liveControlPlaneAuditor mirrors internal/runtime/service.go's
-// controlPlaneAuditor: it synthesises the audit external_id with phase
-// and outcome embedded so the Postgres store does not collapse intent
-// + outcome rows under the unique-external-id constraint. The runtime
-// helper is unexported, so the test re-states the contract here. If
-// either copy drifts the audit-row count in this test will mismatch
-// the expected pair count and the test fails loudly.
+// liveControlPlaneAuditor wraps a controlplane.Store and delegates the
+// mcp.AuditEvent → controlplane.AuditEvent conversion to
+// internal/auditbridge so this live test exercises the exact same
+// ID-synthesis logic the production runtime uses. The bridge pins the
+// invariant that PhaseIntent + PhaseOutcome rows emitted in the same
+// nanosecond stay distinct under the Postgres external_id unique
+// constraint — the very regression this test exists to catch.
 type liveControlPlaneAuditor struct {
 	store controlplane.Store
 }
@@ -121,26 +122,7 @@ func (a liveControlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 	if a.store == nil {
 		return nil
 	}
-	tenantID := event.Metadata["tenant_id"]
-	subject := event.Metadata["subject"]
-	sessionID := event.Metadata["session_id"]
-	transport := event.Metadata["transport"]
-	now := time.Now().UTC()
-	return a.store.AppendAuditEvent(controlplane.AuditEvent{
-		ID:          fmt.Sprintf("%d-%s-%s-%s-%s", now.UnixNano(), sessionID, event.Tool, event.Phase, event.Outcome),
-		At:          now,
-		TenantID:    tenantID,
-		Subject:     subject,
-		SessionID:   sessionID,
-		Transport:   transport,
-		Tool:        event.Tool,
-		Action:      event.Action,
-		Outcome:     event.Outcome,
-		Phase:       event.Phase,
-		Reason:      event.Reason,
-		ResourceIDs: event.ResourceIDs,
-		Metadata:    event.Metadata,
-	})
+	return a.store.AppendAuditEvent(auditbridge.ToControlPlaneEvent(event, time.Now().UTC()))
 }
 
 // TestLiveCreateUpdateDeleteEntryAuditPhases drives a real Clockify

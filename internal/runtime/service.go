@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/auditbridge"
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
@@ -48,35 +49,13 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 	if a.store == nil {
 		return nil
 	}
-	tenantID := event.Metadata["tenant_id"]
-	subject := event.Metadata["subject"]
-	sessionID := event.Metadata["session_id"]
-	transport := event.Metadata["transport"]
-	now := time.Now().UTC()
-	// Two-phase audit (PhaseIntent + PhaseOutcome) emits two records
-	// with the same (sessionID, tool) tuple in rapid succession; the
-	// Postgres store dedupes by external_id, so the synthesised ID
-	// MUST encode phase and outcome to stop the pair from collapsing
-	// into a single row. Including outcome additionally distinguishes
-	// retries that re-emit "outcome" with different success/failure
-	// states. The DevFileStore does not synthesise IDs of its own, so
-	// the runtime owning ID synthesis here is the only place this
-	// invariant is enforced for both backends.
-	return a.store.AppendAuditEvent(controlplane.AuditEvent{
-		ID:          fmt.Sprintf("%d-%s-%s-%s-%s", now.UnixNano(), sessionID, event.Tool, event.Phase, event.Outcome),
-		At:          now,
-		TenantID:    tenantID,
-		Subject:     subject,
-		SessionID:   sessionID,
-		Transport:   transport,
-		Tool:        event.Tool,
-		Action:      event.Action,
-		Outcome:     event.Outcome,
-		Phase:       event.Phase,
-		Reason:      event.Reason,
-		ResourceIDs: event.ResourceIDs,
-		Metadata:    event.Metadata,
-	})
+	// Conversion + ID synthesis live in internal/auditbridge so the live
+	// audit-phase contract test (in the postgres sub-module) and this
+	// production path use the exact same logic. The bridge pins the
+	// invariant that PhaseIntent + PhaseOutcome rows emitted in the same
+	// nanosecond stay distinct under the Postgres external_id unique
+	// constraint.
+	return a.store.AppendAuditEvent(auditbridge.ToControlPlaneEvent(event, time.Now().UTC()))
 }
 
 func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int) *tools.Service {
