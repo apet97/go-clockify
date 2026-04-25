@@ -23,7 +23,18 @@ COPY internal/ internal/
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
+# GO_TAGS opts a custom image build into a tagged binary (e.g. grpc,
+# postgres, fips). The default image build leaves it empty, which keeps
+# the published `ghcr.io/apet97/go-clockify` image stdlib-only per
+# ADR 0001. Operators rolling out the private-network gRPC profile can
+# build a custom image with:
+#   docker build --build-arg GO_TAGS=grpc,postgres -f deploy/Dockerfile -t clockify-mcp:grpc-postgres .
+# An empty `-tags=""` is a no-op as far as the Go toolchain is
+# concerned, so the default image continues to build the stdlib-only
+# binary even with this build-arg present.
+ARG GO_TAGS=""
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build \
+    -tags="${GO_TAGS}" \
     -trimpath \
     -ldflags "-s -w \
         -X main.version=${VERSION} \

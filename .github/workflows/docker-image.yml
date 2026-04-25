@@ -218,6 +218,85 @@ jobs:
             exit 1
           fi
 
+      # PR-only: prove the deploy/Dockerfile GO_TAGS build-arg path
+      # actually produces a gRPC-capable binary. The default image is
+      # stdlib-only (per ADR 0001); this guards against a Dockerfile
+      # change that silently breaks the documented self-build path
+      # operators rely on for the private-network gRPC profile.
+      #
+      # Strategy: build a side image with GO_TAGS=grpc and run
+      # MCP_TRANSPORT=grpc inside it. Without certs the runtime will
+      # fail config validation — which is fine. The smoke asserts the
+      # failure does NOT contain the !grpc-stub error string
+      # ("gRPC transport not compiled in"; see internal/runtime/
+      # grpc_stub.go), proving the gRPC code path is compiled in. A
+      # regression that drops the build-arg would surface here as that
+      # exact string appearing again.
+      - name: Build gRPC PR image (GO_TAGS=grpc)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: clockify-mcp-pr-grpc:${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.build_meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.build_meta.outputs.build_date }}
+            GO_TAGS=grpc
+
+      - name: Smoke-test gRPC PR image
+        if: github.event_name == 'pull_request'
+        env:
+          GRPC_IMAGE_REF: clockify-mcp-pr-grpc:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # --version must succeed regardless of build tags. Confirms the
+          # binary was actually produced and the entrypoint resolves.
+          docker run --rm "$GRPC_IMAGE_REF" --version
+
+          # The default binary's runGRPC stub returns "gRPC transport not
+          # compiled in" when reached. To reach the stub we have to first
+          # pass config.Load() — which requires the MCP_GRPC_TLS_*/
+          # MCP_MTLS_CA_CERT_PATH triple to be set. Pointing them at any
+          # readable file inside the image (the distroless /etc/hostname
+          # serves) lets config.Load succeed and forces the runtime layer
+          # to be the next gate. With the gRPC build tag the runtime
+          # tries to load the keypair and fails with "load TLS keypair";
+          # without the tag it short-circuits with the !grpc stub error.
+          # The smoke fails when the stub error appears — that means the
+          # build-arg path silently dropped the tag.
+          out="$(docker run --rm \
+            -e CLOCKIFY_API_KEY=smoke-test-dummy \
+            -e MCP_TRANSPORT=grpc \
+            -e MCP_AUTH_MODE=mtls \
+            -e MCP_GRPC_TLS_CERT=/etc/hostname \
+            -e MCP_GRPC_TLS_KEY=/etc/hostname \
+            -e MCP_MTLS_CA_CERT_PATH=/etc/hostname \
+            -e MCP_REQUIRE_MTLS_TENANT=1 \
+            -e MCP_CONTROL_PLANE_DSN=memory \
+            -e MCP_ALLOW_DEV_BACKEND=1 \
+            "$GRPC_IMAGE_REF" 2>&1 || true)"
+          printf '%s\n' "$out"
+          if printf '%s' "$out" | grep -F 'gRPC transport not compiled in' >/dev/null; then
+            echo "::error::Dockerfile GO_TAGS build-arg dropped: gRPC binary still hits the !grpc stub"
+            exit 1
+          fi
+          # Positive sanity: the failure must come from the runtime TLS
+          # keypair load, not from somewhere upstream. A regression that
+          # changed the gate ordering would silently mask a missing tag.
+          if ! printf '%s' "$out" | grep -F 'load TLS keypair' >/dev/null; then
+            echo "::error::gRPC smoke did not reach the TLS keypair load — gate ordering or cert env path changed"
+            exit 1
+          fi
+          echo "OK: GO_TAGS=grpc image reached the runtime TLS keypair load (not the !grpc build stub)"
+
       - name: Trivy vulnerability scan (registry digest)
         if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
