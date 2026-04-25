@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -167,14 +168,183 @@ func TestAuthInterceptor_AuthenticatorError(t *testing.T) {
 	auth := fakeAuthenticator{forceErr: errors.New("token expired")}
 	before := metrics.GRPCAuthRejectionsTotal.Get("auth_failed")
 	err, seen := callInterceptor(t, auth, metadata.Pairs("authorization", "Bearer whatever"))
-	if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
 		t.Fatalf("expected Unauthenticated on authenticator error, got %v", err)
+	}
+	// The client must see only the generic phrase; the authenticator's
+	// own error string ("token expired") is server-internal detail.
+	if msg := st.Message(); msg != "authentication failed" {
+		t.Fatalf("expected generic message, got %q", msg)
 	}
 	if seen != nil {
 		t.Fatalf("handler should not run when authenticator fails; got %+v", seen)
 	}
 	if got := metrics.GRPCAuthRejectionsTotal.Get("auth_failed"); got != before+1 {
 		t.Fatalf("expected auth_failed counter to increment, got %d (before=%d)", got, before)
+	}
+}
+
+// TestAuthInterceptor_AuthenticatorErrorDoesNotExposeDetails locks the
+// no-leak contract: a JWKS key id, issuer URL, expiry timestamp, or any
+// other authenticator-internal fragment must not appear in the gRPC
+// status message handed to the unauthenticated client.
+func TestAuthInterceptor_AuthenticatorErrorDoesNotExposeDetails(t *testing.T) {
+	const sensitive = "fake-secret-jwks-key-id"
+	auth := fakeAuthenticator{forceErr: errors.New(sensitive)}
+	err, _ := callInterceptor(t, auth, metadata.Pairs("authorization", "Bearer whatever"))
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated, got %v", err)
+	}
+	if msg := st.Message(); msg != "authentication failed" {
+		t.Fatalf("expected generic message, got %q", msg)
+	}
+	if msg := st.Message(); strings.Contains(msg, sensitive) {
+		t.Fatalf("status message leaked sensitive fragment: %q", msg)
+	}
+	// The full err.Error() (which includes the gRPC code prefix) must
+	// also not contain the sensitive value.
+	if errMsg := err.Error(); strings.Contains(errMsg, sensitive) {
+		t.Fatalf("error string leaked sensitive fragment: %q", errMsg)
+	}
+}
+
+// TestAuthInterceptor_StaticBearer_RequiresAuthorizationMetadata locks the
+// non-mTLS contract: every other auth mode (static bearer, OIDC,
+// forward_auth) still needs Authorization metadata before the
+// authenticator runs. Removing the requirement would silently weaken the
+// HTTP-equivalent baseline.
+func TestAuthInterceptor_StaticBearer_RequiresAuthorizationMetadata(t *testing.T) {
+	auth := fakeAuthenticator{wantToken: "correct"}
+	err, seen := callInterceptor(t, auth, metadata.MD{})
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated on missing authorization, got %v", err)
+	}
+	if seen != nil {
+		t.Fatalf("handler should not run; got principal %+v", seen)
+	}
+}
+
+// TestAuthInterceptor_MTLS_DoesNotRequireAuthorizationMetadata pins the
+// fix for the bug this hardening pass closes: in mTLS mode the
+// interceptor must not reject a stream just because the client did not
+// send an "authorization" metadata pair. The verified client certificate
+// is the credential.
+func TestAuthInterceptor_MTLS_DoesNotRequireAuthorizationMetadata(t *testing.T) {
+	ca, caKey := generateTestCA(t)
+	clientCert := generateTestLeaf(t, ca, caKey, "alice-service", []string{"acme-corp"})
+	leaf, err := x509.ParseCertificate(clientCert.Certificate[0])
+	if err != nil {
+		t.Fatalf("parse client leaf: %v", err)
+	}
+	auth, err := authn.New(authn.Config{Mode: authn.ModeMTLS})
+	if err != nil {
+		t.Fatalf("authn.New(mTLS): %v", err)
+	}
+	// Empty metadata: explicitly no "authorization" pair.
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		AuthInfo: credentials.TLSInfo{
+			State: tls.ConnectionState{
+				VerifiedChains:   [][]*x509.Certificate{{leaf, ca}},
+				PeerCertificates: []*x509.Certificate{leaf},
+			},
+		},
+	})
+	stream := &mockServerStream{ctx: ctx}
+	var ran bool
+	handler := func(_ any, _ grpc.ServerStream) error {
+		ran = true
+		return nil
+	}
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{mtls: true})
+	if err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler); err != nil {
+		t.Fatalf("interceptor returned error in mTLS-no-authz path: %v", err)
+	}
+	if !ran {
+		t.Fatal("handler did not run; mTLS path rejected the call without authorization metadata")
+	}
+}
+
+// TestAuthInterceptor_MTLS_PrincipalExtractionWithoutAuthorization
+// verifies the cert→principal mapping survives when no Authorization
+// metadata is supplied. Pairs with the placeholder-removal fix in
+// TestAuthInterceptor_MTLS_PrincipalExtraction.
+func TestAuthInterceptor_MTLS_PrincipalExtractionWithoutAuthorization(t *testing.T) {
+	ca, caKey := generateTestCA(t)
+	clientCert := generateTestLeaf(t, ca, caKey, "carol-service", []string{"globex"})
+	leaf, err := x509.ParseCertificate(clientCert.Certificate[0])
+	if err != nil {
+		t.Fatalf("parse client leaf: %v", err)
+	}
+	auth, err := authn.New(authn.Config{Mode: authn.ModeMTLS})
+	if err != nil {
+		t.Fatalf("authn.New(mTLS): %v", err)
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		AuthInfo: credentials.TLSInfo{
+			State: tls.ConnectionState{
+				VerifiedChains:   [][]*x509.Certificate{{leaf, ca}},
+				PeerCertificates: []*x509.Certificate{leaf},
+			},
+		},
+	})
+	stream := &mockServerStream{ctx: ctx}
+	var captured *authn.Principal
+	handler := func(_ any, ss grpc.ServerStream) error {
+		if p, ok := authn.PrincipalFromContext(ss.Context()); ok {
+			captured = p
+		}
+		return nil
+	}
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{mtls: true})
+	if err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler); err != nil {
+		t.Fatalf("interceptor returned error: %v", err)
+	}
+	if captured == nil {
+		t.Fatal("handler did not receive a Principal")
+	}
+	if captured.Subject != "carol-service" {
+		t.Fatalf("Subject: want %q, got %q", "carol-service", captured.Subject)
+	}
+	if captured.TenantID != "globex" {
+		t.Fatalf("TenantID: want %q, got %q", "globex", captured.TenantID)
+	}
+	if captured.AuthMode != authn.ModeMTLS {
+		t.Fatalf("AuthMode: want %q, got %q", authn.ModeMTLS, captured.AuthMode)
+	}
+}
+
+// TestAuthInterceptor_MTLS_RejectsWithoutTLSInfo locks that mTLS streams
+// without a verified peer certificate fail with the
+// authn.ModeMTLS-categorised reason ("verified mTLS client certificate
+// required") rather than the misleading "missing authorization
+// metadata" the pre-fix interceptor would have surfaced.
+func TestAuthInterceptor_MTLS_RejectsWithoutTLSInfo(t *testing.T) {
+	auth, err := authn.New(authn.Config{Mode: authn.ModeMTLS})
+	if err != nil {
+		t.Fatalf("authn.New(mTLS): %v", err)
+	}
+	// No peer.AuthInfo and no authorization metadata: the synth request
+	// has Header{} and TLS=nil. The mTLS authenticator must own the
+	// rejection, not buildSynthRequest.
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	stream := &mockServerStream{ctx: ctx}
+	handler := func(_ any, _ grpc.ServerStream) error {
+		t.Fatal("handler must not run when mTLS has no client cert")
+		return nil
+	}
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{mtls: true})
+	err = interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, handler)
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated, got %v", err)
+	}
+	if msg := st.Message(); msg != "authentication failed" {
+		t.Fatalf("expected generic message, got %q", msg)
 	}
 }
 
@@ -384,20 +554,19 @@ func TestAuthInterceptor_MTLS_ClientCertMapsToSubject(t *testing.T) {
 	t.Cleanup(func() { _ = conn.Close() })
 
 	// -- Open Exchange stream and send initialize ------------------------
-	// The auth interceptor always calls buildSynthRequest which requires an
-	// "authorization" metadata key. In mTLS mode the mtlsAuthenticator
-	// ignores the bearer value — only r.TLS matters — but the interceptor
-	// still synthesises the http.Request from metadata first. Supply a
-	// placeholder so the request reaches the mTLS code path.
+	// In mTLS mode the interceptor takes the buildMTLSSynthRequest path
+	// and does NOT require authorization metadata — the verified client
+	// certificate is the credential. We deliberately omit any
+	// "authorization" metadata pair to lock that contract: a regression
+	// that re-required Authorization metadata for mTLS would fail this
+	// test on the initialize handshake.
 	streamDesc := &grpc.StreamDesc{
 		StreamName:    ExchangeMethod,
 		ServerStreams: true,
 		ClientStreams: true,
 	}
-	md := metadata.Pairs("authorization", "Bearer mtls-placeholder")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	stream, err := conn.NewStream(ctx, streamDesc, "/"+ServiceName+"/"+ExchangeMethod)
 	if err != nil {
@@ -456,11 +625,12 @@ func TestAuthInterceptor_MTLS_PrincipalExtraction(t *testing.T) {
 		t.Fatalf("authn.New(mTLS): %v", err)
 	}
 
-	// Build a context with both incoming metadata (required by
-	// buildSynthRequest) and a peer carrying TLS info (required by the mTLS
-	// code path in the interceptor).
-	md := metadata.Pairs("authorization", "Bearer mtls-placeholder")
-	ctx := metadata.NewIncomingContext(context.Background(), md)
+	// In mTLS mode the interceptor's buildMTLSSynthRequest path does NOT
+	// require any "authorization" metadata pair — the verified client
+	// certificate carried via peer.AuthInfo is the credential. Pass an
+	// empty MD so a regression that re-introduced the requirement would
+	// fail this test.
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
 	ctx = peer.NewContext(ctx, &peer.Peer{
 		AuthInfo: credentials.TLSInfo{
 			State: tls.ConnectionState{
