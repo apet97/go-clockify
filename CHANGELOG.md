@@ -7,7 +7,121 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet. Open the next version here._
+> **Scope note.** Security-hardening wave following the
+> 2026-04-25 audit. Six atomic commits closing the seven blockers
+> the audit flagged for paid/public hosted-service deployment, plus
+> the M-tier docs/defaults drift. Self-hosted single-tenant
+> behaviour is preserved by default — every new restriction is
+> opt-in via a flag (`MCP_OIDC_STRICT`, `MCP_REQUIRE_TENANT_CLAIM`,
+> `MCP_DISABLE_INLINE_SECRETS`) so existing deployments continue to
+> work unchanged.
+
+### Added
+
+- **Native TLS / mTLS on the streamable HTTP transport** via two
+  new env vars: `MCP_HTTP_TLS_CERT` and `MCP_HTTP_TLS_KEY`.
+  `MCP_TRANSPORT=streamable_http` with non-empty cert/key paths
+  wraps the listener with `tls.NewListener`; combined with
+  `MCP_AUTH_MODE=mtls` and `MCP_MTLS_CA_CERT_PATH`, it enables
+  end-to-end mutually-authenticated TLS without a fronting proxy.
+  The shared TLS helpers live in `internal/runtime/tlsutil.go`
+  and are reused by the gRPC transport. Closes audit finding H3.
+- **`MCP_OIDC_STRICT=1`** — fails `config.Load` when oidc is
+  selected without `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI`,
+  and rejects tokens missing an `exp` claim at the per-token
+  level. Default unchanged (back-compat). Closes finding C1.
+- **`MCP_REQUIRE_TENANT_CLAIM=1`** — rejects oidc tokens whose
+  tenant claim is empty instead of falling back to
+  `MCP_DEFAULT_TENANT_ID`. Required for any multi-tenant hosted
+  deployment. Closes finding H6.
+- **`MCP_DISABLE_INLINE_SECRETS=1`** — rejects credential refs
+  with `backend=inline` so secrets are forced through env / file /
+  external vault backends. Closes finding L3.
+- **`time_tracking_safe` policy mode** — new `CLOCKIFY_POLICY`
+  tier strictly between `read_only` and `safe_core`. Allows
+  reads + own-time-entry mutations + timer control; blocks
+  workspace-wide `create_*` tools (project / client / tag /
+  task). Recommended default for untrusted AI agents. Closes
+  finding M4.
+- **Audit phase concept** — `AuditEvent` gains a `Phase` field
+  (`PhaseIntent` / `PhaseOutcome`). Non-read-only tool calls
+  now write a pre-handler intent record AND a post-handler
+  outcome record. Empty `Phase` ("") preserved for backward
+  compatibility with audit consumers that pre-date this change.
+- **Hosted-service hardening guards** — production profile docs
+  set `MCP_OIDC_STRICT=1` + `MCP_REQUIRE_TENANT_CLAIM=1` +
+  `MCP_DISABLE_INLINE_SECRETS=1`. Branch-protection target
+  state for paid launch documented in
+  `docs/branch-protection.md`. Live contract tests now fail
+  the workflow on the main repo when secrets are absent (forks
+  keep the warning-and-skip behaviour). Closes findings M7, L2.
+- **`deploy/k8s/overlays/legacy-http/`** — explicit opt-in
+  overlay for operators still on pre-v1.1.0 clients that have
+  not migrated to streamable HTTP.
+- **`tests/deploy_defaults_test.go`** — guards the Dockerfile,
+  Helm values, and Kustomize base against drifting back to
+  `MCP_TRANSPORT=http` or `CLOCKIFY_POLICY=standard`.
+- **`tests/doc_parity_test.go`** — asserts the README MCP
+  protocol badge AND support matrix row both equal
+  `mcp.SupportedProtocolVersions[0]`.
+
+### Changed
+
+- **fail_closed audit now actually blocks mutation.** Previously
+  `MCP_AUDIT_DURABILITY=fail_closed` returned an error to the
+  client AFTER the mutation had already committed upstream. The
+  two-phase intent/outcome model writes the intent record
+  pre-handler — when intent persistence fails in fail_closed
+  mode, the handler is skipped entirely and the mutation never
+  happens. The new behaviour is documented in
+  `docs/runbooks/audit-durability.md`. Closes finding H5.
+- **Default deployment transport flipped from `http` to
+  `streamable_http`** in `deploy/Dockerfile`, the Helm
+  `values.yaml`, and the Kustomize base. Closes finding H1.
+- **Default deployment policy flipped from `standard` to
+  `safe_core`** in the Helm `values.yaml` and Kustomize base
+  (Dockerfile inherits via env). Closes finding M3.
+- **`MCP_STRICT_HOST_CHECK=1`** by default in Dockerfile, Helm
+  values, and Kustomize base — DNS-rebinding mitigated by
+  default for any deployment exposed beyond loopback.
+- **Stdio panic recovery returns a generic message** instead
+  of the raw panic value. Full panic and stack remain in
+  `slog.Error("panic_recovered", ...)`. Closes finding H7.
+- **Config validation requires TLS cert material when
+  `MCP_AUTH_MODE=mtls`** on either the streamable HTTP or
+  gRPC transport. Previously these combinations would start
+  successfully and fail every request at runtime; now they
+  fail at startup with a message naming the missing variable.
+  Closes finding H4.
+- **README MCP protocol version** and back-compat list aligned
+  with `SupportedProtocolVersions` (newest: `2025-11-25`).
+  Closes finding H2.
+- **Production-profile docs** corrected to reference `/health`
+  and `/ready` (the actual registered routes; previously
+  `/healthz` and `/readyz`). Closes finding M2.
+- **`SECURITY.md` and `SUPPORT.md` version matrix** brought in
+  line with v1.1.0's release date (2026-04-22). Closes
+  finding M1.
+- **`docs/branch-protection.md`** gains a "Target state for
+  paid / public hosted launch" section documenting the
+  governance tightening blocked on adding a second maintainer.
+  Closes finding L2.
+- **`scripts/check-doc-parity.sh`** excludes
+  `docs/superpowers/` from the operator-facing parity scan
+  (design specs by definition describe future state).
+
+### Security
+
+- The audit refactor closes the gap where `fail_closed`
+  delivered post-hoc evidence rather than acting as a
+  preventive control. Operators in fail_closed mode now have
+  a real durability guarantee: a broken audit pipeline blocks
+  mutations rather than committing them and complaining.
+- Stdio panic recovery no longer leaks panic values
+  (potentially containing request data, internal state, or
+  upstream credential fragments) to MCP clients.
+- OIDC accepts issuer-only tokens by default for back-compat;
+  hosted deployments must opt into the strict mode flags.
 
 ## [1.1.0] - 2026-04-22
 

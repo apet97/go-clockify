@@ -21,23 +21,44 @@ Tools are categorized based on their impact on data and their required privilege
 *   **Destructive Operations:** Large-scale deletions are generally discouraged for LLM agents.
 *   **Bulk Operations:** Any tool that modifies more than 10 records at once should be carefully audited or disabled.
 
-## Recommended Production Policy: `safe_core`
+## Recommended Production Policies
 
-For most production deployments, the `safe_core` policy is the recommended default.
+The choice between modes depends on whether the agent should be
+able to reshape the workspace (create projects/clients/tags/tasks)
+in addition to logging time:
 
-| Feature | `safe_core` (Recommended) | `standard` (Default) |
-|---------|-------------------------|---------------------|
-| Read access | Full | Full |
-| Write access | Allowlist (Time Tracking) | Full |
-| Delete access | Blocked | Full |
-| Tier 2 tools | Disabled | On-demand |
-| Best for | Shared services, LLM agents | Local development, power users |
+| Feature | `read_only` | `time_tracking_safe` | `safe_core` (Default for hosted) | `standard` |
+|---------|:-----------:|:--------------------:|:--------------------------------:|:----------:|
+| Read access | Full | Full | Full | Full |
+| Time-entry mutations (own user) | ❌ | ✅ | ✅ | ✅ |
+| Timer start/stop | ❌ | ✅ | ✅ | ✅ |
+| Project / client / tag / task creation | ❌ | ❌ | ✅ | ✅ |
+| Delete access (any kind) | ❌ | ❌ | ❌ | ✅ |
+| Tier 2 tools (invoices, admin, …) | ❌ | ❌ | ❌ | On-demand |
+| Recommended for | Read-only dashboards, dev clusters | **Untrusted AI agents** | Trusted shared-service agents | Local development, power users |
+
+`time_tracking_safe` is the recommended default for any deployment
+that exposes the MCP surface to an LLM agent the operator cannot
+fully audit. It is the strictest mode that still lets the agent
+do its time-tracking job — workspace structure (projects /
+clients / tags) stays under human control.
+
+`safe_core` is appropriate when the agent needs to register new
+projects or clients to log time against (e.g. a sales-ops bot
+ingesting CRM accounts). It still blocks all delete operations
+and Tier 2 admin surface.
 
 ## Policy Enforcement
 
 Set the policy using the `CLOCKIFY_POLICY` environment variable.
+Permitted values: `read_only`, `time_tracking_safe`, `safe_core`,
+`standard`, `full`.
 
 ```env
+# Untrusted agent in a hosted deployment — strongest sensible default.
+CLOCKIFY_POLICY=time_tracking_safe
+
+# Or, when the agent needs to register projects/clients to log against:
 CLOCKIFY_POLICY=safe_core
 ```
 

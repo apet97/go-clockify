@@ -17,22 +17,28 @@ why a mutation shows up in Clockify but not in the audit ledger.
 ## 1. What the two modes mean
 
 `MCP_AUDIT_DURABILITY` (config field `AuditDurabilityMode`) has two
-legal values:
+legal values. Since the 2026-04-25 H5 refactor, audit emits two
+records per non-read-only call: an **intent** record before the
+handler runs, and an **outcome** record after.
 
-| Mode | Tool-call response on audit-write failure | Mutation state |
-|------|-------------------------------------------|----------------|
-| `best_effort` (default) | Success — the client sees the result of the mutation. | **Executed.** The upstream Clockify state has changed. |
-| `fail_closed` | Error — the client receives `audit persistence failed; mutation outcome unverifiable`. | **Executed.** The upstream Clockify state has changed; only the audit trail is missing. |
+| Mode | Intent persist failure → | Outcome persist failure → | Mutation state when intent fails |
+|------|----------------------------|----------------------------|----------------------------------|
+| `best_effort` (default) | Logged + counted; handler runs anyway. | Logged + counted; client sees success. | **Executed.** Upstream Clockify state changed; intent record is missing. |
+| `fail_closed` | Caller receives `audit intent persistence failed; refusing to execute mutation`; **handler is skipped**. | Logged + counted; client still sees success (mutation already committed by definition). | **Not executed.** Upstream Clockify state is unchanged. |
 
-Read-only tool calls are never affected — they produce no audit
-event regardless of the mode. The mode only governs mutating
-(write/destructive) calls.
+Read-only tool calls are never affected — they produce no intent
+or outcome records regardless of the mode. The mode only governs
+mutating (write/destructive) calls.
 
-**The critical invariant to communicate internally:** in both
-modes, the mutation *has already been committed upstream* by the
-time the audit write is attempted. An audit failure never unwinds
-the mutation; it only changes whether the caller is told about
-the failure.
+**The critical invariant to communicate internally:** in
+`fail_closed`, an intent persistence failure is a hard
+pre-mutation gate — the upstream Clockify state has NOT changed,
+the client gets an error, and there is no orphaned mutation to
+reconcile. An *outcome* persistence failure is post-hoc: by then
+the mutation has already committed upstream, so the outcome
+record is best-effort even in `fail_closed`. The distinction
+matters for incident response — see §3 for which counter
+disambiguates them.
 
 ## 2. Symptoms
 
@@ -43,10 +49,17 @@ the failure.
   level=ERROR msg=audit_persist_failed
     audit_outcome=not_durable
     durability_mode=best_effort|fail_closed
+    phase=intent|outcome
     tool=<name> outcome=<success|failure> error=<...>
   ```
-- On `fail_closed`, clients see repeated tool-call errors with the
-  substring `audit persistence failed`.
+  Filter on `phase=intent` to find the pre-mutation failures
+  (the ones `fail_closed` blocked); `phase=outcome` for the
+  post-mutation failures that were always best-effort.
+- On `fail_closed`, clients see tool-call errors with the
+  substring `audit intent persistence failed; refusing to
+  execute mutation` for blocked-mutation events. (Outcome
+  failures still reach the client as success — the mutation
+  committed.)
 - On `best_effort`, clients see no change — the operator is the
   only one who notices, via the counter and the log.
 

@@ -13,7 +13,18 @@ The following matrix shows supported authentication modes for each transport.
 | `streamable_http` | ✅ | ✅ | ✅ | ✅ | Multi-tenant shared service (Recommended) |
 | `grpc` | ✅ | ✅ | ✅ | ✅ | Low-latency private network (Requires build tags) |
 
-*   **`mtls` for `http`:** Not supported directly. Terminate TLS upstream and use `forward_auth` to pass user context.
+*   **`mtls` for `http` (legacy):** Not supported. The legacy
+    HTTP transport does not terminate TLS in-process; setting
+    `MCP_HTTP_TLS_CERT` with `MCP_TRANSPORT=http` is rejected at
+    `config.Load`. Terminate TLS upstream and use `forward_auth`
+    to pass user context.
+*   **`mtls` for `streamable_http`:** Supported natively via
+    `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` + `MCP_MTLS_CA_CERT_PATH`.
+    All three are required when `MCP_AUTH_MODE=mtls` is selected
+    on the streamable transport; `config.Load` rejects partial
+    configurations at startup.
+*   **`mtls` for `grpc`:** Same cert / key / CA requirement as
+    streamable HTTP. Plus the `grpc` build tag (see below).
 *   **`grpc`:** Requires building with `-tags=grpc`.
 
 ## Production-readiness classification
