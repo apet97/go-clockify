@@ -430,13 +430,19 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 								"panic", fmt.Sprintf("%v", rec),
 								"stack", stack,
 							)
+							// Generic message — full panic value and stack are
+							// already in the slog event above. Returning the
+							// raw recovered value to the client risks leaking
+							// internal state, request data, or upstream error
+							// strings; the client gets a stable identifier
+							// instead.
 							panicResp := Response{
 								JSONRPC: "2.0",
 								ID:      r.ID,
 								Result: map[string]any{
 									"content": []map[string]any{{
 										"type": "text",
-										"text": "tool panic: " + fmt.Sprintf("%v", rec),
+										"text": "internal tool error; request logged",
 									}},
 									"isError": true,
 								},

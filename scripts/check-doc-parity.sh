@@ -83,8 +83,14 @@ if [ -f "$OPT_OUT" ]; then
   opt_out_list=$(grep -v '^#' "$OPT_OUT" | grep -v '^$' | awk '{print $1}' || true)
 fi
 
-# Find every MCP_* / CLOCKIFY_* token in docs/README
-referenced_vars=$(grep -rhoE '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' \
+# Find every MCP_* / CLOCKIFY_* token in docs/README.
+# `docs/superpowers/` is excluded — that subtree holds AI-assisted design
+# specs which by definition describe future state (env vars to be added in
+# upcoming PRs). They are planning artifacts, not operator documentation,
+# and including them would force every brainstorm-spec commit to land
+# alongside its corresponding implementation, defeating the point of writing
+# the spec first.
+referenced_vars=$(grep -rhoE --exclude-dir=superpowers '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' \
                    "${DOC_DIRS[@]}" 2>/dev/null | sort -u || true)
 referenced_vars="$referenced_vars"$'\n'"$(grep -hoE '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' "${DOC_FILES_TOP[@]}" 2>/dev/null | sort -u || true)"
 referenced_vars=$(printf "%s\n" "$referenced_vars" | sort -u | sed '/^$/d')
@@ -112,7 +118,7 @@ if [ -f "$CATALOG_FILE" ]; then
   strict_tool_files=(README.md)
   while IFS= read -r -d '' file; do
     strict_tool_files+=("$file")
-  done < <(find docs -type f -name '*.md' ! -path 'docs/adr/*' -print0)
+  done < <(find docs -type f -name '*.md' ! -path 'docs/adr/*' ! -path 'docs/superpowers/*' -print0)
 
   referenced_tools=$(
     grep -hoE '\bclockify_[a-z0-9_]{3,}' "${strict_tool_files[@]}" 2>/dev/null \
@@ -177,7 +183,7 @@ fi
 # 5. TODO / TBD / FIXME / XXX check
 # ---------------------------------------------------------------------------
 
-dangling=$(grep -rnE '\b(TODO|TBD|FIXME|XXX)\b' "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null \
+dangling=$(grep -rnE --exclude-dir=superpowers '\b(TODO|TBD|FIXME|XXX)\b' "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null \
             | grep -v "^docs/adr/.*superseded" \
             | grep -v "check-doc-parity" || true)
 

@@ -58,5 +58,5 @@ If a rollout fails, revert to the previous working image digest. Do not attempt 
 
 ## Health and Readiness Endpoints
 
-*   **Liveness:** `/healthz` (Ensures the process is running)
-*   **Readiness:** `/readyz` (Ensures the process is ready to accept traffic and can connect to its dependencies, like Postgres)
+*   **Liveness:** `/health` (Ensures the process is running)
+*   **Readiness:** `/ready` (Ensures the process is ready to accept traffic and can connect to its dependencies, like Postgres)

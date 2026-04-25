@@ -99,7 +99,7 @@ explicit operator intent — run it before and after an upgrade.
 
 | Version | Status | Notes |
 |---------|--------|-------|
-| `v1.1.x` (Unreleased) | Active — where new features land | |
+| `v1.1.x` | Active — released 2026-04-22; where new features land | |
 | `v1.0.x` | Released 2026-04-12 through 2026-04-20; latest is `v1.0.3` | Patch fixes land here only for correctness regressions that affect the stable wire format |
 | `v0.x` | Pre-release; not supported | Pre-`v1` releases from March–April 2026; do not deploy |
 

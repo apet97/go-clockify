@@ -4,12 +4,14 @@
 
 | Version | Supported |
 |---------|-----------|
+| 1.1.x   | Yes       |
 | 1.0.x   | Yes       |
 
 The `0.x` line reached end-of-life when `v1.0.0` shipped. Security
-fixes will not be backported. See [docs/release-policy.md](docs/release-policy.md)
-for the full support window, deprecation policy, and definition of
-"breaking change" used by this project.
+fixes will not be backported beyond the supported lines listed above.
+See [docs/release-policy.md](docs/release-policy.md) for the full
+support window, deprecation policy, and definition of "breaking
+change" used by this project.
 
 ## Reporting a Vulnerability
 

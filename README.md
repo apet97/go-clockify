@@ -4,7 +4,7 @@
 
 [![Go version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](go.mod)
 [![Release](https://img.shields.io/github/v/release/apet97/go-clockify?color=7e57c2)](https://github.com/apet97/go-clockify/releases)
-[![MCP protocol](https://img.shields.io/badge/MCP-2025--06--18-4b0082)](https://modelcontextprotocol.io/specification)
+[![MCP protocol](https://img.shields.io/badge/MCP-2025--11--25-4b0082)](https://modelcontextprotocol.io/specification)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anything else that speaks MCP.
@@ -285,7 +285,7 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 | Component | Version |
 |-----------|---------|
-| MCP Protocol | `2025-06-18` (back-compat: `2025-03-26`, `2024-11-05`) |
+| MCP Protocol | `2025-11-25` (back-compat: `2025-06-18`, `2025-03-26`) |
 | Go | 1.25.9+ |
 | Node.js (npm wrapper) | 18+ |
 
