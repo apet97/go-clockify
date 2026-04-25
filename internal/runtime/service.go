@@ -52,9 +52,19 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 	subject := event.Metadata["subject"]
 	sessionID := event.Metadata["session_id"]
 	transport := event.Metadata["transport"]
+	now := time.Now().UTC()
+	// Two-phase audit (PhaseIntent + PhaseOutcome) emits two records
+	// with the same (sessionID, tool) tuple in rapid succession; the
+	// Postgres store dedupes by external_id, so the synthesised ID
+	// MUST encode phase and outcome to stop the pair from collapsing
+	// into a single row. Including outcome additionally distinguishes
+	// retries that re-emit "outcome" with different success/failure
+	// states. The DevFileStore does not synthesise IDs of its own, so
+	// the runtime owning ID synthesis here is the only place this
+	// invariant is enforced for both backends.
 	return a.store.AppendAuditEvent(controlplane.AuditEvent{
-		ID:          fmt.Sprintf("%d-%s-%s", time.Now().UnixNano(), sessionID, event.Tool),
-		At:          time.Now().UTC(),
+		ID:          fmt.Sprintf("%d-%s-%s-%s-%s", now.UnixNano(), sessionID, event.Tool, event.Phase, event.Outcome),
+		At:          now,
 		TenantID:    tenantID,
 		Subject:     subject,
 		SessionID:   sessionID,
