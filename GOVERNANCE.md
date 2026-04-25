@@ -27,24 +27,44 @@ alternatives cited above reference back here.
 
 Operators evaluating whether to depend on `go-clockify`:
 you can read this document, see who is on the hook, and decide
-whether the audit trail that does exist (signed commits, public CI
-logs, SLSA build provenance where available, the release-smoke
-workflow) is sufficient for your risk appetite.
+whether the audit trail that does exist (public CI logs, GitHub
+web-flow signed squash commits on `main` where available, SLSA build
+provenance where available, the release-smoke workflow) is sufficient
+for your risk appetite.
 
 ## Who can merge to `main`
 
 `@apet97` is the only maintainer with merge access to `main`. Branch
 protection on `main` (snapshot in
 [`docs/branch-protection.md`](docs/branch-protection.md)) enforces
-the merge gate via required CI checks and a one-approval review
-rule. Self-approval is permitted — it has to be, because there is
-nobody else to approve.
+the merge gate via required CI checks, linear history, up-to-date
+branches, and conversation resolution. Required approvals are
+currently set to 0 because GitHub does not let PR authors approve
+their own pull requests, and this repository has one maintainer.
 
 `.github/CODEOWNERS` lists `@apet97` as the owner of every path;
 this is a stylistic declaration today (one-of-one), kept because it
 gives a future co-maintainer a clean diff target: adding a second
 handle to the per-path entries is a one-line PR per path rather
 than a ground-up rewrite.
+
+## Current state — enforced on `main`
+
+The current branch-protection snapshot enforces:
+
+- Required approvals: 0 enforced.
+- Code-owner reviews: disabled.
+- Signed commits: disabled.
+- Admin enforcement: disabled.
+- Required status checks: enabled.
+- Branches up to date before merge: enabled.
+- Conversation resolution: enabled.
+- Linear history: enabled.
+
+The effective merge gate at one-maintainer scale is therefore: CI
+green, branch up to date, linear history, and conversation resolution.
+The branch-protection snapshot remains the canonical record of the
+applied GitHub settings.
 
 ## Merge gate
 
@@ -55,20 +75,31 @@ A PR may merge to `main` only if all of the following are true:
    success.
 2. The branch is up-to-date with `main` (linear history is required;
    see branch-protection.md).
-3. Commits are signed (required-signatures enforcement is on).
-4. The change does not lower a coverage floor without an explicit
+3. The change does not lower a coverage floor without an explicit
    note in the PR body explaining why
    (see [`docs/coverage-policy.md`](docs/coverage-policy.md)).
-5. The PR has at least one approval. For a self-authored PR, this
-   means the maintainer reviewing against the checklist below
-   and self-approving. No-op at one-maintainer scale, but the
-   branch-protection rule stays because the audit trail of an
-   explicit approval click is meaningful.
+4. Any required review comments and conversations are resolved before
+   merge.
 
-The merge gate is the same for self-authored PRs and external PRs.
-The audit trail (signed commits, SLSA build provenance on every
-release, public CI logs, release-smoke nightly verification) makes
-the chain reviewable after the fact.
+The merge gate is the same for self-authored PRs and external PRs. The
+audit trail (public CI logs, SLSA build provenance on releases where
+available, release-smoke verification, and GitHub's signed web-flow
+squash commits on `main`) makes the chain reviewable after the fact.
+
+## Target state — not yet enforced
+
+The following controls are target state, not current state:
+
+- Required approvals: 1 non-author approval.
+- Code-owner reviews: enabled.
+- Signed commits: enabled.
+- Admin enforcement: enabled.
+- Restrict who can dismiss PR reviews: enabled.
+
+These controls become enforceable when a second maintainer joins or
+before a paid / public hosted service launch. Until then,
+`docs/branch-protection.md` documents the gap honestly so downstream
+consumers can evaluate the trust model.
 
 ## Tighter self-review expectations on security-sensitive areas
 
@@ -90,10 +121,9 @@ expectation are:
 - `deploy/` — operator-facing deploy manifests.
 
 When a second maintainer joins, the sensitive-path list in
-`.github/CODEOWNERS` will switch on two required approvals via a
-CODEOWNERS entry change; until then, sensitive-path PRs are
-self-reviewed against this list and the rationale is documented in
-the PR body via the checkbox in
+`.github/CODEOWNERS` will switch on required CODEOWNERS review; until
+then, sensitive-path PRs are self-reviewed against this list and the
+rationale is documented in the PR body via the checkbox in
 `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Releases

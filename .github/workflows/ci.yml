@@ -158,6 +158,11 @@ jobs:
         # single source of truth; editing spec.go without regenerating
         # cannot merge. Input is the static script path, not event data.
         run: bash scripts/check-config-doc-parity.sh
+      - name: Verify governance matches branch-protection snapshot
+        # Fails when GOVERNANCE.md claims current controls that
+        # docs/branch-protection.md says are not actually enforced.
+        # Input is the static script path, not event data.
+        run: sh scripts/check-governance-parity.sh
 
   repo-hygiene:
     name: Repo hygiene
