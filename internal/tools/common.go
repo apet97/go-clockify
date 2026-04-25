@@ -277,8 +277,13 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 // spec B2 requirements for Tier 1 + Tier 2 tools:
 //   - every object schema gets `additionalProperties: false` unless explicitly set
 //   - `page` and `page_size` integer properties gain `minimum`/`maximum` bounds
-//   - `start`/`end` properties whose description mentions RFC3339 gain
-//     `format: "date-time"`
+//   - string properties whose description mentions RFC3339 gain
+//     `format: "date-time"`, UNLESS the description also documents a
+//     flexible parser (e.g. "natural language" or "YYYY-MM-DD"). The
+//     validator at internal/jsonschema enforces format: date-time via
+//     strict time.Parse(time.RFC3339, ...), so adding the format to a
+//     field whose handler accepts wider input would reject valid calls
+//     before the handler ever runs.
 //   - `color` properties whose description mentions Hex gain the 6-hex pattern
 //
 // The walker handles nested objects and arrays (via `items`). It never
@@ -332,15 +337,43 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 		}
 	}
 	// Generic RFC3339 timestamp detection — any string property whose
-	// description calls out an RFC3339 timestamp gains format: date-time.
+	// description calls out an RFC3339 timestamp gains format: date-time,
+	// unless the description ALSO documents a flexible parser (natural
+	// language like "now"/"today" or a YYYY-MM-DD short date). The
+	// jsonschema validator enforces format: date-time via strict
+	// time.Parse(time.RFC3339, ...) before the handler runs, so adding
+	// the format to a flexible-parsing field would reject valid input
+	// like start="now" on clockify_add_entry. Handlers using
+	// timeparse.ParseDatetime / parseFlexibleDateTime accept the wider
+	// surface; the schema must not be tighter than the parser.
 	if typ, _ := prop["type"].(string); typ == "string" {
 		desc, _ := prop["description"].(string)
-		if desc != "" && strings.Contains(desc, "RFC3339") {
+		if desc != "" && strings.Contains(desc, "RFC3339") && !descriptionAdvertisesFlexibleTime(desc) {
 			if _, set := prop["format"]; !set {
 				prop["format"] = "date-time"
 			}
 		}
 	}
+}
+
+// descriptionAdvertisesFlexibleTime reports whether a property's
+// description tells callers they can pass non-RFC3339 input. Handlers
+// that document such flexibility use timeparse.ParseDatetime or
+// parseFlexibleDateTime; the jsonschema validator must skip its
+// format: date-time enforcement for these fields so the schema gate
+// does not reject valid input the handler would accept.
+func descriptionAdvertisesFlexibleTime(desc string) bool {
+	lower := strings.ToLower(desc)
+	if strings.Contains(lower, "natural language") {
+		return true
+	}
+	// Match the literal token "YYYY-MM-DD" (case-insensitive); handlers
+	// like clockify_weekly_summary's week_start parse it via
+	// parseFlexibleDateTime.
+	if strings.Contains(lower, "yyyy-mm-dd") {
+		return true
+	}
+	return false
 }
 
 func requiredSchema(field string) map[string]any {

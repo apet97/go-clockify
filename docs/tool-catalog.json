@@ -34,7 +34,6 @@
           },
           "start": {
             "description": "Start time (RFC3339, or natural language: 'now', 'today 9:00')",
-            "format": "date-time",
             "type": "string"
           },
           "task_id": {
@@ -1259,7 +1258,6 @@
         "properties": {
           "end": {
             "description": "End time (RFC3339 or natural language)",
-            "format": "date-time",
             "type": "string"
           },
           "page": {
@@ -1279,7 +1277,6 @@
           },
           "start": {
             "description": "Start time (RFC3339 or natural language)",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -3137,7 +3134,6 @@
           },
           "week_start": {
             "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time.",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -3671,12 +3667,10 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -4391,7 +4385,6 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "page": {
@@ -4407,7 +4400,6 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -6249,7 +6241,6 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "hours_per_day": {
@@ -6265,7 +6256,6 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "user_id": {
@@ -6327,7 +6317,6 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "hours_per_day": {
@@ -6339,7 +6328,6 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -6451,12 +6439,10 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "user_id": {
@@ -6798,7 +6784,6 @@
           },
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "hours_per_day": {
@@ -6809,7 +6794,6 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -7352,7 +7336,6 @@
         "properties": {
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           },
           "half_day": {
@@ -7368,7 +7351,6 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "format": "date-time",
             "type": "string"
           }
         },

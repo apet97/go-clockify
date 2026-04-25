@@ -95,6 +95,110 @@ func TestTightenInputSchemaRFC3339Format(t *testing.T) {
 	}
 }
 
+// TestTightenInputSchemaSkipsFlexibleDateTime verifies that the format
+// tightener does NOT add format:date-time to fields whose description
+// advertises a flexible parser (natural language or YYYY-MM-DD). The
+// jsonschema validator enforces format:date-time via strict
+// time.Parse(time.RFC3339, ...), so adding the format to a flexible
+// field would reject valid input like start="now" on clockify_add_entry
+// before the handler's lenient parser ever runs.
+func TestTightenInputSchemaSkipsFlexibleDateTime(t *testing.T) {
+	cases := []struct {
+		name        string
+		description string
+	}{
+		{"natural_language_lowercase", "RFC3339 or natural language"},
+		{"natural_language_with_examples", "RFC3339, or natural language: 'now', 'today 9:00'"},
+		{"natural_language_capitalized", "RFC3339 or Natural Language"},
+		{"yyyy_mm_dd", "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time."},
+		{"yyyy_mm_dd_lowercase", "RFC3339 or yyyy-mm-dd"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			schema := map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"when": map[string]any{"type": "string", "description": tc.description},
+				},
+			}
+			tightenInputSchema(schema)
+			when := schema["properties"].(map[string]any)["when"].(map[string]any)
+			if format, set := when["format"]; set {
+				t.Fatalf("flexible-time field should not have format constraint, got %v (description: %q)", format, tc.description)
+			}
+		})
+	}
+}
+
+// TestTightenInputSchemaPreservesExplicitFormat ensures the flexible
+// detection does not let an explicit format set by the descriptor
+// author get overwritten or ignored.
+func TestTightenInputSchemaPreservesExplicitFormat(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"when": map[string]any{
+				"type":        "string",
+				"description": "RFC3339 or natural language",
+				"format":      "date-time", // author opted in explicitly
+			},
+		},
+	}
+	tightenInputSchema(schema)
+	when := schema["properties"].(map[string]any)["when"].(map[string]any)
+	if when["format"] != "date-time" {
+		t.Fatalf("explicit format should be preserved, got %+v", when)
+	}
+}
+
+// TestRegistryFlexibleTimeFieldsHaveNoFormat asserts the property at
+// the live-tool level: every field in the registry whose description
+// advertises flexible parsing must NOT carry format:date-time after
+// the tightener runs. This catches drift if a future descriptor
+// rewords a description in a way the tightener no longer recognises.
+func TestRegistryFlexibleTimeFieldsHaveNoFormat(t *testing.T) {
+	type expect struct {
+		toolName string
+		field    string
+	}
+	flexible := []expect{
+		{"clockify_list_entries", "start"},
+		{"clockify_list_entries", "end"},
+		{"clockify_add_entry", "start"},
+		{"clockify_weekly_summary", "week_start"},
+	}
+
+	svc := &Service{}
+	descriptors := svc.Registry()
+	descByName := make(map[string]map[string]any, len(descriptors))
+	for _, d := range descriptors {
+		if d.Tool.InputSchema == nil {
+			continue
+		}
+		descByName[d.Tool.Name] = d.Tool.InputSchema
+	}
+
+	for _, want := range flexible {
+		schema, ok := descByName[want.toolName]
+		if !ok {
+			t.Errorf("tool %s not found in registry", want.toolName)
+			continue
+		}
+		props, _ := schema["properties"].(map[string]any)
+		field, ok := props[want.field].(map[string]any)
+		if !ok {
+			t.Errorf("%s.%s not found in schema", want.toolName, want.field)
+			continue
+		}
+		// The tightener has already run via normalizeDescriptors() that
+		// Registry() invokes; assert the flexible detection took effect.
+		if format, set := field["format"]; set {
+			t.Errorf("%s.%s carries format=%v but description advertises flexible parsing (description=%q)",
+				want.toolName, want.field, format, field["description"])
+		}
+	}
+}
+
 func TestTightenInputSchemaColorPattern(t *testing.T) {
 	schema := map[string]any{
 		"type": "object",

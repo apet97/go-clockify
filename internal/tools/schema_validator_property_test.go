@@ -7,6 +7,64 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+// TestRegistrySchemaAcceptsNaturalLanguageDatetime is the regression
+// guard for the schema/handler date-time drift. Tools that document
+// flexible-time start/end (e.g. clockify_add_entry, clockify_list_entries)
+// have handlers using timeparse.ParseDatetime which accepts inputs like
+// "now" and "today 9:00". The schema tightener must NOT add
+// format:date-time to those fields, because the jsonschema validator's
+// strict time.Parse(time.RFC3339, ...) would reject them before the
+// handler runs.
+//
+// This walks the live registry, picks the descriptors that document
+// flexible parsing, and verifies the validator passes a natural-language
+// argument map. If a future tightener regression re-introduces
+// format:date-time on a flexible field, this test reports the offending
+// tool/field and the validator error.
+func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
+	type input struct {
+		toolName string
+		args     map[string]any
+	}
+	naturalLanguageCases := []input{
+		{
+			toolName: "clockify_add_entry",
+			// only `start` is required for add_entry.
+			args: map[string]any{"start": "now"},
+		},
+		{
+			toolName: "clockify_list_entries",
+			args:     map[string]any{"start": "today 9:00", "end": "now"},
+		},
+		{
+			toolName: "clockify_weekly_summary",
+			args:     map[string]any{"week_start": "2026-04-21"}, // YYYY-MM-DD short date
+		},
+	}
+
+	svc := &Service{}
+	descriptors := svc.Registry()
+	descByName := make(map[string]map[string]any, len(descriptors))
+	for _, d := range descriptors {
+		if d.Tool.InputSchema == nil {
+			continue
+		}
+		descByName[d.Tool.Name] = d.Tool.InputSchema
+	}
+
+	for _, tc := range naturalLanguageCases {
+		t.Run(tc.toolName, func(t *testing.T) {
+			schema, ok := descByName[tc.toolName]
+			if !ok {
+				t.Fatalf("tool %s not found in registry", tc.toolName)
+			}
+			if err := jsonschema.Validate(schema, tc.args); err != nil {
+				t.Fatalf("%s rejected natural-language args %v: %v", tc.toolName, tc.args, err)
+			}
+		})
+	}
+}
+
 // TestRegistrySchemasAcceptHappyPathArgs is the W2-01 regression guard:
 // every Tier 1 + Tier 2 tool's InputSchema must accept a synthesized
 // happy-path argument map. If a future schema tightening breaks the
