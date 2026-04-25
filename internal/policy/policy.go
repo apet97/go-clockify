@@ -10,10 +10,11 @@ import (
 type Mode string
 
 const (
-	ReadOnly Mode = "read_only"
-	SafeCore Mode = "safe_core"
-	Standard Mode = "standard"
-	Full     Mode = "full"
+	ReadOnly         Mode = "read_only"
+	TimeTrackingSafe Mode = "time_tracking_safe"
+	SafeCore         Mode = "safe_core"
+	Standard         Mode = "standard"
+	Full             Mode = "full"
 )
 
 type Policy struct {
@@ -43,7 +44,7 @@ func FromEnv() (*Policy, error) {
 		mode = Standard
 	}
 	switch mode {
-	case ReadOnly, SafeCore, Standard, Full:
+	case ReadOnly, TimeTrackingSafe, SafeCore, Standard, Full:
 	default:
 		return nil, fmt.Errorf("invalid CLOCKIFY_POLICY: %s", mode)
 	}
@@ -102,6 +103,11 @@ func (p *Policy) IsAllowed(name string, readOnly bool) bool {
 	switch p.Mode {
 	case ReadOnly:
 		return readOnly
+	case TimeTrackingSafe:
+		if readOnly {
+			return true
+		}
+		return isTimeTrackingSafeWrite(name)
 	case SafeCore:
 		if readOnly {
 			return true
@@ -119,7 +125,7 @@ func (p *Policy) IsGroupAllowed(group string) bool {
 	if p == nil {
 		return true
 	}
-	if p.Mode == ReadOnly || p.Mode == SafeCore {
+	if p.Mode == ReadOnly || p.Mode == TimeTrackingSafe || p.Mode == SafeCore {
 		return false
 	}
 	if p.DeniedGroups[group] {
@@ -139,6 +145,9 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 	if p.Mode == ReadOnly && !readOnly {
 		return fmt.Sprintf("policy is read_only; '%s' is a write tool", name)
 	}
+	if p.Mode == TimeTrackingSafe && !readOnly && !isTimeTrackingSafeWrite(name) {
+		return fmt.Sprintf("policy is time_tracking_safe; '%s' is not in the time-tracking write list", name)
+	}
 	if p.Mode == SafeCore && !readOnly && !isSafeCoreWrite(name) {
 		return fmt.Sprintf("policy is safe_core; '%s' is not in the safe write list", name)
 	}
@@ -148,12 +157,13 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 // Describe returns a map describing the current policy configuration.
 func (p *Policy) Describe() map[string]any {
 	m := map[string]any{
-		"mode":                string(p.Mode),
-		"denied_tools":        sortedKeys(p.DeniedTools),
-		"denied_groups":       sortedKeys(p.DeniedGroups),
-		"allowed_groups":      nil,
-		"introspection_tools": introspectionList(),
-		"safe_core_writes":    safeCoreWriteList(),
+		"mode":                      string(p.Mode),
+		"denied_tools":              sortedKeys(p.DeniedTools),
+		"denied_groups":             sortedKeys(p.DeniedGroups),
+		"allowed_groups":            nil,
+		"introspection_tools":       introspectionList(),
+		"safe_core_writes":          safeCoreWriteList(),
+		"time_tracking_safe_writes": timeTrackingSafeWriteList(),
 	}
 	if p.AllowedGroups != nil {
 		m["allowed_groups"] = sortedKeys(p.AllowedGroups)
@@ -197,6 +207,23 @@ func safeCoreWriteList() []string {
 	}
 }
 
+// timeTrackingSafeWriteList is the narrow allowlist for the
+// time_tracking_safe policy: own-entry mutations and timer control
+// only. Crucially excludes project/client/tag/task creation — those
+// are workspace-wide effects and belong in safe_core, not a
+// time-tracking-agent default.
+func timeTrackingSafeWriteList() []string {
+	return []string{
+		"clockify_add_entry",
+		"clockify_find_and_update_entry",
+		"clockify_log_time",
+		"clockify_start_timer",
+		"clockify_stop_timer",
+		"clockify_switch_project",
+		"clockify_update_entry",
+	}
+}
+
 func cloneBoolMap(in map[string]bool) map[string]bool {
 	if in == nil {
 		return nil
@@ -225,6 +252,21 @@ func isSafeCoreWrite(name string) bool {
 		"clockify_find_and_update_entry",
 		"clockify_create_project", "clockify_create_client",
 		"clockify_create_tag", "clockify_create_task":
+		return true
+	}
+	return false
+}
+
+// isTimeTrackingSafeWrite is a strict subset of isSafeCoreWrite that
+// omits workspace-wide create_* tools. time_tracking_safe is the
+// recommended default for untrusted AI agents that should log time
+// but not reshape the workspace.
+func isTimeTrackingSafeWrite(name string) bool {
+	switch name {
+	case "clockify_start_timer", "clockify_stop_timer",
+		"clockify_add_entry", "clockify_update_entry",
+		"clockify_log_time", "clockify_switch_project",
+		"clockify_find_and_update_entry":
 		return true
 	}
 	return false

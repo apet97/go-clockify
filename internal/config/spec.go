@@ -29,7 +29,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_INSECURE", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "Allow non-HTTPS base URLs"},
 
 		// --- Safety ---
-		{Name: "CLOCKIFY_POLICY", Group: "Safety", Enum: []string{"read_only", "safe_core", "standard", "full"}, Default: "standard", Help: "Tool-access policy tier", EssentialDoc: true},
+		{Name: "CLOCKIFY_POLICY", Group: "Safety", Enum: []string{"read_only", "time_tracking_safe", "safe_core", "standard", "full"}, Default: "standard", Help: "Tool-access policy tier", EssentialDoc: true},
 		{Name: "CLOCKIFY_DRY_RUN", Group: "Safety", Default: "enabled", Help: "Enable dry-run preview support for destructive tools when callers pass dry_run:true", EssentialDoc: true},
 		{Name: "CLOCKIFY_DEDUPE_MODE", Group: "Safety", Enum: []string{"warn", "block", "off"}, Default: "warn", Help: "Duplicate entry detection", EssentialDoc: true},
 		{Name: "CLOCKIFY_DEDUPE_LOOKBACK", Group: "Safety", Default: "25", Help: "Recent entries to scan for duplicates"},
@@ -87,6 +87,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_HTTP_TLS_CERT", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server cert path (required for streamable_http + mtls; enables HTTPS when set)"},
 		{Name: "MCP_HTTP_TLS_KEY", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server key path (required for streamable_http + mtls)"},
 		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification (required for grpc + mtls and streamable_http + mtls)"},
+		{Name: "MCP_DISABLE_INLINE_SECRETS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject credential refs with backend=inline (hosted-service hardening; prefer env/file/external vault backends)"},
 		{Name: "MCP_GRPC_REAUTH_INTERVAL", Group: "Auth", Default: "0", AppliesTo: []string{"grpc"}, Help: "gRPC stream reauth interval (0=disabled)"},
 
 		// --- Metrics ---

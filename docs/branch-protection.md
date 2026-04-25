@@ -152,6 +152,31 @@ in a PR labelled `governance-snapshot`) or fixed (re-apply the target
 rules via the GitHub UI). The script exits non-zero if the branch is
 unprotected, which is itself the signal to reconcile.
 
+## Target state for paid / public hosted launch
+
+The current rules are the honest snapshot of a single-maintainer
+project (see ADR-0016). Before `clockify-mcp-go` is offered as a paid
+hosted service — or before the repo admits a second maintainer — the
+2026-04-25 security audit (finding L2) flagged the following as the
+minimum required tightening:
+
+| Setting | Current | Target |
+|---------|---------|--------|
+| Required approvals | 0 | **1** (review from a non-author) |
+| Require review from CODEOWNERS | Disabled | **Enabled** |
+| Require signed commits | Disabled | **Enabled** (web-flow squash counts) |
+| Include administrators | Disabled | **Enabled** (no break-glass around the bot) |
+| Restrict who can dismiss PR reviews | Disabled | **Enabled** (audit trail intact) |
+
+The tightening is gated on adding a second maintainer: enabling
+"required approvals = 1" with a single maintainer blocks every PR.
+`GOVERNANCE.md` carries the request — contact the maintainer via
+the Security Advisory process or a public issue tagged
+`governance-volunteer`.
+
+Until then this file documents the gap honestly so downstream
+consumers can factor it into their trust model.
+
 ## How to update this file
 
 When a setting in the GitHub UI changes:

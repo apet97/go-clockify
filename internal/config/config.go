@@ -74,7 +74,8 @@ type Config struct {
 	// rejects oidc + (no audience + no resource URI) and the OIDC
 	// authenticator rejects tokens missing an `exp` claim. Wired from
 	// MCP_OIDC_STRICT=1.
-	OIDCStrict bool
+	OIDCStrict           bool
+	DisableInlineSecrets bool
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -350,6 +351,7 @@ func Load() (Config, error) {
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
 	cfg.OIDCStrict = os.Getenv("MCP_OIDC_STRICT") == "1"
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
+	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,
 	// regardless of whether the token was minted for this server. That

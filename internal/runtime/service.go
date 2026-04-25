@@ -205,7 +205,9 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	if !ok {
 		return nil, fmt.Errorf("credential ref %q not found for tenant %q", tenant.CredentialRefID, tenant.ID)
 	}
-	material, err := vault.Resolve(ref)
+	material, err := vault.ResolveWithOptions(ref, vault.Options{
+		DisableInline: deps.cfg.DisableInlineSecrets,
+	})
 	if err != nil {
 		return nil, err
 	}

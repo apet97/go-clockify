@@ -8,6 +8,65 @@ import (
 	"github.com/apet97/go-clockify/internal/controlplane"
 )
 
+// TestResolveWithOptions_InlineDisabled locks in the hosted-service
+// hardening switch (MCP_DISABLE_INLINE_SECRETS=1). With the option
+// set, any credential ref with backend=inline is rejected at
+// resolution time regardless of the reference content; env and file
+// backends continue to work.
+func TestResolveWithOptions_InlineDisabled(t *testing.T) {
+	t.Run("inline_rejected_when_disabled", func(t *testing.T) {
+		ref := controlplane.CredentialRef{Backend: "inline", Reference: "abc-key"}
+		_, err := ResolveWithOptions(ref, Options{DisableInline: true})
+		if err == nil {
+			t.Fatal("expected inline rejection when DisableInline=true")
+		}
+	})
+	t.Run("inline_allowed_when_enabled", func(t *testing.T) {
+		ref := controlplane.CredentialRef{Backend: "inline", Reference: "abc-key"}
+		m, err := ResolveWithOptions(ref, Options{DisableInline: false})
+		if err != nil {
+			t.Fatalf("inline should resolve when DisableInline=false: %v", err)
+		}
+		if m.APIKey != "abc-key" {
+			t.Errorf("APIKey = %q, want abc-key", m.APIKey)
+		}
+	})
+	t.Run("env_backend_unaffected_by_flag", func(t *testing.T) {
+		t.Setenv("VAULT_TEST_ENVVAR", "env-key")
+		ref := controlplane.CredentialRef{Backend: "env", Reference: "VAULT_TEST_ENVVAR"}
+		m, err := ResolveWithOptions(ref, Options{DisableInline: true})
+		if err != nil {
+			t.Fatalf("env backend must work with DisableInline=true: %v", err)
+		}
+		if m.APIKey != "env-key" {
+			t.Errorf("APIKey = %q, want env-key", m.APIKey)
+		}
+	})
+	t.Run("file_backend_unaffected_by_flag", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "cred")
+		if err := os.WriteFile(path, []byte("file-key\n"), 0o600); err != nil {
+			t.Fatalf("write temp file: %v", err)
+		}
+		ref := controlplane.CredentialRef{Backend: "file", Reference: path}
+		m, err := ResolveWithOptions(ref, Options{DisableInline: true})
+		if err != nil {
+			t.Fatalf("file backend must work with DisableInline=true: %v", err)
+		}
+		if m.APIKey != "file-key" {
+			t.Errorf("APIKey = %q, want file-key", m.APIKey)
+		}
+	})
+	t.Run("legacy_resolve_preserves_inline", func(t *testing.T) {
+		// The back-compat Resolve wrapper must keep the permissive
+		// default. Callers who haven't migrated to ResolveWithOptions
+		// see no behaviour change.
+		ref := controlplane.CredentialRef{Backend: "inline", Reference: "abc-key"}
+		if _, err := Resolve(ref); err != nil {
+			t.Fatalf("legacy Resolve should permit inline: %v", err)
+		}
+	})
+}
+
 // TestResolveBackends covers every backend dispatch path in Resolve, including
 // the unsupported-backend error branch.
 func TestResolveBackends(t *testing.T) {

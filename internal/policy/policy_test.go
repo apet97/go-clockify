@@ -23,6 +23,57 @@ func TestIsAllowed(t *testing.T) {
 	}
 }
 
+// TestTimeTrackingSafePolicy locks in the narrower allowlist for the
+// 2026-04-25 audit M4 mode: timer + own-entry mutations only, no
+// workspace-wide create_* tools. Reads pass through as with any mode.
+func TestTimeTrackingSafePolicy(t *testing.T) {
+	p := &Policy{Mode: TimeTrackingSafe, DeniedTools: map[string]bool{}}
+
+	// Reads always pass.
+	if !p.IsAllowed("clockify_list_projects", true) {
+		t.Error("read tools must pass in time_tracking_safe")
+	}
+
+	// Timer + own-entry mutations allowed.
+	for _, tool := range []string{
+		"clockify_start_timer",
+		"clockify_stop_timer",
+		"clockify_add_entry",
+		"clockify_update_entry",
+		"clockify_log_time",
+		"clockify_find_and_update_entry",
+		"clockify_switch_project",
+	} {
+		if !p.IsAllowed(tool, false) {
+			t.Errorf("%s should be allowed in time_tracking_safe", tool)
+		}
+	}
+
+	// Workspace-wide writes that safe_core permits must be blocked
+	// here. This is the whole point of the mode.
+	for _, tool := range []string{
+		"clockify_create_project",
+		"clockify_create_client",
+		"clockify_create_tag",
+		"clockify_create_task",
+	} {
+		if p.IsAllowed(tool, false) {
+			t.Errorf("%s is workspace-wide; must be blocked in time_tracking_safe", tool)
+		}
+	}
+
+	// Block reason should name the mode.
+	reason := p.BlockReason("clockify_create_project", false)
+	if reason == "" {
+		t.Error("BlockReason should return a reason for blocked tool")
+	}
+
+	// Groups always blocked in time_tracking_safe (same as read_only / safe_core).
+	if p.IsGroupAllowed("reports") {
+		t.Error("time_tracking_safe must not allow Tier 2 groups")
+	}
+}
+
 func TestIsGroupAllowed(t *testing.T) {
 	// Standard mode allows groups by default
 	p := &Policy{Mode: Standard, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}

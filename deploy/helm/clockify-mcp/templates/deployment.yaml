@@ -134,6 +134,10 @@ spec:
             - name: MCP_REQUIRE_TENANT_CLAIM
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.auth.disableInlineSecrets }}
+            - name: MCP_DISABLE_INLINE_SECRETS
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.auth.forwardTenantHeader }}
             - name: MCP_FORWARD_TENANT_HEADER
               value: {{ . | quote }}
