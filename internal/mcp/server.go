@@ -119,6 +119,11 @@ type Server struct {
 	Activator    Activator                       // nil = activation unrestricted
 	ToolTimeout  time.Duration                   // per-call timeout; 0 = default 45s
 	ReadyChecker func(ctx context.Context) error // optional upstream health check for /ready
+	// ExposeAuthErrors controls whether HTTP transports return detailed
+	// authenticator errors to unauthenticated clients. The default is false:
+	// transports return a generic OAuth error_description and log details
+	// server-side only.
+	ExposeAuthErrors bool
 
 	// ResourceProvider backs resources/* method handlers. nil disables the
 	// resources capability (server omits it from initialize.result.capabilities).

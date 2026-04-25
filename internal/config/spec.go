@@ -90,6 +90,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_HTTP_TLS_KEY", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server key path (required for streamable_http + mtls)"},
 		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification (required for grpc + mtls and streamable_http + mtls)"},
 		{Name: "MCP_DISABLE_INLINE_SECRETS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject credential refs with backend=inline (hosted-service hardening; prefer env/file/external vault backends)"},
+		{Name: "MCP_EXPOSE_AUTH_ERRORS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, expose detailed auth failure reasons to clients (development only); default 0 returns 'authentication failed' to clients while logging the underlying reason server-side."},
 		{Name: "MCP_GRPC_REAUTH_INTERVAL", Group: "Auth", Default: "0", AppliesTo: []string{"grpc"}, Help: "gRPC stream reauth interval (0=disabled)"},
 
 		// --- Metrics ---

@@ -76,6 +76,11 @@ type Config struct {
 	// MCP_OIDC_STRICT=1.
 	OIDCStrict           bool
 	DisableInlineSecrets bool
+	// ExposeAuthErrors controls whether HTTP transports include detailed
+	// authenticator failure reasons in unauthenticated client responses.
+	// Default false returns a generic "authentication failed" description
+	// while server-side logs retain the detailed reason for operators.
+	ExposeAuthErrors bool
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -374,6 +379,7 @@ func Load() (Config, error) {
 	cfg.OIDCStrict = os.Getenv("MCP_OIDC_STRICT") == "1"
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
 	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"
+	cfg.ExposeAuthErrors = os.Getenv("MCP_EXPOSE_AUTH_ERRORS") == "1"
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,
 	// regardless of whether the token was minted for this server. That

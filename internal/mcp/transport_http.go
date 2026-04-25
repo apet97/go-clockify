@@ -414,8 +414,8 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// staticBearerAuthenticator branch.
 		principal, err := authenticator.Authenticate(r.Context(), r)
 		if err != nil {
-			authn.WriteUnauthorized(w, "invalid_token", err.Error())
-			slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 401, "reason", "auth_failed", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
+			logHTTPAuthFailure("http", r, err, "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
+			writeAuthFailure(w, err, s.ExposeAuthErrors)
 			return
 		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))

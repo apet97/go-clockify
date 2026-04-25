@@ -48,11 +48,15 @@ type StreamableHTTPOptions struct {
 	AllowedOrigins  []string
 	AllowAnyOrigin  bool
 	StrictHostCheck bool
-	SessionTTL      time.Duration
-	ReadyChecker    func(context.Context) error
-	Authenticator   authn.Authenticator
-	ControlPlane    controlplane.Store
-	Factory         StreamableSessionFactory
+	// ExposeAuthErrors controls whether unauthenticated clients receive
+	// detailed authenticator failure reasons. Default false returns a
+	// generic OAuth error_description and logs details server-side only.
+	ExposeAuthErrors bool
+	SessionTTL       time.Duration
+	ReadyChecker     func(context.Context) error
+	Authenticator    authn.Authenticator
+	ControlPlane     controlplane.Store
+	Factory          StreamableSessionFactory
 	// ProtectedResource is the unauthenticated handler for the
 	// /.well-known/oauth-protected-resource metadata document. When
 	// non-nil it is mounted at the canonical RFC 9728 path. nil =
@@ -247,7 +251,8 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
-			authn.WriteUnauthorized(w, "invalid_token", err.Error())
+			logHTTPAuthFailure("streamable_http", r, err)
+			writeAuthFailure(w, err, opts.ExposeAuthErrors)
 			return
 		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
@@ -334,7 +339,8 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
-			authn.WriteUnauthorized(w, "invalid_token", err.Error())
+			logHTTPAuthFailure("streamable_http", r, err)
+			writeAuthFailure(w, err, opts.ExposeAuthErrors)
 			return
 		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))

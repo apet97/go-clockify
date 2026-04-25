@@ -72,6 +72,7 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 		AllowedOrigins:    r.cfg.AllowedOrigins,
 		AllowAnyOrigin:    r.cfg.AllowAnyOrigin,
 		StrictHostCheck:   r.cfg.StrictHostCheck,
+		ExposeAuthErrors:  r.cfg.ExposeAuthErrors,
 		SessionTTL:        r.cfg.SessionTTL,
 		ReadyChecker:      readyChecker,
 		Authenticator:     authenticator,
