@@ -6,25 +6,34 @@ name: Release smoke
 # accidental tag mutation) surfaces as a GitHub issue rather than as a
 # silent rot.
 #
-# Four independent verification steps, each in its own step so a single
-# failure does not mask the others:
+# Verification steps, each in its own step so a single failure does
+# not mask the others:
 #
-#   1. gh attestation verify   — SLSA build provenance on the release
-#                                binary attached to the GitHub release.
-#                                Source: actions/attest-build-provenance
-#                                in release.yml.
-#   2. cosign verify-blob       — keyless cosign signature on the binary
-#                                via the .sigstore.json bundle goreleaser
-#                                wrote alongside it. Source: goreleaser
-#                                signs.cosign-keyless step driven by
-#                                release.yml.
+#   1. gh attestation verify   — SLSA build provenance on the default
+#                                linux-x64 release binary (release.yml
+#                                attest-build-provenance).
+#   2. cosign verify-blob       — keyless cosign signature on the
+#                                default linux-x64 binary via the
+#                                .sigstore.json bundle goreleaser wrote
+#                                alongside it.
 #   3. cosign verify            — keyless cosign signature on the
 #                                ghcr.io/apet97/go-clockify image at the
 #                                tag's digest. Source: docker-image.yml
 #                                cosign sign --yes step.
 #   4. doctor --strict           — hosted-posture smoke on the shipped
-#                                linux-x64 binary, including the
+#                                default linux-x64 binary, including the
 #                                negative broad-policy exit path.
+#   5. doctor --strict
+#      --check-backends         — backend-reachability smoke on the
+#                                postgres-tagged linux-x64 binary
+#                                against an ephemeral Postgres service.
+#                                Proves migrations apply and the audit
+#                                health round-trip works on the shipped
+#                                hosted-deploy artifact.
+#   6. gh attestation verify   — SLSA build provenance on the
+#                                postgres-tagged binary.
+#   7. cosign verify-blob       — keyless cosign signature on the
+#                                postgres-tagged binary.
 #
 # All ${{ }} references to event payload, repo, and inputs are placed
 # inside env: blocks rather than interpolated into run: commands so
@@ -74,6 +83,26 @@ jobs:
     name: Verify release artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      # Ephemeral Postgres for the hosted-deploy artifact's
+      # `doctor --strict --check-backends` step. The default linux-x64
+      # binary is stdlib-only by design (ADR 0001) and intentionally
+      # cannot satisfy --check-backends; only the postgres-tagged
+      # artifact links pgx. This service is private to the smoke job —
+      # no external secrets, torn down with the runner.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: clockify
+          POSTGRES_PASSWORD: clockify
+          POSTGRES_DB: clockify_mcp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clockify -d clockify_mcp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -141,15 +170,19 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
           cd artifacts
-          # Use linux-x64 as the canonical verification target. Any
-          # supported binary would work; picking one keeps the smoke
-          # fast. The other four binaries are signed by the same
-          # cosign-keyless run, so verifying one proves the signing
-          # path was healthy at release time.
+          # Use linux-x64 as the canonical verification target for the
+          # default (stdlib) and postgres-tagged build matrices. The
+          # default binary covers config-only strict posture; the
+          # postgres-tagged binary additionally covers the live
+          # backend-check path. The other binaries are signed by the
+          # same cosign-keyless run, so verifying one per matrix
+          # proves the signing path was healthy for the whole release.
           gh release download "$TAG" \
             --repo "${GITHUB_REPOSITORY}" \
             --pattern 'clockify-mcp-linux-x64' \
-            --pattern 'clockify-mcp-linux-x64.sigstore.json'
+            --pattern 'clockify-mcp-linux-x64.sigstore.json' \
+            --pattern 'clockify-mcp-postgres-linux-x64' \
+            --pattern 'clockify-mcp-postgres-linux-x64.sigstore.json'
           ls -l
 
       - name: Smoke-test doctor --strict on release binary
@@ -216,6 +249,62 @@ jobs:
             --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             artifacts/clockify-mcp-linux-x64
+
+      - name: Smoke-test doctor --strict --check-backends on Postgres release binary
+        env:
+          # Hits the ephemeral Postgres service declared at the top of
+          # this job. Localhost / 127.0.0.1 works because services run
+          # on the same network namespace as the runner.
+          PG_DSN: postgres://clockify:clockify@localhost:5432/clockify_mcp?sslmode=disable
+        run: |
+          set -euo pipefail
+          chmod +x artifacts/clockify-mcp-postgres-linux-x64
+
+          # Same prod-postgres profile + dummy OIDC env as the
+          # default-binary smoke step above. The DSN points at the
+          # real service container so DoctorCheck(ctx) actually runs:
+          # ping, schema_migrations row for v2, audit_events.phase
+          # column, and the audit-event round-trip.
+          export MCP_PROFILE=prod-postgres
+          export MCP_CONTROL_PLANE_DSN="$PG_DSN"
+          export MCP_OIDC_ISSUER="https://issuer.example.com"
+          export MCP_OIDC_AUDIENCE="clockify-mcp"
+          export MCP_TENANT_CLAIM="tenant_id"
+          export CLOCKIFY_API_KEY="dummy"
+
+          artifacts/clockify-mcp-postgres-linux-x64 doctor --strict --check-backends \
+            >/tmp/release-doctor-postgres-ok.txt 2>&1
+          grep -q "Strict posture" /tmp/release-doctor-postgres-ok.txt
+          grep -q "OK" /tmp/release-doctor-postgres-ok.txt
+
+      - name: Verify SLSA build provenance attestation (Postgres binary)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Same trust-root checks as the default-binary attestation,
+          # applied to the postgres-tagged hosted-deploy artifact so a
+          # missing or wrong-owner attestation on the production
+          # binary fails the smoke just like the default one.
+          gh attestation verify artifacts/clockify-mcp-postgres-linux-x64 \
+            --owner "${GITHUB_REPOSITORY_OWNER}"
+
+      - name: Verify cosign keyless signature on Postgres binary
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Postgres-tagged binaries are signed by the same goreleaser
+          # cosign-keyless step in release.yml that signs the default
+          # and FIPS matrices, so the certificate identity regex is
+          # identical. A signature mismatch here would indicate the
+          # postgres archive was added without flowing through the
+          # signs.cosign-keyless block in .goreleaser.yaml.
+          cosign verify-blob \
+            --bundle artifacts/clockify-mcp-postgres-linux-x64.sigstore.json \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            artifacts/clockify-mcp-postgres-linux-x64
 
       - name: Resolve container image digest
         id: image
@@ -286,14 +375,23 @@ jobs:
           This workflow re-verifies release-artifact integrity and
           hosted-posture behavior every release produces:
 
-          1. \`gh attestation verify\` on the linux-x64 binary (SLSA
-             build provenance from \`release.yml\`).
-          2. \`cosign verify-blob\` on the linux-x64 binary using the
-             keyless sigstore bundle goreleaser wrote alongside it.
+          1. \`gh attestation verify\` on the default linux-x64 binary
+             (SLSA build provenance from \`release.yml\`).
+          2. \`cosign verify-blob\` on the default linux-x64 binary
+             using the keyless sigstore bundle goreleaser wrote
+             alongside it.
           3. \`cosign verify\` on the multi-arch ghcr.io image at the
              tag's digest (signed by \`docker-image.yml\`).
-          4. \`clockify-mcp doctor --strict\` on the shipped linux-x64
-             binary, including the broad-policy negative exit path.
+          4. \`clockify-mcp doctor --strict\` on the shipped default
+             linux-x64 binary, including the broad-policy negative
+             exit path.
+          5. \`clockify-mcp-postgres doctor --strict --check-backends\`
+             on the shipped postgres-tagged linux-x64 binary against
+             an ephemeral Postgres service, including migration apply
+             and audit-event round-trip.
+          6. \`gh attestation verify\` and \`cosign verify-blob\` on
+             the postgres-tagged linux-x64 binary, mirroring the
+             default-binary supply-chain checks.
 
           A failure usually means one of:
 
