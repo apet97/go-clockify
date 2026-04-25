@@ -80,9 +80,11 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_FORWARD_TENANT_HEADER", Group: "Auth", Default: "X-Forwarded-Tenant", Help: "forward_auth tenant header"},
 		{Name: "MCP_FORWARD_SUBJECT_HEADER", Group: "Auth", Default: "X-Forwarded-User", Help: "forward_auth subject header"},
 		{Name: "MCP_MTLS_TENANT_HEADER", Group: "Auth", Default: "X-Tenant-ID", Help: "mTLS tenant header override"},
-		{Name: "MCP_GRPC_TLS_CERT", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server cert path"},
-		{Name: "MCP_GRPC_TLS_KEY", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server key path"},
-		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification"},
+		{Name: "MCP_GRPC_TLS_CERT", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server cert path (required for grpc + mtls)"},
+		{Name: "MCP_GRPC_TLS_KEY", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server key path (required for grpc + mtls)"},
+		{Name: "MCP_HTTP_TLS_CERT", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server cert path (required for streamable_http + mtls; enables HTTPS when set)"},
+		{Name: "MCP_HTTP_TLS_KEY", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server key path (required for streamable_http + mtls)"},
+		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification (required for grpc + mtls and streamable_http + mtls)"},
 		{Name: "MCP_GRPC_REAUTH_INTERVAL", Group: "Auth", Default: "0", AppliesTo: []string{"grpc"}, Help: "gRPC stream reauth interval (0=disabled)"},
 
 		// --- Metrics ---

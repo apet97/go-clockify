@@ -127,8 +127,16 @@ type Config struct {
 	// private key for the gRPC transport. Both must be set together.
 	GRPCTLSCert string
 	GRPCTLSKey  string
+	// HTTPTLSCert and HTTPTLSKey are paths to the server TLS cert and
+	// private key for the streamable_http transport. Both must be set
+	// together. Required when MCP_AUTH_MODE=mtls on streamable_http.
+	// Legacy http (MCP_TRANSPORT=http) does not support TLS — see the
+	// HTTPTLSCert validation in Load().
+	HTTPTLSCert string
+	HTTPTLSKey  string
 	// MTLSCACertPath is the path to the CA cert for client certificate
-	// verification. Required when MCP_AUTH_MODE=mtls on gRPC.
+	// verification. Required when MCP_AUTH_MODE=mtls on gRPC or
+	// streamable_http.
 	MTLSCACertPath string
 }
 
@@ -439,9 +447,48 @@ func Load() (Config, error) {
 
 	cfg.GRPCTLSCert = os.Getenv("MCP_GRPC_TLS_CERT")
 	cfg.GRPCTLSKey = os.Getenv("MCP_GRPC_TLS_KEY")
+	cfg.HTTPTLSCert = os.Getenv("MCP_HTTP_TLS_CERT")
+	cfg.HTTPTLSKey = os.Getenv("MCP_HTTP_TLS_KEY")
 	cfg.MTLSCACertPath = os.Getenv("MCP_MTLS_CA_CERT_PATH")
 	if (cfg.GRPCTLSCert == "") != (cfg.GRPCTLSKey == "") {
 		return Config{}, fmt.Errorf("MCP_GRPC_TLS_CERT and MCP_GRPC_TLS_KEY must both be set or both empty")
+	}
+	if (cfg.HTTPTLSCert == "") != (cfg.HTTPTLSKey == "") {
+		return Config{}, fmt.Errorf("MCP_HTTP_TLS_CERT and MCP_HTTP_TLS_KEY must both be set or both empty")
+	}
+	// Legacy http transport never terminates TLS in-process. Operators
+	// reaching for MCP_HTTP_TLS_CERT here are confusing legacy http with
+	// streamable_http — surface the mismatch at startup rather than
+	// silently ignoring the cert paths.
+	if cfg.HTTPTLSCert != "" && cfg.Transport != "streamable_http" {
+		return Config{}, fmt.Errorf("MCP_HTTP_TLS_CERT requires MCP_TRANSPORT=streamable_http; the legacy http transport does not terminate TLS")
+	}
+	// streamable_http + mtls requires the full TLS cert material so
+	// the listener can complete the mTLS handshake. Without it the
+	// server starts but every request fails with "verified mTLS client
+	// certificate required". Fail at config load instead.
+	if cfg.Transport == "streamable_http" && cfg.AuthMode == "mtls" {
+		switch {
+		case cfg.HTTPTLSCert == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=streamable_http with MCP_AUTH_MODE=mtls requires MCP_HTTP_TLS_CERT")
+		case cfg.HTTPTLSKey == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=streamable_http with MCP_AUTH_MODE=mtls requires MCP_HTTP_TLS_KEY")
+		case cfg.MTLSCACertPath == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=streamable_http with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH")
+		}
+	}
+	// gRPC + mtls has historically allowed startup without cert
+	// material; the old behaviour was a misleading "ok" cell in the
+	// transport×auth matrix. Lock the requirement in here.
+	if cfg.Transport == "grpc" && cfg.AuthMode == "mtls" {
+		switch {
+		case cfg.GRPCTLSCert == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_GRPC_TLS_CERT")
+		case cfg.GRPCTLSKey == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_GRPC_TLS_KEY")
+		case cfg.MTLSCACertPath == "":
+			return Config{}, fmt.Errorf("MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH")
+		}
 	}
 
 	if v := os.Getenv("MCP_GRPC_REAUTH_INTERVAL"); v != "" {

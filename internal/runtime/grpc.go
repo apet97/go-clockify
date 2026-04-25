@@ -5,9 +5,6 @@ package runtime
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
@@ -54,23 +51,16 @@ func (r *Runtime) runGRPC(ctx context.Context, client *clockify.Client, server *
 	}
 	var grpcTLS *tls.Config
 	if r.cfg.GRPCTLSCert != "" {
-		cert, err := tls.LoadX509KeyPair(r.cfg.GRPCTLSCert, r.cfg.GRPCTLSKey)
+		cfg, err := buildServerTLSConfig(
+			r.cfg.GRPCTLSCert, r.cfg.GRPCTLSKey,
+			r.cfg.MTLSCACertPath,
+			r.cfg.MTLSCACertPath != "",
+			tls.VersionTLS13,
+		)
 		if err != nil {
-			return fmt.Errorf("load gRPC TLS cert/key: %w", err)
+			return err
 		}
-		grpcTLS = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}
-		if r.cfg.MTLSCACertPath != "" {
-			caCert, err := os.ReadFile(r.cfg.MTLSCACertPath)
-			if err != nil {
-				return fmt.Errorf("read mTLS CA cert: %w", err)
-			}
-			pool := x509.NewCertPool()
-			if !pool.AppendCertsFromPEM(caCert) {
-				return fmt.Errorf("mTLS CA cert: no valid PEM certificates found")
-			}
-			grpcTLS.ClientCAs = pool
-			grpcTLS.ClientAuth = tls.RequireAndVerifyClientCert
-		}
+		grpcTLS = cfg
 	}
 	return grpctransport.Serve(ctx, grpctransport.Options{
 		Bind:                 r.cfg.GRPCBind,

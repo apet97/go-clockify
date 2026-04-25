@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"crypto/tls"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/authn"
@@ -45,6 +46,25 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 			return client.Get(ctx, "/user", nil, &user)
 		}
 	}
+	// Native TLS / mTLS for the streamable HTTP transport. Driven from
+	// MCP_HTTP_TLS_CERT / MCP_HTTP_TLS_KEY (set together; config.Load
+	// rejects half-configurations) plus MCP_MTLS_CA_CERT_PATH for
+	// client-cert verification when MCP_AUTH_MODE=mtls. Without
+	// HTTPTLSCert the listener stays plain HTTP, preserving the
+	// long-standing default for self-hosted single-tenant use.
+	var tlsConfig *tls.Config
+	if r.cfg.HTTPTLSCert != "" {
+		tlsConfig, err = buildServerTLSConfig(
+			r.cfg.HTTPTLSCert,
+			r.cfg.HTTPTLSKey,
+			r.cfg.MTLSCACertPath,
+			r.cfg.AuthMode == "mtls",
+			tls.VersionTLS12,
+		)
+		if err != nil {
+			return err
+		}
+	}
 	return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
 		Version:           r.version,
 		Bind:              r.cfg.HTTPBind,
@@ -58,6 +78,7 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 		ControlPlane:      store,
 		ProtectedResource: protectedResource,
 		ExtraHandlers:     r.extraHandlers,
+		TLSConfig:         tlsConfig,
 		Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 			return tenantRuntime(ctx, principal.TenantID, deps, store)
 		},

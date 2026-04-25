@@ -70,10 +70,29 @@ func TestTransportAuthMatrix(t *testing.T) {
 			"MCP_CONTROL_PLANE_DSN": "memory",
 			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
+		// streamable_http + mtls now requires the full TLS cert material.
+		// The mtls authenticator reads r.TLS.VerifiedChains, which only
+		// populates when the listener terminates TLS in-process — without
+		// the cert/key paths the listener stays plain HTTP and every
+		// request fails the verified-chain check at first byte. Surfacing
+		// the mismatch at config.Load is friendlier than a 500 storm.
 		{"streamable_http", "mtls", map[string]string{
 			"MCP_CONTROL_PLANE_DSN": "memory",
 			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_HTTP_TLS_CERT":     "/dev/null",
+			"MCP_HTTP_TLS_KEY":      "/dev/null",
+			"MCP_MTLS_CA_CERT_PATH": "/dev/null",
 		}, "ok"},
+		{"streamable_http", "mtls", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+		}, "MCP_TRANSPORT=streamable_http with MCP_AUTH_MODE=mtls requires MCP_HTTP_TLS_CERT"},
+		{"streamable_http", "mtls", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_HTTP_TLS_CERT":     "/dev/null",
+			"MCP_HTTP_TLS_KEY":      "/dev/null",
+		}, "MCP_TRANSPORT=streamable_http with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH"},
 		// Dev DSN without the ack flag — fails closed with a message
 		// that names both escape hatches (flag or postgres://).
 		{"streamable_http", "static_bearer", map[string]string{
@@ -96,7 +115,31 @@ func TestTransportAuthMatrix(t *testing.T) {
 		{"grpc", "static_bearer", map[string]string{"MCP_BEARER_TOKEN": bearer}, "ok"},
 		{"grpc", "oidc", nil, "ok"},
 		{"grpc", "forward_auth", nil, "ok"},
-		{"grpc", "mtls", nil, "ok"},
+		// gRPC + mtls also requires cert material now (matching the
+		// streamable_http rule). The previous "ok" cell let operators
+		// reach the runtime tls.LoadX509KeyPair with empty paths, which
+		// then bubbled up as an opaque load error per request instead
+		// of a startup failure.
+		{"grpc", "mtls", map[string]string{
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
+			"MCP_MTLS_CA_CERT_PATH": "/dev/null",
+		}, "ok"},
+		{"grpc", "mtls", nil, "MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_GRPC_TLS_CERT"},
+		{"grpc", "mtls", map[string]string{
+			"MCP_GRPC_TLS_CERT": "/dev/null",
+			"MCP_GRPC_TLS_KEY":  "/dev/null",
+		}, "MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH"},
+
+		// --- legacy http rejects HTTP TLS cert -----------------------
+		// MCP_HTTP_TLS_CERT only applies to streamable_http; setting it
+		// with the legacy http transport is a config mistake (legacy http
+		// has no native TLS wiring).
+		{"http", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":  bearer,
+			"MCP_HTTP_TLS_CERT": "/dev/null",
+			"MCP_HTTP_TLS_KEY":  "/dev/null",
+		}, "MCP_HTTP_TLS_CERT requires MCP_TRANSPORT=streamable_http"},
 	}
 
 	for _, tc := range cases {
@@ -121,6 +164,9 @@ func TestTransportAuthMatrix(t *testing.T) {
 				"MCP_OIDC_AUDIENCE", "MCP_OIDC_JWKS_URL", "MCP_OIDC_JWKS_PATH",
 				"MCP_RESOURCE_URI", "MCP_OIDC_VERIFY_CACHE_TTL",
 				"MCP_ALLOW_DEV_BACKEND",
+				"MCP_HTTP_TLS_CERT", "MCP_HTTP_TLS_KEY",
+				"MCP_GRPC_TLS_CERT", "MCP_GRPC_TLS_KEY",
+				"MCP_MTLS_CA_CERT_PATH",
 			} {
 				if _, present := envs[k]; !present {
 					t.Setenv(k, "")

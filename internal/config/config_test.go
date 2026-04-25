@@ -493,16 +493,22 @@ func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 }
 
 // TestLoadTransportGRPCMTLSAccepted verifies mtls is accepted on gRPC
-// (W5-05c: credentials.TLSInfo passthrough).
+// when the operator supplies the full TLS cert material
+// (W5-05c: credentials.TLSInfo passthrough; security audit C2026-04-25
+// H4 promoted the cert/key/CA from optional-runtime-load to
+// required-at-config-load).
 func TestLoadTransportGRPCMTLSAccepted(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
-		"MCP_AUTH_MODE":    "mtls",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_AUTH_MODE":         "mtls",
+		"MCP_GRPC_TLS_CERT":     "/dev/null",
+		"MCP_GRPC_TLS_KEY":      "/dev/null",
+		"MCP_MTLS_CA_CERT_PATH": "/dev/null",
 	})
 	_, err := Load()
 	if err != nil {
-		t.Fatalf("expected gRPC + mtls to be accepted, got: %v", err)
+		t.Fatalf("expected gRPC + mtls (with cert/key/CA) to be accepted, got: %v", err)
 	}
 }
 

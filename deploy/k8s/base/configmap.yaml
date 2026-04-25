@@ -27,7 +27,9 @@ data:
   # MCP_GRPC_REAUTH_INTERVAL: ""
   # MCP_GRPC_TLS_CERT: ""
   # MCP_GRPC_TLS_KEY: ""
-  # MCP_MTLS_CA_CERT_PATH: ""
+  # MCP_HTTP_TLS_CERT: ""           # streamable_http TLS cert PEM (required for streamable_http + mtls)
+  # MCP_HTTP_TLS_KEY: ""            # streamable_http TLS key PEM (required for streamable_http + mtls)
+  # MCP_MTLS_CA_CERT_PATH: ""       # client CA bundle for mtls verification (required for grpc + mtls AND streamable_http + mtls)
   # Auth (uncomment for non-default mode)
   # MCP_AUTH_MODE: ""
   # MCP_OIDC_ISSUER: ""

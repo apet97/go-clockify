@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -69,6 +70,14 @@ type StreamableHTTPOptions struct {
 	// mid-stream without DELETEing the session: SessionTTL alone would
 	// hold the entry for up to 30 minutes. Zero uses the 5 minute default.
 	IdleGraceAfterDisconnect time.Duration
+	// TLSConfig, when non-nil, wraps the bound listener with tls.NewListener
+	// so the streamable HTTP transport terminates TLS in-process. Required
+	// when the operator selects MCP_AUTH_MODE=mtls on streamable_http —
+	// without TLS, the mTLS authenticator has no VerifiedChains to read
+	// from r.TLS and every request fails with "verified mTLS client
+	// certificate required". When nil, the listener serves plain HTTP
+	// (the long-standing default for this transport).
+	TLSConfig *tls.Config
 }
 
 type streamSession struct {
@@ -173,7 +182,19 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 			return fmt.Errorf("listen streamable_http: %w", err)
 		}
 	}
-	slog.Info("streamable_http_start", "bind", ln.Addr().String(), "session_ttl", opts.SessionTTL.String())
+	// Native TLS termination on the streamable HTTP transport. When
+	// TLSConfig is non-nil the listener is wrapped so the Go HTTP
+	// server completes the handshake itself; r.TLS.VerifiedChains is
+	// then populated for downstream mtls authentication. Plain HTTP
+	// remains the default — TLSConfig nil keeps the listener bare.
+	if opts.TLSConfig != nil {
+		ln = tls.NewListener(ln, opts.TLSConfig)
+	}
+	slog.Info("streamable_http_start",
+		"bind", ln.Addr().String(),
+		"session_ttl", opts.SessionTTL.String(),
+		"tls", opts.TLSConfig != nil,
+	)
 	if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 		return err
 	}
