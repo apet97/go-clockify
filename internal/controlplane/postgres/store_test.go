@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -28,6 +29,15 @@ var (
 // dsn lazily starts a postgres:16 container and returns its connection
 // string. One container is reused across every test in the package so
 // the 8–15 second pull+start cost is paid once. TestMain calls cleanup.
+//
+// When the container fails to start (Docker daemon missing, image pull
+// blocked, network unreachable), the default behaviour is t.Skip so a
+// laptop without Docker still builds and runs the rest of the suite.
+// CI must instead fail loudly so a regression in the integration gate
+// does not ship as green: set INTEGRATION_REQUIRED=1 in the environment
+// and dsn() will t.Fatalf on Testcontainers failure. The Makefile's
+// test-postgres target sets the env var; the same flag should be set
+// in any CI workflow that invokes the integration suite on main.
 func dsn(t *testing.T) string {
 	t.Helper()
 	sharedDSNOnce.Do(func() {
@@ -58,9 +68,54 @@ func dsn(t *testing.T) string {
 		sharedDSN = connStr
 	})
 	if sharedErr != nil {
+		if integrationRequired() {
+			t.Fatalf("postgres integration tests required (INTEGRATION_REQUIRED=1) but Testcontainers failed: %v", sharedErr)
+		}
 		t.Skipf("postgres unavailable: %v", sharedErr)
 	}
 	return sharedDSN
+}
+
+// integrationRequired returns true when callers want a Testcontainers
+// failure to surface as t.Fatal rather than t.Skip. Used by CI and
+// `make test-postgres` to ensure the integration gate cannot pass
+// vacuously when Docker is unavailable.
+func integrationRequired() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("INTEGRATION_REQUIRED")))
+	return v == "1" || v == "true" || v == "yes"
+}
+
+// TestIntegrationRequiredEnvGate exercises the env-var parsing in
+// integrationRequired() so a regression that breaks the gate
+// (e.g. a typo, or expanding the env name) surfaces immediately
+// rather than waiting for a Docker-less CI run that would silently
+// fall back to skip-green. The Testcontainers-failure → t.Fatal
+// pathway in dsn() relies on this helper, so guarding the helper is
+// the cheapest way to anchor the gate's semantics.
+func TestIntegrationRequiredEnvGate(t *testing.T) {
+	cases := []struct {
+		env  string
+		want bool
+	}{
+		{"", false},
+		{"0", false},
+		{"false", false},
+		{"no", false},
+		{"foo", false},
+		{"1", true},
+		{"true", true},
+		{"True", true},
+		{"TRUE", true},
+		{"  yes  ", true},
+	}
+	for _, tc := range cases {
+		t.Run("env="+tc.env, func(t *testing.T) {
+			t.Setenv("INTEGRATION_REQUIRED", tc.env)
+			if got := integrationRequired(); got != tc.want {
+				t.Errorf("integrationRequired() with env=%q = %v, want %v", tc.env, got, tc.want)
+			}
+		})
+	}
 }
 
 func TestMain(m *testing.M) {

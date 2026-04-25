@@ -230,4 +230,8 @@ build-postgres:
 	cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...
 
 test-postgres:
-	cd internal/controlplane/postgres && go test -tags=postgres,integration -count=1 -timeout 180s ./...
+	# INTEGRATION_REQUIRED=1 turns a Testcontainers failure into t.Fatal
+	# instead of t.Skip. Without it, the suite would report green when
+	# Docker is unreachable, masking regressions in the postgres
+	# control-plane backend. See store_test.go::dsn for the gate.
+	cd internal/controlplane/postgres && INTEGRATION_REQUIRED=1 go test -tags=postgres,integration -count=1 -timeout 180s ./...
