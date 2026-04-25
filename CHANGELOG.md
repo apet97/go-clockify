@@ -123,6 +123,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OIDC accepts issuer-only tokens by default for back-compat;
   hosted deployments must opt into the strict mode flags.
 
+### Fixed
+
+> **Follow-up audit pass (2026-04-25).** Five additional atomic
+> commits caught by a deeper read-through of the post-wave repo
+> state. Each closes a defense-in-depth or wiring gap that the
+> primary security wave did not cover.
+
+- **Metrics listener no longer silently un-authenticates.**
+  `mcp.ServeMetrics` and `metricsMux` now refuse
+  `AuthMode=static_bearer` with an empty `BearerToken`. The
+  production startup path through `cmd/clockify-mcp/main.go` was
+  already protected by config-load validation
+  (`internal/config/config.go:280-285`); this commit closes the same
+  gap at the library API surface so a programmatic embedder building
+  `MetricsServerOptions` directly cannot regress the property. Without
+  the guard, `subtle.ConstantTimeCompare("","")==1` would treat any
+  client (including a bare `Authorization: Bearer ` header) as
+  authenticated despite a startup log claiming bearer mode.
+- **OIDC strict mode rejects `authn.Config` without audience or
+  resource URI.** `authn.New` now refuses to construct the OIDC
+  authenticator when `OIDCStrict=true` with both `OIDCAudience` and
+  `OIDCResourceURI` empty. Mirrors the pre-existing config-load
+  check at `internal/config/config.go:360-361` (which only fires
+  on the env-var path) and matches the documented `MCP_OIDC_STRICT`
+  contract that strict mode binds tokens to this server.
+- **Schema/handler date-time drift on `clockify_add_entry`,
+  `clockify_list_entries`, `clockify_weekly_summary`, and several
+  Tier 2 timesheet/approval/expenses tools.** The schema tightener
+  added `format: "date-time"` to any string property mentioning
+  "RFC3339" in its description, even when that description also
+  documented a flexible parser (`natural language`, `YYYY-MM-DD`).
+  The jsonschema validator's strict `time.Parse(time.RFC3339, ...)`
+  then rejected valid input like `start="now"` before the handler's
+  lenient `timeparse.ParseDatetime` ever saw it. The tightener now
+  skips the `format` constraint on flexible-time fields;
+  `docs/tool-catalog.json` regenerated to match.
+- **Helm ServiceMonitor wires the dedicated metrics listener
+  correctly.** Setting `metricsEndpoint.bind` non-empty now renders a
+  `metrics` Service port + matching containerPort + ServiceMonitor
+  `port: metrics` in one toggle. A new
+  `metrics.serviceMonitor.bearerTokenSecret` block attaches the
+  Authorization header that `static_bearer` auth requires. The
+  previous chart left the dedicated listener unreachable from
+  Prometheus and never carried an auth header. Kustomize base
+  ServiceMonitor gains an inline comment clarifying that the
+  `port: http` default works only with inline metrics
+  (`MCP_HTTP_INLINE_METRICS_ENABLED=1`); use the Helm toggle or
+  layer an overlay for the dedicated-listener pattern.
+- **Postgres integration test gate fails loud when Testcontainers
+  unavailable.** `internal/controlplane/postgres` now honours an
+  `INTEGRATION_REQUIRED` env var that turns Testcontainers failure
+  into `t.Fatal` instead of `t.Skip`. The Makefile target
+  `test-postgres` sets the var so a Docker-less CI run can no longer
+  report green vacuously. Developer laptops without Docker keep the
+  historic skip behaviour by running `go test
+  -tags=postgres,integration` directly.
+
 ## [1.1.0] - 2026-04-22
 
 > **Scope note.** First minor release after v1.0.0 (2026-04-12).
