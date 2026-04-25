@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/apet97/go-clockify/internal/config"
-	"github.com/apet97/go-clockify/internal/controlplane"
 )
 
 // runDoctor is the `clockify-mcp doctor` subcommand. It audits the
@@ -19,7 +16,7 @@ import (
 // env var (explicit | profile | default | empty), and reports any
 // error Load() would raise at startup. Exit code is 0 on a clean
 // load, 2 on a Load() error, and 3 when --strict finds hosted-service
-// posture failures.
+// posture or backend-check failures.
 //
 // Invocation:
 //
@@ -61,9 +58,7 @@ func runDoctorReport(args []string, out io.Writer) int {
 		strictFindings = strictDoctorFindings(cfg, cfgErr, opts.allowBroadPolicy)
 	}
 	if opts.checkBackends && cfgErr == nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancel()
-		strictFindings = append(strictFindings, backendDoctorFindings(ctx, cfg)...)
+		strictFindings = append(strictFindings, backendDoctorFindings(cfg)...)
 	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
@@ -248,52 +243,6 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 		add("MCP_MTLS_TENANT_SOURCE", "hosted strict posture requires MCP_MTLS_TENANT_SOURCE=cert")
 	}
 
-	return findings
-}
-
-type backendDoctorChecker interface {
-	DoctorCheck(context.Context) error
-}
-
-func backendDoctorFindings(ctx context.Context, cfg config.Config) []doctorFinding {
-	var findings []doctorFinding
-	add := func(key, message string) {
-		findings = append(findings, doctorFinding{
-			Severity: "ERROR",
-			Key:      key,
-			Message:  message,
-		})
-	}
-
-	dsn := strings.TrimSpace(cfg.ControlPlaneDSN)
-	if !isDoctorPostgresDSN(dsn) {
-		add("MCP_CONTROL_PLANE_DSN", "--check-backends requires a postgres:// or postgresql:// control-plane DSN")
-		return findings
-	}
-
-	store, err := controlplane.Open(dsn, controlplane.WithAuditCap(cfg.ControlPlaneAuditCap))
-	if err != nil {
-		message := fmt.Sprintf("backend check failed opening control-plane store: %v", err)
-		if strings.Contains(err.Error(), "unsupported DSN scheme") {
-			message = "postgres backend requested but binary was not built with -tags=postgres"
-		}
-		add("MCP_CONTROL_PLANE_DSN", message)
-		return findings
-	}
-	defer func() {
-		if err := store.Close(); err != nil {
-			add("MCP_CONTROL_PLANE_DSN", fmt.Sprintf("backend check failed closing control-plane store: %v", err))
-		}
-	}()
-
-	checker, ok := store.(backendDoctorChecker)
-	if !ok {
-		add("MCP_CONTROL_PLANE_DSN", "postgres backend opened but does not expose doctor backend checks")
-		return findings
-	}
-	if err := checker.DoctorCheck(ctx); err != nil {
-		add("MCP_CONTROL_PLANE_DSN", fmt.Sprintf("postgres backend health check failed: %v", err))
-	}
 	return findings
 }
 

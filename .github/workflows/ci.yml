@@ -163,6 +163,10 @@ jobs:
         # docs/branch-protection.md says are not actually enforced.
         # Input is the static script path, not event data.
         run: sh scripts/check-governance-parity.sh
+      - name: Verify public launch checklist CLI parity
+        # Fails when the hosted launch checklist references CLI flags
+        # that cmd/clockify-mcp does not implement.
+        run: bash scripts/check-launch-checklist-parity.sh
 
   repo-hygiene:
     name: Repo hygiene
@@ -210,7 +214,16 @@ jobs:
         # in the scanner loop or response encoder would otherwise only
         # surface via user reports. Script takes no external input.
         run: bash scripts/smoke-stdio.sh
-      - name: Doctor strict smoke
+
+  doctor-strict:
+    name: Doctor strict smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+      - name: Run strict doctor smoke
         # Offline synthetic env only: verifies strict-mode flag
         # parsing and posture findings without requiring Postgres.
         run: bash scripts/smoke-doctor-strict.sh

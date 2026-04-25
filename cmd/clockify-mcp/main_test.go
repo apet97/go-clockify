@@ -67,6 +67,16 @@ func TestDoctorStrictProdPostgresPasses(t *testing.T) {
 	}
 }
 
+func TestDoctorStrictSyntheticConfigPasses(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(nil))
+	if code != 0 {
+		t.Fatalf("doctor --strict synthetic config exit = %d, want 0; output:\n%s", code, out)
+	}
+	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
+		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
+	}
+}
+
 func TestDoctorStrictAllowBroadPolicyFlag(t *testing.T) {
 	env := map[string]string{
 		"MCP_TRANSPORT":              "streamable_http",
@@ -203,6 +213,18 @@ func TestDoctorStrictMTLSRequiresCertTenantSource(t *testing.T) {
 	})
 	if code != 3 || !strings.Contains(out, "MCP_MTLS_TENANT_SOURCE") {
 		t.Fatalf("strict mtls tenant source exit/output mismatch: code=%d output:\n%s", code, out)
+	}
+}
+
+func TestDoctorStrictCheckBackendsPreservesLoadErrorExit(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict", "--check-backends"}, strictCleanDoctorEnv(map[string]string{
+		"MCP_AUDIT_DURABILITY": "sometimes",
+	}))
+	if code != 2 {
+		t.Fatalf("doctor load-error exit = %d, want 2; output:\n%s", code, out)
+	}
+	if !strings.Contains(out, "Load() result") || !strings.Contains(out, "invalid MCP_AUDIT_DURABILITY") {
+		t.Fatalf("doctor load-error output missing config failure:\n%s", out)
 	}
 }
 

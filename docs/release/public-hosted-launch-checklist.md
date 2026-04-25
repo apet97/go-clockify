@@ -9,6 +9,11 @@ control." Run through every section before opening the front door.
 - [ ] `clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0 against the deployment environment
 - [ ] strict-doctor output archived with the deploy PR or release notes
 
+`--check-backends` must be run with the Postgres-capable binary built with
+`-tags=postgres`. The default binary reports a strict finding explaining that
+Postgres backend checks require `-tags=postgres`; it does not silently pass
+hosted backend verification.
+
 ## Security
 - [ ] MCP_PROFILE=prod-postgres applied
 - [ ] MCP_OIDC_STRICT=1 (audience or resource URI bound)
@@ -25,6 +30,10 @@ control." Run through every section before opening the front door.
 - [ ] Migration 002_audit_phase applied and backend reachable (`clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0)
 - [ ] Audit retention (`MCP_CONTROL_PLANE_AUDIT_RETENTION`) set per compliance
 - [ ] Backup / restore runbook tested in staging within the last 90 days
+
+With the Postgres-capable binary, `--check-backends` verifies that the database
+is reachable, the control-plane backend opens cleanly, and the audit phase
+migration is visible through the audit write/read health check.
 
 ## CI / release
 - [ ] Docker smoke uses streamable_http with the static-bearer + memory + dev-backend env

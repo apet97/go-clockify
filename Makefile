@@ -4,7 +4,7 @@
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench \
         build-postgres test-postgres \
-        gen-tool-catalog catalog-drift doc-parity config-doc-parity \
+        gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         repo-hygiene release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -46,6 +46,10 @@ verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdi
 # exact heuristics.
 doc-parity:
 	bash scripts/check-doc-parity.sh
+	bash scripts/check-launch-checklist-parity.sh
+
+launch-checklist-parity:
+	bash scripts/check-launch-checklist-parity.sh
 
 # config-doc-parity re-renders cmd/clockify-mcp/help_generated.go and the
 # CONFIG-TABLE block in README.md from internal/config/AllSpecs() and
@@ -168,6 +172,8 @@ release-check:
 	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift
 	@echo "== release-check: hygiene + build-tag wiring =="
 	$(MAKE) repo-hygiene build-tags http-smoke stdio-smoke
+	@echo "== release-check: strict doctor smoke =="
+	$(MAKE) verify-doctor-strict
 	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
 	go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
 	@echo "== release-check: deploy render =="
