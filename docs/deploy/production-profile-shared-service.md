@@ -13,34 +13,54 @@ This document defines the single blessed production profile for deploying `clock
 
 ## Canonical Configuration
 
-For a production deployment, the following environment variables MUST be configured exactly as shown:
+The `shared-service` profile pins the strict hosted-service defaults below;
+operators only need to provide the deployment-specific values (DSN, issuer,
+audience). Apply via `MCP_PROFILE=shared-service` or
+`--profile=shared-service`. Use `prod-postgres` for the same posture plus
+`ENVIRONMENT=prod` enforcement.
 
 ```env
-# Transport: Spec-strict streamable HTTP (MCP 2025-03-26+)
-MCP_TRANSPORT=streamable_http
+MCP_PROFILE=shared-service
 
-# Control Plane: Postgres is mandatory for multi-process / HA
+# Operator-supplied (no profile defaults)
 MCP_CONTROL_PLANE_DSN=postgres://user:pass@db-host:5432/clockify_mcp?sslmode=verify-full
-
-# Auth: OIDC with JWT verification
-MCP_AUTH_MODE=oidc
 MCP_OIDC_ISSUER=https://auth.example.com/
 MCP_OIDC_AUDIENCE=clockify-mcp-shared
-# Hosted-service strict mode: rejects tokens that aren't bound to this
-# server (no audience/resource claim) and tokens missing an exp claim.
-MCP_OIDC_STRICT=1
-# Reject tokens whose tenant claim is empty rather than collapsing them
-# into MCP_DEFAULT_TENANT_ID. Required for any multi-tenant deployment.
-MCP_REQUIRE_TENANT_CLAIM=1
+# MCP_RESOURCE_URI=https://mcp.example.com   # optional RFC 8707 resource indicator
 
-# Observability: Dedicated metrics port
+# Pinned by the profile (override if you really know what you're doing):
+#   MCP_TRANSPORT=streamable_http
+#   MCP_AUTH_MODE=oidc
+#   MCP_AUDIT_DURABILITY=fail_closed
+#   MCP_HTTP_LEGACY_POLICY=deny
+#   MCP_OIDC_STRICT=1
+#   MCP_REQUIRE_TENANT_CLAIM=1
+#   MCP_DISABLE_INLINE_SECRETS=1
+#   CLOCKIFY_POLICY=time_tracking_safe
+
+# Observability: Dedicated metrics port (bind to localhost or scrape behind
+# a NetworkPolicy; never expose publicly).
 MCP_METRICS_BIND=:9091
 MCP_HTTP_INLINE_METRICS_ENABLED=false
-
-# Safety and Compliance
-MCP_AUDIT_DURABILITY=fail_closed
-CLOCKIFY_POLICY=safe_core
 ```
+
+### Strict-gate rationale
+
+Each profile-pinned strict flag closes a specific hosted-service
+footgun. Removing one without a documented reason re-introduces the
+finding it was added to fix.
+
+| Flag | What it does | Footgun without it |
+|---|---|---|
+| `MCP_OIDC_STRICT=1` | Reject tokens without `aud` matching `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI`; reject tokens missing `exp`. | Any-audience tokens minted by the same issuer for a different relying party are accepted. |
+| `MCP_REQUIRE_TENANT_CLAIM=1` | Reject tokens whose tenant claim is empty. | Tokens omitting the claim collapse into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across every misconfigured caller. |
+| `MCP_DISABLE_INLINE_SECRETS=1` | Reject credential refs with `backend=inline`. | Inline credentials sit in the control-plane DB and survive operator forgetfulness; vault-backed refs rotate on revoke. |
+| `CLOCKIFY_POLICY=time_tracking_safe` | Permit time-entry CRUD + tags; deny workspace-level project / client / task create writes. | The default `standard` policy lets an AI agent create projects in the operator's workspace without explicit consent. |
+
+The `time_tracking_safe` choice is the AI-facing default. Trusted-team
+deployments that genuinely need broader writes can override to
+`safe_core` (or higher) explicitly — the override path is preserved
+because the profile only writes to unset keys.
 
 ## TLS Proxy Requirements
 

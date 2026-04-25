@@ -27,6 +27,12 @@ func setProfileEnv(t *testing.T, profile string, overrides map[string]string) {
 		"MCP_HTTP_LEGACY_POLICY",
 		"CLOCKIFY_POLICY",
 		"ENVIRONMENT",
+		// Hosted-service strict gates added by the shared-service /
+		// prod-postgres profiles. TestProfile_HelperCoversAllProfileKeys
+		// keeps this list in lockstep with profile.go.
+		"MCP_OIDC_STRICT",
+		"MCP_REQUIRE_TENANT_CLAIM",
+		"MCP_DISABLE_INLINE_SECRETS",
 	}
 	for _, k := range profileControlled {
 		t.Setenv(k, "")
@@ -137,6 +143,7 @@ func TestProfile_SharedServiceRequiresExplicitDSN(t *testing.T) {
 	setProfileEnv(t, "shared-service", map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
 		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
 	})
 	cfg, err := Load()
@@ -163,8 +170,9 @@ func TestProfile_SharedServiceRequiresExplicitDSN(t *testing.T) {
 // backend not allowed for streamable_http" message.
 func TestProfile_SharedServiceFailsWithoutDSN(t *testing.T) {
 	setProfileEnv(t, "shared-service", map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_OIDC_ISSUER":  "https://issuer.example",
+		"CLOCKIFY_API_KEY":  "test-key",
+		"MCP_OIDC_ISSUER":   "https://issuer.example",
+		"MCP_OIDC_AUDIENCE": "clockify-mcp-shared",
 	})
 	_, err := Load()
 	if err == nil {
@@ -182,6 +190,7 @@ func TestProfile_ProdPostgresEnforcesEnvironment(t *testing.T) {
 	setProfileEnv(t, "prod-postgres", map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
 		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
 	})
 	cfg, err := Load()
@@ -201,6 +210,7 @@ func TestProfile_ProdPostgresRejectsNonPostgresDSN(t *testing.T) {
 	setProfileEnv(t, "prod-postgres", map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
 		"MCP_CONTROL_PLANE_DSN": "memory",
 	})
 	_, err := Load()
@@ -219,6 +229,7 @@ func TestProfile_OverridesWin(t *testing.T) {
 	setProfileEnv(t, "shared-service", map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
 		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
 		// Explicit operator override — profile default is fail_closed.
 		"MCP_AUDIT_DURABILITY": "best_effort",
@@ -286,6 +297,109 @@ func TestProfile_KeysAreSpecced(t *testing.T) {
 				t.Errorf("profile %s references env var %q with no EnvSpec entry", p.Name, k)
 			}
 		}
+	}
+}
+
+// TestProfile_SharedServiceIsStrict locks the four hosted-service
+// strict flags (MCP_OIDC_STRICT, MCP_REQUIRE_TENANT_CLAIM,
+// MCP_DISABLE_INLINE_SECRETS, CLOCKIFY_POLICY=time_tracking_safe)
+// onto the shared-service profile. Drift here re-introduces the C1
+// finding from the 2026-04-25 audit: a hosted-service profile that
+// silently accepts any-audience tokens, falls back to a default tenant
+// when the claim is missing, allows inline secrets, and ships a broad
+// write policy.
+func TestProfile_SharedServiceIsStrict(t *testing.T) {
+	setProfileEnv(t, "shared-service", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.OIDCStrict {
+		t.Errorf("OIDCStrict = false, want true (shared-service must reject any-audience tokens)")
+	}
+	if !cfg.RequireTenantClaim {
+		t.Errorf("RequireTenantClaim = false, want true (multi-tenant must reject missing claim)")
+	}
+	if !cfg.DisableInlineSecrets {
+		t.Errorf("DisableInlineSecrets = false, want true (hosted service must reject inline secrets)")
+	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
+		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe (broader policies require explicit operator opt-in)", got)
+	}
+	// Assert the policy is not broader than safe_core. time_tracking_safe
+	// and read_only are stricter; safe_core is borderline-acceptable for
+	// trusted-team deployments; standard / full are explicit operator
+	// choices that should never be a profile default.
+	switch got := os.Getenv("CLOCKIFY_POLICY"); got {
+	case "read_only", "time_tracking_safe", "safe_core":
+		// allowed
+	case "standard", "full":
+		t.Errorf("CLOCKIFY_POLICY default %q is broader than safe_core; profile must not lower the bar", got)
+	default:
+		t.Errorf("CLOCKIFY_POLICY = %q, expected one of read_only/time_tracking_safe/safe_core", got)
+	}
+}
+
+// TestProfile_ProdPostgresIsStrict mirrors the shared-service strict
+// check for the prod-postgres profile, which is the canonical hosted-
+// service preset. ENVIRONMENT=prod is already covered by
+// TestProfile_ProdPostgresEnforcesEnvironment; this test pins the four
+// strict gates that turn the audit C1 finding from "self-hosted-only"
+// into "hosted-service-locked".
+func TestProfile_ProdPostgresIsStrict(t *testing.T) {
+	setProfileEnv(t, "prod-postgres", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.OIDCStrict {
+		t.Errorf("OIDCStrict = false, want true (prod-postgres)")
+	}
+	if !cfg.RequireTenantClaim {
+		t.Errorf("RequireTenantClaim = false, want true (prod-postgres)")
+	}
+	if !cfg.DisableInlineSecrets {
+		t.Errorf("DisableInlineSecrets = false, want true (prod-postgres)")
+	}
+	if got := os.Getenv("ENVIRONMENT"); got != "prod" {
+		t.Errorf("ENVIRONMENT = %q, want prod", got)
+	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
+		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe", got)
+	}
+}
+
+// TestProfile_SharedServiceStrictOverrideHonoured asserts the load-
+// bearing invariant: explicit operator env always beats a profile
+// default, even for the strict-gate flags. An operator who genuinely
+// wants OIDCStrict off (for staging against a misconfigured issuer,
+// say) must be able to flip it back via env without removing the
+// profile.
+func TestProfile_SharedServiceStrictOverrideHonoured(t *testing.T) {
+	setProfileEnv(t, "shared-service", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+		// Explicit operator override — profile default is "1".
+		"MCP_REQUIRE_TENANT_CLAIM": "0",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.RequireTenantClaim {
+		t.Fatalf("RequireTenantClaim = true; explicit override (MCP_REQUIRE_TENANT_CLAIM=0) must beat the profile default")
 	}
 }
 

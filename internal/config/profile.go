@@ -56,12 +56,36 @@ var allProfilesSlice = []Profile{
 	},
 	{
 		Name:    "shared-service",
-		Summary: "Multi-tenant streamable HTTP with postgres control plane, OIDC auth, fail-closed audit",
+		Summary: "Multi-tenant streamable HTTP with postgres control plane, OIDC strict, tenant-claim required, fail-closed audit",
 		Env: map[string]string{
 			"MCP_TRANSPORT":          "streamable_http",
 			"MCP_AUTH_MODE":          "oidc",
 			"MCP_AUDIT_DURABILITY":   "fail_closed",
 			"MCP_HTTP_LEGACY_POLICY": "deny",
+			// Hosted-service strict gates. Each of these defaults
+			// could be set via env separately, but a multi-tenant
+			// hosted deployment that turns any of them off is doing
+			// something dangerous (see ADR-0015 §"hosted strict gates"
+			// for the rationale matrix). Bundling them in the profile
+			// makes the strict posture the default and forces an
+			// explicit operator opt-out.
+			//
+			// MCP_OIDC_STRICT=1 — reject tokens missing exp; require
+			//   audience or resource URI binding (Config.Load gate).
+			// MCP_REQUIRE_TENANT_CLAIM=1 — reject tokens without a
+			//   tenant claim instead of falling back to the shared
+			//   default tenant (catastrophic in multi-tenant mode).
+			// MCP_DISABLE_INLINE_SECRETS=1 — reject credential refs
+			//   with backend=inline. Inline secrets sit in the
+			//   control-plane DB and survive operator forgetfulness;
+			//   external vault references rotate on revoke.
+			// CLOCKIFY_POLICY=time_tracking_safe — AI-facing untrusted
+			//   default. safe_core / standard / full remain available
+			//   for trusted-team deployments via explicit override.
+			"MCP_OIDC_STRICT":            "1",
+			"MCP_REQUIRE_TENANT_CLAIM":   "1",
+			"MCP_DISABLE_INLINE_SECRETS": "1",
+			"CLOCKIFY_POLICY":            "time_tracking_safe",
 		},
 	},
 	{
@@ -75,13 +99,17 @@ var allProfilesSlice = []Profile{
 	},
 	{
 		Name:    "prod-postgres",
-		Summary: "Shared-service with ENVIRONMENT=prod — existing prod guards refuse to start without postgres DSN",
+		Summary: "Shared-service strict + ENVIRONMENT=prod — postgres DSN required, fail-closed everywhere",
 		Env: map[string]string{
-			"MCP_TRANSPORT":          "streamable_http",
-			"MCP_AUTH_MODE":          "oidc",
-			"MCP_AUDIT_DURABILITY":   "fail_closed",
-			"MCP_HTTP_LEGACY_POLICY": "deny",
-			"ENVIRONMENT":            "prod",
+			"MCP_TRANSPORT":              "streamable_http",
+			"MCP_AUTH_MODE":              "oidc",
+			"MCP_AUDIT_DURABILITY":       "fail_closed",
+			"MCP_HTTP_LEGACY_POLICY":     "deny",
+			"ENVIRONMENT":                "prod",
+			"MCP_OIDC_STRICT":            "1",
+			"MCP_REQUIRE_TENANT_CLAIM":   "1",
+			"MCP_DISABLE_INLINE_SECRETS": "1",
+			"CLOCKIFY_POLICY":            "time_tracking_safe",
 		},
 	},
 }
