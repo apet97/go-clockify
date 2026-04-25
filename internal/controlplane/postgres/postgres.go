@@ -233,16 +233,24 @@ func (s *Store) AppendAuditEvent(event controlplane.AuditEvent) error {
 	metadata, _ := json.Marshal(mapOrEmpty(event.Metadata))
 	externalID := event.ID
 	if externalID == "" {
-		externalID = fmt.Sprintf("%d-%s-%s", event.At.UnixNano(), event.SessionID, event.Tool)
+		// The two-phase audit emits intent + outcome with the same
+		// (At, SessionID, Tool) tuple, so the synthesised external_id
+		// must include Phase to keep the ON CONFLICT (external_id) DO
+		// NOTHING from collapsing the pair into a single row.
+		externalID = fmt.Sprintf("%d-%s-%s-%s", event.At.UnixNano(), event.SessionID, event.Tool, event.Phase)
 	}
+	// Migration 002_audit_phase.sql adds the phase column; old
+	// audit_events rows pre-dating the migration default to ''. The
+	// JSON omitempty tag keeps consumers that don't know about phase
+	// from breaking on legacy single-shot records.
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO audit_events (external_id, at, tenant_id, subject, session_id,
-		                        transport, tool, action, outcome, reason,
+		                        transport, tool, action, outcome, phase, reason,
 		                        resource_ids, metadata)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		ON CONFLICT (external_id) DO NOTHING`,
 		externalID, event.At.UTC(), event.TenantID, event.Subject, event.SessionID,
-		event.Transport, event.Tool, event.Action, event.Outcome, event.Reason,
+		event.Transport, event.Tool, event.Action, event.Outcome, event.Phase, event.Reason,
 		resourceIDs, metadata)
 	return err
 }

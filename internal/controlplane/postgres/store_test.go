@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -250,6 +251,126 @@ func TestMigrationIdempotence(t *testing.T) {
 		t.Fatalf("second open: %v", err)
 	}
 	_ = second.Close()
+}
+
+// TestAuditPhasePersists writes one audit event for each of the
+// three Phase variants (intent, outcome, "" legacy) and asserts the
+// `phase` column round-trips. Migration 002_audit_phase.sql added the
+// column and AppendAuditEvent's INSERT was updated to name it; this
+// test is the regression guard against either change being silently
+// reverted.
+//
+// The store interface intentionally has no "list audit events"
+// method — audit data is read by external tooling — so the test
+// queries the Postgres pool directly using the same DSN the store
+// is wired against.
+func TestAuditPhasePersists(t *testing.T) {
+	dsnStr := dsn(t)
+	s := openStore(t)
+
+	now := time.Now().UTC().Truncate(time.Second)
+	cases := []struct {
+		id    string
+		phase string
+	}{
+		{"phase-intent", "intent"},
+		{"phase-outcome", "outcome"},
+		{"phase-legacy", ""},
+	}
+	for i, tc := range cases {
+		err := s.AppendAuditEvent(controlplane.AuditEvent{
+			ID:      tc.id,
+			At:      now.Add(time.Duration(i) * time.Second),
+			Tool:    "clockify_log_time",
+			Action:  "tools/call",
+			Outcome: "success",
+			Phase:   tc.phase,
+		})
+		if err != nil {
+			t.Fatalf("AppendAuditEvent %s: %v", tc.id, err)
+		}
+	}
+
+	pool, err := pgxpool.New(context.Background(), dsnStr)
+	if err != nil {
+		t.Fatalf("pgxpool: %v", err)
+	}
+	defer pool.Close()
+
+	for _, tc := range cases {
+		var got string
+		err := pool.QueryRow(context.Background(),
+			`SELECT phase FROM audit_events WHERE external_id = $1`, tc.id).Scan(&got)
+		if err != nil {
+			t.Fatalf("query phase for %s: %v", tc.id, err)
+		}
+		if got != tc.phase {
+			t.Errorf("audit_events.phase for %s = %q, want %q", tc.id, got, tc.phase)
+		}
+	}
+
+	// idx_audit_events_phase from migration 002 is the canonical way
+	// to validate the migration ran; the column-existence check above
+	// already proves that, so the index check is belt-and-suspenders
+	// against a future migration that drops the column but forgets the
+	// index. Explicit pg_indexes lookup keeps the assertion honest if
+	// future Postgres versions tighten what shows up there.
+	var indexExists bool
+	err = pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM pg_indexes WHERE tablename = 'audit_events' AND indexname = 'idx_audit_events_phase')`).
+		Scan(&indexExists)
+	if err != nil {
+		t.Fatalf("query phase index: %v", err)
+	}
+	if !indexExists {
+		t.Errorf("idx_audit_events_phase missing — migration 002 did not run")
+	}
+}
+
+// TestAuditPhaseSyntheticExternalID confirms that two events with the
+// same (At, SessionID, Tool) but different Phase produce distinct
+// rows when the caller does not supply an explicit ID. The synthesised
+// external_id must include Phase or the ON CONFLICT (external_id) DO
+// NOTHING clause silently collapses intent+outcome into a single row.
+func TestAuditPhaseSyntheticExternalID(t *testing.T) {
+	dsnStr := dsn(t)
+	s := openStore(t)
+
+	now := time.Now().UTC().Truncate(time.Second)
+	common := controlplane.AuditEvent{
+		At:        now,
+		SessionID: "synthetic-id-test",
+		Tool:      "clockify_delete_entry",
+		Action:    "tools/call",
+		Outcome:   "success",
+	}
+	intent := common
+	intent.Phase = "intent"
+	outcome := common
+	outcome.Phase = "outcome"
+	if err := s.AppendAuditEvent(intent); err != nil {
+		t.Fatalf("intent: %v", err)
+	}
+	if err := s.AppendAuditEvent(outcome); err != nil {
+		t.Fatalf("outcome: %v", err)
+	}
+
+	pool, err := pgxpool.New(context.Background(), dsnStr)
+	if err != nil {
+		t.Fatalf("pgxpool: %v", err)
+	}
+	defer pool.Close()
+
+	var count int
+	err = pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM audit_events WHERE session_id = $1 AND phase IN ('intent','outcome')`,
+		common.SessionID).Scan(&count)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected 2 rows (intent + outcome) with same At/SessionID/Tool; got %d", count)
+	}
 }
 
 // TestConcurrentAudit hammers AppendAuditEvent from N goroutines. The
