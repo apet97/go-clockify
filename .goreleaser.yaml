@@ -94,6 +94,46 @@ builds:
       - -X main.buildDate={{.CommitDate}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Hosted-service Postgres build target. Default binaries are stdlib
+  # only by deliberate design (ADR 0001 keeps pgx out of the top-level
+  # go.mod); operators running the public hosted control-plane need a
+  # binary that links pgx so `doctor --strict --check-backends` and the
+  # production runtime can reach a real Postgres. The `postgres` tag
+  # blank-imports internal/controlplane/postgres in cmd/clockify-mcp's
+  # postgres_on.go, which registers the pgx-backed opener with
+  # controlplane.Open. Archives are named clockify-mcp-postgres-{os}-{arch}
+  # so operators can tell them apart from the default and FIPS matrices,
+  # and the public-hosted launch checklist in
+  # docs/release/public-hosted-launch-checklist.md links to these
+  # filenames as the canonical hosted-deploy artifacts.
+  #
+  # Linux only (and just amd64 + arm64) because the documented hosted
+  # deployment target is Linux containers / VMs; Postgres-on-Mac and
+  # Postgres-on-Windows builds are not part of the supported launch
+  # surface and would balloon the release matrix without an operator
+  # asking for them. Self-builders on those platforms can run
+  # `go build -tags=postgres` locally.
+  - id: clockify-mcp-postgres
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp-postgres
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -tags=postgres
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
   - id: clockify-mcp
     ids:
@@ -113,6 +153,16 @@ archives:
     formats: [binary]
     name_template: >-
       {{ .ProjectName }}-fips-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: clockify-mcp-postgres
+    ids:
+      - clockify-mcp-postgres
+    formats: [binary]
+    name_template: >-
+      {{ .ProjectName }}-postgres-
       {{- .Os }}-
       {{- if eq .Arch "amd64" }}x64
       {{- else if eq .Arch "arm64" }}arm64

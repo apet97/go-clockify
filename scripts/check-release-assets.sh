@@ -21,11 +21,12 @@
 # catches both drops (missing SBOM, missing signature) and accidents
 # (second SBOM format, rogue matrix entry) at the source.
 #
-# Expected matrix (28 artifacts), derived from .goreleaser.yaml:
+# Expected matrix (34 artifacts), derived from .goreleaser.yaml:
 #   - 5 default binaries   (darwin-{arm64,x64}, linux-{arm64,x64}, windows-x64.exe)
 #   - 4 FIPS binaries      (darwin-{arm64,x64}, linux-{arm64,x64}; windows skipped)
-#   - 9 SPDX SBOMs         (one per binary, via syft, `*.spdx.json`)
-#   - 9 sigstore bundles   (one per binary, via cosign, `*.sigstore.json`)
+#   - 2 Postgres binaries  (linux-{arm64,x64}; hosted-service deploy target)
+#   - 11 SPDX SBOMs        (one per binary, via syft, `*.spdx.json`)
+#   - 11 sigstore bundles  (one per binary, via cosign, `*.sigstore.json`)
 #   - 1 SHA256SUMS.txt
 #
 # Usage:
@@ -63,6 +64,15 @@ FIPS_PLATFORMS=(
     "linux-x64"
 )
 
+# Postgres build matrix is Linux-only. The hosted launch checklist
+# documents these binaries as the official supported deploy artifacts;
+# the matrix exists to keep operators off `go build -tags=postgres`
+# self-builds for production hosted deployments.
+POSTGRES_PLATFORMS=(
+    "linux-arm64"
+    "linux-x64"
+)
+
 expected=()
 
 # Default build: 4 unix binaries + 1 windows binary, each with SBOM and sig.
@@ -82,12 +92,21 @@ for p in "${FIPS_PLATFORMS[@]}"; do
     expected+=("clockify-mcp-fips-$p.sigstore.json")
 done
 
+# Postgres build: 2 linux binaries (other OS/arch intentionally skipped).
+# Each binary gets a SBOM and cosign sigstore bundle just like the
+# default and FIPS binaries.
+for p in "${POSTGRES_PLATFORMS[@]}"; do
+    expected+=("clockify-mcp-postgres-$p")
+    expected+=("clockify-mcp-postgres-$p.spdx.json")
+    expected+=("clockify-mcp-postgres-$p.sigstore.json")
+done
+
 expected+=("SHA256SUMS.txt")
 
-# Sanity-check: the array must have exactly 28 entries. If the matrix
+# Sanity-check: the array must have exactly 34 entries. If the matrix
 # above is edited without updating this number (or vice versa), fail
 # loudly so the mismatch can't ship.
-EXPECTED_COUNT=28
+EXPECTED_COUNT=34
 if [ "${#expected[@]}" -ne "$EXPECTED_COUNT" ]; then
     printf 'BUG: expected array has %d entries, script says %d\n' \
         "${#expected[@]}" "$EXPECTED_COUNT" >&2
@@ -157,11 +176,11 @@ fi
 # walk dist/ recursively and deduplicate by basename.
 # Published-artifact name shape:
 #   SHA256SUMS.txt
-#   clockify-mcp[-fips]-<os>-<arch>[.exe][.spdx.json|.sigstore.json]
-# Goreleaser's intermediate binary IDs `clockify-mcp` and
-# `clockify-mcp-fips` (no os/arch suffix) are NOT published assets and
-# must be filtered out of the count.
-ASSET_RE='^(clockify-mcp(-fips)?-(darwin|linux|windows)-(arm64|x64)(\.exe)?(\.spdx\.json|\.sigstore\.json)?|SHA256SUMS\.txt)$'
+#   clockify-mcp[-fips|-postgres]-<os>-<arch>[.exe][.spdx.json|.sigstore.json]
+# Goreleaser's intermediate binary IDs `clockify-mcp`, `clockify-mcp-fips`,
+# and `clockify-mcp-postgres` (no os/arch suffix) are NOT published assets
+# and must be filtered out of the count.
+ASSET_RE='^(clockify-mcp(-fips|-postgres)?-(darwin|linux|windows)-(arm64|x64)(\.exe)?(\.spdx\.json|\.sigstore\.json)?|SHA256SUMS\.txt)$'
 
 if [ -f "$artifacts_json" ] && command -v jq >/dev/null 2>&1; then
     found_names=()
