@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -29,10 +30,22 @@ import (
 // set (local `go run`, `go build` without flags), so the /metrics build_info
 // gauge always emits a sample.
 var (
-	version   = "1.0.0"
+	version   = "dev"
 	commit    = "unknown"
 	buildDate = "unknown"
 )
+
+func effectiveVersion() string {
+	if version != "" && version != "dev" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		if bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+			return bi.Main.Version
+		}
+	}
+	return version
+}
 
 func main() {
 	// Run the FIPS startup assertion first. Default build is a no-op.
@@ -54,7 +67,7 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "--version", "-v":
-			fmt.Println(version)
+			fmt.Println(effectiveVersion())
 			os.Exit(0)
 		case "--help", "-h":
 			printHelp()
@@ -94,8 +107,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	effective := effectiveVersion()
 	rt, err := svcruntime.New(cfg, svcruntime.NewOpts{
-		Version:       version,
+		Version:       effective,
 		ExtraHandlers: pprofExtras(),
 	})
 	if err != nil {
@@ -107,11 +121,11 @@ func run() error {
 	// once the server is built.
 	metrics.BuildInfo.SetFunc(
 		func() float64 { return 1 },
-		version, commit, buildDate, runtime.Version(),
+		effective, commit, buildDate, runtime.Version(),
 	)
 
 	slog.Info("server_start",
-		"version", version,
+		"version", effective,
 		"policy", string(rt.Policy().Mode),
 		"bootstrap", rt.Bootstrap().Mode.String(),
 		"transport", cfg.Transport,
@@ -205,7 +219,7 @@ func printHelp() {
 	// are the least of our problems. Explicit _, _ = satisfies the
 	// errcheck linter.
 	w := os.Stderr
-	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — MCP server for Clockify\n\n", version)
+	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — MCP server for Clockify\n\n", effectiveVersion())
 	_, _ = fmt.Fprintln(w, "Usage:")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] Audit effective configuration (exit 0=OK, 2=ERROR)")
