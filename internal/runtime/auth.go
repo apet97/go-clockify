@@ -31,5 +31,7 @@ func buildAuthnConfig(cfg config.Config) authn.Config {
 		ForwardTenantHeader:  cfg.ForwardTenantHeader,
 		ForwardSubjectHeader: cfg.ForwardSubjectHeader,
 		MTLSTenantHeader:     cfg.MTLSTenantHeader,
+		MTLSTenantSource:     cfg.MTLSTenantSource,
+		RequireMTLSTenant:    cfg.RequireMTLSTenant,
 	}
 }

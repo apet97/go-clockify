@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -259,7 +260,12 @@ func TestMTLSAuthenticate(t *testing.T) {
 		}
 	})
 
-	t.Run("explicit_tenant_header_overrides_org", func(t *testing.T) {
+	t.Run("default_cert_source_ignores_tenant_header", func(t *testing.T) {
+		// Under the default MTLSTenantSource="cert", an X-Tenant-ID
+		// header from the client must NOT override the cert-derived
+		// tenant. This is the load-bearing security invariant for
+		// direct native mTLS — see TestMTLSIgnoresTenantHeaderWhenSourceCert
+		// for the explicit drift check.
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("X-Tenant-ID", "team-charlie")
 		req.TLS = &tls.ConnectionState{
@@ -269,8 +275,8 @@ func TestMTLSAuthenticate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if p.TenantID != "team-charlie" {
-			t.Fatalf("tenant: got %q", p.TenantID)
+		if p.TenantID != "Acme Corp" {
+			t.Fatalf("tenant should come from cert Org under default source, got %q", p.TenantID)
 		}
 	})
 
@@ -288,6 +294,273 @@ func TestMTLSAuthenticate(t *testing.T) {
 			t.Fatalf("default tenant: got %q", p.TenantID)
 		}
 	})
+}
+
+// mtlsRequest is a small fixture builder for the cert-source tests.
+// It builds an httptest.Request with a fabricated VerifiedChains so
+// the authenticator's r.TLS guard passes without a real handshake.
+func mtlsRequest(leaf *x509.Certificate, headers map[string]string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	req.TLS = &tls.ConnectionState{
+		VerifiedChains: [][]*x509.Certificate{{leaf}},
+	}
+	return req
+}
+
+// TestMTLSIgnoresTenantHeaderWhenSourceCert pins the security
+// invariant: under MTLSTenantSource="cert" (the default), an
+// X-Tenant-ID header from the client MUST NOT influence tenant
+// identity. This is the regression guard for the audit finding that
+// said "native mTLS quietly trusted X-Tenant-ID, letting any
+// authenticated client claim any tenant."
+func TestMTLSIgnoresTenantHeaderWhenSourceCert(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   "alice",
+			Organization: []string{"cert-tenant"},
+		},
+	}
+	req := mtlsRequest(leaf, map[string]string{"X-Tenant-ID": "evil-attacker"})
+	p, err := auth.Authenticate(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.TenantID != "cert-tenant" {
+		t.Fatalf("cert source must ignore tenant header; got %q (header was %q)", p.TenantID, "evil-attacker")
+	}
+	if got := p.Claims["tenant_source"]; got != "cert" {
+		t.Errorf("expected Claims[tenant_source]=cert, got %q", got)
+	}
+}
+
+// TestMTLSRejectsMissingTenantWhenRequired exercises the
+// RequireMTLSTenant gate: a cert with no URI SAN and no Subject Org
+// must be rejected (rather than silently collapsing to
+// DefaultTenantID) when the operator has opted into the strict
+// posture.
+func TestMTLSRejectsMissingTenantWhenRequired(t *testing.T) {
+	auth, err := New(Config{
+		Mode:              ModeMTLS,
+		DefaultTenantID:   "fallback",
+		MTLSTenantSource:  "cert",
+		RequireMTLSTenant: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare := &x509.Certificate{Subject: pkix.Name{CommonName: "noorg"}}
+	req := mtlsRequest(bare, nil)
+	if _, err := auth.Authenticate(context.Background(), req); err == nil {
+		t.Fatal("expected rejection for cert with no tenant identity under RequireMTLSTenant=true, got success")
+	}
+	// Sanity: the same cert with the strict gate off falls back to
+	// DefaultTenantID. Drift here means we accidentally tightened the
+	// default for self-hosted deployments.
+	loose, err := New(Config{Mode: ModeMTLS, DefaultTenantID: "fallback", MTLSTenantSource: "cert"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := loose.Authenticate(context.Background(), mtlsRequest(bare, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.TenantID != "fallback" {
+		t.Errorf("loose mode should fall back to DefaultTenantID; got %q", p.TenantID)
+	}
+}
+
+// TestMTLSHeaderSourceOnlyWorksWhenExplicit confirms the inverse:
+// MTLSTenantSource="header" honours X-Tenant-ID and ignores the cert's
+// Organization. Use case is "upstream proxy terminates mTLS, validates
+// it, and stamps the tenant header from a trusted source."
+func TestMTLSHeaderSourceOnlyWorksWhenExplicit(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "header",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   "alice",
+			Organization: []string{"cert-tenant"},
+		},
+	}
+	req := mtlsRequest(leaf, map[string]string{"X-Tenant-ID": "header-tenant"})
+	p, err := auth.Authenticate(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.TenantID != "header-tenant" {
+		t.Fatalf("header source must honour tenant header, got %q", p.TenantID)
+	}
+
+	// Header missing → fall back to DefaultTenantID (cert is NOT
+	// consulted under "header" — the operator explicitly chose to
+	// trust only the proxy).
+	bare := mtlsRequest(leaf, nil)
+	p2, err := auth.Authenticate(context.Background(), bare)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p2.TenantID != "fallback" {
+		t.Errorf("header source must NOT fall back to cert org; got %q", p2.TenantID)
+	}
+}
+
+// TestMTLSHeaderOrCertPrefersHeader exercises the migration-window
+// hybrid: MTLSTenantSource="header_or_cert" trusts the header when
+// present, falls back to the cert when absent.
+func TestMTLSHeaderOrCertPrefersHeader(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "header_or_cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   "alice",
+			Organization: []string{"cert-tenant"},
+		},
+	}
+
+	// Header present → header wins.
+	pHeader, err := auth.Authenticate(context.Background(), mtlsRequest(leaf, map[string]string{"X-Tenant-ID": "header-tenant"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pHeader.TenantID != "header-tenant" {
+		t.Errorf("header_or_cert with header set: got %q, want header-tenant", pHeader.TenantID)
+	}
+
+	// Header absent → cert Org used.
+	pCert, err := auth.Authenticate(context.Background(), mtlsRequest(leaf, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pCert.TenantID != "cert-tenant" {
+		t.Errorf("header_or_cert with no header: got %q, want cert-tenant", pCert.TenantID)
+	}
+}
+
+// TestMTLSTenantFromCertificateURI exercises the URI SAN extraction
+// preference. Both clockify-mcp://tenant/<id> and
+// spiffe://*/tenant/<id> must resolve, and a URI SAN must beat the
+// Subject Organization fallback.
+func TestMTLSTenantFromCertificateURI(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name     string
+		uriRaw   string
+		wantTen  string
+		wantSubj string
+		org      string // fallback shouldn't be used
+	}{
+		{
+			name:     "clockify_mcp_uri_san",
+			uriRaw:   "clockify-mcp://tenant/team-alpha",
+			wantTen:  "team-alpha",
+			wantSubj: "alice",
+			org:      "should-not-be-used",
+		},
+		{
+			name:     "spiffe_uri_san",
+			uriRaw:   "spiffe://example.org/ns/prod/tenant/team-bravo/sa/runner",
+			wantTen:  "team-bravo",
+			wantSubj: "alice",
+			org:      "should-not-be-used",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, parseErr := urlParseHelper(t, tc.uriRaw)
+			if parseErr != nil {
+				t.Fatalf("parse fixture URI: %v", parseErr)
+			}
+			leaf := &x509.Certificate{
+				Subject: pkix.Name{
+					CommonName:   tc.wantSubj,
+					Organization: []string{tc.org},
+				},
+				URIs: []*url.URL{u},
+			}
+			p, err := auth.Authenticate(context.Background(), mtlsRequest(leaf, nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if p.TenantID != tc.wantTen {
+				t.Errorf("tenant: got %q, want %q", p.TenantID, tc.wantTen)
+			}
+			if p.Subject != tc.wantSubj {
+				t.Errorf("subject: got %q, want %q", p.Subject, tc.wantSubj)
+			}
+		})
+	}
+}
+
+// TestMTLSTenantFromCertificateOrganizationFallback confirms the
+// historical Subject Organization path still works when no URI SAN
+// matches. This is the back-compat path for self-hosted deployments
+// that haven't moved to URI SANs yet.
+func TestMTLSTenantFromCertificateOrganizationFallback(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// URI SAN that doesn't match the tenant pattern — must NOT short
+	// circuit ahead of the Org fallback.
+	other, _ := urlParseHelper(t, "spiffe://example.org/ns/prod/sa/runner")
+	leaf := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   "alice",
+			Organization: []string{"team-charlie"},
+		},
+		URIs: []*url.URL{other},
+	}
+	p, err := auth.Authenticate(context.Background(), mtlsRequest(leaf, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.TenantID != "team-charlie" {
+		t.Fatalf("fallback to Org failed: got %q", p.TenantID)
+	}
+}
+
+func urlParseHelper(t *testing.T, raw string) (*url.URL, error) {
+	t.Helper()
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 // TestDecodeJWT covers decodeJWT directly with hand-crafted tokens so the

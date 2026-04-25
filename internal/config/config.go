@@ -85,6 +85,18 @@ type Config struct {
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
+	// MTLSTenantSource selects how the mtls authenticator derives the
+	// tenant identifier. "cert" (default) uses the verified client
+	// certificate (URI SAN → Subject O fallback). "header" honours the
+	// MTLSTenantHeader. "header_or_cert" tries the header first, then
+	// the cert. Wired from MCP_MTLS_TENANT_SOURCE.
+	MTLSTenantSource string
+	// RequireMTLSTenant rejects authentication when the configured
+	// tenant source(s) yield no tenant. Wired from
+	// MCP_REQUIRE_MTLS_TENANT=1; default false preserves the
+	// historical "fall back to MCP_DEFAULT_TENANT_ID" behaviour for
+	// self-hosted single-tenant deployments.
+	RequireMTLSTenant bool
 
 	// Tool execution
 	ToolTimeout               time.Duration
@@ -349,6 +361,16 @@ func Load() (Config, error) {
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
+	cfg.MTLSTenantSource = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_SOURCE"))
+	if cfg.MTLSTenantSource == "" {
+		cfg.MTLSTenantSource = "cert"
+	}
+	switch cfg.MTLSTenantSource {
+	case "cert", "header", "header_or_cert":
+	default:
+		return Config{}, fmt.Errorf("invalid MCP_MTLS_TENANT_SOURCE %q: must be \"cert\", \"header\", or \"header_or_cert\"", cfg.MTLSTenantSource)
+	}
+	cfg.RequireMTLSTenant = os.Getenv("MCP_REQUIRE_MTLS_TENANT") == "1"
 	cfg.OIDCStrict = os.Getenv("MCP_OIDC_STRICT") == "1"
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
 	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"

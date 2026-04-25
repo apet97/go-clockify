@@ -57,6 +57,30 @@ type Config struct {
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
+	// MTLSTenantSource selects how the mtls authenticator derives the
+	// tenant identifier. Valid values:
+	//   "cert"           — verified client certificate only (URI SAN
+	//                      patterns clockify-mcp://tenant/<id> or
+	//                      spiffe://.../tenant/<id>, then Subject
+	//                      Organization fallback). Default; the only
+	//                      sound choice for direct native mTLS because
+	//                      a client-controlled header would let any
+	//                      authenticated client claim any tenant.
+	//   "header"         — request header (MTLSTenantHeader) only.
+	//                      Reserve for deployments where an upstream
+	//                      proxy terminates mTLS, validates it, and
+	//                      stamps the tenant header from a trusted
+	//                      source after stripping any client copy.
+	//   "header_or_cert" — header first, then cert. Hybrid; mainly
+	//                      useful for the brief window of migrating
+	//                      from header-based to cert-based identity.
+	// Empty string is treated as "cert" (the safe default).
+	MTLSTenantSource string
+	// RequireMTLSTenant rejects authentication when no tenant could be
+	// derived from the configured source(s). Default false retains the
+	// historical "fall back to DefaultTenantID" behaviour for
+	// self-hosted single-tenant deployments.
+	RequireMTLSTenant bool
 	// OIDCResourceURI is the canonical resource URI this server represents
 	// per RFC 8707 (OAuth 2.0 Resource Indicators) and the MCP OAuth 2.1
 	// profile. When set, every OIDC token must list this URI in its `aud`
@@ -110,6 +134,13 @@ func New(cfg Config) (Authenticator, error) {
 	}
 	if cfg.MTLSTenantHeader == "" {
 		cfg.MTLSTenantHeader = "X-Tenant-ID"
+	}
+	if cfg.MTLSTenantSource == "" {
+		// Default to certificate-derived tenant identity. A header-
+		// based default would let any authenticated client claim any
+		// tenant by setting X-Tenant-ID, which inverts the trust
+		// model of native mTLS.
+		cfg.MTLSTenantSource = "cert"
 	}
 	switch cfg.Mode {
 	case "", ModeStaticBearer:
@@ -188,11 +219,38 @@ func (a mtlsAuthenticator) Authenticate(_ context.Context, r *http.Request) (Pri
 	if subject == "" {
 		subject = strings.TrimSpace(leaf.Subject.String())
 	}
-	tenant := strings.TrimSpace(r.Header.Get(a.cfg.MTLSTenantHeader))
-	if tenant == "" && len(leaf.Subject.Organization) > 0 {
-		tenant = strings.TrimSpace(leaf.Subject.Organization[0])
+
+	source := a.cfg.MTLSTenantSource
+	if source == "" {
+		source = "cert"
 	}
+	var tenant string
+	switch source {
+	case "header":
+		// Header-only: the operator has explicitly opted into trusting
+		// the upstream proxy with tenant identity. The cert is
+		// verified for authentication, but the tenant attribute comes
+		// from the header.
+		tenant = strings.TrimSpace(r.Header.Get(a.cfg.MTLSTenantHeader))
+	case "header_or_cert":
+		// Hybrid: header wins when present, otherwise fall through to
+		// the cert. Useful only for short migration windows.
+		tenant = strings.TrimSpace(r.Header.Get(a.cfg.MTLSTenantHeader))
+		if tenant == "" {
+			tenant = tenantFromCert(leaf)
+		}
+	default:
+		// "cert" or anything unrecognised: cert-only. Any tenant
+		// header on the request is silently ignored — a client-
+		// controlled header must NEVER mint identity in the default
+		// posture.
+		tenant = tenantFromCert(leaf)
+	}
+
 	if tenant == "" {
+		if a.cfg.RequireMTLSTenant {
+			return Principal{}, fmt.Errorf("mtls client has no tenant identity (source=%s)", source)
+		}
 		tenant = a.cfg.DefaultTenantID
 	}
 	return Principal{
@@ -200,9 +258,57 @@ func (a mtlsAuthenticator) Authenticate(_ context.Context, r *http.Request) (Pri
 		TenantID: tenant,
 		AuthMode: ModeMTLS,
 		Claims: map[string]string{
-			"cert_subject": leaf.Subject.String(),
+			"cert_subject":  leaf.Subject.String(),
+			"tenant_source": source,
 		},
 	}, nil
+}
+
+// tenantFromCert extracts a tenant identifier from a verified client
+// certificate. The lookup order is:
+//  1. URI SAN clockify-mcp://tenant/<id>  (this server's namespace)
+//  2. URI SAN spiffe://*/tenant/<id>      (SPIFFE/SPIRE convention)
+//  3. Subject Organization (first entry, historical behaviour)
+//
+// The first non-empty match wins. Returns "" when no source matches —
+// callers decide whether to fail closed (RequireMTLSTenant) or fall
+// back to DefaultTenantID.
+func tenantFromCert(leaf *x509.Certificate) string {
+	for _, u := range leaf.URIs {
+		if u == nil {
+			continue
+		}
+		if id := tenantFromURI(u); id != "" {
+			return id
+		}
+	}
+	if len(leaf.Subject.Organization) > 0 {
+		return strings.TrimSpace(leaf.Subject.Organization[0])
+	}
+	return ""
+}
+
+// tenantFromURI parses the two supported URI SAN shapes. Returns "" on
+// no match or an empty tenant segment (so callers fall through to the
+// next lookup tier instead of accepting a blank).
+func tenantFromURI(u *url.URL) string {
+	switch u.Scheme {
+	case "clockify-mcp":
+		// clockify-mcp://tenant/<id>
+		if u.Host != "tenant" {
+			return ""
+		}
+		return strings.TrimSpace(strings.TrimPrefix(u.Path, "/"))
+	case "spiffe":
+		// spiffe://<trust-domain>/.../tenant/<id>/...
+		parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+		for i := 0; i+1 < len(parts); i++ {
+			if parts[i] == "tenant" && parts[i+1] != "" {
+				return strings.TrimSpace(parts[i+1])
+			}
+		}
+	}
+	return ""
 }
 
 func peerLeaf(state *tls.ConnectionState) *x509.Certificate {

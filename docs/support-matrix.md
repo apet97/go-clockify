@@ -25,6 +25,19 @@ The following matrix shows supported authentication modes for each transport.
     configurations at startup.
 *   **`mtls` for `grpc`:** Same cert / key / CA requirement as
     streamable HTTP. Plus the `grpc` build tag (see below).
+*   **mTLS tenant identity** (`MCP_MTLS_TENANT_SOURCE`): direct
+    native mTLS uses `cert` (the default), which derives tenant
+    from the verified client certificate — URI SAN
+    `clockify-mcp://tenant/<id>` or `spiffe://*/tenant/<id>` are
+    honoured first, then Subject Organization is the fallback. A
+    client-controlled `X-Tenant-ID` header is silently ignored in
+    this mode; trusting it would let any authenticated client
+    claim any tenant. Only use `MCP_MTLS_TENANT_SOURCE=header` when
+    a trusted upstream proxy terminates mTLS, validates it, and
+    stamps the tenant header from a server-side source after
+    stripping any client copy. `header_or_cert` is a migration-only
+    hybrid. Pair with `MCP_REQUIRE_MTLS_TENANT=1` in hosted
+    deployments to fail closed when no tenant can be derived.
 *   **`grpc`:** Requires building with `-tags=grpc`.
 
 ## Production-readiness classification
