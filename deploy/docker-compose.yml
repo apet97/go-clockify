@@ -17,7 +17,7 @@ services:
       - clockify_mcp_data:/var/lib/clockify-mcp
     environment:
       # Apply the single-tenant streamable HTTP profile so the wired-up
-      # defaults match docs/deploy/production-profile-single-tenant-http.md.
+      # defaults match docs/deploy/profile-single-tenant-http.md.
       # Explicit env values below still win because applyProfile only
       # writes to unset keys.
       - MCP_PROFILE=single-tenant-http
@@ -34,7 +34,11 @@ services:
       - CLOCKIFY_POLICY=${CLOCKIFY_POLICY:-time_tracking_safe}
       - MCP_HTTP_BIND=0.0.0.0:8080
       - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}
-      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
+      # Must match the Caddy public host below. With
+      # MCP_STRICT_HOST_CHECK=1, non-loopback Host values are accepted
+      # only when derived from MCP_ALLOWED_ORIGINS; Caddy preserves the
+      # public Host header.
+      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-https://your-domain.example.com}
       - MCP_LOG_FORMAT=${MCP_LOG_FORMAT:-json}
       - MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-info}
     deploy:

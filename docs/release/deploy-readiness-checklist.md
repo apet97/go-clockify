@@ -9,7 +9,7 @@ This checklist must be satisfied before promoting a release to production.
 
 ## 2. Environment Configuration
 - [ ] **Config Parity:** Ensure the production `.env` or Kubernetes ConfigMap matches the `env.shared-service.example` preset.
-- [ ] **Policy Check:** Verify `CLOCKIFY_POLICY` is set to `safe_core` or `read_only` for public-facing deployments.
+- [ ] **Policy Check:** Verify public AI-facing deployments use `CLOCKIFY_POLICY=time_tracking_safe` or stricter; document any trusted-assistant exception that uses `safe_core` or broader.
 - [ ] **Metrics Isolation:** Confirm `MCP_METRICS_BIND` is listening on a separate, non-exposed port.
 
 ## 3. Pre-Flight Tests

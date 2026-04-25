@@ -4,7 +4,11 @@ metadata:
   name: clockify-mcp-config
   namespace: clockify-mcp
 data:
-  CLOCKIFY_POLICY: "safe_core"
+  # Policy defaults:
+  # - time_tracking_safe: default for untrusted AI time tracking.
+  # - safe_core: trusted assistants that may create projects/clients/tags/tasks.
+  # - standard/full: explicit operator/admin choices for broader automation.
+  CLOCKIFY_POLICY: "time_tracking_safe"
   CLOCKIFY_DRY_RUN: "enabled"
   CLOCKIFY_DEDUPE_MODE: "warn"
   CLOCKIFY_DEDUPE_LOOKBACK: "25"

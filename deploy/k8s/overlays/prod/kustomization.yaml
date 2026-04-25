@@ -3,7 +3,7 @@
 # Hardens the base for production:
 #   - 4 replicas so PDB minAvailable=1 leaves plenty of headroom.
 #   - Full resource requests/limits (match the base deployment).
-#   - CLOCKIFY_POLICY=standard (explicit; base default is the same).
+#   - CLOCKIFY_POLICY=time_tracking_safe for the public AI-facing surface.
 #   - MCP_STRICT_HOST_CHECK=1 so the server refuses requests whose
 #     Host header does not match the configured allowlist.
 #   - commonLabels: environment=prod so observability joins cleanly.
@@ -51,4 +51,4 @@ patches:
     patch: |-
       - op: replace
         path: /data/CLOCKIFY_POLICY
-        value: "standard"
+        value: "time_tracking_safe"

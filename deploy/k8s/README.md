@@ -47,8 +47,8 @@ local MCP clients (Claude Desktop, Cursor).
 | Overlay | Replicas | Policy | Log level | Notes |
 |---|---|---|---|---|
 | `dev` | 1 | `read_only` | `debug` | Smaller CPU/memory requests so pods schedule on laptops. Safe default for iteration — the read-only policy makes it impossible to accidentally mutate Clockify state via a misconfigured client. |
-| `staging` | 3 | `safe_core` | `info` | Production-ish with canary-friendly replica count. `safe_core` policy blocks the most destructive tool classes while leaving the core read + write surface available. |
-| `prod` | 4 | `standard` | `info` | Pinned image tag (`0.7.0`), `MCP_STRICT_HOST_CHECK=1`, full resource requests. Replace `newTag` in `overlays/prod/kustomization.yaml` with a pinned digest before applying. |
+| `staging` | 3 | `safe_core` | `info` | Production-ish with canary-friendly replica count. `safe_core` is intentionally broader for trusted pre-prod workflows that create projects, clients, tags, or tasks. |
+| `prod` | 4 | `time_tracking_safe` | `info` | AI-facing production default, `MCP_STRICT_HOST_CHECK=1`, full resource requests. Pin the image digest before applying. |
 
 ## Quickstart
 

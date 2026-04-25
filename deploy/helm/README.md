@@ -39,9 +39,9 @@ Highlights:
 |---|---|---|
 | `image.repository` / `image.tag` | `ghcr.io/apet97/go-clockify` / `0.7.0` | Image coordinates. Pin to a digest in production. |
 | `replicaCount` | `2` | Deployment replicas. `pdb.minAvailable: 1` stays at 1 regardless. |
-| `config.CLOCKIFY_POLICY` | `standard` | `read_only`, `safe_core`, `standard`, or `full`. |
+| `config.CLOCKIFY_POLICY` | `time_tracking_safe` | `read_only`, `time_tracking_safe`, `safe_core`, `standard`, or `full`. Use `safe_core` only for trusted assistants that may create projects/clients/tags/tasks. |
 | `config.CLOCKIFY_RATE_LIMIT` | `120` | Global rate-limit window (calls per 60s). |
-| `transport.strictHostCheck` | `"0"` | Set `"1"` in prod to require Host header match. |
+| `transport.strictHostCheck` | `"1"` | Require Host header match. |
 | `transport.logLevel` | `info` | `debug`, `info`, `warn`, `error`. |
 | `networkPolicy.enabled` | `true` | Default-deny ingress/egress policy. Disable if your CNI does not support it. |
 | `pdb.enabled` / `pdb.minAvailable` | `true` / `1` | PodDisruptionBudget for voluntary disruptions. |

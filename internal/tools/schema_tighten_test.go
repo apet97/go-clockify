@@ -248,6 +248,46 @@ func TestTier2SchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
 	}
 }
 
+// TestRegistrySchemasUseOnlySupportedValidatorKeywords guards the gap between
+// descriptor authors and the stdlib-only validator. New tool schemas must stay
+// within the keyword subset internal/jsonschema actually enforces.
+func TestRegistrySchemasUseOnlySupportedValidatorKeywords(t *testing.T) {
+	svc := &Service{}
+
+	tier1 := svc.Registry()
+	if len(tier1) == 0 {
+		t.Fatal("Tier 1 registry is empty; schema keyword guard is vacuous")
+	}
+	for _, d := range tier1 {
+		for _, violation := range unsupportedSchemaKeywords(d.Tool.Name, d.Tool.InputSchema) {
+			t.Error(violation)
+		}
+	}
+
+	if len(Tier2Groups) == 0 {
+		t.Fatal("Tier 2 group registry is empty; schema keyword guard is vacuous")
+	}
+	tier2Tools := 0
+	for groupName := range Tier2Groups {
+		descriptors, ok := svc.Tier2Handlers(groupName)
+		if !ok {
+			t.Fatalf("missing tier2 handlers for group %q", groupName)
+		}
+		if len(descriptors) == 0 {
+			t.Fatalf("Tier 2 group %q has no descriptors; schema keyword guard is vacuous for that group", groupName)
+		}
+		tier2Tools += len(descriptors)
+		for _, d := range descriptors {
+			for _, violation := range unsupportedSchemaKeywords(d.Tool.Name, d.Tool.InputSchema) {
+				t.Error(violation)
+			}
+		}
+	}
+	if tier2Tools == 0 {
+		t.Fatal("Tier 2 descriptors are empty; schema keyword guard is vacuous")
+	}
+}
+
 func assertNoOpenObjects(schema any, tool, path string) error {
 	m, ok := schema.(map[string]any)
 	if !ok {

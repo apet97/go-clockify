@@ -27,8 +27,8 @@ The choice between modes depends on whether the agent should be
 able to reshape the workspace (create projects/clients/tags/tasks)
 in addition to logging time:
 
-| Feature | `read_only` | `time_tracking_safe` | `safe_core` (Default for hosted) | `standard` |
-|---------|:-----------:|:--------------------:|:--------------------------------:|:----------:|
+| Feature | `read_only` | `time_tracking_safe` (default for hosted AI) | `safe_core` | `standard` |
+|---------|:-----------:|:-------------------------------------------:|:-----------:|:----------:|
 | Read access | Full | Full | Full | Full |
 | Time-entry mutations (own user) | ❌ | ✅ | ✅ | ✅ |
 | Timer start/stop | ❌ | ✅ | ✅ | ✅ |

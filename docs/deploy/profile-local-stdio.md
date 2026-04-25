@@ -23,7 +23,7 @@ Minimum viable environment:
 ```env
 CLOCKIFY_API_KEY=<your-personal-clockify-api-key>
 MCP_TRANSPORT=stdio
-CLOCKIFY_POLICY=standard
+CLOCKIFY_POLICY=safe_core
 ```
 
 Defaults that apply automatically and don't need to be set:

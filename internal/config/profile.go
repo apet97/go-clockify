@@ -52,6 +52,7 @@ var allProfilesSlice = []Profile{
 			"MCP_ALLOW_DEV_BACKEND":  "1",
 			"MCP_AUDIT_DURABILITY":   "best_effort",
 			"MCP_HTTP_LEGACY_POLICY": "deny",
+			"CLOCKIFY_POLICY":        "time_tracking_safe",
 		},
 	},
 	{

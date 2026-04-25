@@ -30,5 +30,5 @@ This guide is for platform teams operating `clockify-mcp-go` as a multi-tenant s
 
 ## Canonical Configuration
 Use the `deploy/examples/env.shared-service.example` preset as a starting point.
-- **`CLOCKIFY_POLICY=safe_core`**: Mandatory for multi-tenant environments.
+- **`CLOCKIFY_POLICY=time_tracking_safe`**: Mandatory AI-facing default for multi-tenant environments. Use `safe_core` only for trusted assistants that need workspace object creation.
 - **`MCP_METRICS_BIND=:9091`**: Dedicated listener for Prometheus.

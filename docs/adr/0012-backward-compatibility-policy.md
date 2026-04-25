@@ -19,7 +19,7 @@ commitments against the server:
    verbatim (`clockify_start_timer`, `clockify_add_entry`).
    Renaming a tool silently breaks every pinned reference.
 3. **Policy modes.** Operators configure `CLOCKIFY_POLICY`
-   (`read_only`, `safe_core`, `standard`, `full`) and expect
+   (`read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full`) and expect
    the allowlist semantics to remain stable. Narrowing what
    `safe_core` permits, or broadening `read_only`, breaks the
    contract operators made when they chose a mode.
@@ -79,9 +79,12 @@ Two alternatives were considered:
 
 ### Policy modes
 
-- **Mode names are stable.** `safe_core` cannot be renamed to
+- **Mode names are stable.** `time_tracking_safe` and `safe_core` cannot be renamed to
   `guarded` without a major bump.
 - **Allowlists are additive only in minor releases.** A tool
+  newly added to `time_tracking_safe` is a minor bump (more permissive,
+  existing call sites unaffected). Removing a tool from
+  `time_tracking_safe` is a **major** bump. A tool
   newly added to `safe_core` is a minor bump (more permissive,
   existing call sites unaffected). Removing a tool from
   `safe_core` is a **major** bump — it breaks existing
@@ -151,5 +154,5 @@ Two alternatives were considered:
 - `internal/policy/policy.go` — the canonical allowlist per
   policy mode.
 - ADR 0004 (policy enforcement architecture) — the structural
-  rationale for the four policy modes whose names this ADR
+  rationale for the five policy modes whose names this ADR
   pins.

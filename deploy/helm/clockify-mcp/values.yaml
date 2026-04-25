@@ -57,11 +57,11 @@ resources:
 # Environment variables consumed by the server. Values here become the
 # ConfigMap keys. Override per env via -f values-dev.yaml etc.
 config:
-  # safe_core (read + own-time-entry mutations + safe project/client/tag
-  # creation) is the recommended default for an AI-facing endpoint.
-  # Override to "standard" for trusted deployments that need full write
-  # access; see docs/policy-modes.md.
-  CLOCKIFY_POLICY: "safe_core"
+  # Policy defaults:
+  # - time_tracking_safe: default for untrusted AI time tracking.
+  # - safe_core: trusted assistants that may create projects/clients/tags/tasks.
+  # - standard/full: explicit operator/admin choices for broader automation.
+  CLOCKIFY_POLICY: "time_tracking_safe"
   CLOCKIFY_DRY_RUN: "enabled"
   CLOCKIFY_DEDUPE_MODE: "warn"
   CLOCKIFY_DEDUPE_LOOKBACK: "25"

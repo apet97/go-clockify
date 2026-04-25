@@ -68,19 +68,33 @@ func TestComposeDefaultsHardening(t *testing.T) {
 	}
 	// The default branch of CLOCKIFY_POLICY must not fall back to
 	// "standard". time_tracking_safe is the recommended AI-facing
-	// default; safe_core is acceptable for trusted-team deployments.
+	// default; broader modes require an explicit operator override.
 	policyRe := regexp.MustCompile(`(?m)^\s*-\s*CLOCKIFY_POLICY\s*=\$\{CLOCKIFY_POLICY:-([^}]+)\}\s*$`)
 	pm := policyRe.FindStringSubmatch(raw)
 	if len(pm) != 2 {
 		t.Fatalf("docker-compose.yml missing CLOCKIFY_POLICY env with explicit default")
 	}
 	switch pm[1] {
-	case "time_tracking_safe", "safe_core", "read_only":
+	case "time_tracking_safe":
 		// allowed
+	case "safe_core", "read_only":
+		t.Errorf("docker-compose.yml defaults CLOCKIFY_POLICY=%q; expected time_tracking_safe for bundled AI-facing defaults", pm[1])
 	case "standard", "full":
 		t.Errorf("docker-compose.yml defaults CLOCKIFY_POLICY=%q; AI-facing deployments should default to time_tracking_safe", pm[1])
 	default:
 		t.Errorf("docker-compose.yml CLOCKIFY_POLICY default %q is not a recognised policy mode", pm[1])
+	}
+
+	originsRe := regexp.MustCompile(`(?m)^\s*-\s*MCP_ALLOWED_ORIGINS\s*=\$\{MCP_ALLOWED_ORIGINS:-([^}]+)\}\s*$`)
+	om := originsRe.FindStringSubmatch(raw)
+	if len(om) != 2 {
+		t.Fatalf("docker-compose.yml missing MCP_ALLOWED_ORIGINS env with explicit non-empty Caddy host default")
+	}
+	if strings.TrimSpace(om[1]) == "" {
+		t.Errorf("docker-compose.yml defaults MCP_ALLOWED_ORIGINS to empty; strict host check behind Caddy needs the public host")
+	}
+	if om[1] != "https://your-domain.example.com" {
+		t.Errorf("docker-compose.yml MCP_ALLOWED_ORIGINS default = %q, want bundled Caddy public host", om[1])
 	}
 
 	// Loopback-only host bind ensures the service is not directly
@@ -160,13 +174,26 @@ func TestKustomizeBaseDefaultsHardening(t *testing.T) {
 		t.Errorf("k8s base MCP_TRANSPORT=http; audit finding H1 says default must not be the legacy transport")
 	}
 
-	if !strings.Contains(configmap, `CLOCKIFY_POLICY: "safe_core"`) {
-		t.Errorf("k8s base configmap missing CLOCKIFY_POLICY: \"safe_core\"; audit finding M3 says network deployments should not default to standard")
+	if !strings.Contains(configmap, `CLOCKIFY_POLICY: "time_tracking_safe"`) {
+		t.Errorf("k8s base configmap missing CLOCKIFY_POLICY: \"time_tracking_safe\"; AI-facing defaults should not allow workspace object creation")
 	}
 
 	strictHostRe := regexp.MustCompile(`(?ms)- name:\s*MCP_STRICT_HOST_CHECK.*?value:\s*"?1"?`)
 	if !strictHostRe.MatchString(deployment) {
 		t.Errorf("k8s base deployment.yaml missing MCP_STRICT_HOST_CHECK=1 env entry")
+	}
+}
+
+// TestKustomizeProdOverlayDoesNotWidenPolicy ensures the production
+// overlay does not undo the AI-facing base policy by replacing it with
+// broad standard/full access.
+func TestKustomizeProdOverlayDoesNotWidenPolicy(t *testing.T) {
+	raw := mustRead(t, filepath.Join("..", "deploy", "k8s", "overlays", "prod", "kustomization.yaml"))
+	if regexp.MustCompile(`(?m)value:\s*"standard"`).MatchString(raw) || regexp.MustCompile(`(?m)value:\s*"full"`).MatchString(raw) {
+		t.Errorf("prod overlay widens CLOCKIFY_POLICY to standard/full; default prod overlay should stay time_tracking_safe")
+	}
+	if !regexp.MustCompile(`(?m)value:\s*"time_tracking_safe"`).MatchString(raw) {
+		t.Errorf("prod overlay should pin CLOCKIFY_POLICY to time_tracking_safe")
 	}
 }
 
@@ -184,10 +211,10 @@ func TestHelmDefaultsHardening(t *testing.T) {
 		t.Errorf("Helm values.yaml missing transport.mode: \"streamable_http\"")
 	}
 	if regexp.MustCompile(`CLOCKIFY_POLICY:\s*"standard"`).MatchString(raw) {
-		t.Errorf("Helm values.yaml has CLOCKIFY_POLICY: \"standard\" default; audit finding M3 says use safe_core or stricter")
+		t.Errorf("Helm values.yaml has CLOCKIFY_POLICY: \"standard\" default; AI-facing defaults should use time_tracking_safe")
 	}
-	if !regexp.MustCompile(`CLOCKIFY_POLICY:\s*"safe_core"`).MatchString(raw) {
-		t.Errorf("Helm values.yaml CLOCKIFY_POLICY default should be safe_core (or read_only / time_tracking_safe)")
+	if !regexp.MustCompile(`CLOCKIFY_POLICY:\s*"time_tracking_safe"`).MatchString(raw) {
+		t.Errorf("Helm values.yaml CLOCKIFY_POLICY default should be time_tracking_safe")
 	}
 	if !regexp.MustCompile(`(?m)^\s*strictHostCheck:\s*"1"`).MatchString(raw) {
 		t.Errorf("Helm values.yaml strictHostCheck default should be \"1\"")

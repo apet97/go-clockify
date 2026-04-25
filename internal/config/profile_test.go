@@ -132,6 +132,29 @@ func TestProfile_SingleTenantHTTPDefaults(t *testing.T) {
 	if cfg.HTTPLegacyPolicy != "deny" {
 		t.Errorf("HTTPLegacyPolicy = %q, want deny", cfg.HTTPLegacyPolicy)
 	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
+		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe", got)
+	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got == "standard" {
+		t.Errorf("CLOCKIFY_POLICY stayed at raw default %q; single-tenant-http must pin the AI-facing policy", got)
+	}
+}
+
+// TestProfile_SingleTenantHTTPPolicyOverrideWins verifies the
+// time_tracking_safe profile default does not clobber an explicit
+// operator policy choice.
+func TestProfile_SingleTenantHTTPPolicyOverrideWins(t *testing.T) {
+	setProfileEnv(t, "single-tenant-http", map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"MCP_BEARER_TOKEN": "super-secret-token-at-least-sixteen",
+		"CLOCKIFY_POLICY":  "safe_core",
+	})
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "safe_core" {
+		t.Fatalf("CLOCKIFY_POLICY = %q, want explicit safe_core override", got)
+	}
 }
 
 // TestProfile_SharedServiceRequiresExplicitDSN verifies the

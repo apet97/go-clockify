@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -14,18 +15,22 @@ import (
 // effective configuration, attributes the source of every spec'd
 // env var (explicit | profile | default | empty), and reports any
 // error Load() would raise at startup. Exit code is 0 on a clean
-// load and 2 on a Load() error — the same rule used by `doctor`
-// tooling elsewhere in the ecosystem.
+// load, 2 on a Load() error, and 3 when --strict finds hosted-service
+// posture failures.
 //
 // Invocation:
 //
-//	clockify-mcp doctor [--profile=<name>]
+//	clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy]
 //
 // --profile is an alias for MCP_PROFILE=<name>; main() translated it
-// into the env before reaching this function, so doctor does not
-// need to parse it itself. Any other args are ignored for now (keep
-// surface minimal until a real use case shows up).
-func runDoctor(_ []string) int {
+// into the env before reaching this function. runDoctor also honours
+// it directly so tests and embedders get the same behaviour.
+func runDoctor(args []string) int {
+	return runDoctorReport(args, os.Stdout)
+}
+
+func runDoctorReport(args []string, out io.Writer) int {
+	opts := parseDoctorArgs(args)
 	// Snapshot the env BEFORE Load() runs. applyProfile() inside
 	// Load() uses os.Setenv to materialise unset profile keys; if we
 	// read the env after Load() we could not distinguish an
@@ -48,8 +53,12 @@ func runDoctor(_ []string) int {
 	}
 
 	cfg, cfgErr := config.Load()
+	var strictFindings []doctorFinding
+	if opts.strict {
+		strictFindings = strictDoctorFindings(cfg, cfgErr, opts.allowBroadPolicy)
+	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	// pf wraps fmt.Fprintf so the errcheck linter is satisfied.
 	// Writes to stdout via tabwriter never produce an actionable
 	// error at this call site — if stdout is broken, the process
@@ -76,6 +85,19 @@ func runDoctor(_ []string) int {
 			cfg.Transport, cfg.AuthMode, cfg.AuditDurabilityMode)
 	}
 	pln("")
+
+	if opts.strict {
+		if len(strictFindings) == 0 {
+			pf("Strict posture:\tOK\tno hosted-service findings\n")
+		} else {
+			pf("Strict posture:\tERROR\t%d finding(s)\n", len(strictFindings))
+			pln("Severity\tKey\tMessage")
+			for _, f := range strictFindings {
+				pf("%s\t%s\t%s\n", f.Severity, f.Key, f.Message)
+			}
+		}
+		pln("")
+	}
 
 	// Group specs by their EnvSpec.Group in the same display order
 	// gen-config-docs uses, then alphabetise within each group.
@@ -116,7 +138,163 @@ func runDoctor(_ []string) int {
 	if cfgErr != nil {
 		return 2
 	}
+	if opts.strict && len(strictFindings) > 0 {
+		return 3
+	}
 	return 0
+}
+
+type doctorOptions struct {
+	strict           bool
+	allowBroadPolicy bool
+}
+
+func parseDoctorArgs(args []string) doctorOptions {
+	var opts doctorOptions
+	for _, a := range args {
+		switch {
+		case a == "--strict":
+			opts.strict = true
+		case a == "--allow-broad-policy":
+			opts.allowBroadPolicy = true
+		case strings.HasPrefix(a, "--profile="):
+			_ = os.Setenv("MCP_PROFILE", strings.TrimPrefix(a, "--profile="))
+		}
+	}
+	return opts
+}
+
+type doctorFinding struct {
+	Severity string
+	Key      string
+	Message  string
+}
+
+func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool) []doctorFinding {
+	var findings []doctorFinding
+	add := func(key, message string) {
+		findings = append(findings, doctorFinding{
+			Severity: "ERROR",
+			Key:      key,
+			Message:  message,
+		})
+	}
+
+	transport := effectiveDoctorTransport(cfg, cfgErr)
+	authMode := effectiveDoctorAuthMode(cfg, cfgErr, transport)
+
+	if transport == "http" {
+		add("MCP_TRANSPORT", "legacy http transport is forbidden in hosted strict posture; use streamable_http or grpc")
+	}
+	if authMode == "oidc" {
+		if !effectiveDoctorBool(cfg.OIDCStrict, cfgErr, "MCP_OIDC_STRICT") {
+			add("MCP_OIDC_STRICT", "OIDC hosted strict posture requires MCP_OIDC_STRICT=1")
+		}
+		if effectiveDoctorString(cfg.OIDCAudience, cfgErr, "MCP_OIDC_AUDIENCE", "") == "" &&
+			effectiveDoctorString(cfg.OIDCResourceURI, cfgErr, "MCP_RESOURCE_URI", "") == "" {
+			add("MCP_OIDC_AUDIENCE/MCP_RESOURCE_URI", "OIDC hosted strict posture requires MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI")
+		}
+		if !effectiveDoctorBool(cfg.RequireTenantClaim, cfgErr, "MCP_REQUIRE_TENANT_CLAIM") {
+			add("MCP_REQUIRE_TENANT_CLAIM", "OIDC hosted strict posture requires MCP_REQUIRE_TENANT_CLAIM=1")
+		}
+	}
+	if !effectiveDoctorBool(cfg.DisableInlineSecrets, cfgErr, "MCP_DISABLE_INLINE_SECRETS") {
+		add("MCP_DISABLE_INLINE_SECRETS", "hosted strict posture requires MCP_DISABLE_INLINE_SECRETS=1")
+	}
+	if effectiveDoctorBool(cfg.ExposeAuthErrors, cfgErr, "MCP_EXPOSE_AUTH_ERRORS") {
+		add("MCP_EXPOSE_AUTH_ERRORS", "hosted strict posture requires MCP_EXPOSE_AUTH_ERRORS=0 or unset")
+	}
+
+	controlPlaneDSN := effectiveDoctorString(cfg.ControlPlaneDSN, cfgErr, "MCP_CONTROL_PLANE_DSN", "memory")
+	if !strings.HasPrefix(controlPlaneDSN, "postgres://") && !strings.HasPrefix(controlPlaneDSN, "postgresql://") {
+		add("MCP_CONTROL_PLANE_DSN", "hosted strict posture requires a postgres:// or postgresql:// control-plane DSN")
+	}
+
+	auditDurability := effectiveDoctorAuditDurability(cfg, cfgErr)
+	if auditDurability != "fail_closed" {
+		add("MCP_AUDIT_DURABILITY", "hosted strict posture requires MCP_AUDIT_DURABILITY=fail_closed")
+	}
+
+	policyMode := effectiveDoctorPolicyMode()
+	switch policyMode {
+	case "read_only", "time_tracking_safe":
+		// allowed
+	case "safe_core", "standard", "full":
+		if !allowBroadPolicy {
+			add("CLOCKIFY_POLICY", "hosted strict posture requires CLOCKIFY_POLICY no broader than time_tracking_safe; pass --allow-broad-policy only for a documented trusted-operator exception")
+		}
+	default:
+		add("CLOCKIFY_POLICY", "unsupported policy mode; expected read_only, time_tracking_safe, safe_core, standard, or full")
+	}
+
+	mtlsTenantSource := effectiveDoctorString(cfg.MTLSTenantSource, cfgErr, "MCP_MTLS_TENANT_SOURCE", "cert")
+	if mtlsTenantSource == "header" || mtlsTenantSource == "header_or_cert" {
+		add("MCP_MTLS_TENANT_SOURCE", "hosted strict posture requires MCP_MTLS_TENANT_SOURCE=cert")
+	}
+
+	return findings
+}
+
+func effectiveDoctorTransport(cfg config.Config, cfgErr error) string {
+	if cfgErr == nil && cfg.Transport != "" {
+		return cfg.Transport
+	}
+	return effectiveDoctorString("", cfgErr, "MCP_TRANSPORT", "stdio")
+}
+
+func effectiveDoctorAuthMode(cfg config.Config, cfgErr error, transport string) string {
+	if cfgErr == nil && cfg.AuthMode != "" {
+		return cfg.AuthMode
+	}
+	if raw := strings.TrimSpace(os.Getenv("MCP_AUTH_MODE")); raw != "" {
+		return raw
+	}
+	switch transport {
+	case "streamable_http":
+		return "oidc"
+	case "http":
+		return "static_bearer"
+	default:
+		return ""
+	}
+}
+
+func effectiveDoctorAuditDurability(cfg config.Config, cfgErr error) string {
+	if cfgErr == nil && cfg.AuditDurabilityMode != "" {
+		return cfg.AuditDurabilityMode
+	}
+	if raw := strings.TrimSpace(os.Getenv("MCP_AUDIT_DURABILITY")); raw != "" {
+		return raw
+	}
+	if strings.TrimSpace(os.Getenv("ENVIRONMENT")) == "prod" {
+		return "fail_closed"
+	}
+	return "best_effort"
+}
+
+func effectiveDoctorPolicyMode() string {
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_POLICY")))
+	if mode == "" {
+		return "standard"
+	}
+	return mode
+}
+
+func effectiveDoctorString(loaded string, cfgErr error, key, fallback string) string {
+	if cfgErr == nil && loaded != "" {
+		return loaded
+	}
+	if raw := strings.TrimSpace(os.Getenv(key)); raw != "" {
+		return raw
+	}
+	return fallback
+}
+
+func effectiveDoctorBool(loaded bool, cfgErr error, key string) bool {
+	if cfgErr == nil {
+		return loaded
+	}
+	return strings.TrimSpace(os.Getenv(key)) == "1"
 }
 
 // groupSpecs bins specs by their Group field. An empty group becomes

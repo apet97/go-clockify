@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — the four policy modes and the BeforeCall pipeline have
+Accepted — the five policy modes and the BeforeCall pipeline have
 been stable since v0.6.0 and are exercised by the dispatch-level
 test harness added in `45e95a0`.
 
@@ -25,12 +25,13 @@ ad-hoc per tool.
 
 ## Decision
 
-Four named policy modes, configured via `CLOCKIFY_POLICY` and
+Five named policy modes, configured via `CLOCKIFY_POLICY` and
 defined as constants in `internal/policy/policy.go:13-17`:
 
 | Mode | Read | Write | Delete | Tier 2 |
 |------|:----:|:-----:|:------:|:------:|
 | `read_only` | yes | no | no | no |
+| `time_tracking_safe` | yes | time-entry allowlist (`timeTrackingSafeWriteList`) | no | no |
 | `safe_core` | yes | allowlist (`safeCoreWriteList`) | no | no |
 | `standard` (default) | yes | yes | yes | on demand |
 | `full` | yes | yes | yes | yes |
@@ -63,7 +64,7 @@ The same `Pipeline` also implements `FilterTool`, called from the
 are hidden from the list, not just rejected at call time —
 discoverability matches enforcement.
 
-The five-element introspection allowlist
+The six-element introspection allowlist
 (`clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`,
 `clockify_resolve_debug`, plus `clockify_current_user` and
 `clockify_list_workspaces` in `policy.go:174-181`) bypasses the

@@ -47,7 +47,7 @@ MCP_HTTP_INLINE_METRICS_ENABLED=true
 MCP_HTTP_INLINE_METRICS_AUTH_MODE=inherit_main_bearer
 
 # Safety
-CLOCKIFY_POLICY=safe_core
+CLOCKIFY_POLICY=time_tracking_safe
 MCP_STRICT_HOST_CHECK=true
 MCP_ALLOWED_ORIGINS=https://your-client.example.com
 
@@ -66,6 +66,7 @@ mcp.example.com {
   @allowed header Origin "https://your-client.example.com"
   handle_path /mcp* {
     reverse_proxy 127.0.0.1:8080 {
+      header_up Host {host}
       header_up X-Forwarded-For {remote_host}
       header_up X-Forwarded-Proto https
     }
@@ -112,12 +113,17 @@ server {
   `chmod 600`, back it up, and run the retention reaper
   (automatic on startup).
 - `MCP_ALLOWED_ORIGINS` should be pinned to the exact client
-  origin; a wildcard here + a misconfigured proxy is how
-  cross-origin sessions leak.
-- `safe_core` policy is the recommended default: deletes and
-  destructive writes are restricted; clients should preview
-  destructive operations with `dry_run: true` before executing
-  intentionally with `dry_run: false` or omission.
+  origin. When `MCP_STRICT_HOST_CHECK=true`, the public host
+  preserved by your reverse proxy must also be derivable from this
+  allowlist; otherwise legitimate requests are rejected before auth.
+- `time_tracking_safe` policy is the recommended AI-facing default:
+  the agent can start/stop timers and create or update time entries,
+  but cannot create workspace objects such as projects, clients,
+  tags, or tasks.
+- `safe_core` is broader and should be an explicit trusted-assistant
+  choice when project/client/tag/task creation is part of the workflow.
+  `standard` and `full` are trusted operator/admin modes, not public
+  AI defaults.
 
 ## Operational checklist
 

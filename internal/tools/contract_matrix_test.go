@@ -29,10 +29,16 @@ func TestToolContractMatrix(t *testing.T) {
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
+	timeTrackingSafe := &policy.Policy{Mode: policy.TimeTrackingSafe, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
 	safeCore := &policy.Policy{Mode: policy.SafeCore, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
 	introspection := map[string]bool{
 		"clockify_whoami": true, "clockify_current_user": true, "clockify_list_workspaces": true,
 		"clockify_search_tools": true, "clockify_policy_info": true, "clockify_resolve_debug": true,
+	}
+	timeTrackingSafeWrites := map[string]bool{
+		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
+		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
+		"clockify_find_and_update_entry": true,
 	}
 	safeCoreWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
@@ -49,9 +55,36 @@ func TestToolContractMatrix(t *testing.T) {
 			t.Fatalf("introspection list references %q but it is not in the registry", name)
 		}
 	}
+	for name := range timeTrackingSafeWrites {
+		if _, ok := all[name]; !ok {
+			t.Fatalf("timeTrackingSafeWrites list references %q but it is not in the registry", name)
+		}
+	}
 	for name := range safeCoreWrites {
 		if _, ok := all[name]; !ok {
 			t.Fatalf("safeCoreWrites list references %q but it is not in the registry", name)
+		}
+	}
+	for _, name := range []string{
+		"clockify_create_project",
+		"clockify_create_client",
+		"clockify_create_tag",
+		"clockify_create_task",
+	} {
+		contract, ok := all[name]
+		if !ok {
+			t.Fatalf("time_tracking_safe blocked list references %q but it is not in the registry", name)
+		}
+		if contract.readOnly {
+			t.Fatalf("%s is marked read-only; time_tracking_safe would allow this workspace-wide create", name)
+		}
+		if timeTrackingSafe.IsAllowed(name, contract.readOnly) {
+			t.Fatalf("%s should be blocked in time_tracking_safe", name)
+		}
+	}
+	for group := range Tier2Groups {
+		if timeTrackingSafe.IsGroupAllowed(group) {
+			t.Fatalf("time_tracking_safe should block Tier 2 group %q", group)
 		}
 	}
 
@@ -63,6 +96,11 @@ func TestToolContractMatrix(t *testing.T) {
 		expectReadOnlyAllowed := contract.readOnly || introspection[name]
 		if got := readOnly.IsAllowed(name, contract.readOnly); got != expectReadOnlyAllowed {
 			t.Fatalf("read_only policy mismatch for %s: got %v want %v", name, got, expectReadOnlyAllowed)
+		}
+
+		expectTimeTrackingSafeAllowed := contract.readOnly || introspection[name] || timeTrackingSafeWrites[name]
+		if got := timeTrackingSafe.IsAllowed(name, contract.readOnly); got != expectTimeTrackingSafeAllowed {
+			t.Fatalf("time_tracking_safe policy mismatch for %s: got %v want %v", name, got, expectTimeTrackingSafeAllowed)
 		}
 
 		expectSafeCoreAllowed := contract.readOnly || introspection[name] || safeCoreWrites[name]

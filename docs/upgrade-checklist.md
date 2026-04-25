@@ -33,7 +33,8 @@ git diff --no-index \
 ### Policy mode
 
 - [ ] `clockify_policy_info` on the old server — snapshot the
-      effective policy (read_only / safe_core / standard / full)
+      effective policy (read_only / time_tracking_safe / safe_core /
+      standard / full)
       and the per-tool overrides.
 - [ ] If the target release narrows `safe_core` or widens
       `standard`, validate clients don't depend on a tool that's

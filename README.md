@@ -13,7 +13,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 - **124 tools** — 33 always-on (timer, entries, projects, reports, …) plus 91 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
-- **Four policy modes** — `read_only`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
+- **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
 - **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance.
@@ -39,7 +39,7 @@ Pick a deployment profile and invoke the binary with `--profile=<name>` (or `MCP
 | `private-network-grpc` | gRPC + mTLS behind a private perimeter (`-tags=grpc`) | [profile-private-network-grpc.md](docs/deploy/profile-private-network-grpc.md) | [env.private-network-grpc.example](deploy/examples/env.private-network-grpc.example) |
 | `prod-postgres` | alias of `shared-service` with `ENVIRONMENT=prod` | see shared-service doc | — |
 
-Not sure which profile matches your environment? Run `clockify-mcp doctor` — it prints every env var's effective value, its source (explicit / profile / default / empty), and whether `Load()` would succeed at startup. Exit code is 0 on a clean load and 2 on an error.
+Not sure which profile matches your environment? Run `clockify-mcp doctor` — it prints every env var's effective value, its source (explicit / profile / default / empty), and whether `Load()` would succeed at startup. Add `--strict` for hosted-service posture checks. Exit code is 0 on a clean load, 2 on a load error, and 3 when strict posture findings are present.
 
 Operators upgrading from before Wave I: see [the operator overview](docs/production-readiness.md) and [docs/operators/](docs/operators/) for the deeper production checklist — profiles shortcut the common cases but do not replace ops review for critical deployments.
 
@@ -151,8 +151,9 @@ Call `clockify_search_tools` to discover and activate a Tier 2 group or a specif
 | Mode | Read | Write | Delete | Tier 2 | Use case |
 |------|------|-------|--------|--------|----------|
 | `read_only` | yes | no | no | no | Untrusted agents — observe only |
-| `safe_core` | yes | allowlist | no | no | Day-to-day time tracking |
-| `standard` | yes | yes | yes | on demand | **Default** — balanced |
+| `time_tracking_safe` | yes | time-entry allowlist | no | no | **Recommended AI-facing default** for time tracking |
+| `safe_core` | yes | broader allowlist | no | no | Trusted assistants that may create projects, clients, tags, and tasks |
+| `standard` | yes | yes | yes | on demand | Raw no-profile default / trusted operator mode, not a public AI default |
 | `full` | yes | yes | yes | yes | Admin and automation |
 
 Introspection tools (`clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`, `clockify_resolve_debug`) are always available regardless of policy.
