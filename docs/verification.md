@@ -25,7 +25,7 @@ brew install gh
 gh auth login
 ```
 
-All three checks below assume you are working with the binary
+The three supply-chain checks below assume you are working with the binary
 `clockify-mcp-linux-x64` from tag `v1.0.0`. The other binaries
 (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `windows-x64.exe`) are
 signed by the same `release.yml` run, so verifying one proves the
@@ -150,7 +150,31 @@ acceptable when the registry is trusted (ghcr.io) and the release
 pipeline is documented as never overwriting tags
 (see `.github/workflows/release.yml` and `.goreleaser.yaml`).
 
-## 4. SBOM (informational)
+## 4. Strict doctor release smoke
+
+Release smoke also proves the shipped binary still supports hosted
+strict posture checks. This is an offline config check; the synthetic
+Postgres DSN is not contacted unless `--check-backends` is passed.
+
+```sh
+chmod +x clockify-mcp-linux-x64
+
+export MCP_PROFILE=prod-postgres
+export MCP_CONTROL_PLANE_DSN="postgres://user:pass@localhost:5432/clockify?sslmode=disable"
+export MCP_OIDC_ISSUER="https://issuer.example.com"
+export MCP_OIDC_AUDIENCE="clockify-mcp"
+export CLOCKIFY_API_KEY="dummy"
+
+./clockify-mcp-linux-x64 doctor --strict
+
+set +e
+CLOCKIFY_POLICY=standard ./clockify-mcp-linux-x64 doctor --strict
+code=$?
+set -e
+test "$code" = "3"
+```
+
+## 5. SBOM (informational)
 
 Both binaries and images carry SPDX SBOMs. Inspect the binary SBOM
 with:

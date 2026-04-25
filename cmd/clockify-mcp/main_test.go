@@ -206,6 +206,16 @@ func TestDoctorStrictMTLSRequiresCertTenantSource(t *testing.T) {
 	}
 }
 
+func TestParseDoctorArgsCheckBackends(t *testing.T) {
+	opts := parseDoctorArgs([]string{"--strict", "--check-backends"})
+	if !opts.strict {
+		t.Fatal("parseDoctorArgs did not set strict")
+	}
+	if !opts.checkBackends {
+		t.Fatal("parseDoctorArgs did not set checkBackends")
+	}
+}
+
 func runDoctorForTest(t *testing.T, args []string, env map[string]string) (int, string) {
 	t.Helper()
 	for _, spec := range config.AllSpecs() {

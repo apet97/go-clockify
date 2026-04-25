@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/controlplane"
 )
 
 // runDoctor is the `clockify-mcp doctor` subcommand. It audits the
@@ -20,7 +23,7 @@ import (
 //
 // Invocation:
 //
-//	clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy]
+//	clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy] [--check-backends]
 //
 // --profile is an alias for MCP_PROFILE=<name>; main() translated it
 // into the env before reaching this function. runDoctor also honours
@@ -57,6 +60,11 @@ func runDoctorReport(args []string, out io.Writer) int {
 	if opts.strict {
 		strictFindings = strictDoctorFindings(cfg, cfgErr, opts.allowBroadPolicy)
 	}
+	if opts.checkBackends && cfgErr == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+		strictFindings = append(strictFindings, backendDoctorFindings(ctx, cfg)...)
+	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	// pf wraps fmt.Fprintf so the errcheck linter is satisfied.
@@ -88,7 +96,11 @@ func runDoctorReport(args []string, out io.Writer) int {
 
 	if opts.strict {
 		if len(strictFindings) == 0 {
-			pf("Strict posture:\tOK\tno hosted-service findings\n")
+			message := "no hosted-service findings"
+			if opts.checkBackends {
+				message = "no hosted-service or backend findings"
+			}
+			pf("Strict posture:\tOK\t%s\n", message)
 		} else {
 			pf("Strict posture:\tERROR\t%d finding(s)\n", len(strictFindings))
 			pln("Severity\tKey\tMessage")
@@ -147,6 +159,7 @@ func runDoctorReport(args []string, out io.Writer) int {
 type doctorOptions struct {
 	strict           bool
 	allowBroadPolicy bool
+	checkBackends    bool
 }
 
 func parseDoctorArgs(args []string) doctorOptions {
@@ -157,6 +170,9 @@ func parseDoctorArgs(args []string) doctorOptions {
 			opts.strict = true
 		case a == "--allow-broad-policy":
 			opts.allowBroadPolicy = true
+		case a == "--check-backends":
+			opts.checkBackends = true
+			opts.strict = true
 		case strings.HasPrefix(a, "--profile="):
 			_ = os.Setenv("MCP_PROFILE", strings.TrimPrefix(a, "--profile="))
 		}
@@ -233,6 +249,56 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 	}
 
 	return findings
+}
+
+type backendDoctorChecker interface {
+	DoctorCheck(context.Context) error
+}
+
+func backendDoctorFindings(ctx context.Context, cfg config.Config) []doctorFinding {
+	var findings []doctorFinding
+	add := func(key, message string) {
+		findings = append(findings, doctorFinding{
+			Severity: "ERROR",
+			Key:      key,
+			Message:  message,
+		})
+	}
+
+	dsn := strings.TrimSpace(cfg.ControlPlaneDSN)
+	if !isDoctorPostgresDSN(dsn) {
+		add("MCP_CONTROL_PLANE_DSN", "--check-backends requires a postgres:// or postgresql:// control-plane DSN")
+		return findings
+	}
+
+	store, err := controlplane.Open(dsn, controlplane.WithAuditCap(cfg.ControlPlaneAuditCap))
+	if err != nil {
+		message := fmt.Sprintf("backend check failed opening control-plane store: %v", err)
+		if strings.Contains(err.Error(), "unsupported DSN scheme") {
+			message = "postgres backend requested but binary was not built with -tags=postgres"
+		}
+		add("MCP_CONTROL_PLANE_DSN", message)
+		return findings
+	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			add("MCP_CONTROL_PLANE_DSN", fmt.Sprintf("backend check failed closing control-plane store: %v", err))
+		}
+	}()
+
+	checker, ok := store.(backendDoctorChecker)
+	if !ok {
+		add("MCP_CONTROL_PLANE_DSN", "postgres backend opened but does not expose doctor backend checks")
+		return findings
+	}
+	if err := checker.DoctorCheck(ctx); err != nil {
+		add("MCP_CONTROL_PLANE_DSN", fmt.Sprintf("postgres backend health check failed: %v", err))
+	}
+	return findings
+}
+
+func isDoctorPostgresDSN(dsn string) bool {
+	return strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://")
 }
 
 func effectiveDoctorTransport(cfg config.Config, cfgErr error) string {

@@ -4,6 +4,11 @@ The pre-flight gates for taking a clockify-mcp deployment from
 "works on my cluster" to "accepting traffic from clients we don't
 control." Run through every section before opening the front door.
 
+## Pre-flight command gate
+- [ ] `clockify-mcp doctor --profile=prod-postgres --strict` exits 0 against the deployment environment
+- [ ] `clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0 against the deployment environment
+- [ ] strict-doctor output archived with the deploy PR or release notes
+
 ## Security
 - [ ] MCP_PROFILE=prod-postgres applied
 - [ ] MCP_OIDC_STRICT=1 (audience or resource URI bound)
@@ -17,7 +22,7 @@ control." Run through every section before opening the front door.
 
 ## Storage
 - [ ] Postgres backend built with `-tags=postgres`
-- [ ] Migration 002_audit_phase applied (run `clockify-mcp doctor` against the prod DSN)
+- [ ] Migration 002_audit_phase applied and backend reachable (`clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0)
 - [ ] Audit retention (`MCP_CONTROL_PLANE_AUDIT_RETENTION`) set per compliance
 - [ ] Backup / restore runbook tested in staging within the last 90 days
 

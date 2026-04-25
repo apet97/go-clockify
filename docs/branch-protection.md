@@ -97,9 +97,10 @@ required-checks list on `main`, as reported by
   overlay parses cleanly, `scripts/check-overlay-structure.sh`
   blocks any overlay re-introducing an `images:` block, helm
   template renders.
-- `Test (HTTP smoke)` — `scripts/smoke-http.sh` and
-  `scripts/smoke-stdio.sh` exercise the HTTP and stdio transports
-  end-to-end against dummy credentials.
+- `Test (HTTP smoke)` — `scripts/smoke-http.sh`,
+  `scripts/smoke-stdio.sh`, and `scripts/smoke-doctor-strict.sh`
+  exercise HTTP, stdio, and hosted strict-doctor posture end-to-end
+  against dummy credentials.
 - `Build, scan, sign` — the container image builds, Trivy passes on
   HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
 - `Lychee` — external Markdown link check across the repo.

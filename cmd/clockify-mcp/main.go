@@ -222,7 +222,7 @@ func printHelp() {
 	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — MCP server for Clockify\n\n", effectiveVersion())
 	_, _ = fmt.Fprintln(w, "Usage:")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
-	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy]")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy] [--check-backends]")
 	_, _ = fmt.Fprintln(w, "                                             Audit config (exit 0=OK, 2=LOAD ERROR, 3=STRICT FINDINGS)")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp --version | -v            Print version and exit")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp --help    | -h            Print this help and exit")

@@ -59,6 +59,108 @@ func (s *Store) Close() error {
 
 const storeOpTimeout = 15 * time.Second
 
+// DoctorCheck is an explicit health probe for `clockify-mcp doctor
+// --check-backends`. Opening the store has already parsed the DSN,
+// connected to Postgres, and applied embedded migrations; this method
+// verifies those effects are visible and that the audit write path can
+// round-trip the 002_audit_phase column.
+func (s *Store) DoctorCheck(ctx context.Context) error {
+	checkCtx, cancel := context.WithTimeout(ctx, storeOpTimeout)
+	defer cancel()
+
+	if err := s.pool.Ping(checkCtx); err != nil {
+		return fmt.Errorf("ping database: %w", err)
+	}
+
+	var hasMigrationsTable bool
+	if err := s.pool.QueryRow(checkCtx, `
+		SELECT EXISTS (
+			SELECT 1
+			  FROM information_schema.tables
+			 WHERE table_schema = current_schema()
+			   AND table_name = 'schema_migrations'
+		)`).Scan(&hasMigrationsTable); err != nil {
+		return fmt.Errorf("check schema_migrations table: %w", err)
+	}
+	if !hasMigrationsTable {
+		return fmt.Errorf("schema_migrations table does not exist")
+	}
+
+	var migration002Applied bool
+	if err := s.pool.QueryRow(checkCtx,
+		`SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = 2)`,
+	).Scan(&migration002Applied); err != nil {
+		return fmt.Errorf("check migration 002_audit_phase: %w", err)
+	}
+
+	var hasAuditPhaseColumn bool
+	if err := s.pool.QueryRow(checkCtx, `
+		SELECT EXISTS (
+			SELECT 1
+			  FROM information_schema.columns
+			 WHERE table_schema = current_schema()
+			   AND table_name = 'audit_events'
+			   AND column_name = 'phase'
+		)`).Scan(&hasAuditPhaseColumn); err != nil {
+		return fmt.Errorf("check audit_events.phase column: %w", err)
+	}
+	if !migration002Applied && !hasAuditPhaseColumn {
+		return fmt.Errorf("migration 002_audit_phase is not recorded and audit_events.phase is missing")
+	}
+
+	externalID := fmt.Sprintf("doctor-backend-%d", time.Now().UnixNano())
+	appended := false
+	defer func() {
+		if !appended {
+			return
+		}
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
+		defer cancel()
+		_, _ = s.pool.Exec(cleanupCtx,
+			`DELETE FROM audit_events WHERE external_id = $1`,
+			externalID,
+		)
+	}()
+	event := controlplane.AuditEvent{
+		ID:        externalID,
+		At:        time.Now().UTC(),
+		TenantID:  "doctor",
+		Subject:   "doctor",
+		SessionID: "doctor",
+		Transport: "doctor",
+		Tool:      "doctor",
+		Action:    "backend_check",
+		Outcome:   "ok",
+		Phase:     "outcome",
+		Metadata: map[string]string{
+			"source": "clockify-mcp doctor --check-backends",
+		},
+	}
+	if err := s.AppendAuditEvent(event); err != nil {
+		return fmt.Errorf("append audit health event: %w", err)
+	}
+	appended = true
+	var phase string
+	if err := s.pool.QueryRow(checkCtx,
+		`SELECT phase FROM audit_events WHERE external_id = $1`,
+		externalID,
+	).Scan(&phase); err != nil {
+		return fmt.Errorf("read audit health event: %w", err)
+	}
+	if phase != "outcome" {
+		return fmt.Errorf("read audit health event phase %q, want outcome", phase)
+	}
+	if _, err := s.pool.Exec(checkCtx,
+		`DELETE FROM audit_events WHERE external_id = $1`,
+		externalID,
+	); err != nil {
+		return fmt.Errorf("delete audit health event: %w", err)
+	}
+	appended = false
+
+	return nil
+}
+
 func (s *Store) Tenant(id string) (controlplane.TenantRecord, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
 	defer cancel()

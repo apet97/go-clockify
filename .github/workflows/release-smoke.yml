@@ -6,7 +6,7 @@ name: Release smoke
 # accidental tag mutation) surfaces as a GitHub issue rather than as a
 # silent rot.
 #
-# Three independent verification steps, each in its own step so a single
+# Four independent verification steps, each in its own step so a single
 # failure does not mask the others:
 #
 #   1. gh attestation verify   — SLSA build provenance on the release
@@ -22,6 +22,9 @@ name: Release smoke
 #                                ghcr.io/apet97/go-clockify image at the
 #                                tag's digest. Source: docker-image.yml
 #                                cosign sign --yes step.
+#   4. doctor --strict           — hosted-posture smoke on the shipped
+#                                linux-x64 binary, including the
+#                                negative broad-policy exit path.
 #
 # All ${{ }} references to event payload, repo, and inputs are placed
 # inside env: blocks rather than interpolated into run: commands so
@@ -149,6 +152,33 @@ jobs:
             --pattern 'clockify-mcp-linux-x64.sigstore.json'
           ls -l
 
+      - name: Smoke-test doctor --strict on release binary
+        run: |
+          set -euo pipefail
+          chmod +x artifacts/clockify-mcp-linux-x64
+
+          export MCP_PROFILE=prod-postgres
+          export MCP_CONTROL_PLANE_DSN="postgres://user:pass@localhost:5432/clockify?sslmode=disable"
+          export MCP_OIDC_ISSUER="https://issuer.example.com"
+          export MCP_OIDC_AUDIENCE="clockify-mcp"
+          export CLOCKIFY_API_KEY="dummy"
+
+          artifacts/clockify-mcp-linux-x64 doctor --strict >/tmp/release-doctor-strict-ok.txt
+          grep -q "Strict posture" /tmp/release-doctor-strict-ok.txt
+          grep -q "OK" /tmp/release-doctor-strict-ok.txt
+
+          set +e
+          CLOCKIFY_POLICY=standard artifacts/clockify-mcp-linux-x64 doctor --strict >/tmp/release-doctor-strict-fail.txt 2>&1
+          code=$?
+          set -e
+
+          if [ "$code" -ne 3 ]; then
+            echo "expected doctor --strict to exit 3 for strict findings, got $code"
+            cat /tmp/release-doctor-strict-fail.txt
+            exit 1
+          fi
+          grep -q "CLOCKIFY_POLICY" /tmp/release-doctor-strict-fail.txt
+
       - name: Verify SLSA build provenance attestation
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -253,8 +283,8 @@ jobs:
           **Attempt:** ${RUN_ATTEMPT}
           **Commit:** ${SHA}
 
-          This workflow re-verifies three supply-chain surfaces every
-          release produces:
+          This workflow re-verifies release-artifact integrity and
+          hosted-posture behavior every release produces:
 
           1. \`gh attestation verify\` on the linux-x64 binary (SLSA
              build provenance from \`release.yml\`).
@@ -262,6 +292,8 @@ jobs:
              keyless sigstore bundle goreleaser wrote alongside it.
           3. \`cosign verify\` on the multi-arch ghcr.io image at the
              tag's digest (signed by \`docker-image.yml\`).
+          4. \`clockify-mcp doctor --strict\` on the shipped linux-x64
+             binary, including the broad-policy negative exit path.
 
           A failure usually means one of:
 
@@ -273,6 +305,8 @@ jobs:
           4. A genuine signing-pipeline regression landed in
              \`release.yml\`, \`docker-image.yml\`, or
              \`.goreleaser.yaml\`.
+          5. The release binary dropped or regressed hosted strict
+             posture handling in \`clockify-mcp doctor --strict\`.
 
           See \`docs/verification.md\` for the manual equivalent of
           these checks.

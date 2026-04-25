@@ -210,6 +210,10 @@ jobs:
         # in the scanner loop or response encoder would otherwise only
         # surface via user reports. Script takes no external input.
         run: bash scripts/smoke-stdio.sh
+      - name: Doctor strict smoke
+        # Offline synthetic env only: verifies strict-mode flag
+        # parsing and posture findings without requiring Postgres.
+        run: bash scripts/smoke-doctor-strict.sh
 
   secret-scan:
     name: Secret scan (gitleaks)

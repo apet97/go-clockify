@@ -26,6 +26,12 @@ MCP_TRANSPORT=stdio
 CLOCKIFY_POLICY=safe_core
 ```
 
+`local-stdio` intentionally defaults to `safe_core` because the MCP
+client runs as the local user's subprocess with that user's Clockify
+API key. This profile is for trusted local automation. Use
+`CLOCKIFY_POLICY=time_tracking_safe` if the local client or prompt
+source is not fully trusted.
+
 Defaults that apply automatically and don't need to be set:
 
 | Variable | Default | Reason |
