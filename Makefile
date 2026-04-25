@@ -37,7 +37,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict config-parity catalog-drift doc-parity config-doc-parity repo-hygiene
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity repo-hygiene
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -140,6 +140,9 @@ stdio-smoke:
 
 doctor-strict-smoke verify-doctor-strict:
 	bash scripts/smoke-doctor-strict.sh
+
+grpc-auth-smoke:
+	bash scripts/smoke-grpc-auth.sh
 
 secret-scan:
 	@if ! command -v gitleaks >/dev/null 2>&1; then \
