@@ -52,7 +52,7 @@ ARG BUILD_DATE=unknown
 # OCI image labels for registry UX and supply-chain tooling. org.opencontainers.*
 # is the standard; GitHub + GHCR + Grafana + other scanners index these.
 LABEL org.opencontainers.image.title="clockify-mcp" \
-      org.opencontainers.image.description="Production-grade Go MCP server for Clockify" \
+      org.opencontainers.image.description="Go MCP server for Clockify" \
       org.opencontainers.image.source="https://github.com/apet97/go-clockify" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}" \

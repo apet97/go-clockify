@@ -5,15 +5,33 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         VERSION: ${VERSION:-dev}
+    # Host 8080 is bound to loopback so the container is not directly
+    # reachable from the public network. Caddy below terminates TLS and
+    # is the only ingress for the public domain. Operators who do not
+    # need Caddy can drop the caddy service and re-bind to 0.0.0.0:8080,
+    # but should reach for streamable_http TLS (MCP_HTTP_TLS_CERT/KEY)
+    # rather than terminate plaintext on a public port.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - clockify_mcp_data:/var/lib/clockify-mcp
     environment:
+      # Apply the single-tenant streamable HTTP profile so the wired-up
+      # defaults match docs/deploy/production-profile-single-tenant-http.md.
+      # Explicit env values below still win because applyProfile only
+      # writes to unset keys.
+      - MCP_PROFILE=single-tenant-http
       - CLOCKIFY_API_KEY=${CLOCKIFY_API_KEY}
       - CLOCKIFY_WORKSPACE_ID=${CLOCKIFY_WORKSPACE_ID:-}
       - CLOCKIFY_TIMEZONE=${CLOCKIFY_TIMEZONE:-UTC}
       - CLOCKIFY_BASE_URL=${CLOCKIFY_BASE_URL:-https://api.clockify.me/api/v1}
-      - CLOCKIFY_POLICY=${CLOCKIFY_POLICY:-standard}
-      - MCP_TRANSPORT=http
+      # time_tracking_safe is the recommended default for AI-facing
+      # deployments — it permits the time-tracking write surface (entries,
+      # timers, tags on entries) but blocks workspace-wide create writes
+      # for projects, clients, and tasks. Operators running a trusted
+      # team assistant can override to safe_core if they need broader
+      # write access.
+      - CLOCKIFY_POLICY=${CLOCKIFY_POLICY:-time_tracking_safe}
       - MCP_HTTP_BIND=0.0.0.0:8080
       - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}
       - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
@@ -39,5 +57,6 @@ services:
       - clockify-mcp
 
 volumes:
+  clockify_mcp_data:
   caddy_data:
   caddy_config:

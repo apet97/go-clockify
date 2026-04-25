@@ -1,6 +1,15 @@
 your-domain.example.com {
-    reverse_proxy clockify-mcp:8080
+    # Streamable HTTP needs Host and forwarded scheme preserved so the
+    # server's strict Host check (MCP_STRICT_HOST_CHECK) and any future
+    # absolute-URL responses see the externally observed values rather
+    # than the container's internal "clockify-mcp:8080".
+    reverse_proxy clockify-mcp:8080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
     encode gzip
+
     log {
         output stderr
     }

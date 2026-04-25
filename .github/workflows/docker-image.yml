@@ -138,11 +138,25 @@ jobs:
           BUILD_DATE: ${{ steps.build_meta.outputs.build_date }}
         run: |
           set -euo pipefail
+          # The image defaults to MCP_TRANSPORT=streamable_http, which
+          # requires an authenticator and a control-plane store. Wire the
+          # static-bearer + memory-backend pair so the smoke run starts
+          # cleanly without needing a Postgres container or an OIDC issuer.
+          # MCP_ALLOW_DEV_BACKEND=1 acknowledges the single-process
+          # constraint of the memory backend (production deployments use
+          # postgres://...). Metrics are exposed on a dedicated listener
+          # because /metrics is not mounted on the streamable_http main
+          # listener.
           cid="$(docker run -d --rm \
             -p 127.0.0.1:8091:8080 \
+            -p 127.0.0.1:8092:8082 \
             -e CLOCKIFY_API_KEY=smoke-test-dummy \
+            -e MCP_AUTH_MODE=static_bearer \
             -e MCP_BEARER_TOKEN=smoke-test-token-1234567890 \
-            -e MCP_HTTP_INLINE_METRICS_ENABLED=true \
+            -e MCP_CONTROL_PLANE_DSN=memory \
+            -e MCP_ALLOW_DEV_BACKEND=1 \
+            -e MCP_METRICS_BIND=:8082 \
+            -e MCP_METRICS_BEARER_TOKEN=smoke-test-metrics-token-1234567890 \
             "$IMAGE_REF")"
           cleanup() {
             docker rm -f "$cid" >/dev/null 2>&1 || true
@@ -166,7 +180,24 @@ jobs:
               ;;
           esac
 
-          metrics="$(curl -sf -H "Authorization: Bearer smoke-test-token-1234567890" http://127.0.0.1:8091/metrics)"
+          # /metrics on the dedicated listener requires the metrics bearer.
+          # The main bearer must be rejected — defence-in-depth against a
+          # token leak from the API surface granting access to /metrics.
+          unauth_code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8092/metrics)"
+          if [ "$unauth_code" != "401" ]; then
+            echo "unauthenticated /metrics returned $unauth_code, expected 401"
+            exit 1
+          fi
+          wrong_code="$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer smoke-test-token-1234567890" \
+            http://127.0.0.1:8092/metrics)"
+          if [ "$wrong_code" != "401" ]; then
+            echo "/metrics accepted main bearer (expected 401): $wrong_code"
+            exit 1
+          fi
+          metrics="$(curl -sf \
+            -H "Authorization: Bearer smoke-test-metrics-token-1234567890" \
+            http://127.0.0.1:8092/metrics)"
           expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
           printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {
             echo "missing expected build_info labels"
@@ -178,6 +209,14 @@ jobs:
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$COMMIT"
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "$BUILD_DATE"
+          # Confirm the OCI description label is plain — the "Production-grade"
+          # marketing string was removed in the 2026-04-25 hardening wave so
+          # the registry index does not parrot claims the binary doesn't earn.
+          desc="$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.description" }}')"
+          if printf '%s' "$desc" | grep -Eqi 'production-grade|enterprise-grade|best-in-class'; then
+            echo "OCI description contains marketing puffery: $desc"
+            exit 1
+          fi
 
       - name: Trivy vulnerability scan (registry digest)
         if: github.event_name != 'pull_request'

@@ -33,6 +33,113 @@ func TestDockerfileDefaultsHardening(t *testing.T) {
 	if !regexp.MustCompile(`(?m)^ENV MCP_STRICT_HOST_CHECK=1`).MatchString(raw) {
 		t.Errorf("Dockerfile missing ENV MCP_STRICT_HOST_CHECK=1 (DNS-rebinding mitigation expected by default)")
 	}
+
+	// Marketing claims do not belong in registry metadata. The audit-
+	// driven 2026-04-25 wave removed "Production-grade" / "best-in-class"
+	// language from prose docs (commits e12189a, d3db3ce); the OCI label
+	// description is the last surface that still parroted the puffery
+	// when this guard was added.
+	puffery := regexp.MustCompile(`(?i)production-grade|enterprise-grade|best-in-class`)
+	for line := range strings.SplitSeq(raw, "\n") {
+		if !strings.Contains(line, "org.opencontainers.image.description") {
+			continue
+		}
+		if puffery.MatchString(line) {
+			t.Errorf("Dockerfile OCI description contains marketing puffery: %q", strings.TrimSpace(line))
+		}
+	}
+}
+
+// TestComposeDefaultsHardening locks in that deploy/docker-compose.yml
+// applies the single-tenant streamable HTTP profile, binds the host
+// port to loopback only, persists state on a named volume, and does
+// not regress to the legacy http transport or the broad standard
+// policy. Audit findings H1 (legacy default) and M3 (broad policy)
+// were already fixed in deploy/k8s/* and deploy/helm/* — this test
+// stops Compose from quietly drifting back.
+func TestComposeDefaultsHardening(t *testing.T) {
+	raw := mustRead(t, filepath.Join("..", "deploy", "docker-compose.yml"))
+
+	if regexp.MustCompile(`(?m)^\s*-\s*MCP_TRANSPORT\s*=\s*http\s*$`).MatchString(raw) {
+		t.Errorf("docker-compose.yml hardcodes MCP_TRANSPORT=http (legacy); single-tenant profile selects streamable_http")
+	}
+	if !regexp.MustCompile(`(?m)^\s*-\s*MCP_PROFILE\s*=\s*single-tenant-http\s*$`).MatchString(raw) {
+		t.Errorf("docker-compose.yml missing MCP_PROFILE=single-tenant-http; profile is the canonical way to wire control-plane + auth defaults")
+	}
+	// The default branch of CLOCKIFY_POLICY must not fall back to
+	// "standard". time_tracking_safe is the recommended AI-facing
+	// default; safe_core is acceptable for trusted-team deployments.
+	policyRe := regexp.MustCompile(`(?m)^\s*-\s*CLOCKIFY_POLICY\s*=\$\{CLOCKIFY_POLICY:-([^}]+)\}\s*$`)
+	pm := policyRe.FindStringSubmatch(raw)
+	if len(pm) != 2 {
+		t.Fatalf("docker-compose.yml missing CLOCKIFY_POLICY env with explicit default")
+	}
+	switch pm[1] {
+	case "time_tracking_safe", "safe_core", "read_only":
+		// allowed
+	case "standard", "full":
+		t.Errorf("docker-compose.yml defaults CLOCKIFY_POLICY=%q; AI-facing deployments should default to time_tracking_safe", pm[1])
+	default:
+		t.Errorf("docker-compose.yml CLOCKIFY_POLICY default %q is not a recognised policy mode", pm[1])
+	}
+
+	// Loopback-only host bind ensures the service is not directly
+	// reachable from the public network without going through Caddy.
+	if !regexp.MustCompile(`(?m)^\s*-\s*"127\.0\.0\.1:8080:8080"`).MatchString(raw) {
+		t.Errorf("docker-compose.yml clockify-mcp port should be bound to 127.0.0.1:8080:8080 to keep the public surface behind Caddy")
+	}
+
+	if !strings.Contains(raw, "clockify_mcp_data:/var/lib/clockify-mcp") {
+		t.Errorf("docker-compose.yml missing persistent volume mount for /var/lib/clockify-mcp; single-tenant profile expects file-backed control plane")
+	}
+	if !regexp.MustCompile(`(?ms)^volumes:\s*$.*?clockify_mcp_data:`).MatchString(raw) {
+		t.Errorf("docker-compose.yml missing top-level clockify_mcp_data volume declaration")
+	}
+}
+
+// TestCaddyfilePreservesProxyHeaders pins that the bundled Caddyfile
+// preserves the externally observed Host and forwarded scheme so the
+// MCP server's strict-host check sees the public domain rather than
+// the container's internal address. Without these headers, enabling
+// MCP_STRICT_HOST_CHECK behind Caddy would 403 every legitimate
+// request.
+func TestCaddyfilePreservesProxyHeaders(t *testing.T) {
+	raw := mustRead(t, filepath.Join("..", "deploy", "Caddyfile"))
+	if !regexp.MustCompile(`(?m)^\s*header_up\s+Host\s+\{host\}\s*$`).MatchString(raw) {
+		t.Errorf("Caddyfile reverse_proxy block missing `header_up Host {host}` (required so MCP_STRICT_HOST_CHECK sees the public domain)")
+	}
+	if !regexp.MustCompile(`(?m)^\s*header_up\s+X-Forwarded-Proto\s+\{scheme\}\s*$`).MatchString(raw) {
+		t.Errorf("Caddyfile reverse_proxy block missing `header_up X-Forwarded-Proto {scheme}` (required for any future absolute-URL responses)")
+	}
+}
+
+// TestDockerImageWorkflowSmokeEnvHardening locks the env block that
+// the PR Docker smoke uses against the now-default streamable HTTP
+// transport. Without MCP_AUTH_MODE=static_bearer + a memory backend
+// + MCP_ALLOW_DEV_BACKEND=1, the image can't start because
+// streamable_http defaults to OIDC and refuses memory-backed control
+// planes. Without a dedicated metrics bind, /metrics is absent on
+// streamable_http (inline metrics only mounts on legacy http).
+func TestDockerImageWorkflowSmokeEnvHardening(t *testing.T) {
+	raw := mustRead(t, filepath.Join("..", ".github", "workflows", "docker-image.yml"))
+
+	required := []string{
+		"-e MCP_AUTH_MODE=static_bearer",
+		"-e MCP_CONTROL_PLANE_DSN=memory",
+		"-e MCP_ALLOW_DEV_BACKEND=1",
+		"-e MCP_METRICS_BIND=:8082",
+		"-e MCP_METRICS_BEARER_TOKEN=",
+	}
+	for _, frag := range required {
+		if !strings.Contains(raw, frag) {
+			t.Errorf("docker-image.yml smoke step missing %q (streamable_http default needs static-bearer + memory + dev-backend + dedicated metrics listener)", frag)
+		}
+	}
+	// The legacy MCP_HTTP_INLINE_METRICS_ENABLED flag is a no-op on
+	// streamable_http; carrying it forward would mislead future readers.
+	if strings.Contains(raw, "-e MCP_HTTP_INLINE_METRICS_ENABLED=true") {
+		t.Errorf("docker-image.yml smoke still sets MCP_HTTP_INLINE_METRICS_ENABLED=true; inline metrics is legacy-http only — use MCP_METRICS_BIND instead")
+	}
 }
 
 // TestKustomizeBaseDefaultsHardening locks in the same hardening for
