@@ -36,6 +36,8 @@ data:
   # MCP_OIDC_AUDIENCE: ""
   # MCP_OIDC_JWKS_URL: ""
   # MCP_RESOURCE_URI: ""
+  # MCP_OIDC_STRICT: "1"            # fail config if oidc has no audience/resource; reject tokens missing exp
+  # MCP_REQUIRE_TENANT_CLAIM: "1"   # reject oidc tokens missing the tenant claim (no fallback to MCP_DEFAULT_TENANT_ID)
   # MCP_FORWARD_TENANT_HEADER: ""
   # MCP_FORWARD_SUBJECT_HEADER: ""
   # MCP_MTLS_TENANT_HEADER: ""

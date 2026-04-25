@@ -26,6 +26,12 @@ MCP_CONTROL_PLANE_DSN=postgres://user:pass@db-host:5432/clockify_mcp?sslmode=ver
 MCP_AUTH_MODE=oidc
 MCP_OIDC_ISSUER=https://auth.example.com/
 MCP_OIDC_AUDIENCE=clockify-mcp-shared
+# Hosted-service strict mode: rejects tokens that aren't bound to this
+# server (no audience/resource claim) and tokens missing an exp claim.
+MCP_OIDC_STRICT=1
+# Reject tokens whose tenant claim is empty rather than collapsing them
+# into MCP_DEFAULT_TENANT_ID. Required for any multi-tenant deployment.
+MCP_REQUIRE_TENANT_CLAIM=1
 
 # Observability: Dedicated metrics port
 MCP_METRICS_BIND=:9091

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -510,6 +511,69 @@ func TestLoadTransportGRPCMTLSAccepted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected gRPC + mtls (with cert/key/CA) to be accepted, got: %v", err)
 	}
+}
+
+// TestOIDCStrictRequiresAudienceOrResourceURI locks in the C1 finding
+// from the 2026-04-25 audit: when MCP_OIDC_STRICT=1 is set on an oidc
+// deployment, config.Load must reject configurations that bind tokens
+// only by issuer (no audience, no resource URI). Hosted-service
+// deployments need to bind tokens to *this* server, not just any server
+// trusted by the issuer.
+func TestOIDCStrictRequiresAudienceOrResourceURI(t *testing.T) {
+	t.Run("strict_no_audience_no_resource_rejected", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY": "test-key",
+			"MCP_TRANSPORT":    "http",
+			"MCP_AUTH_MODE":    "oidc",
+			"MCP_OIDC_ISSUER":  "https://issuer.example",
+			"MCP_OIDC_STRICT":  "1",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error when MCP_OIDC_STRICT=1 has no audience/resource")
+		}
+		if !strings.Contains(err.Error(), "MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI") {
+			t.Errorf("error should name both vars, got: %v", err)
+		}
+	})
+	t.Run("strict_with_audience_accepted", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":  "test-key",
+			"MCP_TRANSPORT":     "http",
+			"MCP_AUTH_MODE":     "oidc",
+			"MCP_OIDC_ISSUER":   "https://issuer.example",
+			"MCP_OIDC_AUDIENCE": "clockify-mcp",
+			"MCP_OIDC_STRICT":   "1",
+		})
+		if _, err := Load(); err != nil {
+			t.Fatalf("strict + audience should pass: %v", err)
+		}
+	})
+	t.Run("strict_with_resource_uri_accepted", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY": "test-key",
+			"MCP_TRANSPORT":    "http",
+			"MCP_AUTH_MODE":    "oidc",
+			"MCP_OIDC_ISSUER":  "https://issuer.example",
+			"MCP_RESOURCE_URI": "https://mcp.example/mcp",
+			"MCP_OIDC_STRICT":  "1",
+		})
+		if _, err := Load(); err != nil {
+			t.Fatalf("strict + resource URI should pass: %v", err)
+		}
+	})
+	t.Run("non_strict_default_unchanged", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY": "test-key",
+			"MCP_TRANSPORT":    "http",
+			"MCP_AUTH_MODE":    "oidc",
+			"MCP_OIDC_ISSUER":  "https://issuer.example",
+			// no audience, no resource, no MCP_OIDC_STRICT
+		})
+		if _, err := Load(); err != nil {
+			t.Fatalf("non-strict back-compat path should pass: %v", err)
+		}
+	})
 }
 
 func TestLoadDeltaFormat(t *testing.T) {

@@ -126,6 +126,14 @@ spec:
             - name: MCP_RESOURCE_URI
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.auth.oidcStrict }}
+            - name: MCP_OIDC_STRICT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.requireTenantClaim }}
+            - name: MCP_REQUIRE_TENANT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.auth.forwardTenantHeader }}
             - name: MCP_FORWARD_TENANT_HEADER
               value: {{ . | quote }}

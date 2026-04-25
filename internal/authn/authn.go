@@ -63,6 +63,17 @@ type Config struct {
 	// claim — token-binding to the protected resource. Empty disables the
 	// extra check (back-compat with the simple OIDCAudience match).
 	OIDCResourceURI string
+	// OIDCStrict enables hosted-service-grade claim validation: tokens
+	// missing an `exp` claim are rejected. Config.Load enforces the
+	// audience/resource binding requirement at startup; this flag
+	// covers the per-token claim checks. Default false preserves
+	// self-hosted behaviour.
+	OIDCStrict bool
+	// RequireTenantClaim, when true, makes the OIDC authenticator
+	// reject any token whose tenant claim is empty — instead of
+	// quietly falling back to DefaultTenantID. Default false preserves
+	// self-hosted single-tenant behaviour.
+	RequireTenantClaim bool
 	// OIDCVerifyCacheTTL is the hard ceiling on cached verify results.
 	// Zero selects the default (oidcVerifyCacheMaxTTL); values are
 	// clamped to [oidcVerifyCacheMinTTL, oidcVerifyCacheTTLCeiling].
@@ -284,6 +295,13 @@ func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (P
 	}
 	tenant := claimString(claims.Raw, a.cfg.TenantClaim)
 	if tenant == "" {
+		// Hosted-service mode: missing tenant claim is a hard reject.
+		// Falling back to DefaultTenantID would silently collapse all
+		// tokens that omit the claim into a single shared tenant —
+		// dangerous for a public multi-tenant service.
+		if a.cfg.RequireTenantClaim {
+			return Principal{}, fmt.Errorf("oidc token missing tenant claim %q", a.cfg.TenantClaim)
+		}
 		tenant = a.cfg.DefaultTenantID
 	}
 	principal := Principal{
@@ -387,6 +405,12 @@ func validateClaims(claims jwtClaims, cfg Config) error {
 	// the protected resource still validates only those targeted at it.
 	if cfg.OIDCResourceURI != "" && !slices.Contains([]string(claims.Audience), cfg.OIDCResourceURI) {
 		return fmt.Errorf("token aud does not contain resource URI %q", cfg.OIDCResourceURI)
+	}
+	// Strict mode: reject tokens issued without an explicit expiry.
+	// In permissive mode an exp=0 (claim absent) is treated as
+	// non-expiring, which is unsafe for shared-service deployments.
+	if cfg.OIDCStrict && claims.Expires == 0 {
+		return fmt.Errorf("token missing exp claim (strict mode)")
 	}
 	if claims.Expires != 0 && now >= claims.Expires {
 		return fmt.Errorf("token expired")

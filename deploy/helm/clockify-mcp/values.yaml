@@ -115,6 +115,8 @@ auth:
   oidcAudience: ""          # MCP_OIDC_AUDIENCE
   oidcJwksUrl: ""           # MCP_OIDC_JWKS_URL
   oidcJwksPath: ""          # MCP_OIDC_JWKS_PATH (file mount)
+  oidcStrict: ""            # MCP_OIDC_STRICT="1" — fail config if oidc has no audience/resource; reject tokens without exp
+  requireTenantClaim: ""    # MCP_REQUIRE_TENANT_CLAIM="1" — reject oidc tokens missing the tenant claim (no fallback)
   resourceUri: ""           # MCP_RESOURCE_URI (OAuth 2.1 RS indicator)
   forwardTenantHeader: ""   # MCP_FORWARD_TENANT_HEADER
   forwardSubjectHeader: ""  # MCP_FORWARD_SUBJECT_HEADER

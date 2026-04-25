@@ -68,7 +68,19 @@ type Config struct {
 	// selects the conservative 60s default baked into authn; values
 	// outside [1s, 5m] are clamped at the authn layer. Wired from
 	// MCP_OIDC_VERIFY_CACHE_TTL.
-	OIDCVerifyCacheTTL   time.Duration
+	OIDCVerifyCacheTTL time.Duration
+	// OIDCStrict opts the server into stricter OIDC behaviour for
+	// shared-service / hosted deployments. When true, config.Load
+	// rejects oidc + (no audience + no resource URI) and the OIDC
+	// authenticator rejects tokens missing an `exp` claim. Wired from
+	// MCP_OIDC_STRICT=1.
+	OIDCStrict bool
+	// RequireTenantClaim, when true, makes the OIDC authenticator
+	// reject any token whose tenant claim is absent — instead of
+	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
+	// MCP_REQUIRE_TENANT_CLAIM=1; the default fallback is preserved
+	// for backward-compat with self-hosted single-tenant deployments.
+	RequireTenantClaim   bool
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
 	MTLSTenantHeader     string
@@ -336,6 +348,16 @@ func Load() (Config, error) {
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
+	cfg.OIDCStrict = os.Getenv("MCP_OIDC_STRICT") == "1"
+	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
+	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
+	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,
+	// regardless of whether the token was minted for this server. That
+	// is the C1 finding from the 2026-04-25 audit. Force one or the
+	// other when the operator opts into strict mode.
+	if cfg.AuthMode == "oidc" && cfg.OIDCStrict && cfg.OIDCAudience == "" && cfg.OIDCResourceURI == "" {
+		return Config{}, fmt.Errorf("MCP_OIDC_STRICT=1 requires MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI to bind tokens to this server")
+	}
 	if cfg.AuthMode == "oidc" && cfg.Transport == "streamable_http" && cfg.OIDCIssuer == "" {
 		return Config{}, fmt.Errorf("MCP_OIDC_ISSUER is required when MCP_TRANSPORT=streamable_http and MCP_AUTH_MODE=oidc")
 	}

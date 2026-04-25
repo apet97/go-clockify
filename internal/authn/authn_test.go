@@ -347,6 +347,24 @@ func TestValidateClaims(t *testing.T) {
 			t.Fatalf("audience-less config should pass: %v", err)
 		}
 	})
+	t.Run("strict_rejects_missing_exp", func(t *testing.T) {
+		c := jwtClaims{Issuer: cfg.OIDCIssuer, Audience: claimAudience{"clockify"}}
+		strict := Config{OIDCIssuer: cfg.OIDCIssuer, OIDCAudience: "clockify", OIDCStrict: true}
+		err := validateClaims(c, strict)
+		if err == nil {
+			t.Fatal("expected exp=0 to be rejected in strict mode")
+		}
+		if !strings.Contains(err.Error(), "missing exp") {
+			t.Fatalf("expected exp-missing error, got %v", err)
+		}
+	})
+	t.Run("non_strict_accepts_missing_exp", func(t *testing.T) {
+		c := jwtClaims{Issuer: cfg.OIDCIssuer, Audience: claimAudience{"clockify"}}
+		open := Config{OIDCIssuer: cfg.OIDCIssuer, OIDCAudience: "clockify"}
+		if err := validateClaims(c, open); err != nil {
+			t.Fatalf("non-strict should accept missing exp (back-compat): %v", err)
+		}
+	})
 }
 
 // TestClaimAudienceUnmarshalJSON covers both shapes the spec allows: a single

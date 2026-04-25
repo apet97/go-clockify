@@ -214,6 +214,107 @@ func TestOIDCAuthenticator_NoResourceURI(t *testing.T) {
 	}
 }
 
+// TestOIDCAuthenticator_RequireTenantClaim covers the hosted-service
+// switch that disables silent fallback to MCP_DEFAULT_TENANT_ID when a
+// token omits the tenant claim. Without the flag, missing tenant
+// collapses into the default; with the flag, it is rejected outright.
+func TestOIDCAuthenticator_RequireTenantClaim(t *testing.T) {
+	const (
+		issuer   = "https://issuer.example.test"
+		audience = "clockify-mcp"
+		subject  = "user-42"
+		kid      = "test-key-1"
+	)
+	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	jwks := buildJWKS(t, kid, &privKey.PublicKey)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	now := time.Now().Unix()
+	tokenWithoutTenant := signJWT(t, privKey, kid, map[string]any{
+		"iss": issuer,
+		"sub": subject,
+		"aud": []string{audience},
+		"exp": now + 300,
+	})
+	tokenWithTenant := signJWT(t, privKey, kid, map[string]any{
+		"iss":       issuer,
+		"sub":       subject,
+		"aud":       []string{audience},
+		"exp":       now + 300,
+		"tenant_id": "tenant-7",
+	})
+
+	t.Run("default_falls_back_when_flag_off", func(t *testing.T) {
+		auth, err := New(Config{
+			Mode:            ModeOIDC,
+			OIDCIssuer:      issuer,
+			OIDCAudience:    audience,
+			OIDCJWKSURL:     ts.URL,
+			TenantClaim:     "tenant_id",
+			DefaultTenantID: "fallback-tenant",
+			HTTPClient:      ts.Client(),
+		})
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		princ, err := authenticate(t, auth, tokenWithoutTenant)
+		if err != nil {
+			t.Fatalf("expected fallback to succeed: %v", err)
+		}
+		if princ.TenantID != "fallback-tenant" {
+			t.Errorf("expected fallback tenant, got %q", princ.TenantID)
+		}
+	})
+
+	t.Run("strict_rejects_missing_tenant", func(t *testing.T) {
+		auth, err := New(Config{
+			Mode:               ModeOIDC,
+			OIDCIssuer:         issuer,
+			OIDCAudience:       audience,
+			OIDCJWKSURL:        ts.URL,
+			TenantClaim:        "tenant_id",
+			DefaultTenantID:    "fallback-tenant",
+			RequireTenantClaim: true,
+			HTTPClient:         ts.Client(),
+		})
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		if _, err := authenticate(t, auth, tokenWithoutTenant); err == nil {
+			t.Fatal("expected missing-tenant rejection in strict mode")
+		} else if !strings.Contains(err.Error(), "missing tenant claim") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("strict_accepts_present_tenant", func(t *testing.T) {
+		auth, err := New(Config{
+			Mode:               ModeOIDC,
+			OIDCIssuer:         issuer,
+			OIDCAudience:       audience,
+			OIDCJWKSURL:        ts.URL,
+			TenantClaim:        "tenant_id",
+			DefaultTenantID:    "fallback-tenant",
+			RequireTenantClaim: true,
+			HTTPClient:         ts.Client(),
+		})
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		princ, err := authenticate(t, auth, tokenWithTenant)
+		if err != nil {
+			t.Fatalf("expected token-with-tenant to succeed: %v", err)
+		}
+		if princ.TenantID != "tenant-7" {
+			t.Errorf("expected tenant from claim, got %q", princ.TenantID)
+		}
+	})
+}
+
 // TestProtectedResourceHandler covers the metadata document endpoint.
 func TestProtectedResourceHandler(t *testing.T) {
 	cfg := Config{
