@@ -38,6 +38,22 @@ plane DSN, metrics) is your responsibility — there is no sane
 default for those. See the example env file for the minimum
 required set.
 
+### Required operator-supplied env
+
+The profile pins `MCP_TRANSPORT=grpc` + `MCP_AUTH_MODE=mtls`, which
+makes every variable below a hard requirement at startup. Without
+the full set, either `config.Load()` rejects the configuration or
+`clockify-mcp doctor --strict` flags it.
+
+| Variable | Why |
+|----------|-----|
+| `MCP_GRPC_TLS_CERT` | Server certificate PEM. Required by mTLS — `config.Load()` rejects mTLS without it. |
+| `MCP_GRPC_TLS_KEY` | Server key PEM. Same requirement. |
+| `MCP_MTLS_CA_CERT_PATH` | Client CA bundle. Same requirement. |
+| `MCP_MTLS_TENANT_SOURCE=cert` | The hosted-strict posture (default). Header variants invert the trust model — only acceptable behind a proxy that strips client-supplied tenant headers. |
+| `MCP_REQUIRE_MTLS_TENANT=1` | Reject clients whose cert exposes no tenant identity. Without this, misissued certs collapse onto `MCP_DEFAULT_TENANT_ID` — the multi-tenant footgun this gate closes. `doctor --strict` enforces this when `MCP_AUTH_MODE=mtls`. |
+| `MCP_CONTROL_PLANE_DSN=postgres://…` | Production HA — required by `doctor --strict`. |
+
 ## Build requirement
 
 The gRPC transport lives behind the `grpc` build tag. Binaries in

@@ -62,12 +62,62 @@ deployments that genuinely need broader writes can override to
 `safe_core` (or higher) explicitly — the override path is preserved
 because the profile only writes to unset keys.
 
-## TLS Proxy Requirements
+## TLS Deployment Options
 
-`clockify-mcp` does **not** terminate TLS itself. It must be deployed behind a TLS-terminating reverse proxy (e.g., Caddy, Envoy, or NGINX).
-*   **Exposure:** The proxy should only expose the `/mcp` endpoints and the readiness/liveness health endpoints to the public internet.
-*   **Metrics:** The metrics port (`:9091`) must **never** be exposed publicly.
-*   **Headers:** Use `forward_auth` if the proxy handles OIDC and passes user context via headers.
+`clockify-mcp` supports two deployment shapes for shared-service TLS.
+Pick one explicitly per environment — silently mixing them is how
+"who terminates TLS?" incidents start.
+
+### Recommended: reverse-proxy TLS termination
+
+Run `clockify-mcp` on a private listener behind a TLS-terminating
+reverse proxy (Caddy, Envoy, NGINX, or an ingress controller). This is
+the default shape the `shared-service` profile assumes — `MCP_HTTP_BIND`
+is unset and HTTP traffic is plaintext on the private network.
+
+*   **Exposure:** The proxy should only expose the `/mcp` endpoints and
+    the readiness/liveness health endpoints to the public internet.
+*   **Metrics:** The metrics port (`:9091`) must **never** be exposed
+    publicly. Bind it to localhost or scrape it behind a NetworkPolicy.
+*   **Headers:** Preserve `Host` and `X-Forwarded-Proto`. Set
+    `MCP_ALLOWED_ORIGINS` to the public origin and keep
+    `MCP_STRICT_HOST_CHECK=1`.
+*   **Auth:** If the proxy already handles OIDC, pass user context via
+    `forward_auth` headers (`X-Forwarded-User` / `X-Forwarded-Tenant`).
+    Otherwise let `clockify-mcp` validate OIDC tokens directly.
+
+### Supported: native streamable-HTTP TLS
+
+The `streamable_http` transport can terminate TLS itself when both env
+vars are set. Use this when the operator owns the certificate
+material and wants to remove the proxy hop.
+
+```env
+MCP_TRANSPORT=streamable_http      # already pinned by the profile
+MCP_HTTP_TLS_CERT=/etc/clockify-mcp/server.crt
+MCP_HTTP_TLS_KEY=/etc/clockify-mcp/server.key
+```
+
+For native mTLS, additionally set:
+
+```env
+MCP_AUTH_MODE=mtls                 # overrides the profile's oidc default
+MCP_MTLS_CA_CERT_PATH=/etc/clockify-mcp/client-ca.pem
+MCP_MTLS_TENANT_SOURCE=cert        # default; do not change in hosted strict
+MCP_REQUIRE_MTLS_TENANT=1          # reject clients whose cert lacks tenant identity
+```
+
+Native mTLS expects every client to present a verified certificate;
+behind a proxy, switch back to `forward_auth` or OIDC.
+
+### Unsupported: legacy `http` transport
+
+Legacy `MCP_TRANSPORT=http` is POST-only and does **not** terminate TLS
+natively. The `shared-service` profile pins
+`MCP_HTTP_LEGACY_POLICY=deny`, so opting back into legacy http is a
+deliberate operator choice — and even then, terminate TLS at a reverse
+proxy (`forward_auth` or upstream OIDC). Prefer `streamable_http` for
+all new deployments.
 
 ## Database Constraints
 

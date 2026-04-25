@@ -137,6 +137,35 @@ create a client, a project, a time entry, and then clean them up — if
 anything crashes mid-run, the workspace will be left with orphan
 entities named `AG_TEST_<timestamp>_*`.
 
+## Required live coverage before paid hosted launch
+
+The live workflow currently exercises read-only and basic mutating
+flows against a sacrificial workspace. The hardening wave for the
+public hosted launch identified three additional contracts that
+must hold against a real Clockify account before paid traffic is
+accepted, but they are not yet wired into `tests/` because they
+require destructive scenarios that today's harness does not cleanly
+support. Track them as launch-blocking follow-ups; do not ship paid
+hosted access until each is either implemented in `livee2e` or
+explicitly deferred with a documented exception in the deploy PR.
+
+| Contract test | What it must prove | Why it matters |
+|---|---|---|
+| `TestLiveDryRunDoesNotMutate` | When a destructive tool is invoked with `dry_run:true`, no Clockify API mutation is observed (no entry / project / client appears in the workspace). | The dry-run preview is a documented safety contract in `internal/dryrun/`. A regression that silently sends the mutation anyway looks identical to an end user but breaks every "preview before commit" workflow downstream. |
+| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | With `CLOCKIFY_POLICY=time_tracking_safe`, calling `clockify_create_project` returns the policy-deny response and never reaches the upstream API. | `time_tracking_safe` is the AI-facing default for the shared-service profile (see `docs/deploy/production-profile-shared-service.md`). A drift that leaks workspace-level writes through under that policy fails the very promise the profile was added to make. |
+| `TestLiveCreateUpdateDeleteEntryAuditPhases` | A full create→update→delete cycle on a single time entry persists six audit rows in the control plane: three `intent` + three `outcome`, in order, with the correct outcome strings (`succeeded` / `failed`). | The two-phase audit (intent + outcome) is the load-bearing primitive behind `MCP_AUDIT_DURABILITY=fail_closed`. If the runtime auditor's ID synthesis collapses pairs in a real Postgres backend, the audit trail is silently incomplete — the very class of incident the hardening wave closed at the unit level. |
+
+Implementing these tests means extending `tests/` (or whichever
+package owns `livee2e`) to assert against the Clockify response
+shape *and* the control-plane store directly. The control-plane
+side wants a Postgres DSN under the same gating as the existing
+mutating tests (`CLOCKIFY_LIVE_WRITE_ENABLED=true`).
+
+If a test cannot be implemented safely against the sacrificial
+workspace before launch, file an issue, link it from the deploy
+PR, and explicitly call out which guarantee will not be live-tested
+for the launch window.
+
 ## Why not just run in PR CI?
 
 The sacrificial workspace has finite API quota and a Clockify 5xx burst

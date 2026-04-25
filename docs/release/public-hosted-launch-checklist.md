@@ -54,6 +54,10 @@ Operators can either:
 - [ ] OIDC `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI` set (RFC 8707 binding)
 - [ ] If mTLS is used: `MCP_MTLS_TENANT_SOURCE=cert` (default) and `MCP_REQUIRE_MTLS_TENANT=1`
 - [ ] `MCP_EXPOSE_AUTH_ERRORS=0` (default; clients must not see internal error detail)
+- [ ] TLS termination wired (one of):
+  - reverse-proxy TLS in front of `streamable_http` (recommended), **or**
+  - native streamable TLS via `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY`, **or**
+  - native streamable mTLS via `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` + `MCP_MTLS_CA_CERT_PATH` with `MCP_AUTH_MODE=mtls`
 
 ## Storage
 - [ ] Hosted deploy uses `clockify-mcp-postgres-linux-{x64,arm64}` (or a self-built `-tags=postgres` binary documented in the deploy PR)
@@ -74,6 +78,10 @@ check — strict posture passing on the default binary is *not* a substitute.
 - [ ] Release smoke (tag-driven) green for the version being shipped
 - [ ] SLSA build provenance attested for the image digest you're rolling out
 - [ ] Container image pinned by digest in the deployment manifest (no `:latest`)
+- [ ] Live coverage gaps tracked or closed before paid traffic
+      (`TestLiveDryRunDoesNotMutate`, `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`,
+      `TestLiveCreateUpdateDeleteEntryAuditPhases` — see
+      [`docs/live-tests.md`](../live-tests.md#required-live-coverage-before-paid-hosted-launch))
 
 ## Governance
 - [ ] At least one non-author review on the deploy PR
