@@ -216,6 +216,79 @@ func TestDoctorStrictMTLSRequiresCertTenantSource(t *testing.T) {
 	}
 }
 
+// strictMTLSDoctorEnv returns a self-consistent strict-posture env for
+// MCP_AUTH_MODE=mtls. Pinning every required strict flag here keeps the
+// mTLS-specific tests below focused on the one assertion they care about
+// (require-mtls-tenant) rather than tripping over unrelated findings.
+func strictMTLSDoctorEnv(overrides map[string]string) map[string]string {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":           "test-key",
+		"MCP_TRANSPORT":              "grpc",
+		"MCP_AUTH_MODE":              "mtls",
+		"MCP_GRPC_TLS_CERT":          "/tmp/server.crt",
+		"MCP_GRPC_TLS_KEY":           "/tmp/server.key",
+		"MCP_MTLS_CA_CERT_PATH":      "/tmp/ca.crt",
+		"MCP_MTLS_TENANT_SOURCE":     "cert",
+		"MCP_REQUIRE_MTLS_TENANT":    "1",
+		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
+		"MCP_AUDIT_DURABILITY":       "fail_closed",
+		"MCP_DISABLE_INLINE_SECRETS": "1",
+		"CLOCKIFY_POLICY":            "time_tracking_safe",
+	}
+	for k, v := range overrides {
+		env[k] = v
+	}
+	return env
+}
+
+// TestDoctorStrictMTLSRequiresTenantRequired locks that hosted strict
+// posture refuses an mTLS deployment that has not set
+// MCP_REQUIRE_MTLS_TENANT=1. Without that flag a client whose verified
+// cert exposes no tenant identity silently collapses onto
+// MCP_DEFAULT_TENANT_ID — the multi-tenant footgun this gate closes.
+func TestDoctorStrictMTLSRequiresTenantRequired(t *testing.T) {
+	env := strictMTLSDoctorEnv(map[string]string{
+		"MCP_REQUIRE_MTLS_TENANT": "0",
+	})
+	code, out := runDoctorForTest(t, []string{"--strict"}, env)
+	if code != 3 {
+		t.Fatalf("strict mtls without require-tenant exit = %d, want 3; output:\n%s", code, out)
+	}
+	if !strings.Contains(out, "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1") {
+		t.Fatalf("doctor output missing MCP_REQUIRE_MTLS_TENANT finding message:\n%s", out)
+	}
+}
+
+// TestDoctorStrictMTLSWithRequireTenantPasses confirms the happy path:
+// mTLS + tenant source cert + require-mtls-tenant + every other strict
+// flag self-consistent → no findings.
+func TestDoctorStrictMTLSWithRequireTenantPasses(t *testing.T) {
+	env := strictMTLSDoctorEnv(nil)
+	code, out := runDoctorForTest(t, []string{"--strict"}, env)
+	if code != 0 {
+		t.Fatalf("strict mtls happy path exit = %d, want 0; output:\n%s", code, out)
+	}
+	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
+		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
+	}
+}
+
+// TestDoctorStrictNonMTLSDoesNotRequireMTLSTenantRequired pins the
+// negative half: an OIDC deployment must not be flagged for missing
+// MCP_REQUIRE_MTLS_TENANT — the gate is mTLS-specific.
+func TestDoctorStrictNonMTLSDoesNotRequireMTLSTenantRequired(t *testing.T) {
+	env := strictCleanDoctorEnv(map[string]string{
+		"MCP_REQUIRE_MTLS_TENANT": "0",
+	})
+	code, out := runDoctorForTest(t, []string{"--strict"}, env)
+	if code != 0 {
+		t.Fatalf("strict OIDC without require-mtls-tenant exit = %d, want 0; output:\n%s", code, out)
+	}
+	if strings.Contains(out, "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1") {
+		t.Fatalf("OIDC posture flagged MCP_REQUIRE_MTLS_TENANT (mTLS-only gate); output:\n%s", out)
+	}
+}
+
 func TestDoctorStrictCheckBackendsPreservesLoadErrorExit(t *testing.T) {
 	code, out := runDoctorForTest(t, []string{"--strict", "--check-backends"}, strictCleanDoctorEnv(map[string]string{
 		"MCP_AUDIT_DURABILITY": "sometimes",

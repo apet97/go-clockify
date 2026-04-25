@@ -243,6 +243,18 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 		add("MCP_MTLS_TENANT_SOURCE", "hosted strict posture requires MCP_MTLS_TENANT_SOURCE=cert")
 	}
 
+	// mTLS-specific gate: when the deployment is actually selecting
+	// mtls auth, MCP_REQUIRE_MTLS_TENANT must be on. Without it, a
+	// client whose cert exposes no tenant identity silently collapses
+	// onto MCP_DEFAULT_TENANT_ID — exactly the multi-tenant footgun
+	// MCP_REQUIRE_TENANT_CLAIM=1 closes for OIDC. The "tenant source =
+	// cert" half of the requirement is already enforced by the
+	// universal MCP_MTLS_TENANT_SOURCE check above, so we don't repeat
+	// it here. Non-mTLS auth modes are not subject to this check.
+	if authMode == "mtls" && !effectiveDoctorBool(cfg.RequireMTLSTenant, cfgErr, "MCP_REQUIRE_MTLS_TENANT") {
+		add("MCP_REQUIRE_MTLS_TENANT", "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1")
+	}
+
 	return findings
 }
 
