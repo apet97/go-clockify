@@ -263,12 +263,13 @@ OIDC issuer.
 docker build -f deploy/Dockerfile -t clockify-mcp .
 
 docker volume create clockify-mcp-data
+export MCP_BEARER_TOKEN="$(openssl rand -base64 24)"
 
 docker run -p 8080:8080 \
   -v clockify-mcp-data:/var/lib/clockify-mcp \
   -e MCP_PROFILE=single-tenant-http \
   -e CLOCKIFY_API_KEY=your-key \
-  -e MCP_BEARER_TOKEN=replace-with-a-strong-random-token-at-least-16-chars \
+  -e MCP_BEARER_TOKEN="$MCP_BEARER_TOKEN" \
   clockify-mcp
 ```
 
@@ -277,7 +278,7 @@ Validate the running server with the operator-facing endpoints:
 ```sh
 curl http://127.0.0.1:8080/health
 
-curl -H "Authorization: Bearer replace-with-a-strong-random-token-at-least-16-chars" \
+curl --oauth2-bearer "$MCP_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
   http://127.0.0.1:8080/mcp
