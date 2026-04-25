@@ -71,9 +71,26 @@ jobs:
           set -euo pipefail
           TAG="${REF#v}"
           echo "Looking up image: $IMAGE:$TAG"
-          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          # Deploy and Docker Image fire in parallel on the same tag
+          # push. Docker Image's multi-arch build + cosign sign + SLSA
+          # attestation typically takes 5-10 minutes, so retry the
+          # imagetools lookup with a 30s sleep until it appears
+          # (capped at ~12 minutes total). A workflow_run trigger
+          # would be cleaner but adds an extra workflow indirection
+          # operators have to think about; retrying inline keeps the
+          # tag-push the single source of truth for "deploy this".
+          DIGEST=""
+          for i in $(seq 1 24); do
+            DIGEST=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)
+            if [ -n "$DIGEST" ]; then
+              echo "Image found on attempt $i: $DIGEST"
+              break
+            fi
+            echo "Attempt $i: $IMAGE:$TAG not yet published, sleeping 30s..."
+            sleep 30
+          done
           if [ -z "$DIGEST" ]; then
-            echo "::error::could not resolve image digest for $IMAGE:$TAG"
+            echo "::error::could not resolve image digest for $IMAGE:$TAG after 12 minutes (Docker Image workflow likely failed; check it before re-running Deploy)"
             exit 1
           fi
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
