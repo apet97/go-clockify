@@ -39,10 +39,14 @@ func (s *recordingStore) snapshot() []controlplane.AuditEvent {
 func (s *recordingStore) Tenant(string) (controlplane.TenantRecord, bool) {
 	return controlplane.TenantRecord{}, false
 }
-func (s *recordingStore) PutTenant(controlplane.TenantRecord) error               { return nil }
-func (s *recordingStore) CredentialRef(string) (controlplane.CredentialRef, bool) { return controlplane.CredentialRef{}, false }
-func (s *recordingStore) PutCredentialRef(controlplane.CredentialRef) error       { return nil }
-func (s *recordingStore) Session(string) (controlplane.SessionRecord, bool)       { return controlplane.SessionRecord{}, false }
+func (s *recordingStore) PutTenant(controlplane.TenantRecord) error { return nil }
+func (s *recordingStore) CredentialRef(string) (controlplane.CredentialRef, bool) {
+	return controlplane.CredentialRef{}, false
+}
+func (s *recordingStore) PutCredentialRef(controlplane.CredentialRef) error { return nil }
+func (s *recordingStore) Session(string) (controlplane.SessionRecord, bool) {
+	return controlplane.SessionRecord{}, false
+}
 func (s *recordingStore) PutSession(controlplane.SessionRecord) error             { return nil }
 func (s *recordingStore) DeleteSession(string) error                              { return nil }
 func (s *recordingStore) RetainAudit(context.Context, time.Duration) (int, error) { return 0, nil }
