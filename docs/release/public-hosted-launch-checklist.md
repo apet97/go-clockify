@@ -6,13 +6,43 @@ control." Run through every section before opening the front door.
 
 ## Pre-flight command gate
 - [ ] `clockify-mcp doctor --profile=prod-postgres --strict` exits 0 against the deployment environment
-- [ ] `clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0 against the deployment environment
+- [ ] `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` exits 0 against the deployment environment
 - [ ] strict-doctor output archived with the deploy PR or release notes
 
-`--check-backends` must be run with the Postgres-capable binary built with
-`-tags=postgres`. The default binary reports a strict finding explaining that
-Postgres backend checks require `-tags=postgres`; it does not silently pass
-hosted backend verification.
+The pre-flight gate uses two distinct binaries on purpose:
+
+- **Default binary `clockify-mcp-{linux,darwin,windows}-{x64,arm64}`** —
+  stdlib-only by design (ADR 0001 keeps `pgx` out of `go.mod`). Use it
+  for local self-hosted stdio mode and for the strict-posture
+  *config-only* gate (`doctor --strict`). It deliberately *fails*
+  `--check-backends` with a finding that reads
+  `--check-backends requires a binary built with -tags=postgres to
+  verify Postgres reachability and migrations`. Default release
+  binaries cannot satisfy the hosted backend launch gate.
+- **Postgres binary `clockify-mcp-postgres-linux-{x64,arm64}`** — the
+  hosted-deploy artifact. Links the pgx-backed control-plane store
+  and runs the live `DoctorCheck(ctx)` round-trip on a real Postgres
+  instance. This is the binary that backs production hosted
+  deployments and is the only binary that satisfies
+  `doctor --strict --check-backends`.
+
+Operators can either:
+
+1. **(Recommended)** Download
+   `clockify-mcp-postgres-linux-x64` /
+   `clockify-mcp-postgres-linux-arm64` from the GitHub release the
+   deploy is rolling out. Verify its sigstore bundle and SLSA
+   attestation alongside the default binary (the release-smoke
+   workflow does this on every published tag and weekly).
+2. **(Self-build)** Build from a tagged source tree:
+
+   ```sh
+   git checkout vX.Y.Z
+   go build -tags=postgres -o clockify-mcp-postgres ./cmd/clockify-mcp
+   ```
+
+   Self-builds bypass the cosign / SLSA chain and are only acceptable
+   for emergency rollouts; document the deviation in the deploy PR.
 
 ## Security
 - [ ] MCP_PROFILE=prod-postgres applied
@@ -26,14 +56,17 @@ hosted backend verification.
 - [ ] `MCP_EXPOSE_AUTH_ERRORS=0` (default; clients must not see internal error detail)
 
 ## Storage
-- [ ] Postgres backend built with `-tags=postgres`
-- [ ] Migration 002_audit_phase applied and backend reachable (`clockify-mcp doctor --profile=prod-postgres --strict --check-backends` exits 0)
+- [ ] Hosted deploy uses `clockify-mcp-postgres-linux-{x64,arm64}` (or a self-built `-tags=postgres` binary documented in the deploy PR)
+- [ ] Migration 002_audit_phase applied and backend reachable (`clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` exits 0)
 - [ ] Audit retention (`MCP_CONTROL_PLANE_AUDIT_RETENTION`) set per compliance
 - [ ] Backup / restore runbook tested in staging within the last 90 days
 
-With the Postgres-capable binary, `--check-backends` verifies that the database
-is reachable, the control-plane backend opens cleanly, and the audit phase
-migration is visible through the audit write/read health check.
+With the postgres-tagged binary, `--check-backends` verifies that the database
+is reachable, the control-plane backend opens cleanly, the
+`schema_migrations` row for migration 002 is present, the
+`audit_events.phase` column exists, and a synthetic audit event written by
+`DoctorCheck(ctx)` round-trips. This is a live test, not a config-string
+check — strict posture passing on the default binary is *not* a substitute.
 
 ## CI / release
 - [ ] Docker smoke uses streamable_http with the static-bearer + memory + dev-backend env
