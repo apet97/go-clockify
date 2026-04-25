@@ -62,6 +62,7 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 		Tool:        event.Tool,
 		Action:      event.Action,
 		Outcome:     event.Outcome,
+		Phase:       event.Phase,
 		Reason:      event.Reason,
 		ResourceIDs: event.ResourceIDs,
 		Metadata:    event.Metadata,

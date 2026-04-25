@@ -106,10 +106,31 @@ type ToolHints struct {
 	Idempotent  bool
 }
 
+// AuditPhase identifies which side of a non-read-only tool call an
+// audit record was emitted on. Two-phase audit (intent → outcome)
+// is what makes MCP_AUDIT_DURABILITY=fail_closed actually prevent
+// mutation when audit persistence is broken: an intent record is
+// written before the handler runs, and a fail_closed deployment
+// short-circuits the handler when that intent persistence fails.
+//
+//	PhaseIntent   — pre-handler write; "we are about to call this tool"
+//	PhaseOutcome  — post-handler write; "result was succeeded/failed"
+//
+// Empty Phase ("") is preserved for backward compatibility with
+// audit consumers that pre-date the phased model and treat every
+// record as a single-shot outcome.
+type AuditPhase = string
+
+const (
+	PhaseIntent  AuditPhase = "intent"
+	PhaseOutcome AuditPhase = "outcome"
+)
+
 type AuditEvent struct {
 	Tool        string
 	Action      string
 	Outcome     string
+	Phase       AuditPhase
 	Reason      string
 	ResourceIDs map[string]string
 	Metadata    map[string]string

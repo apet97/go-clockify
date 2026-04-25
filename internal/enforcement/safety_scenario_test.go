@@ -86,7 +86,10 @@ func TestSafetyScenarios(t *testing.T) {
 				return map[string]any{"id": "e1"}, nil
 			},
 			auditDurability: "fail_closed",
-			expectError:     "audit persistence failed",
+			// Two-phase audit (2026-04-25 H5 refactor) short-circuits on
+			// the intent record, so the error message now names the
+			// intent phase explicitly.
+			expectError: "audit intent persistence failed",
 		},
 	}
 

@@ -52,15 +52,22 @@ type SessionRecord struct {
 }
 
 type AuditEvent struct {
-	ID          string            `json:"id"`
-	At          time.Time         `json:"at"`
-	TenantID    string            `json:"tenantId"`
-	Subject     string            `json:"subject"`
-	SessionID   string            `json:"sessionId"`
-	Transport   string            `json:"transport,omitempty"`
-	Tool        string            `json:"tool,omitempty"`
-	Action      string            `json:"action"`
-	Outcome     string            `json:"outcome"`
+	ID        string    `json:"id"`
+	At        time.Time `json:"at"`
+	TenantID  string    `json:"tenantId"`
+	Subject   string    `json:"subject"`
+	SessionID string    `json:"sessionId"`
+	Transport string    `json:"transport,omitempty"`
+	Tool      string    `json:"tool,omitempty"`
+	Action    string    `json:"action"`
+	Outcome   string    `json:"outcome"`
+	// Phase tags two-phase audit records:
+	//   "intent"  — pre-handler write (mutation about to happen)
+	//   "outcome" — post-handler write (success/failure of the mutation)
+	//   ""        — single-shot record (legacy / no phase concept)
+	// Older readers that don't recognise the field will see "" via the
+	// JSON omitempty fallback and treat the record as legacy single-shot.
+	Phase       string            `json:"phase,omitempty"`
 	Reason      string            `json:"reason,omitempty"`
 	ResourceIDs map[string]string `json:"resourceIds,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`

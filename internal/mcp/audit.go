@@ -13,24 +13,43 @@ import (
 // caller. Use this for error-outcome calls (the mutation didn't succeed, so
 // failing the response on audit failure would be doubly confusing).
 func (s *Server) recordAuditBestEffort(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
-	_ = s.emitAudit(tool, action, outcome, reason, args, hints)
+	_ = s.emitAudit(tool, action, outcome, "", reason, args, hints)
 }
 
-// recordAuditWithDurability records an audit event and returns an error when
-// AuditDurabilityMode is "fail_closed" and persistence fails. For read-only
-// hints or when the auditor is nil it is always a no-op.
-func (s *Server) recordAuditWithDurability(tool, action, outcome, reason string, args map[string]any, hints ToolHints) error {
-	auditErr := s.emitAudit(tool, action, outcome, reason, args, hints)
-	if auditErr != nil && s.AuditDurabilityMode == "fail_closed" {
-		return fmt.Errorf("audit persistence failed; mutation outcome unverifiable: %w", auditErr)
+// recordAuditIntent writes a pre-handler "we are about to call this
+// tool" record. Audit phase = PhaseIntent. The return value is honoured
+// at the call site: in fail_closed mode a non-nil error short-circuits
+// the handler so the mutation never happens; in best_effort mode the
+// caller logs and continues. Read-only tools and a nil Auditor are
+// no-ops.
+//
+// Why a separate intent record matters: with a single post-handler
+// audit, fail_closed delivers a vague "audit persistence failed"
+// after the mutation has already taken effect. With an intent record,
+// fail_closed actually prevents the mutation when the audit pipeline
+// is broken.
+func (s *Server) recordAuditIntent(tool, action string, args map[string]any, hints ToolHints) error {
+	intentErr := s.emitAudit(tool, action, "attempted", PhaseIntent, "", args, hints)
+	if intentErr != nil && s.AuditDurabilityMode == "fail_closed" {
+		return fmt.Errorf("audit intent persistence failed; refusing to execute mutation: %w", intentErr)
 	}
 	return nil
+}
+
+// recordAuditOutcome writes the post-handler outcome (success/failure)
+// record paired with an earlier recordAuditIntent. Audit phase =
+// PhaseOutcome. The outcome record is best-effort even in fail_closed
+// mode: the mutation has already happened, so failing the call here
+// would only confuse the client. Operators rely on the slog
+// audit_persist_failed event to detect outcome-record loss.
+func (s *Server) recordAuditOutcome(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
+	_ = s.emitAudit(tool, action, outcome, PhaseOutcome, reason, args, hints)
 }
 
 // emitAudit is the shared core: increments the attempt counter, calls the
 // Auditor, and on failure increments the failure counter and logs a structured
 // error. Returns the persistence error (or nil) so callers can act on it.
-func (s *Server) emitAudit(tool, action, outcome, reason string, args map[string]any, hints ToolHints) error {
+func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reason string, args map[string]any, hints ToolHints) error {
 	if s.Auditor == nil || hints.ReadOnly {
 		return nil
 	}
@@ -39,6 +58,7 @@ func (s *Server) emitAudit(tool, action, outcome, reason string, args map[string
 		Tool:        tool,
 		Action:      action,
 		Outcome:     outcome,
+		Phase:       phase,
 		Reason:      reason,
 		ResourceIDs: resourceIDs(args),
 		Metadata: map[string]string{
@@ -57,6 +77,7 @@ func (s *Server) emitAudit(tool, action, outcome, reason string, args map[string
 		slog.Error("audit_persist_failed",
 			"tool", tool,
 			"outcome", outcome,
+			"phase", phase,
 			"audit_outcome", "not_durable",
 			"durability_mode", s.AuditDurabilityMode,
 			"error", err.Error(),

@@ -124,6 +124,25 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		}
 	}
 
+	// Pre-mutation intent audit. For non-read-only calls, write the
+	// intent record BEFORE the handler runs so MCP_AUDIT_DURABILITY=
+	// fail_closed actually blocks mutations when the audit pipeline is
+	// broken. In best_effort mode the intent failure is logged and we
+	// continue; in fail_closed the caller gets an error and the handler
+	// is never invoked.
+	if !d.ReadOnlyHint {
+		if intentErr := s.recordAuditIntent(params.Name, "tools/call", params.Arguments, hints); intentErr != nil {
+			outcome = "audit_intent_failed"
+			slog.Warn("tool_call_blocked_by_audit",
+				"tool", params.Name,
+				"error", intentErr.Error(),
+				"req_id", reqID,
+				"durability_mode", s.AuditDurabilityMode,
+			)
+			return nil, intentErr
+		}
+	}
+
 	// Dispatch
 	start := time.Now()
 	timeout := s.ToolTimeout
@@ -147,22 +166,27 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		default:
 			outcome = "tool_error"
 		}
-		// Audit the failure; best_effort always (the call failed; fail_closed
-		// only applies to successful mutations).
-		s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+		// Failed mutation: write the outcome record so the intent is
+		// paired with a failure, not orphaned. Best-effort — the handler
+		// already reported its error and failing the call on audit here
+		// would only confuse the client.
+		if !d.ReadOnlyHint {
+			s.recordAuditOutcome(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+		} else {
+			s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+		}
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
 	if !d.ReadOnlyHint {
-		// For a successful non-read-only call, audit failure behavior depends
-		// on AuditDurabilityMode. In "fail_closed" mode, a persistence failure
-		// causes this function to return an error so the client knows the audit
-		// trail is incomplete. In "best_effort" mode (default), the failure is
-		// logged and counted but the call is reported as successful.
-		if auditErr := s.recordAuditWithDurability(params.Name, "tools/call", outcome, "", params.Arguments, hints); auditErr != nil {
-			return nil, auditErr
-		}
+		// Successful mutation: pair the earlier intent with a
+		// succeeded outcome. Best-effort — the mutation has already
+		// committed, so failing the call on audit write here is
+		// pointless (the intent proved fail_closed wasn't going to
+		// block us). Persistence failures still emit slog
+		// audit_persist_failed + metrics.
+		s.recordAuditOutcome(params.Name, "tools/call", outcome, "", params.Arguments, hints)
 		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
 	}
 

@@ -44,7 +44,9 @@ func newAuditServer(auditor Auditor, mode string) *Server {
 }
 
 // TestAuditDurability_BestEffort_AllowsSuccess verifies that a persist failure
-// in best_effort mode does not cause the tool call to fail.
+// in best_effort mode does not cause the tool call to fail. With the two-phase
+// audit model, best_effort emits BOTH the intent and the outcome record even
+// when the auditor is broken — the failures are logged and the call proceeds.
 func TestAuditDurability_BestEffort_AllowsSuccess(t *testing.T) {
 	aud := &failAuditor{}
 	s := newAuditServer(aud, "best_effort")
@@ -58,13 +60,17 @@ func TestAuditDurability_BestEffort_AllowsSuccess(t *testing.T) {
 	if strings.Contains(out.String(), `"isError":true`) {
 		t.Fatalf("best_effort: expected success, got error response: %s", out.String())
 	}
-	if aud.calls != 1 {
-		t.Fatalf("expected 1 audit attempt, got %d", aud.calls)
+	// 2 attempts: intent (pre-handler) + outcome (post-handler).
+	if aud.calls != 2 {
+		t.Fatalf("best_effort: expected 2 audit attempts (intent + outcome), got %d", aud.calls)
 	}
 }
 
 // TestAuditDurability_FailClosed_RejectsOnPersistError verifies that a persist
-// failure in fail_closed mode causes the tool call to return an error.
+// failure in fail_closed mode causes the tool call to return an error BEFORE
+// the handler runs. With the two-phase audit, fail_closed short-circuits on
+// the intent persistence failure so the mutation never commits — this is the
+// property the audit refactor was designed to give us.
 func TestAuditDurability_FailClosed_RejectsOnPersistError(t *testing.T) {
 	aud := &failAuditor{}
 	s := newAuditServer(aud, "fail_closed")
@@ -76,10 +82,16 @@ func TestAuditDurability_FailClosed_RejectsOnPersistError(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 	if !strings.Contains(out.String(), `"isError":true`) {
-		t.Fatalf("fail_closed: expected isError response when audit fails, got: %s", out.String())
+		t.Fatalf("fail_closed: expected isError response when audit intent fails, got: %s", out.String())
 	}
-	if !strings.Contains(out.String(), "audit persistence failed") {
-		t.Fatalf("fail_closed: expected audit failure message, got: %s", out.String())
+	if !strings.Contains(out.String(), "audit intent persistence failed") {
+		t.Fatalf("fail_closed: expected intent-audit failure message, got: %s", out.String())
+	}
+	// Only 1 attempt: intent failed → handler never ran → no outcome record.
+	// This is the pre-mutation guarantee: no mutation if audit can't be
+	// persisted.
+	if aud.calls != 1 {
+		t.Fatalf("fail_closed: expected handler-skip after intent failure (1 audit call), got %d", aud.calls)
 	}
 }
 
@@ -136,8 +148,176 @@ func TestAuditDurability_LogsCanonicalOutcomeField(t *testing.T) {
 	}
 }
 
+// recordingAuditor captures each event (phase + outcome) for assertions.
+type recordingAuditor struct {
+	events []AuditEvent
+}
+
+func (r *recordingAuditor) RecordAudit(e AuditEvent) error {
+	r.events = append(r.events, e)
+	return nil
+}
+
+// TestAuditPhase_FailClosedPreventsHandlerOnIntentFailure is the core
+// promise of the 2026-04-25 audit refactor (finding H5): when the audit
+// pipeline is broken AND the operator has selected fail_closed, the
+// handler must never be invoked for a non-read-only call.
+func TestAuditPhase_FailClosedPreventsHandlerOnIntentFailure(t *testing.T) {
+	var handlerInvocations int
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "write_tool"},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			handlerInvocations++
+			return "ok", nil
+		},
+		ReadOnlyHint: false,
+	}}, nil, nil)
+	s.Auditor = &failAuditor{}
+	s.AuditDurabilityMode = "fail_closed"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if handlerInvocations != 0 {
+		t.Fatalf("fail_closed + failed intent MUST NOT invoke handler; got %d invocations", handlerInvocations)
+	}
+	if !strings.Contains(out.String(), `"isError":true`) {
+		t.Fatalf("expected isError response, got: %s", out.String())
+	}
+}
+
+// TestAuditPhase_BestEffortRunsHandlerDespiteIntentFailure confirms the
+// symmetric back-compat path: best_effort keeps the existing behaviour
+// where audit persistence failures are logged but the tool call still
+// runs.
+func TestAuditPhase_BestEffortRunsHandlerDespiteIntentFailure(t *testing.T) {
+	var handlerInvocations int
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "write_tool"},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			handlerInvocations++
+			return "ok", nil
+		},
+		ReadOnlyHint: false,
+	}}, nil, nil)
+	s.Auditor = &failAuditor{}
+	s.AuditDurabilityMode = "best_effort"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if handlerInvocations != 1 {
+		t.Fatalf("best_effort must still invoke handler despite audit failure; got %d invocations", handlerInvocations)
+	}
+	if strings.Contains(out.String(), `"isError":true`) {
+		t.Fatalf("best_effort must return success, got: %s", out.String())
+	}
+}
+
+// TestAuditPhase_IntentThenOutcomeOnSuccess locks in the record order
+// and phase tagging for a successful non-read-only call.
+func TestAuditPhase_IntentThenOutcomeOnSuccess(t *testing.T) {
+	rec := &recordingAuditor{}
+	s := NewServer("test", []ToolDescriptor{{
+		Tool:         Tool{Name: "write_tool"},
+		Handler:      func(_ context.Context, _ map[string]any) (any, error) { return "ok", nil },
+		ReadOnlyHint: false,
+	}}, nil, nil)
+	s.Auditor = rec
+	s.AuditDurabilityMode = "best_effort"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rec.events) != 2 {
+		t.Fatalf("expected 2 audit events (intent + outcome), got %d: %+v", len(rec.events), rec.events)
+	}
+	if rec.events[0].Phase != PhaseIntent {
+		t.Errorf("event[0].Phase = %q, want %q", rec.events[0].Phase, PhaseIntent)
+	}
+	if rec.events[0].Outcome != "attempted" {
+		t.Errorf("event[0].Outcome = %q, want \"attempted\"", rec.events[0].Outcome)
+	}
+	if rec.events[1].Phase != PhaseOutcome {
+		t.Errorf("event[1].Phase = %q, want %q", rec.events[1].Phase, PhaseOutcome)
+	}
+	if rec.events[1].Outcome != "success" {
+		t.Errorf("event[1].Outcome = %q, want \"success\"", rec.events[1].Outcome)
+	}
+}
+
+// TestAuditPhase_OutcomeMarksFailedOnHandlerError verifies that when
+// the intent succeeded but the handler errored, the outcome record
+// captures the failure status + reason so the two records pair up.
+func TestAuditPhase_OutcomeMarksFailedOnHandlerError(t *testing.T) {
+	rec := &recordingAuditor{}
+	s := NewServer("test", []ToolDescriptor{{
+		Tool:         Tool{Name: "write_tool"},
+		Handler:      func(_ context.Context, _ map[string]any) (any, error) { return nil, errors.New("boom") },
+		ReadOnlyHint: false,
+	}}, nil, nil)
+	s.Auditor = rec
+	s.AuditDurabilityMode = "best_effort"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rec.events) != 2 {
+		t.Fatalf("expected 2 events (intent + outcome), got %d", len(rec.events))
+	}
+	if rec.events[0].Phase != PhaseIntent {
+		t.Errorf("intent phase missing: %+v", rec.events[0])
+	}
+	if rec.events[1].Phase != PhaseOutcome {
+		t.Errorf("outcome phase missing: %+v", rec.events[1])
+	}
+	if rec.events[1].Outcome != "tool_error" {
+		t.Errorf("outcome = %q, want \"tool_error\"", rec.events[1].Outcome)
+	}
+	if !strings.Contains(rec.events[1].Reason, "boom") {
+		t.Errorf("outcome reason missing handler error: %q", rec.events[1].Reason)
+	}
+}
+
+// TestAuditPhase_ReadOnlyToolsSkipBothPhases confirms read-only calls
+// never emit intent or outcome records — nothing to audit.
+func TestAuditPhase_ReadOnlyToolsSkipBothPhases(t *testing.T) {
+	rec := &recordingAuditor{}
+	s := NewServer("test", []ToolDescriptor{{
+		Tool:         Tool{Name: "read_tool"},
+		Handler:      func(_ context.Context, _ map[string]any) (any, error) { return "ok", nil },
+		ReadOnlyHint: true,
+	}}, nil, nil)
+	s.Auditor = rec
+	s.AuditDurabilityMode = "fail_closed"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rec.events) != 0 {
+		t.Fatalf("read-only tool emitted %d audit events, expected 0: %+v", len(rec.events), rec.events)
+	}
+}
+
 // TestAuditDurability_SuccessAuditor_AlwaysPasses verifies that a succeeding
 // auditor does not interfere with tool call results in either durability mode.
+// Both modes now emit an intent AND outcome record on a successful mutation,
+// so the auditor should see 2 calls regardless of mode.
 func TestAuditDurability_SuccessAuditor_AlwaysPasses(t *testing.T) {
 	for _, mode := range []string{"best_effort", "fail_closed"} {
 		t.Run(mode, func(t *testing.T) {
@@ -153,8 +333,8 @@ func TestAuditDurability_SuccessAuditor_AlwaysPasses(t *testing.T) {
 			if strings.Contains(out.String(), `"isError":true`) {
 				t.Fatalf("%s: expected success, got error: %s", mode, out.String())
 			}
-			if aud.calls != 1 {
-				t.Fatalf("%s: expected 1 audit call, got %d", mode, aud.calls)
+			if aud.calls != 2 {
+				t.Fatalf("%s: expected 2 audit calls (intent + outcome), got %d", mode, aud.calls)
 			}
 		})
 	}
