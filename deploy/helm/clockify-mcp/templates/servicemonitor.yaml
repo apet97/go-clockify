@@ -14,11 +14,28 @@ spec:
     matchNames:
       - {{ .Release.Namespace }}
   endpoints:
-    - port: http
+    {{- /*
+      When metricsEndpoint.bind is set, the chart exposes a dedicated
+      `metrics` Service port pointed at the Prometheus listener inside
+      the pod (MCP_METRICS_BIND). Otherwise we fall back to scraping the
+      main listener, which only exposes /metrics when
+      MCP_HTTP_INLINE_METRICS_ENABLED=1 (not configured by this chart by
+      default). Operators enabling the ServiceMonitor without either of
+      those modes will get 404s on every scrape — track which mode you
+      enabled so the wiring matches.
+    */}}
+    - port: {{ if .Values.metricsEndpoint.bind }}metrics{{ else }}http{{ end }}
       path: /metrics
       interval: {{ .Values.metrics.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
       honorLabels: false
+      {{- with .Values.metrics.serviceMonitor.bearerTokenSecret.name }}
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ . }}
+          key: {{ $.Values.metrics.serviceMonitor.bearerTokenSecret.key }}
+      {{- end }}
       metricRelabelings:
         - sourceLabels: [__name__]
           regex: '.*_test_.*'

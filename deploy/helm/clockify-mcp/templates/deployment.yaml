@@ -201,6 +201,11 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
             {{- end }}
+            {{- with .Values.metricsEndpoint.bind }}
+            - name: metrics
+              containerPort: {{ $.Values.metricsEndpoint.servicePort }}
+              protocol: TCP
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:

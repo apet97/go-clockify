@@ -14,6 +14,23 @@ spec:
     matchNames:
       - clockify-mcp
   endpoints:
+    # Scrapes /metrics on the main `http` Service port (8080).
+    #
+    # This works only when the inline metrics handler is enabled via
+    # MCP_HTTP_INLINE_METRICS_ENABLED=1 in the ConfigMap. The MCP server
+    # otherwise serves /metrics from a dedicated listener bound to
+    # MCP_METRICS_BIND, which the base manifests do not expose as a
+    # Service port.
+    #
+    # If you want the recommended pattern (dedicated listener with
+    # bearer auth), layer an overlay that:
+    #   - sets MCP_METRICS_BIND=":9091" + MCP_METRICS_AUTH_MODE="static_bearer"
+    #     in the ConfigMap (and provisions MCP_METRICS_BEARER_TOKEN in the Secret)
+    #   - adds a `metrics` containerPort + Service port (targetPort: metrics)
+    #   - patches this ServiceMonitor to set `port: metrics` + an
+    #     `authorization:` block referencing the bearer-token Secret
+    # The Helm chart's metricsEndpoint.bind values key wires all of the
+    # above in one toggle; see deploy/helm/clockify-mcp/values.yaml.
     - port: http
       path: /metrics
       interval: 30s

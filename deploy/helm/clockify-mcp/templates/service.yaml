@@ -21,3 +21,9 @@ spec:
       targetPort: http
       protocol: TCP
     {{- end }}
+    {{- with .Values.metricsEndpoint.bind }}
+    - name: metrics
+      port: {{ $.Values.metricsEndpoint.servicePort }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}

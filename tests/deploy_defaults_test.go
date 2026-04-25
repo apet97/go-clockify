@@ -1,7 +1,9 @@
 package e2e_test
 
 import (
+	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -92,4 +94,108 @@ func mustRead(t *testing.T, path string) string {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	return string(b)
+}
+
+// TestHelmServiceMonitorPortMatchesService renders the Helm chart with
+// the ServiceMonitor enabled in two configurations — with and without
+// a dedicated metrics listener — and asserts the ServiceMonitor scrapes
+// a port name that the rendered Service actually exposes. Catches the
+// "ServiceMonitor scrapes wrong port" drift the 2026-04-25 audit found:
+// when an operator sets metricsEndpoint.bind=":9091", the chart must
+// expose a `metrics` Service port AND the ServiceMonitor must reference
+// that port name, not `http`.
+//
+// Skips when `helm` is not on PATH (laptop without the deploy toolchain
+// installed); CI's deploy-render job covers it.
+func TestHelmServiceMonitorPortMatchesService(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("helm not on PATH; skipping render-based ServiceMonitor wiring check")
+	}
+	chartDir, err := filepath.Abs(filepath.Join("..", "deploy", "helm", "clockify-mcp"))
+	if err != nil {
+		t.Fatalf("abs chart dir: %v", err)
+	}
+
+	t.Run("inline_metrics_default_uses_http_port", func(t *testing.T) {
+		out := helmTemplate(t, chartDir,
+			"--set", "metrics.serviceMonitor.enabled=true",
+		)
+		// SM should scrape "http" when no dedicated listener is configured.
+		if !regexp.MustCompile(`(?m)^\s+- port: http\s*$`).MatchString(out) {
+			t.Errorf("expected ServiceMonitor port=http when metricsEndpoint.bind is empty; got render:\n%s", excerptServiceMonitor(out))
+		}
+		// And no `metrics` Service port should be rendered.
+		if regexp.MustCompile(`(?m)^\s+- name: metrics\s*$`).MatchString(out) {
+			t.Errorf("expected no `metrics` Service port when metricsEndpoint.bind is empty; got render:\n%s", excerptServiceAndDeployment(out))
+		}
+	})
+
+	t.Run("dedicated_metrics_listener_uses_metrics_port_and_auth", func(t *testing.T) {
+		out := helmTemplate(t, chartDir,
+			"--set", "metrics.serviceMonitor.enabled=true",
+			"--set", "metricsEndpoint.bind=:9091",
+			"--set", "metricsEndpoint.authMode=static_bearer",
+			"--set", "metrics.serviceMonitor.bearerTokenSecret.name=clockify-mcp-secrets",
+		)
+
+		// Service must expose a `metrics` port (targetPort: metrics).
+		if !regexp.MustCompile(`(?ms)- name: metrics\s+port: 9091\s+targetPort: metrics`).MatchString(out) {
+			t.Errorf("expected Service to expose `metrics` port (9091, targetPort=metrics) when metricsEndpoint.bind set; got render:\n%s", excerptServiceAndDeployment(out))
+		}
+		// Deployment must expose a `metrics` containerPort.
+		if !regexp.MustCompile(`(?ms)- name: metrics\s+containerPort: 9091`).MatchString(out) {
+			t.Errorf("expected Deployment containerPort `metrics` when metricsEndpoint.bind set; got render:\n%s", excerptServiceAndDeployment(out))
+		}
+		// ServiceMonitor must scrape the metrics port, not http.
+		if !regexp.MustCompile(`(?m)^\s+- port: metrics\s*$`).MatchString(out) {
+			t.Errorf("expected ServiceMonitor port=metrics when dedicated listener configured; got render:\n%s", excerptServiceMonitor(out))
+		}
+		if regexp.MustCompile(`(?ms)kind: ServiceMonitor.*?- port: http`).MatchString(out) {
+			t.Errorf("ServiceMonitor still scrapes `port: http` despite dedicated listener — that's the regression the audit caught")
+		}
+		// And it must carry an Authorization header.
+		if !regexp.MustCompile(`(?ms)authorization:\s+type: Bearer\s+credentials:\s+name: clockify-mcp-secrets`).MatchString(out) {
+			t.Errorf("expected ServiceMonitor to carry Bearer auth referencing the configured Secret; got render:\n%s", excerptServiceMonitor(out))
+		}
+	})
+}
+
+func helmTemplate(t *testing.T, chartDir string, args ...string) string {
+	t.Helper()
+	full := append([]string{"template", "clockify-mcp", chartDir}, args...)
+	cmd := exec.Command("helm", full...)
+	var out, errb bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errb
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("helm template failed: %v\n--- stderr ---\n%s", err, errb.String())
+	}
+	return out.String()
+}
+
+func excerptServiceMonitor(rendered string) string {
+	idx := strings.Index(rendered, "kind: ServiceMonitor")
+	if idx < 0 {
+		return "(no ServiceMonitor in render)"
+	}
+	end := idx + 800
+	if end > len(rendered) {
+		end = len(rendered)
+	}
+	return rendered[idx:end]
+}
+
+func excerptServiceAndDeployment(rendered string) string {
+	idx := strings.Index(rendered, "kind: Service\n")
+	if idx < 0 {
+		idx = strings.Index(rendered, "kind: Service ") // template variation
+	}
+	if idx < 0 {
+		return "(no Service in render)"
+	}
+	end := idx + 1500
+	if end > len(rendered) {
+		end = len(rendered)
+	}
+	return rendered[idx:end]
 }

@@ -146,9 +146,23 @@ cors:
   allowAnyOrigin: ""    # MCP_ALLOW_ANY_ORIGIN ("1" to allow all)
 
 # Metrics endpoint. Separate bind address from the main transport.
+#
+# Setting `bind: ":9091"` enables a dedicated Prometheus listener on the
+# pod. The chart then renders:
+#   - a `metrics` containerPort on the Deployment (matching `servicePort`)
+#   - a `metrics` Service port (so ServiceMonitor can select it)
+#   - a ServiceMonitor endpoint on `port: metrics` (when serviceMonitor enabled)
+#   - an Authorization header on the ServiceMonitor when `authMode` is
+#     `static_bearer` and `metrics.serviceMonitor.bearerTokenSecret.name`
+#     is set (see the metrics.serviceMonitor block below).
+# The server refuses to start when authMode=static_bearer is set without
+# `secrets.metricsBearerToken` (>=16 chars) — keep the two values in sync.
 metricsEndpoint:
   bind: ""              # MCP_METRICS_BIND (empty = disabled)
   authMode: ""          # MCP_METRICS_AUTH_MODE (default: none)
+  # Numeric port used by the Service + container when `bind` is non-empty.
+  # Must match the port part of `bind` (e.g. ":9091" → 9091).
+  servicePort: 9091
 
 # Secret values. By default the chart creates a placeholder Secret with
 # empty values so operators remember to inject real ones before applying.
@@ -187,6 +201,14 @@ metrics:
     enabled: false
     interval: "30s"
     scrapeTimeout: "10s"
+    # When `metricsEndpoint.authMode` is `static_bearer`, point this at a
+    # Secret holding the same token configured via
+    # `secrets.metricsBearerToken` (or your external Secret). The
+    # ServiceMonitor's Authorization header is sent on every scrape.
+    # Leave both fields empty for unauthenticated metrics.
+    bearerTokenSecret:
+      name: ""
+      key: "MCP_METRICS_BEARER_TOKEN"
   prometheusRule:
     enabled: false
     sloBudgetFactor: "0.001"  # 99.9% SLO
