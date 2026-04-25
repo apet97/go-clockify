@@ -138,6 +138,10 @@ spec:
             - name: MCP_DISABLE_INLINE_SECRETS
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.auth.exposeAuthErrors }}
+            - name: MCP_EXPOSE_AUTH_ERRORS
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.auth.forwardTenantHeader }}
             - name: MCP_FORWARD_TENANT_HEADER
               value: {{ . | quote }}
@@ -148,6 +152,14 @@ spec:
             {{- end }}
             {{- with .Values.auth.mtlsTenantHeader }}
             - name: MCP_MTLS_TENANT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.mtlsTenantSource }}
+            - name: MCP_MTLS_TENANT_SOURCE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.requireMtlsTenant }}
+            - name: MCP_REQUIRE_MTLS_TENANT
               value: {{ . | quote }}
             {{- end }}
             {{- with .Values.controlPlane.dsn }}
