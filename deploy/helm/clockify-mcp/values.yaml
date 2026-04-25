@@ -57,7 +57,11 @@ resources:
 # Environment variables consumed by the server. Values here become the
 # ConfigMap keys. Override per env via -f values-dev.yaml etc.
 config:
-  CLOCKIFY_POLICY: "standard"
+  # safe_core (read + own-time-entry mutations + safe project/client/tag
+  # creation) is the recommended default for an AI-facing endpoint.
+  # Override to "standard" for trusted deployments that need full write
+  # access; see docs/policy-modes.md.
+  CLOCKIFY_POLICY: "safe_core"
   CLOCKIFY_DRY_RUN: "enabled"
   CLOCKIFY_DEDUPE_MODE: "warn"
   CLOCKIFY_DEDUPE_LOOKBACK: "25"
@@ -86,7 +90,10 @@ config:
 # leaving mode=grpc will crash the container at startup — cmd/clockify-mcp
 # aborts via grpc_off.go.
 transport:
-  mode: "http"
+  # Default to streamable_http (spec-strict). Legacy http remains selectable
+  # for back-compat but is deprecated — it drops server-initiated
+  # notifications and is unsuitable for shared-service deployments.
+  mode: "streamable_http"
   bind: ":8080"
   grpcBind: ":9090"
   grpcReauthInterval: ""  # MCP_GRPC_REAUTH_INTERVAL (Go duration, e.g. "60s")
@@ -95,7 +102,9 @@ transport:
   httpTlsCert: ""         # MCP_HTTP_TLS_CERT (streamable_http server cert PEM; required for streamable_http + mtls; enables HTTPS when set)
   httpTlsKey: ""          # MCP_HTTP_TLS_KEY (streamable_http server key PEM; required for streamable_http + mtls)
   mtlsCaCertPath: ""      # MCP_MTLS_CA_CERT_PATH (path to CA cert for client verification; required for grpc + mtls AND streamable_http + mtls)
-  strictHostCheck: "0"
+  # Reject Host headers that don't match the bound address; mitigates
+  # DNS-rebinding when the server is exposed beyond loopback.
+  strictHostCheck: "1"
   logFormat: "json"
   logLevel: "info"
 

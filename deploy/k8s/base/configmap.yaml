@@ -4,7 +4,7 @@ metadata:
   name: clockify-mcp-config
   namespace: clockify-mcp
 data:
-  CLOCKIFY_POLICY: "standard"
+  CLOCKIFY_POLICY: "safe_core"
   CLOCKIFY_DRY_RUN: "enabled"
   CLOCKIFY_DEDUPE_MODE: "warn"
   CLOCKIFY_DEDUPE_LOOKBACK: "25"

@@ -1,0 +1,29 @@
+# deploy/k8s/overlays/legacy-http — back-compat overlay.
+#
+# Flips the base back to MCP_TRANSPORT=http (the legacy POST-only
+# transport) for operators still on pre-v1.1.0 clients that have not
+# migrated to streamable HTTP. The base default is streamable_http;
+# this overlay is the explicit opt-in for the deprecated path.
+#
+# Not recommended for new deployments. The legacy transport drops
+# server-initiated notifications (tools/list_changed) and is unsuitable
+# for shared-service hosting. See docs/adr/ for the full migration
+# rationale.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namePrefix: legacy-http-
+
+patches:
+  - target:
+      kind: Deployment
+      name: clockify-mcp
+    patch: |-
+      # env index 0 is MCP_TRANSPORT in the base deployment.yaml.
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "http"

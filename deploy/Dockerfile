@@ -64,9 +64,16 @@ COPY --from=builder /build/clockify-mcp /usr/local/bin/clockify-mcp
 # Run as non-root (distroless "nonroot" resolves to uid/gid 65532).
 USER 65532:65532
 
-ENV MCP_TRANSPORT=http
+# Default to the spec-strict streamable HTTP transport. Legacy http is
+# still selectable via MCP_TRANSPORT=http but is deprecated for new
+# deployments — it drops server-initiated notifications and is unsuitable
+# for shared-service hosting. See docs/adr/ for the rationale.
+ENV MCP_TRANSPORT=streamable_http
 ENV MCP_HTTP_BIND=0.0.0.0:8080
 ENV MCP_LOG_FORMAT=json
+# Reject Host headers that don't match the bound address; mitigates
+# DNS-rebinding when the server is exposed beyond loopback.
+ENV MCP_STRICT_HOST_CHECK=1
 
 EXPOSE 8080
 

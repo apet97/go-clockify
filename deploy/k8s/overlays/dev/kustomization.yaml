@@ -40,6 +40,11 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/env/3/value
         value: "debug"
+      # Disable strict host check so kubectl port-forward (Host: localhost) works.
+      # env index 4 is MCP_STRICT_HOST_CHECK in the base deployment.yaml.
+      - op: replace
+        path: /spec/template/spec/containers/0/env/4/value
+        value: "0"
   - target:
       kind: ConfigMap
       name: clockify-mcp-config

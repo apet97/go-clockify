@@ -41,7 +41,10 @@ spec:
           args: []
           env:
             - name: MCP_TRANSPORT
-              value: http
+              # Spec-strict streamable HTTP. Override the value to "http" via
+              # the legacy-http overlay if you need the deprecated POST-only
+              # transport (see deploy/k8s/overlays/legacy-http).
+              value: streamable_http
             - name: MCP_HTTP_BIND
               value: ":8080"
             # Uncomment the two lines below and switch MCP_TRANSPORT to "grpc"
@@ -56,6 +59,11 @@ spec:
               value: json
             - name: MCP_LOG_LEVEL
               value: info
+            # Reject Host headers that don't match the bound address; mitigates
+            # DNS-rebinding when the server is exposed beyond loopback. Dev
+            # overlay flips this to "0" so port-forwarding works.
+            - name: MCP_STRICT_HOST_CHECK
+              value: "1"
           envFrom:
             - configMapRef:
                 name: clockify-mcp-config
