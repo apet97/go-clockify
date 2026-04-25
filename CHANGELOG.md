@@ -7,6 +7,140 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-25
+
+> **Scope note.** Security-hardening wave following the
+> 2026-04-25 audit, plus a follow-on wave that lands first-class
+> gRPC release artifacts, MCP-path live safety tests, and a few
+> supply-chain repairs that surfaced during release verification.
+> Self-hosted single-tenant behaviour is preserved by default —
+> every new restriction is opt-in via a flag (`MCP_OIDC_STRICT`,
+> `MCP_REQUIRE_TENANT_CLAIM`, `MCP_DISABLE_INLINE_SECRETS`) so
+> existing deployments continue to work unchanged.
+
+### Added (post-Wave-G additions)
+
+- **First-class gRPC release artifacts.** GoReleaser now publishes
+  four new linux-only binaries:
+  `clockify-mcp-grpc-{linux-x64,linux-arm64}` (private-network
+  gRPC, no postgres) and
+  `clockify-mcp-grpc-postgres-{linux-x64,linux-arm64}` (HA
+  private-network gRPC + pgx control plane). Each ships through
+  the same SBOM (syft) + cosign sigstore + SLSA build-provenance
+  chain as the default and Postgres binaries.
+  `scripts/check-release-assets.sh` raised `EXPECTED_COUNT` from
+  34 → 46 and gained `GRPC_PLATFORMS` / `GRPC_POSTGRES_PLATFORMS`
+  arrays; the regex was reordered so `-grpc-postgres` matches
+  before `-grpc`. The hosted launch checklist references the new
+  artifact names.
+- **`scripts/check-grpc-release-parity.sh`** — release-blocking
+  drift gate: the private-network-grpc profile doc must not claim
+  tenant defaults to `X-Tenant-ID`, must not claim Docker images
+  include gRPC unless either `.goreleaser.yaml` ships a `-grpc`
+  artifact or the Dockerfile / docker-image workflow exposes a
+  `GO_TAGS` build arg, and any doc reference to a `-grpc`
+  artifact must be backed by a matching GoReleaser build id +
+  asset-count enumeration. Wired into `verify-core` and
+  `release-check`.
+- **`make build-grpc` / `make build-grpc-postgres`** — local
+  build targets that exercise the gRPC and gRPC+postgres tag
+  matrices so `make verify` is honest about the private-network
+  gRPC profile compiling against the working tree.
+- **MCP-path live safety contracts** — three new tests that
+  exercise the production enforcement / audit pipeline against a
+  real Clockify backend instead of the bare tool handlers:
+  - `TestLiveDryRunDoesNotMutate` (`tests/e2e_live_mcp_test.go`,
+    build tag `livee2e`) — confirms `clockify_delete_entry` with
+    `dry_run:true` previews via the GET counterpart and never
+    deletes the entry upstream.
+  - `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`
+    (`tests/e2e_live_mcp_test.go`) — confirms
+    `CLOCKIFY_POLICY=time_tracking_safe` rejects
+    `clockify_create_project` at the policy gate before the
+    handler runs.
+  - `TestLiveCreateUpdateDeleteEntryAuditPhases`
+    (`internal/controlplane/postgres/live_audit_phases_test.go`,
+    build tags `postgres,livee2e`) — confirms a real
+    create→update→delete entry cycle persists six audit rows
+    (3 intent + 3 outcome) in a Postgres-backed control plane,
+    distinguished only by phase + outcome segments embedded in
+    the synthesised `external_id`.
+  All three are wired into `.github/workflows/live-contract.yml`
+  under the existing `CLOCKIFY_LIVE_WRITE_ENABLED=true` gate.
+  The audit-phase test additionally requires
+  `MCP_LIVE_CONTROL_PLANE_DSN`; missing on a fork is a soft skip,
+  missing on the main repo is a hard fail when the new repo
+  variable `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` is set.
+- **Docker `GO_TAGS` build-arg path.** `deploy/Dockerfile` now
+  accepts `--build-arg GO_TAGS=grpc[,postgres]` so operators can
+  build a gRPC-capable image directly from the published
+  Dockerfile:
+  `docker build --build-arg GO_TAGS=grpc,postgres -f deploy/Dockerfile -t clockify-mcp:grpc-postgres .`
+  Default image is byte-equivalent (empty `-tags=""` is a Go
+  toolchain no-op). The Dockerfile also copies `go.work`,
+  `go.work.sum`, and the per-sub-module `go.mod` / `go.sum` pairs
+  so tagged builds resolve workspace modules correctly without
+  silently falling back to a stale remote sub-module version.
+- **Docker PR-only gRPC smoke test** in
+  `.github/workflows/docker-image.yml` builds a side image with
+  `GO_TAGS=grpc,postgres` and verifies the runtime no longer hits
+  the `!grpc` stub error, so the documented self-build path can't
+  rot.
+- **`internal/auditbridge/`** — shared `ToControlPlaneEvent(event,
+  now)` helper used by both the runtime auditor and the live
+  audit-phase contract test. Centralises the
+  `mcp.AuditEvent → controlplane.AuditEvent` conversion plus the
+  external_id synthesis that keeps PhaseIntent + PhaseOutcome rows
+  distinct under the Postgres unique constraint. Three direct
+  unit tests pin the field mapping, the IDs-differ contract, and
+  nil-metadata defensive behaviour.
+- **`internal/authn/category_test.go`** — pins the
+  `FailureCategory` substring → bucket contract that every
+  transport's auth-failure log/metric label depends on. Closes
+  the pre-existing `internal/authn` coverage shortfall (86.0% →
+  89.8%).
+
+### Fixed (post-Wave-G)
+
+- **FIPS binaries now get SLSA build provenance.** Every release
+  back to v1.0.x shipped FIPS binaries cosign-signed but with no
+  attest-build-provenance subject — `gh attestation verify
+  clockify-mcp-fips-*` returned HTTP 404. The Wave-G FIPS row was
+  added to `.goreleaser.yaml` without extending `release.yml`'s
+  staging step or the `attest-build-provenance` subject-path.
+  Operators running the FIPS binary previously could not satisfy
+  the launch checklist's "SLSA build provenance attested" gate.
+  Closes the gap manually surfaced during v1.1.0 verification.
+- **Dockerfile previously failed on `GO_TAGS=grpc[,postgres]`.**
+  The build context only included `go.mod`; tagged builds need
+  `go.work` + the workspace sub-module manifests
+  (`internal/transport/grpc`, `internal/controlplane/postgres`,
+  `internal/tracing/otel`). Without them the Go toolchain either
+  failed offline or silently downloaded a stale remote version of
+  the sub-module — shipping an image whose gRPC code did not match
+  its source tree. The published `docker build --build-arg
+  GO_TAGS=grpc,postgres ...` recipe now actually works.
+
+### Changed (post-Wave-G)
+
+- **`docs/deploy/profile-private-network-grpc.md`** corrected:
+  tenant extraction defaults to `MCP_MTLS_TENANT_SOURCE=cert`
+  (not `X-Tenant-ID`); the Docker default image does NOT include
+  gRPC; auth modes other than mtls are supported but not the
+  recommended posture.
+- **`docs/support-matrix.md`** gRPC row spells out both supported
+  build paths (published artifact vs. self-build).
+- **`docs/release/public-hosted-launch-checklist.md`** Storage row
+  references `clockify-mcp-grpc-postgres-*` for HA gRPC; live
+  coverage gate is now executable rather than "tracked or
+  closed" prose.
+- **`internal/runtime/service.go`** controlPlaneAuditor delegates
+  to `internal/auditbridge.ToControlPlaneEvent` instead of
+  inlining the conversion + ID synthesis. Same contract, one
+  source of truth.
+
+### Wave G — Security-hardening wave (the original 2026-04-25 audit)
+
 > **Scope note.** Security-hardening wave following the
 > 2026-04-25 audit. Six atomic commits closing the seven blockers
 > the audit flagged for paid/public hosted-service deployment, plus

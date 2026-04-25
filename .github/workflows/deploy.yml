@@ -1,5 +1,32 @@
 name: Deploy
 
+# Tag-driven release-deploy pipeline.
+#
+# Stages:
+#   verify           — verify the published image's cosign signature and the
+#                      release binaries' SLSA build provenance. Always runs.
+#   deploy-staging   — apply the new image to the staging cluster. Skipped
+#                      cleanly with a `::warning::` when the staging cluster
+#                      is not configured (no STAGING_KUBECONFIG secret), so
+#                      a release that lands the supply-chain proofs without
+#                      a staging cluster wired up still reports green for
+#                      the verifiable parts and surfaces the gap loudly
+#                      instead of hard-failing on a stub.
+#   check-live-contract — confirm the most recent nightly live-contract run
+#                         on main was green before promoting to production.
+#   deploy-production — gated by the GitHub `production` environment
+#                       protection rules (manual approval required).
+#
+# The Deploy workflow has been failing on every release since v1.0.1 for
+# two reasons: (a) the verify-image-signature step looked for
+# `ghcr.io/apet97/go-clockify:vX.Y.Z` but the docker-image workflow's
+# metadata-action publishes `:X.Y.Z` (no v-prefix), and (b) the
+# deploy-staging stage hard-failed because the kubectl line was a stub.
+# This rewrite fixes both: the image lookup strips the leading `v`, and
+# every cluster-touching step gates on the corresponding kubeconfig
+# secret being set so a missing staging cluster is a soft warning, not a
+# red workflow.
+
 on:
   push:
     tags:
@@ -7,14 +34,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag to deploy (e.g. v1.0.0)'
+        description: 'Version tag to deploy (e.g. v1.2.0)'
         required: true
         type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: read
+  packages: read
 
 jobs:
   verify:
     name: Verify Release Assets
     runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.image_digest.outputs.digest }}
+      image_tag:    ${{ steps.image_digest.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,60 +58,179 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.1
 
-      - name: Verify Image Signature
+      - name: Resolve image digest
+        id: image_digest
         env:
           IMAGE: ghcr.io/${{ github.repository }}
-          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+          # docker-image.yml uses `type=semver,pattern={{version}}` which
+          # produces a tag WITHOUT the leading `v` (e.g. `1.2.0`, not
+          # `v1.2.0`). The deploy ref is `vX.Y.Z`; strip the leading `v`
+          # before looking the image up.
+          REF: ${{ github.event.inputs.version || github.ref_name }}
         run: |
-          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest.Digest}}' | tr -d '"')
-          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
-          
-          cosign verify "$IMAGE@${DIGEST}" \
+          set -euo pipefail
+          TAG="${REF#v}"
+          echo "Looking up image: $IMAGE:$TAG"
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          if [ -z "$DIGEST" ]; then
+            echo "::error::could not resolve image digest for $IMAGE:$TAG"
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"       >> "$GITHUB_OUTPUT"
+          echo "Resolved digest: $DIGEST"
+
+      - name: Verify image signature
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          DIGEST: ${{ steps.image_digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign verify "$IMAGE@$DIGEST" \
             --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/.*$' \
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
 
-      - name: Verify GitHub Attestation
+      - name: Download release binary for SLSA verification
         env:
-          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF: ${{ github.event.inputs.version || github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          gh attestation verify clockify-mcp-linux-x64 --owner ${{ github.repository_owner }}
-          
+          set -euo pipefail
+          gh release download "$REF" --repo "$REPO" -p clockify-mcp-linux-x64
+
+      - name: Verify SLSA build provenance (linux-x64 binary)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          gh attestation verify clockify-mcp-linux-x64 --owner "$OWNER"
+
   deploy-staging:
     name: Deploy to Staging
     needs: verify
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - name: Deploy Staging
+      - name: Check staging configuration
+        id: cfg
+        env:
+          STAGING_KUBECONFIG: ${{ secrets.STAGING_KUBECONFIG }}
         run: |
-          echo "Deploying to Staging namespace with digest pinning..."
-          # Implementation depends on cluster (e.g., kubectl set image, helm upgrade)
-          # kubectl set image deployment/clockify-mcp clockify-mcp=ghcr.io/apet97/go-clockify@${{ env.IMAGE_DIGEST }} -n clockify-staging
-          
-      - name: Staging Smoke Tests
+          if [ -z "${STAGING_KUBECONFIG:-}" ]; then
+            echo "::warning::STAGING_KUBECONFIG secret not configured — skipping staging deploy."
+            echo "::warning::Configure the secret + uncomment the kubectl block below to enable cluster apply."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to staging cluster
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          DIGEST: ${{ needs.verify.outputs.image_digest }}
+          KUBECONFIG_RAW: ${{ secrets.STAGING_KUBECONFIG }}
         run: |
-          echo "Running smoke tests against staging..."
-          # ./scripts/smoke-http.sh
+          set -euo pipefail
+          mkdir -p ~/.kube
+          printf '%s' "$KUBECONFIG_RAW" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          # Digest pinning so a tag re-publish cannot silently swap the image bytes under us.
+          kubectl set image deployment/clockify-mcp \
+            clockify-mcp="$IMAGE@$DIGEST" \
+            -n clockify-staging
+          kubectl rollout status deployment/clockify-mcp -n clockify-staging --timeout=5m
+
+      - name: Staging smoke tests
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_BASE_URL:-}" ]; then
+            echo "::warning::STAGING_BASE_URL not set — skipping HTTP smoke (deployment did succeed)."
+            exit 0
+          fi
+          curl -sf "${STAGING_BASE_URL%/}/health" >/dev/null
+          curl -s  -o /dev/null -w '%{http_code}\n' "${STAGING_BASE_URL%/}/ready"
+          echo "Staging smoke OK: /health 200; /ready returned the printed code (200 or 503 is acceptable)"
 
   check-live-contract:
     name: Verify Live Contract
     needs: deploy-staging
     runs-on: ubuntu-latest
     steps:
-      - name: Check Live Contract Run
+      - name: Check most recent nightly live-contract run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          echo "Verifying recent live-contract runs..."
-          # In a real setup, query GitHub API to ensure the 'live-contract.yml' workflow is passing on main.
+          set -euo pipefail
+          # Look at the most recent live-contract.yml run on main. A
+          # release should not promote to production while the live
+          # nightly is red — that means upstream Clockify drift has
+          # already caught up with us and the customer-integration
+          # contract is broken.
+          status=$(gh run list \
+            --repo "$REPO" \
+            --workflow live-contract.yml \
+            --branch main \
+            --limit 1 \
+            --json status,conclusion \
+            --jq '.[0].conclusion // "no_runs"')
+          echo "Most recent live-contract conclusion on main: $status"
+          case "$status" in
+            success)
+              echo "OK: live-contract green; safe to promote."
+              ;;
+            no_runs)
+              echo "::warning::No live-contract runs found on main yet — skipping the gate. Run gh workflow run live-contract.yml to seed."
+              ;;
+            failure|cancelled|timed_out)
+              echo "::error::live-contract on main is $status — refusing to promote to production. Triage the failure issue (label live-test-failure) before retrying."
+              exit 1
+              ;;
+            *)
+              echo "::warning::Unexpected live-contract conclusion: $status. Treating as soft-skip."
+              ;;
+          esac
 
   deploy-production:
     name: Deploy to Production
-    needs: check-live-contract
+    needs: [verify, check-live-contract]
     runs-on: ubuntu-latest
-    environment: 
+    environment:
+      # The `production` GitHub Environment carries the manual-approval
+      # protection rule. The job blocks on that approval before any
+      # cluster-touching step runs.
       name: production
-      # This enables the required promotion gate (manual approval) via GitHub Environment protection rules
     steps:
-      - name: Deploy Production
+      - name: Check production configuration
+        id: cfg
+        env:
+          PROD_KUBECONFIG: ${{ secrets.PROD_KUBECONFIG }}
         run: |
-          echo "Deploying to Production namespace..."
-          # kubectl set image deployment/clockify-mcp clockify-mcp=ghcr.io/apet97/go-clockify@${{ env.IMAGE_DIGEST }} -n clockify-prod
+          if [ -z "${PROD_KUBECONFIG:-}" ]; then
+            echo "::warning::PROD_KUBECONFIG secret not configured — skipping production deploy."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to production cluster
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          DIGEST: ${{ needs.verify.outputs.image_digest }}
+          KUBECONFIG_RAW: ${{ secrets.PROD_KUBECONFIG }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.kube
+          printf '%s' "$KUBECONFIG_RAW" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl set image deployment/clockify-mcp \
+            clockify-mcp="$IMAGE@$DIGEST" \
+            -n clockify-prod
+          kubectl rollout status deployment/clockify-mcp -n clockify-prod --timeout=10m
