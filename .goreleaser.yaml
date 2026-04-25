@@ -1,11 +1,15 @@
 # GoReleaser v2 config — clockify-mcp release pipeline (W2-07).
 #
 # Inputs: a pushed git tag matching v*.*.*.
-# Outputs in dist/:
-#   - 5 binaries (darwin-arm64/x64, linux-x64/arm64, windows-x64.exe)
+# Outputs in dist/ (15 binaries × 3 artifact rows + SHA256SUMS.txt = 46):
+#   - 5  default binaries     (darwin-arm64/x64, linux-x64/arm64, windows-x64.exe)
+#   - 4  FIPS binaries        (darwin-arm64/x64, linux-arm64/x64; windows skipped)
+#   - 2  Postgres binaries    (linux-arm64/x64; hosted-deploy artifact)
+#   - 2  gRPC binaries        (linux-arm64/x64; private-network gRPC, no postgres)
+#   - 2  gRPC+Postgres bins   (linux-arm64/x64; HA private-network gRPC + pgx)
+#   - 15 SPDX SBOMs           (one per binary, via syft, `*.spdx.json`)
+#   - 15 cosign sigstore bundles (one per binary)
 #   - SHA256SUMS.txt
-#   - 5 SPDX SBOMs (one per binary)
-#   - 5 cosign keyless sigstore bundles (one per binary)
 #
 # Invariants preserved from the pre-W2-07 hand-rolled release.yml:
 #   - Binary filenames: clockify-mcp-{darwin-arm64,darwin-x64,linux-x64,linux-arm64,windows-x64}(.exe)
@@ -134,6 +138,62 @@ builds:
       - -X main.buildDate={{.CommitDate}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Private-network gRPC build target. The gRPC transport sits behind the
+  # `grpc` build tag (ADR 0001 keeps it out of the default binary). Without
+  # a published `-grpc` artifact, operators rolling out the
+  # private-network-grpc deployment profile have to self-build, which
+  # bypasses the cosign + SLSA chain that every other artifact ships
+  # through. This build closes that gap.
+  #
+  # Linux only — gRPC is the private-network/server-side transport, not a
+  # workstation use case. amd64 + arm64 mirror the Postgres matrix.
+  - id: clockify-mcp-grpc
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp-grpc
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -tags=grpc
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  # gRPC + Postgres build target. The HA private-network gRPC posture: the
+  # gRPC transport plus the pgx-backed control-plane store. The hosted
+  # launch checklist points at this binary for any private-network-grpc
+  # deployment that runs >1 process. Same Linux-only matrix as the other
+  # tagged builds.
+  - id: clockify-mcp-grpc-postgres
+    main: ./cmd/clockify-mcp
+    binary: clockify-mcp-grpc-postgres
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -tags=grpc,postgres
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Tag}}
+      - -X main.commit={{.FullCommit}}
+      - -X main.buildDate={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
   - id: clockify-mcp
     ids:
@@ -163,6 +223,26 @@ archives:
     formats: [binary]
     name_template: >-
       {{ .ProjectName }}-postgres-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: clockify-mcp-grpc
+    ids:
+      - clockify-mcp-grpc
+    formats: [binary]
+    name_template: >-
+      {{ .ProjectName }}-grpc-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: clockify-mcp-grpc-postgres
+    ids:
+      - clockify-mcp-grpc-postgres
+    formats: [binary]
+    name_template: >-
+      {{ .ProjectName }}-grpc-postgres-
       {{- .Os }}-
       {{- if eq .Arch "amd64" }}x64
       {{- else if eq .Arch "arm64" }}arm64

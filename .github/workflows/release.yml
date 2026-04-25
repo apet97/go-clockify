@@ -47,8 +47,9 @@ jobs:
         # Structural gate against the v0.7.0 class of bug (goreleaser
         # filter silently drops a whole artifact category). Fails the
         # workflow before staging/attestation/npm if dist/ doesn't
-        # contain exactly the 28 files .goreleaser.yaml is contracted
-        # to produce. No untrusted input; calls an in-repo script
+        # contain exactly the 46 files .goreleaser.yaml is contracted
+        # to produce (15 binaries + 15 SBOMs + 15 sigstore bundles +
+        # SHA256SUMS.txt). No untrusted input; calls an in-repo script
         # with no arguments (it defaults to ./dist).
         # See docs/runbooks/release-asset-count.md for triage.
         run: bash scripts/check-release-assets.sh
@@ -65,6 +66,15 @@ jobs:
           # see the clockify-mcp-postgres build block in .goreleaser.yaml.
           cp dist/clockify-mcp-postgres_linux_amd64_v1/clockify-mcp-postgres staging/clockify-mcp-postgres-linux-x64
           cp dist/clockify-mcp-postgres_linux_arm64_v8.0/clockify-mcp-postgres staging/clockify-mcp-postgres-linux-arm64
+          # gRPC-tagged private-network artifacts (linux-only). The hosted
+          # launch checklist links to clockify-mcp-grpc-postgres-* for HA
+          # private-network gRPC; the no-postgres -grpc binary covers
+          # single-process private-network gRPC. Both ship through the
+          # cosign + SLSA chain so operators are not forced to self-build.
+          cp dist/clockify-mcp-grpc_linux_amd64_v1/clockify-mcp-grpc   staging/clockify-mcp-grpc-linux-x64
+          cp dist/clockify-mcp-grpc_linux_arm64_v8.0/clockify-mcp-grpc staging/clockify-mcp-grpc-linux-arm64
+          cp dist/clockify-mcp-grpc-postgres_linux_amd64_v1/clockify-mcp-grpc-postgres   staging/clockify-mcp-grpc-postgres-linux-x64
+          cp dist/clockify-mcp-grpc-postgres_linux_arm64_v8.0/clockify-mcp-grpc-postgres staging/clockify-mcp-grpc-postgres-linux-arm64
       - name: Generate SLSA build provenance attestation
         # Repo is public (2026-04-22) — attestation is now a
         # mandatory gate on release. A failure here must fail the
@@ -80,6 +90,10 @@ jobs:
             staging/clockify-mcp-windows-x64.exe
             staging/clockify-mcp-postgres-linux-x64
             staging/clockify-mcp-postgres-linux-arm64
+            staging/clockify-mcp-grpc-linux-x64
+            staging/clockify-mcp-grpc-linux-arm64
+            staging/clockify-mcp-grpc-postgres-linux-x64
+            staging/clockify-mcp-grpc-postgres-linux-arm64
       - name: Publish npm packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

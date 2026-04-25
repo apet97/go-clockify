@@ -21,12 +21,14 @@
 # catches both drops (missing SBOM, missing signature) and accidents
 # (second SBOM format, rogue matrix entry) at the source.
 #
-# Expected matrix (34 artifacts), derived from .goreleaser.yaml:
-#   - 5 default binaries   (darwin-{arm64,x64}, linux-{arm64,x64}, windows-x64.exe)
-#   - 4 FIPS binaries      (darwin-{arm64,x64}, linux-{arm64,x64}; windows skipped)
-#   - 2 Postgres binaries  (linux-{arm64,x64}; hosted-service deploy target)
-#   - 11 SPDX SBOMs        (one per binary, via syft, `*.spdx.json`)
-#   - 11 sigstore bundles  (one per binary, via cosign, `*.sigstore.json`)
+# Expected matrix (46 artifacts), derived from .goreleaser.yaml:
+#   - 5 default binaries        (darwin-{arm64,x64}, linux-{arm64,x64}, windows-x64.exe)
+#   - 4 FIPS binaries           (darwin-{arm64,x64}, linux-{arm64,x64}; windows skipped)
+#   - 2 Postgres binaries       (linux-{arm64,x64}; hosted-service deploy target)
+#   - 2 gRPC binaries           (linux-{arm64,x64}; private-network gRPC, no postgres)
+#   - 2 gRPC+Postgres binaries  (linux-{arm64,x64}; HA private-network gRPC + pgx)
+#   - 15 SPDX SBOMs             (one per binary, via syft, `*.spdx.json`)
+#   - 15 sigstore bundles       (one per binary, via cosign, `*.sigstore.json`)
 #   - 1 SHA256SUMS.txt
 #
 # Usage:
@@ -73,6 +75,20 @@ POSTGRES_PLATFORMS=(
     "linux-x64"
 )
 
+# gRPC build matrix is Linux-only — gRPC is the private-network/server-side
+# transport and the laptop OSes (darwin/windows) are not supported deploy
+# targets for it. The two arrays are tracked separately so a future change
+# (e.g. adding linux-ppc64le) only edits one row.
+GRPC_PLATFORMS=(
+    "linux-arm64"
+    "linux-x64"
+)
+
+GRPC_POSTGRES_PLATFORMS=(
+    "linux-arm64"
+    "linux-x64"
+)
+
 expected=()
 
 # Default build: 4 unix binaries + 1 windows binary, each with SBOM and sig.
@@ -101,12 +117,30 @@ for p in "${POSTGRES_PLATFORMS[@]}"; do
     expected+=("clockify-mcp-postgres-$p.sigstore.json")
 done
 
+# gRPC build: 2 linux binaries that include the private-network gRPC
+# transport (without postgres). Same SBOM + cosign sigstore shape as
+# every other build.
+for p in "${GRPC_PLATFORMS[@]}"; do
+    expected+=("clockify-mcp-grpc-$p")
+    expected+=("clockify-mcp-grpc-$p.spdx.json")
+    expected+=("clockify-mcp-grpc-$p.sigstore.json")
+done
+
+# gRPC + Postgres build: 2 linux binaries for HA private-network gRPC
+# (the artifact the hosted launch checklist points at when both gRPC
+# and the pgx control plane are required).
+for p in "${GRPC_POSTGRES_PLATFORMS[@]}"; do
+    expected+=("clockify-mcp-grpc-postgres-$p")
+    expected+=("clockify-mcp-grpc-postgres-$p.spdx.json")
+    expected+=("clockify-mcp-grpc-postgres-$p.sigstore.json")
+done
+
 expected+=("SHA256SUMS.txt")
 
-# Sanity-check: the array must have exactly 34 entries. If the matrix
+# Sanity-check: the array must have exactly 46 entries. If the matrix
 # above is edited without updating this number (or vice versa), fail
 # loudly so the mismatch can't ship.
-EXPECTED_COUNT=34
+EXPECTED_COUNT=46
 if [ "${#expected[@]}" -ne "$EXPECTED_COUNT" ]; then
     printf 'BUG: expected array has %d entries, script says %d\n' \
         "${#expected[@]}" "$EXPECTED_COUNT" >&2
@@ -176,11 +210,13 @@ fi
 # walk dist/ recursively and deduplicate by basename.
 # Published-artifact name shape:
 #   SHA256SUMS.txt
-#   clockify-mcp[-fips|-postgres]-<os>-<arch>[.exe][.spdx.json|.sigstore.json]
+#   clockify-mcp[-fips|-postgres|-grpc|-grpc-postgres]-<os>-<arch>[.exe][.spdx.json|.sigstore.json]
 # Goreleaser's intermediate binary IDs `clockify-mcp`, `clockify-mcp-fips`,
-# and `clockify-mcp-postgres` (no os/arch suffix) are NOT published assets
-# and must be filtered out of the count.
-ASSET_RE='^(clockify-mcp(-fips|-postgres)?-(darwin|linux|windows)-(arm64|x64)(\.exe)?(\.spdx\.json|\.sigstore\.json)?|SHA256SUMS\.txt)$'
+# `clockify-mcp-postgres`, `clockify-mcp-grpc`, and
+# `clockify-mcp-grpc-postgres` (no os/arch suffix) are NOT published assets
+# and must be filtered out of the count. The `-grpc-postgres` alternative
+# is listed before `-grpc` so the regex picks the longer match first.
+ASSET_RE='^(clockify-mcp(-fips|-postgres|-grpc-postgres|-grpc)?-(darwin|linux|windows)-(arm64|x64)(\.exe)?(\.spdx\.json|\.sigstore\.json)?|SHA256SUMS\.txt)$'
 
 if [ -f "$artifacts_json" ] && command -v jq >/dev/null 2>&1; then
     found_names=()

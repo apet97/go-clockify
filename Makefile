@@ -3,8 +3,9 @@
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench \
-        build-postgres test-postgres \
+        build-postgres test-postgres build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
+        grpc-release-parity \
         repo-hygiene release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -37,7 +38,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity repo-hygiene
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -144,6 +145,24 @@ doctor-strict-smoke verify-doctor-strict:
 grpc-auth-smoke:
 	bash scripts/smoke-grpc-auth.sh
 
+# grpc-release-parity enforces that the private-network gRPC profile
+# documentation, GoReleaser config, asset-count script, and Dockerfile
+# stay coherent. Wired into verify-core so a doc that mentions a gRPC
+# artifact the release pipeline does not produce fails before tag time.
+grpc-release-parity:
+	bash scripts/check-grpc-release-parity.sh
+
+# Sanity-build the gRPC-tagged binaries locally. Mirrors the tag matrix
+# .goreleaser.yaml ships and keeps `make verify` honest about the
+# private-network gRPC profile actually compiling against the working
+# tree (the default build path leaves `-tags=grpc` untested).
+build-grpc:
+	go build -tags=grpc ./...
+
+build-grpc-postgres:
+	cd internal/controlplane/postgres && go build -tags=postgres ./...
+	go build -tags=grpc,postgres ./cmd/clockify-mcp
+
 secret-scan:
 	@if ! command -v gitleaks >/dev/null 2>&1; then \
 		echo "gitleaks not installed; install via 'brew install gitleaks' or run scripts/gitleaks-install.sh"; \
@@ -172,7 +191,7 @@ release-check:
 	@echo "== release-check: tests + coverage floors =="
 	$(MAKE) cover-check
 	@echo "== release-check: config + doc parity =="
-	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift
+	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
 	$(MAKE) repo-hygiene build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
