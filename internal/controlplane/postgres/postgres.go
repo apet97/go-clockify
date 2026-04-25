@@ -92,6 +92,16 @@ func (s *Store) DoctorCheck(ctx context.Context) error {
 	).Scan(&migration002Applied); err != nil {
 		return fmt.Errorf("check migration 002_audit_phase: %w", err)
 	}
+	// Both checks are launch-required and reported separately so the
+	// operator can tell whether the binary, the database, or both
+	// drifted. A previous version returned success when only one of the
+	// two was true (e.g. somebody hand-applied the column without
+	// recording the migration). That was too permissive: the doctor
+	// report drives the public hosted launch checklist, which contracts
+	// on "migration 002 row present AND phase column present".
+	if !migration002Applied {
+		return fmt.Errorf("migration 002_audit_phase is not recorded in schema_migrations")
+	}
 
 	var hasAuditPhaseColumn bool
 	if err := s.pool.QueryRow(checkCtx, `
@@ -104,8 +114,8 @@ func (s *Store) DoctorCheck(ctx context.Context) error {
 		)`).Scan(&hasAuditPhaseColumn); err != nil {
 		return fmt.Errorf("check audit_events.phase column: %w", err)
 	}
-	if !migration002Applied && !hasAuditPhaseColumn {
-		return fmt.Errorf("migration 002_audit_phase is not recorded and audit_events.phase is missing")
+	if !hasAuditPhaseColumn {
+		return fmt.Errorf("audit_events.phase column is missing")
 	}
 
 	externalID := fmt.Sprintf("doctor-backend-%d", time.Now().UnixNano())
