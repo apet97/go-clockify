@@ -222,6 +222,15 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	if cfg.OIDCIssuer == "" {
 		return nil, fmt.Errorf("oidc auth requires MCP_OIDC_ISSUER")
 	}
+	// Strict mode binds tokens to this server. Without an audience or
+	// resource URI configured, validateClaims has no value to require in
+	// the aud claim, so a token issued by the trusted issuer for a
+	// different relying party would still be accepted. internal/config
+	// enforces this on the documented startup path; this guard catches
+	// programmatic embedders that build authn.Config directly.
+	if cfg.OIDCStrict && cfg.OIDCAudience == "" && cfg.OIDCResourceURI == "" {
+		return nil, fmt.Errorf("oidc strict mode requires OIDCAudience or OIDCResourceURI to be set")
+	}
 	u, err := url.Parse(cfg.OIDCIssuer)
 	if err != nil || u.Scheme == "" {
 		return nil, fmt.Errorf("invalid MCP_OIDC_ISSUER %q (must be absolute URL with scheme)", cfg.OIDCIssuer)

@@ -85,6 +85,62 @@ func TestNewDefaults(t *testing.T) {
 			t.Fatalf("default JWKS URL: got %q want %q", o.cache.url, want)
 		}
 	})
+	// Strict mode must bind tokens to this server. Without an audience or
+	// resource URI configured, validateClaims has no value to require in
+	// the aud claim, so a token issued by the trusted issuer for a
+	// different relying party would still be accepted. internal/config
+	// enforces the same invariant on the documented startup path; this
+	// guard catches programmatic embedders that build authn.Config
+	// directly. Both audience-only and resource-only configs satisfy the
+	// requirement.
+	t.Run("oidc_strict_requires_audience_or_resource", func(t *testing.T) {
+		_, err := New(Config{
+			Mode:       ModeOIDC,
+			OIDCIssuer: "https://issuer.example.com/",
+			OIDCStrict: true,
+		})
+		if err == nil {
+			t.Fatal("expected error for OIDC strict mode without audience or resource URI")
+		}
+		if !strings.Contains(err.Error(), "OIDCAudience or OIDCResourceURI") {
+			t.Fatalf("expected strict-mode validation error, got: %v", err)
+		}
+	})
+	t.Run("oidc_strict_with_audience_ok", func(t *testing.T) {
+		_, err := New(Config{
+			Mode:         ModeOIDC,
+			OIDCIssuer:   "https://issuer.example.com/",
+			OIDCStrict:   true,
+			OIDCAudience: "clockify-mcp",
+		})
+		if err != nil {
+			t.Fatalf("strict mode with audience should succeed: %v", err)
+		}
+	})
+	t.Run("oidc_strict_with_resource_uri_ok", func(t *testing.T) {
+		_, err := New(Config{
+			Mode:            ModeOIDC,
+			OIDCIssuer:      "https://issuer.example.com/",
+			OIDCStrict:      true,
+			OIDCResourceURI: "https://mcp.example.com/",
+		})
+		if err != nil {
+			t.Fatalf("strict mode with resource URI should succeed: %v", err)
+		}
+	})
+	// Permissive mode (default) deliberately does NOT require an audience
+	// — operators who haven't opted into strict mode can run with
+	// issuer-only validation. This codifies that the new strict-mode
+	// guard does not regress permissive callers.
+	t.Run("oidc_permissive_without_audience_ok", func(t *testing.T) {
+		_, err := New(Config{
+			Mode:       ModeOIDC,
+			OIDCIssuer: "https://issuer.example.com/",
+		})
+		if err != nil {
+			t.Fatalf("permissive mode without audience should succeed: %v", err)
+		}
+	})
 	t.Run("unsupported_mode", func(t *testing.T) {
 		if _, err := New(Config{Mode: Mode("ldap")}); err == nil {
 			t.Fatal("expected error for unsupported mode")
