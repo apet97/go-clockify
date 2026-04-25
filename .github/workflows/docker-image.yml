@@ -232,8 +232,16 @@ jobs:
       # grpc_stub.go), proving the gRPC code path is compiled in. A
       # regression that drops the build-arg would surface here as that
       # exact string appearing again.
-      - name: Build gRPC PR image (GO_TAGS=grpc)
+      - name: Build gRPC PR image (GO_TAGS=grpc,postgres)
         if: github.event_name == 'pull_request'
+        # GO_TAGS=grpc,postgres is the worst-case build: it pulls in
+        # both workspace sub-modules (internal/transport/grpc and
+        # internal/controlplane/postgres) so a missing go.work or a
+        # missing sub-module go.mod / go.sum in the build context
+        # surfaces here. Single-tag GO_TAGS=grpc is a strict subset of
+        # this matrix; running just the dual-tag combo keeps PR cache
+        # hot while still proving every tagged self-build path the
+        # docs document is actually buildable.
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
@@ -249,7 +257,7 @@ jobs:
             VERSION=${{ steps.build_meta.outputs.version }}
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ steps.build_meta.outputs.build_date }}
-            GO_TAGS=grpc
+            GO_TAGS=grpc,postgres
 
       - name: Smoke-test gRPC PR image
         if: github.event_name == 'pull_request'

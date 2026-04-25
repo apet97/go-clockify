@@ -15,8 +15,23 @@ ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /build
 
-COPY go.mod ./
-# No go.sum needed — stdlib only, zero external dependencies
+# Copy the workspace manifests first so the layer cache survives source
+# edits. The default (untagged) build uses only the root go.mod (stdlib
+# only, no external deps), but `--build-arg GO_TAGS=grpc[,postgres]`
+# triggers blank-imports of the workspace sub-modules
+# (internal/transport/grpc, internal/controlplane/postgres,
+# internal/tracing/otel), each of which has its own go.mod and go.sum.
+# The Go toolchain resolves them via go.work — without go.work and the
+# matching sub-module manifests in the build context the build either
+# fails offline ("module lookup disabled by GOPROXY=off") or silently
+# downloads a stale remote version of the sub-module. Either outcome
+# breaks reproducibility for custom GO_TAGS images. Copying the
+# manifests up-front is cheap (a handful of files) and keeps the
+# default build untouched.
+COPY go.mod go.work go.work.sum ./
+COPY internal/tracing/otel/go.mod internal/tracing/otel/go.sum internal/tracing/otel/
+COPY internal/transport/grpc/go.mod internal/transport/grpc/go.sum internal/transport/grpc/
+COPY internal/controlplane/postgres/go.mod internal/controlplane/postgres/go.sum internal/controlplane/postgres/
 COPY cmd/ cmd/
 COPY internal/ internal/
 
