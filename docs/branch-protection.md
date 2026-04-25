@@ -97,10 +97,18 @@ required-checks list on `main`, as reported by
   overlay parses cleanly, `scripts/check-overlay-structure.sh`
   blocks any overlay re-introducing an `images:` block, helm
   template renders.
-- `Test (HTTP smoke)` — `scripts/smoke-http.sh`,
-  `scripts/smoke-stdio.sh`, and `scripts/smoke-doctor-strict.sh`
-  exercise HTTP, stdio, and hosted strict-doctor posture end-to-end
-  against dummy credentials.
+- `Test (HTTP smoke)` — `scripts/smoke-http.sh` and
+  `scripts/smoke-stdio.sh` exercise HTTP and stdio transports
+  end-to-end against dummy credentials.
+- `Doctor strict smoke` — `scripts/smoke-doctor-strict.sh` verifies
+  hosted strict-posture behavior, including the broad-policy
+  negative exit path. Runs as a standalone CI job so a strict-doctor
+  regression does not hide behind an HTTP/stdio smoke failure.
+- `Doctor Postgres backend` — builds `clockify-mcp` with
+  `-tags=postgres` against an ephemeral `postgres:16-alpine` service
+  and runs `doctor --strict --check-backends`. Exit 0 proves the
+  embedded migrations apply, `audit_events.phase` exists, and the
+  audit health round-trip through `DoctorCheck(ctx)` succeeds.
 - `Build, scan, sign` — the container image builds, Trivy passes on
   HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
 - `Lychee` — external Markdown link check across the repo.

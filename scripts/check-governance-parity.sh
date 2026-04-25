@@ -26,6 +26,23 @@ require_branch_line '^\| Require review from Code Owners[[:space:]]*\|[[:space:]
 require_branch_line '^\| Require signed commits[[:space:]]*\|[[:space:]]*Disabled[[:space:]]*\|' 'Require signed commits: Disabled'
 require_branch_line '^\| Enforce for admins[[:space:]]*\|[[:space:]]*Disabled[[:space:]]*\|' 'Enforce for admins: Disabled'
 
+# The "Doctor strict smoke" job was promoted to a standalone required
+# check after the strict-doctor regression that hid behind an HTTP smoke
+# failure. The branch-protection snapshot must list it separately, and
+# must NOT bury smoke-doctor-strict.sh under the HTTP smoke bullet — the
+# bug was an aliased, invisible required check, and the parity gate
+# exists so that drift cannot return.
+if ! grep -Fq 'Doctor strict smoke' "$branch_doc"; then
+  fail "branch-protection snapshot missing required check: Doctor strict smoke"
+fi
+if awk '
+  /^- `Test \(HTTP smoke\)`/ { capture = 1; print; next }
+  capture && /^- `/ { capture = 0 }
+  capture { print }
+' "$branch_doc" | grep -Fq 'smoke-doctor-strict.sh'; then
+  fail "Test (HTTP smoke) bullet still claims smoke-doctor-strict.sh; it is now its own job"
+fi
+
 current_state=$(awk '
   /^## Current state/ { in_section = 1; next }
   /^## Target state/ { in_section = 0 }
