@@ -121,10 +121,18 @@ jobs:
             -run '^TestE2E(ReadOnly|Errors)$' \
             ./tests/...
 
-      - name: Run mutating live tests (TestE2EMutating)
+      - name: Run mutating live tests (TestE2EMutating + MCP-path safety contracts)
         # Gated on the repository variable so writes can be disabled
         # without editing the workflow. Manual dispatch can also force
         # writes on via the input, useful for debugging upstream bugs.
+        #
+        # The regex covers both the long-standing direct-handler suite
+        # (TestE2EMutating) and the launch-blocking MCP-path safety
+        # contracts (TestLiveDryRunDoesNotMutate,
+        # TestLivePolicyTimeTrackingSafeBlocksProjectCreate). The new
+        # tests share the existing CLOCKIFY_LIVE_WRITE_ENABLED gate
+        # because their setup creates real entities in the sacrificial
+        # workspace.
         if: |
           steps.secrets_check.outputs.skip != 'true' &&
           (vars.CLOCKIFY_LIVE_WRITE_ENABLED == 'true' ||
@@ -133,10 +141,66 @@ jobs:
           CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
           CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
           CLOCKIFY_RUN_LIVE_E2E: "1"
+          CLOCKIFY_LIVE_WRITE_ENABLED: "true"
         run: |
-          go test -tags=livee2e -count=1 -timeout 5m \
-            -run '^TestE2EMutating$' \
+          go test -tags=livee2e -count=1 -timeout 10m \
+            -run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$' \
             ./tests/...
+
+      - name: Check audit-phase live test secret
+        # MCP_LIVE_CONTROL_PLANE_DSN is the test-only Postgres DSN the
+        # audit-phase contract test connects to. Missing on a fork is
+        # a soft skip via t.Skip; missing on the main repo is a hard
+        # failure when CLOCKIFY_LIVE_AUDIT_REQUIRED=true (set as a
+        # repo variable for the paid hosted-launch posture). Without
+        # the var the absence of the DSN is treated as fail-soft so
+        # nightly stays green during onboarding.
+        id: audit_dsn_check
+        if: |
+          steps.secrets_check.outputs.skip != 'true' &&
+          (vars.CLOCKIFY_LIVE_WRITE_ENABLED == 'true' ||
+           github.event.inputs.enable_writes == 'true')
+        env:
+          AUDIT_DSN: ${{ secrets.MCP_LIVE_CONTROL_PLANE_DSN }}
+          AUDIT_REQUIRED: ${{ vars.CLOCKIFY_LIVE_AUDIT_REQUIRED }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "${AUDIT_DSN:-}" ]; then
+            echo "::warning::MCP_LIVE_CONTROL_PLANE_DSN secret missing — skipping TestLiveCreateUpdateDeleteEntryAuditPhases."
+            if [ "${AUDIT_REQUIRED:-}" = "true" ] && [ "${REPO}" = "apet97/go-clockify" ]; then
+              echo "::error::CLOCKIFY_LIVE_AUDIT_REQUIRED=true on the main repo but MCP_LIVE_CONTROL_PLANE_DSN is unset."
+              exit 1
+            fi
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run audit-phase live test (TestLiveCreateUpdateDeleteEntryAuditPhases)
+        # Postgres-backed audit-phase contract. Build with -tags=postgres
+        # to register the pgx-backed control-plane opener, plus livee2e
+        # to admit the test file. The test connects to the sacrificial
+        # Postgres pointed at by MCP_LIVE_CONTROL_PLANE_DSN and asserts
+        # six audit rows (3 intent + 3 outcome) for the create/update/
+        # delete cycle. Skips at the test level if its env preconditions
+        # are not met; this step's own gate avoids spinning up the build
+        # when we already know the DSN is missing.
+        if: |
+          steps.secrets_check.outputs.skip != 'true' &&
+          (vars.CLOCKIFY_LIVE_WRITE_ENABLED == 'true' ||
+           github.event.inputs.enable_writes == 'true') &&
+          steps.audit_dsn_check.outputs.skip != 'true'
+        env:
+          CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+          CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
+          CLOCKIFY_RUN_LIVE_E2E: "1"
+          CLOCKIFY_LIVE_WRITE_ENABLED: "true"
+          MCP_LIVE_CONTROL_PLANE_DSN: ${{ secrets.MCP_LIVE_CONTROL_PLANE_DSN }}
+        working-directory: internal/controlplane/postgres
+        run: |
+          go test -tags=postgres,livee2e -count=1 -timeout 10m \
+            -run '^TestLiveCreateUpdateDeleteEntryAuditPhases$' \
+            ./...
 
       - name: Open failure issue
         if: failure()
