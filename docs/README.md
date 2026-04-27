@@ -93,6 +93,10 @@ Supply-chain verification, release process, and the smoke cadence.
   deprecation windows, support timeline.
 - [release/deploy-readiness-checklist.md](release/deploy-readiness-checklist.md)
   — pre-production checklist.
+- [release/public-hosted-launch-checklist.md](release/public-hosted-launch-checklist.md)
+  — pre-flight gates for going from "works on my cluster" to
+  accepting traffic from clients you don't control. Use the
+  Postgres-tagged binary for the strict-doctor backend check.
 - [upgrade-checklist.md](upgrade-checklist.md) — per-release
   upgrade notes.
 - [live-tests.md](live-tests.md) — why `release-smoke` and

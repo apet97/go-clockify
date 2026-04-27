@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/README.md` Release Trust section lists
+  `public-hosted-launch-checklist.md`.** docs/release/ ships two
+  checklists — `deploy-readiness-checklist.md` (general
+  pre-production) and `public-hosted-launch-checklist.md` (the
+  pre-flight gates for accepting traffic from clients you don't
+  control, including the Postgres-binary backend check via
+  `doctor --strict --check-backends`). The navigation index
+  listed only the first; the public-launch checklist was on disk
+  but absent from the index. Same doc-vs-filesystem drift pattern
+  as iter96 (ADR index) and iter97 (runbooks index). Pure
+  operator-doc fix.
 - **`docs/README.md` Runbooks section lists all 12 runbooks.** The
   Runbooks section listed 10 entries but `docs/runbooks/` has 12
   files. The two missing entries are the runbooks that ship with
