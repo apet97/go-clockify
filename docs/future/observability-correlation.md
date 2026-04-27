@@ -93,7 +93,7 @@ propagated correctly — child spans inherit the context.
 | Tracer interface + no-op fallback | `internal/tracing/tracing.go`       |
 | MCP server dispatch (ingress)     | `internal/mcp/server.go`            |
 | Clockify HTTP transport (egress)  | `internal/clockify/client.go`       |
-| Make target                       | `make verify-tags` under `otel` tag |
+| Make target                       | `make build-tags` (exercises `otel` build tag via `scripts/check-build-tags.sh`) |
 
 ## Open questions for the next wave
 

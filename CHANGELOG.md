@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/future/observability-correlation.md` Reference Points
+  cites `make build-tags`, not `make verify-tags`.** The
+  "Reference points in the current code" table named the Make
+  target as `make verify-tags under otel tag`, but no
+  `verify-tags` target exists in the Makefile. The actual target
+  is `make build-tags` (Makefile L130 area; runs
+  `SKIP_FIPS=1 bash scripts/check-build-tags.sh`), and the script
+  exercises the `otel` build tag at `scripts/check-build-tags.sh:80`.
+  A future contributor reading this future-pointer doc to find
+  the right verification entry-point would have hit
+  "no rule to make target". Cell now names the real target with
+  a one-line description of what it actually exercises. Pure
+  doc-vs-Makefile drift, low-impact (future-pointer doc) but
+  same iter103/iter105 class — fictional commands silently turn
+  guidance into noops.
 - **`docs/release/deploy-readiness-checklist.md` references the
   real `make http-smoke` target.** Pre-Flight Tests section said
   "Run `make smoke-http` against a staging instance" but the
