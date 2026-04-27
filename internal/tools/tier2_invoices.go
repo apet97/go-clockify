@@ -95,11 +95,12 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 7. Mark invoice paid
-		{Tool: toolRW("clockify_mark_invoice_paid", "Mark an invoice as paid", map[string]any{
+		{Tool: toolRW("clockify_mark_invoice_paid", "Mark an invoice as paid (sets status=PAID). Supports dry_run:true to preview the invoice that would be updated.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string"},
+				"dry_run":    map[string]any{"type": "boolean", "description": "Preview only; returns the current invoice without updating status"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.markInvoicePaid(ctx, args)
@@ -347,6 +348,19 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+
+	if dryrun.Enabled(args) {
+		var invoice map[string]any
+		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, nil, &invoice); err != nil {
+			return ResultEnvelope{}, err
+		}
+		return ResultEnvelope{
+			OK:     true,
+			Action: "clockify_mark_invoice_paid",
+			Data:   dryrun.WrapResult(invoice, "clockify_mark_invoice_paid"),
+			Meta:   map[string]any{"workspaceId": wsID},
+		}, nil
 	}
 
 	body := map[string]any{"status": "PAID"}

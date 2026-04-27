@@ -121,11 +121,12 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 7. Test webhook (RW)
 		{
-			Tool: toolRW("clockify_test_webhook", "Send a test delivery to a webhook", map[string]any{
+			Tool: toolRW("clockify_test_webhook", "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{
 					"webhook_id": map[string]any{"type": "string", "description": "Webhook ID to test"},
+					"dry_run":    map[string]any{"type": "boolean", "description": "Preview only; returns the webhook record without sending the test delivery"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -405,6 +406,22 @@ func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultE
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+
+	if dryrun.Enabled(args) {
+		var webhook map[string]any
+		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID, nil, &webhook); err != nil {
+			return ResultEnvelope{}, err
+		}
+		return ResultEnvelope{
+			OK:     true,
+			Action: "clockify_test_webhook",
+			Data:   dryrun.WrapResult(webhook, "clockify_test_webhook"),
+			Meta: map[string]any{
+				"workspaceId": wsID,
+				"webhookId":   webhookID,
+			},
+		}, nil
 	}
 
 	var result map[string]any

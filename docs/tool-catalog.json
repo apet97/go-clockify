@@ -5636,7 +5636,7 @@
     },
     {
       "name": "clockify_mark_invoice_paid",
-      "description": "Mark an invoice as paid",
+      "description": "Mark an invoice as paid (sets status=PAID). Supports dry_run:true to preview the invoice that would be updated.",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
@@ -5645,6 +5645,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview only; returns the current invoice without updating status",
+            "type": "boolean"
+          },
           "invoice_id": {
             "type": "string"
           }
@@ -8706,7 +8710,7 @@
     },
     {
       "name": "clockify_test_webhook",
-      "description": "Send a test delivery to a webhook",
+      "description": "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.",
       "group": "webhooks",
       "tier": 2,
       "read_only": false,
@@ -8715,6 +8719,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview only; returns the webhook record without sending the test delivery",
+            "type": "boolean"
+          },
           "webhook_id": {
             "description": "Webhook ID to test",
             "type": "string"

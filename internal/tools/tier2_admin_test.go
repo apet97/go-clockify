@@ -117,6 +117,59 @@ func TestCreateWebhookBlocksPrivateIP(t *testing.T) {
 	}
 }
 
+// TestTestWebhookDryRun locks in audit finding 7: clockify_test_webhook
+// is non-destructive but triggers an external delivery, so dry_run:true
+// must short-circuit before the POST /test call. Pre-fix the schema
+// did not even expose dry_run and the handler always sent the test.
+func TestTestWebhookDryRun(t *testing.T) {
+	var testPostCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":     "wh1",
+				"url":    "https://example.com/hook",
+				"events": []string{"NEW_TIME_ENTRY"},
+			})
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost:
+			testPostCalled = true
+			respondJSON(t, w, map[string]any{"status": "delivered"})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+
+	// 1. Dry-run: GETs the webhook record and returns wrapped envelope,
+	//    must NOT POST /test.
+	result, err := svc.TestWebhook(context.Background(), map[string]any{
+		"webhook_id": "wh1",
+		"dry_run":    true,
+	})
+	if err != nil {
+		t.Fatalf("test webhook dry run failed: %v", err)
+	}
+	if testPostCalled {
+		t.Fatal("dry-run must not POST /test")
+	}
+	if result.Action != "clockify_test_webhook" {
+		t.Fatalf("unexpected action %q", result.Action)
+	}
+
+	// 2. Executed: POSTs /test as before.
+	result, err = svc.TestWebhook(context.Background(), map[string]any{
+		"webhook_id": "wh1",
+	})
+	if err != nil {
+		t.Fatalf("test webhook execute failed: %v", err)
+	}
+	if !testPostCalled {
+		t.Fatal("non-dry-run must POST /test")
+	}
+}
+
 func TestDeleteWebhookDryRun(t *testing.T) {
 	var deleteCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

@@ -126,11 +126,21 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// 7. markInvoicePaid
+	// 7a. markInvoicePaid dry-run — must GET (preview), not PUT
+	beforePaidDryRun := len(requests)
+	res, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
+	mustOK(t, res, err, "clockify_mark_invoice_paid")
+	for _, r := range requests[beforePaidDryRun:] {
+		if r.method == "PUT" {
+			t.Fatalf("markInvoicePaid dry-run must not PUT, got %s %s", r.method, r.path)
+		}
+	}
+
+	// 7b. markInvoicePaid executed
 	res, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_mark_invoice_paid")
 
-	// 7b. markInvoicePaid validation
+	// 7c. markInvoicePaid validation
 	if _, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty invoice_id")
 	}

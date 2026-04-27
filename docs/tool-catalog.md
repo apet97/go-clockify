@@ -108,7 +108,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_invoice_report` | yes | no | yes | Get invoices filtered by status with aggregated totals |
 | `clockify_list_invoice_items` | yes | no | yes | List items for an invoice |
 | `clockify_list_invoices` | yes | no | yes | List invoices in the workspace with pagination |
-| `clockify_mark_invoice_paid` | no | no | no | Mark an invoice as paid |
+| `clockify_mark_invoice_paid` | no | no | no | Mark an invoice as paid (sets status=PAID). Supports dry_run:true to preview the invoice that would be updated. |
 | `clockify_send_invoice` | no | no | no | Send an invoice to the client |
 | `clockify_update_invoice` | no | no | no | Update an existing invoice |
 | `clockify_update_invoice_item` | no | no | no | Update an invoice item |
@@ -189,6 +189,6 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_get_webhook` | yes | no | yes | Get a webhook by ID |
 | `clockify_list_webhook_events` | yes | no | yes | List available webhook event types |
 | `clockify_list_webhooks` | yes | no | yes | List webhooks in the workspace |
-| `clockify_test_webhook` | no | no | no | Send a test delivery to a webhook |
+| `clockify_test_webhook` | no | no | no | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
 | `clockify_update_webhook` | no | no | no | Update an existing webhook |
 
