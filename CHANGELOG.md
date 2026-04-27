@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/verification.md` SLSA section now says "all 15 binaries"
+  instead of "five binaries".** Same iter101 drift — the SLSA
+  build-provenance section claimed `release.yml` stages "the five
+  binaries" but the workflow stages 15 (full matrix in
+  `scripts/check-release-assets.sh`). A reader following the
+  verification recipe to confirm SLSA coverage on a non-default
+  binary (e.g. the Postgres-tagged binary backing their hosted
+  deployment, or a FIPS variant) would have inferred the
+  attestation only covers the default 5 — but every binary
+  carries its own SLSA attestation. Section now names all five
+  tag combinations and points at the canonical platform list.
+  Pure operator-doc fix; closes the verification-side of iter101.
 - **`docs/release-policy.md` Release Artifacts now lists all 15
   binaries.** The Release Artifacts section claimed "Five
   binaries" but the canonical platform matrix in

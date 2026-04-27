@@ -35,9 +35,12 @@ different platform or release.
 
 ## 1. SLSA build provenance attestation
 
-The `release.yml` workflow stages the five binaries and runs
-`actions/attest-build-provenance` against them. The attestation lives
-in the GitHub attestation service and is verified through `gh`:
+The `release.yml` workflow stages all 15 binaries (5 default
+platforms + 4 FIPS + 2 Postgres + 2 gRPC + 2 gRPC-Postgres; full
+matrix in [`scripts/check-release-assets.sh`](../scripts/check-release-assets.sh))
+and runs `actions/attest-build-provenance` against each one. The
+attestation lives in the GitHub attestation service and is verified
+through `gh`:
 
 ```sh
 TAG=v1.2.0
