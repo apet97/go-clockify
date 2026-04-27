@@ -106,6 +106,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `paths.Workspace(wsID, "clients")`. Identical wire shape; gains
   workspace-ID validation on every call (which `ResolveWorkspaceID`
   did not enforce on the env-supplied path).
+- **`ListTags` + `CreateTag` migrated to `paths.Workspace`.** Same
+  shape as `clients.go` — workspace-ID validation on every call,
+  byte-identical wire output for normal Clockify IDs.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

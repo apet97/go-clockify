@@ -7,10 +7,15 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/paths"
 )
 
 func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "tags")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -20,7 +25,7 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		"page-size": strconv.Itoa(pageSize),
 	}
 	var out []clockify.Tag
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/tags", query, &out); err != nil {
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_tags", out, map[string]any{
@@ -40,9 +45,13 @@ func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnv
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	path, err := paths.Workspace(wsID, "tags")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	var tag clockify.Tag
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/tags", map[string]any{"name": name}, &tag); err != nil {
+	if err := s.Client.Post(ctx, path, map[string]any{"name": name}, &tag); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_tag", tag, map[string]any{"workspaceId": wsID}), nil
