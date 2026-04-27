@@ -75,6 +75,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`SECURITY.md` adds Hosted-profile error sanitisation bullet.**
+  The Security Features list never gained the
+  `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS` entry that shipped with the
+  audit-finding wave (closes Finding 9 — per-tenant identifier
+  leakage via 4xx response bodies). New bullet describes both the
+  profile default (on for `shared-service` / `prod-postgres`) and
+  the operator override, plus the slog-side preservation for
+  debugging. Operators reading SECURITY.md for compliance reviews
+  now see the per-tenant data-leak prevention surface.
 - **`SECURITY.md` Webhook URL validation entry brought to current
   state.** The Security Features bullet described only the
   pre-audit literal-IP check (which has been the baseline since
