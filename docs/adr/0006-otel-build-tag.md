@@ -118,9 +118,9 @@ implementation isolated in a dedicated Go sub-module:
 ## References
 
 - Previously referred to as "ADR 009" in `cmd/clockify-mcp/otel_on.go:15`,
-  `cmd/clockify-mcp/otel_off.go:10`, `cmd/clockify-mcp/main.go:145`,
+  `cmd/clockify-mcp/otel_off.go:10`, `cmd/clockify-mcp/main.go:147`,
   `internal/tracing/otel/otel.go:5`, `internal/tracing/otel/span_emit_test.go:39`,
-  `scripts/check-build-tags.sh:64`.
+  `scripts/check-build-tags.sh:68`.
 - Facade: `internal/tracing/tracing.go`.
 - Sub-module: `internal/tracing/otel/otel.go`.
 - Build-tagged wiring: `cmd/clockify-mcp/otel_on.go`,

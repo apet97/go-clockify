@@ -299,6 +299,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `internal/runtime/runtime.go` `New()`). Anchors at `bootstrap.go:71`
   and `:56` were verified still accurate and left as-is — this
   iteration only touched the genuinely stale ones.
+- **ADR-0006 historical-rename anchors realigned.** The
+  References section lists the source comments that say
+  "See ADR 009" (the historical name for ADR-0006). Two of six
+  line refs had drifted: `cmd/clockify-mcp/main.go:145` (now :147)
+  and `scripts/check-build-tags.sh:64` (now :68). Line refs are
+  intentional here — the comment text is the same in every file,
+  so a grep would not disambiguate. The other four anchors
+  (otel_on.go:15, otel_off.go:10, otel.go:5, span_emit_test.go:39)
+  were verified still accurate.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion
