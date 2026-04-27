@@ -98,9 +98,10 @@ explaining the build-tag requirement.
 
 ## References
 
-- Validation: `internal/config/config.go:107-116` (`MCP_TRANSPORT`
-  switch).
-- Dispatch wiring: `cmd/clockify-mcp/main.go:161-260`.
+- Validation: `internal/config/config.go` `Load()` — the `MCP_TRANSPORT`
+  switch (search for `cfg.Transport = os.Getenv("MCP_TRANSPORT")`).
+- Dispatch wiring: `internal/runtime/runtime.go` `Runtime.Run` —
+  the transport switch (search for `switch r.cfg.Transport`).
 - Streamable HTTP implementation: `internal/mcp/transport_streamable_http.go`.
 - Legacy HTTP implementation: `internal/mcp/transport_http.go`.
 - gRPC implementation: `internal/transport/grpc/transport.go`.
