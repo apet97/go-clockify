@@ -7,6 +7,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -25,8 +26,12 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 	if projectID != "" {
 		payload["projectId"] = projectID
 	}
+	path, err := paths.Workspace(wsID, "time-entries")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out clockify.TimeEntry
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/time-entries", payload, &out); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	meta := map[string]any{"workspaceId": wsID}
@@ -50,8 +55,12 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 		return nil, err
 	}
 	payload := map[string]any{"end": time.Now().UTC().Format(time.RFC3339)}
+	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
+	if err != nil {
+		return nil, err
+	}
 	var out clockify.TimeEntry
-	if err := s.Client.Patch(ctx, "/workspaces/"+wsID+"/user/"+user.ID+"/time-entries", payload, &out); err != nil {
+	if err := s.Client.Patch(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)

@@ -137,6 +137,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loop uses `slices.Contains` instead of a hand-written found-loop.
   Pure refactor — no behaviour change. Clears the lint hints that
   surfaced during the f372814 migration.
+- **`timer.go` migrated to `paths.Workspace`.** `StartTimer` POSTs
+  to `paths.Workspace(wsID, "time-entries")`; `StopTimer` PATCHes
+  `paths.Workspace(wsID, "user", user.ID, "time-entries")`.
+  `TimerStatus` is unchanged — it routes through
+  `listEntriesWithQuery`, which was migrated in f372814.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
