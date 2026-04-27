@@ -96,18 +96,38 @@ ships first and the patch backport defers the knob.
 
 ## Release artifacts
 
-Every release produces:
+Every release produces 15 binaries across five tag combinations
+(canonical list: `scripts/check-release-assets.sh`):
 
-- Five binaries: `darwin-arm64`, `darwin-x64`, `linux-x64`,
-  `linux-arm64`, `windows-x64.exe`. All built with `-trimpath`.
-- A SPDX SBOM per binary.
-- A keyless cosign signature (`.sigstore.json`) per binary.
+- **Default (stdlib only) — 5 binaries.** `clockify-mcp-darwin-arm64`,
+  `-darwin-x64`, `-linux-arm64`, `-linux-x64`, `-windows-x64.exe`.
+- **FIPS-tagged — 4 binaries.** `clockify-mcp-fips-darwin-arm64`,
+  `-fips-darwin-x64`, `-fips-linux-arm64`, `-fips-linux-x64`. No
+  Windows variant (Go FIPS toolchain support).
+- **Postgres-tagged — 2 binaries.** `clockify-mcp-postgres-linux-arm64`,
+  `-postgres-linux-x64`. Backs hosted shared-service deployments;
+  required by `doctor --strict --check-backends`.
+- **gRPC-tagged — 2 binaries.** `clockify-mcp-grpc-linux-arm64`,
+  `-grpc-linux-x64`. The `private-network-grpc` profile.
+- **gRPC + Postgres — 2 binaries.** `clockify-mcp-grpc-postgres-linux-arm64`,
+  `-grpc-postgres-linux-x64`. Hosted gRPC shape.
+
+All binaries are built with `-trimpath`. Every binary ships:
+
+- A SPDX SBOM (`<binary>.spdx.json`).
+- A keyless cosign signature (`<binary>.sigstore.json`).
 - A SLSA build provenance attestation per binary, stored in the
-  GitHub attestation service.
+  GitHub attestation service. SLSA was conditional while the repo
+  was user-owned-private (per ADR-0013, now Superseded); mandatory
+  on every release since 2026-04-22 when the repo flipped public.
+
+Plus, per release tag:
+
 - A multi-arch container image at
   `ghcr.io/apet97/go-clockify:v<version>` carrying a cosign signature,
   SPDX SBOM attestation, and SLSA build provenance attestation.
 - An npm wrapper package (publish gated on `NPM_TOKEN` being set).
+- A signed `SHA256SUMS.txt` covering every binary in the release.
 
 Verification steps live in [docs/verification.md](verification.md). A
 post-release smoke job (`.github/workflows/release-smoke.yml`)

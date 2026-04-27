@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release-policy.md` Release Artifacts now lists all 15
+  binaries.** The Release Artifacts section claimed "Five
+  binaries" but the canonical platform matrix in
+  `scripts/check-release-assets.sh` produces 15 binaries across
+  five tag combinations: 5 default (darwin/linux × arm64/x64
+  + windows-x64.exe), 4 FIPS-tagged (UNIX only — no Windows FIPS
+  toolchain), 2 Postgres-tagged (linux only — backs
+  shared-service `doctor --check-backends`), 2 gRPC-tagged
+  (linux only — `private-network-grpc` profile), and 2
+  gRPC+Postgres (hosted gRPC shape). Section now enumerates each
+  group with its naming pattern and operator-facing role, plus
+  notes that SLSA was conditional pre-2026-04-22 (per ADR-0013)
+  and mandatory after the repo flipped public. Closes a
+  multi-binary drift that affected operators reading
+  release-policy as the canonical artifact contract — anyone
+  expecting a Postgres binary or gRPC variant would have
+  concluded they didn't ship.
 - **`docs/production-readiness.md` Governance audit-trail
   description now matches `GOVERNANCE.md`.** The Governance
   section claimed the audit trail came from "signed commits,
