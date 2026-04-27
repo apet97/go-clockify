@@ -134,8 +134,10 @@ Design elements:
 
 ## References
 
-- Previously referred to as "ADR 013" in
-  `internal/tools/common.go:50`.
+- Previously referred to as "ADR 013" — find via
+  `git grep -n 'ADR 013'`. Today's hits include
+  `internal/tools/common.go` (`EmitResourceUpdate` field doc) and
+  `docs/adr/README.md`.
 - Subscription set: `internal/mcp/resources.go:48-54`.
 - Wire format: `internal/mcp/resources.go:148-198`
   (`ResourceUpdateDelta`, `NotifyResourceUpdated`).
