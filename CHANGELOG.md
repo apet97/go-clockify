@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.github/workflows/release-smoke.yml` workflow_dispatch tag
+  example bumped to `v1.2.0`.** The manual-trigger input for the
+  release-smoke workflow described the tag parameter as
+  "Release tag to verify (e.g. v1.0.0)" — same drift pattern as
+  iter78's `docs/verification.md` fix and iter89/iter90/iter91's
+  v1.0.x → v1.2.x sweep across release-policy / SECURITY /
+  production-readiness. Operators landing on the GitHub Actions
+  UI to dispatch a re-verification would have copied the v1.0.0
+  example by default. Tag bumped to v1.2.0 (current Active per
+  SUPPORT.md). Pure operator-doc fix (workflow input
+  description); no behaviour change.
 - **`docs/production-readiness.md` Upgrade path no longer anchors
   at `1.0.x today`.** The Upgrade path section's short-version
   paragraph said "only the current minor (1.0.x today) is
