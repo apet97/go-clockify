@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/production-readiness.md` Governance audit-trail
+  description now matches `GOVERNANCE.md`.** The Governance
+  section claimed the audit trail came from "signed commits,
+  public CI logs, and SLSA build provenance on every release."
+  Two factual problems: signed-commit enforcement on `main` is
+  intentionally disabled (per `docs/branch-protection.md` L57:
+  "Signed commits: disabled" — the single-maintainer reality
+  documented in ADR-0016), and SLSA is conditional, not
+  "every release" (per ADR-0013: SLSA depends on the GitHub
+  attestation service which was unavailable while the repo was
+  user-owned-private). GOVERNANCE.md L28-33 lists the actual
+  audit-trail components: public CI logs, GitHub web-flow signed
+  squash commits on `main` where available, SLSA where
+  available, and the release-smoke workflow. Section now uses
+  the same enumeration. Pure operator-doc fix; reviewer
+  evaluating audit-trail claims now sees consistent language
+  across both surfaces.
 - **`CONTRIBUTING.md` Project Structure section now reflects the
   real `internal/` package tree.** The ASCII tree listed 13
   internal packages but `ls internal/` returns 28. Missing
