@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -230,7 +231,10 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 	query["page-size"] = fmt.Sprintf("%d", pageSize)
 
 	var requests []map[string]any
-	path := "/workspaces/" + wsID + "/time-off/requests"
+	path, err := paths.Workspace(wsID, "time-off", "requests")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &requests); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -259,7 +263,10 @@ func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (R
 	}
 
 	var request map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests/" + requestID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &request); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -299,7 +306,10 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests"
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -327,7 +337,10 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 
 	// Fetch existing for merge
 	var existing map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests/" + requestID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -377,7 +390,10 @@ func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests/" + requestID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if dryrun.Enabled(args) {
 		var request map[string]any
@@ -426,7 +442,10 @@ func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (Resu
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests/" + requestID + "/approve"
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID, "approve")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -461,7 +480,10 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/requests/" + requestID + "/deny"
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID, "deny")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -487,7 +509,10 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 	}
 
 	var policies []map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies"
+	path, err := paths.Workspace(wsID, "time-off", "policies")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &policies); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -510,7 +535,10 @@ func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (Re
 	}
 
 	var policy map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &policy); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -555,7 +583,10 @@ func (s *Service) createTimeOffPolicy(ctx context.Context, args map[string]any) 
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies"
+	path, err := paths.Workspace(wsID, "time-off", "policies")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -576,7 +607,10 @@ func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) 
 
 	// Fetch existing for merge
 	var existing map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -645,7 +679,10 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 	}
 
 	var balance map[string]any
-	path := "/workspaces/" + wsID + "/time-off/policies/" + policyID + "/balances/" + userID
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "balances", userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &balance); err != nil {
 		return ResultEnvelope{}, err
 	}

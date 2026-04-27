@@ -217,6 +217,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deleteExpense` builds `expensePath` once for dry-run preview +
   DELETE; `deleteExpenseCategory` uses minimal-fallback short-circuit
   before the path is needed.
+- **`tier2_time_off.go` migrated to `paths.Workspace`.** All 12
+  concats across 10 handlers — request CRUD nested under policy ID
+  (5-segment), approve/deny PUTs (6-segment), policy CRUD
+  (3-4 segment), balance lookup (6-segment).
+  `deleteTimeOffRequest` and `updateTimeOffRequest` /
+  `updateTimeOffPolicy` build path once for the GET-then-mutate
+  pair. First Tier-2 file with consistent 6-segment paths.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
