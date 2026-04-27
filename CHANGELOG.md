@@ -211,6 +211,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project-totals report, capacity filter). Cleanest pattern in the
   Tier-2 cluster — every concat was already in the form
   `path := "..."`, so the swap is a literal RHS replacement.
+- **`tier2_expenses.go` migrated to `paths.Workspace`.** All 11
+  concats: 5 expense handlers (list/get/create/update/delete) +
+  4 category handlers (list/create/update/delete) + 1 report.
+  `deleteExpense` builds `expensePath` once for dry-run preview +
+  DELETE; `deleteExpenseCategory` uses minimal-fallback short-circuit
+  before the path is needed.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

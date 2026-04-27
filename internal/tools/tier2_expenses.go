@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -152,8 +153,12 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
+	path, err := paths.Workspace(wsID, "expenses")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/expenses", map[string]string{
+	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
 	}, &items); err != nil {
@@ -176,8 +181,12 @@ func (s *Service) getExpense(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "expenses", expenseID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var expense map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/expenses/"+expenseID, nil, &expense); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &expense); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_expense", expense, map[string]any{"workspaceId": wsID}), nil
@@ -210,8 +219,12 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 		body["description"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "expenses")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/expenses", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_expense", created, map[string]any{"workspaceId": wsID}), nil
@@ -244,8 +257,12 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		body["description"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "expenses", expenseID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/expenses/"+expenseID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_expense", updated, map[string]any{"workspaceId": wsID}), nil
@@ -260,10 +277,14 @@ func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	expensePath, err := paths.Workspace(wsID, "expenses", expenseID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if dryrun.Enabled(args) {
 		var expense map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/expenses/"+expenseID, nil, &expense); err != nil {
+		if err := s.Client.Get(ctx, expensePath, nil, &expense); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -274,7 +295,7 @@ func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (Resul
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/expenses/"+expenseID); err != nil {
+	if err := s.Client.Delete(ctx, expensePath); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_expense", map[string]any{
@@ -289,8 +310,12 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "expenses", "categories")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/expenses/categories", nil, &items); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_expense_categories", items, map[string]any{
@@ -310,8 +335,12 @@ func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any
 	}
 
 	body := map[string]any{"name": name}
+	path, err := paths.Workspace(wsID, "expenses", "categories")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/expenses/categories", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_expense_category", created, map[string]any{"workspaceId": wsID}), nil
@@ -332,8 +361,12 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 		body["name"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/expenses/categories/"+catID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_expense_category", updated, map[string]any{
@@ -363,7 +396,11 @@ func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/expenses/categories/"+catID); err != nil {
+	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_expense_category", map[string]any{
@@ -391,8 +428,12 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 		query["end"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "expenses")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var expenses []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/expenses", query, &expenses); err != nil {
+	if err := s.Client.Get(ctx, path, query, &expenses); err != nil {
 		return ResultEnvelope{}, err
 	}
 
