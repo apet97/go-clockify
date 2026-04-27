@@ -22,10 +22,14 @@ limits, or HA rollout semantics (go to
 ## Canonical configuration
 
 ```env
-# Transport: streamable_http is recommended over legacy http for
-# server-initiated notifications. streamable_http is the only
-# transport that can emit tools/list_changed after Tier 2 group
-# activation — legacy http drops all notifications silently.
+# Transport: streamable_http is the recommended HTTP-shape transport
+# because it emits server-initiated notifications (tools/list_changed
+# after Tier 2 group activation, plus progress + resource updates) via
+# its SSE stream on GET /mcp. The legacy `http` POST-only transport
+# drops all such notifications silently. (Stdio and gRPC also support
+# server-initiated notifications, but they're outside the HTTP-shape
+# this profile covers — see profile-local-stdio.md and
+# profile-private-network-grpc.md respectively.)
 MCP_TRANSPORT=streamable_http
 MCP_HTTP_BIND=127.0.0.1:8080
 

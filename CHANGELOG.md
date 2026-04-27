@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/deploy/profile-single-tenant-http.md` env-file annotation
+  doesn't claim streamable_http is the *only* notification-capable
+  transport.** The `MCP_TRANSPORT=streamable_http` env-block comment
+  said "streamable_http is the only transport that can emit
+  tools/list_changed after Tier 2 group activation". Operator-correct
+  within the HTTP-shape this profile covers, but unconditionally
+  wrong: stdio (per `internal/mcp/transport_stdio.go`) and gRPC
+  (per `internal/transport/grpc/transport.go:230-243` `streamNotifier`
+  + ADR-0008) also emit `tools/list_changed`. Same iter146 / iter147
+  transport-coverage drift class at the deploy-profile env-annotation
+  surface. Comment now scopes the claim to "the recommended HTTP-shape
+  transport" with explicit pointers to profile-local-stdio.md and
+  profile-private-network-grpc.md for the other two
+  notification-capable transports.
 - **`README.md` "Stale tool list" troubleshooting line covers
   gRPC.** Iter146 fixed the same gRPC omission in
   `docs/clients.md` Tool Discovery; this commit closes the
