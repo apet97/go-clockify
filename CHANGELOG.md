@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`docs/verification.md` example tags bumped to v1.2.0.** The
+  three supply-chain verification recipes (SLSA build provenance,
+  cosign keyless on the binary, cosign on the container image) plus
+  the §5 SBOM download example all hard-coded `TAG=v1.0.0` /
+  `gh release download v1.0.0`. iter52 (720a1e0) bumped the parallel
+  `docs/verify-release.md` to v1.2.0 (current Active per SUPPORT.md)
+  but missed `docs/verification.md`. Operators copy-pasting the
+  examples were verifying the v1.0.0 GA release rather than the
+  current line. All four blocks now use `TAG=v1.2.0`; the
+  intentional "Bundle format (v1.0.0 vs v1.0.1+)" historical note
+  in §2 is preserved since it documents why offline verify-blob
+  specifically fails on the v1.0.0 legacy rekor-bundle artifact.
+  Lead paragraph also picks up an explicit SUPPORT.md cross-link
+  matching the iter49 pattern. Pure operator-doc fix.
 - **`docs/tool-catalog.md` adds Audit-tracked argument capture
   section.** Iter27 (97c20da) emitted `risk_class` and `audit_keys`
   on every tool descriptor in `docs/tool-catalog.json`; iter31

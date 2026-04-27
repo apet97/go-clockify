@@ -26,11 +26,12 @@ gh auth login
 ```
 
 The three supply-chain checks below assume you are working with the binary
-`clockify-mcp-linux-x64` from tag `v1.0.0`. The other binaries
-(`darwin-arm64`, `darwin-x64`, `linux-arm64`, `windows-x64.exe`) are
-signed by the same `release.yml` run, so verifying one proves the
-release-time signing pipeline was healthy. Replace the filename to
-verify a different platform.
+`clockify-mcp-linux-x64` from tag `v1.2.0` (the current Active line per
+[`SUPPORT.md`](../SUPPORT.md)). The other binaries (`darwin-arm64`,
+`darwin-x64`, `linux-arm64`, `windows-x64.exe`) are signed by the same
+`release.yml` run, so verifying one proves the release-time signing
+pipeline was healthy. Replace the filename or `TAG` value to verify a
+different platform or release.
 
 ## 1. SLSA build provenance attestation
 
@@ -39,7 +40,7 @@ The `release.yml` workflow stages the five binaries and runs
 in the GitHub attestation service and is verified through `gh`:
 
 ```sh
-TAG=v1.0.0
+TAG=v1.2.0
 OWNER=apet97
 
 # Download the binary
@@ -78,7 +79,7 @@ signer to the GitHub Actions OIDC identity for `release.yml` at the
 release tag.
 
 ```sh
-TAG=v1.0.0
+TAG=v1.2.0
 OWNER=apet97
 REPO="${OWNER}/go-clockify"
 
@@ -119,7 +120,7 @@ The container image is built and signed by `docker-image.yml`, not
 by `release.yml`. The certificate identity differs accordingly.
 
 ```sh
-TAG=v1.0.0
+TAG=v1.2.0
 OWNER=apet97
 REPO="${OWNER}/go-clockify"
 IMAGE_REF="ghcr.io/${REPO}:${TAG}"
@@ -180,7 +181,7 @@ Both binaries and images carry SPDX SBOMs. Inspect the binary SBOM
 with:
 
 ```sh
-gh release download v1.0.0 \
+gh release download v1.2.0 \
   --repo apet97/go-clockify \
   --pattern 'clockify-mcp-linux-x64.spdx.json'
 jq '.creationInfo, .name, (.packages | length)' clockify-mcp-linux-x64.spdx.json
