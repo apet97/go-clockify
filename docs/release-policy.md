@@ -7,25 +7,28 @@ the maintainer.
 
 ## Supported versions
 
-| Line  | Status   | Receives                            |
-|-------|----------|-------------------------------------|
-| 1.0.x | Active   | Security fixes, bug fixes, features |
-| 0.x   | EOL      | Nothing                             |
+| Line  | Status     | Receives                                                 |
+|-------|------------|----------------------------------------------------------|
+| 1.2.x | Active     | Security fixes, bug fixes, features                      |
+| 1.1.x | Superseded | Nothing — upgrade to `1.2.x`                             |
+| 1.0.x | Patch-only | Correctness regressions on the stable v1 wire format only|
+| 0.x   | EOL        | Nothing                                                  |
 
-When `1.1.0` ships, `1.0.x` continues to receive **security fixes only**
-for the duration of the next minor (≈6 weeks). After that, only the
-current minor is supported.
+The Active line is the only one receiving non-correctness changes.
+When the next minor ships (`1.3.0`), `1.2.x` will move to patch-only
+and `1.1.x` will be EOL. See `SUPPORT.md` for the canonical state of
+each line at any moment.
 
 This is a single-supported-line policy by default. Platform teams that
-need a longer support window should pin a specific `1.0.x` patch and
-self-backport.
+need a longer support window should pin a specific patch on the
+current minor and self-backport.
 
 ## Cadence
 
-- **Patch** (`1.0.x` → `1.0.x+1`): on demand. Shipped when a fix lands
+- **Patch** (`1.x.y` → `1.x.y+1`): on demand. Shipped when a fix lands
   on `main` and is worth releasing — typically within a week of merge.
-- **Minor** (`1.0` → `1.1`): roughly every 6 weeks. Carries new tools,
-  new transports, new auth modes, new env vars.
+- **Minor** (`1.x` → `1.(x+1)`): roughly every 6 weeks. Carries new
+  tools, new transports, new auth modes, new env vars.
 - **Major** (`1.x` → `2.0`): when a breaking change cannot be deferred.
   Announced one minor in advance.
 
@@ -75,8 +78,9 @@ This gives operators a documented window to migrate without surprise.
 
 ## Backport criteria
 
-Once a minor line is supported (i.e. `1.0.x` after `1.1.0` ships), the
-following backports are accepted:
+Once a minor line is on the patch-only track (e.g. `1.0.x` after
+`1.1.0` shipped, or `1.1.x` after `1.2.0` shipped), the following
+backports are accepted:
 
 - **Security fixes** (CVE-class) — always backported within the
   support window.

@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release-policy.md` Supported-versions table realigned
+  with current minor cadence.** The release-policy table claimed
+  `1.0.x` was Active and `0.x` was EOL — anchored at the v1.0.x
+  era before v1.1.0 (2026-04-22) and v1.2.0 (2026-04-25) shipped.
+  iter48 (a005f82) bumped SUPPORT.md to name v1.2.x as Active but
+  release-policy was missed by that pass; the parallel section in
+  release-policy continued to misrepresent the support window.
+  Table now lists v1.2.x (Active), v1.1.x (Superseded), v1.0.x
+  (Patch-only on stable v1 wire format), v0.x (EOL), matching
+  SUPPORT.md exactly. Cadence example bullets switched from
+  hardcoded 1.0.x → 1.0.x+1 to abstract `1.x.y` → `1.x.y+1` so
+  the policy doc no longer goes stale every minor. Backport
+  criteria intro line updated to describe the patch-only track
+  generically rather than naming a specific version pair. Pure
+  operator-doc fix; closes the iter48-era version-string sweep
+  at the release-policy surface.
 - **`docs/support-matrix.md` "Recommended" deploy-doc list now
   includes `private-network-grpc`.** The post-table sentence
   promised "Every 'Recommended' row has a corresponding file
