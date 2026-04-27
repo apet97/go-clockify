@@ -46,7 +46,7 @@ Highlights:
 | `networkPolicy.enabled` | `true` | Default-deny ingress/egress policy. Disable if your CNI does not support it. |
 | `pdb.enabled` / `pdb.minAvailable` | `true` / `1` | PodDisruptionBudget for voluntary disruptions. |
 | `metrics.serviceMonitor.enabled` | `false` | kube-prometheus-stack ServiceMonitor (requires the CRDs). |
-| `metrics.prometheusRule.enabled` | `false` | Alert rules from `docs/observability.md` (requires the CRDs). |
+| `metrics.prometheusRule.enabled` | `false` | Alert rules rendered from `deploy/helm/clockify-mcp/templates/prometheusrule.yaml` (requires the kube-prometheus-stack CRDs). |
 | `secrets.create` | `true` | Chart creates the Secret. Set to `false` to use an external Secret (sealed-secrets, external-secrets). |
 | `secrets.clockifyApiKey` | `""` | Must be set before the pod becomes ready. Pod readiness fails loudly otherwise. |
 | `secrets.mcpBearerToken` | `""` | 16+ character random string. Generate with `openssl rand -base64 24`. |

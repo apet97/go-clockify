@@ -18,6 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **Phantom `docs/observability.md` references repointed.**
+  Four references promised an operator doc that was never
+  written: `cmd/clockify-mcp/otel_on.go` (the OTel install
+  failure hint), `deploy/helm/README.md` (PrometheusRule
+  Purpose column), `deploy/k8s/README.md` (prometheus-rule.yaml
+  description), and `docs/adr/0006-otel-build-tag.md`
+  (Related docs). Same situation as iter56's pprof phantom-
+  runbook find. All four rewritten to reference the actual
+  artifacts: the OTel hint now spells out what to check
+  (`OTEL_EXPORTER_OTLP_ENDPOINT` + collector reachability)
+  instead of deferring to a 404; the helm/k8s table cells now
+  point at the real `prometheus-rule.yaml` /
+  `prometheusrule.yaml` files as the canonical alert
+  definitions; the ADR's Related-docs block points at the
+  actual ServiceMonitor + PrometheusRule template files.
+  Pure operator-doc fix; reviewers no longer chase a phantom
+  observability doc.
 - **`internal/mcp/resources.go` ADR-0009 reference renumbered.**
   The `ResourceUpdateDelta` doc-comment pointed reviewers at
   `docs/adr/013-resource-delta-sync.md` — wrong ADR number,

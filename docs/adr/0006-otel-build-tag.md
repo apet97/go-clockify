@@ -128,6 +128,10 @@ implementation isolated in a dedicated Go sub-module:
 - CI enforcement: `scripts/check-build-tags.sh`.
 - Related ADRs: 0001 (stdlib-only invariant), 0007 (FIPS build tag),
   0008 (gRPC build tag).
-- Related docs: `docs/production-readiness.md` "Compliance posture",
-  `docs/observability.md`.
+- Related docs: `docs/production-readiness.md` "Compliance posture";
+  alert rules + ServiceMonitor wiring live in
+  `deploy/k8s/base/prometheus-rule.yaml` /
+  `deploy/k8s/base/servicemonitor.yaml` (Kustomize) and
+  `deploy/helm/clockify-mcp/templates/{prometheusrule,servicemonitor}.yaml`
+  (Helm).
 - Spec: <https://www.w3.org/TR/trace-context/> (W3C Trace Context).

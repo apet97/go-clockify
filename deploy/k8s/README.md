@@ -37,7 +37,7 @@ deploy/k8s/
 | `pdb.yaml` | PodDisruptionBudget preserving at least one healthy replica during voluntary disruptions. |
 | `serviceaccount.yaml` | Dedicated ServiceAccount used by the Deployment. |
 | `servicemonitor.yaml` | kube-prometheus-stack `ServiceMonitor` scraping `/metrics` on the `http` port every 30s. |
-| `prometheus-rule.yaml` | `PrometheusRule` mirroring `docs/observability.md` alerts: multi-window burn-rate (99.9% SLO), `ClockifyMCPUpstreamUnavailable`, `ClockifyMCPHighToolErrorRate`, `ClockifyMCPRateLimitSaturation`, `ClockifyMCPHighLatency`, `ClockifyMCPNotReady`, `ClockifyMCPAuthFailures`. |
+| `prometheus-rule.yaml` | `PrometheusRule` carrying the SLO + transport alerts: multi-window burn-rate (99.9% SLO), `ClockifyMCPUpstreamUnavailable`, `ClockifyMCPHighToolErrorRate`, `ClockifyMCPRateLimitSaturation`, `ClockifyMCPHighLatency`, `ClockifyMCPNotReady`, `ClockifyMCPAuthFailures`. The file itself is the canonical definition. |
 
 The server runs in HTTP transport mode in-cluster. Stdio is reserved for
 local MCP clients (Claude Desktop, Cursor).

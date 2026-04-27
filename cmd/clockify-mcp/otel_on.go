@@ -31,7 +31,7 @@ func installOTel(ctx context.Context) func() {
 	if err != nil {
 		slog.Warn("otel_install_failed",
 			"error", err.Error(),
-			"hint", "tracing will fall back to no-op; see docs/observability.md",
+			"hint", "tracing will fall back to no-op; check OTEL_EXPORTER_OTLP_ENDPOINT and the local OTLP collector reachability",
 		)
 		return func() {}
 	}
