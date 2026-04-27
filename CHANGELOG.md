@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release/deploy-readiness-checklist.md` references real
+  doctor commands instead of fictional `--dry-run` flag.** The
+  Pre-Flight Tests section had a "Postgres Migration: Run
+  `clockify-mcp --dry-run` against a production clone to verify
+  database migrations" item, but `--dry-run` is not a CLI flag —
+  the binary's subcommand is `clockify-mcp doctor` (with
+  `--strict` and `--check-backends` modifiers per
+  `cmd/clockify-mcp/main.go:225`). An operator following this
+  checklist verbatim would have hit "unknown flag" and either
+  skipped the verification or improvised. Item replaced with the
+  two real commands from `public-hosted-launch-checklist.md`:
+  config-only `clockify-mcp doctor --strict` for the default
+  binary and `clockify-mcp-postgres doctor --strict
+  --check-backends` for hosted Postgres deployments (ADR-0001
+  keeps `pgx` out of the default binary so only the Postgres-
+  tagged variant satisfies the backend gate). Pure operator-doc
+  fix — but a high-impact one because the wrong flag turns the
+  pre-production gate into a noop.
 - **`docs/verification.md` SLSA section now says "all 15 binaries"
   instead of "five binaries".** Same iter101 drift — the SLSA
   build-provenance section claimed `release.yml` stages "the five
