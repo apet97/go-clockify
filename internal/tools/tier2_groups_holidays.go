@@ -7,6 +7,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -153,8 +154,12 @@ func (s *Service) ListUserGroupsAdmin(ctx context.Context) (ResultEnvelope, erro
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "user-groups")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/user-groups", nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_user_groups_admin", out, map[string]any{
@@ -173,8 +178,12 @@ func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_user_group", out, map[string]any{"workspaceId": wsID}), nil
@@ -195,8 +204,12 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 		body["userIds"] = userIDs
 	}
 
+	path, err := paths.Workspace(wsID, "user-groups")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/user-groups", body, &out); err != nil {
+	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_user_group_admin", out, map[string]any{"workspaceId": wsID}), nil
@@ -220,8 +233,12 @@ func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any)
 		body["userIds"] = userIDs
 	}
 
+	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID, body, &out); err != nil {
+	if err := s.Client.Put(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_user_group_admin", out, map[string]any{"workspaceId": wsID}), nil
@@ -246,7 +263,11 @@ func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any)
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID); err != nil {
+	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_user_group_admin", map[string]any{
@@ -265,8 +286,12 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "holidays")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/holidays", nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_holidays", out, map[string]any{
@@ -298,8 +323,12 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 		body["recurring"] = recurring
 	}
 
+	path, err := paths.Workspace(wsID, "holidays")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/holidays", body, &out); err != nil {
+	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
@@ -324,7 +353,11 @@ func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (Resul
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/holidays/"+holidayID); err != nil {
+	path, err := paths.Workspace(wsID, "holidays", holidayID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_holiday", map[string]any{

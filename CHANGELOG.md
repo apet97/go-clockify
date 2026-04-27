@@ -185,6 +185,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `fieldPath` once for dry-run GET + DELETE; `SetCustomFieldValue`
   picks the projects-vs-time-entries branch via the helper while
   keeping the conditional shape.
+- **`tier2_groups_holidays.go` migrated to `paths.Workspace`.** All
+  8 concats — 5× user-groups (list/get/create/update/delete) +
+  3× holidays (list/create/delete). Standard `paths.Workspace`
+  swaps; helper validates the workspace ID and percent-encodes
+  every sub-segment.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
