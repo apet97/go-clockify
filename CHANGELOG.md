@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/performance.md` "Reproduce locally" lists all 5 load
+  scenarios.** Section §"Throughput envelope (load harness)"
+  reproduce-locally bash block listed the 4 pre-iter138
+  scenarios (`per-token-saturation`, `steady`, `burst`,
+  `tenant-mix`) but `tests/load/main.go:63-136` registers 5,
+  the 5th being `ratelimit-reap-correctness`. Continuation of
+  the iter138 sweep at the third operator-visible surface
+  (after `tests/load/README.md` and `.github/workflows/load.yml`)
+  so an operator copy-pasting from performance.md gets the
+  canonical scenario set.
 - **`tests/load/README.md` and `.github/workflows/load.yml` cover
   `ratelimit-reap-correctness`.** Both surfaces listed only 4
   load scenarios (`steady`, `burst`, `tenant-mix`,

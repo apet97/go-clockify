@@ -214,6 +214,7 @@ go run ./tests/load -scenario per-token-saturation
 go run ./tests/load -scenario steady
 go run ./tests/load -scenario burst
 go run ./tests/load -scenario tenant-mix
+go run ./tests/load -scenario ratelimit-reap-correctness
 ```
 
 Or via CI: `gh workflow run load.yml -f scenario=per-token-saturation`.
