@@ -198,21 +198,21 @@ func writeMarkdown(path string, c catalog) error {
 
 func writeTable(b *strings.Builder, rows []catalogTool, hideGroup bool) {
 	if hideGroup {
-		b.WriteString("| Tool | Read-only | Destructive | Idempotent | Description |\n")
-		b.WriteString("|------|-----------|-------------|------------|-------------|\n")
+		b.WriteString("| Tool | Read-only | Destructive | Idempotent | Risk | Description |\n")
+		b.WriteString("|------|-----------|-------------|------------|------|-------------|\n")
 	} else {
-		b.WriteString("| Tool | Group | Read-only | Destructive | Idempotent | Description |\n")
-		b.WriteString("|------|-------|-----------|-------------|------------|-------------|\n")
+		b.WriteString("| Tool | Group | Read-only | Destructive | Idempotent | Risk | Description |\n")
+		b.WriteString("|------|-------|-----------|-------------|------------|------|-------------|\n")
 	}
 	for _, t := range rows {
 		desc := strings.ReplaceAll(t.Description, "|", "\\|")
 		desc = strings.ReplaceAll(desc, "\n", " ")
 		if hideGroup {
-			fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s |\n",
-				t.Name, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), desc)
+			fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s | %s |\n",
+				t.Name, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), riskCell(t.RiskClass), desc)
 		} else {
-			fmt.Fprintf(b, "| `%s` | `%s` | %s | %s | %s | %s |\n",
-				t.Name, t.Group, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), desc)
+			fmt.Fprintf(b, "| `%s` | `%s` | %s | %s | %s | %s | %s |\n",
+				t.Name, t.Group, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), riskCell(t.RiskClass), desc)
 		}
 	}
 }
@@ -222,4 +222,19 @@ func yn(v bool) string {
 		return "yes"
 	}
 	return "no"
+}
+
+// riskCell renders a tool's RiskClass taxonomy as a comma-separated
+// list of inline-coded names for the markdown table. Empty input
+// renders as an em dash so the column never collapses to a blank
+// cell that would distort the table.
+func riskCell(names []string) string {
+	if len(names) == 0 {
+		return "—"
+	}
+	parts := make([]string, len(names))
+	for i, n := range names {
+		parts[i] = "`" + n + "`"
+	}
+	return strings.Join(parts, ", ")
 }

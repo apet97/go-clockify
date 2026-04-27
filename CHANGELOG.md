@@ -245,8 +245,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `billing`, `admin`, `permission_change`, `external_side_effect`,
   `destructive`) and surfaces the `AuditKeys` slice. Consumers
   (policy agents, ops dashboards, audit harnesses) can now filter
-  on the structured taxonomy without grep-ing source. Markdown
-  output is unchanged — JSON is the machine-readable surface.
+  on the structured taxonomy without grep-ing source.
+- **`docs/tool-catalog.md` gains a `Risk` column.** Both the Tier-1
+  table and every Tier-2 group sub-table render the same risk
+  taxonomy as inline-coded names joined with `, `. Empty risk (the
+  zero-value bitmask, which never occurs today) renders as an em
+  dash so the column never collapses to a blank cell. Closes the
+  human-browsing gap left when 97c20da landed the JSON surface
+  without touching the markdown rendering.
 
 ### Fixed
 
