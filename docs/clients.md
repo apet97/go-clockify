@@ -59,7 +59,13 @@ deployments keep verbose errors by default for fast diagnostics.
 any reply containing a private, reserved, link-local, or loopback IP
 when the deployment is on a hosted profile (or
 `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` is set explicitly). Local profiles
-keep the literal-IP-only check.
+keep the literal-IP-only check. Operators can opt specific hostnames
+out of the DNS check via `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]`
+(exact or leading-dot suffix); a webhook URL whose host matches a
+listed entry will succeed even if its DNS reply contains a private IP.
+Clients seeing an unexpectedly-accepted webhook in such an environment
+are not observing a security regression — the operator deliberately
+admitted that hostname.
 
 ### Resource Templates
 The server exposes `clockify://` URI templates.

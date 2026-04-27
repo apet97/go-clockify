@@ -75,6 +75,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`docs/clients.md` Hosted-Mode Webhook URL Validation section
+  references the allowlist escape hatch.** Iter40 added
+  `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` and iter41 propagated it into
+  the shared-service operator docs (00b5561), but the
+  client-facing `docs/clients.md` section still described the DNS
+  gate without the escape hatch. Clients seeing an unexpectedly-
+  accepted webhook in a split-horizon environment had no signal
+  whether they were watching a security regression or an operator-
+  admitted hostname. Section now explains: operators can opt
+  specific hostnames out via the env var, and a successful
+  allowlist hit is not a regression. Pure operator-doc fix; no
+  behaviour change. Closes the iter41-era doc-sync deferment.
 - **Reproducibility workflow drops phantom `docs/reproducibility.md`
   pointers.** `.github/workflows/reproducibility.yml` had two
   references to a `docs/reproducibility.md` operator doc that was
