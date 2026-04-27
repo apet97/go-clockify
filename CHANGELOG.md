@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **`docs/verify-release.md` image name + example tag corrected.**
+  Three image references named `ghcr.io/apet97/clockify-mcp` —
+  the registry path is `ghcr.io/apet97/go-clockify` (the same
+  one referenced in `verification.md`, the deploy templates,
+  the k8s manifests, and the certificate-identity-regexp on
+  the very next line). Operators following the verify-release
+  guide would `crane digest` / `cosign verify` against a
+  non-existent image and hit a 404 immediately. All three
+  occurrences renamed to `go-clockify`. Same file: the
+  example `TAG=v0.7.1` (and downstream literal artifact
+  names like `clockify-mcp_0.7.1_*.tar.gz`) bumped to
+  `v1.2.0` so the doc-as-runbook produces a verifiable result
+  end-to-end without manual substitution. The image-name fix
+  is a real bug operators would hit; the tag bump is the
+  doc-currency hygiene that keeps the runbook copy-paste-able.
 - **`docs/runbooks/image-digest-pinning.md` examples bumped to v1.2.0.**
   Three operator-facing copy-paste examples (the
   `docker buildx imagetools inspect` digest-resolution command,

@@ -33,7 +33,7 @@ brew install syft grype
 ## 1. Fetch the release
 
 ```sh
-TAG=v0.7.1
+TAG=v1.2.0
 gh release download "$TAG" \
   --repo apet97/go-clockify \
   --dir ./artifacts
@@ -60,8 +60,8 @@ A success looks like:
 
 ```
 Verified OK
-./clockify-mcp_0.7.1_linux_amd64.tar.gz: OK
-./clockify-mcp_0.7.1_linux_arm64.tar.gz: OK
+./clockify-mcp_1.2.0_linux_amd64.tar.gz: OK
+./clockify-mcp_1.2.0_linux_arm64.tar.gz: OK
 ```
 
 If `cosign verify-blob` fails, the binary may have been tampered
@@ -75,10 +75,10 @@ maintainer's local machine but not the CI runner.
 
 ```sh
 slsa-verifier verify-artifact \
-  --provenance-path ./artifacts/clockify-mcp_0.7.1_linux_amd64.intoto.jsonl \
+  --provenance-path ./artifacts/clockify-mcp_1.2.0_linux_amd64.intoto.jsonl \
   --source-uri github.com/apet97/go-clockify \
   --source-tag "$TAG" \
-  ./artifacts/clockify-mcp_0.7.1_linux_amd64.tar.gz
+  ./artifacts/clockify-mcp_1.2.0_linux_amd64.tar.gz
 ```
 
 The output ends with:
@@ -95,11 +95,11 @@ deploying.
 
 ```sh
 # List the top-level dependencies
-syft packages ./artifacts/clockify-mcp_0.7.1_linux_amd64.spdx.json \
+syft packages ./artifacts/clockify-mcp_1.2.0_linux_amd64.spdx.json \
   -o table | head -30
 
 # Scan for CVEs using the Grype vulnerability database
-grype sbom:./artifacts/clockify-mcp_0.7.1_linux_amd64.spdx.json \
+grype sbom:./artifacts/clockify-mcp_1.2.0_linux_amd64.spdx.json \
   --fail-on high
 ```
 
@@ -111,16 +111,16 @@ not the SBOM itself.
 ## 5. Container images
 
 The published container images at
-`ghcr.io/apet97/clockify-mcp:$TAG` are digest-pinned and signed
+`ghcr.io/apet97/go-clockify:$TAG` are digest-pinned and signed
 by the same workflow.
 
 ```sh
-DIGEST=$(crane digest ghcr.io/apet97/clockify-mcp:"$TAG")
+DIGEST=$(crane digest ghcr.io/apet97/go-clockify:"$TAG")
 
 cosign verify \
   --certificate-identity-regexp "^https://github.com/apet97/go-clockify/\.github/workflows/release\.yml@refs/tags/" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  "ghcr.io/apet97/clockify-mcp@${DIGEST}"
+  "ghcr.io/apet97/go-clockify@${DIGEST}"
 ```
 
 Deploy by digest, not by tag — tag resolution is mutable; a
