@@ -1,6 +1,7 @@
 package config
 
 import (
+	"maps"
 	"strings"
 	"testing"
 )
@@ -153,9 +154,7 @@ func TestTransportAuthMatrix(t *testing.T) {
 			if tc.authMode != "" {
 				envs["MCP_AUTH_MODE"] = tc.authMode
 			}
-			for k, v := range tc.extra {
-				envs[k] = v
-			}
+			maps.Copy(envs, tc.extra)
 			// Clear any env inherited from other tests so each cell is
 			// deterministic. Covers the leak between cases that share
 			// the same process env.

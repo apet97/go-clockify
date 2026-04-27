@@ -171,6 +171,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `maps.Copy(env, overrides)`. Pure test-fixture refactor —
   no behaviour change. Same lint sweep continues into test
   files.
+- **`internal/config/transport_auth_matrix_test.go` modernised.**
+  Per-cell `for k, v := range tc.extra { envs[k] = v }` overlay
+  collapses to `maps.Copy(envs, tc.extra)`. Pure test-fixture
+  refactor — no behaviour change. Closes the iter46-queued
+  test-file lint cleanup.
 
 ### Added
 
