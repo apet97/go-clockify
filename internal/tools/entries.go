@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +19,7 @@ import (
 // project, and pagination.
 func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-	if pageSize > 200 {
-		pageSize = 200
-	}
+	pageSize := min(intArg(args, "page_size", 50), 200)
 
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
@@ -324,14 +322,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	s.emitEntryAndWeeklyWithState(ctx, wsID, updated)
 	newWeeklyURIs := weeklyReportURIsForEntry(wsID, updated.TimeInterval.Start, updated.TimeInterval.End, loc)
 	for _, oldURI := range oldWeeklyURIs {
-		found := false
-		for _, newURI := range newWeeklyURIs {
-			if oldURI == newURI {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(newWeeklyURIs, oldURI) {
 			s.emitResourceUpdate(ctx, oldURI)
 		}
 	}

@@ -132,6 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`/workspaces/<ws>/user/<uid>/time-entries`) all swap to
   `paths.Workspace(...)`. Largest single-file migration so far —
   exercises 2-, 3-, and 4-segment forms in one file.
+- **`entries.go` modernised.** `ListEntries` clamps `pageSize` with
+  `min()` instead of an `if`-statement; `UpdateEntry`'s outdated-URI
+  loop uses `slices.Contains` instead of a hand-written found-loop.
+  Pure refactor — no behaviour change. Clears the lint hints that
+  surfaced during the f372814 migration.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
