@@ -21,8 +21,10 @@ import (
 
 // Options configures a Serve invocation. Bind is required; Server is the
 // shared mcp.Server instance every stream will dispatch against. MaxRecvSize
-// caps per-frame inbound bytes to match the legacy HTTP MCP_HTTP_MAX_BODY
-// default (2 MiB) when unset.
+// caps per-frame inbound bytes; when unset it inherits Server.MaxMessageSize
+// (driven by MCP_MAX_MESSAGE_SIZE; MCP_HTTP_MAX_BODY is its deprecated
+// alias) and falls back to the 4 MiB (4194304 byte) default if Server is
+// also unset.
 //
 // Authenticator is optional. When non-nil, a grpc.StreamServerInterceptor
 // is installed that bridges the shared internal/authn contract onto gRPC

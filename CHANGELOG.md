@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`internal/transport/grpc/transport.go` `MaxRecvSize` doc-comment
+  matches actual default.** The Options struct comment said
+  `MaxRecvSize` "caps per-frame inbound bytes to match the legacy
+  HTTP `MCP_HTTP_MAX_BODY` default (2 MiB) when unset" but two
+  things had drifted: (1) the actual default at line 69 is
+  `4194304` (4 MiB) since the iter83-era body-limit
+  standardisation, not 2 MiB; (2) the primary knob is
+  `MCP_MAX_MESSAGE_SIZE`, with `MCP_HTTP_MAX_BODY` as the deprecated
+  alias since v1.0.1. Comment now describes the actual fall-through
+  (Server.MaxMessageSize first, then 4 MiB literal) and names the
+  current primary knob. Pure source-comment drift fix matching
+  iter83 (SECURITY.md / production-readiness.md 2 MB → 4 MB) at the
+  Go-source surface.
 - **`GOVERNANCE.md` and `docs/production-readiness.md` audit-trail
   enumeration drops stale SLSA "where available" qualifier.**
   Both docs phrased the audit trail as including "SLSA build
