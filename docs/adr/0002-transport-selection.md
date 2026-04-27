@@ -35,7 +35,7 @@ Four transports, selected via `MCP_TRANSPORT` and validated in
 |-------------------|---------|-------------------------------------------------------------------------------------------|
 | `stdio`           | yes     | Local CLI clients. Parent process is trusted; no inbound auth. Required by the MCP spec for the canonical local-process binding. |
 | `http`            | no      | Single-tenant HTTP service behind a TLS-terminating proxy. Original POST-only transport, simpler than streamable_http. Capability-reduced (no SSE, no listChanged). |
-| `streamable_http` | no      | Multi-tenant HTTP service for spec-strict 2025-06-18 / 2025-03-26 MCP clients. Per-installation tokens, session resumption via `Last-Event-ID`, server-initiated notifications via SSE. |
+| `streamable_http` | no      | Multi-tenant HTTP service for MCP clients on the streamable-HTTP-capable versions (`2025-11-25`, `2025-06-18`, `2025-03-26` — every version since the 2025-03-26 introduction). Per-installation tokens, session resumption via `Last-Event-ID`, server-initiated notifications via SSE. |
 | `grpc`            | no      | Bidirectional low-latency clients on a private network. Build-tag opt-in (`-tags=grpc`); not in the default binary. |
 
 `stdio` is the default per the MCP local-process binding. The other

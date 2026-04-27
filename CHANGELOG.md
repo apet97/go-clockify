@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0002-transport-selection.md` streamable_http row
+  covers 2025-11-25 protocol version.** The Decision-section
+  transport table described streamable_http as targeting
+  "spec-strict 2025-06-18 / 2025-03-26 MCP clients" — missing
+  `2025-11-25`, the newest version that also defines streamable
+  HTTP (every version since the 2025-03-26 introduction supports
+  it). Same iter144 protocol-version drift class iter144 fixed in
+  ADR-0012's compat-policy committed window. Row now reads "every
+  version since the 2025-03-26 introduction" with the three
+  current streamable-HTTP-capable versions enumerated; future
+  protocol versions don't re-stale the wording. Source of truth
+  remains `internal/mcp/server.go:SupportedProtocolVersions`.
 - **`docs/deploy/profile-single-tenant-http.md` env-file annotation
   doesn't claim streamable_http is the *only* notification-capable
   transport.** The `MCP_TRANSPORT=streamable_http` env-block comment
