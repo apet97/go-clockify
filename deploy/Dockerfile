@@ -6,7 +6,7 @@
 # kept inline for review ergonomics; the `@sha256:` is what Docker actually
 # resolves. Bumping this digest is a deliberate supply-chain action and should
 # happen in its own commit alongside a note about what changed upstream
-# (toolchain bump, CVE fix, etc.). See docs/runbooks/w2-12-digest-pinning.md.
+# (toolchain bump, CVE fix, etc.). See docs/runbooks/image-digest-pinning.md.
 #
 # Digest resolved from `golang:1.25-bookworm` on 2026-04-14 via
 #   docker buildx imagetools inspect golang:1.25-bookworm

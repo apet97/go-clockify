@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **Stale `w2-12-digest-pinning.md` runbook references repointed.**
+  The runbook was renamed `w2-12-digest-pinning.md` →
+  `image-digest-pinning.md` (already documented in CHANGELOG)
+  but three call sites still referenced the old name and pointed
+  operators at a 404: `deploy/Dockerfile` (the comment near the
+  base-image digest pin), and two sites in
+  `scripts/check-overlay-structure.sh` (the policy block-comment
+  and — most impactful — the operator-facing error message that
+  prints when the structural guard trips). All three repointed
+  to the current filename. Pure operator-doc-pointer fix; no
+  behaviour change. The check-overlay-structure.sh error message
+  in particular was a real bug operators would hit.
 - **`deploy/helm/README.md` image.tag default cell corrected.**
   The Highlights table claimed `image.tag` defaults to `0.7.0`,
   which was wrong on two axes: (a) `values.yaml` actually

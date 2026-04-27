@@ -6,7 +6,7 @@
 # The rule: NO overlay under deploy/k8s/overlays/ may set a kustomize
 # `images:` override (newTag / newName / newDigest). Operators pin the
 # image digest at deploy time via `kustomize edit set image`, per
-# docs/runbooks/w2-12-digest-pinning.md. That pinning never lives in the
+# docs/runbooks/image-digest-pinning.md. That pinning never lives in the
 # tree; it's built into the manifests immediately before `kubectl apply`.
 #
 # A structural check is safer than a value check (e.g. "overlay tag >=
@@ -52,7 +52,7 @@ done
 
 if [ "$violations" -gt 0 ]; then
     printf '\n%d overlay(s) violate the image-pinning policy\n' "$violations" >&2
-    echo "See docs/runbooks/w2-12-digest-pinning.md for the deploy-time workflow." >&2
+    echo "See docs/runbooks/image-digest-pinning.md for the deploy-time workflow." >&2
     exit 1
 fi
 
