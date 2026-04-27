@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/testing/soak-and-profile.md` pprof setup matches the
+  actual `-tags=pprof` build.** The doc said pprof "is typically
+  enabled via a separate debug port" and instructed operators to
+  curl `localhost:6060/debug/pprof/*`. Reality, per
+  `cmd/clockify-mcp/pprof_on.go:32-34`: the pprof handlers mount
+  on whichever HTTP transport is active (the same port as
+  `MCP_HTTP_BIND`, default `:8080`), behind the `pprof` build
+  tag — there is no separate `:6060` debug listener. An operator
+  curl-ing `:6060` would have hit nothing and assumed pprof
+  wasn't built. Doc now describes the build-tag enable path
+  (with the `pprof_enabled` WARN log to confirm), names the
+  active-HTTP-transport binding, and bumps the curl examples to
+  `:8080`. Same fictional-mechanism drift class as iter128
+  (tool_call_error debug-record claim) at the soak/profile
+  surface.
 - **`docs/coverage-policy.md` "Why these exact numbers" prose
   matches ratcheted floor.** §"Why these exact numbers" said
   "The new 69% global floor closes that gap" — but iter140

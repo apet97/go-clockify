@@ -21,26 +21,44 @@ Soak testing involves running the application under expected load for an extende
 `clockify-mcp-go` optionally exposes the standard Go `net/http/pprof` endpoints.
 
 ### Enabling `pprof`
-In a shared-service deployment, `pprof` is typically enabled via a separate debug port or a specific environment variable (verify current implementation). If not enabled, a rebuild with a debug tag may be required.
+The pprof handlers ship behind the `pprof` build tag (see
+`cmd/clockify-mcp/pprof_on.go`). The default release binary
+**does not** link `net/http/pprof` — verified in CI by the
+nm-gate in `.github/workflows/ci.yml`. To enable:
+
+```bash
+# Rebuild with the pprof build tag.
+go build -tags=pprof ./cmd/clockify-mcp
+```
+
+A `pprof_enabled` WARN log fires on startup ("build tag pprof
+mounted /debug/pprof/* — do not run in production") so an
+operator can confirm the tag took.
 
 ### Collecting Profiles
-Assuming the debug listener is at `:6060`:
+The pprof handlers mount on whichever HTTP transport is active
+(stdio binaries are unaffected — pprof requires HTTP). The
+endpoints live on the same port as `MCP_HTTP_BIND` (default
+`:8080`), NOT on a separate debug port. They are deliberately
+unauthenticated — the build-tag gate is the only access
+control, so debug builds must only run on trusted networks
+(loopback or firewalled). Examples assume `MCP_HTTP_BIND=:8080`:
 
 #### 1. Heap Profile (Memory)
 ```bash
-go tool pprof http://localhost:6060/debug/pprof/heap
+go tool pprof http://localhost:8080/debug/pprof/heap
 ```
 Use `top` and `list` in the interactive shell to find the largest memory consumers.
 
 #### 2. CPU Profile
 ```bash
-go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+go tool pprof http://localhost:8080/debug/pprof/profile?seconds=30
 ```
 This collects a 30-second CPU profile. Use `web` to view a call graph (requires Graphviz).
 
 #### 3. Goroutine Stack Dump
 ```bash
-curl -s http://localhost:6060/debug/pprof/goroutine?debug=1 > goroutines.txt
+curl -s http://localhost:8080/debug/pprof/goroutine?debug=1 > goroutines.txt
 ```
 Analyze for any stuck or leaked goroutines.
 
