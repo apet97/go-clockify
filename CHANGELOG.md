@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/auth-failures.md` symptoms + grep pattern match
+  the actual log msg field.** Runbook section §1 told operators
+  401 auth failures emit `msg=http_request status=401
+  reason=auth_failed` and the §2 grep recipe matched only
+  `msg=http_request`. Reality: 401 auth failures emit
+  `msg=http_auth_failed` (via
+  `logHTTPAuthFailure` in `internal/mcp/transport_auth_errors.go`),
+  while 403 cases (cors_rejected, host_rejected) emit
+  `msg=http_request`. An operator following the runbook would
+  have grepped `msg=http_request` and missed every 401 because
+  those carry the `http_auth_failed` msg field. Symptoms list now
+  names both msg fields and the grep regex matches both. Same
+  iter114 fictional-string drift class as the
+  `metrics_auth_mode_unsafe`-vs-`risky_config` rename, except this
+  one would have made the operator-on-call think there were no
+  auth failures when there were.
 - **`internal/transport/grpc/transport.go` `MaxRecvSize` doc-comment
   matches actual default.** The Options struct comment said
   `MaxRecvSize` "caps per-frame inbound bytes to match the legacy

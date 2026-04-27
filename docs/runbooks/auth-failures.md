@@ -24,8 +24,13 @@ layer is failing.
 - HTTP transport: clients see `401 Unauthorized` or `403 Forbidden`
   on every tool call.
 - Structured logs show one of:
-  - `level=WARN msg=http_request status=401 reason=auth_failed`
+  - `level=WARN msg=http_auth_failed status=401 reason=auth_failed`
+    (emitted by `logHTTPAuthFailure` at
+    `internal/mcp/transport_auth_errors.go:20-36`; carries an
+    `auth_failed=<error>` attribute and an
+    `auth_failure_category=<bucket>` field for triage)
   - `level=WARN msg=http_request status=403 reason=cors_rejected`
+  - `level=WARN msg=http_request status=403 reason=host_rejected`
   - `level=WARN msg=tool_call error="clockify ... 401 Unauthorized ..."`
 - gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|reauth_expired"}` rises.
 - Upstream Clockify auth failure: `msg=tool_call` errors consistently
@@ -35,10 +40,12 @@ layer is failing.
 ## 2. Where to look first
 
 ```sh
-# Inbound HTTP rejections
+# Inbound HTTP rejections (401 auth failures and 403 host/CORS rejections
+# are emitted under different msg fields — http_auth_failed and
+# http_request respectively — so grep both)
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
-  | grep 'msg=http_request' \
-  | grep -E 'status=401|status=403|reason=(auth_failed|cors_rejected)'
+  | grep -E 'msg=(http_auth_failed|http_request)' \
+  | grep -E 'status=401|status=403|reason=(auth_failed|cors_rejected|host_rejected)'
 
 # Upstream Clockify auth failures
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
