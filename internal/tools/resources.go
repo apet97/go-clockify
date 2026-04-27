@@ -11,6 +11,7 @@ import (
 	"github.com/apet97/go-clockify/internal/jsonmergepatch"
 	"github.com/apet97/go-clockify/internal/jsonpatch"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 )
 
 // diffResourceState computes the wire-format delta between two cached
@@ -281,8 +282,12 @@ func (s *Service) ReadResource(ctx context.Context, uri string) ([]mcp.ResourceC
 
 	// clockify://workspace/{id}
 	if len(segments) == 2 {
+		path, err := paths.Workspace(workspaceID)
+		if err != nil {
+			return nil, err
+		}
 		var out map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+workspaceID, nil, &out); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 			return nil, err
 		}
 		return encodeResource(uri, out)
@@ -304,29 +309,45 @@ func (s *Service) ReadResource(ctx context.Context, uri string) ([]mcp.ResourceC
 			}
 			return encodeResource(uri, user)
 		}
+		path, err := paths.Workspace(workspaceID, "users", id)
+		if err != nil {
+			return nil, err
+		}
 		var user clockify.User
-		if err := s.Client.Get(ctx, "/workspaces/"+workspaceID+"/users/"+id, nil, &user); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &user); err != nil {
 			return nil, err
 		}
 		return encodeResource(uri, user)
 
 	case "project":
+		path, err := paths.Workspace(workspaceID, "projects", id)
+		if err != nil {
+			return nil, err
+		}
 		var project clockify.Project
-		if err := s.Client.Get(ctx, "/workspaces/"+workspaceID+"/projects/"+id, nil, &project); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &project); err != nil {
 			return nil, err
 		}
 		return encodeResource(uri, project)
 
 	case "entry":
+		path, err := paths.Workspace(workspaceID, "time-entries", id)
+		if err != nil {
+			return nil, err
+		}
 		var entry clockify.TimeEntry
-		if err := s.Client.Get(ctx, "/workspaces/"+workspaceID+"/time-entries/"+id, nil, &entry); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &entry); err != nil {
 			return nil, err
 		}
 		return encodeResource(uri, entry)
 
 	case "group":
+		path, err := paths.Workspace(workspaceID, "user-groups", id)
+		if err != nil {
+			return nil, err
+		}
 		var group map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+workspaceID+"/user-groups/"+id, nil, &group); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &group); err != nil {
 			return nil, err
 		}
 		return encodeResource(uri, group)

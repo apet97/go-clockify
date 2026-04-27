@@ -151,6 +151,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PUTs to `paths.Workspace(wsID, "time-entries", entry.ID)`.
   `SwitchProject` is unchanged — it delegates to `StopTimer` /
   `StartTimer`, both already migrated in 3e7ae44.
+
+### Security
+
+- **`resources.go` migrated to `paths.Workspace` — adds first-ever
+  `ValidateID` on URI-parsed IDs.** `ReadResource` parses workspace
+  / user / project / entry / group IDs straight out of the
+  `clockify://workspace/{id}/...` URI supplied by the MCP client.
+  Pre-fix none of those IDs were validated before reaching the
+  Clockify URL path. After migration, `paths.Workspace` runs
+  `resolve.ValidateID` on the workspace ID and `url.PathEscape` on
+  every sub-segment, so a URI containing `/`, `?`, `#`, `%`, `..`
+  or a control byte is rejected at the resource layer instead of
+  being silently forwarded.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
