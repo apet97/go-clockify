@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/hosted-error-sanitization.md` "Temporary debug
+  procedure" stops referencing fictional `tool_call_error`
+  record.** Section §4 told operators "raise `MCP_LOG_LEVEL=debug`
+  and reproduce — the debug-level `tool_call_error` enriched
+  record may already carry what you need." But no log message
+  named `tool_call_error` exists in the codebase: tool failures
+  emit `slog.Warn("tool_call", ..., "error", err.Error(), ...)`
+  at `internal/mcp/tools.go:117` and `:179`, regardless of
+  `MCP_LOG_LEVEL`. An operator following the runbook with
+  `MCP_LOG_LEVEL=debug` set and grepping for `tool_call_error`
+  would have found nothing and concluded the slog wasn't capturing
+  the body — when in fact the WARN-level `msg=tool_call` line
+  always carries the full body in `error=`. Step now names the
+  real source lines, the canonical record name, and clarifies
+  that the WARN line is unaffected by `MCP_LOG_LEVEL`. Same
+  iter114/iter127 fictional-string drift class — operator
+  following stale recipe gets silence rather than the right
+  signal.
 - **`docs/runbooks/auth-failures.md` symptoms + grep pattern match
   the actual log msg field.** Runbook section §1 told operators
   401 auth failures emit `msg=http_request status=401

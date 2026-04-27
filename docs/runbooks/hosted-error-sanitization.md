@@ -56,9 +56,15 @@ The explicit env var always wins over the profile default.
 When the slog record is not enough (e.g. you need to ask the user to
 re-run with full context), prefer one of these:
 
-1. **Operator side:** raise `MCP_LOG_LEVEL=debug` and reproduce. The
-   debug-level `tool_call_error` enriched record may already carry
-   what you need.
+1. **Operator side:** the WARN-level `msg=tool_call` record at
+   `internal/mcp/tools.go:117` (BeforeCall failure path) and `:179`
+   (handler failure path) already carries the full upstream body
+   verbatim in the `error=` attribute regardless of `MCP_LOG_LEVEL`
+   — sanitisation only affects the MCP wire response, never the
+   server-side log. Filter on `tool=<name>` and `req_id=<id>` to
+   correlate with the client's seen sanitised error. (Raising
+   `MCP_LOG_LEVEL=debug` does not surface a separate enriched record
+   for this code path; the WARN line is the canonical record.)
 2. **Client side:** if you really need the upstream body on the wire
    for a single debug session, set
    `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0` on a non-production replica
