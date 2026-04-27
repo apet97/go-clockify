@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Structured risk taxonomy on `ToolDescriptor`.** New `RiskClass`
+  bitmask (`Read | Write | Billing | Admin | PermissionChange |
+  ExternalSideEffect | Destructive`) and `AuditKeys []string` fields,
+  populated by default from the existing MCP boolean hints and
+  refined per tool in `internal/tools/risk_overrides.go`. Audit
+  recorder consumes `AuditKeys` so events for permission/billing
+  changes carry the action-defining fields (role, status, quantity,
+  unit_price) — not just the *_id arguments.
+- **Hosted-profile error sanitisation.** Tool-error responses on
+  `shared-service` and `prod-postgres` profiles omit upstream
+  Clockify response bodies. Operator override:
+  `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0/1`. Server-side slog records
+  still carry the full APIError for debugging.
+- **Hosted-profile webhook DNS validation.** `CreateWebhook` /
+  `UpdateWebhook` resolve the host and reject any reply containing
+  a private, reserved, link-local, or loopback IP — closes the
+  literal-IP-only gap (a hostname pointing at 169.254.169.254 would
+  previously sail through). Operator override:
+  `CLOCKIFY_WEBHOOK_VALIDATE_DNS=0/1`.
+- **Tier-2 activation enumerates the activated group.**
+  `clockify_search_tools` responses now include an `activated_tools`
+  list and a message naming every tool the activation brought online.
+  Tool description spells out the contract: each Tier-2 group is the
+  unit of activation.
+- **Dry-run on `clockify_mark_invoice_paid` and
+  `clockify_test_webhook`.** Both honour `dry_run:true`: GET the
+  preview and skip the PUT/POST. Closes the inconsistency where
+  `send_invoice` and `deactivate_user` already had handler-level
+  dry-run.
+- **Static path-safety gate.**
+  `TestPathSafety_HandlersValidateIDsBeforeConcat` fails the build
+  if any non-test file in `internal/tools/` concatenates a
+  non-workspace ID into a URL path without calling
+  `resolve.ValidateID` or a `resolve.Resolve*ID` helper.
+
+### Security
+
+- **Hosted profiles refuse `CLOCKIFY_INSECURE=1`.**
+  `MCP_PROFILE=shared-service` and `prod-postgres` reject the
+  override at startup with an actionable error. Local profiles
+  preserve the existing developer behaviour.
+- **`CLOCKIFY_WORKSPACE_ID` validated at startup.** Path-traversal
+  shaped values (`/`, `?`, `#`, `%`, `..`, control bytes) now fail
+  config load instead of silently propagating into every
+  `/workspaces/{id}/...` call. `GetWorkspace` adds a belt-and-suspenders
+  validate-before-concat in case `ResolveWorkspaceID` returns an
+  auto-detected ID from a compromised upstream.
+
+### Fixed
+
+- **`normalizeEndpoint` comment matches behaviour.** Doc now
+  precisely describes the 24/32/36-char ID-shape match instead of
+  overstating "any other non-letter leading segment". Companion
+  test (`TestNormalizeEndpoint_NonIDShapesPreserved`) locks in
+  both the collapse and the preserve paths so comment + code can
+  no longer drift apart silently.
+
 ## [1.2.0] - 2026-04-25
 
 > **Scope note.** Security-hardening wave following the

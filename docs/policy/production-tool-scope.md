@@ -21,6 +21,32 @@ Tools are categorized based on their impact on data and their required privilege
 *   **Destructive Operations:** Large-scale deletions are generally discouraged for LLM agents.
 *   **Bulk Operations:** Any tool that modifies more than 10 records at once should be carefully audited or disabled.
 
+### Runtime metadata
+
+The categorisation above is reflected at runtime on every
+`mcp.ToolDescriptor`:
+
+*   `RiskClass` (bitmask) — `Read | Write | Billing | Admin |
+    PermissionChange | ExternalSideEffect | Destructive`. Defaults
+    are derived from the existing read-only / destructive boolean
+    hints; the `internal/tools/risk_overrides.go` registry layers
+    finer distinctions on top (billing for invoice tools, admin +
+    permission_change for `clockify_update_user_role`, external
+    side effect for `clockify_test_webhook` and outbound invoice
+    sends).
+*   `AuditKeys []string` — argument keys whose values are recorded
+    in audit events alongside the implicit `*_id` capture, so a
+    permission-change record carries the new role and a billing
+    record carries the quantity / unit_price / status that defines
+    the action.
+
+Both fields are matrix-tested
+(`internal/tools/risk_class_test.go`) so a new tool added without
+a class falls the build, and the audit recorder consumes
+`AuditKeys` end-to-end
+(`internal/mcp/server_helpers_test.go`,
+`internal/mcp/audit_test.go`).
+
 ## Recommended Production Policies
 
 The choice between modes depends on whether the agent should be
