@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0016-single-maintainer-governance.md` "Auto-generate
+  branch-protection.md" follow-up reflects post-flip reality.**
+  The follow-up's "Currently blocked by the GitHub API returning
+  403 on user-owned private repos; the auto-gen gate becomes
+  viable once the repo flips to public or to an org" became stale
+  on 2026-04-22 when the repo flipped public (per ADR-0013, now
+  Superseded). `scripts/audit-branch-protection.sh` already reads
+  the live protection state via `gh api`; the remaining gap is
+  the rendering + CI-parity glue, not the API blocker. Bullet now
+  describes the actual remaining work so a contributor reading
+  the follow-up isn't pointed at a non-blocker. Same iter141-class
+  post-flip context drift, this time at the ADR-0016 follow-ups
+  surface.
 - **`docs/verification.md` SLSA note frames pre-public-flip
   behaviour as historical context.** The "user-owned private
   repositories" note still described `release.yml`'s

@@ -139,10 +139,15 @@ Tracked in Wave L issues:
 - **Branch-protection hardening once a second maintainer joins.**
   Flip `enforce_admins` on, consider pushing required approvals
   from 1 to 2 for sensitive paths via CODEOWNERS enforcement.
-- **Auto-generate branch-protection.md.** Currently blocked by
-  the GitHub API returning 403 on user-owned private repos; the
-  auto-gen gate becomes viable once the repo flips to public or
-  to an org.
+- **Auto-generate branch-protection.md.** Was blocked pre-2026-04-22
+  by the GitHub API returning 403 on user-owned private repos; that
+  blocker is gone since the public flip (per ADR-0013, now
+  Superseded), and `scripts/audit-branch-protection.sh` already
+  reads the live protection state via `gh api`. Remaining work is
+  the lightweight glue that turns that JSON into the snapshot
+  table at `docs/branch-protection.md` (line-by-line render +
+  CI gate that fails when the live state diverges from the
+  rendered snapshot). Tracked in Wave L follow-ups.
 
 ## References
 
