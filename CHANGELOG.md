@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`SECURITY.md` Supported Versions table now lists `1.2.x` as
+  Active.** The Supported Versions table was anchored at the
+  v1.0.x → v1.1.x era — claiming 1.1.x and 1.0.x were the supported
+  lines, with no entry for v1.2.x. Since v1.2.0 (2026-04-25) is
+  the Active line per SUPPORT.md (and per iter89's release-policy
+  realignment), an operator looking up "is my v1.2.0 receiving
+  security fixes" would have concluded the Active line is **not**
+  supported — the inverse of the truth. iter48's version-string
+  sweep (a005f82) bumped SUPPORT.md but missed both
+  release-policy.md (closed in iter89) and SECURITY.md (closed
+  here). Table now lists 1.2.x (Active), 1.1.x (Superseded —
+  upgrade), 1.0.x (patch-only on the stable v1 wire format), and
+  0.x (EOL since v1.0.0). New prose explicitly tells operators on
+  superseded minors to upgrade rather than wait for a backport,
+  and points at SUPPORT.md as the canonical version-status state.
+  Closes the iter48-era version sweep at the security-policy
+  surface.
+
 ### Fixed
 
 - **`docs/release-policy.md` Supported-versions table realigned

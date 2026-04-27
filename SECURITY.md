@@ -2,16 +2,23 @@
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| 1.1.x   | Yes       |
-| 1.0.x   | Yes       |
+| Version | Status                                                                                          |
+|---------|-------------------------------------------------------------------------------------------------|
+| 1.2.x   | Active — receives security fixes alongside features and bug fixes                               |
+| 1.1.x   | Superseded — upgrade to `1.2.x` for security fixes                                              |
+| 1.0.x   | Patch-only for correctness regressions on the stable v1 wire format (security CVEs that meet that bar are backported) |
+| 0.x     | End-of-life since `v1.0.0`                                                                      |
 
-The `0.x` line reached end-of-life when `v1.0.0` shipped. Security
-fixes will not be backported beyond the supported lines listed above.
-See [docs/release-policy.md](docs/release-policy.md) for the full
-support window, deprecation policy, and definition of "breaking
-change" used by this project.
+Security fixes always land on the Active minor (`1.2.x` today). The
+prior minor (`1.1.x`) is superseded; operators on it should upgrade
+rather than wait for a backport. The `1.0.x` line receives only
+correctness-regression patches on the stable v1 wire format — security
+CVEs that meet that bar are backported, others are not.
+
+See [SUPPORT.md](SUPPORT.md) for the canonical version-status state and
+[docs/release-policy.md](docs/release-policy.md) for the full support
+window, deprecation policy, and definition of "breaking change" used by
+this project.
 
 ## Reporting a Vulnerability
 
