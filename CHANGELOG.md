@@ -85,6 +85,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`internal/paths` package (foundation).** New `paths.Workspace(wsID, sub...)`
+  helper validates the workspace ID via `resolve.ValidateID` and
+  `url.PathEscape`-s every sub-segment before joining. Empty
+  sub-segments and segments containing `/` are rejected at
+  construction time so caller bugs surface locally rather than as a
+  later 404. No callers migrated yet — this commit lands the
+  foundation; future iterations swap handler-level
+  `"/workspaces/"+wsID+"/..."` concats over to it.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
