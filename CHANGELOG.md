@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/release-asset-count.md` symptom log lines
+  show `expected 46` matching the canonical script.** The
+  Symptoms section quoted log lines as
+  `FAIL: found N matching top-level files in dist, expected 28`
+  and `BUG: expected array has N entries, script says 28`, but
+  `scripts/check-release-assets.sh:143` declares
+  `EXPECTED_COUNT=46` (15 binaries × 3 artifacts +
+  `SHA256SUMS.txt`). 28 was the pre-gRPC era count (5 default
+  + 4 FIPS binaries), valid only before iter101's wave that
+  added Postgres / gRPC / gRPC + Postgres rows to the canonical
+  matrix. An operator running the release and hitting the asset-
+  count failure would have grepped the Symptoms list, found
+  numbers that didn't match the actual log line, and concluded
+  either the runbook or the script was wrong. Symptoms now show
+  `expected 46` with a one-line breakdown of the 5 tag
+  combinations + 3 artifacts per binary, and the `BUG`
+  enumeration includes the four newer platform arrays
+  (POSTGRES / GRPC / GRPC_POSTGRES) so a reviewer auditing
+  internal consistency knows which arrays to cross-check. Same
+  iter114/iter129 fictional-number drift class.
 - **Deploy-profile docs use canonical `0`/`1` for boolean env
   vars instead of `true`/`false`.** `docs/deploy/profile-single-
   tenant-http.md` set `MCP_HTTP_INLINE_METRICS_ENABLED=true` and

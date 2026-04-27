@@ -12,12 +12,17 @@ Workflow log shows one of:
 
 - `FAIL: N expected release asset(s) missing from dist` — goreleaser
   produced strictly fewer artifacts than the matrix expects.
-- `FAIL: found N matching top-level files in dist, expected 28` —
+- `FAIL: found N matching top-level files in dist, expected 46` —
   goreleaser produced too many, too few, or the wrong shape.
-- `BUG: expected array has N entries, script says 28` — the script
-  itself is internally inconsistent. Either `DEFAULT_UNIX_PLATFORMS`,
-  `FIPS_PLATFORMS`, or `EXPECTED_COUNT` in the script has drifted
-  from the others.
+  (`46` = 15 binaries × 3 artifacts per binary
+  [bare + `.spdx.json` + `.sigstore.json`] + `SHA256SUMS.txt`;
+  the 15 binaries are 5 default + 4 FIPS + 2 Postgres + 2 gRPC +
+  2 gRPC + Postgres per `scripts/check-release-assets.sh:143`.)
+- `BUG: expected array has N entries, script says 46` — the
+  script itself is internally inconsistent. Either
+  `DEFAULT_UNIX_PLATFORMS`, `DEFAULT_WINDOWS`, `FIPS_PLATFORMS`,
+  `POSTGRES_PLATFORMS`, `GRPC_PLATFORMS`, `GRPC_POSTGRES_PLATFORMS`,
+  or `EXPECTED_COUNT` in the script has drifted from the others.
 
 ## Immediate mitigation
 
