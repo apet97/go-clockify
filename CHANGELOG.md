@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`SECURITY.md` Config validation bullet flags hosted-profile
+  refusal of `CLOCKIFY_INSECURE=1`.** The bullet described the
+  override as universally available ("non-HTTPS BASE_URL rejected
+  unless loopback or explicitly opted in with INSECURE=1"), which
+  is misleading for hosted profiles where the override is refused
+  outright at startup. The TLS / HTTP Transport section already
+  documents the refusal — added an inline cross-reference so a
+  reader scanning the Security Features list doesn't reach a
+  wrong inference about what overrides are honoured. Pure
+  operator-doc fix.
 - **`SECURITY.md` adds Audit fidelity bullet for
   `RiskClass`/`AuditKeys`.** Existing Audit durability bullet
   described persistence semantics (fail_closed vs best_effort)
