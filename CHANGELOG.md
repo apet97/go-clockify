@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.github/workflows/reproducibility.yml` workflow_dispatch
+  example bumped to v1.2.0.** The reproducibility workflow's
+  manual-dispatch tag input described the parameter as "Release
+  tag to verify (e.g. v0.7.1)" — same iter48-era v0.x example-
+  string drift that iter92 already fixed in release-smoke.yml's
+  parallel description (iter92 commit `3c639f6`). v0.7.1 was the
+  supported release when the reproducibility workflow landed but
+  v1.0.0/v1.1.0/v1.2.0 have since shipped; an operator dispatching
+  the workflow today reflexively verifying a v1.x tag would have
+  copied the stale example. Pure description text bump; the
+  load-bearing `v0.X.Y+dirty` mention at :137 stays — that's a
+  placeholder pattern reference, not a specific tag example.
 - **`docs/adr/0009-resource-delta-sync.md` "ADR 013" pointer uses
   grep anchor.** ADR-0009's References section cited
   `internal/tools/common.go:50` for the legacy "ADR 013" inline-
