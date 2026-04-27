@@ -20,6 +20,13 @@ Most clients fetch the list of available tools at startup using `tools/list`.
   spec-canonical SSE stream on `GET /mcp` (Streamable HTTP 2025-03-26
   §3.3) — no manual re-fetch needed. The `/mcp/events` alias is
   preserved for older client implementations.
+- **`grpc` Clients:** Receive the same notifications fanned out
+  through the bidirectional `Exchange` stream — every active client
+  stream registers a per-stream `streamNotifier` (see ADR-0008
+  §"Per-stream notifier registration"), so `tools/list_changed`,
+  `notifications/progress`, and `notifications/resources/updated`
+  reach every connected gRPC client without polling. Requires the
+  `-tags=grpc` build (the `private-network-grpc` profile artifact).
 - **Legacy `http` Clients:** Must manually re-fetch the tool list
   after activation. The legacy POST-only transport does not carry
   server-initiated notifications; this is a known limitation and one

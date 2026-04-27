@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/clients.md` Tool Discovery section adds the gRPC
+  bullet.** The transport-by-transport behaviour list named
+  Stdio, streamable_http, and Legacy http but omitted gRPC,
+  even though `internal/transport/grpc/transport.go:230-243`
+  defines a `streamNotifier` that fans `tools/list_changed`,
+  `notifications/progress`, and `notifications/resources/updated`
+  out through every active `Exchange` stream (see ADR-0008
+  §"Per-stream notifier registration"). Operators following the
+  `private-network-grpc` profile would have read the section,
+  not seen gRPC mentioned, and either polled `tools/list`
+  unnecessarily or assumed gRPC had the legacy-http limitation
+  it doesn't have. Same iter111-class transport-bullet drift
+  pattern that closed the streamable_http vs legacy-http split,
+  this time at the gRPC surface.
 - **`docs/adr/0010-metrics-stack-direction.md` reflects post-v1.0
   reality.** Two stale claims: Context paragraph said "~15
   hand-registered series" (actual is 22 per
