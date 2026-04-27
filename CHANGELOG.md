@@ -101,6 +101,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   swapped for one `paths.Workspace(wsID)` call; identical wire
   shape, identical validation semantics. The `resolve` import drops
   off this file.
+- **`ListClients` + `CreateClient` migrated to `paths.Workspace`.**
+  Both swap `"/workspaces/"+wsID+"/clients"` for
+  `paths.Workspace(wsID, "clients")`. Identical wire shape; gains
+  workspace-ID validation on every call (which `ResolveWorkspaceID`
+  did not enforce on the env-supplied path).
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
