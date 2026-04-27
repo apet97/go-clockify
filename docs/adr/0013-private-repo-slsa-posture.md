@@ -7,8 +7,10 @@ skip path and `continue-on-error` treatments this ADR codified
 are removed; SLSA attestation is now a mandatory gate on every
 release and every main-branch image push. The ADR stays in the
 tree as the historical record of why the private-repo workaround
-existed from 2026-04-22 (SLSA workaround introduction via Wave G)
-through 2026-04-22 (this flip) — roughly the v1.0.0–v1.0.3 era.
+existed from 2026-04-20 (SLSA workaround introduction via
+`fix(ci): make SLSA attestation non-fatal for private user-owned
+repo`, shipped with v1.0.3) through 2026-04-22 (this flip) —
+the v1.0.3 era only; v1.0.0–v1.0.2 predated the workaround.
 Future readers finding a reference to this ADR in a commit
 message or PR body should understand: private-repo posture, no
 longer live.

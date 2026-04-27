@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0013-private-repo-slsa-posture.md` Status block
+  cites the real workaround-introduction date.** The Status block
+  said the workaround existed "from 2026-04-22 (SLSA workaround
+  introduction via Wave G) through 2026-04-22 (this flip)" — both
+  dates were the same, implying a zero-day workaround window. Git
+  history shows the actual SLSA-non-fatal commit landed
+  2026-04-20 (`fix(ci): make SLSA attestation non-fatal for
+  private user-owned repo`, shipped with v1.0.3) and the
+  public-flip removal was 2026-04-22, so the workaround was live
+  for roughly 2 days during the v1.0.3 cut. The "v1.0.0–v1.0.3
+  era" claim was also slightly off — v1.0.0 / v1.0.1 / v1.0.2
+  predated the workaround. Status block now reads "v1.0.3 era
+  only" with the introduction-commit subject quoted so a reader
+  doing forensics on a v1.0.3 build can find the exact change.
+  Pure historical-precision fix; doesn't change the Superseded
+  outcome.
 - **`docs/adr/0016-single-maintainer-governance.md` "Auto-generate
   branch-protection.md" follow-up reflects post-flip reality.**
   The follow-up's "Currently blocked by the GitHub API returning
