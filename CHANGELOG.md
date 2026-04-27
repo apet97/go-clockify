@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0002-transport-selection.md` Spec link points at
+  `2025-11-25`.** ADR-0002 References block linked the spec at
+  `modelcontextprotocol.io/specification/2025-06-18`, the version
+  the ADR was written against. iter149's transport-table fix
+  brought the streamable_http row up to four-version coverage,
+  but this companion link still pinned an older spec URL. Now
+  points at `2025-11-25` (the newest supported version) with a
+  parenthetical naming the older accepted versions and pointing
+  at `internal/mcp/server.go:SupportedProtocolVersions` as the
+  canonical list. Same iter144/iter149 protocol-version sweep
+  but at the spec-URL surface.
 - **`docs/adr/0002-transport-selection.md` streamable_http row
   covers 2025-11-25 protocol version.** The Decision-section
   transport table described streamable_http as targeting

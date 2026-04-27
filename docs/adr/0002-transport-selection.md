@@ -110,4 +110,7 @@ explaining the build-tag requirement.
   build tag).
 - Related docs: `docs/production-readiness.md` "Pick a transport",
   `README.md` "Configuration".
-- Spec: <https://modelcontextprotocol.io/specification/2025-06-18>
+- Spec: <https://modelcontextprotocol.io/specification/2025-11-25>
+  (newest supported version; older versions
+  `2025-06-18`, `2025-03-26`, `2024-11-05` are also accepted via
+  `internal/mcp/server.go:SupportedProtocolVersions`).
