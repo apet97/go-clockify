@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/README.md` profile list realigned with canonical
+  registry.** The Start Here block claimed "the five canonical
+  deployment profiles (`local-stdio`, `single-tenant-http`,
+  `shared-service`, `private-network-grpc`, `self-hosted`)" — but
+  `internal/config/profile.go`'s `allProfilesSlice` registers five
+  profiles where the fifth is `prod-postgres`, not `self-hosted`.
+  `self-hosted` is a documented shape (covered by
+  `deploy/profile-self-hosted.md`) but is not a valid `MCP_PROFILE`
+  value — `clockify-mcp --profile=self-hosted` would fail with
+  "unknown profile". Doc now matches the registry, plus a
+  parenthetical pointing at the legacy-shape upgrade-path doc so
+  operators searching for "self-hosted" still land somewhere
+  useful. Pure operator-doc fix.
 - **`README.md` Compatibility table now lists all four MCP
   protocol versions.** The Compatibility table's MCP Protocol row
   named `2025-11-25` plus back-compat for `2025-06-18` and

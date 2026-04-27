@@ -12,8 +12,11 @@ security reviewers probably want [Release Trust](#release-trust).**
 - [production-readiness.md](production-readiness.md) — single-page operator overview.
 - [deploy/](deploy/) — the five canonical deployment profiles
   (`local-stdio`, `single-tenant-http`, `shared-service`,
-  `private-network-grpc`, `self-hosted`). Apply with `clockify-mcp
-  --profile=<name>` or `MCP_PROFILE=<name>`.
+  `private-network-grpc`, `prod-postgres`). Apply with `clockify-mcp
+  --profile=<name>` or `MCP_PROFILE=<name>`. (The legacy
+  `self-hosted` shape pre-dates the profile system and is now
+  served by `local-stdio` or `single-tenant-http`; see
+  [`deploy/profile-self-hosted.md`](deploy/profile-self-hosted.md).)
 
 ## Operator Guides
 
