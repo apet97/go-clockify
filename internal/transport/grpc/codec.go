@@ -6,7 +6,9 @@
 //
 // This package is a separate Go module with its own go.mod. The top-level
 // build remains stdlib-only per ADR 001. Reach it from the main module only
-// under -tags=grpc (see cmd/clockify-mcp/grpc_on.go).
+// under -tags=grpc (the runtime gRPC dispatcher lives in
+// internal/runtime/grpc.go — `runGRPC` — and is selected by
+// `Runtime.Run` when MCP_TRANSPORT=grpc).
 package grpctransport
 
 import (

@@ -75,6 +75,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`internal/transport/grpc/codec.go` package-doc gRPC entry-point
+  pointer unstuck from pre-C2.2 path.** The package comment told
+  reviewers to read `cmd/clockify-mcp/grpc_on.go` to see how the
+  separate go.mod is reached under `-tags=grpc`. That file no
+  longer exists — the gRPC dispatcher was extracted into
+  `internal/runtime/grpc.go` (`runGRPC`) during the dea1cc3 C2.2
+  refactor, and `Runtime.Run` selects it when `MCP_TRANSPORT=grpc`.
+  Repointed to the actual current path. Pure doc fix; no
+  behaviour change.
 - **`deploy/k8s/base/deployment.yaml` drops dead
   `docs/audit-chart-vs-config.md` pointer.** The gRPC-transport
   comment block listed both the Helm chart's deployment.yaml
