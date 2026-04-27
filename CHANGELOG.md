@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/coverage-policy.md` per-package floors realigned with
+  `scripts/check-coverage.sh`.** The Current floors table was
+  anchored at "as of 2026-04-13" but six floors had been
+  ratcheted up in the canonical FLOORS_DEFAULT since: clockify
+  70%→73%, enforcement 85%→88%, authn 85%→87%, timeparse
+  88%→94%, tracing 95%→99%, vault 92%→94%. A reviewer reading
+  the doc to assess "is the test suite as strict as advertised"
+  would have inferred slacker floors than CI actually enforces.
+  Table now mirrors `FLOORS_DEFAULT` exactly, drops the brittle
+  date stamp (the script is the source of truth), and marks each
+  ratcheted entry. Pure operator-doc fix.
 - **`docs/future/observability-correlation.md` Reference Points
   cites `make build-tags`, not `make verify-tags`.** The
   "Reference points in the current code" table named the Make

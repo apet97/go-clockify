@@ -22,30 +22,34 @@ common legitimate reasons are:
 "The tests I'm adding in this PR push the number over the floor" is not a
 valid reason to lower the floor — that's a raise, not a lower.
 
-## Current floors (as of 2026-04-13)
+## Current floors
 
-These were calibrated on branch `wave-a` after the A3.1 dispatcher-level
-test suite landed. Each per-package floor is set ~1% below the measured
-current to leave headroom for CI flakiness from incremental coverage drift.
+The canonical list lives in `FLOORS_DEFAULT` at the top of
+[`scripts/check-coverage.sh`](../scripts/check-coverage.sh). The
+table below mirrors that list; if they drift, the script is the
+source of truth. Each per-package floor was originally calibrated
+~1% below the measured current (on branch `wave-a` after the A3.1
+dispatcher-level test suite landed) to leave headroom for CI
+flakiness; several have been ratcheted up since.
 
-| Package | Floor | Measured at calibration |
+| Package | Floor | Notes |
 |---|---|---|
-| **Global** | **69%** | 69.0% |
-| `internal/mcp` | 70% | 71.2% |
-| `internal/tools` | 63% | 64.2% |
-| `internal/clockify` | 70% | 72.8% |
-| `internal/config` | 78% | 80.1% |
-| `internal/enforcement` | 85% | 89.0% |
-| `internal/ratelimit` | 80% | 81.8% |
-| `internal/logging` | 95% | 97.2% |
-| `internal/jsonschema` | 85% | 86.4% |
-| `internal/authn` | 85% | 88.5% |
-| `internal/policy` | 75% | 77.2% |
-| `internal/resolve` | 78% | 80.8% |
-| `internal/timeparse` | 88% | 90.4% |
-| `internal/truncate` | 90% | 92.3% |
-| `internal/tracing` | 95% | 100.0% |
-| `internal/vault` | 92% | 95.2% |
+| **Global** | **69%** | total `./internal/...` coverage |
+| `internal/mcp` | 70% | |
+| `internal/tools` | 63% | |
+| `internal/clockify` | 73% | ratcheted post-calibration |
+| `internal/config` | 78% | |
+| `internal/enforcement` | 88% | ratcheted post-calibration |
+| `internal/ratelimit` | 80% | |
+| `internal/logging` | 95% | |
+| `internal/jsonschema` | 85% | |
+| `internal/authn` | 87% | ratcheted post-calibration |
+| `internal/policy` | 75% | |
+| `internal/resolve` | 78% | |
+| `internal/timeparse` | 94% | ratcheted post-calibration |
+| `internal/truncate` | 90% | |
+| `internal/tracing` | 99% | ratcheted post-calibration |
+| `internal/vault` | 94% | ratcheted post-calibration |
 
 ## Planned ratchets
 
