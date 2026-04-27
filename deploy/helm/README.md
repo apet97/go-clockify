@@ -37,7 +37,7 @@ Highlights:
 
 | Value | Default | Purpose |
 |---|---|---|
-| `image.repository` / `image.tag` | `ghcr.io/apet97/go-clockify` / `0.7.0` | Image coordinates. Pin to a digest in production. |
+| `image.repository` / `image.tag` | `ghcr.io/apet97/go-clockify` / `""` (falls back to `.Chart.AppVersion`) | Image coordinates. Pin to a digest in production. |
 | `replicaCount` | `2` | Deployment replicas. `pdb.minAvailable: 1` stays at 1 regardless. |
 | `config.CLOCKIFY_POLICY` | `time_tracking_safe` | `read_only`, `time_tracking_safe`, `safe_core`, `standard`, or `full`. Use `safe_core` only for trusted assistants that may create projects/clients/tags/tasks. |
 | `config.CLOCKIFY_RATE_LIMIT` | `120` | Global rate-limit window (calls per 60s). |

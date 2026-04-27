@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **`deploy/helm/README.md` image.tag default cell corrected.**
+  The Highlights table claimed `image.tag` defaults to `0.7.0`,
+  which was wrong on two axes: (a) `values.yaml` actually
+  defaults `tag: ""` and the chart template falls back to
+  `.Chart.AppVersion` when blank — there is no literal default
+  tag; (b) `0.7.0` doesn't match any current release and
+  predates the v1.0 wire-format guarantee. Replaced with the
+  accurate `""` (falls back to `.Chart.AppVersion`) so
+  operators reading the table get a true picture of the chart's
+  default behaviour.
 - **`docs/verify-release.md` image name + example tag corrected.**
   Three image references named `ghcr.io/apet97/clockify-mcp` —
   the registry path is `ghcr.io/apet97/go-clockify` (the same
