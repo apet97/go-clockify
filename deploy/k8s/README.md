@@ -86,8 +86,9 @@ curl -fsS -H "Authorization: Bearer $MCP_BEARER_TOKEN" \
 The manifest references `ghcr.io/apet97/go-clockify:latest`. The project's
 Dockerfile lives in [`deploy/Dockerfile`](../Dockerfile). In production:
 
-- Pin to a released tag (for example `ghcr.io/apet97/go-clockify:v0.5.0`)
-  instead of `:latest` so rollouts are deterministic.
+- Pin to a released tag (for example `ghcr.io/apet97/go-clockify:v1.2.0`)
+  instead of `:latest` so rollouts are deterministic. See
+  [`SUPPORT.md`](../../SUPPORT.md) for the current supported line.
 - Consider building your own image from a verified release binary and
   publishing it to your internal registry.
 - Mirror the image to keep supply-chain provenance under your control.

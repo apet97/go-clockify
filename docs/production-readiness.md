@@ -54,7 +54,7 @@ Set with `MCP_AUTH_MODE=…`. Auth-failure triage lives in
 |--------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------|
 | Kustomize          | Reference manifests with base + dev/prod overlays, NetworkPolicy, PDB, ServiceMonitor, PrometheusRule with burn-rate alerts. | [`deploy/k8s/`](../deploy/k8s/) and [`deploy/k8s/README.md`](../deploy/k8s/README.md) |
 | Helm               | Same surface as Kustomize, packaged as a chart for clusters that prefer Helm.            | [`deploy/helm/`](../deploy/helm/) and `deploy/helm/README.md` |
-| Container image    | Multi-arch, distroless, non-root, read-only root FS, dropped capabilities, Trivy-scanned, cosign-signed. | `ghcr.io/apet97/go-clockify:v1.0.0` (see [`docs/verification.md`](verification.md)) |
+| Container image    | Multi-arch, distroless, non-root, read-only root FS, dropped capabilities, Trivy-scanned, cosign-signed. | `ghcr.io/apet97/go-clockify:v1.2.0` (see [`docs/verification.md`](verification.md); [`SUPPORT.md`](../SUPPORT.md) names the current supported line) |
 | Raw binary         | Single static binary, no runtime dependencies. Suitable for systemd or container-less hosts. | `go install github.com/apet97/go-clockify/cmd/clockify-mcp@latest` or download from the Releases page. |
 
 Image tags are not pinned in the `prod` Kustomize overlay by design —

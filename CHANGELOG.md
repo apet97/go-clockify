@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cited image-pin examples bumped to v1.2.0 + linked to SUPPORT.md.**
+  Two stale operator-pointers found by re-grepping for version
+  strings: `deploy/k8s/README.md` (pin example was `v0.5.0` —
+  pre-v1 placeholder) and `docs/production-readiness.md` (image-
+  tag column was `v1.0.0` — pre-Wave-G). Both now name `v1.2.0`
+  (the current Active line per SUPPORT.md) and add an explicit
+  link to SUPPORT.md so future readers find the canonical
+  current line directly. Pure operator-doc fix; no behaviour
+  change. Companion to a005f82 (the SUPPORT.md realignment).
 - **`SUPPORT.md` version matrix realigned to v1.2.x as Active.**
   The matrix still named `v1.1.x` (released 2026-04-22) as the
   active line, but `v1.2.0` shipped 2026-04-25 with the audit-
