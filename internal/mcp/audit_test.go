@@ -220,6 +220,47 @@ func TestAuditPhase_BestEffortRunsHandlerDespiteIntentFailure(t *testing.T) {
 	}
 }
 
+// TestAudit_AuditKeysCaptureActionDefiningArgs verifies the end-to-end
+// flow added in audit finding 8: a ToolDescriptor.AuditKeys list is
+// forwarded via ToolHints into the audit recorder, and resourceIDs()
+// captures those non-_id arg values in the AuditEvent. Without the
+// flow, an audit event for a permission change would carry only the
+// user_id and lose the new role.
+func TestAudit_AuditKeysCaptureActionDefiningArgs(t *testing.T) {
+	rec := &recordingAuditor{}
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "update_role", InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"user_id": map[string]any{"type": "string"},
+				"role":    map[string]any{"type": "string"},
+			},
+		}},
+		Handler:      func(_ context.Context, _ map[string]any) (any, error) { return "ok", nil },
+		ReadOnlyHint: false,
+		AuditKeys:    []string{"role"},
+	}}, nil, nil)
+	s.Auditor = rec
+	s.AuditDurabilityMode = "best_effort"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"update_role","arguments":{"user_id":"u1","role":"ADMIN"}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rec.events) < 1 {
+		t.Fatalf("expected at least one audit event")
+	}
+	intent := rec.events[0]
+	if intent.ResourceIDs["user_id"] != "u1" {
+		t.Errorf("user_id missing or wrong: %+v", intent.ResourceIDs)
+	}
+	if intent.ResourceIDs["role"] != "ADMIN" {
+		t.Errorf("role not captured by AuditKeys plumbing: %+v", intent.ResourceIDs)
+	}
+}
+
 // TestAuditPhase_IntentThenOutcomeOnSuccess locks in the record order
 // and phase tagging for a successful non-read-only call.
 func TestAuditPhase_IntentThenOutcomeOnSuccess(t *testing.T) {

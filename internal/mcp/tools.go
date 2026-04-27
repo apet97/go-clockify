@@ -81,6 +81,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		ReadOnly:    d.ReadOnlyHint,
 		Destructive: d.DestructiveHint,
 		Idempotent:  d.IdempotentHint,
+		AuditKeys:   d.AuditKeys,
 	}
 
 	// Enforcement: policy gate, rate limit, dry-run intercept

@@ -60,7 +60,7 @@ func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reaso
 		Outcome:     outcome,
 		Phase:       phase,
 		Reason:      reason,
-		ResourceIDs: resourceIDs(args),
+		ResourceIDs: resourceIDs(args, hints.AuditKeys),
 		Metadata: map[string]string{
 			"tenant_id":  s.AuditTenantID,
 			"subject":    s.AuditSubject,
@@ -87,19 +87,30 @@ func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reaso
 }
 
 // resourceIDs extracts resource identifiers from tool-call arguments
-// for the audit record. The suffix check is case-sensitive on "_id"
-// because every tool schema under internal/tools/ declares its
-// identifier properties as snake_case lowercase (expense_id, entry_id,
-// approval_id, …). A case-insensitive match was historically used but
-// added strings.ToLower on every audit arg key for zero benefit —
-// dropping it removes the per-key allocation from the hot path behind
-// BenchmarkPipelineBeforeCall.
+// for the audit record. Two passes:
 //
-// A future tool schema introducing an UPPER_ID or camelCase_Id tag
-// would silently lose that resource from audit coverage; the
-// enforcement CI grep (and TestResourceIDs_LowercaseSuffixContract) is
-// the gate against that regression.
-func resourceIDs(args map[string]any) map[string]string {
+//  1. The "_id" suffix scan (case-sensitive) catches every implicit
+//     identifier declared in tool schemas (expense_id, entry_id,
+//     approval_id, …). Case-sensitive because every tool schema under
+//     internal/tools/ declares its identifier properties as snake_case
+//     lowercase; a case-insensitive match was historically used but
+//     added strings.ToLower on every audit arg key for zero benefit.
+//     A future tool schema introducing an UPPER_ID or camelCase_Id tag
+//     would silently lose that resource from coverage; the enforcement
+//     CI grep (and TestResourceIDs_LowercaseSuffixContract) is the
+//     gate against that regression.
+//
+//  2. The explicit AuditKeys pass captures action-defining argument
+//     values that aren't IDs — role, status, quantity, unit_price,
+//     description — declared on each ToolDescriptor.AuditKeys (see
+//     internal/tools/risk_overrides.go). Without it, an audit event
+//     for clockify_update_user_role would record the user_id but lose
+//     the new role; auditors of permission-change events would not be
+//     able to reconstruct what changed.
+//
+// Numeric and boolean values are stringified so the audit envelope
+// stays []string-safe; nil/empty values are skipped.
+func resourceIDs(args map[string]any, auditKeys []string) map[string]string {
 	if len(args) == 0 {
 		return nil
 	}
@@ -113,6 +124,28 @@ func resourceIDs(args map[string]any) map[string]string {
 			continue
 		}
 		ids[k] = value
+	}
+	for _, key := range auditKeys {
+		if _, already := ids[key]; already {
+			continue
+		}
+		raw, ok := args[key]
+		if !ok || raw == nil {
+			continue
+		}
+		switch v := raw.(type) {
+		case string:
+			if strings.TrimSpace(v) == "" {
+				continue
+			}
+			ids[key] = v
+		case bool:
+			ids[key] = fmt.Sprintf("%v", v)
+		case float64, float32, int, int64, int32:
+			ids[key] = fmt.Sprintf("%v", v)
+		default:
+			ids[key] = fmt.Sprintf("%v", v)
+		}
 	}
 	if len(ids) == 0 {
 		return nil

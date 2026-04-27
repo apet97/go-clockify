@@ -104,6 +104,12 @@ type ToolHints struct {
 	ReadOnly    bool
 	Destructive bool
 	Idempotent  bool
+	// AuditKeys is forwarded from ToolDescriptor.AuditKeys so the audit
+	// recorder can capture action-defining argument values (role, status,
+	// quantity, unit_price, …) beyond the implicit *_id suffix scan in
+	// resourceIDs. Empty for tools whose argument shape is fully
+	// described by *_id keys.
+	AuditKeys []string
 }
 
 // AuditPhase identifies which side of a non-read-only tool call an

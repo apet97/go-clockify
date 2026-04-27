@@ -64,12 +64,12 @@ func TestToolNameFromRequest(t *testing.T) {
 // Non-string and empty values are skipped; mismatched suffixes are ignored.
 func TestResourceIDs(t *testing.T) {
 	t.Run("nil_args_returns_nil", func(t *testing.T) {
-		if got := resourceIDs(nil); got != nil {
+		if got := resourceIDs(nil, nil); got != nil {
 			t.Fatalf("expected nil, got %+v", got)
 		}
 	})
 	t.Run("empty_args_returns_nil", func(t *testing.T) {
-		if got := resourceIDs(map[string]any{}); got != nil {
+		if got := resourceIDs(map[string]any{}, nil); got != nil {
 			t.Fatalf("expected nil, got %+v", got)
 		}
 	})
@@ -82,7 +82,7 @@ func TestResourceIDs(t *testing.T) {
 			"empty_id":     "   ",
 			"nonstring_id": 42,
 		}
-		got := resourceIDs(args)
+		got := resourceIDs(args, nil)
 		if len(got) != 2 {
 			t.Fatalf("expected 2 ids, got %+v", got)
 		}
@@ -101,14 +101,58 @@ func TestResourceIDs(t *testing.T) {
 			"Entry_Id":   "abc123",
 			"CLIENT_ID":  "client-1",
 		}
-		if got := resourceIDs(args); got != nil {
+		if got := resourceIDs(args, nil); got != nil {
 			t.Fatalf("expected nil for uppercase suffixes, got %+v", got)
 		}
 	})
 	t.Run("only_skipped_returns_nil", func(t *testing.T) {
 		args := map[string]any{"empty_id": "  ", "nonstring_id": 42}
-		if got := resourceIDs(args); got != nil {
+		if got := resourceIDs(args, nil); got != nil {
 			t.Fatalf("expected nil, got %+v", got)
+		}
+	})
+	t.Run("audit_keys_capture_action_defining_fields", func(t *testing.T) {
+		// AuditKeys is the explicit pass that captures non-_id fields
+		// like role, status, quantity, unit_price. role:"ADMIN" carries
+		// the action; without AuditKeys the audit event would only
+		// record user_id and lose what changed.
+		args := map[string]any{
+			"user_id":     "u1",
+			"role":        "ADMIN",
+			"description": "Q1 consulting",
+			"quantity":    8.0,
+			"unit_price":  150,
+			"unrelated":   "ignored",
+		}
+		got := resourceIDs(args, []string{"role", "description", "quantity", "unit_price"})
+		if got["user_id"] != "u1" {
+			t.Errorf("user_id missing: %+v", got)
+		}
+		if got["role"] != "ADMIN" {
+			t.Errorf("role missing or wrong: %+v", got)
+		}
+		if got["description"] != "Q1 consulting" {
+			t.Errorf("description missing: %+v", got)
+		}
+		if got["quantity"] != "8" {
+			t.Errorf("quantity stringification wrong: %+v", got)
+		}
+		if got["unit_price"] != "150" {
+			t.Errorf("unit_price stringification wrong: %+v", got)
+		}
+		if _, dup := got["unrelated"]; dup {
+			t.Errorf("unrelated key should not be captured: %+v", got)
+		}
+	})
+	t.Run("audit_keys_do_not_overwrite_id_scan", func(t *testing.T) {
+		// If a key is captured by both passes (e.g. listed in AuditKeys
+		// and ends with _id), the first pass wins. Defensive — there is
+		// no current taxonomy where this matters, but it locks in the
+		// precedence.
+		args := map[string]any{"invoice_id": "inv1"}
+		got := resourceIDs(args, []string{"invoice_id"})
+		if got["invoice_id"] != "inv1" || len(got) != 1 {
+			t.Fatalf("unexpected result: %+v", got)
 		}
 	})
 }
