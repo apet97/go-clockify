@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/production-readiness.md` TLS-termination bullet matches
+  reality.** Compliance posture had the same blanket "the HTTP
+  transport does NOT terminate TLS by design" claim that iter93
+  fixed in SECURITY.md — parallel surface drift. Bullet now
+  distinguishes the proxy-fronted default (static_bearer / oidc /
+  forward_auth) from in-process termination on `streamable_http`
+  with `MCP_HTTP_TLS_CERT`/`_KEY` and `grpc` with
+  `MCP_GRPC_TLS_CERT`/`_KEY`, plus the legacy-http
+  config.Load rejection. Operator-facing parity restored across
+  both canonical surfaces.
 - **`SECURITY.md` TLS section now distinguishes proxy-terminated
   vs in-process TLS modes.** The TLS / HTTP Transport section
   blankly stated "The HTTP transport does **not** terminate TLS"

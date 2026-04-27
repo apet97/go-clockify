@@ -157,10 +157,16 @@ you need a checklist for a third-party assessor, this is the list.
   toolchain when it is available; soft-fails locally when the host
   toolchain lacks FIPS support. See
   [`scripts/check-build-tags.sh`](../scripts/check-build-tags.sh).
-- **TLS termination** — the HTTP transport does NOT terminate TLS by
-  design. Production deployments must front it with a TLS-terminating
+- **TLS termination** — by default the HTTP transport does NOT
+  terminate TLS; production deployments using `static_bearer` /
+  `oidc` / `forward_auth` must front it with a TLS-terminating
   proxy (Caddy, nginx, Envoy, Traefik). Reference Caddyfile:
-  [`deploy/Caddyfile`](../deploy/Caddyfile).
+  [`deploy/Caddyfile`](../deploy/Caddyfile). The `streamable_http`
+  and `grpc` transports terminate TLS in-process when explicit
+  cert + key paths are set (`MCP_HTTP_TLS_CERT`/`_KEY` for
+  streamable_http, `MCP_GRPC_TLS_CERT`/`_KEY` for grpc) — required
+  by `MCP_AUTH_MODE=mtls`. The legacy `http` transport rejects
+  `MCP_HTTP_TLS_CERT` at config.Load.
 - **Panic containment** — both the stdio dispatch goroutine and the
   HTTP handlers recover panics, emit a structured `panic_recovered`
   log event with the stack, increment
