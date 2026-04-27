@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docs/clients.md` Backwards Compatibility section now lists all
+  four supported MCP protocol versions.** The Backwards Compatibility
+  blurb claimed support for `2025-06-18`, `2025-03-26`, and
+  `2024-11-05` — but `internal/mcp/server.go`
+  `SupportedProtocolVersions` actually advertises four versions
+  (the latest being `2025-11-25`). The MCP protocol-version compat
+  test (`internal/mcp/protocol_version_compat_test.go`) covers all
+  four against the same source of truth, so the doc was the only
+  drift point. Section now matches `SupportedProtocolVersions` and
+  adds an explicit cross-reference so future protocol-version
+  additions land both places. Pure operator-doc fix; clients reading
+  the supported-versions list to plan their handshake floor now see
+  the correct ceiling.
+
 ### Added
 
 - **`docs/verification.md` example tags bumped to v1.2.0.** The

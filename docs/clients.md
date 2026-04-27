@@ -79,7 +79,7 @@ We follow Semantic Versioning (SemVer). Breaking changes to the tool schema (ren
 - See `docs/release-policy.md` for our full deprecation policy.
 
 ### Backwards Compatibility
-The server supports multiple versions of the MCP protocol (today: `2025-06-18`, `2025-03-26`, and `2024-11-05`). It will negotiate the highest mutually supported version during the `initialize` handshake.
+The server supports multiple versions of the MCP protocol (today: `2025-11-25`, `2025-06-18`, `2025-03-26`, and `2024-11-05`). It will negotiate the highest mutually supported version during the `initialize` handshake. The canonical list lives in `internal/mcp/server.go` (`SupportedProtocolVersions`); this doc tracks it.
 
 ## Troubleshooting Client Issues
 
