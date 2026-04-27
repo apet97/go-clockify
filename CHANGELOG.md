@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0009-resource-delta-sync.md` "ADR 013" pointer uses
+  grep anchor.** ADR-0009's References section cited
+  `internal/tools/common.go:50` for the legacy "ADR 013" inline-
+  comment trail, but the audit-finding wave inserted
+  `WebhookAllowedDomains` ahead of that field — the ADR-013
+  string moved to `:77` (now sitting in the `EmitResourceUpdate`
+  field doc). Replaced the stale line anchor with
+  `git grep -n 'ADR 013'` plus symbol context (`EmitResourceUpdate`
+  field doc, README index), matching the iter34/iter65/iter115/
+  iter116/iter117 ADR-sweep pattern. The mcp/resources.go anchors
+  in the same References block (:48-54, :148-198, :165-167) are
+  still accurate — only the common.go pointer drifted. Same line-
+  anchor failure mode as ADR-0007 (post-Wave-I main.go growth) and
+  ADR-0008 (C2.2 runtime move).
 - **`docs/adr/0007-fips-build-tag.md` line anchors replaced with
   grep anchors.** ADR-0007 had five line-anchored references for
   the FIPS startup hook: Decision §"Mandatory startup assertion"
