@@ -57,7 +57,9 @@ subsystems in a fixed order. `BeforeCall`
 
 `Enforcement` is a pluggable interface on `mcp.Server` so the
 protocol core does not import the enforcement package or any of its
-dependencies. The wiring happens once in `cmd/clockify-mcp/runtime.go`.
+dependencies. The wiring happens once in `internal/runtime/service.go`
+`buildServer()` (extracted there from the pre-C2.2 `cmd/clockify-mcp/
+runtime.go` during the dea1cc3 runtime extraction).
 
 The same `Pipeline` also implements `FilterTool`, called from the
 `tools/list` handler. This means tools blocked by the current policy
@@ -131,8 +133,9 @@ state regardless of mode.
   `policy.go:91-115` (`IsAllowed` switch).
 - Pipeline: `internal/enforcement/enforcement.go:27-...` (`Pipeline`
   struct and `BeforeCall`).
-- Wiring: `cmd/clockify-mcp/runtime.go` (where `Pipeline` is
-  installed on `mcp.Server`).
+- Wiring: `internal/runtime/service.go` `buildServer()` (where
+  `Pipeline` is installed on `mcp.Server`; pre-C2.2 the wiring
+  lived in `cmd/clockify-mcp/runtime.go`, removed during dea1cc3).
 - Dry-run strategies: `internal/dryrun/dryrun.go:62-69` (the
   `Action` enum: `ConfirmPattern`, `PreviewTool`, `MinimalFallback`,
   `NotDestructive`).

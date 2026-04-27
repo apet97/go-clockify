@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **ADR-0004 wiring pointers unstuck from pre-C2.2 path.** Two
+  references in `docs/adr/0004-policy-enforcement-architecture.md`
+  pointed at `cmd/clockify-mcp/runtime.go` as the place where
+  `Pipeline` is installed on `mcp.Server`. That file was removed
+  in the dea1cc3 C2.2 runtime extraction; the actual wiring lives
+  in `internal/runtime/service.go` `buildServer()`. Both repointed
+  with a one-line C2.2 historical note (same pattern as ADR-0005's
+  iter37 fix in 7e120d4). Closes the per-ADR sweep (ADR-0004 was
+  missed by the iter34-38 wave because its grep didn't surface
+  the `cmd/clockify-mcp/runtime.go` references).
 - **Makefile `mutation` target repointed to current floor source.**
   The target's comment block told operators to read
   `docs/testing/mutation-floors.md` for the per-package gremlins
