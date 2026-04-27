@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Regression test locks in tenant-attribution on audit slog
+  records.** New `TestAuditDurability_LogsTenantAttribution` in
+  `internal/mcp/audit_test.go` captures slog output during a
+  forced audit-persist failure (best_effort and fail_closed) and
+  asserts that the `tenant_id`, `subject`, `session_id`, and
+  `transport` fields iter156 added to `audit_persist_failed` (and
+  iter157 added to `tool_call_blocked_by_audit`) survive future
+  refactors. Drift-checked: commenting out the `tenant_id` field
+  in `internal/mcp/audit.go:77` makes the test fail with the
+  exact missing-field message; restoring the field passes again.
+  Locks in iter156/iter157's audit-durability runbook §5
+  contract via the test suite.
 - **`docs/runbooks/audit-durability.md` Symptoms section
   documents the new tenant-attribution fields on
   `audit_persist_failed`.** iter156 added

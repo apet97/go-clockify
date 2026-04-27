@@ -148,6 +148,51 @@ func TestAuditDurability_LogsCanonicalOutcomeField(t *testing.T) {
 	}
 }
 
+// TestAuditDurability_LogsTenantAttribution locks in the iter156 + iter157
+// invariant that audit_persist_failed (best_effort + fail_closed outcome
+// path) and tool_call_blocked_by_audit (fail_closed intent rejection)
+// emit the four tenant-attribution fields that the audit-durability runbook
+// §5 "Identify affected tenants" recovery step depends on. Reverting the
+// "tenant_id"/"subject"/"session_id"/"transport" args on either slog call
+// must fail this test loudly so a future contributor doesn't quietly
+// regress incident-response capability.
+func TestAuditDurability_LogsTenantAttribution(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	defer slog.SetDefault(prev)
+
+	for _, mode := range []string{"best_effort", "fail_closed"} {
+		t.Run(mode, func(t *testing.T) {
+			buf.Reset()
+			aud := &failAuditor{}
+			s := newAuditServer(aud, mode)
+			s.initialized.Store(true)
+			s.AuditTenantID = "tenant-acme"
+			s.AuditSubject = "user-42"
+			s.AuditSessionID = "sess-xyz"
+			s.AuditTransport = "streamable_http"
+
+			input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+			var out strings.Builder
+			if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			logged := buf.String()
+			for _, want := range []string{
+				`"tenant_id":"tenant-acme"`,
+				`"subject":"user-42"`,
+				`"session_id":"sess-xyz"`,
+				`"transport":"streamable_http"`,
+			} {
+				if !strings.Contains(logged, want) {
+					t.Errorf("%s: missing %s in audit slog stream\n--- captured slog ---\n%s", mode, want, logged)
+				}
+			}
+		})
+	}
+}
+
 // recordingAuditor captures each event (phase + outcome) for assertions.
 type recordingAuditor struct {
 	events []AuditEvent
