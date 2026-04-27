@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **`docs/runbooks/audit-durability.md` Symptoms section
+  documents the new tenant-attribution fields on
+  `audit_persist_failed`.** iter156 added
+  `tenant_id` / `subject` / `session_id` / `transport` to the
+  slog event, but the runbook §2 Symptoms structure didn't
+  enumerate them. Operators reading the log-line shape to
+  understand what they can filter on would have missed the
+  newly available attribution metadata. Symptoms structure now
+  includes the four fields with a one-line note about which
+  transports populate them (streamable_http per session;
+  stdio/gRPC empty strings until the runtime wires them). Pure
+  doc sync to match iter156.
 - **`tool_call_blocked_by_audit` slog record carries tenant /
   subject / session / transport context.** The fail_closed-mode
   rejection event at `internal/mcp/tools.go:137` previously

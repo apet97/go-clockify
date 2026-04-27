@@ -51,10 +51,18 @@ disambiguates them.
     durability_mode=best_effort|fail_closed
     phase=intent|outcome
     tool=<name> outcome=<success|failure> error=<...>
+    tenant_id=<id> subject=<sub> session_id=<sid> transport=<t>
   ```
   Filter on `phase=intent` to find the pre-mutation failures
   (the ones `fail_closed` blocked); `phase=outcome` for the
-  post-mutation failures that were always best-effort.
+  post-mutation failures that were always best-effort. The
+  `tenant_id` / `subject` / `session_id` / `transport` fields
+  carry the same attribution metadata as the persisted
+  `AuditEvent.Metadata` so an incident responder can identify
+  affected tenants directly from the slog stream — populated on
+  streamable_http (one tenant per session); empty strings on
+  stdio and pre-authn gRPC where the runtime hasn't wired them
+  yet.
 - On `fail_closed`, clients see tool-call errors with the
   substring `audit intent persistence failed; refusing to
   execute mutation` for blocked-mutation events. (Outcome
