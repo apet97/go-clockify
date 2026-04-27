@@ -13,13 +13,22 @@ pre-flight and the per-minor operational tasks.
 
 ### Config diff
 
-- [ ] Compare the source config schema at the target version
-      against your current config:
+- [ ] Compare the canonical EnvSpec at the target version against
+      your current config. The authoritative list lives in
+      `internal/config/spec.go`; the grep below skims direct
+      `os.Getenv` reads in `config.go` (catches ~65 of 79 entries
+      — the rest are read through helpers like `getEnvDuration` /
+      `getEnvBool` or live in `internal/config/profile.go`):
 
 ```sh
+# Quick skim (the 65-of-79 set)
 git diff --no-index \
   <(git show v$CURRENT:internal/config/config.go | grep -E '^\s*[A-Z].*os\.Getenv') \
   <(git show v$TARGET:internal/config/config.go  | grep -E '^\s*[A-Z].*os\.Getenv')
+
+# Authoritative set (every EnvSpec entry, including helpers
+# and profile-driven defaults):
+git diff "v$CURRENT" "v$TARGET" -- internal/config/spec.go
 ```
 
 - [ ] For every env var added between `$CURRENT` and `$TARGET`,

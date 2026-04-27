@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/upgrade-checklist.md` Config diff names spec.go as
+  authoritative.** The Config diff command grepped for
+  `os.Getenv` patterns in `internal/config/config.go` — that
+  finds ~65 of the 79 EnvSpec entries (the rest are read through
+  helpers like `getEnvDuration`/`getEnvBool` or live in
+  `internal/config/profile.go`). An operator running the grep
+  verbatim before an upgrade would have missed 14 env vars,
+  including profile-bundle-default keys that change behaviour
+  silently. Section now keeps the quick-skim grep command but
+  adds a second `git diff` against `internal/config/spec.go` —
+  the canonical EnvSpec — and explicitly labels which command
+  is authoritative. Pure operator-doc fix; the upgrade pre-
+  flight no longer pretends config.go is exhaustive.
 - **`docs/coverage-policy.md` per-package floors realigned with
   `scripts/check-coverage.sh`.** The Current floors table was
   anchored at "as of 2026-04-13" but six floors had been
