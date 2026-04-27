@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`SECURITY.md` Config validation entry covers
+  `CLOCKIFY_WORKSPACE_ID` startup validation.** The Config
+  validation bullet only mentioned the `CLOCKIFY_BASE_URL` /
+  `CLOCKIFY_INSECURE` check; it never gained the workspace-ID
+  startup gate from audit Finding 4 (the gate that fails config
+  load rather than silently propagating path-traversal-shaped IDs
+  like `bad/path` or `bad?query` into every `/workspaces/{id}/...`
+  URL). Bullet now describes both checks. Pure operator-doc fix;
+  closes another iter40-era doc-sync gap at the security-summary
+  level.
 - **`SECURITY.md` adds Hosted-profile error sanitisation bullet.**
   The Security Features list never gained the
   `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS` entry that shipped with the
