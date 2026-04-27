@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/clockify-outage-drill.md` Scenario A names the
+  real upstream-failure metric.** The drill checklist told the
+  operator "Check that `clockify_mcp_upstream_errors_total` metric
+  increments" but no such metric exists. The actual metric is
+  `clockify_upstream_requests_total` (no `mcp` infix, no
+  `_errors_` base — outbound metrics live under the
+  `clockify_upstream_*` namespace per
+  `internal/metrics/metrics.go:654`), and failures are
+  distinguished by the `status="5xx"` (or `4xx` for 429) label
+  on the same series as success. The retry counter
+  `clockify_upstream_retries_total` is the secondary signal once
+  client retries kick in. Drill step now names the real metric +
+  filter expression + source line so an operator running the
+  drill can verify the right gauge moved instead of grepping for
+  a metric that never existed. Same iter114/iter127/iter128
+  fictional-string drift class.
 - **`docs/runbooks/hosted-error-sanitization.md` "Temporary debug
   procedure" stops referencing fictional `tool_call_error`
   record.** Section §4 told operators "raise `MCP_LOG_LEVEL=debug`

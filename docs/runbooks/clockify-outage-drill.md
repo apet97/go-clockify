@@ -25,7 +25,7 @@ Configure a local proxy to return `503 Service Unavailable` for all requests to 
 - [ ] Attempt a `clockify_whoami` tool call.
 - [ ] Verify that the application returns a clear error message (e.g., `Upstream API Unavailable`).
 - [ ] Confirm no panics are logged.
-- [ ] Check that `clockify_mcp_upstream_errors_total` metric increments.
+- [ ] Check that `clockify_upstream_requests_total{status="5xx"}` increments — the failure-side counter sits on the same series as success, distinguished by the `status` bucket label (`2xx` / `3xx` / `4xx` / `5xx`). For the 429 scenario, expect `status="4xx"` instead. Registered at `internal/metrics/metrics.go:654` with labels `endpoint`, `method`, `status`. The retry counter `clockify_upstream_retries_total{reason="server_error|timeout"}` is the secondary signal once the client retries kick in.
 
 ### Scenario B: Partial Outage (Read-Only)
 - [ ] Simulate 503 for `POST`/`PUT`/`DELETE` and 200 for `GET`.
