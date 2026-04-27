@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`README.md` Configuration section bumps env-var count to 75+.**
+  The Configuration teaser said "Run `clockify-mcp --help` for the
+  complete list (60+ variables ...)" but
+  `internal/config/spec.go` registers 79 EnvSpec entries today.
+  Tighter bound now reads "75+ variables" and adds "webhook DNS
+  validation" to the topical-coverage list since iter40 added the
+  `CLOCKIFY_WEBHOOK_VALIDATE_DNS` and
+  `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` controls. Pure operator-doc
+  fix; closes a stale-floor count drift between README copy and
+  the canonical EnvSpec.
 - **`docs/release/deploy-readiness-checklist.md` references real
   doctor commands instead of fictional `--dry-run` flag.** The
   Pre-Flight Tests section had a "Postgres Migration: Run

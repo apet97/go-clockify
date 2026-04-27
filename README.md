@@ -194,7 +194,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_TRANSPORT` | `stdio` | Transport mode; http is legacy POST-only (deprecated) |
 <!-- CONFIG-TABLE END -->
 
-Run `clockify-mcp --help` for the complete list (60+ variables covering concurrency, timeouts, control plane, metrics, auth, and CORS).
+Run `clockify-mcp --help` for the complete list (75+ variables covering concurrency, timeouts, control plane, metrics, auth, CORS, and webhook DNS validation).
 
 ## Common workflows
 
