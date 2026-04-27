@@ -308,7 +308,7 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 | Component | Version |
 |-----------|---------|
-| MCP Protocol | `2025-11-25` (back-compat: `2025-06-18`, `2025-03-26`) |
+| MCP Protocol | `2025-11-25` (back-compat: `2025-06-18`, `2025-03-26`, `2024-11-05`) |
 | Go | 1.25.9+ |
 | Node.js (npm wrapper) | 18+ |
 
