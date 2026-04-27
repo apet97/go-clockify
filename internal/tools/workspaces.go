@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/resolve"
+	"github.com/apet97/go-clockify/internal/paths"
 )
 
 func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
@@ -48,16 +48,16 @@ func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	// Defence-in-depth: config.Load already validates an env-supplied
-	// CLOCKIFY_WORKSPACE_ID, but ResolveWorkspaceID can also return an
-	// auto-detected ID from a /workspaces response. Validate before
-	// concatenating into the path so a malformed upstream response
-	// cannot smuggle a ../ traversal or a query-injecting segment.
-	if err := resolve.ValidateID(wsID, "workspace_id"); err != nil {
+	// paths.Workspace runs resolve.ValidateID and url.PathEscape per
+	// segment. Defence-in-depth: config.Load already validates an
+	// env-supplied CLOCKIFY_WORKSPACE_ID, but ResolveWorkspaceID can
+	// also return an auto-detected ID from a /workspaces response.
+	path, err := paths.Workspace(wsID)
+	if err != nil {
 		return ResultEnvelope{}, err
 	}
 	var out map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_workspace", out, map[string]any{"workspaceId": wsID}), nil

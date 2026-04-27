@@ -93,6 +93,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   later 404. No callers migrated yet — this commit lands the
   foundation; future iterations swap handler-level
   `"/workspaces/"+wsID+"/..."` concats over to it.
+
+### Changed
+
+- **`GetWorkspace` migrated to `paths.Workspace`.** First caller of
+  the new typed builder. Inline `resolve.ValidateID` + path concat
+  swapped for one `paths.Workspace(wsID)` call; identical wire
+  shape, identical validation semantics. The `resolve` import drops
+  off this file.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
