@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Deploy-profile docs use canonical `0`/`1` for boolean env
+  vars instead of `true`/`false`.** `docs/deploy/profile-single-
+  tenant-http.md` set `MCP_HTTP_INLINE_METRICS_ENABLED=true` and
+  `MCP_STRICT_HOST_CHECK=true`, while
+  `docs/deploy/production-profile-shared-service.md` used
+  `MCP_HTTP_INLINE_METRICS_ENABLED=false` — both work because
+  `optionalBoolEnv` (`internal/config/config.go:780`) goes through
+  `strconv.ParseBool` which accepts the wider boolean set, but
+  spec.go's `Enum` for both vars is `["0", "1"]` and every other
+  surface (README CONFIG-TABLE, configmap, runbooks, Dockerfile)
+  uses `0`/`1`. Now the deploy profile docs match — operators
+  copy-pasting between docs see consistent quoting and don't
+  question whether `true` and `1` differ semantically. Pure
+  consistency fix; no semantic change at runtime.
 - **`CLOCKIFY_TIMEZONE` fallback documentation acknowledges
   loadLocation exception.** Iter131's commit body claimed "every
   call site that consumes Service.DefaultTimezone has the same

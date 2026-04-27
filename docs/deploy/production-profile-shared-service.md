@@ -55,7 +55,7 @@ MCP_OIDC_AUDIENCE=clockify-mcp-shared
 # Observability: Dedicated metrics port (bind to localhost or scrape behind
 # a NetworkPolicy; never expose publicly).
 MCP_METRICS_BIND=:9091
-MCP_HTTP_INLINE_METRICS_ENABLED=false
+MCP_HTTP_INLINE_METRICS_ENABLED=0
 ```
 
 ### Strict-gate rationale

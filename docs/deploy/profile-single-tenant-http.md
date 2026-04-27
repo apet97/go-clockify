@@ -43,12 +43,12 @@ MCP_AUDIT_DURABILITY=best_effort
 # Observability: metrics on the main listener with inherited
 # bearer auth so your reverse proxy's allowlist is the only
 # exposure gate.
-MCP_HTTP_INLINE_METRICS_ENABLED=true
+MCP_HTTP_INLINE_METRICS_ENABLED=1
 MCP_HTTP_INLINE_METRICS_AUTH_MODE=inherit_main_bearer
 
 # Safety
 CLOCKIFY_POLICY=time_tracking_safe
-MCP_STRICT_HOST_CHECK=true
+MCP_STRICT_HOST_CHECK=1
 MCP_ALLOWED_ORIGINS=https://your-client.example.com
 
 # Clockify credentials
@@ -107,13 +107,13 @@ server {
 - Every client presents the same shared bearer. Rotating the
   token invalidates every client simultaneously — plan rotations
   around a maintenance window.
-- `MCP_STRICT_HOST_CHECK=true` ensures DNS-rebinding attempts
+- `MCP_STRICT_HOST_CHECK=1` ensures DNS-rebinding attempts
   from a browser context are rejected before the auth check.
 - The audit file lives on local disk; protect it with
   `chmod 600`, back it up, and run the retention reaper
   (automatic on startup).
 - `MCP_ALLOWED_ORIGINS` should be pinned to the exact client
-  origin. When `MCP_STRICT_HOST_CHECK=true`, the public host
+  origin. When `MCP_STRICT_HOST_CHECK=1`, the public host
   preserved by your reverse proxy must also be derivable from this
   allowlist; otherwise legitimate requests are rejected before auth.
 - `time_tracking_safe` policy is the recommended AI-facing default:
