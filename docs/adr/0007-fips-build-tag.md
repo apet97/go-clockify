@@ -40,7 +40,8 @@ mandatory startup assertion:
   `cmd/clockify-mcp/fips_off.go` (`//go:build !fips`) provides a
   no-op stub.
 - **Mandatory startup assertion.** `main()` calls `fipsStartupCheck`
-  before any other initialization (`cmd/clockify-mcp/main.go:48-51`).
+  before any other initialization (`cmd/clockify-mcp/main.go`; find
+  via `git grep -n 'fipsStartupCheck()' cmd/clockify-mcp/main.go`).
   In a `-tags=fips` binary, the process exits with a clear stderr
   message if `crypto/fips140.Enabled()` returns false. The hint text
   tells the operator to rebuild with `GOFIPS140=latest` or set
@@ -111,13 +112,19 @@ mandatory startup assertion:
 
 ## References
 
-- Previously referred to as "ADR 011" in
-  `cmd/clockify-mcp/main.go:50`, `cmd/clockify-mcp/fips_on.go:22`,
-  `cmd/clockify-mcp/fips_off.go:9`, `.goreleaser.yaml:73`.
-- Build-tagged file: `cmd/clockify-mcp/fips_on.go`.
-- Default-build stub: `cmd/clockify-mcp/fips_off.go`.
-- Startup wiring: `cmd/clockify-mcp/main.go:48-51`.
-- Goreleaser FIPS build entry: `.goreleaser.yaml` (`fips` builder).
+- Previously referred to as "ADR 011" in inline comments — find
+  via `git grep -n 'ADR 011'`. Today's hits include
+  `cmd/clockify-mcp/main.go`, `cmd/clockify-mcp/fips_on.go`,
+  `cmd/clockify-mcp/fips_off.go`, and `.goreleaser.yaml`.
+- Build-tagged file: `cmd/clockify-mcp/fips_on.go` (defines
+  `fipsStartupCheck` under `//go:build fips`).
+- Default-build stub: `cmd/clockify-mcp/fips_off.go` (no-op
+  `fipsStartupCheck` under `//go:build !fips`).
+- Startup wiring: `fipsStartupCheck()` call in
+  `cmd/clockify-mcp/main.go` (find via
+  `git grep -n 'fipsStartupCheck()' cmd/clockify-mcp/main.go`).
+- Goreleaser FIPS build entry: `.goreleaser.yaml` `clockify-mcp-fips`
+  builder (find via `git grep -n 'clockify-mcp-fips$' .goreleaser.yaml`).
 - Related ADRs: 0001 (stdlib-only invariant), 0006 (OTel build tag),
   0008 (gRPC build tag).
 - Related docs: `docs/production-readiness.md` "Compliance posture",

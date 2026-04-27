@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0007-fips-build-tag.md` line anchors replaced with
+  grep anchors.** ADR-0007 had five line-anchored references for
+  the FIPS startup hook: Decision §"Mandatory startup assertion"
+  cited `cmd/clockify-mcp/main.go:48-51` (close to but not
+  pinpoint at the `fipsStartupCheck()` call at line 54), plus
+  References-section anchors at `:50`, `fips_on.go:22`,
+  `fips_off.go:9`, and `.goreleaser.yaml:73`. All five replaced
+  with symbol-name + `git grep` instructions following the same
+  iter34/iter65/iter115/iter116 ADR-sweep pattern. Same drift
+  class — line anchors go stale on post-write growth or refactors;
+  the function name `fipsStartupCheck` and the goreleaser
+  `clockify-mcp-fips` builder ID survive most reorganisations.
 - **`docs/adr/0004-policy-enforcement-architecture.md` line
   anchors replaced with grep anchors.** Four line-anchored
   references had drifted: `policy.go:13-17` covered ReadOnly
