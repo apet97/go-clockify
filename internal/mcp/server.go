@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -397,10 +398,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	// limit because bufio.Scanner only consults max when it needs to grow
 	// beyond the initial buffer. Before this, a 64 KiB initial capacity
 	// plus maxMsg = 4 KiB meant the scanner happily consumed 64 KiB lines.
-	initial := 64 * 1024
-	if maxMsg < initial {
-		initial = maxMsg
-	}
+	initial := min(64*1024, maxMsg)
 	buf := make([]byte, 0, initial)
 	scanner.Buffer(buf, maxMsg)
 	s.encoderMu.Lock()
@@ -810,13 +808,8 @@ func (s *Server) handleInitialize(raw any) map[string]any {
 	_ = decodeParams(raw, &params) // tolerate missing / malformed params
 
 	negotiated := SupportedProtocolVersions[0]
-	if requested := strings.TrimSpace(params.ProtocolVersion); requested != "" {
-		for _, v := range SupportedProtocolVersions {
-			if v == requested {
-				negotiated = requested
-				break
-			}
-		}
+	if requested := strings.TrimSpace(params.ProtocolVersion); requested != "" && slices.Contains(SupportedProtocolVersions, requested) {
+		negotiated = requested
 	}
 
 	// Extract clientInfo name/version for log correlation.

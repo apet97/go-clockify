@@ -76,6 +76,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `addSessionToInitializeResult` swaps the map-overlay loop to
   `maps.Copy`. Pure refactor — no behaviour change. Clears the
   `slicescontains` and `mapsloop` hints on this file.
+- **`internal/mcp/server.go` modernised.** The stdio scanner-buffer
+  sizing collapses to `initial := min(64*1024, maxMsg)`, and the
+  `initialize` protocol-version negotiation uses
+  `slices.Contains(SupportedProtocolVersions, requested)` instead of
+  a for-range scan with break. Pure refactor — no behaviour change.
+  Clears the `minmax` and `slicescontains` hints on this file.
 
 ### Fixed
 
