@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **`tool_call_blocked_by_audit` slog record carries tenant /
+  subject / session / transport context.** The fail_closed-mode
+  rejection event at `internal/mcp/tools.go:137` previously
+  emitted only `tool`, `error`, `req_id`, and `durability_mode`.
+  iter156 added the same metadata fields to `audit_persist_failed`;
+  this commit closes the parallel surface so an operator triaging
+  a fail_closed-mode incident can attribute blocked mutations to
+  specific tenants directly from the slog record without
+  cross-referencing the audit_events table or session metadata.
+  Strictly additive, same shape as iter156. Both fail-closed
+  failure-mode events (`audit_persist_failed` for outcome-record
+  loss, `tool_call_blocked_by_audit` for intent-rejected mutations)
+  now carry consistent attribution context.
 - **`audit_persist_failed` slog record carries tenant / subject /
   session / transport context.** When the audit Auditor returns a
   persistence error, the slog.Error event at

@@ -139,6 +139,10 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 				"error", intentErr.Error(),
 				"req_id", reqID,
 				"durability_mode", s.AuditDurabilityMode,
+				"tenant_id", s.AuditTenantID,
+				"subject", s.AuditSubject,
+				"session_id", s.AuditSessionID,
+				"transport", s.AuditTransport,
 			)
 			return nil, intentErr
 		}
