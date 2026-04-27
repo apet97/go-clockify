@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -110,8 +111,12 @@ func (s *Service) listSharedReports(ctx context.Context, args map[string]any) (R
 		"page-size": fmt.Sprintf("%d", pageSize),
 	}
 
+	path, err := paths.Workspace(wsID, "shared-reports")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/shared-reports", query, &items); err != nil {
+	if err := s.Client.Get(ctx, path, query, &items); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_shared_reports", items, map[string]any{
@@ -131,8 +136,12 @@ func (s *Service) getSharedReport(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "shared-reports", reportID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var report map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/shared-reports/"+reportID, nil, &report); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &report); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_shared_report", report, map[string]any{"workspaceId": wsID}), nil
@@ -157,8 +166,12 @@ func (s *Service) createSharedReport(ctx context.Context, args map[string]any) (
 		body["filters"] = filters
 	}
 
+	path, err := paths.Workspace(wsID, "shared-reports")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/shared-reports", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_shared_report", created, map[string]any{"workspaceId": wsID}), nil
@@ -185,8 +198,12 @@ func (s *Service) updateSharedReport(ctx context.Context, args map[string]any) (
 		body["filters"] = filters
 	}
 
+	path, err := paths.Workspace(wsID, "shared-reports", reportID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/shared-reports/"+reportID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_shared_report", updated, map[string]any{"workspaceId": wsID}), nil
@@ -201,11 +218,15 @@ func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	reportPath, err := paths.Workspace(wsID, "shared-reports", reportID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	// Dry-run: fetch the report for preview, don't delete.
 	if dryrun.Enabled(args) {
 		var report map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/shared-reports/"+reportID, nil, &report); err != nil {
+		if err := s.Client.Get(ctx, reportPath, nil, &report); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -216,7 +237,7 @@ func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/shared-reports/"+reportID); err != nil {
+	if err := s.Client.Delete(ctx, reportPath); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_shared_report", map[string]any{
@@ -242,8 +263,12 @@ func (s *Service) exportSharedReport(ctx context.Context, args map[string]any) (
 
 	query := map[string]string{"format": format}
 
+	path, err := paths.Workspace(wsID, "shared-reports", reportID, "export")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var export map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/shared-reports/"+reportID+"/export", query, &export); err != nil {
+	if err := s.Client.Get(ctx, path, query, &export); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_export_shared_report", export, map[string]any{

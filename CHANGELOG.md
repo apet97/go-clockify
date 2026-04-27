@@ -170,6 +170,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   typed builder. First Tier-2 file in the migration; same pattern
   as the Tier-1 sweep — pure refactor for tools whose IDs are
   already validated upstream by `resolve.ValidateID`.
+- **`tier2_shared_reports.go` migrated to `paths.Workspace`.** All
+  7 concats — list, get, create, update, dry-run preview, delete,
+  export — swap to the typed builder. `deleteSharedReport` builds
+  `reportPath` once and reuses it for the dry-run GET preview and
+  the actual DELETE.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
