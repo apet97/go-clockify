@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/support-matrix.md` "Recommended" deploy-doc list now
+  includes `private-network-grpc`.** The post-table sentence
+  promised "Every 'Recommended' row has a corresponding file
+  under `docs/deploy/`" but listed only three entries (local-stdio,
+  single-tenant-http, production-profile-shared-service). The
+  matrix has four Recommended rows: the fourth is "Private mesh,
+  low-latency RPC" with `grpc + oidc or mtls + postgres://`,
+  which has its corresponding file at
+  `docs/deploy/profile-private-network-grpc.md`. List now
+  enumerates all four. Pure operator-doc fix; closes the
+  iter84-87 chain at the support-matrix level by giving every
+  registered profile (except the prod-postgres alias which is
+  documented inside production-profile-shared-service.md) a
+  named pointer.
 - **`docs/operators/README.md` landing page lists profile coverage +
   drops legacy-HTTP reference.** The operator-guide landing page
   described the self-hosted guide as covering "stdio or legacy

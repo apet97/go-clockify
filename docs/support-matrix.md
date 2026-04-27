@@ -90,6 +90,7 @@ Every "Recommended" row has a corresponding file under
 - `docs/deploy/profile-local-stdio.md`
 - `docs/deploy/profile-single-tenant-http.md`
 - `docs/deploy/production-profile-shared-service.md`
+- `docs/deploy/profile-private-network-grpc.md`
 
 ## Supported MCP Clients
 
