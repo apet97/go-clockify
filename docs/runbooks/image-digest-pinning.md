@@ -24,7 +24,7 @@ At the moment of deploy, take one of two paths:
 
 ```sh
 # 1. Resolve the digest for the tag you want to ship.
-docker buildx imagetools inspect ghcr.io/apet97/go-clockify:v1.0.0 \
+docker buildx imagetools inspect ghcr.io/apet97/go-clockify:v1.2.0 \
   --format '{{json .Manifest.Digest}}'
 # -> "sha256:abc123…"
 
@@ -58,7 +58,7 @@ spec:
   source:
     kustomize:
       images:
-        - ghcr.io/apet97/go-clockify:v1.0.0
+        - ghcr.io/apet97/go-clockify:v1.2.0
 ```
 
 Flux example:
@@ -67,7 +67,7 @@ Flux example:
 spec:
   images:
     - name: ghcr.io/apet97/go-clockify
-      newTag: v1.0.0
+      newTag: v1.2.0
 ```
 
 Both render correctly against the in-tree overlay because the tool

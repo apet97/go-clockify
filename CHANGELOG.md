@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **`docs/runbooks/image-digest-pinning.md` examples bumped to v1.2.0.**
+  Three operator-facing copy-paste examples (the
+  `docker buildx imagetools inspect` digest-resolution command,
+  the Argo CD `images:` override, and the Flux `newTag:`
+  override) all named `v1.0.0`. Operators following the
+  runbook today should pin the current Active line — bumped
+  to `v1.2.0`. The historical narrative line ("the overlay was
+  stuck at 0.7.0 while the base pointed at v1.0.0") is left
+  as-is since that's documenting a past incident, not a
+  prescription.
 - **k8s base manifest + Helm chart realigned to v1.2.0.**
   `deploy/k8s/base/deployment.yaml`'s pinned image was still
   `v1.0.0` — the comment on that line says "Bump on release"
