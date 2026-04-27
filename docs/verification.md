@@ -61,18 +61,23 @@ attestation has not yet propagated through GitHub's storage (this is
 eventually consistent — retry in 10 minutes for a freshly published
 release).
 
-> **Note — user-owned private repositories.** `gh attestation verify`
-> returns "Feature not available for user-owned private repositories"
-> (HTTP 404) when the repository is private and owned by a user
-> account rather than an organization or a public repo. In that
-> account tier the GitHub attestation service is not active, so
-> `release.yml`'s `actions/attest-build-provenance` step runs with
-> `continue-on-error: true` and no attestation is produced. The
-> release-smoke workflow treats this narrow outcome as **skipped**
+> **Note — historical context for v1.0.x verification.** Before
+> 2026-04-22 the repository was user-owned-private, the GitHub
+> attestation service was not active for that account tier, and
+> `gh attestation verify` returned "Feature not available for
+> user-owned private repositories" (HTTP 404). `release.yml`'s
+> `actions/attest-build-provenance` step ran with
+> `continue-on-error: true`, no attestation was produced, and the
+> release-smoke workflow treated this as **skipped**
 > (surfaced as a `::notice::`); the two mandatory cosign checks
-> below remain the gate. See
+> below were the gate during that window. After the public flip
+> on 2026-04-22 the attestation step became a mandatory gate
+> (no `continue-on-error`) and every release since carries an
+> attestation. Operators verifying a v1.0.x binary may still hit
+> the legacy 404; verifying anything from `v1.1.0` onward should
+> succeed. See
 > [`docs/adr/0013-private-repo-slsa-posture.md`](adr/0013-private-repo-slsa-posture.md)
-> for the rationale and the upgrade path.
+> for the rationale and the post-flip upgrade.
 
 ## 2. Cosign keyless signature on the binary
 

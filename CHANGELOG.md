@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/verification.md` SLSA note frames pre-public-flip
+  behaviour as historical context.** The "user-owned private
+  repositories" note still described `release.yml`'s
+  `actions/attest-build-provenance` step as running with
+  `continue-on-error: true` and the release-smoke workflow
+  treating attestation failures as `::notice::`-skipped. That was
+  the pre-2026-04-22 behaviour; after the public flip
+  (`release.yml:90-94`: "Repo is public (2026-04-22) —
+  attestation is now a mandatory gate") the workaround was
+  removed and every release since carries a real attestation.
+  An operator verifying a current binary today would not hit the
+  fallback the note describes; an operator verifying a v1.0.x
+  binary still might. Note rephrased as historical context for
+  the v1.0.x window with explicit "v1.1.0 onward should succeed"
+  guidance, plus updated cross-reference framing for ADR-0013
+  (now Superseded). Same iter109/iter125 ADR-0013-superseded
+  drift class, this time at the verification.md surface.
 - **Global coverage floor reads `71%` consistently across script
   and policy doc.** `scripts/check-coverage.sh:6` doc-comment said
   "default: 55" but the actual default at line 19 is `71`.
