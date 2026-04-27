@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`CLOCKIFY_TIMEZONE` fallback documentation acknowledges
+  loadLocation exception.** Iter131's commit body claimed "every
+  call site that consumes Service.DefaultTimezone has the same
+  guard `if loc == nil { loc = time.UTC }`" — accurate for
+  entries.go, resources.go, and reports.go's aggregate path, but
+  it missed reports.go:250 where `WeeklySummary` does
+  `loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)`.
+  `loadLocation` (common.go:522-528) ultimately falls back to
+  `time.Now().Location()` (system-local) when both the arg and
+  DefaultTimezone are nil, not UTC. The behaviour is split: most
+  consumers fall through to UTC, but the WeeklySummary path keeps
+  the historical system-local default for backward compatibility
+  with the `Defaults to Monday of the current week in local time`
+  tool-descriptor claim. Updated `internal/tools/common.go:21`
+  doc comment + `deploy/helm/clockify-mcp/values.yaml:115` Helm
+  comment to spell out the split fallback explicitly so a
+  contributor or operator following either trail sees the actual
+  behaviour. Pure doc-correction; iter131's substantive fix
+  (UTC for the most-trafficked path) stands.
 - **`CLOCKIFY_TIMEZONE` documented fallback is UTC, not system.**
   Both `deploy/helm/clockify-mcp/values.yaml:115` ("default:
   system") and `internal/tools/common.go:21` ("nil = system

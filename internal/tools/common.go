@@ -18,7 +18,7 @@ import (
 type Service struct {
 	Client          *clockify.Client
 	WorkspaceID     string
-	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil = UTC fallback (every call site does `if loc == nil { loc = time.UTC }`)
+	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil falls back to UTC at the direct-consumer call sites (entries.go, resources.go, reports.go aggregate path). The exception: tool args that go through loadLocation (WeeklySummary's `timezone` arg) ultimately fall through to `time.Now().Location()` when both the arg and DefaultTimezone are unset — see loadLocation in this file.
 	DedupeConfig    *dedupe.Config        // optional, set during wiring
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	ActivateGroup   func(context.Context, string) (ActivationResult, error)
