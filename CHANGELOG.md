@@ -113,6 +113,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caller before sub-segment ID territory (`projects.go`,
   `entries.go`, `tasks.go`, `tier2_*.go`). `WhoAmI` /
   `CurrentUser` hit `/user` (no workspace prefix) and stay as-is.
+- **`projects.go` migrated to `paths.Workspace`.** First sub-segment
+  exercise of the helper: `GetProject` now uses
+  `paths.Workspace(wsID, "projects", projectID)` — the project ID
+  comes from `resolve.ResolveProjectID` so it's already validated;
+  the helper adds defensive percent-encoding on top.
+  `ListProjects` and `CreateProject` use the simpler two-segment
+  form. Identical wire shape for normal Clockify IDs.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

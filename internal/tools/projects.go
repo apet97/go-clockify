@@ -7,11 +7,16 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListProjects(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "projects")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -21,7 +26,7 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 		"page-size": strconv.Itoa(pageSize),
 	}
 	var projects []clockify.Project
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects", query, &projects); err != nil {
+	if err := s.Client.Get(ctx, path, query, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_projects", projects, map[string]any{
@@ -44,8 +49,12 @@ func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnve
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	path, err := paths.Workspace(wsID, "projects", projectID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out clockify.Project
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects/"+projectID, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_project", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
@@ -81,8 +90,12 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 		payload["isPublic"] = isPublic
 	}
 
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var project clockify.Project
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/projects", payload, &project); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &project); err != nil {
 		return ResultEnvelope{}, err
 	}
 
