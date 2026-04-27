@@ -5,16 +5,28 @@ import (
 )
 
 // normalizeEndpoint collapses a concrete Clockify API path into a template
-// suitable for use as a Prometheus label value. Every segment that looks
-// like a Clockify ID (24 lowercase hex characters) is replaced with `:id`,
-// and any other non-letter leading segment gets the same treatment so
-// cardinality stays bounded regardless of traffic patterns.
+// suitable for use as a Prometheus label value. Segments matching the
+// Clockify ID shapes — 24-char hex (BSON ObjectID), 32-char hex (UUID
+// without hyphens), and 36-char canonical UUID — are replaced with
+// `:id`. Any other path segment, including arbitrary user-controlled
+// strings of unusual length, is preserved verbatim. Combined with the
+// per-handler ValidateID gate (which rejects unsafe characters before
+// IDs reach this layer), that's enough to keep the metrics labelset
+// bounded for the Clockify resource shape we actually call.
 //
 // Examples:
 //
 //	/workspaces/64abc.../time-entries/abc123... → /workspaces/:id/time-entries/:id
 //	/user                                       → /user
 //	/workspaces                                 → /workspaces
+//
+// Cardinality risk: a future handler that passes a non-ID-shaped
+// user-controlled string into the path (e.g. a 12-char hex token, a
+// 40-char SHA, or an arbitrary slug) would surface that string as a
+// metric label value verbatim. Audit finding 11. Static
+// TestPathSafety_HandlersValidateIDsBeforeConcat in internal/tools/
+// catches the most likely entry point for that drift, but the design
+// risk is tracked here for future work that might widen the matcher.
 //
 // The function is pure and allocates only on paths containing IDs, so it is
 // cheap enough to call on every request in the hot path.

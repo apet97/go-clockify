@@ -88,9 +88,23 @@ var previewMap = map[string]string{
 // These tools must be registered with toolDestructive() to reach this path.
 // Note: tools registered with toolRW() handle dry-run at the handler level
 // and never reach this map (CheckDryRun passes through for non-destructive tools).
+//
+// Audit finding 6 follow-up: today ConfirmPattern returns the same minimal
+// envelope as MinimalFallback (executeDryRun in internal/enforcement),
+// so moving a tool between the two maps changes nothing observable. A
+// real confirmation-token requirement on non-dry-run execution
+// (e.g. confirm:"delete_invoice_item:inv1:item7") would block the
+// most dangerous "agent fires off a destructive call without dry-run
+// first" scenarios; that is tracked as a separate follow-up rather
+// than half-wired here. The current safety story is: dry-run is on
+// by default (CLOCKIFY_DRY_RUN=enabled), the policy gate denies most
+// destructive tools by default, and operators must explicitly switch
+// CLOCKIFY_POLICY=full to expose them.
 var confirmTools = map[string]bool{}
 
-// minimalTools use minimal fallback (no GET counterpart).
+// minimalTools use minimal fallback (no GET counterpart). These deletes
+// have no Clockify GET endpoint that returns the doomed resource shape,
+// so dry-run echoes the supplied IDs without any preview content.
 var minimalTools = map[string]bool{
 	"clockify_delete_invoice_item":     true,
 	"clockify_delete_expense_category": true,
