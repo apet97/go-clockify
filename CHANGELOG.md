@@ -120,6 +120,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the helper adds defensive percent-encoding on top.
   `ListProjects` and `CreateProject` use the simpler two-segment
   form. Identical wire shape for normal Clockify IDs.
+- **`tasks.go` migrated to `paths.Workspace`.** `ListTasks` +
+  `CreateTask` now use the four-segment form
+  `paths.Workspace(wsID, "projects", projectID, "tasks")`. The
+  project ID is resolved upstream via `resolve.ResolveProjectID`;
+  the helper percent-encodes each segment. Identical wire shape for
+  normal Clockify IDs.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
