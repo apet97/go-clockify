@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -185,8 +186,12 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
+	path, err := paths.Workspace(wsID, "invoices")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices", map[string]string{
+	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
 	}, &items); err != nil {
@@ -209,8 +214,12 @@ func (s *Service) getInvoice(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var invoice map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, nil, &invoice); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_invoice", invoice, map[string]any{"workspaceId": wsID}), nil
@@ -237,8 +246,12 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 		body["note"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "invoices")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/invoices", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_invoice", created, map[string]any{"workspaceId": wsID}), nil
@@ -271,8 +284,12 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 		body["status"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_invoice", updated, map[string]any{"workspaceId": wsID}), nil
@@ -288,9 +305,14 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	if dryrun.Enabled(args) {
 		var invoice map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, nil, &invoice); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -301,7 +323,7 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (Resul
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID); err != nil {
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_invoice", map[string]any{
@@ -321,8 +343,12 @@ func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	if dryrun.Enabled(args) {
+		path, err := paths.Workspace(wsID, "invoices", invoiceID)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 		var invoice map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, nil, &invoice); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -333,8 +359,12 @@ func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ResultE
 		}, nil
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "send")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID+"/send", nil, &result); err != nil {
+	if err := s.Client.Post(ctx, path, nil, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_send_invoice", result, map[string]any{"workspaceId": wsID}), nil
@@ -350,9 +380,14 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	if dryrun.Enabled(args) {
 		var invoice map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, nil, &invoice); err != nil {
+		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -365,7 +400,7 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 
 	body := map[string]any{"status": "PAID"}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_mark_invoice_paid", updated, map[string]any{"workspaceId": wsID}), nil
@@ -381,8 +416,12 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID+"/items", nil, &items); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_invoice_items", items, map[string]any{
@@ -413,8 +452,12 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 		body["unitPrice"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID+"/items", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_add_invoice_item", created, map[string]any{
@@ -448,8 +491,12 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 		body["unitPrice"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID+"/items/"+itemID, body, &updated); err != nil {
+	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_invoice_item", updated, map[string]any{
@@ -485,7 +532,11 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/invoices/"+invoiceID+"/items/"+itemID); err != nil {
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_invoice_item", map[string]any{
@@ -511,8 +562,12 @@ func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (Resul
 		query["status"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "invoices")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var invoices []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/invoices", query, &invoices); err != nil {
+	if err := s.Client.Get(ctx, path, query, &invoices); err != nil {
 		return ResultEnvelope{}, err
 	}
 

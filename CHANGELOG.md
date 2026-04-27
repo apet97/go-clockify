@@ -224,6 +224,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deleteTimeOffRequest` and `updateTimeOffRequest` /
   `updateTimeOffPolicy` build path once for the GET-then-mutate
   pair. First Tier-2 file with consistent 6-segment paths.
+- **`tier2_invoices.go` migrated to `paths.Workspace`.** All 15
+  concats across 12 handlers — list/get/create/update/delete
+  invoices, send (3-segment `/send`), mark-paid, item CRUD
+  (4/5-segment `/items[/id]`), and report. `deleteInvoice` and
+  `markInvoicePaid` build path once for the dry-run GET preview +
+  the real PUT/DELETE; `sendInvoice` uses two paths (the bare
+  invoice for the preview, plus the `/send` sub-path for the POST).
+  Closes the Tier-2 caller-migration sweep (12/12 files).
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
