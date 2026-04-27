@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0004-policy-enforcement-architecture.md` line
+  anchors replaced with grep anchors.** Four line-anchored
+  references had drifted: `policy.go:13-17` covered ReadOnly
+  through Standard but missed the `Full` constant at line 18
+  (the canonical enum has five modes per iter99 finding);
+  `policy.go:91-115` (`IsAllowed` switch) and
+  `policy.go:174-181` (introspection allowlist) had drifted to
+  `:93-…` and `:184-193` respectively after post-write growth;
+  `enforcement.go:65-...` (`BeforeCall`) and `dryrun.go:62-69`
+  (`Action` enum) stayed accurate but were also pinned to fragile
+  line numbers. Switched all five anchors to symbol-name +
+  `git grep` instructions matching the iter34/iter65 ADR sweep
+  pattern. Same drift class as iter115 (ADR-0008): line anchors
+  go stale on post-write code growth or when const blocks gain
+  new entries; symbol-grep anchors survive most reorganisations.
 - **`docs/adr/0008-grpc-auth-interceptor.md` References section
   uses grep anchors instead of stale line numbers.** The ADR's
   References section listed five line-anchored cross-references

@@ -26,7 +26,9 @@ ad-hoc per tool.
 ## Decision
 
 Five named policy modes, configured via `CLOCKIFY_POLICY` and
-defined as constants in `internal/policy/policy.go:13-17`:
+defined as constants in `internal/policy/policy.go` (find via
+`git grep -nE 'ReadOnly\s+Mode = "read_only"'` or the surrounding
+`const (` block):
 
 | Mode | Read | Write | Delete | Tier 2 |
 |------|:----:|:-----:|:------:|:------:|
@@ -38,8 +40,8 @@ defined as constants in `internal/policy/policy.go:13-17`:
 
 Enforcement lives in `internal/enforcement.Pipeline`, which
 implements the `mcp.Enforcement` interface and composes five
-subsystems in a fixed order. `BeforeCall`
-(`internal/enforcement/enforcement.go:65-...`) runs:
+subsystems in a fixed order. `BeforeCall` in
+`internal/enforcement/enforcement.go` runs:
 
 1. **Schema validation** (`internal/jsonschema.Validate`) — runs
    first so a malformed call never consumes a rate-limit slot or
@@ -69,9 +71,10 @@ discoverability matches enforcement.
 The six-element introspection allowlist
 (`clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`,
 `clockify_resolve_debug`, plus `clockify_current_user` and
-`clockify_list_workspaces` in `policy.go:174-181`) bypasses the
-policy gate so an operator can always introspect the running server's
-state regardless of mode.
+`clockify_list_workspaces`; defined in `introspectionList()` in
+`internal/policy/policy.go`) bypasses the policy gate so an
+operator can always introspect the running server's state
+regardless of mode.
 
 ## Consequences
 
@@ -129,18 +132,22 @@ state regardless of mode.
 
 ## References
 
-- Modes: `internal/policy/policy.go:13-17` (constants),
-  `policy.go:91-115` (`IsAllowed` switch).
-- Pipeline: `internal/enforcement/enforcement.go:27-...` (`Pipeline`
-  struct and `BeforeCall`).
+- Modes: `internal/policy/policy.go` — five `Mode` constants
+  (`ReadOnly`, `TimeTrackingSafe`, `SafeCore`, `Standard`,
+  `Full`) plus the `IsAllowed` switch (find both via
+  `git grep -n 'IsAllowed\|^const (' internal/policy/policy.go`).
+- Pipeline: `internal/enforcement/enforcement.go` — `Pipeline`
+  struct + `BeforeCall` method (find via
+  `git grep -n 'type Pipeline\|func (p \*Pipeline) BeforeCall'`).
 - Wiring: `internal/runtime/service.go` `buildServer()` (where
   `Pipeline` is installed on `mcp.Server`; pre-C2.2 the wiring
   lived in `cmd/clockify-mcp/runtime.go`, removed during dea1cc3).
-- Dry-run strategies: `internal/dryrun/dryrun.go:62-69` (the
-  `Action` enum: `ConfirmPattern`, `PreviewTool`, `MinimalFallback`,
-  `NotDestructive`).
-- Tool annotation source: `internal/tools/registry.go` and the
-  `Tier1Catalog` slice in `internal/bootstrap/bootstrap.go:71`.
+- Dry-run strategies: `internal/dryrun/dryrun.go` — `Action` enum
+  (`ConfirmPattern`, `PreviewTool`, `MinimalFallback`,
+  `NotDestructive`); find via `git grep -n 'type Action int'`.
+- Tool annotation source: `internal/tools/registry.go` and
+  `Tier1Catalog` in `internal/bootstrap/bootstrap.go` (find via
+  `git grep -n 'var Tier1Catalog'`).
 - Related ADRs: 0005 (tier activation feeds the same `FilterTool`
   pipeline).
 - Related docs: `README.md` "Policy modes",
