@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`deploy/k8s/base/deployment.yaml` drops dead
+  `docs/audit-chart-vs-config.md` pointer.** The gRPC-transport
+  comment block listed both the Helm chart's deployment.yaml
+  AND the audit doc as references for the full gap list. The
+  audit doc was a W4-era internal tracker (mentioned in
+  CHANGELOG history alongside "all 22 gaps closed") that's no
+  longer in main. Dropped the second pointer; the Helm chart's
+  deployment.yaml is the actionable reference for the
+  multi-port + tcpSocket-probe gRPC pattern, and that pointer
+  remains.
 - **Fourth `w2-12-digest-pinning.md` reference cleared (sweep
   closed).** Iter55 (c5f1bdd) repointed three call sites
   (Dockerfile + check-overlay-structure.sh ×2) but missed the

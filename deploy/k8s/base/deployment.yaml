@@ -52,7 +52,7 @@ spec:
             # an image built with -tags=grpc. When enabled, also adjust
             # service.yaml to expose the grpc port and switch the probes to
             # tcpSocket — see the Helm chart's deployment.yaml for the
-            # pattern, or docs/audit-chart-vs-config.md for the full gap list.
+            # pattern.
             # - name: MCP_GRPC_BIND
             #   value: ":9090"
             - name: MCP_LOG_FORMAT
