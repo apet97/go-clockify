@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **k8s base manifest + Helm chart realigned to v1.2.0.**
+  `deploy/k8s/base/deployment.yaml`'s pinned image was still
+  `v1.0.0` — the comment on that line says "Bump on release"
+  but the bump was missed for both v1.1.0 (2026-04-22) and
+  v1.2.0 (2026-04-25). Operators applying the base verbatim
+  via `kubectl apply -k deploy/k8s/base` were getting a
+  release without the audit-finding security wave. The Helm
+  chart's `version` and `appVersion` were similarly stuck at
+  `1.0.0` — `helm list` would then show that misleading
+  appVersion alongside whatever image tag the operator
+  actually deployed. Both bumped to `v1.2.0`. Chart-comment
+  guidance corrected: only Chart.yaml needs editing on
+  release because `cmd/clockify-mcp/main.go` reads its
+  version via ldflags + `debug.ReadBuildInfo()`, not from a
+  literal source string.
 - **`SUPPORT.md` version matrix realigned to v1.2.x as Active.**
   The matrix still named `v1.1.x` (released 2026-04-22) as the
   active line, but `v1.2.0` shipped 2026-04-25 with the audit-

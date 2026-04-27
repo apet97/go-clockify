@@ -5,10 +5,11 @@ description: |
   Exposes 124 Clockify tools over HTTP or stdio for use with Claude
   Desktop, Cursor, and other MCP clients.
 type: application
-# Chart version tracks the MCP server semver exactly. Bump both together
-# at release time (cmd/clockify-mcp/main.go + this field).
-version: 1.0.0
-appVersion: "1.0.0"
+# Chart version tracks the MCP server semver exactly. Bump on release
+# (cmd/clockify-mcp/main.go reads its own version via ldflags + build-info,
+# so only this file needs editing).
+version: 1.2.0
+appVersion: "1.2.0"
 kubeVersion: ">=1.27.0-0"
 keywords:
   - clockify
