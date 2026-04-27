@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"maps"
 	"strings"
 	"testing"
 
@@ -235,9 +236,7 @@ func strictMTLSDoctorEnv(overrides map[string]string) map[string]string {
 		"MCP_DISABLE_INLINE_SECRETS": "1",
 		"CLOCKIFY_POLICY":            "time_tracking_safe",
 	}
-	for k, v := range overrides {
-		env[k] = v
-	}
+	maps.Copy(env, overrides)
 	return env
 }
 
@@ -337,8 +336,6 @@ func strictCleanDoctorEnv(overrides map[string]string) map[string]string {
 		"MCP_AUDIT_DURABILITY":       "fail_closed",
 		"CLOCKIFY_POLICY":            "time_tracking_safe",
 	}
-	for k, v := range overrides {
-		env[k] = v
-	}
+	maps.Copy(env, overrides)
 	return env
 }

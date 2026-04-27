@@ -164,6 +164,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `slices.ContainsFunc(val, hasNull)`. Pure refactor — no
   behaviour change. Closes the iter43-queued lint sweep across
   the codebase.
+- **`cmd/clockify-mcp/main_test.go` test fixtures modernised.**
+  Two identical `for k, v := range overrides { env[k] = v }`
+  helper bodies (in the strict-doctor mTLS-tenant-required and
+  prod-control-plane-DSN test fixtures) collapse to
+  `maps.Copy(env, overrides)`. Pure test-fixture refactor —
+  no behaviour change. Same lint sweep continues into test
+  files.
 
 ### Added
 
