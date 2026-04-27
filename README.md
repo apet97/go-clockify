@@ -324,7 +324,7 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 **Dry-run not working** — Ensure `CLOCKIFY_DRY_RUN=enabled` (default) and pass `"dry_run": true` in tool call parameters.
 
-**Stale tool list** — Stdio and `streamable_http` clients receive `notifications/tools/list_changed` after activation (streamable_http via the SSE stream on `GET /mcp`); only legacy `http` clients must manually re-fetch `tools/list`.
+**Stale tool list** — Stdio, `streamable_http`, and `grpc` clients all receive `notifications/tools/list_changed` after activation (streamable_http via the SSE stream on `GET /mcp`; gRPC fans the notification through every active `Exchange` stream). Only legacy `http` clients must manually re-fetch `tools/list`.
 
 ## Deployment
 

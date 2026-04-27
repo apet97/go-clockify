@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`README.md` "Stale tool list" troubleshooting line covers
+  gRPC.** Iter146 fixed the same gRPC omission in
+  `docs/clients.md` Tool Discovery; this commit closes the
+  parallel surface in the README. The line previously read
+  "Stdio and `streamable_http` clients receive
+  `notifications/tools/list_changed` after activation ... only
+  legacy `http` clients must manually re-fetch `tools/list`",
+  silently leaving gRPC out even though
+  `internal/transport/grpc/transport.go:230-243` `streamNotifier`
+  fans the same notification through every active `Exchange`
+  stream. Operators on the `private-network-grpc` profile reading
+  the README troubleshooting now see gRPC alongside stdio /
+  streamable_http with the matching bidirectional-stream
+  delivery model. Same iter111→iter112 parallel-surface pattern
+  applied to gRPC.
 - **`docs/clients.md` Tool Discovery section adds the gRPC
   bullet.** The transport-by-transport behaviour list named
   Stdio, streamable_http, and Legacy http but omitted gRPC,
