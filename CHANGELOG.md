@@ -271,13 +271,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   need a v2.0 bump). `TestStreamableEventsBackCompatAlias` docstring
   updated in the same commit so test + production prose agree.
 - **ADR-0002 file references unstuck from pre-C2.2 line numbers.**
-  The references section pointed at `internal/config/config.go:107-116`
-  for the `MCP_TRANSPORT` validation switch (now at lines 239–247 after
-  the auth surface grew) and at `cmd/clockify-mcp/main.go:161-260`
+  Two sites pointed at `internal/config/config.go:107-116` for the
+  `MCP_TRANSPORT` validation switch (now at lines 239–247 after the
+  auth surface grew) and one at `cmd/clockify-mcp/main.go:161-260`
   for dispatch wiring (which moved to `internal/runtime/runtime.go`
   in the dea1cc3 C2.2 refactor — main.go is now a 236-line shim).
-  Replaced with function-name search anchors so future reorgs do
-  not invalidate the ADR again.
+  Replaced with function-name search anchors (`Load()`,
+  `Runtime.Run`) so future reorgs do not invalidate the ADR again.
+  Landed in two passes (References section in 6a3c25b, body
+  paragraph in this commit) to stay within the per-commit file
+  budget.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion

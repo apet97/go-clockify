@@ -28,7 +28,8 @@ configuration knob and document when each is the right pick.
 ## Decision
 
 Four transports, selected via `MCP_TRANSPORT` and validated in
-`internal/config/config.go:107-116`:
+`internal/config/config.go` `Load()` (search for
+`cfg.Transport = os.Getenv("MCP_TRANSPORT")`):
 
 | Transport         | Default | When to pick                                                                              |
 |-------------------|---------|-------------------------------------------------------------------------------------------|
