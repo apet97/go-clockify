@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Webhook DNS-allowlist escape hatch (validator-side).** New
+  `Service.WebhookAllowedDomains []string` lets operators admit
+  known-trusted hostnames whose DNS reply contains a private/reserved
+  IP — the use case is split-horizon DNS where a legitimately-trusted
+  hostname resolves to a private IP only on the control-plane
+  network. Match modes: exact (`webhook.example.com`) and leading-dot
+  suffix (`.example.com` matches every subdomain but NOT
+  `attacker.example.com.evil.com` — the leading dot anchors the
+  suffix to a full DNS label). Empty / whitespace entries are
+  skipped so a CSV typo cannot accidentally match every host. Empty
+  allowlist preserves the historical reject-on-private behaviour
+  exactly. Tests in `tier2_admin_test.go` cover all match modes
+  plus the leading-dot anchoring property. Production wiring
+  (env var `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` + Config field +
+  runtime plumbing + Helm/k8s) follows in a later commit; this
+  commit lands the validator side so the next iteration can wire
+  the env surface against an already-tested helper. Closes the
+  `docs/runbooks/webhook-dns-validation.md` §4b open follow-up
+  on the validator side.
 - **Structured risk taxonomy on `ToolDescriptor`.** New `RiskClass`
   bitmask (`Read | Write | Billing | Admin | PermissionChange |
   ExternalSideEffect | Destructive`) and `AuditKeys []string` fields,

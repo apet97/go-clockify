@@ -168,6 +168,15 @@ func (s *Service) validateWebhookURLForService(ctx context.Context, url string) 
 		return nil
 	}
 
+	// Operator escape hatch: known-trusted hostnames bypass the
+	// private-IP check. Used when split-horizon DNS resolves a
+	// legitimately-trusted hostname to a private IP only on the
+	// control-plane network (see docs/runbooks/webhook-dns-validation.md
+	// §4b). Empty allowlist = no bypass.
+	if isWebhookHostAllowed(host, s.WebhookAllowedDomains) {
+		return nil
+	}
+
 	resolver := s.WebhookHostResolver
 	if resolver == nil {
 		resolver = defaultWebhookResolver
@@ -185,6 +194,36 @@ func (s *Service) validateWebhookURLForService(ctx context.Context, url string) 
 		}
 	}
 	return nil
+}
+
+// isWebhookHostAllowed reports whether host matches any entry in the
+// caller-supplied allowlist. Match modes:
+//
+//   - Exact: `webhook.example.com` matches host `webhook.example.com`.
+//   - Suffix (entry begins with `.`): `.example.com` matches
+//     `webhook.example.com` and `api.example.com`. The leading dot is
+//     load-bearing — it forces the suffix to be a *full* DNS label,
+//     so `.example.com` does NOT match `attacker.example.com.evil.com`
+//     because that string ends with `.evil.com`, not `.example.com`.
+//
+// Empty / whitespace-only entries are skipped so an operator's typo
+// in `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=,foo.com` doesn't silently
+// match every host. Comparison is case-insensitive on the entry side
+// (host is already lowercased by the caller).
+func isWebhookHostAllowed(host string, allow []string) bool {
+	for _, d := range allow {
+		d = strings.ToLower(strings.TrimSpace(d))
+		if d == "" {
+			continue
+		}
+		if host == d {
+			return true
+		}
+		if strings.HasPrefix(d, ".") && strings.HasSuffix(host, d) {
+			return true
+		}
+	}
+	return false
 }
 
 // defaultWebhookResolver wraps net.DefaultResolver.LookupIPAddr in the

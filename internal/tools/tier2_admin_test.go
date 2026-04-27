@@ -316,6 +316,68 @@ func TestValidateWebhookURL_DNS_NoFlagSkipsResolution(t *testing.T) {
 	}
 }
 
+// TestValidateWebhookURL_DNS_AllowedDomains exercises the operator
+// escape hatch: when the host matches WebhookAllowedDomains, the
+// private-IP check is bypassed entirely. Use case is split-horizon
+// DNS where a known-trusted hostname legitimately resolves to a
+// private IP only on the control-plane network. See
+// docs/runbooks/webhook-dns-validation.md §4b.
+func TestValidateWebhookURL_DNS_AllowedDomains(t *testing.T) {
+	cases := []struct {
+		name        string
+		allow       []string
+		host        string
+		ip          string
+		wantAllowed bool
+	}{
+		// Exact-match entries.
+		{"exact_match_bypasses", []string{"webhook.example.com"}, "webhook.example.com", "10.0.0.1", true},
+		{"exact_no_match_still_rejects", []string{"webhook.example.com"}, "other.example.com", "10.0.0.1", false},
+		// Suffix-match entries (leading dot).
+		{"suffix_match_bypasses", []string{".example.com"}, "webhook.example.com", "10.0.0.1", true},
+		{"suffix_match_subsubdomain", []string{".example.com"}, "api.eu.example.com", "10.0.0.1", true},
+		// Critical: leading-dot suffix must NOT match a domain that
+		// merely *contains* the suffix in the middle. Without the
+		// leading-dot anchor an attacker could register
+		// `attacker.example.com.evil.com` and bypass the gate.
+		{"suffix_no_match_on_substring", []string{".example.com"}, "attacker.example.com.evil.com", "10.0.0.1", false},
+		// Empty / whitespace entries are skipped so a typo in the
+		// CSV form doesn't accidentally match every host.
+		{"empty_entry_skipped", []string{"", " ", "webhook.example.com"}, "webhook.example.com", "10.0.0.1", true},
+		{"all_empty_no_bypass", []string{"", " ", "\t"}, "webhook.example.com", "10.0.0.1", false},
+		// Case-insensitive matching on the entry side; host is
+		// already lowercased by the caller.
+		{"case_insensitive_entry", []string{"WEBHOOK.EXAMPLE.COM"}, "webhook.example.com", "10.0.0.1", true},
+		// Public IP path is unaffected by the allowlist.
+		{"public_ip_unaffected", []string{".example.com"}, "public.example.com", "8.8.8.8", true},
+		// Empty allowlist preserves the historical reject-on-private
+		// behaviour exactly.
+		{"empty_allowlist_rejects_private", nil, "internal.example.com", "10.0.0.1", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc := &Service{
+				WebhookValidateDNS:    true,
+				WebhookAllowedDomains: c.allow,
+				WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+					addr, err := netip.ParseAddr(c.ip)
+					if err != nil {
+						t.Fatalf("bad test ip %s: %v", c.ip, err)
+					}
+					return []netip.Addr{addr}, nil
+				},
+			}
+			err := svc.validateWebhookURLForService(context.Background(), "https://"+c.host+"/hook")
+			if c.wantAllowed && err != nil {
+				t.Fatalf("host %s (allow=%v) should be allowed: %v", c.host, c.allow, err)
+			}
+			if !c.wantAllowed && err == nil {
+				t.Fatalf("host %s (allow=%v) should be rejected", c.host, c.allow)
+			}
+		})
+	}
+}
+
 // TestValidateWebhookURL_DNS_LookupErrorPropagates locks in fail-closed
 // behaviour: a DNS error blocks webhook creation rather than silently
 // allowing the URL through.

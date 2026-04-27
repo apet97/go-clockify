@@ -34,6 +34,20 @@ type Service struct {
 	// WebhookHostResolver overrides the LookupIPAddr call for tests.
 	// nil = use net.DefaultResolver.
 	WebhookHostResolver func(context.Context, string) ([]netip.Addr, error)
+	// WebhookAllowedDomains is an optional escape-hatch list of webhook
+	// hostnames that bypass the WebhookValidateDNS private-IP check.
+	// Each entry is matched against the parsed URL's host (lowercased)
+	// either by exact equality (`webhook.example.com`) or by suffix
+	// when the entry begins with a dot (`.example.com` matches
+	// `webhook.example.com` and `api.example.com` but NOT
+	// `attacker.example.com.evil.com`). Empty list = no bypass; the
+	// DNS check applies to every host. Operators use this to admit
+	// known-trusted hostnames in split-horizon DNS environments where
+	// the hostname legitimately resolves to a private IP only on the
+	// control-plane network. See `docs/runbooks/webhook-dns-validation.md`
+	// §4b for the use case. Production wiring (env var + Config field)
+	// follows in a later commit; tests inject this field directly.
+	WebhookAllowedDomains []string
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier
