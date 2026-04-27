@@ -127,7 +127,12 @@ Plus, per release tag:
   `ghcr.io/apet97/go-clockify:v<version>` carrying a cosign signature,
   SPDX SBOM attestation, and SLSA build provenance attestation.
 - An npm wrapper package (publish gated on `NPM_TOKEN` being set).
-- A signed `SHA256SUMS.txt` covering every binary in the release.
+- An unsigned `SHA256SUMS.txt` listing every binary in the release.
+  Each row lets `sha256sum -c` cross-check a downloaded binary
+  against the one goreleaser staged. The trust anchor is the
+  per-binary `.sigstore.json` cosign bundle, not the checksum
+  file itself — goreleaser's `signs:` block only signs
+  `artifacts: binary`.
 
 Verification steps live in [docs/verification.md](verification.md). A
 post-release smoke job (`.github/workflows/release-smoke.yml`)

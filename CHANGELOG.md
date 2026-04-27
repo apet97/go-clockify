@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release-policy.md` SHA256SUMS.txt described as
+  unsigned manifest, not "signed" file.** The Release artifacts
+  trailer said "A signed `SHA256SUMS.txt` covering every binary
+  in the release", but the canonical goreleaser config has
+  `signs: cosign-keyless` with `artifacts: binary` — only the
+  binaries are cosign-signed (per-binary `.sigstore.json`
+  bundles). The checksum file itself is unsigned; its role is
+  letting `sha256sum -c` cross-check downloads against
+  goreleaser's staged hashes once a binary is independently
+  verified via cosign. iter110's verify-release.md fix already
+  pivoted to per-binary verification — this commit closes the
+  parallel claim in release-policy.md so a reviewer auditing
+  release-artifact provenance no longer infers a signature on
+  SHA256SUMS.txt that doesn't exist.
 - **`README.md` Troubleshooting "Stale tool list" entry matches
   reality.** The Troubleshooting line said "Stdio clients receive
   `notifications/tools/list_changed` after activation; HTTP
