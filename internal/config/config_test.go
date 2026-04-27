@@ -1,6 +1,7 @@
 package config
 
 import (
+	"maps"
 	"os"
 	"strings"
 	"testing"
@@ -1196,9 +1197,7 @@ func TestLoad_SanitizeUpstreamErrors_HostedProfileDefault(t *testing.T) {
 				"MCP_PROFILE":      c.profile,
 			}
 			if isHostedProfile(c.profile) {
-				for k, v := range hostedProfileEnv {
-					env[k] = v
-				}
+				maps.Copy(env, hostedProfileEnv)
 			}
 			setEnvs(t, env)
 			cfg, err := Load()
@@ -1252,9 +1251,7 @@ func TestLoad_WebhookValidateDNS_HostedProfileDefault(t *testing.T) {
 				"MCP_PROFILE":      c.profile,
 			}
 			if isHostedProfile(c.profile) {
-				for k, v := range hostedProfileEnv {
-					env[k] = v
-				}
+				maps.Copy(env, hostedProfileEnv)
 			}
 			setEnvs(t, env)
 			cfg, err := Load()
@@ -1277,9 +1274,7 @@ func TestLoad_SanitizeUpstreamErrors_ExplicitOverride(t *testing.T) {
 		"MCP_PROFILE":                       "shared-service",
 		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS": "0",
 	}
-	for k, v := range hostedProfileEnv {
-		env[k] = v
-	}
+	maps.Copy(env, hostedProfileEnv)
 	setEnvs(t, env)
 	cfg, err := Load()
 	if err != nil {

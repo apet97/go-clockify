@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validate-before-concat in case `ResolveWorkspaceID` returns an
   auto-detected ID from a compromised upstream.
 
+### Changed
+
+- **`config_test.go` uses `maps.Copy` for fixture overlays.** Three
+  `for k, v := range hostedProfileEnv { env[k] = v }` loops added
+  during the audit-finding wave (Wave G + H) replaced with the
+  idiomatic `maps.Copy` call. Functionally equivalent; clears the
+  `mapsloop` lint hint.
+
 ### Fixed
 
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
