@@ -110,10 +110,11 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 			return tools.ActivationResult{}, err
 		}
 		return tools.ActivationResult{
-			Kind:      "group",
-			Name:      group,
-			Group:     group,
-			ToolCount: len(descriptors),
+			Kind:           "group",
+			Name:           group,
+			Group:          group,
+			ToolCount:      len(descriptors),
+			ActivatedTools: toolNames(descriptors),
 		}, nil
 	}
 
@@ -122,7 +123,12 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 			if err := server.ActivateTier1Tool(name); err != nil {
 				return tools.ActivationResult{}, err
 			}
-			return tools.ActivationResult{Kind: "tool", Name: name, ToolCount: 1}, nil
+			return tools.ActivationResult{
+				Kind:           "tool",
+				Name:           name,
+				ToolCount:      1,
+				ActivatedTools: []string{name},
+			}, nil
 		}
 		for groupName := range tools.Tier2Groups {
 			descriptors, ok := service.Tier2Handlers(groupName)
@@ -137,10 +143,11 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 					return tools.ActivationResult{}, err
 				}
 				return tools.ActivationResult{
-					Kind:      "tool",
-					Name:      name,
-					Group:     groupName,
-					ToolCount: len(descriptors),
+					Kind:           "tool",
+					Name:           name,
+					Group:          groupName,
+					ToolCount:      len(descriptors),
+					ActivatedTools: toolNames(descriptors),
 				}, nil
 			}
 		}
@@ -148,6 +155,18 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	}
 
 	return server
+}
+
+// toolNames extracts the descriptor names so the activation result can
+// enumerate exactly which tools the LLM just brought online. Used by both
+// activate_group and activate_tool callbacks; output ordering matches the
+// descriptor builder's declaration order, which is stable per build.
+func toolNames(descriptors []mcp.ToolDescriptor) []string {
+	out := make([]string, len(descriptors))
+	for i, d := range descriptors {
+		out[i] = d.Tool.Name
+	}
+	return out
 }
 
 func bootstrapDefaultTenant(store controlplane.Store, cfg config.Config) error {

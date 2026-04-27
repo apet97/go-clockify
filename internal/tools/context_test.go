@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -257,6 +258,78 @@ func TestSearchToolsActivateTool(t *testing.T) {
 	}
 	if data["group"] != "invoices" {
 		t.Fatalf("expected group=invoices, got %v", data["group"])
+	}
+}
+
+// TestSearchToolsActivateToolEnumeratesGroup locks in the audit-finding-1
+// fix: when an LLM activates a single Tier-2 tool name, the response must
+// surface the entire containing group so the LLM sees what other
+// capabilities it just gained. Pre-fix the message said only "12 tools
+// now available" without naming them.
+func TestSearchToolsActivateToolEnumeratesGroup(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	siblings := []string{
+		"clockify_send_invoice",
+		"clockify_mark_invoice_paid",
+		"clockify_delete_invoice",
+	}
+	svc.ActivateTool = func(_ context.Context, name string) (ActivationResult, error) {
+		return ActivationResult{
+			Kind:           "tool",
+			Name:           name,
+			Group:          "invoices",
+			ToolCount:      len(siblings),
+			ActivatedTools: siblings,
+		}, nil
+	}
+
+	result, err := svc.SearchTools(context.Background(), map[string]any{
+		"activate_tool": "clockify_send_invoice",
+	})
+	if err != nil {
+		t.Fatalf("activate tool failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	tools, ok := data["activated_tools"].([]string)
+	if !ok {
+		t.Fatalf("activated_tools missing or wrong type: %T %v", data["activated_tools"], data["activated_tools"])
+	}
+	if len(tools) != len(siblings) {
+		t.Fatalf("expected %d activated tools, got %d", len(siblings), len(tools))
+	}
+	msg, _ := data["activation_message"].(string)
+	for _, sibling := range siblings {
+		if !strings.Contains(msg, sibling) {
+			t.Errorf("activation_message %q must enumerate sibling %q", msg, sibling)
+		}
+	}
+}
+
+// TestSearchToolsActivateGroupEnumerates covers the activate_group
+// branch — same enumeration contract as the tool-name branch above.
+func TestSearchToolsActivateGroupEnumerates(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	members := []string{"clockify_create_webhook", "clockify_test_webhook"}
+	svc.ActivateGroup = func(_ context.Context, name string) (ActivationResult, error) {
+		return ActivationResult{
+			Kind:           "group",
+			Name:           name,
+			Group:          name,
+			ToolCount:      len(members),
+			ActivatedTools: members,
+		}, nil
+	}
+
+	result, err := svc.SearchTools(context.Background(), map[string]any{
+		"activate_group": "webhooks",
+	})
+	if err != nil {
+		t.Fatalf("activate group failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	tools, ok := data["activated_tools"].([]string)
+	if !ok || len(tools) != len(members) {
+		t.Fatalf("expected %d activated_tools, got %T %v", len(members), data["activated_tools"], data["activated_tools"])
 	}
 }
 

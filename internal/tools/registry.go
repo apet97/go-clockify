@@ -173,10 +173,10 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_policy_info", "Display effective policy configuration", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 			return s.PolicyInfo(ctx)
 		}},
-		{Tool: toolRO("clockify_search_tools", "Search and discover available tools by keyword", map[string]any{"type": "object", "properties": map[string]any{
+		{Tool: toolRO("clockify_search_tools", "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.", map[string]any{"type": "object", "properties": map[string]any{
 			"query":          map[string]any{"type": "string", "description": "Search query for tools"},
-			"activate_group": map[string]any{"type": "string"},
-			"activate_tool":  map[string]any{"type": "string"},
+			"activate_group": map[string]any{"type": "string", "description": "Activate every tool in the named Tier-2 group (e.g. \"invoices\")"},
+			"activate_tool":  map[string]any{"type": "string", "description": "Activate the Tier-2 group that contains the named tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group). For a single Tier-1 tool name, only that tool is activated."},
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SearchTools(ctx, args)
 		}},

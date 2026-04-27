@@ -2273,7 +2273,7 @@
     },
     {
       "name": "clockify_search_tools",
-      "description": "Search and discover available tools by keyword",
+      "description": "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -2283,9 +2283,11 @@
         "additionalProperties": false,
         "properties": {
           "activate_group": {
+            "description": "Activate every tool in the named Tier-2 group (e.g. \"invoices\")",
             "type": "string"
           },
           "activate_tool": {
+            "description": "Activate the Tier-2 group that contains the named tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group). For a single Tier-1 tool name, only that tool is activated.",
             "type": "string"
           },
           "query": {

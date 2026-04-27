@@ -82,13 +82,10 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
-		return ok("clockify_search_tools", map[string]any{
-			"activated":          result.Name,
-			"activation_type":    result.Kind,
-			"group":              result.Group,
-			"tool_count":         result.ToolCount,
-			"activation_message": fmt.Sprintf("Activated %d tools from group %q", result.ToolCount, result.Group),
-		}, nil), nil
+		return ok("clockify_search_tools", activationPayload(result, fmt.Sprintf(
+			"Activated group %q (%d tools now available): %s",
+			result.Group, result.ToolCount, strings.Join(result.ActivatedTools, ", "),
+		)), nil), nil
 	}
 	if activateTool != "" {
 		if s.ActivateTool == nil {
@@ -98,17 +95,19 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
-		message := fmt.Sprintf("Activated tool %q", result.Name)
+		// Tier-1 activation has no Group; Tier-2 tool-name activation
+		// brings the entire containing group online. The enumerated
+		// list makes that contract visible to the LLM (audit finding 1).
+		var message string
 		if result.Group != "" {
-			message = fmt.Sprintf("Activated tool %q via group %q (%d tools now available)", result.Name, result.Group, result.ToolCount)
+			message = fmt.Sprintf(
+				"Activated tool %q via group %q — the entire group is now available (%d tools): %s",
+				result.Name, result.Group, result.ToolCount, strings.Join(result.ActivatedTools, ", "),
+			)
+		} else {
+			message = fmt.Sprintf("Activated tool %q", result.Name)
 		}
-		return ok("clockify_search_tools", map[string]any{
-			"activated":          result.Name,
-			"activation_type":    result.Kind,
-			"group":              result.Group,
-			"tool_count":         result.ToolCount,
-			"activation_message": message,
-		}, nil), nil
+		return ok("clockify_search_tools", activationPayload(result, message), nil), nil
 	}
 
 	query := stringArg(args, "query")
@@ -167,6 +166,26 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		"by_domain":   grouped,
 		"all_results": results,
 	}, nil), nil
+}
+
+// activationPayload assembles the data envelope returned by SearchTools
+// for any activation request. Centralised so the activate_group and
+// activate_tool branches stay schema-aligned and so the activated_tools
+// list is always present (empty for Tier-1 single-tool activation, full
+// group enumeration for Tier-2).
+func activationPayload(result ActivationResult, message string) map[string]any {
+	tools := result.ActivatedTools
+	if tools == nil {
+		tools = []string{}
+	}
+	return map[string]any{
+		"activated":          result.Name,
+		"activation_type":    result.Kind,
+		"group":              result.Group,
+		"tool_count":         result.ToolCount,
+		"activated_tools":    tools,
+		"activation_message": message,
+	}
 }
 
 func containsKeyword(keywords []string, query string) bool {

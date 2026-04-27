@@ -76,10 +76,18 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 }
 
 type ActivationResult struct {
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	Group     string `json:"group,omitempty"`
-	ToolCount int    `json:"toolCount"`
+	Kind  string `json:"kind"`
+	Name  string `json:"name"`
+	Group string `json:"group,omitempty"`
+	// ToolCount is len(ActivatedTools); kept as a separate field for
+	// backwards compatibility with clients that read it directly.
+	ToolCount int `json:"toolCount"`
+	// ActivatedTools enumerates every tool name brought online by this
+	// activation. For Tier-2 tool-name activations, this is the full
+	// containing group — the LLM sees exactly what other capabilities
+	// it just gained alongside the requested one. Empty for Tier-1
+	// single-tool activation by design.
+	ActivatedTools []string `json:"activatedTools,omitempty"`
 }
 
 type ResultEnvelope struct {

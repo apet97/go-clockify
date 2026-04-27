@@ -41,7 +41,7 @@ Tool tiers:
   - Tier 1 tools are registered at startup and visible in tools/list.
   - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
   - Use 'clockify_search_tools' to discover tools by keyword or group name.
-  - Activate Tier 2 tools with 'clockify_search_tools' using 'activate_group' or 'activate_tool' before calling them.
+  - Activate Tier 2 tools with 'clockify_search_tools' using 'activate_group' (preferred) or 'activate_tool' before calling them. Each Tier-2 group is the unit of activation: passing a single tool name via 'activate_tool' brings the entire containing group online, and the response enumerates every newly-available tool name.
 
 Safety:
   - The server supports four policy modes: read_only, safe_core, standard (default), full.
