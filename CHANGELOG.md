@@ -198,6 +198,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carries `RiskAdmin | RiskPermissionChange` per the descriptor
   taxonomy — defence-in-depth percent-encoding is doubly welcome
   here.
+- **`tier2_webhooks.go` migrated to `paths.Workspace`.** All 9
+  concats — list/get/create/update/delete + ListWebhookEvents
+  (special `/webhooks/events` literal sub-path) + TestWebhook
+  (which has separate dry-run preview path and `/test` POST path).
+  `DeleteWebhook` builds `webhookPath` once for the dry-run GET +
+  DELETE pair. Webhooks carry `RiskExternalSideEffect`; the helper
+  re-validates the workspace ID even though the literal-IP webhook
+  URL check still runs in the body.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

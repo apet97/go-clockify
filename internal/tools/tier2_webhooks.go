@@ -11,6 +11,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -306,8 +307,12 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 		"page-size": strconv.Itoa(pageSize),
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var webhooks []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks", query, &webhooks); err != nil {
+	if err := s.Client.Get(ctx, path, query, &webhooks); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -331,8 +336,12 @@ func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks", webhookID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var webhook map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID, nil, &webhook); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &webhook); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -367,8 +376,12 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 		payload["name"] = name
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/webhooks", payload, &result); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -405,8 +418,12 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, fmt.Errorf("at least one field (url, events, name) must be provided for update")
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks", webhookID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID, payload, &result); err != nil {
+	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -424,10 +441,14 @@ func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	webhookPath, err := paths.Workspace(wsID, "webhooks", webhookID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if dryrun.Enabled(args) {
 		var webhook map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID, nil, &webhook); err != nil {
+		if err := s.Client.Get(ctx, webhookPath, nil, &webhook); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -438,7 +459,7 @@ func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (Resul
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID); err != nil {
+	if err := s.Client.Delete(ctx, webhookPath); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -452,8 +473,12 @@ func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks", "events")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var events []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks/events", nil, &events); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &events); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -476,8 +501,12 @@ func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	if dryrun.Enabled(args) {
+		previewPath, err := paths.Workspace(wsID, "webhooks", webhookID)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 		var webhook map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID, nil, &webhook); err != nil {
+		if err := s.Client.Get(ctx, previewPath, nil, &webhook); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -491,8 +520,12 @@ func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultE
 		}, nil
 	}
 
+	testPath, err := paths.Workspace(wsID, "webhooks", webhookID, "test")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/webhooks/"+webhookID+"/test", nil, &result); err != nil {
+	if err := s.Client.Post(ctx, testPath, nil, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
