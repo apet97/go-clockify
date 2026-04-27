@@ -4,7 +4,7 @@ name: Reproducibility
 # byte-for-byte from source on a clean runner. Runs automatically when a
 # release is published and can be dispatched manually against any tag.
 #
-# The recipe (see docs/reproducibility.md for full details):
+# The recipe (full detail in this comment block):
 #
 #   1. Check out the repo at the release tag with full history so
 #      `git show -s` can resolve the commit timestamp.
@@ -24,7 +24,7 @@ name: Reproducibility
 # A failure in this job means either (a) the release toolchain drifted,
 # (b) goreleaser added a new transform we haven't captured, or (c) the
 # build is genuinely non-reproducible on the target platform — in which
-# case docs/reproducibility.md should be updated to document the gap and
+# case this comment block should be updated to document the gap and
 # the matrix entry marked `continue-on-error: true` for that platform.
 #
 # Trigger model. `release: [published]` fires only when a release is

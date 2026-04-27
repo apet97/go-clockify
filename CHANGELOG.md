@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **Reproducibility workflow drops phantom `docs/reproducibility.md`
+  pointers.** `.github/workflows/reproducibility.yml` had two
+  references to a `docs/reproducibility.md` operator doc that was
+  never authored — the workflow's own comment block already
+  contains the full 6-step recipe, making the external pointer
+  redundant. Both repointed to "this comment block": the recipe
+  intro now says "full detail in this comment block"; the
+  failure-recovery instruction now says "this comment block
+  should be updated to document the gap" instead of pointing at
+  a 404. Pure operator-doc fix.
 - **Phantom `docs/troubleshooting.md` references dropped.** Two ADRs
   (0004 + 0005) listed `docs/troubleshooting.md` in their Related-docs
   blocks; ADR-0005 even named a specific section ("Stale tool list").
