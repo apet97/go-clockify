@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/operators/README.md` landing page lists profile coverage +
+  drops legacy-HTTP reference.** The operator-guide landing page
+  described the self-hosted guide as covering "stdio or legacy
+  HTTP" — same drift iter85 closed in self-hosted.md, persisting
+  one level up at the index. Page now names the registered
+  profile(s) each guide covers (shared-service.md →
+  `shared-service` + `prod-postgres`; self-hosted.md →
+  `local-stdio` + `single-tenant-http`), drops the legacy-http
+  reference in favour of `streamable_http`, and notes the
+  fifth profile (`private-network-grpc`) lives in deploy/
+  rather than under either operator guide. Pure operator-doc
+  fix; closes the iter84-86 chain at the operator landing-page
+  level.
 - **`docs/operators/shared-service.md` Canonical Configuration leads
   with `--profile=` apply commands.** The shared-service operator
   guide pointed operators at `deploy/examples/env.shared-service.example`
