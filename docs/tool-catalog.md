@@ -192,3 +192,32 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_test_webhook` | no | no | no | `write`, `external_side_effect` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
 | `clockify_update_webhook` | no | no | no | `write`, `external_side_effect` | Update an existing webhook |
 
+
+## Audit-tracked argument capture
+
+Tools below record action-defining arguments alongside the
+default `*_id` capture in audit events. See
+`internal/mcp/audit.go` for the recorder; the per-tool
+`audit_keys` list also surfaces in `docs/tool-catalog.json`.
+
+| Tool | Tier | Audit Keys |
+|------|------|------------|
+| `clockify_add_invoice_item` | 2 | `invoice_id`, `description`, `quantity`, `unit_price` |
+| `clockify_add_user_to_group` | 2 | `group_id`, `user_id` |
+| `clockify_create_invoice` | 2 | `client_id`, `currency`, `due_date` |
+| `clockify_create_user_group` | 2 | `name` |
+| `clockify_create_webhook` | 2 | `url`, `events` |
+| `clockify_deactivate_user` | 2 | `user_id` |
+| `clockify_delete_invoice` | 2 | `invoice_id` |
+| `clockify_delete_invoice_item` | 2 | `invoice_id`, `item_id` |
+| `clockify_delete_user_group` | 2 | `group_id` |
+| `clockify_delete_webhook` | 2 | `webhook_id` |
+| `clockify_mark_invoice_paid` | 2 | `invoice_id` |
+| `clockify_remove_user_from_group` | 2 | `group_id`, `user_id` |
+| `clockify_send_invoice` | 2 | `invoice_id` |
+| `clockify_test_webhook` | 2 | `webhook_id` |
+| `clockify_update_invoice` | 2 | `invoice_id`, `status`, `client_id` |
+| `clockify_update_invoice_item` | 2 | `invoice_id`, `item_id`, `description`, `quantity`, `unit_price` |
+| `clockify_update_user_group` | 2 | `group_id`, `name` |
+| `clockify_update_user_role` | 2 | `user_id`, `role` |
+| `clockify_update_webhook` | 2 | `webhook_id`, `url`, `events` |

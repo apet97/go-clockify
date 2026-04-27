@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`docs/tool-catalog.md` adds Audit-tracked argument capture
+  section.** Iter27 (97c20da) emitted `risk_class` and `audit_keys`
+  on every tool descriptor in `docs/tool-catalog.json`; iter31
+  (c70360a) added the Risk column to the markdown rendering, but
+  `audit_keys` had no markdown surface — readers without `jq`
+  couldn't see which tools record action-defining arguments
+  (role, status, quantity, unit_price) alongside the default `*_id`
+  capture in audit events. New focused section after the Tier-2
+  tables lists the 19 tools that carry `audit_keys`, sorted by
+  tier+name. Symmetric completion of the iter27→iter31 catalog
+  rendering chain; pure docs change. Compliance reviewers now have
+  a one-screen view of which mutations emit enriched audit events.
 - **`SECURITY.md` Dry-run bullet expanded to cover non-destructive RW.**
   The Security Features "Dry-run" entry was scoped to "every
   destructive operation", but audit Finding 7 added `dry_run:true`

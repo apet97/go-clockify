@@ -193,7 +193,60 @@ func writeMarkdown(path string, c catalog) error {
 		b.WriteString("\n")
 	}
 
+	writeAuditKeysSection(&b, c)
+
 	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
+// writeAuditKeysSection emits a focused table of every tool that
+// carries action-defining audit_keys beyond the default *_id capture.
+// The audit recorder (internal/mcp/audit.go) consumes these keys to
+// record what change was applied (role, status, quantity, unit_price)
+// alongside the IDs that were touched. Surfacing them in the catalog
+// gives compliance reviewers a one-screen view of which mutations
+// emit enriched audit events without grepping source. Tools without
+// audit_keys are omitted to keep the section tight; consumers needing
+// the full per-tool field appear in tool-catalog.json.
+func writeAuditKeysSection(b *strings.Builder, c catalog) {
+	type row struct {
+		tier int
+		tool catalogTool
+	}
+	var rows []row
+	for _, t := range c.Tier1 {
+		if len(t.AuditKeys) > 0 {
+			rows = append(rows, row{1, t})
+		}
+	}
+	for _, t := range c.Tier2 {
+		if len(t.AuditKeys) > 0 {
+			rows = append(rows, row{2, t})
+		}
+	}
+	if len(rows) == 0 {
+		return
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].tier != rows[j].tier {
+			return rows[i].tier < rows[j].tier
+		}
+		return rows[i].tool.Name < rows[j].tool.Name
+	})
+
+	b.WriteString("\n## Audit-tracked argument capture\n\n")
+	b.WriteString("Tools below record action-defining arguments alongside the\n")
+	b.WriteString("default `*_id` capture in audit events. See\n")
+	b.WriteString("`internal/mcp/audit.go` for the recorder; the per-tool\n")
+	b.WriteString("`audit_keys` list also surfaces in `docs/tool-catalog.json`.\n\n")
+	b.WriteString("| Tool | Tier | Audit Keys |\n")
+	b.WriteString("|------|------|------------|\n")
+	for _, r := range rows {
+		parts := make([]string, len(r.tool.AuditKeys))
+		for i, k := range r.tool.AuditKeys {
+			parts[i] = "`" + k + "`"
+		}
+		fmt.Fprintf(b, "| `%s` | %d | %s |\n", r.tool.Name, r.tier, strings.Join(parts, ", "))
+	}
 }
 
 func writeTable(b *strings.Builder, rows []catalogTool, hideGroup bool) {
