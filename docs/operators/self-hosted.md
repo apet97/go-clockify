@@ -3,9 +3,12 @@
 This guide is for individual users or small teams operating `clockify-mcp-go` locally or in a private cloud environment.
 
 ## Architecture
-- **Transport:** `stdio` or `http` (Standard)
+- **Transport:** `stdio` (single-user, MCP client subprocess) or
+  `streamable_http` (small-team HTTP, behind a TLS-terminating proxy).
+  The legacy `http` transport is deprecated and rejected by
+  `MCP_HTTP_LEGACY_POLICY=deny`; do not use for new setups.
 - **Control Plane:** `file://` or `memory` (Safe for single-process)
-- **Auth:** N/A for `stdio` or `static_bearer` for `http`
+- **Auth:** N/A for `stdio`; `static_bearer` for `streamable_http`.
 - **Infrastructure:** Docker, Docker Compose, or local process
 
 ## Key Responsibilities
@@ -16,7 +19,7 @@ This guide is for individual users or small teams operating `clockify-mcp-go` lo
 
 ### 2. Local Security
 - Protect your `CLOCKIFY_API_KEY`. Do not commit it to version control.
-- If using the `http` transport, generate a strong `MCP_BEARER_TOKEN` and distribute it to your clients.
+- If using the `streamable_http` transport, generate a strong (≥16-char) `MCP_BEARER_TOKEN` and distribute it to your clients.
 
 ### 3. Client Configuration
 - Configure your local MCP client (Claude Desktop, Cursor, etc.) to use the correct transport and credentials.
@@ -27,6 +30,24 @@ This guide is for individual users or small teams operating `clockify-mcp-go` lo
 - Re-run `go install` or pull the latest Docker image to update.
 
 ## Recommended Configuration
-Use the `deploy/examples/env.self-hosted.example` preset.
-- **`CLOCKIFY_POLICY=standard`**: Suitable for individual power users.
-- **`MCP_TRANSPORT=stdio`**: Recommended for the simplest setup with local clients.
+
+Apply one of the two registered profiles that match this guide's
+shape (see [`docs/deploy/`](../deploy/) for full profile notes):
+
+- `clockify-mcp --profile=local-stdio` — single user, MCP client
+  subprocess, no auth. Sets `MCP_TRANSPORT=stdio`,
+  `CLOCKIFY_POLICY=safe_core`,
+  `MCP_AUDIT_DURABILITY=best_effort`.
+- `clockify-mcp --profile=single-tenant-http` — small-team HTTP,
+  static-bearer auth, file-backed control plane. Sets
+  `MCP_TRANSPORT=streamable_http`, `MCP_AUTH_MODE=static_bearer`,
+  `MCP_HTTP_LEGACY_POLICY=deny`,
+  `CLOCKIFY_POLICY=time_tracking_safe`.
+
+The legacy `deploy/examples/env.self-hosted.example` preset
+pre-dates the profile system and is preserved for operator muscle
+memory; new setups should pick a profile name above and override
+individual env vars (e.g. `CLOCKIFY_POLICY=standard` for individual
+power users) rather than start from the legacy file. See
+[`docs/deploy/profile-self-hosted.md`](../deploy/profile-self-hosted.md)
+for the upgrade path.

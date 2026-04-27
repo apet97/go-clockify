@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/operators/self-hosted.md` updated to the profile system +
+  `streamable_http`.** The Architecture section recommended
+  `MCP_TRANSPORT=stdio or http (Standard)` but the legacy `http`
+  transport has been deprecated since v1.0.1 (covered by
+  `MCP_HTTP_LEGACY_POLICY=deny` in the `single-tenant-http`
+  profile). The Recommended Configuration section pointed at
+  `deploy/examples/env.self-hosted.example` directly without
+  referencing the Wave I profile system. iter84 mapped this guide
+  to the `local-stdio` and `single-tenant-http` profiles; this
+  commit updates the doc to match: Architecture now names
+  `stdio` and `streamable_http` as the two transports (legacy
+  `http` flagged as deprecated), Recommended Configuration leads
+  with `--profile=local-stdio` and `--profile=single-tenant-http`
+  apply commands, and the legacy env file is described as
+  preserved-for-muscle-memory with a pointer to
+  `deploy/profile-self-hosted.md` for the upgrade path. Pure
+  operator-doc fix; no behaviour change.
 - **`docs/README.md` Operator Guides section no longer says "two
   supported profiles".** The intro line conflated "operator-guide
   categories" (shared-service vs. self-hosted shapes) with
