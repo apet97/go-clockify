@@ -34,6 +34,12 @@ import (
 // MCP's Tool struct plus the ToolDescriptor hints and the group
 // membership so consumers can filter by read/write/destructive or
 // tier without parsing Markdown.
+//
+// RiskClass and AuditKeys surface the structured taxonomy added in
+// the 2026-04-27 audit-finding wave so consumers (policy, ops
+// dashboards, agent harnesses) can filter on billing / admin /
+// permission_change / external_side_effect without grep-ing source.
+// The taxonomy mapping mirrors internal/tools/risk_overrides.go.
 type catalogTool struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description,omitempty"`
@@ -42,9 +48,40 @@ type catalogTool struct {
 	ReadOnly     bool           `json:"read_only"`
 	Destructive  bool           `json:"destructive"`
 	Idempotent   bool           `json:"idempotent"`
+	RiskClass    []string       `json:"risk_class,omitempty"`
+	AuditKeys    []string       `json:"audit_keys,omitempty"`
 	InputSchema  map[string]any `json:"input_schema,omitempty"`
 	OutputSchema map[string]any `json:"output_schema,omitempty"`
 	Annotations  map[string]any `json:"annotations,omitempty"`
+}
+
+// riskClassNames decomposes a mcp.RiskClass bitmask into the stable
+// lowercase taxonomy names emitted in the catalog. Order is fixed so
+// catalog output is byte-deterministic.
+func riskClassNames(rc mcp.RiskClass) []string {
+	if rc == 0 {
+		return nil
+	}
+	type entry struct {
+		bit  mcp.RiskClass
+		name string
+	}
+	all := []entry{
+		{mcp.RiskRead, "read"},
+		{mcp.RiskWrite, "write"},
+		{mcp.RiskBilling, "billing"},
+		{mcp.RiskAdmin, "admin"},
+		{mcp.RiskPermissionChange, "permission_change"},
+		{mcp.RiskExternalSideEffect, "external_side_effect"},
+		{mcp.RiskDestructive, "destructive"},
+	}
+	out := make([]string, 0, 2)
+	for _, e := range all {
+		if rc.Has(e.bit) {
+			out = append(out, e.name)
+		}
+	}
+	return out
 }
 
 type catalog struct {
@@ -88,6 +125,8 @@ func toCatalog(ds []mcp.ToolDescriptor, group string, tier int) []catalogTool {
 			ReadOnly:     d.ReadOnlyHint,
 			Destructive:  d.DestructiveHint,
 			Idempotent:   d.IdempotentHint,
+			RiskClass:    riskClassNames(d.RiskClass),
+			AuditKeys:    d.AuditKeys,
 			InputSchema:  d.Tool.InputSchema,
 			OutputSchema: d.Tool.OutputSchema,
 			Annotations:  d.Tool.Annotations,

@@ -83,6 +83,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a for-range scan with break. Pure refactor — no behaviour change.
   Clears the `minmax` and `slicescontains` hints on this file.
 
+### Added
+
+- **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
+  The catalog generator now decomposes every tool's `mcp.RiskClass`
+  bitmask into stable lowercase taxonomy names (`read`, `write`,
+  `billing`, `admin`, `permission_change`, `external_side_effect`,
+  `destructive`) and surfaces the `AuditKeys` slice. Consumers
+  (policy agents, ops dashboards, audit harnesses) can now filter
+  on the structured taxonomy without grep-ing source. Markdown
+  output is unchanged — JSON is the machine-readable surface.
+
 ### Fixed
 
 - **`normalizeEndpoint` comment matches behaviour.** Doc now

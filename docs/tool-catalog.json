@@ -9,6 +9,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -143,6 +146,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -209,6 +215,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -302,6 +311,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -368,6 +380,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -446,6 +461,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -508,6 +526,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -564,6 +585,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -777,6 +801,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -946,6 +973,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1056,6 +1086,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1134,6 +1167,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -1179,6 +1215,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1253,6 +1292,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1383,6 +1425,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1469,6 +1514,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1543,6 +1591,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1628,6 +1679,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1706,6 +1760,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -1767,6 +1824,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1912,6 +1972,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -1957,6 +2020,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2221,6 +2287,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2279,6 +2348,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2338,6 +2410,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2451,6 +2526,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2501,6 +2579,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2707,6 +2788,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2827,6 +2911,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -2872,6 +2959,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2988,6 +3078,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3119,6 +3212,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3354,6 +3450,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -3431,6 +3530,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3488,6 +3590,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3541,6 +3646,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3603,6 +3711,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3664,6 +3775,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3723,6 +3837,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3776,6 +3893,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3846,6 +3966,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3903,6 +4026,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3956,6 +4082,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4014,6 +4143,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4080,6 +4212,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4145,6 +4280,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4216,6 +4354,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4270,6 +4411,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4326,6 +4470,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4382,6 +4529,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4448,6 +4598,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4501,6 +4654,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -4546,6 +4702,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4604,6 +4763,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4672,6 +4834,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4728,6 +4893,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4791,6 +4959,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4852,6 +5023,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4909,6 +5083,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4966,6 +5143,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5019,6 +5199,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -5064,6 +5247,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -5109,6 +5295,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5172,6 +5361,16 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "description",
+        "quantity",
+        "unit_price"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5234,6 +5433,15 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "client_id",
+        "currency",
+        "due_date"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5300,6 +5508,13 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "billing",
+        "destructive"
+      ],
+      "audit_keys": [
+        "invoice_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5356,6 +5571,14 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "billing",
+        "destructive"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "item_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5416,6 +5639,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5469,6 +5695,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5531,6 +5760,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5584,6 +5816,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5642,6 +5877,13 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5699,6 +5941,14 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "invoice_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5755,6 +6005,15 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "status",
+        "client_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5824,6 +6083,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "item_id",
+        "description",
+        "quantity",
+        "unit_price"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5890,6 +6160,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5947,6 +6220,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6016,6 +6292,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6069,6 +6348,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -6114,6 +6396,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6179,6 +6464,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6242,6 +6530,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6318,6 +6609,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6383,6 +6677,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6440,6 +6737,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6503,6 +6803,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6556,6 +6859,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6607,6 +6913,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6660,6 +6969,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6726,6 +7038,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6782,6 +7097,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6849,6 +7167,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6913,6 +7234,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6970,6 +7294,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7027,6 +7354,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7080,6 +7410,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7138,6 +7471,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7201,6 +7537,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7262,6 +7601,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7337,6 +7679,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7408,6 +7753,9 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "destructive"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7469,6 +7817,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7530,6 +7881,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7583,6 +7937,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7640,6 +7997,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7696,6 +8056,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7760,6 +8123,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7818,6 +8184,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7892,6 +8261,9 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7961,6 +8333,14 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "group_id",
+        "user_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8020,6 +8400,13 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "name"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8074,6 +8461,13 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "user_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8132,6 +8526,13 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "admin",
+        "destructive"
+      ],
+      "audit_keys": [
+        "group_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8190,6 +8591,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8248,6 +8652,14 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "admin",
+        "destructive"
+      ],
+      "audit_keys": [
+        "group_id",
+        "user_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8311,6 +8723,14 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "group_id",
+        "name"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8370,6 +8790,15 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "user_id",
+        "role"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8435,6 +8864,14 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "url",
+        "events"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8501,6 +8938,13 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "risk_class": [
+        "external_side_effect",
+        "destructive"
+      ],
+      "audit_keys": [
+        "webhook_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8559,6 +9003,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8613,6 +9060,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -8658,6 +9108,9 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8716,6 +9169,13 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "webhook_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8774,6 +9234,15 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "risk_class": [
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "webhook_id",
+        "url",
+        "events"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
