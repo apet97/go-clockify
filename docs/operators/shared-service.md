@@ -34,7 +34,11 @@ This guide is for platform teams operating `clockify-mcp-go` as a multi-tenant s
     response bodies from MCP tool-error responses (full bodies still
     flow into slog).
   - `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` — DNS-resolve webhook hosts and
-    reject any private/reserved IP reply (SSRF protection).
+    reject any private/reserved IP reply (SSRF protection). Pair
+    with `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]` to
+    admit known-trusted hostnames whose split-horizon DNS reply
+    would otherwise look like a private IP — see
+    `docs/runbooks/webhook-dns-validation.md` §4b.
   - `CLOCKIFY_INSECURE=1` is **refused** at startup; remote HTTP
     leaks per-tenant API keys.
 

@@ -42,6 +42,13 @@ MCP_OIDC_AUDIENCE=clockify-mcp-shared
 # env var only when you understand the cross-tenant implications):
 #   CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1   (omit Clockify response bodies on the wire)
 #   CLOCKIFY_WEBHOOK_VALIDATE_DNS=1       (resolve webhook hosts; reject private/reserved replies)
+#
+# Optional escape hatch when the DNS gate is on (no profile default):
+#   CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=webhook.example.com,.internal.example.com
+#   (admit known-trusted hosts whose split-horizon DNS reply would
+#   otherwise look private; exact or leading-dot suffix; see
+#   docs/runbooks/webhook-dns-validation.md §4b)
+#
 # Refused outright under shared-service / prod-postgres:
 #   CLOCKIFY_INSECURE=1                   (remote HTTP would leak per-tenant API keys)
 
@@ -65,6 +72,7 @@ finding it was added to fix.
 | `CLOCKIFY_POLICY=time_tracking_safe` | Permit time-entry CRUD + tags; deny workspace-level project / client / task create writes. | The default `standard` policy lets an AI agent create projects in the operator's workspace without explicit consent. |
 | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` (profile default) | Tool-error responses to MCP clients omit upstream Clockify response bodies; full bodies still flow into server-side slog. | A 4xx body from Clockify can carry per-tenant identifiers; without sanitisation those leak across tenant boundaries via the MCP wire. |
 | `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` (profile default) | `CreateWebhook` / `UpdateWebhook` resolve the host and reject any reply containing a private, reserved, link-local, or loopback IP. | A hostname resolving to `169.254.169.254` (cloud metadata) or `10.0.0.x` turns the Clockify outbound webhook delivery into an SSRF probe across the hosted control plane. |
+| `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]` (no default) | Comma-separated escape-hatch list that bypasses the DNS gate above. Each entry matches exactly (`webhook.example.com`) or as a leading-dot suffix anchored at a full DNS label (`.example.com`). Use case: split-horizon DNS where a known-trusted hostname legitimately resolves to a private IP only on the control-plane network — see `docs/runbooks/webhook-dns-validation.md` §4b. | Without this hatch, operators on split-horizon DNS would have to disable `CLOCKIFY_WEBHOOK_VALIDATE_DNS` entirely (loose for every host) instead of admitting the one trusted hostname (tight for every other host). |
 | `CLOCKIFY_INSECURE=1` is **refused** | Profile rejects the override at startup with an actionable error. | Remote HTTP in a multi-tenant deployment leaks per-tenant Clockify API keys to anything in the network path. |
 
 The `time_tracking_safe` choice is the AI-facing default. Trusted-team

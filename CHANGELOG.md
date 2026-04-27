@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Hosted-profile docs reference the new
+  `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` escape hatch.**
+  `docs/operators/shared-service.md` and
+  `docs/deploy/production-profile-shared-service.md` previously
+  documented `CLOCKIFY_WEBHOOK_VALIDATE_DNS` without naming its
+  escape hatch — operators reading those docs would learn about the
+  DNS gate but not how to admit a known-trusted hostname stuck
+  behind split-horizon DNS. Both pages now point at the new env
+  var and link to the `webhook-dns-validation.md` §4b runbook.
+  Closes the doc-sync gap left after ab010e6 lit up the env
+  surface.
 - **`CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` env var lights up the
   webhook DNS-allowlist escape hatch.** Operators set a
   comma-separated list of hostnames that bypass the
