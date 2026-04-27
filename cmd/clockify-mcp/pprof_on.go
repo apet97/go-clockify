@@ -21,7 +21,10 @@ import (
 // Security: pprof endpoints are NOT gated behind the bearer token because
 // they live outside the /mcp handler. The whole point of the build tag is
 // that production binaries never link pprof; debug builds must only run on
-// trusted networks (loopback or firewalled) per docs/runbooks/oom-or-goroutine-leak.md.
+// trusted networks (loopback or firewalled) — `/debug/pprof/heap` and
+// `/debug/pprof/goroutine` leak process layout, allocation patterns, and
+// goroutine stacks (including handler frame strings) to anyone who can
+// reach the listener.
 func pprofExtras() []mcp.ExtraHandler {
 	slog.Warn("pprof_enabled",
 		"hint", "build tag pprof mounted /debug/pprof/* — do not run in production",

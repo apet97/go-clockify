@@ -18,6 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **`pprof_on.go` / `pprof_off.go` drop reference to never-written
+  `oom-or-goroutine-leak.md` runbook.** The original feat commit
+  (da2fa8b — "pprof endpoints behind -tags=pprof") promised an
+  operator runbook at `docs/runbooks/oom-or-goroutine-leak.md`
+  but the file was never authored. Two source comments still
+  pointed at the 404. Both rewritten to inline the security
+  caveat directly: pprof_off.go points at the pprof_on.go
+  doc-comment for the full security rationale; pprof_on.go now
+  spells out *what* `/debug/pprof/heap` and `/debug/pprof/goroutine`
+  leak (process layout, allocation patterns, handler frame
+  strings) instead of deferring to a phantom runbook. Operators
+  reading the source now get the why-trusted-network-only
+  explanation inline.
 - **Stale `w2-12-digest-pinning.md` runbook references repointed.**
   The runbook was renamed `w2-12-digest-pinning.md` →
   `image-digest-pinning.md` (already documented in CHANGELOG)
