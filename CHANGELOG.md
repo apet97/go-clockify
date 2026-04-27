@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`tests/load/README.md` and `.github/workflows/load.yml` cover
+  `ratelimit-reap-correctness`.** Both surfaces listed only 4
+  load scenarios (`steady`, `burst`, `tenant-mix`,
+  `per-token-saturation`) but `tests/load/main.go:63-136`
+  registers 5 — the 5th, `ratelimit-reap-correctness`, is the
+  two-phase scenario that verifies the per-subject limiter reaps
+  correctly: noisy tenant saturates, idles past one window, then
+  resumes; reap must restore full budget without affecting the
+  cold tenant. README's Running examples + Scenarios table and
+  the workflow's `workflow_dispatch` input description both
+  updated to match the canonical 5-scenario registry. Same iter136
+  / iter137 fictional-list drift class at the load-harness
+  surfaces.
 - **`.github/workflows/chaos.yml` workflow_dispatch description
   lists `upstream-429-concurrent`.** The scenario-input dropdown
   hint named only the original 5 scenarios (429-storm, 503-burst,

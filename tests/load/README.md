@@ -24,6 +24,7 @@ go run ./tests/load -scenario steady
 go run ./tests/load -scenario burst
 go run ./tests/load -scenario tenant-mix
 go run ./tests/load -scenario per-token-saturation
+go run ./tests/load -scenario ratelimit-reap-correctness
 ```
 
 ## Scenarios
@@ -34,6 +35,7 @@ go run ./tests/load -scenario per-token-saturation
 | `burst` | 5 tenants × 50 calls, no pacing | Maximum throughput with a small global concurrency cap (20). Stress test for the global semaphore layer. |
 | `tenant-mix` | 10 tenants, tenant-0 fires 5× | Realistic multi-tenant mix with one noisy neighbour. Should show per-token rejections concentrated on tenant-0 without starving the others. |
 | `per-token-saturation` | 4 tenants, tenant-0 fires 10× | **W2-09 acceptance scenario.** The noisy tenant is expected to exhaust its per-token budget while quiet tenants keep flowing at 100% success. The harness encodes an explicit acceptance check that the noisy tenant's per-token rejections exceed 3× the quiet average, otherwise it `log.Fatal`s. |
+| `ratelimit-reap-correctness` | 2 tenants, noisy tenant-0 saturates → idles past one window → resumes | Verifies the per-subject limiter reaps correctly: after the noisy tenant idles past one rate-limit window, the reap must restore its full budget while the cold tenant stays unaffected. Two-phase scenario; uses a short 1.5 s window so the reap completes in seconds. |
 
 ## Acceptance criteria
 

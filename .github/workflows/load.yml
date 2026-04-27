@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: "Scenario name (steady, burst, tenant-mix, per-token-saturation)"
+        description: "Scenario name (steady, burst, tenant-mix, per-token-saturation, ratelimit-reap-correctness)"
         required: true
         default: per-token-saturation
   schedule:
