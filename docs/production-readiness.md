@@ -97,9 +97,11 @@ recommended for any multi-process deployment.
 Versioning, support window, deprecation flow, and the definition of
 "breaking change" used by this project live in
 [`docs/release-policy.md`](release-policy.md). Short version: only
-the current minor (1.0.x today) is supported; when 1.1 ships, 1.0.x
-gets security-only fixes for one minor cycle and then EOLs. There is
-no LTS.
+the Active minor receives non-correctness changes; the prior minor
+is Superseded (operators upgrade rather than wait for backports);
+the line before that is patch-only for correctness regressions on
+the stable v1 wire format. See [`SUPPORT.md`](../SUPPORT.md) for the
+canonical version-status state. There is no LTS.
 
 ## Rollback
 

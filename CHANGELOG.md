@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docs/production-readiness.md` Upgrade path no longer anchors
+  at `1.0.x today`.** The Upgrade path section's short-version
+  paragraph said "only the current minor (1.0.x today) is
+  supported; when 1.1 ships, 1.0.x gets security-only fixes...".
+  This was anchored at the v1.0.x → v1.1 era — same drift iter89
+  caught in release-policy.md and iter90 caught in SECURITY.md
+  Supported Versions. Paragraph rewritten in abstract terms
+  (Active / Superseded / patch-only) and points at SUPPORT.md as
+  the canonical state, so future minors do not restale the doc.
+  Closes the iter48-era version sweep at the production-readiness
+  surface — the four canonical "what is supported" docs
+  (SUPPORT.md, release-policy.md, SECURITY.md,
+  production-readiness.md) now all agree.
+
 ### Security
 
 - **`SECURITY.md` Supported Versions table now lists `1.2.x` as
