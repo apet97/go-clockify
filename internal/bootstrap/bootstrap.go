@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 )
@@ -134,7 +135,7 @@ func ConfigFromEnv() (Config, error) {
 			return Config{}, fmt.Errorf("CLOCKIFY_BOOTSTRAP_TOOLS is required when mode is custom")
 		}
 		cfg.CustomTools = make(map[string]bool)
-		for _, t := range strings.Split(toolsStr, ",") {
+		for t := range strings.SplitSeq(toolsStr, ",") {
 			name := strings.TrimSpace(t)
 			if name != "" {
 				cfg.CustomTools[name] = true
@@ -189,9 +190,7 @@ func cloneBoolMap(in map[string]bool) map[string]bool {
 		return nil
 	}
 	out := make(map[string]bool, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

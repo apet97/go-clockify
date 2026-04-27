@@ -137,6 +137,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pre-allocated capacity hint. Pure refactor — no behaviour
   change. Clears the `stringsseq` and `mapsloop` gopls hints
   surfaced during the iter40 webhook-allowlist parser landing.
+- **`internal/bootstrap/bootstrap.go` modernised.** The
+  `CLOCKIFY_BOOTSTRAP_TOOLS` parser swaps
+  `for _, t := range strings.Split(toolsStr, ",")` for
+  `for t := range strings.SplitSeq(...)` and the `Clone`
+  helper's `for k, v := range in { out[k] = v }` body
+  collapses to `maps.Copy(out, in)` while keeping the
+  pre-allocated capacity hint. Pure refactor — no behaviour
+  change. Same lint sweep that cleared `policy.go` in
+  0953132.
 
 ### Added
 
