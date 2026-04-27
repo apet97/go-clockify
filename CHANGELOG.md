@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`README.md` Troubleshooting "Stale tool list" entry matches
+  reality.** The Troubleshooting line said "Stdio clients receive
+  `notifications/tools/list_changed` after activation; HTTP
+  clients must re-fetch `tools/list`." Same drift iter111 fixed
+  in `docs/clients.md` — only legacy `http` is POST-only;
+  `streamable_http` clients get the same notifications via the
+  SSE stream on `GET /mcp`. Line now distinguishes the two
+  transports so a streamable_http operator hitting "stale tool
+  list" doesn't waste time implementing manual re-fetch logic
+  the server already pushes.
 - **`docs/clients.md` Tool Discovery distinguishes
   `streamable_http` from legacy `http`.** The Tool Discovery
   section grouped all "HTTP Clients" together with "Must
