@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.github/workflows/chaos.yml` workflow_dispatch description
+  lists `upstream-429-concurrent`.** The scenario-input dropdown
+  hint named only the original 5 scenarios (429-storm, 503-burst,
+  mid-body-reset, tls-handshake-fail, dns-fail) but
+  `tests/chaos/main.go:54-61` registers 6 — the
+  `upstream-429-concurrent` scenario. iter136 fixed the same
+  drift in the README; this commit closes it at the workflow-
+  input surface so an operator dispatching the workflow
+  manually sees every scenario name in the description hint.
+  Same iter136 fictional-list drift class.
 - **`tests/chaos/README.md` covers the `upstream-429-concurrent`
   scenario.** The README's scenario table listed 5 scenarios
   (429-storm, 503-burst, mid-body-reset, tls-handshake-fail,

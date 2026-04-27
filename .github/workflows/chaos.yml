@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: "Scenario name (429-storm, 503-burst, mid-body-reset, tls-handshake-fail, dns-fail, or 'all')"
+        description: "Scenario name (429-storm, 503-burst, mid-body-reset, tls-handshake-fail, dns-fail, upstream-429-concurrent, or 'all')"
         required: true
         default: all
   schedule:
