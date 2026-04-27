@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/clients.md` Tool Discovery distinguishes
+  `streamable_http` from legacy `http`.** The Tool Discovery
+  section grouped all "HTTP Clients" together with "Must
+  manually re-fetch the tool list or handle session-based tool
+  visibility updates." That was correct only for the legacy
+  `http` transport, which is POST-only and carries no
+  server-initiated notifications. The `streamable_http` transport
+  (the spec-strict default for new HTTP deployments) DOES
+  deliver `notifications/tools/list_changed` via the SSE stream
+  on `GET /mcp` — see
+  `internal/mcp/transport_streamable_http.go:159-166` and the
+  Streamable HTTP 2025-03-26 §3.3 reference. A streamable_http
+  client following the doc would have implemented unnecessary
+  manual re-fetch logic and missed the spec-canonical SSE flow
+  the server provides for free. Section now has three bullets
+  (Stdio, `streamable_http`, legacy `http`) describing each
+  transport's notification model accurately.
 - **`docs/verify-release.md` recipe aligned with actual release
   artifacts.** The verify-release recipe was structurally
   drifted across §1, §2, §3, §4, §6, and §7 against the goreleaser

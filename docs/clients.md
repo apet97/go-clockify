@@ -16,7 +16,15 @@ This document provides guidance on how various Model Context Protocol (MCP) clie
 ### Tool Discovery
 Most clients fetch the list of available tools at startup using `tools/list`.
 - **Stdio Clients:** Automatically receive `notifications/tools/list_changed` when new tools are activated via `clockify_search_tools`.
-- **HTTP Clients:** Must manually re-fetch the tool list or handle session-based tool visibility updates.
+- **`streamable_http` Clients:** Receive the same notifications via the
+  spec-canonical SSE stream on `GET /mcp` (Streamable HTTP 2025-03-26
+  §3.3) — no manual re-fetch needed. The `/mcp/events` alias is
+  preserved for older client implementations.
+- **Legacy `http` Clients:** Must manually re-fetch the tool list
+  after activation. The legacy POST-only transport does not carry
+  server-initiated notifications; this is a known limitation and one
+  of the reasons it is deprecated (`MCP_HTTP_LEGACY_POLICY=deny`
+  refuses it on hosted profiles).
 
 ### Tier-2 Activation Semantics
 Each Tier-2 group (invoices, expenses, scheduling, time_off, …) is the
