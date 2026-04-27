@@ -7,6 +7,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -164,8 +165,12 @@ func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (Resu
 		"page-size": strconv.Itoa(pageSize),
 	}
 
+	path, err := paths.Workspace(wsID, "user-groups")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var groups []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/user-groups", query, &groups); err != nil {
+	if err := s.Client.Get(ctx, path, query, &groups); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -190,8 +195,12 @@ func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (Res
 	}
 
 	payload := map[string]any{"name": name}
+	path, err := paths.Workspace(wsID, "user-groups")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/user-groups", payload, &result); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -218,8 +227,12 @@ func (s *Service) UpdateUserGroup(ctx context.Context, args map[string]any) (Res
 	}
 
 	payload := map[string]any{"name": name}
+	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID, payload, &result); err != nil {
+	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -248,7 +261,11 @@ func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (Res
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID); err != nil {
+	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -273,8 +290,12 @@ func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (Resu
 	}
 
 	payload := map[string]any{"userId": userID}
+	path, err := paths.Workspace(wsID, "user-groups", groupID, "users")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID+"/users", payload, &result); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -311,7 +332,11 @@ func (s *Service) RemoveUserFromGroup(ctx context.Context, args map[string]any) 
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/user-groups/"+groupID+"/users/"+userID); err != nil {
+	path, err := paths.Workspace(wsID, "user-groups", groupID, "users", userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -342,8 +367,12 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	}
 
 	payload := map[string]any{"role": role}
+	path, err := paths.Workspace(wsID, "users", userID, "roles")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/users/"+userID+"/roles", payload, &result); err != nil {
+	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -382,8 +411,12 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 	}
 
 	payload := map[string]any{"status": "INACTIVE"}
+	path, err := paths.Workspace(wsID, "users", userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/users/"+userID, payload, &result); err != nil {
+	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 

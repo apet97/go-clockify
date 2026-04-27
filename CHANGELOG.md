@@ -190,6 +190,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3× holidays (list/create/delete). Standard `paths.Workspace`
   swaps; helper validates the workspace ID and percent-encodes
   every sub-segment.
+- **`tier2_user_admin.go` migrated to `paths.Workspace`.** All 8
+  concats across the admin surface (list/create/update/delete
+  user-groups, add/remove user from group, update user role,
+  deactivate user). The `update_user_role` and `deactivate_user`
+  PUT paths target `/workspaces/<ws>/users/<uid>{,/roles}`, which
+  carries `RiskAdmin | RiskPermissionChange` per the descriptor
+  taxonomy — defence-in-depth percent-encoding is doubly welcome
+  here.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
