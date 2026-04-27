@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -97,9 +98,7 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 	}
 	for page := 1; page <= aggregatePageSafetyStop; page++ {
 		query := make(map[string]string, len(baseQuery)+2)
-		for k, v := range baseQuery {
-			query[k] = v
-		}
+		maps.Copy(query, baseQuery)
 		query["page"] = strconv.Itoa(page)
 		query["page-size"] = strconv.Itoa(pageSize)
 
@@ -206,9 +205,7 @@ func mergeMeta(base, extra map[string]any) map[string]any {
 	if base == nil {
 		base = map[string]any{}
 	}
-	for k, v := range extra {
-		base[k] = v
-	}
+	maps.Copy(base, extra)
 	return base
 }
 

@@ -82,6 +82,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `slices.Contains(SupportedProtocolVersions, requested)` instead of
   a for-range scan with break. Pure refactor — no behaviour change.
   Clears the `minmax` and `slicescontains` hints on this file.
+- **`internal/tools/reports.go` modernised.** Two `for k, v :=
+  range src { dst[k] = v }` loops (the per-page query buffer in
+  `aggregateEntriesRange` and the pagination-meta merge in
+  `mergeMeta`) replaced with `maps.Copy`. The pre-allocated
+  capacity hint on the per-page query map is preserved. Pure
+  refactor — no behaviour change. Clears the `mapsloop` hints
+  queued during ce5f12b.
 
 ### Added
 
