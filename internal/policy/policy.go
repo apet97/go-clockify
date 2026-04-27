@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sort"
 	"strings"
@@ -50,7 +51,7 @@ func FromEnv() (*Policy, error) {
 	}
 
 	denied := map[string]bool{}
-	for _, item := range strings.Split(os.Getenv("CLOCKIFY_DENY_TOOLS"), ",") {
+	for item := range strings.SplitSeq(os.Getenv("CLOCKIFY_DENY_TOOLS"), ",") {
 		item = strings.TrimSpace(item)
 		if item != "" {
 			denied[item] = true
@@ -58,7 +59,7 @@ func FromEnv() (*Policy, error) {
 	}
 
 	deniedGroups := map[string]bool{}
-	for _, item := range strings.Split(os.Getenv("CLOCKIFY_DENY_GROUPS"), ",") {
+	for item := range strings.SplitSeq(os.Getenv("CLOCKIFY_DENY_GROUPS"), ",") {
 		item = strings.TrimSpace(item)
 		if item != "" {
 			deniedGroups[item] = true
@@ -68,7 +69,7 @@ func FromEnv() (*Policy, error) {
 	var allowedGroups map[string]bool
 	if raw := os.Getenv("CLOCKIFY_ALLOW_GROUPS"); raw != "" {
 		allowedGroups = map[string]bool{}
-		for _, item := range strings.Split(raw, ",") {
+		for item := range strings.SplitSeq(raw, ",") {
 			item = strings.TrimSpace(item)
 			if item != "" {
 				allowedGroups[item] = true
@@ -229,9 +230,7 @@ func cloneBoolMap(in map[string]bool) map[string]bool {
 		return nil
 	}
 	out := make(map[string]bool, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

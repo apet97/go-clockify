@@ -125,6 +125,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   capacity hint on the per-page query map is preserved. Pure
   refactor — no behaviour change. Clears the `mapsloop` hints
   queued during ce5f12b.
+- **`internal/policy/policy.go` modernised.** Three
+  `for _, item := range strings.Split(os.Getenv(...), ",")`
+  loops over the `CLOCKIFY_DENY_TOOLS` / `CLOCKIFY_DENY_GROUPS`
+  / `CLOCKIFY_ALLOW_GROUPS` env vars rewritten as
+  `for item := range strings.SplitSeq(...)` (same
+  modernisation already applied to the new
+  `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` parser in ab010e6); the
+  `cloneBoolMap` helper's `for k, v := range in { out[k] = v }`
+  body collapses to `maps.Copy(out, in)` while keeping the
+  pre-allocated capacity hint. Pure refactor — no behaviour
+  change. Clears the `stringsseq` and `mapsloop` gopls hints
+  surfaced during the iter40 webhook-allowlist parser landing.
 
 ### Added
 
