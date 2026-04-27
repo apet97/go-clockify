@@ -50,9 +50,11 @@ Two alternatives were considered:
 
 ### MCP protocol versions
 
-- **Committed window:** the last three published protocol
-  versions as listed in `internal/mcp/server.go:SupportedProtocolVersions`
-  (today: `2025-06-18`, `2025-03-26`, `2024-11-05`).
+- **Committed window:** every published protocol version listed
+  in `internal/mcp/server.go:SupportedProtocolVersions` (today:
+  `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05` — four
+  versions). The slice is the source of truth; this ADR tracks
+  whatever it currently holds.
 - **Dropping a version is a major-version bump** of
   `clockify-mcp`. The release notes must list the dropped
   version and name the earliest client version that still

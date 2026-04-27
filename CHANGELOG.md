@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0012-backward-compatibility-policy.md` MCP-protocol
+  committed window matches the canonical four-version slice.**
+  ADR-0012 said "the **Committed window:** the last three
+  published protocol versions ... (today: `2025-06-18`,
+  `2025-03-26`, `2024-11-05`)" but
+  `internal/mcp/server.go:SupportedProtocolVersions` lists FOUR
+  entries (`2025-11-25`, `2025-06-18`, `2025-03-26`,
+  `2024-11-05`). iter79 closed the same drift in clients.md and
+  iter80 in the README Compatibility table; ADR-0012 was the
+  canonical compat-policy surface still showing the pre-iter79
+  three-version slice. Bullet now reads "every published
+  protocol version" with the slice as source of truth, so future
+  additions don't re-stale the wording. Same drift class as
+  iter79/iter80 at the ADR surface.
 - **`docs/adr/0013-private-repo-slsa-posture.md` Status block
   cites the real workaround-introduction date.** The Status block
   said the workaround existed "from 2026-04-22 (SLSA workaround
