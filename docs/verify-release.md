@@ -1,13 +1,21 @@
 # Verifying release artifacts
 
-Every tagged release of `clockify-mcp` ships:
+Every tagged release of `clockify-mcp` ships 15 binaries across
+five tag combinations (per `scripts/check-release-assets.sh`): the
+five default platforms (`darwin-arm64`, `darwin-x64`, `linux-arm64`,
+`linux-x64`, `windows-x64.exe`) plus FIPS, Postgres, gRPC, and
+gRPC-Postgres variants. Each binary ships:
 
-- Binaries for linux/amd64, linux/arm64, darwin/amd64,
-  darwin/arm64, windows/amd64.
-- `SHA256SUMS` with cosign signatures (keyless, OIDC-identified
-  from the release workflow).
-- An SPDX SBOM per binary (`<name>.spdx.json`).
-- SLSA v1.0 provenance attestations (`<name>.intoto.jsonl`).
+- The raw binary (`clockify-mcp-<platform>`, e.g.
+  `clockify-mcp-linux-x64`; no version in the filename, no
+  archive wrapper).
+- A keyless cosign sigstore bundle (`<binary>.sigstore.json`).
+- An SPDX SBOM (`<binary>.spdx.json`).
+- A SLSA build-provenance attestation stored in the GitHub
+  attestation service (verified via `gh attestation verify`,
+  not as an `.intoto.jsonl` artifact alongside the binary).
+
+Plus a single signed checksum file per release: `SHA256SUMS.txt`.
 
 This document walks through how a downstream consumer verifies
 each piece before deploying. Every command is read-only — no
@@ -22,9 +30,10 @@ Install one-time:
 brew install cosign            # macOS
 # or: go install github.com/sigstore/cosign/v2/cmd/cosign@latest
 
-# SLSA provenance verification
-brew install slsa-verifier
-# or: go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
+# SLSA provenance verification (via the GitHub attestation service)
+# — uses the gh CLI; no slsa-verifier binary needed.
+brew install gh
+gh auth login
 
 # SBOM tooling
 brew install syft grype
@@ -40,28 +49,32 @@ gh release download "$TAG" \
 ls ./artifacts
 ```
 
-## 2. Verify the checksums
+## 2. Verify the per-binary signatures
+
+Goreleaser's `cosign-keyless` step signs each binary individually
+(not the `SHA256SUMS.txt` file as a whole — that file is left
+unsigned and is just a convenience for `sha256sum -c` cross-checks
+once the binaries themselves are verified). Verify the binary
+you actually intend to deploy:
 
 ```sh
-# Keyless cosign verify against the release workflow's OIDC
-# identity. If the workflow path or repo changes, the identity
-# regex must be updated.
+BIN=clockify-mcp-linux-x64
+
 cosign verify-blob \
-  --bundle ./artifacts/SHA256SUMS.bundle \
+  --bundle "./artifacts/${BIN}.sigstore.json" \
   --certificate-identity-regexp "^https://github.com/apet97/go-clockify/\.github/workflows/release\.yml@refs/tags/" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ./artifacts/SHA256SUMS
+  "./artifacts/${BIN}"
 
-# Then check the binaries against the signed checksum list.
-cd artifacts && sha256sum -c SHA256SUMS --ignore-missing
+# Cross-check that the binary matches the published checksum:
+cd artifacts && sha256sum -c SHA256SUMS.txt --ignore-missing
 ```
 
 A success looks like:
 
 ```
 Verified OK
-./clockify-mcp_1.2.0_linux_amd64.tar.gz: OK
-./clockify-mcp_1.2.0_linux_arm64.tar.gz: OK
+clockify-mcp-linux-x64: OK
 ```
 
 If `cosign verify-blob` fails, the binary may have been tampered
@@ -71,21 +84,20 @@ with post-release. Do not deploy.
 
 SLSA provenance proves the binary came out of the expected CI
 workflow — a protection against an attacker who has compromised a
-maintainer's local machine but not the CI runner.
+maintainer's local machine but not the CI runner. The release
+workflow uses `actions/attest-build-provenance`, which stores the
+attestation in the GitHub attestation service (not as an
+`.intoto.jsonl` file alongside the binary):
 
 ```sh
-slsa-verifier verify-artifact \
-  --provenance-path ./artifacts/clockify-mcp_1.2.0_linux_amd64.intoto.jsonl \
-  --source-uri github.com/apet97/go-clockify \
-  --source-tag "$TAG" \
-  ./artifacts/clockify-mcp_1.2.0_linux_amd64.tar.gz
+gh attestation verify "./artifacts/${BIN}" --owner apet97
 ```
 
-The output ends with:
-
-```
-PASSED: SLSA verification passed
-```
+The output ends with `Verification succeeded!`. A non-zero exit
+means either the binary was tampered with or the attestation has
+not yet propagated through the GitHub attestation service
+(eventually-consistent — retry in 10 minutes for a freshly
+published release).
 
 ## 4. Inspect and scan the SBOM
 
@@ -95,11 +107,11 @@ deploying.
 
 ```sh
 # List the top-level dependencies
-syft packages ./artifacts/clockify-mcp_1.2.0_linux_amd64.spdx.json \
+syft packages "./artifacts/${BIN}.spdx.json" \
   -o table | head -30
 
 # Scan for CVEs using the Grype vulnerability database
-grype sbom:./artifacts/clockify-mcp_1.2.0_linux_amd64.spdx.json \
+grype "sbom:./artifacts/${BIN}.spdx.json" \
   --fail-on high
 ```
 
@@ -137,20 +149,20 @@ steps:
   - name: Verify release
     run: |
       set -euo pipefail
-      cosign verify-blob --bundle ... SHA256SUMS
-      slsa-verifier verify-artifact ...
-      grype sbom:... --fail-on high
+      cosign verify-blob --bundle "${BIN}.sigstore.json" --certificate-identity-regexp ... "${BIN}"
+      gh attestation verify "${BIN}" --owner apet97
+      grype "sbom:${BIN}.spdx.json" --fail-on high
 ```
 
 If any step non-zeroes, the rollout does not proceed.
 
 ## When verification fails
 
-- **cosign verify fails** — the checksum file was re-signed by
-  a non-release workflow, or the release was re-cut without
-  re-signing. Open an issue; do not deploy.
-- **slsa-verifier fails** — the binary in hand did not come out
-  of the tagged source. Open an issue; do not deploy.
+- **cosign verify fails** — the binary was tampered with or the
+  release was re-cut without re-signing. Open an issue; do not
+  deploy.
+- **gh attestation verify fails** — the binary in hand did not
+  come out of the tagged source. Open an issue; do not deploy.
 - **grype reports a new High/Critical** — check the release
   page for a security advisory; if none, open one linking the
   CVE, the affected module, and whether the exploit path is

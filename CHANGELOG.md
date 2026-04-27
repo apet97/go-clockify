@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/verify-release.md` recipe aligned with actual release
+  artifacts.** The verify-release recipe was structurally
+  drifted across §1, §2, §3, §4, §6, and §7 against the goreleaser
+  config and `scripts/check-release-assets.sh`:
+  (1) §1 listed `<name>.intoto.jsonl` SLSA files alongside
+      binaries — those don't ship; SLSA goes to the GitHub
+      attestation service via `actions/attest-build-provenance`.
+  (2) §2 used `cosign verify-blob --bundle SHA256SUMS.bundle
+      SHA256SUMS` — neither file exists; goreleaser only signs
+      `artifacts: binary` (per-binary `.sigstore.json`), and the
+      checksum file is `SHA256SUMS.txt`.
+  (3) Example "success looks like" listed
+      `clockify-mcp_1.2.0_linux_amd64.tar.gz` — releases ship
+      raw binaries (`clockify-mcp-linux-x64`, no version, no
+      archive wrapper).
+  (4) §3 used `slsa-verifier verify-artifact` against an
+      `.intoto.jsonl` file — the actual flow is `gh attestation
+      verify` against the binary itself (matching iter102's
+      verification.md fix).
+  (5) §4 SBOM commands referenced
+      `clockify-mcp_1.2.0_linux_amd64.spdx.json` — actual
+      filename is `clockify-mcp-linux-x64.spdx.json`.
+  (6) §6 release-gate pseudocode and §7 failure-mode list both
+      named slsa-verifier; both updated to gh-attestation flow.
+  Recipe is now self-consistent with what `gh release download`
+  actually returns. Operators following it verbatim no longer
+  hit "no such file" / "unknown subcommand" errors. Same drift
+  class as iter95/iter103/iter105 (commands have to match what
+  exists), but covering substantially more surface than a
+  single-line fix.
 - **`SECURITY.md` "Zero external dependencies" bullet matches
   the workspace reality.** The Security Features bullet said
   "minimal supply chain attack surface; no `go.sum` at all" but
