@@ -70,6 +70,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `page` floor with `max()` instead of an `if`-statement. Pure
   refactor — no behaviour change. Clears the `mapsloop` and `minmax`
   hints accumulated on this file during the audit-finding wave.
+- **`internal/mcp/transport_streamable_http.go` modernised.**
+  `validateProtocolVersion` swaps a hand-written for-range protocol
+  membership check to `slices.Contains(SupportedProtocolVersions, v)`;
+  `addSessionToInitializeResult` swaps the map-overlay loop to
+  `maps.Copy`. Pure refactor — no behaviour change. Clears the
+  `slicescontains` and `mapsloop` hints on this file.
 
 ### Fixed
 

@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -418,14 +420,7 @@ func validateProtocolVersion(r *http.Request, session *streamSession) error {
 	if v == "" {
 		return nil
 	}
-	supported := false
-	for _, s := range SupportedProtocolVersions {
-		if s == v {
-			supported = true
-			break
-		}
-	}
-	if !supported {
+	if !slices.Contains(SupportedProtocolVersions, v) {
 		return fmt.Errorf("unsupported Mcp-Protocol-Version %q", v)
 	}
 	if negotiated := session.server.NegotiatedProtocolVersion(); negotiated != "" && v != negotiated {
@@ -450,9 +445,7 @@ func addSessionToInitializeResult(result any, sessionID string) any {
 		return result
 	}
 	out := make(map[string]any, len(m)+1)
-	for k, v := range m {
-		out[k] = v
-	}
+	maps.Copy(out, m)
 	out["sessionId"] = sessionID
 	return out
 }
