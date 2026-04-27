@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`GOVERNANCE.md` and `docs/production-readiness.md` audit-trail
+  enumeration drops stale SLSA "where available" qualifier.**
+  Both docs phrased the audit trail as including "SLSA build
+  provenance where available" — the qualifier dated from the
+  pre-2026-04-22 ADR-0013 era when SLSA was conditional on the
+  repo being user-owned-public. iter100 deliberately mirrored
+  GOVERNANCE.md's phrasing into production-readiness.md and
+  acknowledged the post-flip reality in the commit body but kept
+  the qualifier; iter124 then dropped it from SUPPORT.md as the
+  fifth canonical surface. Now closing the loop at the upstream
+  GOVERNANCE.md (the canonical source) and its
+  production-readiness.md mirror, so all six "what is supported /
+  what ships" surfaces (release-policy, verification,
+  production-readiness, SECURITY, SUPPORT, GOVERNANCE) read
+  consistently. The web-flow signed-squash-commits "where
+  available" qualifier on the same line stays — that's still
+  load-bearing because direct-push commits aren't web-flow signed.
 - **`SUPPORT.md` "Signed releases" line drops "(where available)"
   SLSA qualifier.** SUPPORT.md said "every tagged release ships
   with cosign signatures, SBOM, and (where available) SLSA build

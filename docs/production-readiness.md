@@ -212,8 +212,9 @@ you need a checklist for a third-party assessor, this is the list.
 Single-maintainer project today (`@apet97`). Self-merge is permitted
 because there is no alternative reviewer; the audit trail comes from
 public CI logs, GitHub web-flow signed squash commits on `main` where
-available, SLSA build provenance where available (per ADR-0013), and
-the release-smoke workflow. Signed-commit enforcement on `main` is
+available, SLSA build provenance on every release since the
+2026-04-22 public flip (per ADR-0013, now Superseded — pre-flip
+releases were best-effort), and the release-smoke workflow. Signed-commit enforcement on `main` is
 intentionally disabled (single-maintainer reality — see
 [`docs/branch-protection.md`](branch-protection.md) for the
 snapshot). See [`GOVERNANCE.md`](../GOVERNANCE.md) for the honest

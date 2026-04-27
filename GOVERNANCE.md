@@ -28,9 +28,11 @@ alternatives cited above reference back here.
 Operators evaluating whether to depend on `go-clockify`:
 you can read this document, see who is on the hook, and decide
 whether the audit trail that does exist (public CI logs, GitHub
-web-flow signed squash commits on `main` where available, SLSA build
-provenance where available, the release-smoke workflow) is sufficient
-for your risk appetite.
+web-flow signed squash commits on `main` where available, SLSA
+build provenance on every release since the 2026-04-22 public flip
+(per ADR-0013, now Superseded — pre-flip releases were
+best-effort), the release-smoke workflow) is sufficient for your
+risk appetite.
 
 ## Who can merge to `main`
 
