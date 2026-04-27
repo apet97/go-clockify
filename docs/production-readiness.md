@@ -183,9 +183,10 @@ you need a checklist for a third-party assessor, this is the list.
   `internal/logging.RedactingHandler`, which masks 20+ well-known
   secret-key patterns before encoding. See
   [`internal/logging/redact.go`](../internal/logging/redact.go).
-- **Response limits** — 10MB on Clockify API responses, 2MB default
-  on HTTP request bodies. Tunable via `MCP_HTTP_MAX_BODY` and
-  `CLOCKIFY_REPORT_MAX_ENTRIES`.
+- **Response limits** — 10MB on Clockify API responses, 4MB default
+  on HTTP request bodies. Tunable via `MCP_MAX_MESSAGE_SIZE`
+  (capped at 100MB; `MCP_HTTP_MAX_BODY` is the deprecated alias)
+  and `CLOCKIFY_REPORT_MAX_ENTRIES`.
 - **Tool annotations** — every tool carries `readOnlyHint`,
   `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`
   so spec-strict MCP clients can render correct safety hints. See

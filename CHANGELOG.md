@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SECURITY.md` + `docs/production-readiness.md` Response limits
+  claim now reflects the 4 MB default.** Both surfaces stated
+  "2MB default on HTTP request bodies" — pinning back to the v0.6-
+  era streamable-HTTP fallback. The actual default has been
+  `MCP_MAX_MESSAGE_SIZE=4194304` (4 MB) since v1.0.1's transport
+  consistency standardisation (commit 13d2a0c); the 2 MB literal
+  in `internal/mcp/transport_streamable_http.go` is an inner-loop
+  fallback that never fires once the runtime wires `MaxBodySize`
+  from the config (`internal/runtime/streamable.go:71`).
+  production-readiness.md also pointed operators at
+  `MCP_HTTP_MAX_BODY` which has been the deprecated alias since
+  v1.0.1 — primary knob is `MCP_MAX_MESSAGE_SIZE`. Both files
+  now state 4 MB and name the primary env var, with the
+  deprecated alias parenthesised for back-compat readers. Pure
+  operator-doc fix.
 - **`internal/config/profile.go` package doc no longer claims a
   1:1 profile↔doc mapping.** The Profile type comment said "The five
   canonical profiles map onto the five docs/deploy/ profile notes" —

@@ -65,7 +65,7 @@ The following are in scope:
 - **Name resolution**: ambiguous matches fail closed (no guessing).
 - **Stdout purity**: protocol responses only on stdout; every log goes to stderr via slog — never mixes with JSON-RPC frames in stdio mode.
 - **Tool annotations**: all 124 tools carry `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`. Spec-strict MCP clients get the correct safety hints on every descriptor.
-- **Response limits**: 10MB on Clockify API responses, 2MB default on HTTP request bodies.
+- **Response limits**: 10MB on Clockify API responses, 4MB default on HTTP request bodies (`MCP_MAX_MESSAGE_SIZE`, capped at 100MB).
 - **Zero external dependencies** (stdlib only) — minimal supply chain attack surface; no `go.sum` at all.
 - **Initialization guard**: `tools/call` rejected before `initialize` handshake (`-32002 server not initialized`).
 
