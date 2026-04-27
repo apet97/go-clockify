@@ -73,9 +73,12 @@ propagated correctly — child spans inherit the context.
 
 ### Operator-facing
 
-- **README / docs/safe-usage.md update:** how to enable
+- **README / `docs/operators/` update:** how to enable
   `trace_id` propagation, which trace exporter endpoints are
-  expected, and how to configure the sampler.
+  expected, and how to configure the sampler. (`docs/safe-usage.md`
+  was the original target landing page when this plan was written
+  but is no longer in the repo; `docs/operators/` is the current
+  home for operator-facing per-profile guidance.)
 - **Runbook entry in docs/runbooks/:** "given a slow MCP tool call,
   here is how to pull the trace and identify the upstream cause."
 - **Smoke test in tests/e2e_otel_test.go (build tag gated):** dispatch

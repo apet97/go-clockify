@@ -78,7 +78,9 @@ support.
 
 `CLOCKIFY_INSECURE=1` only bypasses base-URL scheme validation when resolving
 `CLOCKIFY_BASE_URL`; it does not disable TLS certificate verification in the
-outbound Clockify client. See `docs/safe-usage.md` for the full scope.
+outbound Clockify client. Hosted profiles (`shared-service`,
+`prod-postgres`) refuse `CLOCKIFY_INSECURE=1` outright at startup —
+only `local-stdio` / `single-tenant-http` honour the override.
 
 ## Verifying release artifacts
 

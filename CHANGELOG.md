@@ -35,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actual ServiceMonitor + PrometheusRule template files.
   Pure operator-doc fix; reviewers no longer chase a phantom
   observability doc.
+- **SECURITY.md drops broken `docs/safe-usage.md` pointer; future
+  observability plan adds historical-context note.** SECURITY.md
+  §"TLS / HTTP Transport" tail-pointed at `docs/safe-usage.md`
+  for the full INSECURE scope, but that doc existed in the v0.6
+  era and isn't tracked in current main. Replaced with the actual
+  full-scope sentence inline (hosted profiles refuse INSECURE at
+  startup; only `local-stdio` / `single-tenant-http` honour it).
+  `docs/future/observability-correlation.md` also referenced
+  `docs/safe-usage.md` as a future landing page; rewrote to
+  reference the current `docs/operators/` home + a parenthetical
+  noting the original target is no longer in the repo (preserves
+  the planning trail without sending future authors at a 404).
 - **`internal/controlplane/COMPAT.md` retention-reaper pointer
   unstuck from pre-C2.2 path.** The compat-matrix row for
   `RetainAudit(ctx, maxAge)` cited `cmd/clockify-mcp/retain.go`
