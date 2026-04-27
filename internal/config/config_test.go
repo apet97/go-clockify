@@ -1077,3 +1077,89 @@ func TestOIDCVerifyCacheTTL_InvalidDurationRejected(t *testing.T) {
 		t.Fatal("expected error for unparseable duration")
 	}
 }
+
+// TestLoad_RejectsBadWorkspaceID verifies CLOCKIFY_WORKSPACE_ID is run
+// through resolve.ValidateID at startup so a malformed value (path-injection
+// shaped, fragment, query, or .. traversal) cannot reach handler-level
+// path concatenation. Pre-fix, these would silently propagate to every
+// /workspaces/{id}/... request.
+func TestLoad_RejectsBadWorkspaceID(t *testing.T) {
+	bad := []string{
+		"bad/path",
+		"bad?query",
+		"bad#fragment",
+		"bad%2Fpath",
+		"foo..bar",
+		"ws\x01id", // control byte rejected by ValidateID's rune loop
+	}
+	for _, val := range bad {
+		t.Run(val, func(t *testing.T) {
+			setEnvs(t, map[string]string{
+				"CLOCKIFY_API_KEY":      "test-key",
+				"CLOCKIFY_WORKSPACE_ID": val,
+			})
+			_, err := Load()
+			if err == nil {
+				t.Fatalf("expected validation error for %q, got nil", val)
+			}
+			if !strings.Contains(err.Error(), "CLOCKIFY_WORKSPACE_ID") {
+				t.Fatalf("error %q should reference CLOCKIFY_WORKSPACE_ID", err)
+			}
+		})
+	}
+}
+
+// TestLoad_AcceptsValidWorkspaceID locks in the negative direction:
+// well-formed IDs (real Clockify IDs are 24-hex BSON ObjectIDs, but the
+// validator accepts any safe string of bounded length) keep working.
+func TestLoad_AcceptsValidWorkspaceID(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"CLOCKIFY_WORKSPACE_ID": "5e0fa5cb6c5dc403da9f1234",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.WorkspaceID != "5e0fa5cb6c5dc403da9f1234" {
+		t.Fatalf("workspace mismatch: %q", cfg.WorkspaceID)
+	}
+}
+
+// TestLoad_HostedProfileRefusesInsecure exercises the new hosted-profile
+// guardrail: shared-service and prod-postgres must reject CLOCKIFY_INSECURE=1
+// because remote HTTP in a multi-tenant deployment is a credential-leak
+// risk. Local profiles still accept the override.
+func TestLoad_HostedProfileRefusesInsecure(t *testing.T) {
+	cases := []struct {
+		profile string
+		want    bool // want error?
+	}{
+		{"shared-service", true},
+		{"prod-postgres", true},
+		{"local-stdio", false},
+		{"single-tenant-http", false},
+	}
+	for _, c := range cases {
+		t.Run(c.profile, func(t *testing.T) {
+			setEnvs(t, map[string]string{
+				"CLOCKIFY_API_KEY":  "test-key",
+				"CLOCKIFY_INSECURE": "1",
+				"MCP_PROFILE":       c.profile,
+				// shared-service / prod-postgres set MCP_TRANSPORT=streamable_http,
+				// which doesn't require API key — but supplying one keeps the
+				// rest of Load() on the happy path.
+			})
+			_, err := Load()
+			if c.want && err == nil {
+				t.Fatalf("expected hosted profile %q to reject CLOCKIFY_INSECURE=1", c.profile)
+			}
+			if c.want && !strings.Contains(err.Error(), "CLOCKIFY_INSECURE=1") {
+				t.Fatalf("error %q should reference CLOCKIFY_INSECURE=1", err)
+			}
+			if !c.want && err != nil && strings.Contains(err.Error(), "CLOCKIFY_INSECURE=1") {
+				t.Fatalf("non-hosted profile %q should not reject INSECURE: %v", c.profile, err)
+			}
+		})
+	}
+}

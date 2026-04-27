@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 const DefaultBaseURL = "https://api.clockify.me/api/v1"
@@ -176,8 +178,9 @@ func Load() (Config, error) {
 	// the operator did not set explicitly. Explicit values always
 	// win because applyProfile only writes to unset keys. Profile is
 	// opt-in: with MCP_PROFILE empty the behaviour is unchanged.
-	if name := strings.TrimSpace(os.Getenv("MCP_PROFILE")); name != "" {
-		if _, err := applyProfile(name); err != nil {
+	profileName := strings.TrimSpace(os.Getenv("MCP_PROFILE"))
+	if profileName != "" {
+		if _, err := applyProfile(profileName); err != nil {
 			return Config{}, err
 		}
 	}
@@ -187,6 +190,17 @@ func Load() (Config, error) {
 		WorkspaceID: os.Getenv("CLOCKIFY_WORKSPACE_ID"),
 		BaseURL:     strings.TrimRight(os.Getenv("CLOCKIFY_BASE_URL"), "/"),
 		Insecure:    os.Getenv("CLOCKIFY_INSECURE") == "1",
+	}
+	// Hosted-profile guardrail: a multi-tenant deployment that points at a
+	// remote HTTP endpoint with TLS off is almost certainly a misconfiguration
+	// and a credential-leak risk. Refuse to start.
+	if cfg.Insecure && isHostedProfile(profileName) {
+		return Config{}, fmt.Errorf("CLOCKIFY_INSECURE=1 is refused under MCP_PROFILE=%s; use HTTPS or switch profile", profileName)
+	}
+	if cfg.WorkspaceID != "" {
+		if err := resolve.ValidateID(cfg.WorkspaceID, "CLOCKIFY_WORKSPACE_ID"); err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_WORKSPACE_ID: %w", err)
+		}
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL

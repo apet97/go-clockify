@@ -151,6 +151,20 @@ func ProfileByName(name string) (*Profile, error) {
 	return nil, fmt.Errorf("unknown profile %q; valid: %s", name, strings.Join(ProfileNames(), ", "))
 }
 
+// hostedProfiles is the set of profile names that target a multi-tenant /
+// shared deployment posture. These profiles forbid certain operator
+// shortcuts that would be merely awkward in a single-user local install
+// but actively dangerous in production (e.g. CLOCKIFY_INSECURE=1, see
+// Load()).
+var hostedProfiles = map[string]bool{
+	"shared-service": true,
+	"prod-postgres":  true,
+}
+
+// isHostedProfile reports whether the given profile name is one of the
+// hosted profiles whose strict gates apply.
+func isHostedProfile(name string) bool { return hostedProfiles[name] }
+
 // applyProfile materialises the named profile's defaults into the
 // process environment for any currently-unset key. Called exactly once
 // at the top of Load() when MCP_PROFILE is set. Explicit env overrides
