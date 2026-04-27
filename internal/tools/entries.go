@@ -9,6 +9,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
@@ -83,8 +84,12 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	path, err := paths.Workspace(wsID, "time-entries", entryID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var entry clockify.TimeEntry
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, nil, &entry); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &entry); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_entry", entry, map[string]any{"workspaceId": wsID}), nil
@@ -187,8 +192,12 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 		return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: dryrun.Preview("clockify_add_entry", args)}, nil
 	}
 
+	path, err := paths.Workspace(wsID, "time-entries")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var entry clockify.TimeEntry
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/time-entries", payload, &entry); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &entry); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -212,10 +221,14 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	// Fetch existing entry
 	var existing clockify.TimeEntry
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, nil, &existing); err != nil {
+	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -304,7 +317,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	var updated clockify.TimeEntry
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, putPayload, &updated); err != nil {
+	if err := s.Client.Put(ctx, entryPath, putPayload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -336,9 +349,13 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	var entry clockify.TimeEntry
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID, nil, &entry); err != nil {
+	if err := s.Client.Get(ctx, entryPath, nil, &entry); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -351,7 +368,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/time-entries/"+entryID); err != nil {
+	if err := s.Client.Delete(ctx, entryPath); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -382,8 +399,12 @@ func (s *Service) listEntriesWithQuery(ctx context.Context, query map[string]str
 	if _, ok := query["page-size"]; !ok {
 		query["page-size"] = "100"
 	}
+	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
+	if err != nil {
+		return nil, "", "", err
+	}
 	var entries []clockify.TimeEntry
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/user/"+user.ID+"/time-entries", query, &entries); err != nil {
+	if err := s.Client.Get(ctx, path, query, &entries); err != nil {
 		return nil, "", "", err
 	}
 	return entries, wsID, user.ID, nil

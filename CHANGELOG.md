@@ -126,6 +126,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project ID is resolved upstream via `resolve.ResolveProjectID`;
   the helper percent-encodes each segment. Identical wire shape for
   normal Clockify IDs.
+- **`entries.go` migrated to `paths.Workspace`.** Seven concat sites
+  across `GetEntry`, `AddEntry`, `UpdateEntry` (GET fetch + PUT),
+  `DeleteEntry` (GET preview + DELETE), and `listEntriesWithQuery`
+  (`/workspaces/<ws>/user/<uid>/time-entries`) all swap to
+  `paths.Workspace(...)`. Largest single-file migration so far —
+  exercises 2-, 3-, and 4-segment forms in one file.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
