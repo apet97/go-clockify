@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/upgrade-checklist.md` post-rollout grep matches the real
+  401 log line.** §"4. Watch the rollout for regressions" listed
+  `msg=http_request status=401 reason=auth_failed` as the spike
+  pattern to watch — but iter127 already confirmed the actual
+  401 auth-failure record at
+  `internal/mcp/transport_auth_errors.go:35` emits
+  `msg=http_auth_failed`, not `msg=http_request`. iter127 closed
+  the drift in `docs/runbooks/auth-failures.md` but missed this
+  parallel surface; an operator running an upgrade and grepping
+  the suggested string would see zero hits even when bearer-token
+  drift was happening, exactly the failure mode the checklist is
+  meant to catch. Pattern now reads `msg=http_auth_failed
+  status=401 reason=auth_failed` with a one-line clarification
+  pointing at auth-failures.md as the canonical recipe.
 - **`docs/adr/0002-transport-selection.md` Spec link points at
   `2025-11-25`.** ADR-0002 References block linked the spec at
   `modelcontextprotocol.io/specification/2025-06-18`, the version

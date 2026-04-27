@@ -123,9 +123,11 @@ rollout:
 - The new protocol version negotiation rejects a client that
   worked on the old version (check the `msg=initialize` log line
   for `protocol_version=` and `requested_version=`).
-- Any `msg=http_request status=401 reason=auth_failed` spike (your bearer
-  rotation may have landed without the client config catching
-  up — see `docs/runbooks/auth-failures.md`).
+- Any `msg=http_auth_failed status=401 reason=auth_failed` spike
+  (your bearer rotation may have landed without the client config
+  catching up — see `docs/runbooks/auth-failures.md` for the
+  canonical grep recipe; the 401 path emits `http_auth_failed`,
+  not `http_request`).
 
 Rollback is a digest revert; don't try to patch the live
 deployment.
