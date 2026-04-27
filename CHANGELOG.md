@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0008-grpc-auth-interceptor.md` References section
+  uses grep anchors instead of stale line numbers.** The ADR's
+  References section listed five line-anchored cross-references
+  for the legacy "ADR 012" inline comment hits, plus two
+  per-line code anchors. The line numbers had drifted post-write
+  in every cited file: cmd/clockify-mcp/main.go:251 doesn't even
+  exist (the file moved most content to `internal/runtime/grpc.go`
+  during the dea1cc3 C2.2 extraction; current file is 236 lines),
+  scripts/check-build-tags.sh hits actually live at :4 and :72
+  (was :68), values.yaml at :85 (was :81), deployment.yaml at
+  :51 (was :48), config_test.go at :442 (was :282). Pattern is
+  identical to the iter34/iter65 ADR sweeps that switched
+  ADR-0002/0003/0004/0005/0006 from line anchors to function-
+  name + grep-string anchors. References section now points at
+  symbol names (`authStreamInterceptor`, `streamNotifier`) and
+  recommends `git grep -n "ADR 012"` for the inline-comment
+  trail; the cmd/clockify-mcp move is documented inline so
+  CHANGELOG-trace continuity is preserved. Pure operator-doc fix.
 - **`docs/runbooks/production-incident-drill.md` references the
   real risky-config log line.** The drill's "Metrics-auth drift"
   step told operators to "Scan for `msg=metrics_auth_mode_unsafe`

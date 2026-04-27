@@ -122,13 +122,21 @@ an explicit "rebuild with -tags=grpc" error. ADR 0001 and the
 
 ## References
 
-- Previously referred to as "ADR 012" in
-  `cmd/clockify-mcp/main.go:251`, `internal/transport/grpc/transport.go:29`,
-  `scripts/check-build-tags.sh:68`, `deploy/helm/clockify-mcp/values.yaml:81`,
-  `deploy/k8s/base/deployment.yaml:48`, `internal/config/config_test.go:282`.
-- Interceptor: `internal/transport/grpc/transport.go:76-83`
-  (`authStreamInterceptor` invocation).
-- Per-stream notifier: `internal/transport/grpc/transport.go:132-167`.
+- Previously referred to as "ADR 012" in inline comments — find via
+  `git grep -n 'ADR 012'`. Today's hits include
+  `internal/transport/grpc/transport.go`,
+  `scripts/check-build-tags.sh`, `deploy/helm/clockify-mcp/values.yaml`,
+  `deploy/k8s/base/deployment.yaml`, and
+  `internal/config/config_test.go`. The `cmd/clockify-mcp/main.go`
+  reference moved to `internal/runtime/grpc.go` during the dea1cc3
+  C2.2 runtime extraction (see iter59/iter63 commit messages on
+  `main`).
+- Interceptor: `authStreamInterceptor` in
+  `internal/transport/grpc/transport.go` (find via
+  `git grep -n authStreamInterceptor`).
+- Per-stream notifier: `streamNotifier` in
+  `internal/transport/grpc/transport.go` (find via
+  `git grep -n streamNotifier`).
 - Shared authn: `internal/authn/`.
 - Related ADRs: 0001 (stdlib-only invariant), 0002 (transport
   selection), 0003 (auth-mode compatibility matrix).
