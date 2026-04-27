@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/README.md` Operator Guides section no longer says "two
+  supported profiles".** The intro line conflated "operator-guide
+  categories" (shared-service vs. self-hosted shapes) with
+  "supported profiles" — but five canonical profiles are
+  registered (local-stdio, single-tenant-http, shared-service,
+  private-network-grpc, prod-postgres) and `private-network-grpc`
+  is fully supported despite not having a dedicated operator
+  guide. Iter81/82 caught the same conflation in adjacent doc
+  surfaces; this is the third instance in the chain. Section
+  intro now says guides are grouped by operator shape and all
+  five profiles are supported, plus each guide bullet now names
+  the profiles it covers (shared-service guide → `shared-service`
+  + `prod-postgres`; self-hosted guide → `local-stdio` +
+  `single-tenant-http`). `private-network-grpc` is intentionally
+  not under either operator guide — it is documented in the
+  Deployment Profiles section instead. Pure operator-doc fix.
 - **`SECURITY.md` + `docs/production-readiness.md` Response limits
   claim now reflects the 4 MB default.** Both surfaces stated
   "2MB default on HTTP request bodies" — pinning back to the v0.6-

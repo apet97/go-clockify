@@ -20,14 +20,20 @@ security reviewers probably want [Release Trust](#release-trust).**
 
 ## Operator Guides
 
-Run-the-service documentation for the two supported profiles.
+Run-the-service documentation grouped by operator shape (multi-tenant
+hosted vs. single-user / small-team). All five registered profiles
+are supported; the two operator guides below cover the two shapes
+that share the most operator concerns. Single-shape deployment notes
+live one section down under [Deployment Profiles](#deployment-profiles).
 
 - [operators/](operators/) — cross-referenced operator guides for
   shared-service and self-hosted deployments.
 - [operators/shared-service.md](operators/shared-service.md) —
-  multi-tenant `streamable_http` + Postgres + OIDC.
+  multi-tenant `streamable_http` + Postgres + OIDC. Applies to the
+  `shared-service` and `prod-postgres` profiles.
 - [operators/self-hosted.md](operators/self-hosted.md) —
-  single-user / small-team deployments.
+  single-user / small-team deployments. Applies to the
+  `local-stdio` and `single-tenant-http` profiles.
 - [clients.md](clients.md) — MCP client compatibility matrix.
 - [support-matrix.md](support-matrix.md) — what we support, in what
   combination, on which OS.
