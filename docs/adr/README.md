@@ -22,10 +22,19 @@ from `git log` and inline code comments.
 | 0009 | Resource delta-sync subscriptions | [0009-resource-delta-sync.md](0009-resource-delta-sync.md) |
 | 0010 | Metrics stack direction (proposed) | [0010-metrics-stack-direction.md](0010-metrics-stack-direction.md) |
 | 0011 | Control-plane schema versioning | [0011-controlplane-schema-versioning.md](0011-controlplane-schema-versioning.md) |
+| 0012 | Backward-compatibility policy | [0012-backward-compatibility-policy.md](0012-backward-compatibility-policy.md) |
+| 0013 | Private-repo SLSA posture (superseded) | [0013-private-repo-slsa-posture.md](0013-private-repo-slsa-posture.md) |
+| 0014 | Production fail-closed defaults | [0014-prod-fail-closed-defaults.md](0014-prod-fail-closed-defaults.md) |
+| 0015 | Profile-centric configuration model | [0015-profile-centric-configuration.md](0015-profile-centric-configuration.md) |
+| 0016 | Single-maintainer governance reality | [0016-single-maintainer-governance.md](0016-single-maintainer-governance.md) |
 
-ADRs 0001–0009 and 0011 are **Accepted**. 0010 is **Proposed** — it
-captures the design surface around whether to keep the homegrown
-metrics facade or move to OpenTelemetry metrics; no code change yet.
+ADRs 0001–0009, 0011, 0012, 0014, 0015, and 0016 are **Accepted**.
+0010 is **Proposed** — it captures the design surface around whether
+to keep the homegrown metrics facade or move to OpenTelemetry
+metrics; no code change yet. 0013 is **Superseded 2026-04-22** when
+the repository flipped to public — the skip path and
+`continue-on-error` treatments it codified are gone, but the ADR
+stays in the tree as the historical record.
 
 New ADRs should follow the MADR 3.0 template (status / context /
 decision / consequences / alternatives / references) used by the

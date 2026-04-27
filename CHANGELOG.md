@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/README.md` index lists ADRs 0012-0016.** The ADR
+  index table stopped at 0011 (Control-plane schema versioning)
+  but the directory has five additional ADRs: 0012
+  (Backward-compatibility policy, Accepted), 0013 (Private-repo
+  SLSA posture, Superseded 2026-04-22 when the repo flipped
+  public), 0014 (Production fail-closed defaults, Accepted),
+  0015 (Profile-centric configuration model, Accepted), and
+  0016 (Single-maintainer governance reality, Accepted). Index
+  now lists all 16 ADRs and the status summary paragraph
+  enumerates which are Accepted, which is Proposed (0010), and
+  which is Superseded (0013) with the reason. Pure operator-doc
+  fix; closes a doc-vs-filesystem drift that left contributors
+  navigating from the index unaware that five recent ADRs
+  existed.
 - **`deploy/k8s/README.md` Observability section now describes the
   real endpoint surface.** The section claimed
   "Legacy `MCP_TRANSPORT=http` exposes three unauthenticated
