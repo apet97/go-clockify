@@ -30,7 +30,7 @@ new method) but require an implementation in every existing backend.
 |--------|-------|-----------|
 | `Tenant`, `PutTenant`, `CredentialRef`, `PutCredentialRef`, `Session`, `PutSession`, `DeleteSession`, `AppendAuditEvent` | v0.6.0 | Original eight methods. |
 | `Close() error` | v1.1.0 (Wave B1.0) | Release backend-owned resources. `DevFileStore` returns nil. Postgres closes the pool. |
-| `RetainAudit(ctx, maxAge) (int, error)` | v1.1.0 (Wave B2.1) | Drop audit events older than `maxAge`, return count removed. `maxAge <= 0` is a no-op. Called by the retention reaper in `cmd/clockify-mcp/retain.go`. |
+| `RetainAudit(ctx, maxAge) (int, error)` | v1.1.0 (Wave B2.1) | Drop audit events older than `maxAge`, return count removed. `maxAge <= 0` is a no-op. Called by the retention reaper in `internal/runtime/retain.go` (moved out of `cmd/clockify-mcp/retain.go` during the dea1cc3 C2.2 runtime extraction). |
 
 ## File / memory backend
 

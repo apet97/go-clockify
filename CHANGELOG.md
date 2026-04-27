@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actual ServiceMonitor + PrometheusRule template files.
   Pure operator-doc fix; reviewers no longer chase a phantom
   observability doc.
+- **`internal/controlplane/COMPAT.md` retention-reaper pointer
+  unstuck from pre-C2.2 path.** The compat-matrix row for
+  `RetainAudit(ctx, maxAge)` cited `cmd/clockify-mcp/retain.go`
+  as the call site — that file was moved to
+  `internal/runtime/retain.go` during the dea1cc3 C2.2 runtime
+  extraction (along with `RetainAuditOnce` → `RetainAuditLoop`).
+  Compat-matrix readers now land on the actual current call site
+  and get a one-line note about the historical move so the
+  CHANGELOG reference resolves.
 - **`internal/mcp/resources.go` ADR-0009 reference renumbered.**
   The `ResourceUpdateDelta` doc-comment pointed reviewers at
   `docs/adr/013-resource-delta-sync.md` — wrong ADR number,
