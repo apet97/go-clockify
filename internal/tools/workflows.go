@@ -9,6 +9,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -43,8 +44,12 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
 	}
+	path, err := paths.Workspace(wsID, "time-entries")
+	if err != nil {
+		return nil, err
+	}
 	var out clockify.TimeEntry
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/time-entries", payload, &out); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
 	return ok("clockify_log_time", LogTimeData{Entry: out, ResolvedProject: projectID}, map[string]any{"workspaceId": wsID}), nil
@@ -118,8 +123,12 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	if entry.TimeInterval.End != "" {
 		payload["end"] = entry.TimeInterval.End
 	}
+	path, err := paths.Workspace(wsID, "time-entries", entry.ID)
+	if err != nil {
+		return nil, err
+	}
 	var out clockify.TimeEntry
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/time-entries/"+entry.ID, payload, &out); err != nil {
+	if err := s.Client.Put(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
 	return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: out, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID}), nil

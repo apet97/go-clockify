@@ -146,6 +146,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `aggregateEntriesRange` (used inside the pagination loop) swaps
   to `paths.Workspace(wsID, "user", user.ID, "time-entries")`. Same
   4-segment shape as the entries.go helper.
+- **`workflows.go` migrated to `paths.Workspace`.** `LogTime` POSTs
+  to `paths.Workspace(wsID, "time-entries")`; `FindAndUpdateEntry`
+  PUTs to `paths.Workspace(wsID, "time-entries", entry.ID)`.
+  `SwitchProject` is unchanged — it delegates to `StopTimer` /
+  `StartTimer`, both already migrated in 3e7ae44.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
