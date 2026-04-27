@@ -142,6 +142,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `paths.Workspace(wsID, "user", user.ID, "time-entries")`.
   `TimerStatus` is unchanged — it routes through
   `listEntriesWithQuery`, which was migrated in f372814.
+- **`reports.go` migrated to `paths.Workspace`.** Single concat in
+  `aggregateEntriesRange` (used inside the pagination loop) swaps
+  to `paths.Workspace(wsID, "user", user.ID, "time-entries")`. Same
+  4-segment shape as the entries.go helper.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

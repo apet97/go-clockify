@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -90,7 +91,10 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 		ByDay:     make(map[string]*dayBucket),
 	}
 
-	path := "/workspaces/" + wsID + "/user/" + user.ID + "/time-entries"
+	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
+	if err != nil {
+		return nil, "", "", err
+	}
 	for page := 1; page <= aggregatePageSafetyStop; page++ {
 		query := make(map[string]string, len(baseQuery)+2)
 		for k, v := range baseQuery {
