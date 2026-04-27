@@ -80,6 +80,10 @@ func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reaso
 			"phase", phase,
 			"audit_outcome", "not_durable",
 			"durability_mode", s.AuditDurabilityMode,
+			"tenant_id", s.AuditTenantID,
+			"subject", s.AuditSubject,
+			"session_id", s.AuditSessionID,
+			"transport", s.AuditTransport,
 			"error", err.Error(),
 		)
 	}

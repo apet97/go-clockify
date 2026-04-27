@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`audit_persist_failed` slog record carries tenant / subject /
+  session / transport context.** When the audit Auditor returns a
+  persistence error, the slog.Error event at
+  `internal/mcp/audit.go:77` previously emitted only `tool`,
+  `outcome`, `phase`, `audit_outcome`, `durability_mode`, and
+  `error`. Operators following the
+  `docs/runbooks/audit-durability.md` recovery checklist (filter
+  by `tenant_id=…` to identify affected tenants) would have
+  found nothing — the `tenant_id` field claim was fictional.
+  Same iter114 / iter127 / iter151 fictional-string drift class,
+  but resolved by extending the code rather than weakening the
+  runbook: tenant_id, subject, session_id, and transport are all
+  already in the `AuditEvent.Metadata` passed to the Auditor, so
+  duplicating them onto the slog event is a strictly-additive
+  change. Affected-tenant attribution from logs is now possible
+  without cross-referencing the Postgres audit_events table.
+
 ### Fixed
 
 - **`docs/testing/soak-and-profile.md` pprof setup matches the
