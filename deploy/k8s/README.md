@@ -113,14 +113,22 @@ or the Deployment manifest.
 
 ## Observability
 
-Legacy `MCP_TRANSPORT=http` exposes three unauthenticated endpoints on the main listener:
+Both `MCP_TRANSPORT=http` (legacy) and `MCP_TRANSPORT=streamable_http`
+expose two unauthenticated endpoints on the main listener:
 
 - `GET /health` — liveness (always 200 if the process is alive).
 - `GET /ready` — readiness (503 if the upstream Clockify API is unreachable).
-- `GET /metrics` — Prometheus text-format metrics.
 
-For `MCP_TRANSPORT=streamable_http`, prefer a dedicated metrics listener via
-`MCP_METRICS_BIND` and scrape that port instead of the public MCP listener.
+`GET /metrics` (Prometheus text format) is **not** mounted on the main
+listener by default. Two ways to scrape:
+
+1. **Recommended:** enable a dedicated side-channel listener via
+   `MCP_METRICS_BIND=:9091` and scrape that port. Keeps `/metrics`
+   off the same auth boundary as the MCP wire.
+2. **Inline:** opt in with `MCP_HTTP_INLINE_METRICS_ENABLED=1`. Auth
+   defaults to `inherit_main_bearer` (reuses the primary bearer);
+   `static_bearer` accepts a dedicated separate token;
+   `none` requires explicit opt-in and emits a startup warning.
 
 Structured JSON logs are written to stderr (`MCP_LOG_FORMAT=json`).
 

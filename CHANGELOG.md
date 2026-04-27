@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`deploy/k8s/README.md` Observability section now describes the
+  real endpoint surface.** The section claimed
+  "Legacy `MCP_TRANSPORT=http` exposes three unauthenticated
+  endpoints on the main listener: /health, /ready, /metrics" but
+  the actual code disagrees on three points:
+  (1) `/health` and `/ready` are mounted on **both** legacy http
+      and streamable_http (`internal/mcp/transport_streamable_http.go:138-143`),
+  (2) `/metrics` is **not** mounted on the main listener by default
+      — it is gated by `MCP_HTTP_INLINE_METRICS_ENABLED`
+      (`internal/mcp/transport_http.go:30-58`), and
+  (3) when inline metrics are enabled, auth defaults to
+      `inherit_main_bearer`, not "unauthenticated".
+  Section rewritten to describe both transports' shared health
+  endpoints, the recommended `MCP_METRICS_BIND` side-channel
+  listener, and the inline-metrics opt-in with its three auth
+  modes (`inherit_main_bearer` / `static_bearer` / `none`)
+  matching the SECURITY.md "Inline /metrics security" bullet.
+  Pure operator-doc fix; closes a year-old drift between the
+  k8s deploy README and the actual transport code.
 - **`docs/production-readiness.md` TLS-termination bullet matches
   reality.** Compliance posture had the same blanket "the HTTP
   transport does NOT terminate TLS by design" claim that iter93
