@@ -154,6 +154,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   injected by callers like `aggregateEntriesRange`). Pure
   refactor — no behaviour change. Same lint sweep
   (`policy.go` 0953132, `bootstrap.go` 3c5592e).
+- **`internal/jsonmergepatch/merge_patch.go` modernised.** Two
+  hints cleared: the `applyAny` object-merge `for k, v := range
+  prevObj { out[k] = v }` body collapses to
+  `maps.Copy(out, prevObj)` while preserving the
+  `make(map[string]any, len(prevObj)+len(patchObj))` capacity
+  hint; the `hasNull` slice case `for _, inner := range val { if
+  hasNull(inner) { return true } }` collapses to
+  `slices.ContainsFunc(val, hasNull)`. Pure refactor — no
+  behaviour change. Closes the iter43-queued lint sweep across
+  the codebase.
 
 ### Added
 

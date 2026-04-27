@@ -33,6 +33,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 )
 
 // FormatNone means no delta was computed because there was no prior
@@ -176,9 +178,7 @@ func applyAny(prev, patch any) any {
 		prevObj = map[string]any{}
 	}
 	out := make(map[string]any, len(prevObj)+len(patchObj))
-	for k, v := range prevObj {
-		out[k] = v
-	}
+	maps.Copy(out, prevObj)
 	for k, v := range patchObj {
 		if v == nil {
 			delete(out, k)
@@ -231,11 +231,7 @@ func hasNull(v any) bool {
 			}
 		}
 	case []any:
-		for _, inner := range val {
-			if hasNull(inner) {
-				return true
-			}
-		}
+		return slices.ContainsFunc(val, hasNull)
 	}
 	return false
 }
