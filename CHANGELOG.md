@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`CONTRIBUTING.md` Project Structure section now reflects the
+  real `internal/` package tree.** The ASCII tree listed 13
+  internal packages but `ls internal/` returns 28. Missing
+  load-bearing entries: `runtime/` (extracted in C2.2 — the
+  current entry-point wiring), `controlplane/` + `auditbridge/`
+  (audit + tenant store + bridge), `transport/` (gRPC adapter),
+  `paths/` (typed URL path builder), `authn/`, `vault/`,
+  `logging/` (PII redaction), `metrics/`, `tracing/`,
+  `jsonschema/`, `jsonpatch/`, `jsonmergepatch/`, `testharness/`,
+  `benchdata/`. Also: the `policy/` line listed only four modes
+  (`read_only/safe_core/standard/full`), missing
+  `time_tracking_safe` — the recommended default for hosted-AI
+  deployments per `docs/policy/production-tool-scope.md`. Tree
+  now lists all 28 packages with one-line descriptions and the
+  policy-mode list matches `internal/policy/policy.go:14-19`.
+  New contributors landing on CONTRIBUTING.md no longer have to
+  cross-reference `ls internal/` to find packages.
 - **`docs/README.md` Release Trust section lists
   `public-hosted-launch-checklist.md`.** docs/release/ ships two
   checklists — `deploy-readiness-checklist.md` (general

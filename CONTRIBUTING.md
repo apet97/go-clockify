@@ -71,22 +71,37 @@ All checks must pass with no errors.
 ## Project Structure
 
 ```
-cmd/clockify-mcp/     Entrypoint — wires all layers
+cmd/clockify-mcp/     Entrypoint shim — defers to internal/runtime
 internal/
-  mcp/                Protocol core — pure JSON-RPC/MCP engine (modular: server, tools, resources, audit, prompts)
+  mcp/                Protocol core — pure JSON-RPC/MCP engine (server, tools, resources, audit, prompts)
+  runtime/            Process wiring — selects transport, builds Server (extracted in C2.2)
   clockify/           HTTP client (connection pooling, retry/backoff, pagination)
   tools/              All 124 tool handlers (Tier 1 registry + Tier 2 lazy groups)
   enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
-  config/             Environment variable configuration (fail-fast validation)
-  policy/             Policy modes (read_only/safe_core/standard/full)
+  config/             EnvSpec + profile system + fail-fast validation
+  policy/             Policy modes (read_only/time_tracking_safe/safe_core/standard/full)
   resolve/            Name-to-ID resolution
   dryrun/             Dry-run interception strategies
   bootstrap/          Tool visibility modes, searchable catalog
   ratelimit/          Concurrency + throughput control (race-safe)
   truncate/           Token-aware output truncation
   dedupe/             Duplicate entry detection
-  timeparse/          Natural language time parsing
+  timeparse/          Natural-language time parsing
   helpers/            Error mapping, write envelopes
+  paths/              Typed URL path builder (validates IDs before concat)
+  transport/          Transport adapters (grpc behind -tags=grpc)
+  controlplane/       Audit + tenant store (memory or postgres backend)
+  auditbridge/        Bridge from mcp.Auditor to controlplane.Auditor
+  authn/              Auth modes (static_bearer, oidc, forward_auth, mtls)
+  vault/              Secret storage abstraction (inline vs external refs)
+  logging/            slog handler + PII-redaction wrapper
+  metrics/            Prometheus metrics + side-channel listener
+  tracing/            OTel tracing (behind -tags=otel)
+  jsonschema/         Tool input-schema validation
+  jsonpatch/          RFC 6902 patches (audit/replay)
+  jsonmergepatch/     RFC 7396 patches (resource delta-sync)
+  testharness/        Cross-transport parity test harness
+  benchdata/          Benchmark fixtures
 ```
 
 ## Pull Request Process
