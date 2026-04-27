@@ -18,7 +18,7 @@ import (
 type Service struct {
 	Client          *clockify.Client
 	WorkspaceID     string
-	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil = system timezone
+	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil = UTC fallback (every call site does `if loc == nil { loc = time.UTC }`)
 	DedupeConfig    *dedupe.Config        // optional, set during wiring
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	ActivateGroup   func(context.Context, string) (ActivationResult, error)

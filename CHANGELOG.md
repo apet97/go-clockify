@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`CLOCKIFY_TIMEZONE` documented fallback is UTC, not system.**
+  Both `deploy/helm/clockify-mcp/values.yaml:115` ("default:
+  system") and `internal/tools/common.go:21` ("nil = system
+  timezone") claimed an unset `CLOCKIFY_TIMEZONE` falls back to
+  the host's local timezone. Reality, per
+  `internal/tools/entries.go:233-235`,
+  `internal/tools/reports.go:76`,
+  `internal/tools/resources.go:86`,
+  `internal/tools/resources.go:146`,
+  `internal/tools/entries.go:367-369`: every call site does
+  `if loc == nil { loc = time.UTC }`. An operator on a
+  Europe/Berlin host expecting locale-aware time parsing for
+  log-time / report-aggregation tools would have got UTC instead,
+  potentially shifting day-boundary aggregation by up to a full
+  day. Both surfaces now name UTC as the actual fallback and
+  the values.yaml comment includes a sample IANA value
+  (`Europe/Berlin`) so operators know they need to set the var
+  explicitly. Same hosted-default-doc-vs-code-reality drift
+  class as iter130 (`MCP_METRICS_AUTH_MODE`).
 - **`deploy/k8s/base/configmap.yaml` and
   `deploy/helm/clockify-mcp/values.yaml` describe the real
   `MCP_METRICS_AUTH_MODE` default.** Both deploy templates'
