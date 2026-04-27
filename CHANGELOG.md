@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/coverage-policy.md` "Why these exact numbers" prose
+  matches ratcheted floor.** §"Why these exact numbers" said
+  "The new 69% global floor closes that gap" — but iter140
+  already bumped the floor table to 71%; this prose paragraph
+  was the last surface still naming 69%. Now reads "The 71%
+  global floor (initially calibrated to 69%, ratcheted upward
+  in subsequent waves; see the table above)" so the historical
+  starting point is preserved as context but the current floor
+  matches the script + table. Continuation of iter140's
+  global-floor sweep at the missed prose surface.
 - **`docs/adr/0012-backward-compatibility-policy.md` Config env
   vars Rename flow describes real marker.** Step 1 said "Startup
   logs `config_env_rename` at WARN when the old name is

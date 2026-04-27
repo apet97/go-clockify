@@ -73,10 +73,12 @@ floors ranging 62–85%. That 55% was wildly below the actual measured
 coverage (68.5%), so the floor was not meaningfully guarding against
 regressions — a PR could delete 13% worth of tests and still merge.
 
-The new 69% global floor closes that gap. The per-package floors cover every
-non-trivial package in `internal/` (the previous six became fifteen),
-including the safety-critical ones that had no floor at all: `internal/tools`,
-`internal/authn`, `internal/policy`, `internal/clockify`.
+The 71% global floor (initially calibrated to 69%, ratcheted upward
+in subsequent waves; see the table above) closes that gap. The
+per-package floors cover every non-trivial package in `internal/`
+(the previous six became fifteen), including the safety-critical
+ones that had no floor at all: `internal/tools`, `internal/authn`,
+`internal/policy`, `internal/clockify`.
 
 ## Running locally
 
