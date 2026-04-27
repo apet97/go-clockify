@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`internal/config/profile.go` package doc no longer claims a
+  1:1 profile↔doc mapping.** The Profile type comment said "The five
+  canonical profiles map onto the five docs/deploy/ profile notes" —
+  but the mapping is not 1:1: prod-postgres has no dedicated doc
+  (covered inline in production-profile-shared-service.md as an
+  alias) and docs/deploy/profile-self-hosted.md exists for a legacy
+  shape without any registered profile. iter81 surfaced the same
+  drift on the docs/README.md side; this is the symmetric fix at
+  the source-comment layer. Comment now enumerates the five
+  registered names and notes the prod-postgres alias inline +
+  the self-hosted legacy-shape pointer. Pure code-comment fix.
 - **`docs/README.md` profile list realigned with canonical
   registry.** The Start Here block claimed "the five canonical
   deployment profiles (`local-stdio`, `single-tenant-http`,

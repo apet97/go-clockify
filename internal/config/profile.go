@@ -11,8 +11,13 @@ import (
 // Profile is a named bundle of env-var defaults for a supported deployment
 // shape. Applying a profile sets each of its Env keys only when the key is
 // currently unset in the process environment; explicit values (from shell,
-// container env, systemd EnvironmentFile, etc.) always win. The five
-// canonical profiles map onto the five docs/deploy/ profile notes.
+// container env, systemd EnvironmentFile, etc.) always win. Five canonical
+// profile names are registered: local-stdio, single-tenant-http,
+// shared-service, private-network-grpc, prod-postgres (the last is a
+// shared-service alias with ENVIRONMENT=prod). docs/deploy/ carries a note
+// per profile shape; prod-postgres is documented inside the shared-service
+// note, and docs/deploy/profile-self-hosted.md is a legacy-shape upgrade
+// pointer without a corresponding registered profile.
 type Profile struct {
 	// Name is the stable identifier passed via --profile=<name> or
 	// MCP_PROFILE=<name>. Hyphenated for CLI ergonomics.
