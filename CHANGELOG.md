@@ -75,6 +75,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **Fourth `w2-12-digest-pinning.md` reference cleared (sweep
+  closed).** Iter55 (c5f1bdd) repointed three call sites
+  (Dockerfile + check-overlay-structure.sh ×2) but missed the
+  fourth in `deploy/k8s/overlays/prod/kustomization.yaml`'s
+  policy block-comment. Now repointed to
+  `image-digest-pinning.md`. Pure pointer fix; closes the
+  iter55 sweep.
 - **Stale `w2-12-digest-pinning.md` runbook references repointed.**
   The runbook was renamed `w2-12-digest-pinning.md` →
   `image-digest-pinning.md` (already documented in CHANGELOG)

@@ -19,7 +19,7 @@
 #   or equivalent in their GitOps tooling. Pinning here would drift out
 #   of sync with every release — and did exactly that prior to wave-a A5,
 #   when the overlay was stuck at "0.7.0" while the base pointed at "v1.0.0".
-#   See docs/runbooks/w2-12-digest-pinning.md for the full workflow.
+#   See docs/runbooks/image-digest-pinning.md for the full workflow.
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
