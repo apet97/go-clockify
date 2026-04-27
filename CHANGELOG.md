@@ -146,6 +146,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pre-allocated capacity hint. Pure refactor — no behaviour
   change. Same lint sweep that cleared `policy.go` in
   0953132.
+- **`internal/clockify/client.go` `cloneQuery` modernised.**
+  The `for k, v := range in { out[k] = v }` body collapses
+  to `maps.Copy(out, in)` while preserving the
+  `make(map[string]string, len(in)+2)` capacity hint (the
+  +2 buffer for the per-page `page` / `page-size` entries
+  injected by callers like `aggregateEntriesRange`). Pure
+  refactor — no behaviour change. Same lint sweep
+  (`policy.go` 0953132, `bootstrap.go` 3c5592e).
 
 ### Added
 

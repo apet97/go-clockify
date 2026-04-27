@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"net/http"
@@ -345,9 +346,7 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 
 func cloneQuery(in map[string]string) map[string]string {
 	out := make(map[string]string, len(in)+2)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 
