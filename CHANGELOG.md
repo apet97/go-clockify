@@ -289,6 +289,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   block grew). Replaced with the same function-name + grep-string
   search anchors used in the ADR-0002 sweep so the same reorg-drift
   cannot recur.
+- **ADR-0005 file references unstuck from pre-C2.2 line numbers.**
+  Three stale anchors fixed: `internal/tools/context.go:75-90`
+  (the activation handler grew past line 90 when the activated_tools
+  enumeration landed); `bootstrap.go:55-68` (mis-described the
+  `AlwaysVisible` location — that map starts at line 47, not 55);
+  and `cmd/clockify-mcp/runtime.go:113-150` (file was removed in
+  the dea1cc3 C2.2 refactor — wiring now lives in
+  `internal/runtime/runtime.go` `New()`). Anchors at `bootstrap.go:71`
+  and `:56` were verified still accurate and left as-is — this
+  iteration only touched the genuinely stale ones.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion

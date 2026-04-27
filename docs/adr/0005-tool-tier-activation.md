@@ -46,7 +46,7 @@ tool that is always visible regardless of policy or bootstrap mode.
 Two activation paths:
 
 1. `activate_group: "<group>"` — activates every tool in a Tier 2
-   group at once. Wired in `internal/tools/context.go:75-90`.
+   group at once. Wired in `internal/tools/context.go` (search for `activateGroup := stringArg(args, "activate_group")`).
 2. `activate_tool: "<name>"` — activates a single Tier 2 tool by
    name. Wired in the same handler.
 
@@ -130,11 +130,16 @@ both gates allow it.
 
 - Tier 1 catalog: `internal/bootstrap/bootstrap.go:71`
   (`Tier1Catalog`).
-- Activation handler: `internal/tools/context.go:75-90`
+- Activation handler: `internal/tools/context.go` (search for `activateGroup := stringArg(args, "activate_group")`)
   (`activate_group` and `activate_tool` arguments).
-- Bootstrap modes: `internal/bootstrap/bootstrap.go:11-17` (`Mode`
-  enum) and `bootstrap.go:55-68` (`AlwaysVisible`, `MinimalSet`).
-- Wiring: `cmd/clockify-mcp/runtime.go:113-150`.
+- Bootstrap modes: `internal/bootstrap/bootstrap.go` `Mode` enum
+  (search for `type Mode int`) and the `AlwaysVisible` / `MinimalSet`
+  maps (search for `var AlwaysVisible`).
+- Wiring: `internal/runtime/runtime.go` `New()` — bootstrap config
+  is loaded by `bootstrap.ConfigFromEnv()` (search for that call)
+  and threaded through `runtimeDeps`. Pre-C2.2 (dea1cc3) the wiring
+  lived in `cmd/clockify-mcp/runtime.go`; that file was removed when
+  the runtime extracted into `internal/runtime/`.
 - Notifications: `internal/mcp/server.go` (search for
   `tools/list_changed`).
 - Related ADRs: 0004 (the same `FilterTool` pipeline gates both
