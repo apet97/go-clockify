@@ -34,15 +34,17 @@ exit non-zero on failure too.
 | `mid-body-reset` | httptest hijacks the connection, writes partial headers + body, then closes. | Client surfaces a clean `unexpected EOF` error without panicking or hanging. Reader cleanup path is exercised. |
 | `tls-handshake-fail` | httptest TLS server with a self-signed certificate that will not validate against the system CA pool. | Client surfaces a `tls: failed to verify certificate` error; no retry loop. |
 | `dns-fail` | Client points at a `.invalid` TLD hostname that cannot resolve. | Client surfaces a `no such host` error within the context deadline. DNS failures are local; infinite retries would be pointless. |
+| `upstream-429-concurrent` | N concurrent GETs racing through a `Retry-After: 1` storm — verifies retries don't serialise behind a shared lock. | Total wall-clock stays bounded by a small multiple of `Retry-After`; linear scaling with caller count means retries are holding a shared lock. |
 
 ## Acceptance
 
-`go run ./tests/chaos -scenario all` must print `all 5 scenarios
+`go run ./tests/chaos -scenario all` must print `all 6 scenarios
 passed` and exit zero. A `FAIL` outcome on any scenario indicates the
 HTTP client regressed one of its invariants and should be
 investigated before shipping a release.
 
-Recorded first-run output (2026-04-11 session):
+Recorded run (2026-04-11 first run; refreshed 2026-04-28 to cover
+`upstream-429-concurrent`):
 
 ```
 [PASS] 429-storm               2× 429 Retry-After: 1 then 200 — client must retry and succeed
@@ -60,7 +62,10 @@ Recorded first-run output (2026-04-11 session):
 [PASS] tls-handshake-fail      self-signed TLS server — handshake must fail cleanly
          elapsed=38ms error: x509: certificate signed by unknown authority
 
-all 5 scenarios passed
+[PASS] upstream-429-concurrent 10 concurrent callers racing through a Retry-After:1 storm
+         elapsed≈1.1s every caller succeeds; wall-clock stays a small multiple of Retry-After
+
+all 6 scenarios passed
 ```
 
 ## CI integration

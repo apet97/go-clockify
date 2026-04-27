@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`tests/chaos/README.md` covers the `upstream-429-concurrent`
+  scenario.** The README's scenario table listed 5 scenarios
+  (429-storm, 503-burst, mid-body-reset, tls-handshake-fail,
+  dns-fail), the Acceptance section claimed `all 5 scenarios
+  passed` is the expected output, and the Recorded run showed 5
+  PASS lines — but `tests/chaos/main.go:54-61` registers a 6th
+  scenario, `upstream-429-concurrent` (added to verify retries
+  don't serialise behind a shared lock; cited in
+  `docs/runbooks/production-incident-drill.md` Scenario A as
+  the canonical concurrent-throttling chaos test). Operators
+  running `go run ./tests/chaos -scenario all` today see "all 6
+  scenarios passed" with the extra PASS line, then have to
+  decide whether the README is stale or their run is wrong.
+  Scenarios table now includes the row, Acceptance text says
+  6, and the Recorded run shows the additional `[PASS]`. Same
+  iter134/iter135 fictional-number drift class.
 - **`docs/runbooks/release-asset-count.md` "Wrong count" /
   "Post-incident" sections updated to 46 (sweep continuation).**
   iter134 fixed the Symptoms section's two "expected 28"
