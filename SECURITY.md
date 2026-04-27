@@ -73,7 +73,7 @@ The following are in scope:
 - **Stdout purity**: protocol responses only on stdout; every log goes to stderr via slog — never mixes with JSON-RPC frames in stdio mode.
 - **Tool annotations**: all 124 tools carry `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`. Spec-strict MCP clients get the correct safety hints on every descriptor.
 - **Response limits**: 10MB on Clockify API responses, 4MB default on HTTP request bodies (`MCP_MAX_MESSAGE_SIZE`, capped at 100MB).
-- **Zero external dependencies** (stdlib only) — minimal supply chain attack surface; no `go.sum` at all.
+- **Zero external dependencies in the default binary** (stdlib only) — minimal supply chain attack surface. The root `go.mod` has zero `require` lines beyond the workspace pointer to the local `internal/tracing/otel` sub-module; the build-tagged sub-modules (`internal/transport/grpc`, `internal/controlplane/postgres`, `internal/tracing/otel`) live in their own `go.mod` files and only enter the build under `-tags=grpc`/`postgres`/`otel`. The root `go.sum` covers those sub-module deps for reproducibility but is irrelevant to the default-binary attack surface.
 - **Initialization guard**: `tools/call` rejected before `initialize` handshake (`-32002 server not initialized`).
 
 ## TLS / HTTP Transport

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SECURITY.md` "Zero external dependencies" bullet matches
+  the workspace reality.** The Security Features bullet said
+  "minimal supply chain attack surface; no `go.sum` at all" but
+  the repo root has had a 61-line `go.sum` since v1.0.0
+  (`2e5d258`) — it covers the build-tagged sub-module dependencies
+  under `go.work` (grpc, postgres, otel). The "no go.sum at all"
+  framing was correct for the default binary's attack surface
+  (root `go.mod` has zero external `require` lines) but
+  misleading at the file level. Bullet now states "Zero external
+  dependencies in the default binary", names the build-tagged
+  sub-modules that bring in deps under their own `go.mod`, and
+  notes that the root `go.sum` covers those for reproducibility
+  but does not apply to the default-binary surface. Pure
+  operator-doc fix; reviewer auditing supply chain claims sees
+  the accurate scope rather than a literal-false statement.
 - **`docs/upgrade-checklist.md` Config diff names spec.go as
   authoritative.** The Config diff command grepped for
   `os.Getenv` patterns in `internal/config/config.go` — that
