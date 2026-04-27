@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/production-incident-drill.md` references the
+  real risky-config log line.** The drill's "Metrics-auth drift"
+  step told operators to "Scan for `msg=metrics_auth_mode_unsafe`
+  log lines" but no such log message exists in the codebase. The
+  actual warning emitted at startup when
+  `MCP_HTTP_INLINE_METRICS_ENABLED=1` is paired with
+  `MCP_HTTP_INLINE_METRICS_AUTH_MODE=none` is
+  `msg=risky_config risk=inline_metrics_no_auth`
+  (`internal/runtime/legacy_http.go:48-53`). An operator running
+  the drill would have grepped for a string that never appears
+  and concluded the drift wasn't present — masking exactly the
+  failure mode the drill exists to surface. Step now names the
+  real log line plus the file/lines that emit it. Pure
+  operator-doc fix; closes a fictional-string drift the same way
+  iter103 closed `--dry-run` and iter105 closed `make smoke-http`.
 - **`docs/release-policy.md` SHA256SUMS.txt described as
   unsigned manifest, not "signed" file.** The Release artifacts
   trailer said "A signed `SHA256SUMS.txt` covering every binary

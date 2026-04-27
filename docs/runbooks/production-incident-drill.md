@@ -103,10 +103,15 @@ sequence matches.
    loss."
 
 5. **Metrics-auth drift.** Scan for
-   `msg=metrics_auth_mode_unsafe` log lines, identify the
-   subset of pods with the bad config, re-roll them with the
-   correct env. Reference: a deployment-hygiene runbook (not
-   yet in-tree; capture the gap in the post-drill writeup).
+   `msg=risky_config risk=inline_metrics_no_auth` log lines —
+   that is what `internal/runtime/legacy_http.go:48-53` emits
+   when `MCP_HTTP_INLINE_METRICS_ENABLED=1` is paired with
+   `MCP_HTTP_INLINE_METRICS_AUTH_MODE=none`. Identify the
+   subset of pods with that startup warning, re-roll them with
+   `inherit_main_bearer` (or move scraping to the dedicated
+   `MCP_METRICS_BIND` listener). Reference: a deployment-hygiene
+   runbook (not yet in-tree; capture the gap in the post-drill
+   writeup).
 
 6. **Upstream throttling.** This is the expected steady-state
    during a Clockify outage — correct operator behaviour is
