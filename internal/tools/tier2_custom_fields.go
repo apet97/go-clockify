@@ -8,6 +8,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -144,8 +145,12 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 		"page-size": strconv.Itoa(pageSize),
 	}
 
+	path, err := paths.Workspace(wsID, "custom-fields")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/custom-fields", query, &out); err != nil {
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_custom_fields", out, map[string]any{
@@ -166,8 +171,12 @@ func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "custom-fields", fieldID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/custom-fields/"+fieldID, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_custom_field", out, map[string]any{"workspaceId": wsID}), nil
@@ -199,8 +208,12 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 		body["required"] = req
 	}
 
+	path, err := paths.Workspace(wsID, "custom-fields")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/custom-fields", body, &out); err != nil {
+	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_custom_field", out, map[string]any{"workspaceId": wsID}), nil
@@ -227,8 +240,12 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 		body["required"] = req
 	}
 
+	path, err := paths.Workspace(wsID, "custom-fields", fieldID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/custom-fields/"+fieldID, body, &out); err != nil {
+	if err := s.Client.Put(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_custom_field", out, map[string]any{"workspaceId": wsID}), nil
@@ -243,11 +260,15 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	fieldPath, err := paths.Workspace(wsID, "custom-fields", fieldID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if dryrun.Enabled(args) {
 		// Preview: fetch the field then wrap as dry-run result
 		var field map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/custom-fields/"+fieldID, nil, &field); err != nil {
+		if err := s.Client.Get(ctx, fieldPath, nil, &field); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -258,7 +279,7 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, "/workspaces/"+wsID+"/custom-fields/"+fieldID); err != nil {
+	if err := s.Client.Delete(ctx, fieldPath); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_custom_field", map[string]any{
@@ -305,9 +326,12 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 
 	var path string
 	if projectID != "" {
-		path = "/workspaces/" + wsID + "/projects/" + projectID + "/custom-fields"
+		path, err = paths.Workspace(wsID, "projects", projectID, "custom-fields")
 	} else {
-		path = "/workspaces/" + wsID + "/time-entries/" + entryID + "/custom-fields"
+		path, err = paths.Workspace(wsID, "time-entries", entryID, "custom-fields")
+	}
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
 
 	var out map[string]any

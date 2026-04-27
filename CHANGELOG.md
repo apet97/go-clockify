@@ -180,6 +180,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   withdraw). `approveTimesheet` and `rejectTimesheet` build
   `approvalPath` once at the top, used for both the dry-run GET
   preview and the PUT — same pattern as `entries.go`.
+- **`tier2_custom_fields.go` migrated to `paths.Workspace`.** All 8
+  concats: list/get/create/update; `DeleteCustomField` builds
+  `fieldPath` once for dry-run GET + DELETE; `SetCustomFieldValue`
+  picks the projects-vs-time-entries branch via the helper while
+  keeping the conditional shape.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
