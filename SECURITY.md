@@ -108,18 +108,38 @@ only `local-stdio` / `single-tenant-http` honour the override.
 
 ## Verifying release artifacts
 
-Every release ships with:
+Every release ships **15 binaries across five tag combinations**
+(see [`docs/release-policy.md`](docs/release-policy.md#release-artifacts)
+for the full enumeration and `scripts/check-release-assets.sh` for
+the canonical platform matrix):
 
-- The binary (`clockify-mcp-<platform>[.exe]`)
-- A sigstore bundle (`clockify-mcp-<platform>.sigstore.json`) produced
-  by keyless cosign signing
-- A SPDX SBOM (`clockify-mcp-<platform>.spdx.json`)
+- 5 default (stdlib only): `darwin-arm64`, `darwin-x64`,
+  `linux-x64`, `linux-arm64`, `windows-x64.exe`.
+- 4 FIPS-tagged: `darwin/linux × arm64/x64` (Go's FIPS 140-3 module
+  has no Windows toolchain support).
+- 2 Postgres-tagged: `linux × arm64/x64`. Required by
+  `doctor --strict --check-backends` per the hosted-launch checklist.
+- 2 gRPC-tagged: `linux × arm64/x64`. Backs the
+  `private-network-grpc` profile.
+- 2 gRPC + Postgres: `linux × arm64/x64`. The hosted gRPC shape.
+
+Each binary ships with:
+
+- A sigstore bundle (`<binary>.sigstore.json`) produced by per-binary
+  keyless cosign signing.
+- A SPDX SBOM (`<binary>.spdx.json`).
 - A GitHub build provenance attestation (SLSA-aligned, stored in the
-  GitHub attestation service)
-- A multi-arch container image at `ghcr.io/apet97/go-clockify:v<version>`
-  that is Trivy-scanned (HIGH+CRITICAL blocking), cosign-signed, carries
-  a SPDX SBOM attestation, and an attested SLSA build provenance with the
-  image digest as subject
+  GitHub attestation service — covers all 15 binaries since the
+  ADR-0013 public-flip on 2026-04-22).
+
+`SHA256SUMS.txt` is shipped alongside as an unsigned manifest; it
+lets `sha256sum -c` cross-check downloads against goreleaser's staged
+hashes once a binary is independently verified via cosign.
+
+A multi-arch container image at `ghcr.io/apet97/go-clockify:v<version>`
+ships in parallel: Trivy-scanned (HIGH+CRITICAL blocking),
+cosign-signed, carries a SPDX SBOM attestation, and an attested
+SLSA build provenance with the image digest as subject.
 
 Release binaries are built with `-trimpath` so they do not embed the
 builder's absolute paths.

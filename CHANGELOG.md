@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SECURITY.md` "Verifying release artifacts" section enumerates
+  all 15 binaries.** The section described releases as shipping a
+  single binary family `clockify-mcp-<platform>[.exe]` plus its
+  sigstore/SBOM/attestation siblings, but iter101 / iter102 already
+  fixed the same v1.0.x-era artefact list shape in
+  `docs/release-policy.md` and `docs/verification.md` — releases
+  produce 15 binaries across five tag combinations (5 default + 4
+  FIPS + 2 Postgres + 2 gRPC + 2 gRPC + Postgres). Operators
+  reading SECURITY.md for the per-binary signature claim wouldn't
+  have learnt the FIPS / Postgres / gRPC / gRPC-Postgres binaries
+  also ship signed; section now mirrors release-policy's
+  enumeration plus the iter113 SHA256SUMS-is-unsigned and
+  iter109 ADR-0013 public-flip clarifications. Pure operator-doc
+  fix; closes the iter101 sweep at the security-policy surface.
 - **`.github/workflows/reproducibility.yml` workflow_dispatch
   example bumped to v1.2.0.** The reproducibility workflow's
   manual-dispatch tag input described the parameter as "Release
