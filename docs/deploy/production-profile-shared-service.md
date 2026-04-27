@@ -37,6 +37,13 @@ MCP_OIDC_AUDIENCE=clockify-mcp-shared
 #   MCP_REQUIRE_TENANT_CLAIM=1
 #   MCP_DISABLE_INLINE_SECRETS=1
 #   CLOCKIFY_POLICY=time_tracking_safe
+#
+# Profile-driven hosted-mode safety defaults (override with the matching
+# env var only when you understand the cross-tenant implications):
+#   CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1   (omit Clockify response bodies on the wire)
+#   CLOCKIFY_WEBHOOK_VALIDATE_DNS=1       (resolve webhook hosts; reject private/reserved replies)
+# Refused outright under shared-service / prod-postgres:
+#   CLOCKIFY_INSECURE=1                   (remote HTTP would leak per-tenant API keys)
 
 # Observability: Dedicated metrics port (bind to localhost or scrape behind
 # a NetworkPolicy; never expose publicly).
@@ -56,6 +63,9 @@ finding it was added to fix.
 | `MCP_REQUIRE_TENANT_CLAIM=1` | Reject tokens whose tenant claim is empty. | Tokens omitting the claim collapse into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across every misconfigured caller. |
 | `MCP_DISABLE_INLINE_SECRETS=1` | Reject credential refs with `backend=inline`. | Inline credentials sit in the control-plane DB and survive operator forgetfulness; vault-backed refs rotate on revoke. |
 | `CLOCKIFY_POLICY=time_tracking_safe` | Permit time-entry CRUD + tags; deny workspace-level project / client / task create writes. | The default `standard` policy lets an AI agent create projects in the operator's workspace without explicit consent. |
+| `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` (profile default) | Tool-error responses to MCP clients omit upstream Clockify response bodies; full bodies still flow into server-side slog. | A 4xx body from Clockify can carry per-tenant identifiers; without sanitisation those leak across tenant boundaries via the MCP wire. |
+| `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` (profile default) | `CreateWebhook` / `UpdateWebhook` resolve the host and reject any reply containing a private, reserved, link-local, or loopback IP. | A hostname resolving to `169.254.169.254` (cloud metadata) or `10.0.0.x` turns the Clockify outbound webhook delivery into an SSRF probe across the hosted control plane. |
+| `CLOCKIFY_INSECURE=1` is **refused** | Profile rejects the override at startup with an actionable error. | Remote HTTP in a multi-tenant deployment leaks per-tenant Clockify API keys to anything in the network path. |
 
 The `time_tracking_safe` choice is the AI-facing default. Trusted-team
 deployments that genuinely need broader writes can override to

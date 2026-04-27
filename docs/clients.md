@@ -18,10 +18,48 @@ Most clients fetch the list of available tools at startup using `tools/list`.
 - **Stdio Clients:** Automatically receive `notifications/tools/list_changed` when new tools are activated via `clockify_search_tools`.
 - **HTTP Clients:** Must manually re-fetch the tool list or handle session-based tool visibility updates.
 
+### Tier-2 Activation Semantics
+Each Tier-2 group (invoices, expenses, scheduling, time_off, …) is the
+unit of activation. Calling `clockify_search_tools` with either
+`activate_group:"<group>"` **or** `activate_tool:"<tool>"` brings the
+**entire containing group** online — the response payload includes
+`activated_tools: [...]` enumerating every tool name now reachable, and
+the `activation_message` lists them inline so the LLM can see what
+sibling capabilities it just gained. `activate_group` is the
+preferred form for new code; `activate_tool` is preserved for
+backwards compatibility.
+
 ### Safety and Destructive Operations
-`clockify-mcp-go` provides safety hints in tool definitions (`destructiveHint: true`).
+`clockify-mcp-go` provides safety hints in tool definitions (`destructiveHint: true`)
+plus a structured `RiskClass` bitmask on every descriptor
+(`Read | Write | Billing | Admin | PermissionChange |
+ExternalSideEffect | Destructive`). Audit events for billing /
+admin / permission-change tools capture the action-defining fields
+(role, status, quantity, unit_price), not just the IDs.
+
 - Clients like Claude Desktop may display a confirmation dialog before executing a destructive tool (e.g., `clockify_delete_entry`).
 - The `CLOCKIFY_DRY_RUN` environment variable (default: `enabled`) enables server-side preview support for destructive tools when the caller sends `dry_run:true`. If `dry_run` is omitted or `false`, the mutation executes.
+- **Non-destructive RW tools that trigger external side effects** —
+  `clockify_send_invoice`, `clockify_mark_invoice_paid`,
+  `clockify_test_webhook`, `clockify_deactivate_user` — also honour
+  `dry_run:true`: the handler GETs a preview without executing the
+  PUT/POST. Use this for any agent flow that wants a confirmation
+  step before billing or admin actions land.
+
+### Hosted-Mode Error Sanitisation
+On the `shared-service` and `prod-postgres` deployment profiles,
+tool-error responses to the MCP client omit upstream Clockify response
+bodies (`CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` is the profile default,
+overridable). Clients see the verb / path / status only; full bodies
+are still emitted to server-side slog for operator debugging. Local
+deployments keep verbose errors by default for fast diagnostics.
+
+### Hosted-Mode Webhook URL Validation
+`CreateWebhook` / `UpdateWebhook` resolve the host via DNS and reject
+any reply containing a private, reserved, link-local, or loopback IP
+when the deployment is on a hosted profile (or
+`CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` is set explicitly). Local profiles
+keep the literal-IP-only check.
 
 ### Resource Templates
 The server exposes `clockify://` URI templates.
