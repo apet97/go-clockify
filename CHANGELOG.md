@@ -75,6 +75,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`SECURITY.md` Webhook URL validation entry brought to current
+  state.** The Security Features bullet described only the
+  pre-audit literal-IP check (which has been the baseline since
+  v0.x). Missing: the hosted-profile DNS-resolve gate that ships
+  with shared-service / prod-postgres (closes the literal-IP-only
+  gap that would let `metadata.google.internal` style hostnames
+  resolve to `169.254.169.254` past the literal check), the
+  `CLOCKIFY_WEBHOOK_VALIDATE_DNS` operator override, and the
+  `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` allowlist escape hatch.
+  Bullet now describes all three layers. Pure operator-doc fix;
+  closes the iter40-era doc-sync chain at the security-summary
+  level.
 - **`docs/clients.md` Hosted-Mode Webhook URL Validation section
   references the allowlist escape hatch.** Iter40 added
   `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` and iter41 propagated it into
