@@ -105,12 +105,43 @@ func (e encoderNotifier) Notify(method string, params any) error {
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
 
+// RiskClass categorises tools beyond the three MCP boolean hints. It is a
+// bitmask so a tool can carry multiple attributes (for example a billing
+// action that also triggers an external side effect). Consumers — audit,
+// policy, enforcement — pattern-match against bits to decide confirmation
+// requirements, log fidelity, and policy gates. The taxonomy mirrors
+// docs/policy/production-tool-scope.md.
+type RiskClass uint32
+
+const (
+	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
+	RiskWrite                                    // ordinary mutating writes
+	RiskBilling                                  // touches invoices / payments
+	RiskAdmin                                    // workspace-admin scope (deactivate, group/user mgmt)
+	RiskPermissionChange                         // role / permission changes
+	RiskExternalSideEffect                       // triggers outbound delivery (email, webhook test)
+	RiskDestructive                              // irreversible delete-style operations
+)
+
+// Has reports whether the receiver carries every bit in mask.
+func (r RiskClass) Has(mask RiskClass) bool { return r&mask == mask }
+
 type ToolDescriptor struct {
 	Tool            Tool
 	Handler         ToolHandler
 	ReadOnlyHint    bool
 	DestructiveHint bool
 	IdempotentHint  bool
+	// RiskClass is the structured risk taxonomy; defaults are derived from
+	// the boolean hints in normalizeDescriptors when this field is zero.
+	// Tier-2 tools that need finer granularity than read/write/destructive
+	// (billing, admin, permission_change, external_side_effect) override it
+	// in internal/tools/risk_overrides.go.
+	RiskClass RiskClass
+	// AuditKeys lists argument keys (beyond the implicit *_id suffix scan)
+	// whose values must be captured in audit events. Used for action-defining
+	// fields like role, status, quantity, unit_price.
+	AuditKeys []string
 }
 
 type Server struct {

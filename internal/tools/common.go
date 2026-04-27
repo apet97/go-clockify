@@ -269,8 +269,34 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		if in[i].Tool.InputSchema != nil {
 			tightenInputSchema(in[i].Tool.InputSchema)
 		}
+		applyRiskMetadata(&in[i])
 	}
 	return in
+}
+
+// applyRiskMetadata populates RiskClass and AuditKeys for a descriptor.
+// The default risk class is derived from the three MCP boolean hints; per-tool
+// overrides in riskOverrides win because billing/admin/permission_change
+// distinctions cannot be expressed as booleans.
+func applyRiskMetadata(d *mcp.ToolDescriptor) {
+	if d.RiskClass == 0 {
+		switch {
+		case d.DestructiveHint:
+			d.RiskClass = mcp.RiskDestructive
+		case d.ReadOnlyHint:
+			d.RiskClass = mcp.RiskRead
+		default:
+			d.RiskClass = mcp.RiskWrite
+		}
+	}
+	if override, ok := riskOverrides[d.Tool.Name]; ok {
+		if override.class != 0 {
+			d.RiskClass = override.class
+		}
+		if len(override.auditKeys) > 0 && len(d.AuditKeys) == 0 {
+			d.AuditKeys = append([]string(nil), override.auditKeys...)
+		}
+	}
 }
 
 // tightenInputSchema mutates a JSON schema tree in place to meet the MCP
