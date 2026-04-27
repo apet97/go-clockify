@@ -75,6 +75,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **Makefile `mutation` target repointed to current floor source.**
+  The target's comment block told operators to read
+  `docs/testing/mutation-floors.md` for the per-package gremlins
+  efficacy floors. That standalone runbook was retired; the floors
+  themselves live inline in `.github/workflows/mutation.yml`'s
+  top-of-file comment table + matrix entries (the workflow IS the
+  source of truth, not a doc that mirrored it). Repointed the
+  Makefile comment to the workflow file. Pure doc fix; no
+  behaviour change.
 - **`internal/transport/grpc/codec.go` package-doc gRPC entry-point
   pointer unstuck from pre-C2.2 path.** The package comment told
   reviewers to read `cmd/clockify-mcp/grpc_on.go` to see how the

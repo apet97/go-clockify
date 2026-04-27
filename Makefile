@@ -244,8 +244,9 @@ verify-bench: bench
 	 echo "== benchstat $(BENCH_BASELINE) vs $(BENCH_OUT) =="; \
 	 "$$BENCHSTAT" $(BENCH_BASELINE) $(BENCH_OUT)
 
-# Local mutation testing via gremlins.dev (W2-10). Floors live in
-# docs/testing/mutation-floors.md; CI runs the same tool nightly.
+# Local mutation testing via gremlins.dev (W2-10). Per-package
+# efficacy floors live in .github/workflows/mutation.yml (top-of-file
+# comment table + matrix entries); CI runs the same tool nightly.
 # Usage: `make mutation PKG=internal/jsonschema`
 PKG ?= internal/jsonschema
 mutation:
