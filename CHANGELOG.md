@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SECURITY.md` TLS section now distinguishes proxy-terminated
+  vs in-process TLS modes.** The TLS / HTTP Transport section
+  blankly stated "The HTTP transport does **not** terminate TLS"
+  with a "MUST front with proxy" mandate. That was correct only
+  for the default static_bearer / oidc / forward_auth deployments;
+  `streamable_http` with `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY`
+  and `grpc` with `MCP_GRPC_TLS_CERT` + `MCP_GRPC_TLS_KEY` both
+  terminate TLS in-process — and mTLS-anchored deployments
+  (per `support-matrix.md` line 21) rely on exactly that path
+  via `internal/runtime/streamable.go:56-83`. Section now
+  describes both modes accurately: default = proxy-fronted, with
+  the explicit cert+key paths called out for the in-process
+  termination case. Operators considering mTLS no longer have to
+  cross-reference the support matrix to discover the in-process
+  TLS option exists.
 - **`.github/workflows/release-smoke.yml` workflow_dispatch tag
   example bumped to `v1.2.0`.** The manual-trigger input for the
   release-smoke workflow described the tag parameter as

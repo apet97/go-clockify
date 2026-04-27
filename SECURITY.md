@@ -78,12 +78,27 @@ The following are in scope:
 
 ## TLS / HTTP Transport
 
-The HTTP transport does **not** terminate TLS. Production deployments MUST
-front the server with a TLS-terminating reverse proxy (Caddy, nginx, Envoy,
-Traefik, or a cloud load balancer). Without a proxy, the bearer token and all
+By default the HTTP transport does **not** terminate TLS — production
+deployments using `static_bearer`, `oidc`, or `forward_auth` MUST front the
+server with a TLS-terminating reverse proxy (Caddy, nginx, Envoy, Traefik,
+or a cloud load balancer). Without a proxy, the bearer token and all
 request/response bodies travel in plain HTTP. See `deploy/Caddyfile`
 for a reference configuration that uses Caddy's automatic Let's Encrypt
 support.
+
+In-process TLS termination is supported on the `streamable_http` and `grpc`
+transports when explicit cert + key paths are set:
+
+- `streamable_http`: set `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` (and
+  `MCP_MTLS_CA_CERT_PATH` for `MCP_AUTH_MODE=mtls`). The legacy `http`
+  transport rejects `MCP_HTTP_TLS_CERT` at config load — terminate TLS
+  upstream and use `forward_auth`.
+- `grpc` (build-tag opt-in): set `MCP_GRPC_TLS_CERT` + `MCP_GRPC_TLS_KEY`
+  (and `MCP_MTLS_CA_CERT_PATH` for `MCP_AUTH_MODE=mtls`).
+
+mTLS-anchored deployments rely on this in-process termination — see
+[`docs/support-matrix.md`](docs/support-matrix.md) for the per-transport
+auth-mode matrix.
 
 `CLOCKIFY_INSECURE=1` only bypasses base-URL scheme validation when resolving
 `CLOCKIFY_BASE_URL`; it does not disable TLS certificate verification in the
