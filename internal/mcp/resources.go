@@ -144,7 +144,7 @@ func (s *Server) handleResourcesUnsubscribe(raw any) (any, *RPCError) {
 //
 // This extension is additive and backwards compatible: clients that only
 // read the `uri` field keep working. No MCP protocol version bump is
-// required. See docs/adr/013-resource-delta-sync.md.
+// required. See docs/adr/0009-resource-delta-sync.md.
 type ResourceUpdateDelta struct {
 	// Format is one of FormatNone / FormatMerge / FormatFull /
 	// FormatDeleted. Empty means do not emit a delta envelope — legacy

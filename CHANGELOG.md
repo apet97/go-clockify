@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to SUPPORT.md so future readers find the canonical
   current line directly. Pure operator-doc fix; no behaviour
   change. Companion to a005f82 (the SUPPORT.md realignment).
+- **`internal/mcp/resources.go` ADR-0009 reference renumbered.**
+  The `ResourceUpdateDelta` doc-comment pointed reviewers at
+  `docs/adr/013-resource-delta-sync.md` — wrong ADR number,
+  AND missing the canonical 4-digit zero-pad. The actual ADR is
+  `docs/adr/0009-resource-delta-sync.md`. Pure typo fix; reader
+  following the link no longer hits a 404.
 - **`pprof_on.go` / `pprof_off.go` drop reference to never-written
   `oom-or-goroutine-leak.md` runbook.** The original feat commit
   (da2fa8b — "pprof endpoints behind -tags=pprof") promised an
