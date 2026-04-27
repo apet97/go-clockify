@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/paths"
 )
 
 func (s *Service) WhoAmI(ctx context.Context) (ResultEnvelope, error) {
@@ -50,13 +51,17 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	path, err := paths.Workspace(wsID, "users")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	page, pageSize := paginationFromArgs(args)
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
 	var users []clockify.User
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/users", query, &users); err != nil {
+	if err := s.Client.Get(ctx, path, query, &users); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_users", users, map[string]any{

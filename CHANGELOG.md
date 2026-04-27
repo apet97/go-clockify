@@ -109,6 +109,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ListTags` + `CreateTag` migrated to `paths.Workspace`.** Same
   shape as `clients.go` — workspace-ID validation on every call,
   byte-identical wire output for normal Clockify IDs.
+- **`ListUsers` migrated to `paths.Workspace`.** Last wsID-only
+  caller before sub-segment ID territory (`projects.go`,
+  `entries.go`, `tasks.go`, `tier2_*.go`). `WhoAmI` /
+  `CurrentUser` hit `/user` (no workspace prefix) and stay as-is.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
