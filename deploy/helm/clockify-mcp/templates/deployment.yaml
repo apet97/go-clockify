@@ -98,6 +98,14 @@ spec:
             - name: CLOCKIFY_INSECURE
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.clockify.sanitizeUpstreamErrors }}
+            - name: CLOCKIFY_SANITIZE_UPSTREAM_ERRORS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.clockify.webhookValidateDns }}
+            - name: CLOCKIFY_WEBHOOK_VALIDATE_DNS
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.clockify.deltaFormat }}
             - name: CLOCKIFY_DELTA_FORMAT
               value: {{ . | quote }}

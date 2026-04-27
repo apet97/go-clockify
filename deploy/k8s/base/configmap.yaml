@@ -27,6 +27,8 @@ data:
   # CLOCKIFY_BASE_URL: "https://api.clockify.me/api/v1"
   # CLOCKIFY_TIMEZONE: ""
   # CLOCKIFY_INSECURE: "0"
+  # CLOCKIFY_SANITIZE_UPSTREAM_ERRORS: "1"  # omit Clockify response bodies from MCP tool errors (hosted-default; explicit override always wins)
+  # CLOCKIFY_WEBHOOK_VALIDATE_DNS: "1"      # DNS-resolve webhook hosts and reject private/reserved IPs (hosted-default)
   # CLOCKIFY_DELTA_FORMAT: "merge"
   # MCP_GRPC_REAUTH_INTERVAL: ""
   # MCP_GRPC_TLS_CERT: ""

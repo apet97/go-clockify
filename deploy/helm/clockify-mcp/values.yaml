@@ -114,6 +114,8 @@ clockify:
   baseUrl: ""         # CLOCKIFY_BASE_URL (default: https://api.clockify.me/api/v1)
   timezone: ""        # CLOCKIFY_TIMEZONE (default: system)
   insecure: ""        # CLOCKIFY_INSECURE ("1" to allow non-loopback HTTP)
+  sanitizeUpstreamErrors: ""  # CLOCKIFY_SANITIZE_UPSTREAM_ERRORS ("1" to omit Clockify response bodies from MCP errors; default 1 under hosted profiles)
+  webhookValidateDns: ""      # CLOCKIFY_WEBHOOK_VALIDATE_DNS ("1" to DNS-resolve webhook hosts and reject private/reserved replies; default 1 under hosted profiles)
   deltaFormat: ""     # CLOCKIFY_DELTA_FORMAT ("merge" or "jsonpatch", default: merge)
 
 # Authentication. Modes: static_bearer, oidc, forward_auth, mtls.
