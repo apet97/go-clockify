@@ -70,30 +70,32 @@ of upstream causes. Work through them in order:
 
 **Wrong count (pass 2 fail):**
 
-- **N > 28** → goreleaser started producing an extra artifact format
+- **N > 46** → goreleaser started producing an extra artifact format
   (e.g. `.sbom.json` added alongside `.spdx.json`), or a new build
   matrix entry was added without updating the script's platform
   arrays. Either fix the script to match the intended new shape
   or revert the yaml change.
-- **N < 28** but pass 1 passed → impossible; if pass 1 passes, all
-  28 expected files exist and pass 2 counts at least 28. If you
+- **N < 46** but pass 1 passed → impossible; if pass 1 passes, all
+  46 expected files exist and pass 2 counts at least 46. If you
   see this, the script's `shopt -s nullglob` or glob patterns are
   broken — bisect the script.
 
 **Script self-bug:**
 
-- Someone edited `DEFAULT_UNIX_PLATFORMS` / `FIPS_PLATFORMS` /
-  `EXPECTED_COUNT` without keeping them in sync. Fix both together
-  in one commit with a clear message explaining the matrix change.
-  Do NOT bump `EXPECTED_COUNT` alone — the script's job is to catch
-  exactly that kind of one-sided edit.
+- Someone edited `DEFAULT_UNIX_PLATFORMS` / `DEFAULT_WINDOWS` /
+  `FIPS_PLATFORMS` / `POSTGRES_PLATFORMS` / `GRPC_PLATFORMS` /
+  `GRPC_POSTGRES_PLATFORMS` / `EXPECTED_COUNT` without keeping
+  them in sync. Fix both together in one commit with a clear
+  message explaining the matrix change. Do NOT bump
+  `EXPECTED_COUNT` alone — the script's job is to catch exactly
+  that kind of one-sided edit.
 
 ## Post-incident
 
 After the next clean release:
 
 1. Confirm the check passed in the workflow log (grep
-   `OK: all 28 expected release assets present`).
+   `OK: all 46 expected release assets present`).
 2. Cross-check the published GitHub release page: the asset count
    should match.
 3. Verify via `gh release view "$TAG" --json assets | jq '.assets | length'`.

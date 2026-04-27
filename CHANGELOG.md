@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/runbooks/release-asset-count.md` "Wrong count" /
+  "Post-incident" sections updated to 46 (sweep continuation).**
+  iter134 fixed the Symptoms section's two "expected 28"
+  quotes but missed four more pre-gRPC-era `28` references in
+  the runbook body: the "Wrong count (pass 2 fail)" bucket
+  named "N > 28" / "N < 28" / "all 28 expected files exist"
+  thresholds, and the Post-incident grep recipe still searched
+  for `OK: all 28 expected release assets present`. Script's
+  actual success log at `scripts/check-release-assets.sh:256`
+  prints `OK: all 46 expected release assets present`. Sweep
+  also extended the Script-self-bug bullet's array enumeration
+  from `DEFAULT_UNIX_PLATFORMS / FIPS_PLATFORMS / EXPECTED_COUNT`
+  to the full six-array list (DEFAULT_UNIX, DEFAULT_WINDOWS,
+  FIPS, POSTGRES, GRPC, GRPC_POSTGRES) so a contributor fixing
+  matrix drift knows every input that contributes to the count.
+  Confirms `grep -n 28 docs/runbooks/release-asset-count.md`
+  returns zero hits — the runbook now reads consistently.
 - **`docs/runbooks/release-asset-count.md` symptom log lines
   show `expected 46` matching the canonical script.** The
   Symptoms section quoted log lines as
