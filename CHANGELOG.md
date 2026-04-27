@@ -256,6 +256,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`internal/paths` package doc no longer leaks an absolute path.**
+  The package comment previously pointed reviewers at
+  `/Users/15x/.claude/plans/...` for the audit-finding context — a
+  personal local path with no meaning on any other machine. Now
+  references the in-repo CHANGELOG entries (0de5458, 1919006) and
+  describes the migration sweep in past tense since it completed.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion

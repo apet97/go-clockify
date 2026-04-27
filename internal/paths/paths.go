@@ -7,12 +7,15 @@
 // (internal/tools/path_safety_test.go) enforces that every handler
 // file calls resolve.ValidateID or a resolve.Resolve*ID helper before
 // concatenating non-workspace IDs. This package adds the next layer:
-// a single typed builder so the discipline can shift from "every
-// handler writes its own concat" to "every handler calls Workspace()
-// and lets the helper escape and validate centrally".
+// every Tier-1 + Tier-2 handler that constructs a /workspaces/<ws>/...
+// URL goes through Workspace(), which validates the workspace ID via
+// resolve.ValidateID and percent-encodes every sub-segment via
+// url.PathEscape. Migration sweep completed across all 21 handler
+// files in the 2026-04-27 audit-finding wave.
 //
-// Audit finding 3 follow-up — see the "Out of scope" section of
-// /Users/15x/.claude/plans/ultrathink-and-validate-findings-delegated-catmull.md.
+// Spec: closes the typed-builder follow-up to audit finding 3
+// (path-safety static test); see CHANGELOG entries 0de5458 (helper
+// landed) and 1919006 (sweep closed).
 package paths
 
 import (
