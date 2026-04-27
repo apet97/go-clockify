@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/README.md` Runbooks section lists all 12 runbooks.** The
+  Runbooks section listed 10 entries but `docs/runbooks/` has 12
+  files. The two missing entries are the runbooks that ship with
+  the audit-finding wave: `hosted-error-sanitization.md` (Finding 9
+  guidance for when sanitised errors hide upstream signal) and
+  `webhook-dns-validation.md` (Finding 10 — DNS-rebinding guard +
+  allowlist escape hatch). Both are referenced from SECURITY.md
+  bullets but were never added to the docs/ navigation index.
+  Section now lists all 12 in topic-affinity order. Same
+  doc-vs-filesystem drift pattern as iter96's ADR README index
+  fix. Pure operator-doc fix.
 - **`docs/adr/README.md` index lists ADRs 0012-0016.** The ADR
   index table stopped at 0011 (Control-plane schema versioning)
   but the directory has five additional ADRs: 0012

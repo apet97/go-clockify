@@ -61,6 +61,12 @@ emits — no prose-only guesses.
   — hot tenant diagnosis.
 - [runbooks/audit-durability.md](runbooks/audit-durability.md) —
   what to do when `fail_closed` aborts a call.
+- [runbooks/hosted-error-sanitization.md](runbooks/hosted-error-sanitization.md)
+  — when sanitised errors hide upstream signal that the tenant
+  needs.
+- [runbooks/webhook-dns-validation.md](runbooks/webhook-dns-validation.md)
+  — DNS-rebinding guard, allowlist escape hatch, and split-horizon
+  triage.
 - [runbooks/clockify-upstream-outage.md](runbooks/clockify-upstream-outage.md)
   — Clockify API outage playbook.
 - [runbooks/clockify-outage-drill.md](runbooks/clockify-outage-drill.md)
