@@ -165,7 +165,7 @@ cors:
 # `secrets.metricsBearerToken` (>=16 chars) — keep the two values in sync.
 metricsEndpoint:
   bind: ""              # MCP_METRICS_BIND (empty = disabled)
-  authMode: ""          # MCP_METRICS_AUTH_MODE (default: none)
+  authMode: ""          # MCP_METRICS_AUTH_MODE (default: static_bearer when bind is set; "none" disables auth)
   # Numeric port used by the Service + container when `bind` is non-empty.
   # Must match the port part of `bind` (e.g. ":9091" → 9091).
   servicePort: 9091

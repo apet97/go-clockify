@@ -64,4 +64,4 @@ data:
   # MCP_STRICT_HOST_CHECK: "0"
   # Metrics endpoint
   # MCP_METRICS_BIND: ""
-  # MCP_METRICS_AUTH_MODE: "none"
+  # MCP_METRICS_AUTH_MODE: "static_bearer"  # default is static_bearer when MCP_METRICS_BIND is set (set MCP_METRICS_BEARER_TOKEN >=16 chars); "none" opts out of auth on the dedicated listener

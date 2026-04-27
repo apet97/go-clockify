@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`deploy/k8s/base/configmap.yaml` and
+  `deploy/helm/clockify-mcp/values.yaml` describe the real
+  `MCP_METRICS_AUTH_MODE` default.** Both deploy templates'
+  inline comments described the default as `none`, but
+  `internal/config/config.go:331-334` defaults it to
+  `static_bearer` when `MCP_METRICS_BIND` is set. An operator
+  setting `MCP_METRICS_BIND=:9091` and leaving `_AUTH_MODE`
+  blank — under the impression "none" was the documented
+  default — would have hit the startup error
+  `MCP_METRICS_BEARER_TOKEN is required when
+  MCP_METRICS_AUTH_MODE=static_bearer`. Comments now name the
+  real default with the conditional ("static_bearer when
+  MCP_METRICS_BIND is set"), make explicit that `none` opts
+  out, and remind operators to set the bearer token. Same
+  iter40-era hosted-fail-closed posture as iter114/iter127–129
+  drift class but at the deploy-template surface instead of
+  runbook prose.
 - **`docs/runbooks/clockify-outage-drill.md` Scenario A names the
   real upstream-failure metric.** The drill checklist told the
   operator "Check that `clockify_mcp_upstream_errors_total` metric
