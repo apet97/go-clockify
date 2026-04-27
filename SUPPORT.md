@@ -84,7 +84,7 @@ What we do NOT promise:
 - Long-term support for every minor. The latest minor is the
   supported minor.
 - Backports of fixes to older minors. If you are on `v1.0.3` and
-  need the `v1.1.2` fix, upgrade to `v1.1.2`.
+  need a `v1.2.x` fix, upgrade to the latest `v1.2.x`.
 
 ## Upgrading
 
@@ -99,7 +99,8 @@ explicit operator intent — run it before and after an upgrade.
 
 | Version | Status | Notes |
 |---------|--------|-------|
-| `v1.1.x` | Active — released 2026-04-22; where new features land | |
+| `v1.2.x` | Active — released 2026-04-25; where new features land | Latest minor; the only line receiving non-correctness changes |
+| `v1.1.x` | Released 2026-04-22; superseded by `v1.2.x` | No further releases planned; upgrade to `v1.2.x` for fixes |
 | `v1.0.x` | Released 2026-04-12 through 2026-04-20; latest is `v1.0.3` | Patch fixes land here only for correctness regressions that affect the stable wire format |
 | `v0.x` | Pre-release; not supported | Pre-`v1` releases from March–April 2026; do not deploy |
 

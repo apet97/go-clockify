@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`SUPPORT.md` version matrix realigned to v1.2.x as Active.**
+  The matrix still named `v1.1.x` (released 2026-04-22) as the
+  active line, but `v1.2.0` shipped 2026-04-25 with the audit-
+  finding security wave and is now where new features land. New
+  row added for `v1.2.x`; the `v1.1.x` row reclassified as
+  superseded. The "Backports" example also pointed at a
+  hypothetical `v1.1.2` that never shipped — replaced with a
+  generic "latest `v1.2.x`" pointer that ages better.
 - **Hosted-profile docs reference the new
   `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` escape hatch.**
   `docs/operators/shared-service.md` and
