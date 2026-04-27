@@ -144,5 +144,4 @@ state regardless of mode.
 - Related ADRs: 0005 (tier activation feeds the same `FilterTool`
   pipeline).
 - Related docs: `README.md` "Policy modes",
-  `docs/production-readiness.md` "Threat model summary",
-  `docs/troubleshooting.md`.
+  `docs/production-readiness.md` "Threat model summary".

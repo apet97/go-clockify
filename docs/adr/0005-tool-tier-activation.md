@@ -145,5 +145,4 @@ both gates allow it.
 - Related ADRs: 0004 (the same `FilterTool` pipeline gates both
   policy and bootstrap visibility).
 - Related docs: `README.md` "Tool tiers",
-  `docs/production-readiness.md`,
-  `docs/troubleshooting.md` "Stale tool list".
+  `docs/production-readiness.md`.

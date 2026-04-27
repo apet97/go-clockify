@@ -75,6 +75,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **Phantom `docs/troubleshooting.md` references dropped.** Two ADRs
+  (0004 + 0005) listed `docs/troubleshooting.md` in their Related-docs
+  blocks; ADR-0005 even named a specific section ("Stale tool list").
+  The doc was created in 40ef8d3 (2026-04-11) but isn't in current
+  main, and no successor runbook covers the same scope (the `docs/
+  runbooks/` directory has per-symptom pages but no general
+  symptom→fix matrix). Both Related-docs entries dropped; the
+  remaining items in each block (`README.md` "Policy modes" /
+  "Tool tiers", `docs/production-readiness.md`) carry the load.
+  Same per-iteration pattern as iter56–60: when a doc was promised
+  but is no longer in the tree and has no successor, drop the
+  pointer rather than recreate the doc unilaterally.
 - **ADR-0004 wiring pointers unstuck from pre-C2.2 path.** Two
   references in `docs/adr/0004-policy-enforcement-architecture.md`
   pointed at `cmd/clockify-mcp/runtime.go` as the place where
