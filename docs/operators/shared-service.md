@@ -43,8 +43,36 @@ This guide is for platform teams operating `clockify-mcp-go` as a multi-tenant s
     leaks per-tenant API keys.
 
 ## Canonical Configuration
-Use the `deploy/examples/env.shared-service.example` preset as a starting point.
-- **`CLOCKIFY_POLICY=time_tracking_safe`**: Mandatory AI-facing default for multi-tenant environments. Use `safe_core` only for trusted assistants that need workspace object creation.
+
+Apply one of the two registered profiles that match this guide's
+shape (see [`docs/deploy/`](../deploy/) for full profile notes):
+
+- `clockify-mcp --profile=shared-service` — multi-tenant baseline.
+  Sets `MCP_TRANSPORT=streamable_http`, `MCP_AUTH_MODE=oidc`,
+  `MCP_AUDIT_DURABILITY=fail_closed`, `MCP_HTTP_LEGACY_POLICY=deny`,
+  `MCP_OIDC_STRICT=1`, `MCP_REQUIRE_TENANT_CLAIM=1`,
+  `MCP_DISABLE_INLINE_SECRETS=1`,
+  `CLOCKIFY_POLICY=time_tracking_safe`.
+- `clockify-mcp --profile=prod-postgres` — same posture plus
+  `ENVIRONMENT=prod` so downstream prod-only assertions
+  (release-asset checks, hosted-profile drills) treat this as the
+  production line. Use this for the production blue/green; keep
+  `shared-service` for staging.
+
+`deploy/examples/env.shared-service.example` is preserved as a
+starting reference for operators populating Helm values or
+Kustomize secrets, but the env keys it sets are now also covered
+by the profiles above. Override individual keys (e.g.
+`CLOCKIFY_POLICY=safe_core` for trusted assistants that need
+workspace object creation) by setting them explicitly — the
+profile leaves any explicit value through.
+
+Other knobs the profile does not own:
+
+- **`CLOCKIFY_POLICY=time_tracking_safe`** (profile default):
+  Mandatory AI-facing default for multi-tenant environments. Use
+  `safe_core` only for trusted assistants that need workspace
+  object creation.
 - **`MCP_METRICS_BIND=:9091`**: Dedicated listener for Prometheus.
 
 ## Audit + Risk Metadata

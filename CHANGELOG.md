@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/operators/shared-service.md` Canonical Configuration leads
+  with `--profile=` apply commands.** The shared-service operator
+  guide pointed operators at `deploy/examples/env.shared-service.example`
+  directly, the same legacy pattern iter85 closed for the
+  self-hosted guide. iter84 mapped this guide to the
+  `shared-service` and `prod-postgres` profiles; this commit
+  updates the doc to lead with both `--profile=` apply commands,
+  enumerates the env defaults each one sets (matching profile.go's
+  shared-service entry at line 59 and the prod-postgres entry at
+  line 102), and re-frames the legacy env file as the
+  Helm/Kustomize starting reference for operators populating
+  values + secrets. Pure operator-doc fix.
 - **`docs/operators/self-hosted.md` updated to the profile system +
   `streamable_http`.** The Architecture section recommended
   `MCP_TRANSPORT=stdio or http (Standard)` but the legacy `http`
