@@ -65,6 +65,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   test (`TestNormalizeEndpoint_NonIDShapesPreserved`) locks in
   both the collapse and the preserve paths so comment + code can
   no longer drift apart silently.
+- **Stdio honours `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1`.** The
+  flag is now assigned in `buildServer()`, so every transport
+  (stdio, legacy_http, streamable_http session, grpc) picks it up
+  uniformly. Pre-fix the assignment lived in `runLegacyHTTP()` and
+  the streamable-session overlay only, leaving stdio operators
+  with no way to opt in.
+- **Name resolution accepts legitimate Clockify names with
+  punctuation.** New `resolve.ValidateNameRef` is a permissive
+  sibling of `ValidateID`: empty / oversized / control-byte input
+  still fails, but `/`, `?`, `#`, `%`, `&`, `..`, and Unicode pass
+  through. `resolveByNameOrID` and `ResolveUserID` now dispatch
+  on shape — strict `ValidateID` only when the input is being
+  returned verbatim as a path-segment ID, permissive `ValidateNameRef`
+  when it goes to a `name=` query parameter (which `url.Values`
+  safely encodes). Pre-fix, project / client / tag / task names
+  like "ACME / Support" or "R&D 50%" failed validation before the
+  safe lookup could run.
 
 ## [1.2.0] - 2026-04-25
 

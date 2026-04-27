@@ -7,8 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/controlplane"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/policy"
+	"github.com/apet97/go-clockify/internal/tools"
 )
 
 // recordingStore captures every AppendAuditEvent call so the runtime
@@ -186,5 +191,37 @@ func TestControlPlaneAuditorNilStoreNoOps(t *testing.T) {
 	auditor := controlPlaneAuditor{store: nil}
 	if err := auditor.RecordAudit(mcp.AuditEvent{Tool: "x", Phase: mcp.PhaseOutcome}); err != nil {
 		t.Fatalf("nil-store RecordAudit returned error: %v", err)
+	}
+}
+
+// TestBuildServer_PropagatesSanitizeUpstreamErrors guards the central-
+// wiring fix: every transport (stdio, legacy_http, streamable session,
+// grpc) must observe cfg.SanitizeUpstreamErrors, which means buildServer
+// itself must assign it. Pre-fix only legacy_http and streamable_http's
+// per-session overlay set the flag, so an stdio operator setting
+// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1 saw no effect at all.
+func TestBuildServer_PropagatesSanitizeUpstreamErrors(t *testing.T) {
+	cases := []struct {
+		name string
+		want bool
+	}{
+		{"sanitize_off", false},
+		{"sanitize_on", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			client := clockify.NewClient("k", "https://api.clockify.me/api/v1", time.Second, 0)
+			service := tools.New(client, "ws-test")
+			pol := &policy.Policy{Mode: policy.Standard}
+			bc := &bootstrap.Config{}
+			deps := runtimeDeps{
+				cfg:    config.Config{SanitizeUpstreamErrors: c.want},
+				policy: pol,
+			}
+			server := buildServer("test-version", deps, service, pol, bc)
+			if server.SanitizeUpstreamErrors != c.want {
+				t.Fatalf("server.SanitizeUpstreamErrors = %v, want %v", server.SanitizeUpstreamErrors, c.want)
+			}
+		})
 	}
 }

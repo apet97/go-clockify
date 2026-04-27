@@ -267,6 +267,101 @@ func TestResolveProjectID_CaseFoldingContract(t *testing.T) {
 	}
 }
 
+// TestValidateNameRef locks the contract for the new permissive
+// validator: legitimate Clockify names containing /, %, &, .. or
+// other punctuation must pass (they reach the API as
+// query-parameter values, which url.Values safely encodes), while
+// empty / oversized / control-byte input still fails.
+func TestValidateNameRef(t *testing.T) {
+	good := []string{
+		"ACME / Support",
+		"R&D 50%",
+		"Q1..Q2",
+		"Ümlaut Café",
+		"foo?bar#baz",
+		"plain",
+	}
+	for _, s := range good {
+		if err := ValidateNameRef(s, "project"); err != nil {
+			t.Errorf("legitimate name %q rejected: %v", s, err)
+		}
+	}
+	bad := []struct {
+		ref  string
+		hint string
+	}{
+		{"", "empty"},
+		{"   ", "whitespace-only"},
+		{"foo\x00bar", "embedded NUL"},
+		{"foo\x1fbar", "embedded control byte"},
+		{strings.Repeat("a", maxIDLength+1), "oversized"},
+	}
+	for _, c := range bad {
+		if err := ValidateNameRef(c.ref, "project"); err == nil {
+			t.Errorf("%s should be rejected: %q", c.hint, c.ref)
+		}
+	}
+}
+
+// TestResolveProjectID_AcceptsNameWithPunctuation locks audit
+// finding 2: a workspace name containing characters that ValidateID
+// rejects (slash, ampersand, percent) must still resolve when the
+// caller passes the name itself, because the lookup goes via a
+// query-parameter and never touches a URL path. Pre-fix the strict
+// validator rejected the input before the safe path could run.
+func TestResolveProjectID_AcceptsNameWithPunctuation(t *testing.T) {
+	projects := []map[string]any{
+		{"id": "aaa111bbb222ccc333ddd444", "name": "ACME / Support"},
+	}
+	var seenName string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		seenName = r.URL.Query().Get("name")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(projects)
+	})
+	defer cleanup()
+
+	id, err := ResolveProjectID(context.Background(), client, "ws123", "ACME / Support")
+	if err != nil {
+		t.Fatalf("name with slash should resolve via query-param lookup: %v", err)
+	}
+	if id != "aaa111bbb222ccc333ddd444" {
+		t.Fatalf("expected project id, got %q", id)
+	}
+	if seenName != "ACME / Support" {
+		t.Fatalf("expected exact name forwarded as query param, got %q", seenName)
+	}
+}
+
+// TestResolveProjectID_StillRejectsPathInjectionShapedID makes sure
+// the relaxed name path doesn't open the door to a Clockify-ID-shaped
+// input that nonetheless contains a "/". A 24-char hex-shaped value
+// IS treated as an ID and runs through ValidateID.
+func TestResolveProjectID_StillRejectsPathInjectionShapedID(t *testing.T) {
+	// 24-char hex literal containing a slash is impossible (slash is
+	// not in the hex class), so looksLikeClockifyID rejects it and the
+	// input falls into the name path — where ValidateNameRef accepts
+	// it as a name and the lookup safely encodes via url.Values. The
+	// real defence is ValidateID running only on path-bound inputs;
+	// we lock that by exercising a near-ID-shaped string.
+	weird := "abcd1234abcd1234abcd123/" // 24 chars, ends in slash → not a valid ID
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]map[string]any{})
+	})
+	defer cleanup()
+
+	_, err := ResolveProjectID(context.Background(), client, "ws123", weird)
+	if err == nil {
+		t.Fatal("expected not-found, since the test server returns no matches")
+	}
+	// The error must be a not-found, NOT a validation error referencing
+	// path characters: this proves the input took the (safe) name path.
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found via name path; got: %v", err)
+	}
+}
+
 // FuzzValidateID feeds random strings into ValidateID and requires that it
 // never panics. Errors are expected for malicious input.
 func FuzzValidateID(f *testing.F) {
