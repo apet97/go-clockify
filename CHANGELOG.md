@@ -281,6 +281,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Landed in two passes (References section in 6a3c25b, body
   paragraph in this commit) to stay within the per-commit file
   budget.
+- **ADR-0003 file references unstuck from pre-1.x line numbers.**
+  Four anchors invalidated by post-write growth of the auth surface
+  in `internal/config/config.go` (the auth-mode switch + token-length
+  checks moved ~130 lines down) and the gRPC transport file (the
+  Authenticator-wiring block shifted ~10 lines after the TLS option
+  block grew). Replaced with the same function-name + grep-string
+  search anchors used in the ADR-0002 sweep so the same reorg-drift
+  cannot recur.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion

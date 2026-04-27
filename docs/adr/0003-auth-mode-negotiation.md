@@ -22,7 +22,8 @@ serve traffic with the wrong trust model.
 ## Decision
 
 Four named auth modes, configured via `MCP_AUTH_MODE` and validated
-in `internal/config/config.go:126-154`:
+in `internal/config/config.go` `Load()` (search for
+`cfg.AuthMode = strings.TrimSpace(os.Getenv("MCP_AUTH_MODE"))`):
 
 | Mode            | Trusts                                                | Wire-level mechanism                                 |
 |-----------------|-------------------------------------------------------|------------------------------------------------------|
@@ -42,11 +43,12 @@ Compatibility matrix (enforced in `internal/config/config.go`):
 
 Specific rules:
 
-- `stdio` rejects every value of `MCP_AUTH_MODE`. The check at
-  `config.go:142-144` returns an explicit error: "MCP_AUTH_MODE is
-  only valid for HTTP transports".
+- `stdio` rejects every value of `MCP_AUTH_MODE`. The check returns
+  an explicit error: "MCP_AUTH_MODE is only valid for HTTP transports"
+  (search for that string in `config.go`).
 - `static_bearer` requires `MCP_BEARER_TOKEN` to be set and at least
-  16 characters long. Both checks are at `config.go:166-174`.
+  16 characters long. Both checks live in `config.go` (search for
+  `if len(cfg.BearerToken) < 16`).
 - `streamable_http` defaults to `oidc` when `MCP_AUTH_MODE` is unset.
 - `http` defaults to `static_bearer` when `MCP_AUTH_MODE` is unset.
 - `grpc` accepts all four modes after W5-05a/b/c. mTLS and forward
@@ -110,11 +112,14 @@ wiring).
 
 ## References
 
-- Validation: `internal/config/config.go:126-154` (the auth-mode
-  switch and the per-transport compatibility checks).
-- Token-length checks: `internal/config/config.go:166-174`.
+- Validation: `internal/config/config.go` `Load()` — the auth-mode
+  switch and the per-transport compatibility checks (search for
+  `cfg.AuthMode = strings.TrimSpace(os.Getenv("MCP_AUTH_MODE"))`).
+- Token-length checks: `internal/config/config.go` (search for
+  `if len(cfg.BearerToken) < 16`).
 - Authenticator implementations: `internal/authn/`.
-- gRPC mode wiring: `internal/transport/grpc/transport.go:76-83`.
+- gRPC mode wiring: `internal/transport/grpc/transport.go` (search
+  for `if opts.Authenticator != nil {`).
 - Related ADRs: 0002 (transport selection), 0008 (gRPC interceptor).
 - Related docs: `docs/production-readiness.md` "Pick an auth mode",
   `docs/runbooks/auth-failures.md`.
