@@ -37,9 +37,42 @@ func TestValidateBaseURL(t *testing.T) {
 func setEnvs(t *testing.T, envs map[string]string) {
 	t.Helper()
 	t.Setenv("MCP_METRICS_AUTH_MODE", "none")
+	// applyProfile leaks process-global env via os.Setenv without going
+	// through t.Setenv, so previous tests can leave MCP_OIDC_STRICT etc.
+	// set when this one starts. Register a cleanup-restorable version
+	// via t.Setenv("", "") only when the test isn't supplying one
+	// itself, so subsequent subtests get a clean slate.
+	for _, k := range profileLeakedEnvs {
+		if _, ok := envs[k]; ok {
+			continue
+		}
+		t.Setenv(k, "")
+	}
 	for k, v := range envs {
 		t.Setenv(k, v)
 	}
+}
+
+// profileLeakedEnvs lists env vars that hosted profiles set via
+// os.Setenv inside applyProfile. Without explicit reset, a previous
+// hosted-profile test can leave them lingering and confuse later
+// non-hosted tests.
+var profileLeakedEnvs = []string{
+	"MCP_OIDC_STRICT",
+	"MCP_REQUIRE_TENANT_CLAIM",
+	"MCP_DISABLE_INLINE_SECRETS",
+	"MCP_HTTP_LEGACY_POLICY",
+	"MCP_AUDIT_DURABILITY",
+	"CLOCKIFY_POLICY",
+	"MCP_TRANSPORT",
+	"MCP_AUTH_MODE",
+	"ENVIRONMENT",
+	"MCP_CONTROL_PLANE_DSN",
+	"MCP_ALLOW_DEV_BACKEND",
+	"MCP_OIDC_ISSUER",
+	"MCP_OIDC_AUDIENCE",
+	"CLOCKIFY_INSECURE",
+	"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
 }
 
 func TestLoadReportsURLRemoved(t *testing.T) {
@@ -1123,6 +1156,100 @@ func TestLoad_AcceptsValidWorkspaceID(t *testing.T) {
 	}
 	if cfg.WorkspaceID != "5e0fa5cb6c5dc403da9f1234" {
 		t.Fatalf("workspace mismatch: %q", cfg.WorkspaceID)
+	}
+}
+
+// hostedProfileEnv supplies the minimum env to make Load() succeed for
+// shared-service / prod-postgres profiles. They set MCP_OIDC_STRICT=1
+// which requires either MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI to bind
+// tokens to this server, plus an OIDC issuer for streamable_http with
+// AuthMode=oidc. Tests that aren't asserting OIDC behaviour just need
+// these placeholders to clear the gates.
+var hostedProfileEnv = map[string]string{
+	"MCP_OIDC_AUDIENCE":     "test-audience",
+	"MCP_OIDC_ISSUER":       "https://example.com",
+	"MCP_CONTROL_PLANE_DSN": "memory",
+	"MCP_ALLOW_DEV_BACKEND": "1",
+}
+
+// TestLoad_SanitizeUpstreamErrors_HostedProfileDefault locks in the
+// profile-driven default added in audit finding 9: shared-service
+// silently flips SanitizeUpstreamErrors=true so a 4xx from Clockify
+// cannot leak per-tenant info across tenants. local-stdio keeps
+// verbose errors for fast operator debugging. The other two
+// profiles (prod-postgres, single-tenant-http) have additional
+// production gates that need real postgres / a bearer token to clear,
+// so they're covered indirectly by the isHostedProfile() unit logic.
+func TestLoad_SanitizeUpstreamErrors_HostedProfileDefault(t *testing.T) {
+	cases := []struct {
+		profile string
+		want    bool
+	}{
+		{"shared-service", true},
+		{"local-stdio", false},
+	}
+	for _, c := range cases {
+		t.Run(c.profile, func(t *testing.T) {
+			env := map[string]string{
+				"CLOCKIFY_API_KEY": "test-key",
+				"MCP_PROFILE":      c.profile,
+			}
+			if isHostedProfile(c.profile) {
+				for k, v := range hostedProfileEnv {
+					env[k] = v
+				}
+			}
+			setEnvs(t, env)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if cfg.SanitizeUpstreamErrors != c.want {
+				t.Fatalf("profile %q SanitizeUpstreamErrors=%v want=%v", c.profile, cfg.SanitizeUpstreamErrors, c.want)
+			}
+		})
+	}
+}
+
+// TestIsHostedProfile_Predicate locks in the predicate independently
+// of Load() so the profile classification is testable without OIDC
+// strict gates getting in the way.
+func TestIsHostedProfile_Predicate(t *testing.T) {
+	cases := map[string]bool{
+		"shared-service":       true,
+		"prod-postgres":        true,
+		"local-stdio":          false,
+		"single-tenant-http":   false,
+		"private-network-grpc": false,
+		"unknown":              false,
+		"":                     false,
+	}
+	for name, want := range cases {
+		if got := isHostedProfile(name); got != want {
+			t.Errorf("isHostedProfile(%q)=%v want=%v", name, got, want)
+		}
+	}
+}
+
+// TestLoad_SanitizeUpstreamErrors_ExplicitOverride confirms
+// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0 wins over the hosted-profile
+// default (operator-explicit always overrides profile defaults).
+func TestLoad_SanitizeUpstreamErrors_ExplicitOverride(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":                  "test-key",
+		"MCP_PROFILE":                       "shared-service",
+		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS": "0",
+	}
+	for k, v := range hostedProfileEnv {
+		env[k] = v
+	}
+	setEnvs(t, env)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.SanitizeUpstreamErrors {
+		t.Fatal("explicit CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0 must override hosted default")
 	}
 }
 

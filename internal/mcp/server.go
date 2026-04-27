@@ -103,6 +103,30 @@ func (e encoderNotifier) Notify(method string, params any) error {
 	return (*e.encoder).Encode(msg)
 }
 
+// sanitizable is implemented by errors that carry both a verbose form
+// (Error()) and a sanitised form (Sanitized()) — typically because the
+// verbose form embeds an upstream HTTP response body that should not
+// cross tenant boundaries on a hosted deployment. clockify.APIError is
+// the in-tree implementer; the interface is duck-typed so this package
+// stays free of a clockify import.
+type sanitizable interface {
+	error
+	Sanitized() string
+}
+
+// sanitizeClientError walks the error chain looking for any wrapped
+// error that exposes a Sanitized() form, returning that form as the
+// MCP client-facing message. Errors with no sanitised form fall back
+// to err.Error() unchanged: those are typically schema/validation /
+// transport-level errors with no embedded upstream payload.
+func sanitizeClientError(err error) string {
+	var s sanitizable
+	if errors.As(err, &s) {
+		return s.Sanitized()
+	}
+	return err.Error()
+}
+
 type ToolHandler func(context.Context, map[string]any) (any, error)
 
 // RiskClass categorises tools beyond the three MCP boolean hints. It is a
@@ -155,6 +179,14 @@ type Server struct {
 	// transports return a generic OAuth error_description and log details
 	// server-side only.
 	ExposeAuthErrors bool
+
+	// SanitizeUpstreamErrors controls whether tool-error responses to MCP
+	// clients omit upstream Clockify response bodies. The default is false
+	// (verbose, useful for local development); hosted profiles
+	// (shared-service, prod-postgres) set it to true so a 4xx from
+	// Clockify can't leak per-tenant info across tenant boundaries.
+	// The full APIError is always logged server-side regardless.
+	SanitizeUpstreamErrors bool
 
 	// ResourceProvider backs resources/* method handlers. nil disables the
 	// resources capability (server omits it from initialize.result.capabilities).
@@ -718,11 +750,18 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				resp.Error = &RPCError{Code: -32602, Message: ute.Error()}
 				return resp
 			}
-			// MCP spec: tool errors return content with isError: true
+			// MCP spec: tool errors return content with isError: true.
+			// Sanitisation only affects the client-facing message; the
+			// full err.Error() is preserved in the slog tool_call
+			// records emitted from callTool.
+			text := err.Error()
+			if s.SanitizeUpstreamErrors {
+				text = sanitizeClientError(err)
+			}
 			resp.Result = map[string]any{
 				"content": []map[string]any{{
 					"type": "text",
-					"text": err.Error(),
+					"text": text,
 				}},
 				"isError": true,
 			}

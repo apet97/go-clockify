@@ -52,11 +52,16 @@ type StreamableHTTPOptions struct {
 	// detailed authenticator failure reasons. Default false returns a
 	// generic OAuth error_description and logs details server-side only.
 	ExposeAuthErrors bool
-	SessionTTL       time.Duration
-	ReadyChecker     func(context.Context) error
-	Authenticator    authn.Authenticator
-	ControlPlane     controlplane.Store
-	Factory          StreamableSessionFactory
+	// SanitizeUpstreamErrors controls whether tool errors returned to
+	// MCP clients omit upstream Clockify response bodies. Default false
+	// (verbose, useful for local development); hosted profiles flip it
+	// on so upstream payloads cannot cross tenant boundaries.
+	SanitizeUpstreamErrors bool
+	SessionTTL             time.Duration
+	ReadyChecker           func(context.Context) error
+	Authenticator          authn.Authenticator
+	ControlPlane           controlplane.Store
+	Factory                StreamableSessionFactory
 	// ProtectedResource is the unauthenticated handler for the
 	// /.well-known/oauth-protected-resource metadata document. When
 	// non-nil it is mounted at the canonical RFC 9728 path. nil =
@@ -488,6 +493,9 @@ func (m *streamSessionManager) create(ctx context.Context, id string, principal 
 	session.server.AuditTenantID = runtime.TenantID
 	session.server.AuditSubject = principal.Subject
 	session.server.AuditTransport = "streamable_http"
+	if opts.SanitizeUpstreamErrors {
+		session.server.SanitizeUpstreamErrors = true
+	}
 	m.mu.Lock()
 	m.items[id] = session
 	m.mu.Unlock()

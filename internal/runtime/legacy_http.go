@@ -57,6 +57,7 @@ func (r *Runtime) runLegacyHTTP(ctx context.Context, client *clockify.Client, se
 		return client.Get(ctx, "/user", nil, &user)
 	}
 	server.ExposeAuthErrors = r.cfg.ExposeAuthErrors
+	server.SanitizeUpstreamErrors = r.cfg.SanitizeUpstreamErrors
 	server.ExtraHTTPHandlers = r.extraHandlers
 	legacyAuth, err := authn.New(buildAuthnConfig(r.cfg))
 	if err != nil {

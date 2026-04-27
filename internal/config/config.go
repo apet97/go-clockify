@@ -83,6 +83,15 @@ type Config struct {
 	// Default false returns a generic "authentication failed" description
 	// while server-side logs retain the detailed reason for operators.
 	ExposeAuthErrors bool
+	// SanitizeUpstreamErrors controls whether tool errors returned to MCP
+	// clients omit the upstream Clockify response body. Default false
+	// (verbose, useful for local development); hosted profiles
+	// (shared-service, prod-postgres) flip it to true so a 4xx response
+	// body cannot leak per-tenant info across tenant boundaries. The
+	// full APIError is always logged server-side regardless. Wired from
+	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1, with the hosted-profile
+	// default applied when the operator hasn't overridden it.
+	SanitizeUpstreamErrors bool
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -394,6 +403,14 @@ func Load() (Config, error) {
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
 	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"
 	cfg.ExposeAuthErrors = os.Getenv("MCP_EXPOSE_AUTH_ERRORS") == "1"
+	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS: explicit override always wins.
+	// If unset, hosted profiles default to sanitised output to keep a
+	// per-tenant Clockify response body off the MCP wire.
+	if raw := os.Getenv("CLOCKIFY_SANITIZE_UPSTREAM_ERRORS"); raw != "" {
+		cfg.SanitizeUpstreamErrors = raw == "1" || strings.EqualFold(raw, "true")
+	} else if isHostedProfile(profileName) {
+		cfg.SanitizeUpstreamErrors = true
+	}
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,
 	// regardless of whether the token was minted for this server. That
