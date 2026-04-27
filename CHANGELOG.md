@@ -75,6 +75,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strings) instead of deferring to a phantom runbook. Operators
   reading the source now get the why-trusted-network-only
   explanation inline.
+- **`SECURITY.md` adds Audit fidelity bullet for
+  `RiskClass`/`AuditKeys`.** Existing Audit durability bullet
+  described persistence semantics (fail_closed vs best_effort)
+  but never the *content* improvement from audit Finding 8 —
+  `RiskClass` bitmask recorded on every event, `AuditKeys`
+  causing the recorder to capture action-defining arguments
+  (role, status, quantity, unit_price) alongside the `*_id`
+  fields. Closes the audit-completeness gap at the security-
+  summary level: operators auditing for compliance reviews
+  now see that audit events capture *what change* was applied,
+  not just *what was touched*.
 - **`SECURITY.md` Config validation entry covers
   `CLOCKIFY_WORKSPACE_ID` startup validation.** The Config
   validation bullet only mentioned the `CLOCKIFY_BASE_URL` /
