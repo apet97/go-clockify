@@ -67,8 +67,14 @@ When a breaking change is planned for the next major:
 
 1. The minor release that introduces the deprecation includes the new
    surface alongside the old.
-2. The old surface logs `level=WARN msg=deprecated_surface_used` to
-   stderr the first time it is touched at process start.
+2. The old surface is flagged `Deprecated: true` in the relevant
+   registry (e.g. `internal/config/spec.go` for env vars), so the
+   `clockify-mcp --help` banner labels it `DEPRECATED — use
+   <replacement>` and the operator-visible config tables (README,
+   `cmd/clockify-mcp/help_generated.go`) show the deprecation
+   inline. (A runtime WARN-level deprecation log per touch is on
+   the Wave L follow-up list; today the deprecation surfaces
+   through `--help` and the generated docs, not via slog.)
 3. The release notes for that minor list the deprecation explicitly
    under a "Deprecations" header.
 4. The next major (one minor cycle later, ≥6 weeks) removes the old

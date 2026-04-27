@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release-policy.md` deprecation flow describes the real
+  marker, not a fictional log.** §"Deprecation policy" step 2
+  said "the old surface logs `level=WARN
+  msg=deprecated_surface_used` to stderr the first time it is
+  touched at process start" — but no `deprecated_surface_used`
+  log exists in the codebase. `internal/config/spec.go`'s
+  `Deprecated bool` field is consumed only by the help-text
+  generator (the banner labels deprecated env vars with
+  `DEPRECATED — use <replacement>`); no runtime slog fires when
+  a deprecated key is observed. iter151's iter127-class
+  fictional-log-line sweep extends here. Step now describes what
+  actually surfaces today (the `Deprecated: true` flag on the
+  registry, `--help` banner, and generated docs) plus an explicit
+  "A runtime WARN-level deprecation log per touch is on the Wave
+  L follow-up list" so the contract no longer over-promises.
 - **`docs/upgrade-checklist.md` post-rollout grep matches the real
   401 log line.** §"4. Watch the rollout for regressions" listed
   `msg=http_request status=401 reason=auth_failed` as the spike
