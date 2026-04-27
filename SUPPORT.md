@@ -68,9 +68,14 @@ What we promise for the `v1.x` series:
   additions) only land in a major bump; today we use
   `Deprecated: true` spec entries as a soft migration window
   where we intentionally accept both.
-- **Signed releases.** Every tagged release ships with cosign
-  signatures, SBOM, and (where available) SLSA build provenance.
-  Verification recipe in [`docs/verification.md`](docs/verification.md).
+- **Signed releases.** Every tagged release ships 15 binaries
+  (5 default + 4 FIPS + 2 Postgres + 2 gRPC + 2 gRPC + Postgres),
+  each with a per-binary cosign signature, SPDX SBOM, and SLSA
+  build provenance attestation. SLSA was conditional pre-2026-04-22
+  when the repo was user-owned-private (per ADR-0013, now
+  Superseded); it has been mandatory on every release since the
+  public flip. Verification recipe in
+  [`docs/verification.md`](docs/verification.md).
 - **No surprise removals.** Deprecations are announced one minor
   version before removal. The `MCP_HTTP_MAX_BODY` alias is the
   canonical example: it will disappear no earlier than a

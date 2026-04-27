@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SUPPORT.md` "Signed releases" line drops "(where available)"
+  SLSA qualifier.** SUPPORT.md said "every tagged release ships
+  with cosign signatures, SBOM, and (where available) SLSA build
+  provenance" — the "(where available)" qualifier dated from the
+  pre-2026-04-22 era when ADR-0013 documented SLSA as conditional
+  on the repo being public. Since the public-flip on 2026-04-22,
+  SLSA is mandatory on every release. Same iter101 SLSA-paragraph
+  drift class iter101 fixed in release-policy.md, iter102 in
+  verification.md, iter94 in production-readiness.md, and iter123
+  in SECURITY.md — SUPPORT.md is the fifth canonical "what is
+  supported / what ships" doc surface, now aligned. Bullet now
+  also enumerates the 15-binary contract by tag combination so
+  it's not a single-binary-family claim either.
 - **`SECURITY.md` "Verifying release artifacts" section enumerates
   all 15 binaries.** The section described releases as shipping a
   single binary family `clockify-mcp-<platform>[.exe]` plus its
