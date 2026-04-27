@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/release/deploy-readiness-checklist.md` references the
+  real `make http-smoke` target.** Pre-Flight Tests section said
+  "Run `make smoke-http` against a staging instance" but the
+  Makefile target name is `http-smoke` (`Makefile` L137:
+  `http-smoke:` followed by `bash scripts/smoke-http.sh`). The
+  word order was reversed in the checklist; `make smoke-http`
+  would have failed with "no rule to make target". Same iter103-
+  class fix as the `--dry-run` flag — operator-facing checklist
+  items have to match the actual Makefile/CLI surface or the
+  pre-production gate becomes a no-op. Item now references both
+  `make http-smoke` and `make stdio-smoke` so operators on either
+  transport hit the right entry point. Pure operator-doc fix.
 - **`README.md` Configuration section bumps env-var count to 75+.**
   The Configuration teaser said "Run `clockify-mcp --help` for the
   complete list (60+ variables ...)" but

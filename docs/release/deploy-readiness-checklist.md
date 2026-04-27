@@ -13,7 +13,7 @@ This checklist must be satisfied before promoting a release to production.
 - [ ] **Metrics Isolation:** Confirm `MCP_METRICS_BIND` is listening on a separate, non-exposed port.
 
 ## 3. Pre-Flight Tests
-- [ ] **Staging Smoke Tests:** Run `make smoke-http` against a staging instance.
+- [ ] **Staging Smoke Tests:** Run `make http-smoke` (or `make stdio-smoke`) against a staging instance.
 - [ ] **Live-Contract Status:** Check the latest nightly live-contract test run in GitHub Actions.
 - [ ] **Doctor — Config:** Run `clockify-mcp doctor --profile=<your-profile> --strict` against the production environment; expect exit 0.
 - [ ] **Doctor — Backends (Postgres deployments):** Run `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` against a production clone; expect exit 0. The default `clockify-mcp` binary deliberately fails `--check-backends` because ADR-0001 keeps `pgx` out of the default `go.mod` — only the Postgres-tagged binary satisfies this gate. See [`public-hosted-launch-checklist.md`](public-hosted-launch-checklist.md) for the full hosted pre-flight.
