@@ -158,8 +158,10 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
 	// GET /mcp is the spec-canonical SSE stream for server→client
 	// notifications (MCP Streamable HTTP 2025-03-26 §3.3). GET /mcp/events
-	// is kept as a deprecated back-compat alias for one release and will be
-	// removed in 0.7.
+	// is the legacy alias from the pre-1.0 transport shape; it now
+	// stays mounted indefinitely — under ADR-0012 removing an
+	// operator-facing route is a major-version bump, and clients
+	// pinned to the old path during the v0.x line still rely on it.
 	mux.Handle("GET /mcp", observeHTTPH("/mcp", streamableEventsHandler(opts, mgr)))
 	mux.Handle("GET /mcp/events", observeHTTPH("/mcp/events", streamableEventsHandler(opts, mgr)))
 	if opts.ProtectedResource != nil {

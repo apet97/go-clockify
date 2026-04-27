@@ -465,7 +465,9 @@ func TestStreamableUnifiedRouteSSE(t *testing.T) {
 }
 
 // TestStreamableEventsBackCompatAlias verifies that GET /mcp/events still
-// serves the SSE stream during the 0.6 deprecation window.
+// serves the SSE stream as the indefinitely-mounted legacy alias for the
+// pre-1.0 transport route shape (see ADR-0012 — removing an operator-
+// facing route is a major-version bump).
 func TestStreamableEventsBackCompatAlias(t *testing.T) {
 	mgr, opts := newTestStreamableStack(t)
 

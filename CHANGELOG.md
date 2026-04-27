@@ -262,6 +262,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   personal local path with no meaning on any other machine. Now
   references the in-repo CHANGELOG entries (0de5458, 1919006) and
   describes the migration sweep in past tense since it completed.
+- **`/mcp/events` legacy-alias comment matches reality.** The
+  comment in `streamableHTTPMux` previously promised the alias
+  would be removed in v0.7 — the project shipped v1.0 in 2026-04-12
+  and is now at v1.2.0 with the alias still mounted, so the comment
+  was stale by ~9 months. Replaced with an ADR-0012 reference noting
+  the route stays indefinitely (operator-facing route removal would
+  need a v2.0 bump). `TestStreamableEventsBackCompatAlias` docstring
+  updated in the same commit so test + production prose agree.
 - **`normalizeEndpoint` comment matches behaviour.** Doc now
   precisely describes the 24/32/36-char ID-shape match instead of
   overstating "any other non-letter leading segment". Companion
