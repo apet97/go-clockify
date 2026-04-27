@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0010-metrics-stack-direction.md` reflects post-v1.0
+  reality.** Two stale claims: Context paragraph said "~15
+  hand-registered series" (actual is 22 per
+  `internal/metrics/metrics.go`) and Decision text said "Keep
+  homegrown for v0.x, revisit at v1.0" without acknowledging
+  that v1.0/v1.1/v1.2 all shipped without a revisit. Context
+  bumped to 22 with a `grep -cE` recipe so future drift is
+  trivial to recheck. Decision keeps the original v0.x/v1.0
+  framing as the original commitment text but adds a
+  parenthetical status update naming v1.0.0's 2026-04-12 ship
+  date and "still keep homegrown through v1.x" as the
+  implicit extension until a follow-up ADR. Same iter142
+  post-flip-state-update class at the Proposed-ADR surface.
 - **`docs/adr/0012-backward-compatibility-policy.md` MCP-protocol
   committed window matches the canonical four-version slice.**
   ADR-0012 said "the **Committed window:** the last three

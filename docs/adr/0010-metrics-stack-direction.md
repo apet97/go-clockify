@@ -11,7 +11,9 @@ deliberate rather than accumulated.
 
 The server ships a bespoke metrics facade under `internal/metrics/`:
 registry, counter / histogram / gauge primitives, a Prometheus text
-format writer, and ~15 hand-registered series. It is intentionally
+format writer, and 22 hand-registered series (count via
+`grep -cE '"clockify_(mcp_)?[a-z_]+"' internal/metrics/metrics.go`,
+which reads the canonical name strings). It is intentionally
 small (see ADR 0001, which mandates that the default binary link
 zero non-stdlib symbols).
 
@@ -38,7 +40,12 @@ change it" trap.
 
 ## Decision
 
-**Keep homegrown for v0.x, revisit at v1.0.**
+**Keep homegrown for v0.x, revisit at v1.0.** (Status update:
+v1.0.0 shipped 2026-04-12 and v1.1 / v1.2 followed without an
+OTel-metrics revisit; the homegrown facade still meets the
+ADR-0001 stdlib-only contract and no operator request has
+forced the question. Treat this as an implicit "still keep
+homegrown through v1.x" until a follow-up ADR supersedes.)
 
 The current facade is small, debuggable, and carries no dependency
 cost. Migrating to OTel now would:
