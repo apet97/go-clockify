@@ -164,6 +164,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every sub-segment, so a URI containing `/`, `?`, `#`, `%`, `..`
   or a control byte is rejected at the resource layer instead of
   being silently forwarded.
+- **`tier2_project_admin.go` migrated to `paths.Workspace`.** All 6
+  concats (list templates, get template, create template, update
+  estimate, set memberships, archive projects bulk) swap to the
+  typed builder. First Tier-2 file in the migration; same pattern
+  as the Tier-1 sweep — pure refactor for tools whose IDs are
+  already validated upstream by `resolve.ValidateID`.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

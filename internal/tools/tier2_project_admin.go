@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -125,8 +126,12 @@ func (s *Service) ListProjectTemplates(ctx context.Context) (ResultEnvelope, err
 	}
 
 	query := map[string]string{"is-template": "true"}
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects", query, &out); err != nil {
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_project_templates", out, map[string]any{
@@ -145,8 +150,12 @@ func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "projects", projectID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/projects/"+projectID, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_project_template", out, map[string]any{"workspaceId": wsID}), nil
@@ -182,8 +191,12 @@ func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any
 		body["clientId"] = clientID
 	}
 
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/projects", body, &out); err != nil {
+	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_project_template", out, map[string]any{"workspaceId": wsID}), nil
@@ -217,8 +230,12 @@ func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any
 		},
 	}
 
+	path, err := paths.Workspace(wsID, "projects", projectID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/projects/"+projectID, body, &out); err != nil {
+	if err := s.Client.Put(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
@@ -259,8 +276,12 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 
 	body := map[string]any{"memberships": memberships}
 
+	path, err := paths.Workspace(wsID, "projects", projectID, "memberships")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/projects/"+projectID+"/memberships", body, &out); err != nil {
+	if err := s.Client.Put(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
@@ -292,8 +313,17 @@ func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (Res
 		}
 
 		body := map[string]any{"archived": true}
+		path, err := paths.Workspace(wsID, "projects", pid)
+		if err != nil {
+			results = append(results, map[string]any{
+				"projectId": pid,
+				"archived":  false,
+				"error":     err.Error(),
+			})
+			continue
+		}
 		var out map[string]any
-		if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/projects/"+pid, body, &out); err != nil {
+		if err := s.Client.Put(ctx, path, body, &out); err != nil {
 			results = append(results, map[string]any{
 				"projectId": pid,
 				"archived":  false,
