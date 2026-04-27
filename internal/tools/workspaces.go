@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
@@ -45,6 +46,14 @@ func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	// Defence-in-depth: config.Load already validates an env-supplied
+	// CLOCKIFY_WORKSPACE_ID, but ResolveWorkspaceID can also return an
+	// auto-detected ID from a /workspaces response. Validate before
+	// concatenating into the path so a malformed upstream response
+	// cannot smuggle a ../ traversal or a query-injecting segment.
+	if err := resolve.ValidateID(wsID, "workspace_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
 	var out map[string]any
