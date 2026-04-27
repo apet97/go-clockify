@@ -175,6 +175,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   export — swap to the typed builder. `deleteSharedReport` builds
   `reportPath` once and reuses it for the dry-run GET preview and
   the actual DELETE.
+- **`tier2_approvals.go` migrated to `paths.Workspace`.** All 8
+  concats across 6 handlers (list, get, submit, approve, reject,
+  withdraw). `approveTimesheet` and `rejectTimesheet` build
+  `approvalPath` once at the top, used for both the dry-run GET
+  preview and the PUT — same pattern as `entries.go`.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,

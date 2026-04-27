@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -111,8 +112,12 @@ func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any)
 		query["status"] = v
 	}
 
+	path, err := paths.Workspace(wsID, "approval-requests")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var items []map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/approval-requests", query, &items); err != nil {
+	if err := s.Client.Get(ctx, path, query, &items); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_approval_requests", items, map[string]any{
@@ -132,8 +137,12 @@ func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "approval-requests", approvalID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var approval map[string]any
-	if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, nil, &approval); err != nil {
+	if err := s.Client.Get(ctx, path, nil, &approval); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_approval_request", approval, map[string]any{"workspaceId": wsID}), nil
@@ -155,8 +164,12 @@ func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (R
 		"end":   endDate,
 	}
 
+	path, err := paths.Workspace(wsID, "approval-requests")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, "/workspaces/"+wsID+"/approval-requests", body, &created); err != nil {
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_submit_for_approval", created, map[string]any{"workspaceId": wsID}), nil
@@ -171,11 +184,15 @@ func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (Re
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	approvalPath, err := paths.Workspace(wsID, "approval-requests", approvalID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	// Confirm-pattern dry-run: fetch and return preview without mutating.
 	if dryrun.Enabled(args) {
 		var approval map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, nil, &approval); err != nil {
+		if err := s.Client.Get(ctx, approvalPath, nil, &approval); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -188,7 +205,7 @@ func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (Re
 
 	body := map[string]any{"status": "APPROVED"}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, body, &result); err != nil {
+	if err := s.Client.Put(ctx, approvalPath, body, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_approve_timesheet", result, map[string]any{"workspaceId": wsID}), nil
@@ -203,11 +220,15 @@ func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (Res
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	approvalPath, err := paths.Workspace(wsID, "approval-requests", approvalID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	// Confirm-pattern dry-run: fetch and return preview without mutating.
 	if dryrun.Enabled(args) {
 		var approval map[string]any
-		if err := s.Client.Get(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, nil, &approval); err != nil {
+		if err := s.Client.Get(ctx, approvalPath, nil, &approval); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -224,7 +245,7 @@ func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (Res
 	}
 
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, body, &result); err != nil {
+	if err := s.Client.Put(ctx, approvalPath, body, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_reject_timesheet", result, map[string]any{"workspaceId": wsID}), nil
@@ -241,8 +262,12 @@ func (s *Service) withdrawApproval(ctx context.Context, args map[string]any) (Re
 	}
 
 	body := map[string]any{"status": "WITHDRAWN"}
+	path, err := paths.Workspace(wsID, "approval-requests", approvalID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, "/workspaces/"+wsID+"/approval-requests/"+approvalID, body, &result); err != nil {
+	if err := s.Client.Put(ctx, path, body, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_withdraw_approval", result, map[string]any{"workspaceId": wsID}), nil
