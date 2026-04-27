@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`docs/adr/0012-backward-compatibility-policy.md` Config env
+  vars Rename flow describes real marker.** Step 1 said "Startup
+  logs `config_env_rename` at WARN when the old name is
+  observed" — but no `config_env_rename` log message exists in
+  the codebase. iter152 closed the parallel
+  `deprecated_surface_used` claim in `docs/release-policy.md`
+  and explicitly deferred this ADR-0012 surface for atomic-
+  commit boundaries; this commit closes it. ADR-0012's flow
+  now describes the actual mechanism (`Deprecated: true,
+  Replacement: "<new>"` flag in `internal/config/spec.go` →
+  `--help` banner + generated tables) plus an explicit Wave L
+  follow-up note for the future runtime log. Same iter114 /
+  iter127 / iter151 / iter152 fictional-log-line drift class,
+  now closed across both compat-policy surfaces.
 - **`docs/release-policy.md` deprecation flow describes the real
   marker, not a fictional log.** §"Deprecation policy" step 2
   said "the old surface logs `level=WARN

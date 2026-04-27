@@ -103,11 +103,20 @@ Two alternatives were considered:
 
 - **Removal is a major-version bump.**
 - **Rename flow (minor bump):**
-  1. Minor release N: both names are honoured. Startup logs
-     `config_env_rename` at WARN when the old name is
-     observed, pointing at the new one. The old name is added
-     to `deploy/.config-parity-opt-out.txt` so the parity
-     check stops requiring it in deployment manifests.
+  1. Minor release N: both names are honoured at runtime. The
+     old name is flagged `Deprecated: true, Replacement: "<new
+     name>"` in `internal/config/spec.go` so the
+     `clockify-mcp --help` banner labels it `DEPRECATED — use
+     <new name>` and the generated config tables (README,
+     `cmd/clockify-mcp/help_generated.go`) show the
+     replacement inline. The old name is also added to
+     `deploy/.config-parity-opt-out.txt` so the parity check
+     stops requiring it in deployment manifests. (A future
+     runtime WARN-level `config_env_rename` log per touch is on
+     the Wave L follow-up list; today the rename surfaces
+     through `--help` and the generated docs, not via slog —
+     the silent fallback path lives at
+     `internal/config/config.go` `Load()`.)
   2. Minor release N+K (K ≥ 1): the old name is removed only
      at the next major bump.
 - **Default changes are called out in the release notes.** A
