@@ -3,7 +3,7 @@
 # Called from CI and from `make cover-check` so both use identical logic.
 #
 # Environment variables:
-#   COVERAGE_GLOBAL_FLOOR   Minimum total coverage % (default: 55)
+#   COVERAGE_GLOBAL_FLOOR   Minimum total coverage % (default: 71)
 #   COVERAGE_FLOORS         Space-separated "pkg=floor" pairs, e.g.
 #                           "internal/mcp=62 internal/config=78".
 #                           Default matches the current CI floors.

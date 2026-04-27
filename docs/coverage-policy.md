@@ -34,7 +34,7 @@ flakiness; several have been ratcheted up since.
 
 | Package | Floor | Notes |
 |---|---|---|
-| **Global** | **69%** | total `./internal/...` coverage |
+| **Global** | **71%** | total `./internal/...` coverage |
 | `internal/mcp` | 70% | |
 | `internal/tools` | 63% | |
 | `internal/clockify` | 73% | ratcheted post-calibration |
@@ -53,8 +53,10 @@ flakiness; several have been ratcheted up since.
 
 ## Planned ratchets
 
-The target for the next ratchet PR is **global 70%**, which requires lifting
-`internal/tools` into the low 60s. The dispatcher-level negative-path tests
+The previous target of **global 70%** was reached and the floor has
+since ratcheted to **71%** (current). The next planned ratchet is
+**global 72%**, which requires lifting `internal/tools` into the
+low 60s. The dispatcher-level negative-path tests
 in `internal/tools/dispatch_test.go` cover the enforcement surface but
 intentionally do not re-cover what the service-layer tests in
 `internal/tools/tools_test.go` already hit — follow-up PRs should add

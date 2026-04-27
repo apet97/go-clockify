@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Global coverage floor reads `71%` consistently across script
+  and policy doc.** `scripts/check-coverage.sh:6` doc-comment said
+  "default: 55" but the actual default at line 19 is `71`.
+  `docs/coverage-policy.md:37` table said `Global = 69%` and the
+  Planned-ratchets section named "global 70%" as the next target,
+  but the floor has already ratcheted to 71%. Both the comment and
+  the doc table now read `71`, and the Planned-ratchets section
+  acknowledges the previous target was reached and names global
+  72% as the next ratchet target. Same iter107-class doc-vs-code
+  drift but at the global-floor surface.
 - **`docs/performance.md` "Reproduce locally" lists all 5 load
   scenarios.** Section §"Throughput envelope (load harness)"
   reproduce-locally bash block listed the 4 pre-iter138
