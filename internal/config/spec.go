@@ -28,6 +28,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_TIMEZONE", Group: "Core", Help: "IANA timezone for time parsing"},
 		{Name: "CLOCKIFY_INSECURE", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "Allow non-HTTPS base URLs"},
 		{Name: "CLOCKIFY_SANITIZE_UPSTREAM_ERRORS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, omit upstream Clockify response bodies from MCP tool-error responses (still logged server-side). Hosted profiles (shared-service, prod-postgres) default to 1."},
+		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, CreateWebhook/UpdateWebhook resolve the webhook host via DNS and reject any reply with a private/reserved IP (SSRF protection). Hosted profiles (shared-service, prod-postgres) default to 1."},
 
 		// --- Safety ---
 		{Name: "CLOCKIFY_POLICY", Group: "Safety", Enum: []string{"read_only", "time_tracking_safe", "safe_core", "standard", "full"}, Default: "standard", Help: "Tool-access policy tier", EssentialDoc: true},

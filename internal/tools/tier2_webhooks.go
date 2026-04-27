@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/netip"
 	neturl "net/url"
 	"strconv"
@@ -135,6 +136,72 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 			},
 		},
 	}
+}
+
+// validateWebhookURLForService runs validateWebhookURL plus, when the
+// service is configured for DNS-aware validation (hosted profiles),
+// resolves the host and rejects any reply containing a private,
+// reserved, link-local, or loopback IP. Same isPublicWebhookAddr
+// classifier as the literal-IP path so the contract is identical
+// across both modes.
+//
+// Note: there is an inherent TOCTOU window between this resolve and
+// the upstream Clockify→host delivery — DNS rebinding is not fully
+// closed by this gate. It does close the easy case where the operator
+// or a malicious user supplies an explicitly hostile hostname like
+// metadata.google.internal or a domain that resolves to 169.254.169.254.
+func (s *Service) validateWebhookURLForService(ctx context.Context, url string) error {
+	if err := validateWebhookURL(url); err != nil {
+		return err
+	}
+	if !s.WebhookValidateDNS {
+		return nil
+	}
+	parsed, err := neturl.Parse(url)
+	if err != nil {
+		return fmt.Errorf("invalid webhook URL: %w", err)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if _, ipErr := netip.ParseAddr(host); ipErr == nil {
+		// IP literals were already classified by validateWebhookURL.
+		return nil
+	}
+
+	resolver := s.WebhookHostResolver
+	if resolver == nil {
+		resolver = defaultWebhookResolver
+	}
+	addrs, err := resolver(ctx, host)
+	if err != nil {
+		return fmt.Errorf("webhook host %q DNS lookup failed: %w", host, err)
+	}
+	if len(addrs) == 0 {
+		return fmt.Errorf("webhook host %q resolved to no addresses", host)
+	}
+	for _, a := range addrs {
+		if !isPublicWebhookAddr(a) {
+			return fmt.Errorf("webhook host %q resolves to private/reserved address %s", host, a.String())
+		}
+	}
+	return nil
+}
+
+// defaultWebhookResolver wraps net.DefaultResolver.LookupIPAddr in the
+// netip-returning shape the service callback expects.
+func defaultWebhookResolver(ctx context.Context, host string) ([]netip.Addr, error) {
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]netip.Addr, 0, len(addrs))
+	for _, a := range addrs {
+		ip, ok := netip.AddrFromSlice(a.IP)
+		if !ok {
+			continue
+		}
+		out = append(out, ip)
+	}
+	return out, nil
 }
 
 // validateWebhookURL checks that a webhook URL uses HTTPS and doesn't target
@@ -278,7 +345,7 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 	if url == "" {
 		return ResultEnvelope{}, fmt.Errorf("url is required")
 	}
-	if err := validateWebhookURL(url); err != nil {
+	if err := s.validateWebhookURLForService(ctx, url); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -322,7 +389,7 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 
 	payload := map[string]any{}
 	if url := stringArg(args, "url"); url != "" {
-		if err := validateWebhookURL(url); err != nil {
+		if err := s.validateWebhookURLForService(ctx, url); err != nil {
 			return ResultEnvelope{}, err
 		}
 		payload["url"] = url

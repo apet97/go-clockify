@@ -92,6 +92,15 @@ type Config struct {
 	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1, with the hosted-profile
 	// default applied when the operator hasn't overridden it.
 	SanitizeUpstreamErrors bool
+	// WebhookValidateDNS, when true, makes CreateWebhook/UpdateWebhook
+	// resolve the host and reject any reply containing a private,
+	// reserved, link-local, or loopback IP. Default false (literal-IP
+	// check only); hosted profiles flip it on so a hostname pointing
+	// at 169.254.169.254 (cloud-metadata) or a private-range A record
+	// can't turn the Clockify outbound webhook delivery into an SSRF
+	// probe. Wired from CLOCKIFY_WEBHOOK_VALIDATE_DNS=1, with the
+	// hosted-profile default applied when the operator hasn't overridden.
+	WebhookValidateDNS bool
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -410,6 +419,13 @@ func Load() (Config, error) {
 		cfg.SanitizeUpstreamErrors = raw == "1" || strings.EqualFold(raw, "true")
 	} else if isHostedProfile(profileName) {
 		cfg.SanitizeUpstreamErrors = true
+	}
+	// CLOCKIFY_WEBHOOK_VALIDATE_DNS: same pattern — explicit override
+	// wins, hosted profiles default to true.
+	if raw := os.Getenv("CLOCKIFY_WEBHOOK_VALIDATE_DNS"); raw != "" {
+		cfg.WebhookValidateDNS = raw == "1" || strings.EqualFold(raw, "true")
+	} else if isHostedProfile(profileName) {
+		cfg.WebhookValidateDNS = true
 	}
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,

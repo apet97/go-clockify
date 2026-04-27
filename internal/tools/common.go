@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,17 @@ type Service struct {
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	ActivateGroup   func(context.Context, string) (ActivationResult, error)
 	ActivateTool    func(context.Context, string) (ActivationResult, error)
+	// WebhookValidateDNS, when true, makes CreateWebhook/UpdateWebhook
+	// resolve the webhook host via the system resolver and reject any
+	// reply that contains a private/reserved IP. Default false matches
+	// the literal-only check; hosted profiles flip it on so a hostname
+	// pointing at 169.254.169.254 (cloud-metadata) or 10.0.0.x cannot
+	// turn the Clockify webhook delivery into an SSRF probe across the
+	// hosted control plane. Audit finding 10.
+	WebhookValidateDNS bool
+	// WebhookHostResolver overrides the LookupIPAddr call for tests.
+	// nil = use net.DefaultResolver.
+	WebhookHostResolver func(context.Context, string) ([]netip.Addr, error)
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier

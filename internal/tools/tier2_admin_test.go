@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -247,6 +249,86 @@ func TestCreateUserGroup(t *testing.T) {
 	}
 	if data["name"] != "Backend Team" {
 		t.Fatalf("unexpected group name: %v", data["name"])
+	}
+}
+
+// TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA exercises
+// audit finding 10: with WebhookValidateDNS=true (set automatically
+// by hosted profiles), a hostname that resolves to a private or
+// reserved IP must be rejected, not just literal IP addresses. The
+// test injects a deterministic resolver so the test stays offline.
+func TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA(t *testing.T) {
+	cases := []struct {
+		name      string
+		host      string
+		ip        string
+		wantBlock bool
+	}{
+		{"private_10", "internal.example.com", "10.0.0.1", true},
+		{"private_172", "internal.example.com", "172.16.0.1", true},
+		{"private_192", "internal.example.com", "192.168.1.1", true},
+		{"loopback_dns", "internal.example.com", "127.0.0.1", true},
+		{"link_local", "internal.example.com", "169.254.169.254", true}, // AWS metadata
+		{"public", "public.example.com", "8.8.8.8", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc := &Service{
+				WebhookValidateDNS: true,
+				WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+					addr, err := netip.ParseAddr(c.ip)
+					if err != nil {
+						t.Fatalf("bad test ip %s: %v", c.ip, err)
+					}
+					return []netip.Addr{addr}, nil
+				},
+			}
+			err := svc.validateWebhookURLForService(context.Background(), "https://"+c.host+"/hook")
+			if c.wantBlock && err == nil {
+				t.Fatalf("DNS-resolved %s → %s should be rejected", c.host, c.ip)
+			}
+			if !c.wantBlock && err != nil {
+				t.Fatalf("DNS-resolved %s → %s should be allowed: %v", c.host, c.ip, err)
+			}
+		})
+	}
+}
+
+// TestValidateWebhookURL_DNS_NoFlagSkipsResolution confirms that
+// when WebhookValidateDNS is false (local/dev profile default), the
+// resolver is never consulted — preserving the prior behaviour for
+// operators who depend on internal Clockify webhooks pointing at
+// hostnames that resolve to private IPs in their network.
+func TestValidateWebhookURL_DNS_NoFlagSkipsResolution(t *testing.T) {
+	resolverCalls := 0
+	svc := &Service{
+		WebhookValidateDNS: false,
+		WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+			resolverCalls++
+			return nil, nil
+		},
+	}
+	if err := svc.validateWebhookURLForService(context.Background(), "https://internal.example.com/hook"); err != nil {
+		t.Fatalf("unexpected error with WebhookValidateDNS=false: %v", err)
+	}
+	if resolverCalls != 0 {
+		t.Fatalf("resolver should not be called when WebhookValidateDNS=false (got %d calls)", resolverCalls)
+	}
+}
+
+// TestValidateWebhookURL_DNS_LookupErrorPropagates locks in fail-closed
+// behaviour: a DNS error blocks webhook creation rather than silently
+// allowing the URL through.
+func TestValidateWebhookURL_DNS_LookupErrorPropagates(t *testing.T) {
+	svc := &Service{
+		WebhookValidateDNS: true,
+		WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+			return nil, fmt.Errorf("nxdomain")
+		},
+	}
+	err := svc.validateWebhookURLForService(context.Background(), "https://does-not-exist.example.com/hook")
+	if err == nil {
+		t.Fatal("DNS lookup error must surface as a webhook validation failure")
 	}
 }
 

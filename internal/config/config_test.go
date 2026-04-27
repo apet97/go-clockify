@@ -73,6 +73,7 @@ var profileLeakedEnvs = []string{
 	"MCP_OIDC_AUDIENCE",
 	"CLOCKIFY_INSECURE",
 	"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
+	"CLOCKIFY_WEBHOOK_VALIDATE_DNS",
 }
 
 func TestLoadReportsURLRemoved(t *testing.T) {
@@ -1228,6 +1229,42 @@ func TestIsHostedProfile_Predicate(t *testing.T) {
 		if got := isHostedProfile(name); got != want {
 			t.Errorf("isHostedProfile(%q)=%v want=%v", name, got, want)
 		}
+	}
+}
+
+// TestLoad_WebhookValidateDNS_HostedProfileDefault locks in the
+// profile-driven default added in audit finding 10: shared-service
+// flips WebhookValidateDNS=true so a hostname that resolves to a
+// private/reserved IP is rejected. local-stdio keeps the legacy
+// literal-only check.
+func TestLoad_WebhookValidateDNS_HostedProfileDefault(t *testing.T) {
+	cases := []struct {
+		profile string
+		want    bool
+	}{
+		{"shared-service", true},
+		{"local-stdio", false},
+	}
+	for _, c := range cases {
+		t.Run(c.profile, func(t *testing.T) {
+			env := map[string]string{
+				"CLOCKIFY_API_KEY": "test-key",
+				"MCP_PROFILE":      c.profile,
+			}
+			if isHostedProfile(c.profile) {
+				for k, v := range hostedProfileEnv {
+					env[k] = v
+				}
+			}
+			setEnvs(t, env)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if cfg.WebhookValidateDNS != c.want {
+				t.Fatalf("profile %q WebhookValidateDNS=%v want=%v", c.profile, cfg.WebhookValidateDNS, c.want)
+			}
+		})
 	}
 }
 
