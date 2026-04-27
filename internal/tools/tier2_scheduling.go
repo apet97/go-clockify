@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -195,7 +196,10 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 	query["page-size"] = fmt.Sprintf("%d", pageSize)
 
 	var assignments []map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/assignments"
+	path, err := paths.Workspace(wsID, "scheduling", "assignments")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &assignments); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -220,7 +224,10 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 	}
 
 	var assignment map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/assignments/" + aID
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &assignment); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -273,7 +280,10 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/assignments"
+	path, err := paths.Workspace(wsID, "scheduling", "assignments")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -298,7 +308,10 @@ func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (Re
 
 	// Fetch existing assignment for merge
 	var existing map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/assignments/" + aID
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -343,7 +356,10 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	path := "/workspaces/" + wsID + "/scheduling/assignments/" + aID
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if dryrun.Enabled(args) {
 		var assignment map[string]any
@@ -382,7 +398,10 @@ func (s *Service) listSchedules(ctx context.Context, args map[string]any) (Resul
 	}
 
 	var schedules []map[string]any
-	path := "/workspaces/" + wsID + "/scheduling"
+	path, err := paths.Workspace(wsID, "scheduling")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &schedules); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -405,7 +424,10 @@ func (s *Service) getSchedule(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	var schedule map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/" + sID
+	path, err := paths.Workspace(wsID, "scheduling", sID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, nil, &schedule); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -438,7 +460,10 @@ func (s *Service) createSchedule(ctx context.Context, args map[string]any) (Resu
 	}
 
 	var result map[string]any
-	path := "/workspaces/" + wsID + "/scheduling"
+	path, err := paths.Workspace(wsID, "scheduling")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -462,7 +487,10 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 	}
 
 	var totals map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/assignments/project-totals"
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "project-totals")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &totals); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -491,7 +519,10 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 	}
 
 	var capacity map[string]any
-	path := "/workspaces/" + wsID + "/scheduling/capacity"
+	path, err := paths.Workspace(wsID, "scheduling", "capacity")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := s.Client.Get(ctx, path, query, &capacity); err != nil {
 		return ResultEnvelope{}, err
 	}

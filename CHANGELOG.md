@@ -206,6 +206,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   DELETE pair. Webhooks carry `RiskExternalSideEffect`; the helper
   re-validates the workspace ID even though the literal-IP webhook
   URL check still runs in the body.
+- **`tier2_scheduling.go` migrated to `paths.Workspace`.** All 10
+  concats across 8 handlers (assignments CRUD, schedules CRUD,
+  project-totals report, capacity filter). Cleanest pattern in the
+  Tier-2 cluster — every concat was already in the form
+  `path := "..."`, so the swap is a literal RHS replacement.
 - **`docs/tool-catalog.json` exposes `risk_class` + `audit_keys`.**
   The catalog generator now decomposes every tool's `mcp.RiskClass`
   bitmask into stable lowercase taxonomy names (`read`, `write`,
