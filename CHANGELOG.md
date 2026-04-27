@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`SECURITY.md` Dry-run bullet expanded to cover non-destructive RW.**
+  The Security Features "Dry-run" entry was scoped to "every
+  destructive operation", but audit Finding 7 added `dry_run:true`
+  support to four non-destructive RW tools whose execution triggers
+  an external side effect: `clockify_send_invoice`,
+  `clockify_mark_invoice_paid`, `clockify_test_webhook`, and
+  `clockify_deactivate_user`. Each handler calls
+  `dryrun.Enabled(args)` at the top of the body and returns a wrapped
+  GET preview without issuing the PUT/POST. `docs/clients.md`
+  documented this in the "Safety and Destructive Operations" section,
+  but SECURITY.md as the canonical security summary missed the
+  propagation. Bullet now names all four tools inline so an auditor
+  reading the security surface gets the staged-preview path without
+  cross-referencing clients.md. Pure operator-doc fix; closes the
+  iter40-era doc-sync chain at the security-summary level.
 - **Cited image-pin examples bumped to v1.2.0 + linked to SUPPORT.md.**
   Two stale operator-pointers found by re-grepping for version
   strings: `deploy/k8s/README.md` (pin example was `v0.5.0` —
