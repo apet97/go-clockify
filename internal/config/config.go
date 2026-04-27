@@ -101,6 +101,19 @@ type Config struct {
 	// probe. Wired from CLOCKIFY_WEBHOOK_VALIDATE_DNS=1, with the
 	// hosted-profile default applied when the operator hasn't overridden.
 	WebhookValidateDNS bool
+	// WebhookAllowedDomains is the per-deployment escape-hatch list of
+	// hostnames that bypass the WebhookValidateDNS private-IP check.
+	// Supplied as a comma-separated list via
+	// CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS; whitespace around each entry is
+	// trimmed and empty entries are skipped. Each entry matches a host
+	// either exactly (`webhook.example.com`) or as a leading-dot
+	// suffix that anchors a full DNS label (`.example.com` matches
+	// `webhook.example.com` and `api.eu.example.com` but NOT
+	// `attacker.example.com.evil.com`). Empty list = no bypass.
+	// Use case: split-horizon DNS where a known-trusted hostname
+	// resolves to a private IP only on the control-plane network.
+	// See docs/runbooks/webhook-dns-validation.md §4b.
+	WebhookAllowedDomains []string
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -426,6 +439,21 @@ func Load() (Config, error) {
 		cfg.WebhookValidateDNS = raw == "1" || strings.EqualFold(raw, "true")
 	} else if isHostedProfile(profileName) {
 		cfg.WebhookValidateDNS = true
+	}
+	// CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: comma-separated escape-hatch
+	// list of hostnames that bypass the WebhookValidateDNS private-IP
+	// check. Whitespace around each entry is trimmed and empty
+	// entries are dropped here — the validator (`isWebhookHostAllowed`
+	// in internal/tools/tier2_webhooks.go) ALSO trims and skips
+	// empties as defence-in-depth, but doing it once at config-load
+	// time keeps the parsed surface small.
+	if raw := os.Getenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"); raw != "" {
+		for item := range strings.SplitSeq(raw, ",") {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				cfg.WebhookAllowedDomains = append(cfg.WebhookAllowedDomains, item)
+			}
+		}
 	}
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,

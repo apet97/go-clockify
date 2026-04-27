@@ -58,7 +58,7 @@ func (a controlPlaneAuditor) RecordAudit(event mcp.AuditEvent) error {
 	return a.store.AppendAuditEvent(auditbridge.ToControlPlaneEvent(event, time.Now().UTC()))
 }
 
-func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int, webhookValidateDNS bool) *tools.Service {
+func newService(client *clockify.Client, workspaceID string, timezone string, dd dedupe.Config, pol *policy.Policy, reportMaxEntries int, webhookValidateDNS bool, webhookAllowedDomains []string) *tools.Service {
 	service := tools.New(client, workspaceID)
 	if timezone != "" {
 		loc, _ := time.LoadLocation(timezone)
@@ -68,6 +68,7 @@ func newService(client *clockify.Client, workspaceID string, timezone string, dd
 	service.PolicyDescribe = pol.Describe
 	service.ReportMaxEntries = reportMaxEntries
 	service.WebhookValidateDNS = webhookValidateDNS
+	service.WebhookAllowedDomains = webhookAllowedDomains
 	return service
 }
 
@@ -263,7 +264,7 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 		}
 	}
 	bc := deps.bootstrap.Clone()
-	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries, deps.cfg.WebhookValidateDNS)
+	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries, deps.cfg.WebhookValidateDNS, deps.cfg.WebhookAllowedDomains)
 	service.DeltaFormat = deps.cfg.DeltaFormat
 	server := buildServer(deps.version, deps, service, pol, bc)
 	return &mcp.StreamableSessionRuntime{

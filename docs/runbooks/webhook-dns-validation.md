@@ -72,9 +72,15 @@ If split-horizon DNS is the cause, the right fix is to either:
 
 1. Run `clockify-mcp` with a resolver that sees the public answer
    (e.g. `1.1.1.1` / `8.8.8.8`), or
-2. Open a tracked issue requesting a per-deployment domain
-   allowlist; there is currently no env var for this and the
-   plan-file follow-ups list it as a future addition.
+2. Set `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]` to
+   admit the known-trusted hostname. Each entry matches either
+   exactly (`webhook.example.com`) or as a leading-dot suffix
+   that anchors a full DNS label (`.example.com` matches
+   `webhook.example.com` and `api.eu.example.com` but NOT
+   `attacker.example.com.evil.com`). Whitespace around each
+   entry is trimmed and empty entries are dropped, so a
+   leading or trailing comma is harmless. Empty list = no
+   bypass; the DNS check applies to every host.
 
 ### 4c. The reject is wrong
 

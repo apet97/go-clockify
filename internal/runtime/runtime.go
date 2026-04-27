@@ -106,7 +106,7 @@ func (r *Runtime) Run(ctx context.Context) error {
 	client := clockify.NewClient(r.cfg.APIKey, r.cfg.BaseURL, r.cfg.RequestTimeout, r.cfg.MaxRetries)
 	defer client.Close()
 	client.SetUserAgent("clockify-mcp-go/" + r.version)
-	service := newService(client, r.cfg.WorkspaceID, r.cfg.Timezone, r.deps.dd, r.deps.policy, r.cfg.ReportMaxEntries, r.cfg.WebhookValidateDNS)
+	service := newService(client, r.cfg.WorkspaceID, r.cfg.Timezone, r.deps.dd, r.deps.policy, r.cfg.ReportMaxEntries, r.cfg.WebhookValidateDNS, r.cfg.WebhookAllowedDomains)
 	service.DeltaFormat = r.cfg.DeltaFormat
 	server := buildServer(r.version, r.deps, service, r.deps.policy, &r.deps.bootstrap)
 	metrics.ReadyState.SetFunc(func() float64 {

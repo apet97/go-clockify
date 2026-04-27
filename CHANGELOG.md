@@ -9,25 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Webhook DNS-allowlist escape hatch (validator-side).** New
-  `Service.WebhookAllowedDomains []string` lets operators admit
-  known-trusted hostnames whose DNS reply contains a private/reserved
-  IP — the use case is split-horizon DNS where a legitimately-trusted
-  hostname resolves to a private IP only on the control-plane
-  network. Match modes: exact (`webhook.example.com`) and leading-dot
-  suffix (`.example.com` matches every subdomain but NOT
-  `attacker.example.com.evil.com` — the leading dot anchors the
-  suffix to a full DNS label). Empty / whitespace entries are
-  skipped so a CSV typo cannot accidentally match every host. Empty
-  allowlist preserves the historical reject-on-private behaviour
-  exactly. Tests in `tier2_admin_test.go` cover all match modes
-  plus the leading-dot anchoring property. Production wiring
-  (env var `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` + Config field +
-  runtime plumbing + Helm/k8s) follows in a later commit; this
-  commit lands the validator side so the next iteration can wire
-  the env surface against an already-tested helper. Closes the
-  `docs/runbooks/webhook-dns-validation.md` §4b open follow-up
-  on the validator side.
+- **`CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` env var lights up the
+  webhook DNS-allowlist escape hatch.** Operators set a
+  comma-separated list of hostnames that bypass the
+  `CLOCKIFY_WEBHOOK_VALIDATE_DNS` private-IP check. Each entry
+  matches either exactly (`webhook.example.com`) or as a
+  leading-dot suffix that anchors a full DNS label
+  (`.example.com` matches `webhook.example.com` and
+  `api.eu.example.com` but NOT `attacker.example.com.evil.com`).
+  Whitespace around each entry is trimmed and empty entries are
+  dropped, so a leading or trailing comma is harmless. Empty
+  list (default) preserves the historical reject-on-private
+  behaviour exactly. Use case: split-horizon DNS where a known-
+  trusted hostname legitimately resolves to a private IP only
+  on the control-plane network — see
+  `docs/runbooks/webhook-dns-validation.md` §4b for the operator
+  runbook. Surface change: `EnvSpec` entry, Helm
+  `clockify.webhookAllowedDomains` value, k8s ConfigMap
+  commented placeholder, runtime wiring through
+  `internal/runtime/service.go` `newService`. Validator side
+  landed in e0c825d; this commit closes the env-surface slice
+  of the multi-commit feature. Helm `values.yaml` /
+  `deployment.yaml` / k8s `configmap.yaml` updated in the same
+  commit because `make release-check`'s `config-parity` gate
+  refuses any new env var that isn't reachable through the
+  deploy templates.
 - **Structured risk taxonomy on `ToolDescriptor`.** New `RiskClass`
   bitmask (`Read | Write | Billing | Admin | PermissionChange |
   ExternalSideEffect | Destructive`) and `AuditKeys []string` fields,

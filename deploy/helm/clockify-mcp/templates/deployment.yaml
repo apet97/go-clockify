@@ -106,6 +106,10 @@ spec:
             - name: CLOCKIFY_WEBHOOK_VALIDATE_DNS
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.clockify.webhookAllowedDomains }}
+            - name: CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.clockify.deltaFormat }}
             - name: CLOCKIFY_DELTA_FORMAT
               value: {{ . | quote }}

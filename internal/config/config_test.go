@@ -3,6 +3,7 @@ package config
 import (
 	"maps"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1260,6 +1261,47 @@ func TestLoad_WebhookValidateDNS_HostedProfileDefault(t *testing.T) {
 			}
 			if cfg.WebhookValidateDNS != c.want {
 				t.Fatalf("profile %q WebhookValidateDNS=%v want=%v", c.profile, cfg.WebhookValidateDNS, c.want)
+			}
+		})
+	}
+}
+
+// TestLoad_WebhookAllowedDomains_Parser exercises the comma-separated
+// parser added for CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: whitespace
+// around each entry is trimmed and empty entries are dropped at
+// config-load time. The validator helper (`isWebhookHostAllowed`)
+// also trims/skips as defence-in-depth — this test pins the
+// config-load surface so we don't double-pay or under-trim.
+func TestLoad_WebhookAllowedDomains_Parser(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want []string
+	}{
+		{"unset_yields_nil", "", nil},
+		{"single_entry", "webhook.example.com", []string{"webhook.example.com"}},
+		{"two_entries", "webhook.example.com,api.example.com", []string{"webhook.example.com", "api.example.com"}},
+		{"trims_whitespace", " webhook.example.com , api.example.com ", []string{"webhook.example.com", "api.example.com"}},
+		{"drops_empty_entries", ",,foo.com,,bar.com,,", []string{"foo.com", "bar.com"}},
+		{"only_empties_yields_nil", ",, ,\t,,", nil},
+		{"leading_dot_suffix_preserved", ".example.com", []string{".example.com"}},
+		{"mixed_exact_and_suffix", "webhook.example.com,.internal.example.com", []string{"webhook.example.com", ".internal.example.com"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			env := map[string]string{
+				"CLOCKIFY_API_KEY": "test-key",
+			}
+			if c.raw != "" {
+				env["CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"] = c.raw
+			}
+			setEnvs(t, env)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if !slices.Equal(cfg.WebhookAllowedDomains, c.want) {
+				t.Fatalf("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=%q → %v, want %v", c.raw, cfg.WebhookAllowedDomains, c.want)
 			}
 		})
 	}
