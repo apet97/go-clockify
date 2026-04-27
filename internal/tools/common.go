@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"net/netip"
 	"strings"
@@ -439,9 +440,7 @@ func paginationSchema(extras map[string]any) map[string]any {
 		return schema
 	}
 	if extra, ok := extras["properties"].(map[string]any); ok {
-		for k, v := range extra {
-			props[k] = v
-		}
+		maps.Copy(props, extra)
 	}
 	if req, ok := extras["required"].([]string); ok && len(req) > 0 {
 		schema["required"] = req
@@ -462,10 +461,7 @@ func boolArg(args map[string]any, key string) bool {
 // paginationFromArgs extracts page/page_size from a tool args map, applying
 // the standard defaults (page=1, page_size=50) and a hard cap of 200.
 func paginationFromArgs(args map[string]any) (page, pageSize int) {
-	page = intArg(args, "page", 1)
-	if page < 1 {
-		page = 1
-	}
+	page = max(intArg(args, "page", 1), 1)
 	pageSize = intArg(args, "page_size", 50)
 	if pageSize < 1 {
 		pageSize = 50

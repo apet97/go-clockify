@@ -64,6 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   during the audit-finding wave (Wave G + H) replaced with the
   idiomatic `maps.Copy` call. Functionally equivalent; clears the
   `mapsloop` lint hint.
+- **`internal/tools/common.go` modernised.** `buildPaginationSchema`
+  copies the optional `properties` overlay via `maps.Copy` instead of
+  a hand-written for-range loop; `paginationFromArgs` clamps the
+  `page` floor with `max()` instead of an `if`-statement. Pure
+  refactor — no behaviour change. Clears the `mapsloop` and `minmax`
+  hints accumulated on this file during the audit-finding wave.
 
 ### Fixed
 
