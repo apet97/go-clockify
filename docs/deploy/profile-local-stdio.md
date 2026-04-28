@@ -53,6 +53,7 @@ Add to `~/.claude/mcp.json`:
     "clockify": {
       "command": "clockify-mcp",
       "env": {
+        "MCP_PROFILE": "local-stdio",
         "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
       }
     }
@@ -71,6 +72,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`
     "clockify": {
       "command": "/usr/local/bin/clockify-mcp",
       "env": {
+        "MCP_PROFILE": "local-stdio",
         "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
       }
     }
@@ -88,12 +90,18 @@ Add to `.cursor/mcp.json` in your workspace root:
     "clockify": {
       "command": "clockify-mcp",
       "env": {
+        "MCP_PROFILE": "local-stdio",
         "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
       }
     }
   }
 }
 ```
+
+`MCP_PROFILE=local-stdio` is required for the `safe_core` policy default
+above to take effect. Without it the server falls back to
+`CLOCKIFY_POLICY=standard`, which exposes more destructive tools than the
+profile intends.
 
 ## Security model
 
