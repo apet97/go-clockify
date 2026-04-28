@@ -45,7 +45,8 @@ Tool tiers:
   - Activate Tier 2 tools with 'clockify_search_tools' using 'activate_group' (preferred) or 'activate_tool' before calling them. Each Tier-2 group is the unit of activation: passing a single tool name via 'activate_tool' brings the entire containing group online, and the response enumerates every newly-available tool name.
 
 Safety:
-  - The server supports four policy modes: read_only, safe_core, standard (default), full.
+  - The server supports five policy modes: read_only, time_tracking_safe, safe_core, standard (default), full.
+  - time_tracking_safe is the recommended AI-facing default (used by the shared-service and prod-postgres profiles).
   - Destructive tools support dry-run previews when you pass dry_run:true.
   - Omit dry_run or pass dry_run:false to execute the mutation.
   - Use 'clockify_policy_info' to inspect the active policy and dry-run configuration.

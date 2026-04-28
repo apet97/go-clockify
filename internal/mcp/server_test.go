@@ -51,6 +51,18 @@ func TestServerInstructionsPublicContract(t *testing.T) {
 	if strings.Contains(ServerInstructions, "dry-run interceptor by default") {
 		t.Fatalf("ServerInstructions contains stale dry-run-default wording: %q", ServerInstructions)
 	}
+	// Policy-mode count must match the policy.Mode constants in
+	// internal/policy. Stale "four policy modes" wording omits
+	// time_tracking_safe — the recommended AI-facing default — and
+	// misleads agentic clients reading instructions as system prompt.
+	if !strings.Contains(ServerInstructions, "five policy modes") {
+		t.Fatalf("ServerInstructions should advertise all five policy modes: %q", ServerInstructions)
+	}
+	for _, mode := range []string{"read_only", "time_tracking_safe", "safe_core", "standard", "full"} {
+		if !strings.Contains(ServerInstructions, mode) {
+			t.Fatalf("ServerInstructions missing policy mode %q: %q", mode, ServerInstructions)
+		}
+	}
 }
 
 // FuzzJSONRPCParse feeds random byte sequences into the JSON-RPC Request
