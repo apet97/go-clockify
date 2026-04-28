@@ -22,7 +22,7 @@ type EnvSpec struct {
 func AllSpecs() []EnvSpec {
 	return []EnvSpec{
 		// --- Core ---
-		{Name: "CLOCKIFY_API_KEY", Group: "Core", Help: "API key (required for stdio/http/grpc; optional for streamable_http)", EssentialDoc: true},
+		{Name: "CLOCKIFY_API_KEY", Group: "Core", Help: "API key (required for stdio/http/grpc and MCP_PROFILE=single-tenant-http; optional for shared-service / prod-postgres streamable_http where tenant credentials come from the control plane)", EssentialDoc: true},
 		{Name: "CLOCKIFY_WORKSPACE_ID", Group: "Core", Default: "auto", Help: "Workspace ID (auto-detected if only one)", EssentialDoc: true},
 		{Name: "CLOCKIFY_BASE_URL", Group: "Core", Default: "https://api.clockify.me/api/v1", Help: "API base URL; HTTPS required unless loopback or CLOCKIFY_INSECURE=1"},
 		{Name: "CLOCKIFY_TIMEZONE", Group: "Core", Help: "IANA timezone for time parsing"},
