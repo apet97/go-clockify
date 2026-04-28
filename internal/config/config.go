@@ -263,6 +263,19 @@ func Load() (Config, error) {
 	if cfg.Transport != "streamable_http" && cfg.APIKey == "" {
 		return Config{}, fmt.Errorf("CLOCKIFY_API_KEY is required")
 	}
+	// single-tenant-http bootstraps the only tenant from the env
+	// API key (bootstrapDefaultTenant in internal/runtime/service.go).
+	// streamable_http otherwise tolerates an empty key because hosted
+	// shared-service tenants resolve credentials through the control
+	// plane — but for this profile, an empty key means /ready never
+	// validates Clockify and the first session fails with "tenant not
+	// found". Fail at config load instead of letting the pod become
+	// "ready" with no real backend behind it.
+	if profileName == "single-tenant-http" && cfg.APIKey == "" {
+		return Config{}, fmt.Errorf(
+			"CLOCKIFY_API_KEY is required for MCP_PROFILE=single-tenant-http " +
+				"(profile bootstraps the default tenant from the env API key)")
+	}
 	if cfg.APIKey != "" {
 		if err := validateBaseURL(cfg.BaseURL, cfg.Insecure); err != nil {
 			return Config{}, err

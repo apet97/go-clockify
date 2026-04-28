@@ -364,6 +364,64 @@ func TestLoadMaxMessageSizeLegacyFallback(t *testing.T) {
 	}
 }
 
+// TestLoadSingleTenantHTTPRequiresAPIKey verifies that the
+// single-tenant-http profile fails Load() when CLOCKIFY_API_KEY
+// is empty: the profile bootstraps the only tenant from the env
+// key, so without it /ready is never wired and the first session
+// fails with "tenant not found in control plane". Other streamable
+// HTTP deployments (shared-service, prod-postgres) still allow an
+// empty key because hosted credentials come from the control plane.
+func TestLoadSingleTenantHTTPRequiresAPIKey(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_PROFILE":      "single-tenant-http",
+		"MCP_BEARER_TOKEN": "single-tenant-bearer-token-1234",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected Load() to fail when single-tenant-http has no API key")
+	}
+	if !strings.Contains(err.Error(), "single-tenant-http") {
+		t.Fatalf("error must reference the profile name; got %v", err)
+	}
+	if !strings.Contains(err.Error(), "CLOCKIFY_API_KEY") {
+		t.Fatalf("error must reference CLOCKIFY_API_KEY; got %v", err)
+	}
+}
+
+// TestLoadSingleTenantHTTPAcceptsAPIKey confirms the same profile
+// loads cleanly when the API key is set — this is the happy path
+// the gate is protecting.
+func TestLoadSingleTenantHTTPAcceptsAPIKey(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_PROFILE":      "single-tenant-http",
+		"MCP_BEARER_TOKEN": "single-tenant-bearer-token-1234",
+		"CLOCKIFY_API_KEY": "test-key",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() should succeed with API key set: %v", err)
+	}
+	if cfg.APIKey != "test-key" {
+		t.Fatalf("expected APIKey to be propagated; got %q", cfg.APIKey)
+	}
+}
+
+// TestLoadSharedServiceAllowsEmptyAPIKey ensures the new gate is
+// scoped to single-tenant-http only — shared-service deployments
+// still resolve credentials per-tenant from the control plane.
+func TestLoadSharedServiceAllowsEmptyAPIKey(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"MCP_PROFILE":           "shared-service",
+		"MCP_OIDC_ISSUER":       "https://example.com",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp",
+		"MCP_CONTROL_PLANE_DSN": "memory",
+		"MCP_ALLOW_DEV_BACKEND": "1",
+	})
+	if _, err := Load(); err != nil {
+		t.Fatalf("shared-service should load without API key: %v", err)
+	}
+}
+
 func TestLoadStreamableHTTPAllowsEmptyAPIKey(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"MCP_TRANSPORT":         "streamable_http",
