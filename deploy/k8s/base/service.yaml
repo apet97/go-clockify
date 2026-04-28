@@ -16,11 +16,13 @@ spec:
   # client routed to the same pod across the session lifetime so
   # `initialize` and the subsequent `tools/call` requests do not
   # split-brain. Tradeoff: clients sharing a NAT egress all hash to
-  # the same backend.
+  # the same backend. The 24h timeout matches the MCP_SESSION_TTL
+  # ceiling defined in internal/config/spec.go ([1m,24h]); a shorter
+  # affinity window would re-hash clients mid-session.
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:
-      timeoutSeconds: 10800
+      timeoutSeconds: 86400
   ports:
     - name: http
       port: 8080

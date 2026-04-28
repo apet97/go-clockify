@@ -194,6 +194,16 @@ service:
   port: 8080
   # Port used when transport.mode=grpc. Ignored for http modes.
   grpcPort: 9090
+  # ClientIP session affinity for streamable HTTP. The Service template
+  # only renders the affinity block when transport.mode != "grpc"; gRPC's
+  # bidi streams already keep a long-lived TCP connection per client.
+  # Default timeout matches the MCP_SESSION_TTL ceiling (24h); reduce
+  # only if you also reduce MCP_SESSION_TTL — a shorter affinity window
+  # re-hashes clients mid-session and breaks the in-memory session
+  # manager (see internal/mcp/transport_streamable_http.go).
+  sessionAffinity:
+    enabled: true
+    timeoutSeconds: 86400
 
 # NetworkPolicy — default-deny with two allowlist labels. Set
 # networkPolicy.enabled: false to opt out entirely.
