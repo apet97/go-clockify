@@ -8,6 +8,16 @@ spec:
   type: {{ .Values.service.type }}
   selector:
     {{- include "clockify-mcp.selectorLabels" . | nindent 4 }}
+  {{- if ne .Values.transport.mode "grpc" }}
+  # Streamable HTTP sessions are pinned to a pod's in-memory session
+  # manager; without ClientIP affinity, an `initialize` on pod A
+  # followed by `tools/call` on pod B returns "session not found".
+  # gRPC mode (long-lived bidi streams) does not need or use this.
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+  {{- end }}
   ports:
     {{- if eq .Values.transport.mode "grpc" }}
     - name: grpc

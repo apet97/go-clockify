@@ -12,7 +12,14 @@ image:
   pullPolicy: IfNotPresent
 
 # Number of replicas. The PDB (pdb.enabled below) pins minAvailable: 1
-# so rolling updates stay available at replicaCount >= 2.
+# so rolling updates stay available at replicaCount >= 2. The Service
+# template enables sessionAffinity=ClientIP for non-gRPC modes so
+# streamable HTTP sessions stay pinned to a single pod (the in-memory
+# session manager is not yet rehydrated from the control-plane store).
+# Clients behind a shared NAT egress will all hash to the same backend
+# under ClientIP affinity — for non-trivial multi-replica deployments,
+# pair this with pod anti-affinity or a per-tenant ingress. The
+# session-rehydration follow-up will lift this constraint.
 replicaCount: 2
 
 # Override fullnameOverride to pin the resource prefix. Default is
