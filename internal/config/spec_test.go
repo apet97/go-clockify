@@ -42,6 +42,8 @@ func TestEnvSpec_CoversEveryGetenv(t *testing.T) {
 		"CLOCKIFY_ALLOW_GROUPS":           true, // internal/enforcement
 		"CLOCKIFY_MAX_CONCURRENT":         true, // main.go
 		"CLOCKIFY_RATE_LIMIT":             true, // internal/ratelimit
+		"CLOCKIFY_PER_TOKEN_CONCURRENCY":  true, // internal/ratelimit
+		"CLOCKIFY_PER_TOKEN_RATE_LIMIT":   true, // internal/ratelimit
 		"CLOCKIFY_TOKEN_BUDGET":           true, // internal/truncate
 		"CLOCKIFY_BOOTSTRAP_MODE":         true, // internal/tools
 		"CLOCKIFY_BOOTSTRAP_TOOLS":        true, // internal/tools

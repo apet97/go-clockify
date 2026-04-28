@@ -45,6 +45,8 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_MAX_CONCURRENT", Group: "Performance", Default: "10", Help: "Concurrent tool-call limit (0=disabled)"},
 		{Name: "CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT", Group: "Performance", Default: "100ms", Help: "Wait-for-slot timeout [1ms,30s]"},
 		{Name: "CLOCKIFY_RATE_LIMIT", Group: "Performance", Default: "120", Help: "Tool calls per 60s window (0=disabled)", EssentialDoc: true},
+		{Name: "CLOCKIFY_PER_TOKEN_CONCURRENCY", Group: "Performance", Default: "5", AppliesTo: []string{"streamable_http", "grpc"}, Help: "Per-subject concurrent tool-call limit for authenticated transports (0=disabled)"},
+		{Name: "CLOCKIFY_PER_TOKEN_RATE_LIMIT", Group: "Performance", Default: "60", AppliesTo: []string{"streamable_http", "grpc"}, Help: "Per-subject tool calls per 60s window for authenticated transports (0=disabled)"},
 		{Name: "CLOCKIFY_TOKEN_BUDGET", Group: "Performance", Default: "8000", Help: "Response token budget (0=disabled)"},
 		{Name: "CLOCKIFY_TOOL_TIMEOUT", Group: "Performance", Default: "45s", Help: "Per-tool deadline [5s,10m]"},
 		{Name: "MCP_MAX_INFLIGHT_TOOL_CALLS", Group: "Performance", Default: "64", Help: "Stdio dispatch goroutine cap (0=disabled)"},
