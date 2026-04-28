@@ -110,7 +110,9 @@ transport:
   httpTlsKey: ""          # MCP_HTTP_TLS_KEY (streamable_http server key PEM; required for streamable_http + mtls)
   mtlsCaCertPath: ""      # MCP_MTLS_CA_CERT_PATH (path to CA cert for client verification; required for grpc + mtls AND streamable_http + mtls)
   # Reject Host headers that don't match the bound address; mitigates
-  # DNS-rebinding when the server is exposed beyond loopback.
+  # DNS-rebinding when the server is exposed beyond loopback. Pair with
+  # cors.allowedOrigins (or cors.allowAnyOrigin: "1", or a loopback
+  # bind) — config.Load() refuses to start otherwise.
   strictHostCheck: "1"
   logFormat: "json"
   logLevel: "info"

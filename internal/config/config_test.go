@@ -240,6 +240,85 @@ func TestLoadStrictHostCheckInvalidReturnsError(t *testing.T) {
 	}
 }
 
+// TestLoadStrictHostCheckEmptyAllowlistRejected fails Load() when an
+// HTTP-flavoured transport bound to a non-loopback address has the
+// strict host check enabled but no allowlist; the runtime would then
+// reject every request with a 403. The error message must mention
+// MCP_ALLOWED_ORIGINS so the operator knows what to set.
+func TestLoadStrictHostCheckEmptyAllowlistRejected(t *testing.T) {
+	base := func() map[string]string {
+		return map[string]string{
+			"MCP_TRANSPORT":         "streamable_http",
+			"MCP_OIDC_ISSUER":       "https://example.com",
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_STRICT_HOST_CHECK": "1",
+		}
+	}
+	cases := []struct {
+		name string
+		bind string
+	}{
+		{"any-interface ':8080'", ":8080"},
+		{"explicit 0.0.0.0", "0.0.0.0:8080"},
+		{"explicit ipv6 unspecified", "[::]:8080"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			envs := base()
+			envs["MCP_HTTP_BIND"] = tc.bind
+			setEnvs(t, envs)
+			_, err := Load()
+			if err == nil {
+				t.Fatal("expected Load() to fail with strict host check + empty allowlist")
+			}
+			if !strings.Contains(err.Error(), "MCP_ALLOWED_ORIGINS") {
+				t.Fatalf("error must reference MCP_ALLOWED_ORIGINS; got %v", err)
+			}
+		})
+	}
+}
+
+// TestLoadStrictHostCheckAcceptsEscapeHatches confirms the preflight
+// passes when any of the documented escape hatches is set: an explicit
+// allowlist, MCP_ALLOW_ANY_ORIGIN=1, or a loopback bind. Each escape
+// hatch must independently satisfy the gate.
+func TestLoadStrictHostCheckAcceptsEscapeHatches(t *testing.T) {
+	streamable := func(extra map[string]string) map[string]string {
+		envs := map[string]string{
+			"MCP_TRANSPORT":         "streamable_http",
+			"MCP_OIDC_ISSUER":       "https://example.com",
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_STRICT_HOST_CHECK": "1",
+			"MCP_HTTP_BIND":         ":8080",
+		}
+		maps.Copy(envs, extra)
+		return envs
+	}
+	cases := []struct {
+		name string
+		envs map[string]string
+	}{
+		{"allowlist set", streamable(map[string]string{"MCP_ALLOWED_ORIGINS": "https://client.example.com"})},
+		{"allow-any-origin", streamable(map[string]string{"MCP_ALLOW_ANY_ORIGIN": "1"})},
+		{"loopback bind", streamable(map[string]string{"MCP_HTTP_BIND": "127.0.0.1:8080"})},
+		{"ipv6 loopback bind", streamable(map[string]string{"MCP_HTTP_BIND": "[::1]:8080"})},
+		{"stdio transport unaffected", map[string]string{
+			"CLOCKIFY_API_KEY":      "test-key",
+			"MCP_STRICT_HOST_CHECK": "1",
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			setEnvs(t, tc.envs)
+			if _, err := Load(); err != nil {
+				t.Fatalf("Load() should succeed for %s: %v", tc.name, err)
+			}
+		})
+	}
+}
+
 func TestLoadMaxMessageSizeDefault(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY": "test-key",

@@ -5,7 +5,11 @@
 #   - Full resource requests/limits (match the base deployment).
 #   - CLOCKIFY_POLICY=time_tracking_safe for the public AI-facing surface.
 #   - MCP_STRICT_HOST_CHECK=1 so the server refuses requests whose
-#     Host header does not match the configured allowlist.
+#     Host header does not match the configured allowlist. Pair with
+#     MCP_ALLOWED_ORIGINS — config.Load() now refuses to start when
+#     strict host check is enabled with an empty allowlist on a
+#     non-loopback bind. Operators MUST replace the placeholder
+#     allowlist below with their real client origin(s) before applying.
 #   - commonLabels: environment=prod so observability joins cleanly.
 #
 # Image pinning policy (enforced by scripts/check-overlay-structure.sh):
@@ -52,3 +56,12 @@ patches:
       - op: replace
         path: /data/CLOCKIFY_POLICY
         value: "time_tracking_safe"
+      # Placeholder allowlist — replace with real client origin(s)
+      # before applying this overlay. The base ConfigMap does not set
+      # MCP_ALLOWED_ORIGINS at all, so we must add it here. Without an
+      # operator override, requests from real clients will not match
+      # this hostname and the server will reject them with 403 — that
+      # is the intended fail-closed posture, not silent data loss.
+      - op: add
+        path: /data/MCP_ALLOWED_ORIGINS
+        value: "https://your-client.example.com"

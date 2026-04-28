@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -501,6 +502,22 @@ func Load() (Config, error) {
 	}
 	cfg.StrictHostCheck = strictHostCheck
 
+	// Strict host check + empty allowlist on a non-loopback bind would
+	// reject every request — isHostAllowed admits only loopback hosts
+	// and entries derived from MCP_ALLOWED_ORIGINS. Catching this at
+	// config load gives the operator a clear actionable error instead
+	// of an opaque 403 from every probe and client.
+	if cfg.StrictHostCheck &&
+		(cfg.Transport == "http" || cfg.Transport == "streamable_http") &&
+		!cfg.AllowAnyOrigin &&
+		len(cfg.AllowedOrigins) == 0 &&
+		!isLoopbackBind(cfg.HTTPBind) {
+		return Config{}, fmt.Errorf(
+			"MCP_STRICT_HOST_CHECK=1 with MCP_HTTP_BIND=%q requires MCP_ALLOWED_ORIGINS to be set "+
+				"(or MCP_ALLOW_ANY_ORIGIN=1, or a loopback bind); empty allowlist would reject every non-loopback request",
+			cfg.HTTPBind)
+	}
+
 	cfg.MaxMessageSize = 4194304 // 4 MB default
 	mbs := os.Getenv("MCP_MAX_MESSAGE_SIZE")
 	if mbs == "" {
@@ -775,6 +792,24 @@ func isLoopbackHost(host string) bool {
 	default:
 		return false
 	}
+}
+
+// isLoopbackBind reports whether a Go HTTP bind address resolves to the
+// loopback interface. The empty host (":8080") and "0.0.0.0"/"::"
+// bind to ALL interfaces and are NOT loopback. Used by the strict
+// host-check preflight in Load() so a strict policy with no allowlist
+// is only acceptable when the listener is unreachable from off-host.
+func isLoopbackBind(bind string) bool {
+	host, _, err := net.SplitHostPort(bind)
+	if err != nil {
+		// Falls through for malformed binds; the listener layer will
+		// reject them with a clearer error than this preflight would.
+		return false
+	}
+	if host == "" {
+		return false
+	}
+	return isLoopbackHost(host)
 }
 
 func optionalBoolEnv(key string) (bool, error) {
