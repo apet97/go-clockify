@@ -32,7 +32,7 @@ layer is failing.
   - `level=WARN msg=http_request status=403 reason=cors_rejected`
   - `level=WARN msg=http_request status=403 reason=host_rejected`
   - `level=WARN msg=tool_call error="clockify ... 401 Unauthorized ..."`
-- gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|reauth_expired"}` rises.
+- gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|missing_metadata|reauth_expired"}` rises. (`missing_metadata` fires when the gRPC stream lands without any metadata at all — earlier than `missing_authorization`, which fires when metadata exists but the `authorization` key is absent.)
 - Upstream Clockify auth failure: `msg=tool_call` errors consistently
   include `401 Unauthorized` from `api.clockify.me` across multiple
   tools.

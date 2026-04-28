@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **`docs/runbooks/auth-failures.md` lists the full set of gRPC
+  auth-rejection reasons.** §1 Symptoms named four `reason` label
+  values (`auth_failed`, `missing_authorization`,
+  `empty_authorization`, `reauth_expired`) but
+  `internal/transport/grpc/auth.go` actually emits five — the
+  missing one is `missing_metadata` (auth.go:51), which fires
+  when the gRPC stream lands without any metadata at all
+  (earlier than `missing_authorization`, which fires when
+  metadata exists but the `authorization` key is absent). An
+  operator dashboarding the metric or alerting on it would have
+  silently missed `missing_metadata`-class rejections — usually
+  caused by a misconfigured client that doesn't attach auth
+  metadata at all. Runbook now lists all five reasons with a
+  one-line note distinguishing the two "missing" variants.
 - **Regression test locks in tenant-attribution on audit slog
   records.** New `TestAuditDurability_LogsTenantAttribution` in
   `internal/mcp/audit_test.go` captures slog output during a
