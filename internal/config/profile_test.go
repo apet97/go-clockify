@@ -245,6 +245,78 @@ func TestProfile_ProdPostgresRejectsNonPostgresDSN(t *testing.T) {
 	}
 }
 
+// TestProfile_PrivateNetworkGRPCFailsWithoutDSN locks the symmetric
+// dev-backend gate for the private-network-grpc profile: without an
+// explicit MCP_CONTROL_PLANE_DSN (or the MCP_ALLOW_DEV_BACKEND escape
+// hatch), Load() must refuse with the same actionable error
+// shared-service operators see. The profile pairs grpc with
+// fail_closed audit, and a memory backend cannot honour fail_closed
+// across pod restarts in a multi-replica deployment.
+func TestProfile_PrivateNetworkGRPCFailsWithoutDSN(t *testing.T) {
+	setProfileEnv(t, "private-network-grpc", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_GRPC_TLS_CERT":     "/dev/null",
+		"MCP_GRPC_TLS_KEY":      "/dev/null",
+		"MCP_MTLS_CA_CERT_PATH": "/dev/null",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for private-network-grpc without DSN, got nil")
+	}
+	if !strings.Contains(err.Error(), "MCP_ALLOW_DEV_BACKEND") {
+		t.Errorf("error should mention MCP_ALLOW_DEV_BACKEND escape hatch; got: %v", err)
+	}
+	if !strings.Contains(err.Error(), `MCP_TRANSPORT="grpc"`) {
+		t.Errorf("error should name the actual transport via %%q (grpc); got: %v", err)
+	}
+}
+
+// TestProfile_PrivateNetworkGRPCPostgresOK confirms the production
+// path: applying the profile with a real postgres DSN supplies every
+// required guard input, so Load() succeeds and the profile defaults
+// (transport=grpc, auth=mtls, fail_closed audit) propagate to Config.
+func TestProfile_PrivateNetworkGRPCPostgresOK(t *testing.T) {
+	setProfileEnv(t, "private-network-grpc", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_GRPC_TLS_CERT":     "/dev/null",
+		"MCP_GRPC_TLS_KEY":      "/dev/null",
+		"MCP_MTLS_CA_CERT_PATH": "/dev/null",
+		"MCP_CONTROL_PLANE_DSN": "postgres://user:pw@db.example:5432/mcp",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Transport != "grpc" {
+		t.Errorf("Transport = %q, want grpc", cfg.Transport)
+	}
+	if cfg.AuthMode != "mtls" {
+		t.Errorf("AuthMode = %q, want mtls", cfg.AuthMode)
+	}
+	if cfg.AuditDurabilityMode != "fail_closed" {
+		t.Errorf("AuditDurabilityMode = %q, want fail_closed", cfg.AuditDurabilityMode)
+	}
+}
+
+// TestProfile_PrivateNetworkGRPCAllowsDevBackendFlag confirms the
+// escape hatch: an operator running the profile in a single-process
+// dev / preview environment can still opt in via MCP_ALLOW_DEV_BACKEND=1
+// + memory DSN. This mirrors the streamable_http "explicit single-process
+// acknowledgement" path so the two transports stay symmetric.
+func TestProfile_PrivateNetworkGRPCAllowsDevBackendFlag(t *testing.T) {
+	setProfileEnv(t, "private-network-grpc", map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_GRPC_TLS_CERT":     "/dev/null",
+		"MCP_GRPC_TLS_KEY":      "/dev/null",
+		"MCP_MTLS_CA_CERT_PATH": "/dev/null",
+		"MCP_CONTROL_PLANE_DSN": "memory",
+		"MCP_ALLOW_DEV_BACKEND": "1",
+	})
+	if _, err := Load(); err != nil {
+		t.Fatalf("flag should permit private-network-grpc + memory: %v", err)
+	}
+}
+
 // TestProfile_OverridesWin is the load-bearing invariant: profile
 // defaults MUST NOT overwrite explicit operator env. Flip this test's
 // expected value to run the drift check.
