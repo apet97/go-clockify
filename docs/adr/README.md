@@ -28,17 +28,19 @@ from `git log` and inline code comments.
 | 0015 | Profile-centric configuration model | [0015-profile-centric-configuration.md](0015-profile-centric-configuration.md) |
 | 0016 | Single-maintainer governance reality | [0016-single-maintainer-governance.md](0016-single-maintainer-governance.md) |
 | 0017 | Streamable-HTTP session rehydration (proposed) | [0017-streamable-http-session-rehydration.md](0017-streamable-http-session-rehydration.md) |
+| 0018 | Risk-class enforcement and confirmation tokens (proposed) | [0018-risk-class-confirmation-tokens.md](0018-risk-class-confirmation-tokens.md) |
 
 ADRs 0001–0009, 0011, 0012, 0014, 0015, and 0016 are **Accepted**.
-0010 and 0017 are **Proposed** — 0010 captures the design surface
-around whether to keep the homegrown metrics facade or move to
-OpenTelemetry metrics; 0017 records the cross-pod session-rehydration
-follow-up to the Wave 2026-04-28 ClientIP-affinity band-aid (Factory
-contract + auth-revalidation questions need pinning before the
-architectural fix can land). 0013 is **Superseded 2026-04-22** when
-the repository flipped to public — the skip path and
-`continue-on-error` treatments it codified are gone, but the ADR
-stays in the tree as the historical record.
+0010, 0017, and 0018 are **Proposed** — 0010 captures the design
+surface around whether to keep the homegrown metrics facade or move
+to OpenTelemetry metrics; 0017 records the cross-pod
+session-rehydration follow-up to the Wave 2026-04-28 ClientIP-affinity
+band-aid; 0018 records the risk-class-driven enforcement +
+confirmation-token follow-up that needs an MCP-client-coordinated
+token-format decision before it can land. 0013 is **Superseded
+2026-04-22** when the repository flipped to public — the skip path
+and `continue-on-error` treatments it codified are gone, but the
+ADR stays in the tree as the historical record.
 
 New ADRs should follow the MADR 3.0 template (status / context /
 decision / consequences / alternatives / references) used by the
