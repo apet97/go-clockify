@@ -717,6 +717,25 @@ func Load() (Config, error) {
 	// Setting inline metrics options outside of legacy HTTP transport is a
 	// no-op at runtime but not a config error — operators may share config
 	// across environments.
+	//
+	// However, when inline metrics ARE active (Transport=http) and the
+	// auth mode is the default "inherit_main_bearer", the inline handler
+	// (transport_http.go inlineMetricsHandler) compares against
+	// opts.MainBearerToken — which is only populated when MCP_AUTH_MODE=
+	// static_bearer (transport_http.go:106). With OIDC, forward_auth, or
+	// mtls main auth, MainBearerToken is empty and every scrape gets 401.
+	// Catch the misconfiguration at Load() so the operator sees an
+	// actionable error instead of silently dead /metrics.
+	if cfg.HTTPInlineMetricsEnabled &&
+		cfg.HTTPInlineMetricsAuthMode == "inherit_main_bearer" &&
+		cfg.Transport == "http" &&
+		cfg.AuthMode != "static_bearer" {
+		return Config{}, fmt.Errorf(
+			"MCP_HTTP_INLINE_METRICS_AUTH_MODE=inherit_main_bearer requires MCP_AUTH_MODE=static_bearer (current: %q); "+
+				"pick MCP_HTTP_INLINE_METRICS_AUTH_MODE=static_bearer with MCP_HTTP_INLINE_METRICS_BEARER_TOKEN, "+
+				"or MCP_HTTP_INLINE_METRICS_AUTH_MODE=none, or use the dedicated MCP_METRICS_BIND listener instead",
+			cfg.AuthMode)
+	}
 
 	// Legacy HTTP transport policy. Default is "warn" in dev so the
 	// legacy path keeps working with a visible deprecation log; in

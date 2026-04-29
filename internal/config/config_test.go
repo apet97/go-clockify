@@ -1206,6 +1206,79 @@ func TestHTTPInlineMetrics_InvalidAuthMode(t *testing.T) {
 	}
 }
 
+// TestHTTPInlineMetrics_InheritBearerRequiresStaticBearer locks the
+// gate that catches a silent /metrics-401 trap: when MCP_TRANSPORT=http
+// + MCP_HTTP_INLINE_METRICS_ENABLED=1 + the default auth mode
+// inherit_main_bearer, the inline handler at transport_http.go reuses
+// MainBearerToken — populated only when MCP_AUTH_MODE=static_bearer.
+// With OIDC or forward_auth, MainBearerToken is empty and the
+// constant-time compare rejects every scrape. Failing at config load
+// is friendlier than a silently dead /metrics endpoint.
+func TestHTTPInlineMetrics_InheritBearerRequiresStaticBearer(t *testing.T) {
+	t.Run("oidc_rejected", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":                "test-key",
+			"MCP_TRANSPORT":                   "http",
+			"MCP_AUTH_MODE":                   "oidc",
+			"MCP_OIDC_ISSUER":                 "https://issuer.example",
+			"MCP_HTTP_INLINE_METRICS_ENABLED": "1",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for http + oidc + inline metrics + inherit_main_bearer")
+		}
+		if !strings.Contains(err.Error(), "inherit_main_bearer requires MCP_AUTH_MODE=static_bearer") {
+			t.Errorf("error should explain the static_bearer requirement; got: %v", err)
+		}
+	})
+	t.Run("forward_auth_rejected", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":                "test-key",
+			"MCP_TRANSPORT":                   "http",
+			"MCP_AUTH_MODE":                   "forward_auth",
+			"MCP_HTTP_INLINE_METRICS_ENABLED": "1",
+		})
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for http + forward_auth + inline metrics + inherit_main_bearer")
+		}
+		if !strings.Contains(err.Error(), "inherit_main_bearer requires MCP_AUTH_MODE=static_bearer") {
+			t.Errorf("error should explain the static_bearer requirement; got: %v", err)
+		}
+	})
+	t.Run("static_bearer_ok", func(t *testing.T) {
+		// Same shape as TestHTTPInlineMetrics_EnabledDefaultsToInheritBearer
+		// but pinned alongside the negative cases so the contract is
+		// readable end-to-end.
+		m := baseHTTPEnvs()
+		m["MCP_HTTP_INLINE_METRICS_ENABLED"] = "1"
+		setEnvs(t, m)
+		if _, err := Load(); err != nil {
+			t.Fatalf("http + static_bearer + inline + inherit_main_bearer should pass: %v", err)
+		}
+	})
+	t.Run("streamable_http_oidc_unaffected", func(t *testing.T) {
+		// Setting inline metrics options outside legacy http is a
+		// documented no-op (config.go comment block above the gate).
+		// The gate scopes itself to Transport=="http" so operators
+		// who share config across environments can keep the same
+		// MCP_HTTP_INLINE_METRICS_ENABLED=1 in a streamable_http
+		// deployment without spurious errors.
+		setEnvs(t, map[string]string{
+			"CLOCKIFY_API_KEY":                "test-key",
+			"MCP_TRANSPORT":                   "streamable_http",
+			"MCP_AUTH_MODE":                   "oidc",
+			"MCP_OIDC_ISSUER":                 "https://issuer.example",
+			"MCP_CONTROL_PLANE_DSN":           "memory",
+			"MCP_ALLOW_DEV_BACKEND":           "1",
+			"MCP_HTTP_INLINE_METRICS_ENABLED": "1",
+		})
+		if _, err := Load(); err != nil {
+			t.Fatalf("streamable_http + oidc + inline metrics should pass (no-op path): %v", err)
+		}
+	})
+}
+
 // --- OIDC verify-cache TTL --------------------------------------------------
 
 func TestOIDCVerifyCacheTTL_Default(t *testing.T) {
