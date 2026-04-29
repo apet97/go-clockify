@@ -172,7 +172,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_POLICY` | `standard` | Tool-access policy tier |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per 60s window (0=disabled) |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |
-| `MCP_ALLOW_DEV_BACKEND` | `—` | Permit memory/file backends for streamable_http (single-process only) |
+| `MCP_ALLOW_DEV_BACKEND` | `—` | Permit memory/file backends for streamable_http or grpc (single-process only) |
 | `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod) |
 | `MCP_AUTH_MODE` | `—` | Authentication mode (per-transport support varies; see matrix) |
 | `MCP_CONTROL_PLANE_AUDIT_CAP` | `0` | File/memory audit cap (0=unbounded). Postgres uses retention instead. |

@@ -111,7 +111,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_CONTROL_PLANE_AUDIT_CAP", Group: "ControlPlane", Default: "0", Help: "File/memory audit cap (0=unbounded). Postgres uses retention instead.", EssentialDoc: true},
 		{Name: "MCP_CONTROL_PLANE_AUDIT_RETENTION", Group: "ControlPlane", Default: "720h", Help: "Audit retention [1h,8760h]; 0=off", EssentialDoc: true},
 		{Name: "MCP_SESSION_TTL", Group: "ControlPlane", Default: "30m", AppliesTo: []string{"streamable_http"}, Help: "Session TTL [1m,24h]"},
-		{Name: "MCP_ALLOW_DEV_BACKEND", Group: "ControlPlane", Enum: []string{"0", "1"}, Help: "Permit memory/file backends for streamable_http (single-process only)", EssentialDoc: true},
+		{Name: "MCP_ALLOW_DEV_BACKEND", Group: "ControlPlane", Enum: []string{"0", "1"}, Help: "Permit memory/file backends for streamable_http or grpc (single-process only)", EssentialDoc: true},
 		{Name: "MCP_AUDIT_DURABILITY", Group: "Audit", Enum: []string{"best_effort", "fail_closed"}, Default: "best_effort", Help: "Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod)", EssentialDoc: true},
 
 		// --- Logging / Deploy ---
