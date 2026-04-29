@@ -480,22 +480,25 @@ func Load() (Config, error) {
 	if cfg.AuthMode == "oidc" && cfg.Transport == "streamable_http" && cfg.OIDCIssuer == "" {
 		return Config{}, fmt.Errorf("MCP_OIDC_ISSUER is required when MCP_TRANSPORT=streamable_http and MCP_AUTH_MODE=oidc")
 	}
-	// Fail-closed dev-backend guard for streamable_http. A dev DSN
-	// (memory/file/bare path) cannot back a multi-process deployment
+	// Fail-closed dev-backend guard for streamable_http and grpc. A dev
+	// DSN (memory/file/bare path) cannot back a multi-process deployment
 	// correctly — session state, audit events, and rate-limit counters
-	// diverge across replicas. Require an explicit acknowledgement so
-	// an operator who wants the single-process path knows they are on
-	// it. See docs/adr/0014-prod-fail-closed-defaults.md.
+	// diverge across replicas. Both transports are deployed multi-replica
+	// behind a load balancer in production (private-network-grpc profile
+	// pairs grpc with fail_closed audit, which a memory backend cannot
+	// honour across pod restarts). Require an explicit acknowledgement
+	// so an operator who wants the single-process path knows they are
+	// on it. See docs/adr/0014-prod-fail-closed-defaults.md.
 	//
 	// Belt + suspenders: runtime.BuildStore repeats the same check so
 	// a caller that bypasses Load() (e.g. a custom wiring path) still
 	// refuses to start against a dev DSN.
-	if cfg.Transport == "streamable_http" &&
+	if (cfg.Transport == "streamable_http" || cfg.Transport == "grpc") &&
 		IsDevControlPlaneDSN(cfg.ControlPlaneDSN) &&
 		os.Getenv("MCP_ALLOW_DEV_BACKEND") != "1" {
 		return Config{}, fmt.Errorf(
-			"MCP_TRANSPORT=streamable_http with MCP_CONTROL_PLANE_DSN=%q (dev backend) is disallowed by default; set MCP_ALLOW_DEV_BACKEND=1 to acknowledge the single-process limits, or point MCP_CONTROL_PLANE_DSN at a production backend (postgres://...)",
-			cfg.ControlPlaneDSN)
+			"MCP_TRANSPORT=%q with MCP_CONTROL_PLANE_DSN=%q (dev backend) is disallowed by default; set MCP_ALLOW_DEV_BACKEND=1 to acknowledge the single-process limits, or point MCP_CONTROL_PLANE_DSN at a production backend (postgres://...)",
+			cfg.Transport, cfg.ControlPlaneDSN)
 	}
 
 	if origins := os.Getenv("MCP_ALLOWED_ORIGINS"); origins != "" {

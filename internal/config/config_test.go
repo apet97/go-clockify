@@ -578,11 +578,17 @@ func TestLoadTransportInvalid(t *testing.T) {
 // that MCP_GRPC_BIND is wired into Config. The transport binary itself is
 // only linked under -tags=grpc (see ADR 012); Config.Load just validates
 // the selection and records the bind address.
+//
+// MCP_ALLOW_DEV_BACKEND=1 is set here (and on every gRPC happy-path test
+// below) because the dev-backend guard at config.go:493 covers gRPC as
+// well as streamable_http — fail_closed audit on a memory backend cannot
+// honour pod restarts on either transport. See ADR-0014.
 func TestLoadTransportGRPC(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
-		"MCP_GRPC_BIND":    "127.0.0.1:7777",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_BIND":         "127.0.0.1:7777",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -600,8 +606,9 @@ func TestLoadTransportGRPC(t *testing.T) {
 // MCP_GRPC_BIND is not set.
 func TestLoadTransportGRPCDefaultBind(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	os.Unsetenv("MCP_GRPC_BIND")
 	cfg, err := Load()
@@ -618,10 +625,11 @@ func TestLoadTransportGRPCDefaultBind(t *testing.T) {
 // the legacy HTTP transport's shape so operators get a consistent knob.
 func TestLoadTransportGRPCStaticBearer(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
-		"MCP_AUTH_MODE":    "static_bearer",
-		"MCP_BEARER_TOKEN": "1234567890abcdef",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_AUTH_MODE":         "static_bearer",
+		"MCP_BEARER_TOKEN":      "1234567890abcdef",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -638,10 +646,11 @@ func TestLoadTransportGRPCStaticBearer(t *testing.T) {
 // interceptor is compatible with it out of the box.
 func TestLoadTransportGRPCOIDC(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
-		"MCP_AUTH_MODE":    "oidc",
-		"MCP_OIDC_ISSUER":  "https://idp.example.com",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_AUTH_MODE":         "oidc",
+		"MCP_OIDC_ISSUER":       "https://idp.example.com",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -656,9 +665,10 @@ func TestLoadTransportGRPCOIDC(t *testing.T) {
 // accepted on gRPC (W5-05b: metadata passthrough).
 func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY": "test-key",
-		"MCP_TRANSPORT":    "grpc",
-		"MCP_AUTH_MODE":    "forward_auth",
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_AUTH_MODE":         "forward_auth",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	_, err := Load()
 	if err != nil {
@@ -679,6 +689,7 @@ func TestLoadTransportGRPCMTLSAccepted(t *testing.T) {
 		"MCP_GRPC_TLS_CERT":     "/dev/null",
 		"MCP_GRPC_TLS_KEY":      "/dev/null",
 		"MCP_MTLS_CA_CERT_PATH": "/dev/null",
+		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	_, err := Load()
 	if err != nil {
@@ -779,6 +790,7 @@ func TestLoadGRPCReauthInterval(t *testing.T) {
 		"CLOCKIFY_API_KEY":         "test-key",
 		"MCP_TRANSPORT":            "grpc",
 		"MCP_GRPC_REAUTH_INTERVAL": "60s",
+		"MCP_ALLOW_DEV_BACKEND":    "1",
 	})
 	cfg, err := Load()
 	if err != nil {

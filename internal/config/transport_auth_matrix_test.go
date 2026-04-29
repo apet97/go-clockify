@@ -113,24 +113,65 @@ func TestTransportAuthMatrix(t *testing.T) {
 		}, "ok"},
 
 		// --- grpc ---------------------------------------------------
-		{"grpc", "static_bearer", map[string]string{"MCP_BEARER_TOKEN": bearer}, "ok"},
-		{"grpc", "oidc", nil, "ok"},
-		{"grpc", "forward_auth", nil, "ok"},
+		// gRPC, like streamable_http, is deployed multi-replica behind a
+		// load balancer in production. The dev-backend guard at
+		// config.go:493 refuses to load with a memory/file DSN unless
+		// MCP_ALLOW_DEV_BACKEND=1 is explicit. The cells below pass that
+		// flag so the matrix exercises the auth-mode dimension; the
+		// dedicated dev-backend rows further down assert the guard fires.
+		{"grpc", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+		}, "ok"},
+		{"grpc", "oidc", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+		}, "ok"},
+		{"grpc", "forward_auth", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+		}, "ok"},
 		// gRPC + mtls also requires cert material now (matching the
 		// streamable_http rule). The previous "ok" cell let operators
 		// reach the runtime tls.LoadX509KeyPair with empty paths, which
 		// then bubbled up as an opaque load error per request instead
 		// of a startup failure.
 		{"grpc", "mtls", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
 			"MCP_GRPC_TLS_CERT":     "/dev/null",
 			"MCP_GRPC_TLS_KEY":      "/dev/null",
 			"MCP_MTLS_CA_CERT_PATH": "/dev/null",
 		}, "ok"},
-		{"grpc", "mtls", nil, "MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_GRPC_TLS_CERT"},
 		{"grpc", "mtls", map[string]string{
-			"MCP_GRPC_TLS_CERT": "/dev/null",
-			"MCP_GRPC_TLS_KEY":  "/dev/null",
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+		}, "MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_GRPC_TLS_CERT"},
+		{"grpc", "mtls", map[string]string{
+			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
 		}, "MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH"},
+		// Dev DSN without the ack flag — same fail-closed path as
+		// streamable_http's lines above. Two cells: explicit "memory"
+		// and empty (Load defaults to "memory"). The error message
+		// names the actual transport via %q so the operator sees
+		// "MCP_TRANSPORT=\"grpc\" with MCP_CONTROL_PLANE_DSN=...".
+		{"grpc", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "memory",
+		}, "dev backend) is disallowed by default"},
+		{"grpc", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN": bearer,
+		}, "dev backend) is disallowed by default"},
+		// Production DSN (postgres://) always passes without the flag,
+		// matching the streamable_http rule above.
+		{"grpc", "static_bearer", map[string]string{
+			"MCP_BEARER_TOKEN":      bearer,
+			"MCP_CONTROL_PLANE_DSN": "postgres://user:pw@db.example:5432/mcp",
+		}, "ok"},
 
 		// --- legacy http rejects HTTP TLS cert -----------------------
 		// MCP_HTTP_TLS_CERT only applies to streamable_http; setting it
