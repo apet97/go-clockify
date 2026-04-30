@@ -6,7 +6,7 @@
         build-postgres test-postgres build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
-        repo-hygiene release-check
+        repo-hygiene script-tests release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -38,7 +38,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -64,6 +64,13 @@ config-doc-parity:
 # keeps future stages clean.
 repo-hygiene:
 	bash scripts/check-repo-hygiene.sh
+
+# script-tests runs regression tests for repo shell scripts whose
+# output contract matters (currently: filter-bench-output.sh, which
+# `make bench` pipes raw `go test -bench` output through to produce
+# benchstat-compatible profiles). Pure bash, runs in milliseconds.
+script-tests:
+	bash scripts/test-filter-bench-output.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool
@@ -195,7 +202,7 @@ release-check:
 	@echo "== release-check: config + doc parity =="
 	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
-	$(MAKE) repo-hygiene build-tags http-smoke stdio-smoke
+	$(MAKE) repo-hygiene script-tests build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
 	$(MAKE) verify-doctor-strict
 	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
