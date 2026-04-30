@@ -741,8 +741,12 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decode ec y: %w", err)
 		}
+		curve, err := curveFor(crv)
+		if err != nil {
+			return nil, err
+		}
 		return &ecdsa.PublicKey{
-			Curve: curveFor(crv),
+			Curve: curve,
 			X:     new(big.Int).SetBytes(xb),
 			Y:     new(big.Int).SetBytes(yb),
 		}, nil
@@ -751,14 +755,26 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 	}
 }
 
-func curveFor(name string) elliptic.Curve {
+// curveFor maps a JWK `crv` string to an elliptic.Curve. Pre-fix,
+// the function silently defaulted unknown curves to P-256 — a JWK
+// with `crv: "P-999"` (or empty) would be loaded as a P-256 key
+// and then signature verification would either fail with a
+// confusing error or, worse, succeed with the wrong-curve key in
+// pathological constructions. ChatGPT flagged this as a JWK
+// parsing correctness gap. The function now returns an explicit
+// error for any unrecognised curve name (including the empty
+// string), which propagates back through jwkPublicKey to the
+// JWKS-load caller.
+func curveFor(name string) (elliptic.Curve, error) {
 	switch name {
+	case "P-256":
+		return elliptic.P256(), nil
 	case "P-384":
-		return elliptic.P384()
+		return elliptic.P384(), nil
 	case "P-521":
-		return elliptic.P521()
+		return elliptic.P521(), nil
 	default:
-		return elliptic.P256()
+		return nil, fmt.Errorf("unsupported EC curve %q", name)
 	}
 }
 

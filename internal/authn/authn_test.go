@@ -807,22 +807,54 @@ func TestJWKPublicKey(t *testing.T) {
 	}
 }
 
-// TestCurveFor covers the well-known curve names and the default branch.
+// TestCurveFor covers the well-known curve names and the post-audit
+// rejection branch: unknown / empty `crv` values now return an error
+// instead of silently defaulting to P-256. Pre-fix a JWK declaring
+// `crv: "P-999"` would be loaded as a P-256 key — the verifier would
+// then either fail with a misleading error or, in pathological
+// constructions, succeed against the wrong curve.
 func TestCurveFor(t *testing.T) {
-	cases := []struct {
-		name string
-		want elliptic.Curve
-	}{
-		{"P-256", elliptic.P256()},
-		{"P-384", elliptic.P384()},
-		{"P-521", elliptic.P521()},
-		{"unknown", elliptic.P256()}, // default fallback
-	}
-	for _, tc := range cases {
-		got := curveFor(tc.name)
-		if got != tc.want {
-			t.Fatalf("curveFor(%q): got %T, want %T", tc.name, got, tc.want)
+	t.Run("known_curves", func(t *testing.T) {
+		cases := []struct {
+			name string
+			want elliptic.Curve
+		}{
+			{"P-256", elliptic.P256()},
+			{"P-384", elliptic.P384()},
+			{"P-521", elliptic.P521()},
 		}
+		for _, tc := range cases {
+			got, err := curveFor(tc.name)
+			if err != nil {
+				t.Fatalf("curveFor(%q): unexpected error: %v", tc.name, err)
+			}
+			if got != tc.want {
+				t.Fatalf("curveFor(%q): got %T, want %T", tc.name, got, tc.want)
+			}
+		}
+	})
+	t.Run("unknown_curve_rejected", func(t *testing.T) {
+		if _, err := curveFor("P-999"); err == nil {
+			t.Fatal("expected error for unknown curve, got nil")
+		}
+	})
+	t.Run("empty_curve_rejected", func(t *testing.T) {
+		if _, err := curveFor(""); err == nil {
+			t.Fatal("expected error for empty curve, got nil")
+		}
+	})
+}
+
+// TestParseECPublicKey_UnknownCurveRejected drives the new
+// rejection through jwkPublicKey (the public entry point used by
+// jwksCache.reload) so a malformed JWK in the live JWKS payload
+// fails the load instead of producing a P-256 key. The x/y values
+// are valid base64 placeholders — curveFor's rejection fires after
+// the base64 decode but before any curve-aware math, so the test
+// doesn't need a true on-curve point.
+func TestParseECPublicKey_UnknownCurveRejected(t *testing.T) {
+	if _, err := jwkPublicKey("EC", "", "", "AAAA", "AAAA", "P-999"); err == nil {
+		t.Fatal("expected jwkPublicKey to reject unknown EC curve")
 	}
 }
 
