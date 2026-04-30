@@ -101,6 +101,11 @@ repo-hygiene:
 #     and the test pins missing-asset detection plus the cardinality
 #     regex shape. Bash 4+ only (gate uses declare -A); the test
 #     skips with a clear note on bash 3.2.
+#   - check-launch-checklist-parity.sh — fails when the public hosted
+#     launch checklist references CLI flags that cmd/clockify-mcp does
+#     not implement. Two-layer gate (source greps + binary --help
+#     parity); the test exercises both layers via PATH-stubbed `go`
+#     plus a controlled help-text fixture.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
@@ -109,6 +114,7 @@ script-tests:
 	bash scripts/test-check-repo-hygiene.sh
 	bash scripts/test-check-governance-parity.sh
 	bash scripts/test-check-release-assets.sh
+	bash scripts/test-check-launch-checklist-parity.sh
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u

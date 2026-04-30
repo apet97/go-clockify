@@ -227,7 +227,7 @@ jobs:
   repo-hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
-    # Hard ceiling: pure bash/awk gates plus seven contract tests,
+    # Hard ceiling: pure bash/awk gates plus eight contract tests,
     # 10-20s combined; 5m absorbs runner variance.
     timeout-minutes: 5
     steps:
@@ -313,6 +313,17 @@ jobs:
         # exit-2 directory-absent surface. Static input, no event
         # data.
         run: bash scripts/test-check-release-assets.sh
+      - name: Verify launch-checklist-parity gate contract
+        # Same playbook as the seven peer tests above. Guards
+        # scripts/check-launch-checklist-parity.sh, the doc-parity
+        # gate that keeps the public hosted launch checklist tied
+        # to the cmd/clockify-mcp source AND its --help banner
+        # (Layer 1 source greps + Layer 2 binary parity). The test
+        # PATH-stubs `go` so Layer 2 runs in milliseconds against
+        # a controlled help-text fixture, exercising every grep
+        # branch in both layers plus the build-failure and
+        # Go-absent edges. Static input, no event data.
+        run: bash scripts/test-check-launch-checklist-parity.sh
 
   shellcheck:
     name: Shellcheck
