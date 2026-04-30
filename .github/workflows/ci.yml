@@ -179,6 +179,12 @@ jobs:
         # rather than discipline alone. Input is the static script
         # path, not event data.
         run: bash scripts/check-repo-hygiene.sh
+      - name: Verify bench-output filter contract
+        # Runs the same regression test invoked locally by `make script-tests`,
+        # `make verify-core`, and `make release-check`. Guards
+        # scripts/filter-bench-output.sh because bench.yml pipes raw
+        # `go test -bench` output through it.
+        run: bash scripts/test-filter-bench-output.sh
 
   deploy-render:
     name: Deploy render (k8s + helm)
