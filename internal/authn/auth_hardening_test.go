@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -75,6 +76,91 @@ func TestForwardAuthHardening(t *testing.T) {
 			t.Fatal("expected error for missing forward-auth headers")
 		}
 	})
+}
+
+// TestForwardAuth_RejectsUntrustedSource locks the trusted-proxy
+// gate added per ChatGPT's audit: an untrusted source attempting to
+// pose as a forward-auth proxy must be rejected before headers are
+// inspected. The authenticator now refuses any request whose
+// r.RemoteAddr is outside the configured CIDR allow-list.
+func TestForwardAuth_RejectsUntrustedSource(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+	if err != nil {
+		t.Fatalf("parse CIDR: %v", err)
+	}
+	auth, err := New(Config{
+		Mode:                      ModeForwardAuth,
+		ForwardSubjectHeader:      "X-Forwarded-User",
+		ForwardTenantHeader:       "X-Forwarded-Tenant",
+		ForwardAuthTrustedProxies: []*net.IPNet{trusted},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.5:443" // documented TEST-NET-3 — never trusted
+	req.Header.Set("X-Forwarded-User", "spoofer")
+	if _, err := auth.Authenticate(context.Background(), req); err == nil {
+		t.Fatal("expected error: untrusted source must be refused")
+	} else if !strings.Contains(err.Error(), "trusted_proxies") &&
+		!strings.Contains(err.Error(), "TRUSTED_PROXIES") {
+		t.Fatalf("expected error to mention trusted-proxy allowlist, got: %v", err)
+	}
+}
+
+// TestForwardAuth_AcceptsTrustedCIDR is the symmetric guardrail:
+// when the source IS inside the trusted CIDR, the authenticator
+// must continue to honour the forwarded headers. Otherwise the
+// gate would lock out every legitimate proxy.
+func TestForwardAuth_AcceptsTrustedCIDR(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+	if err != nil {
+		t.Fatalf("parse CIDR: %v", err)
+	}
+	auth, err := New(Config{
+		Mode:                      ModeForwardAuth,
+		ForwardSubjectHeader:      "X-Forwarded-User",
+		ForwardTenantHeader:       "X-Forwarded-Tenant",
+		ForwardAuthTrustedProxies: []*net.IPNet{trusted},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.5.5.5:443" // inside 10.0.0.0/8
+	req.Header.Set("X-Forwarded-User", "alice")
+	req.Header.Set("X-Forwarded-Tenant", "acme")
+
+	principal, err := auth.Authenticate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("trusted source must succeed: %v", err)
+	}
+	if principal.Subject != "alice" || principal.TenantID != "acme" {
+		t.Fatalf("principal = %+v, want alice/acme", principal)
+	}
+}
+
+// TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour documents
+// the deliberate non-default: an empty (or unset)
+// ForwardAuthTrustedProxies skips the source check entirely so
+// existing self-hosted single-tenant operators who own the network
+// boundary do not have to set the env var. doctor --strict refuses
+// this configuration in hosted profiles via a separate gate.
+func TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour(t *testing.T) {
+	auth, err := New(Config{
+		Mode:                 ModeForwardAuth,
+		ForwardSubjectHeader: "X-Forwarded-User",
+		ForwardTenantHeader:  "X-Forwarded-Tenant",
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.5:443"
+	req.Header.Set("X-Forwarded-User", "alice")
+	if _, err := auth.Authenticate(context.Background(), req); err != nil {
+		t.Fatalf("legacy unset-allowlist behaviour broke: %v", err)
+	}
 }
 
 // TestNewOIDCAuth_StrictRejectsHTTPIssuer locks the second go/no-go

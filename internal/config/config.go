@@ -130,7 +130,18 @@ type Config struct {
 	RequireTenantClaim   bool
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
-	MTLSTenantHeader     string
+	// ForwardAuthTrustedProxies is the parsed CIDR allow-list for
+	// the forward_auth authenticator. When non-empty, the
+	// authenticator rejects any request whose source address is not
+	// inside one of these networks before reading
+	// X-Forwarded-User / X-Forwarded-Tenant. Empty (default)
+	// preserves the historical "trust everything" posture for
+	// self-hosted single-tenant deployments where the operator owns
+	// the network boundary; doctor --strict refuses to start with
+	// forward_auth + empty allow-list to surface the misconfiguration.
+	// Wired from MCP_FORWARD_AUTH_TRUSTED_PROXIES (comma-separated).
+	ForwardAuthTrustedProxies []*net.IPNet
+	MTLSTenantHeader          string
 	// MTLSTenantSource selects how the mtls authenticator derives the
 	// tenant identifier. "cert" (default) uses the verified client
 	// certificate (URI SAN → Subject O fallback). "header" honours the
@@ -435,6 +446,13 @@ func Load() (Config, error) {
 	}
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
+	if raw := strings.TrimSpace(os.Getenv("MCP_FORWARD_AUTH_TRUSTED_PROXIES")); raw != "" {
+		nets, err := parseCIDRList(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MCP_FORWARD_AUTH_TRUSTED_PROXIES: %w", err)
+		}
+		cfg.ForwardAuthTrustedProxies = nets
+	}
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
 	cfg.MTLSTenantSource = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_SOURCE"))
 	if cfg.MTLSTenantSource == "" {
@@ -858,6 +876,29 @@ func ValidateBaseURL(raw string, opts ValidateBaseURLOptions) error {
 // ValidateBaseURL with explicit options.
 func validateBaseURL(raw string, insecure bool) error {
 	return ValidateBaseURL(raw, ValidateBaseURLOptions{AllowInsecure: insecure})
+}
+
+// parseCIDRList parses a comma-separated CIDR list (e.g.
+// "10.0.0.0/8, 172.16.0.0/12, fd00::/8") into a slice of *net.IPNet.
+// Empty input yields an empty slice. Whitespace around commas is
+// trimmed; bare IPs without a prefix length are not accepted —
+// operators must be explicit ("10.0.0.5/32"). Used by
+// MCP_FORWARD_AUTH_TRUSTED_PROXIES.
+func parseCIDRList(raw string) ([]*net.IPNet, error) {
+	parts := strings.Split(raw, ",")
+	out := make([]*net.IPNet, 0, len(parts))
+	for _, part := range parts {
+		entry := strings.TrimSpace(part)
+		if entry == "" {
+			continue
+		}
+		_, ipNet, err := net.ParseCIDR(entry)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CIDR %q: %w", entry, err)
+		}
+		out = append(out, ipNet)
+	}
+	return out, nil
 }
 
 func isLoopbackHost(host string) bool {

@@ -255,6 +255,24 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 		add("MCP_REQUIRE_MTLS_TENANT", "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1")
 	}
 
+	// forward_auth-specific gate: per ChatGPT's audit, a hosted
+	// strict deployment that uses forward_auth must declare which
+	// upstream proxies are allowed to send X-Forwarded-User /
+	// X-Forwarded-Tenant. Without an explicit allow-list, any
+	// network-reachable client could spoof those headers. The
+	// authenticator itself enforces the allow-list at runtime;
+	// doctor surfaces the misconfiguration before the binary
+	// starts taking traffic.
+	if authMode == "forward_auth" {
+		raw := effectiveDoctorString("", cfgErr, "MCP_FORWARD_AUTH_TRUSTED_PROXIES", "")
+		if cfgErr == nil && len(cfg.ForwardAuthTrustedProxies) > 0 {
+			raw = "non-empty"
+		}
+		if strings.TrimSpace(raw) == "" {
+			add("MCP_FORWARD_AUTH_TRUSTED_PROXIES", "hosted strict forward_auth posture requires MCP_FORWARD_AUTH_TRUSTED_PROXIES (CIDR allow-list of upstream proxies); empty list lets any source spoof X-Forwarded-User / X-Forwarded-Tenant")
+		}
+	}
+
 	return findings
 }
 

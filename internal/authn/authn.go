@@ -18,6 +18,7 @@ import (
 	"io"
 	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -56,7 +57,15 @@ type Config struct {
 	OIDCJWKSPath         string
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
-	MTLSTenantHeader     string
+	// ForwardAuthTrustedProxies, when non-empty, gates the
+	// forward_auth authenticator: a request whose direct source
+	// (r.RemoteAddr) is not inside one of these networks is
+	// rejected before X-Forwarded-User / X-Forwarded-Tenant are
+	// inspected. Empty preserves the historical "trust every
+	// source" posture for self-hosted single-tenant deployments
+	// where the operator owns the network boundary.
+	ForwardAuthTrustedProxies []*net.IPNet
+	MTLSTenantHeader          string
 	// MTLSTenantSource selects how the mtls authenticator derives the
 	// tenant identifier. Valid values:
 	//   "cert"           — verified client certificate only (URI SAN
@@ -184,6 +193,11 @@ type forwardAuthAuthenticator struct {
 }
 
 func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Request) (Principal, error) {
+	if len(a.cfg.ForwardAuthTrustedProxies) > 0 {
+		if err := requireTrustedProxySource(r, a.cfg.ForwardAuthTrustedProxies); err != nil {
+			return Principal{}, err
+		}
+	}
 	subject := strings.TrimSpace(r.Header.Get(a.cfg.ForwardSubjectHeader))
 	if subject == "" {
 		return Principal{}, fmt.Errorf("missing %s header", a.cfg.ForwardSubjectHeader)
@@ -201,6 +215,40 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 			"forward_tenant_header":  a.cfg.ForwardTenantHeader,
 		},
 	}, nil
+}
+
+// requireTrustedProxySource enforces the
+// MCP_FORWARD_AUTH_TRUSTED_PROXIES allow-list. ChatGPT's audit
+// flagged the original forwardAuthAuthenticator as unsafe for any
+// internet-facing deployment because it trusted X-Forwarded-User /
+// X-Forwarded-Tenant headers from any source — a direct request
+// from the public internet could spoof them.
+//
+// The check inspects r.RemoteAddr, which is the *direct* TCP peer
+// the Go HTTP server saw — i.e. the reverse proxy hop, not the
+// original client. That is exactly what should be trusted. We do
+// NOT walk X-Forwarded-For: the goal is to confirm the proxy that
+// actually sent the request is one we trust, not to reconstruct
+// the original client IP (which is out of scope for this gate).
+func requireTrustedProxySource(r *http.Request, trusted []*net.IPNet) error {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// http.Server always populates RemoteAddr as host:port;
+		// a malformed value is a programmer error or a hostile
+		// embedder. Refuse to forward-auth anything we can't pin
+		// to a network identity.
+		return fmt.Errorf("forward_auth: cannot parse RemoteAddr %q: %w", r.RemoteAddr, err)
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("forward_auth: cannot parse source IP %q", host)
+	}
+	for _, n := range trusted {
+		if n.Contains(ip) {
+			return nil
+		}
+	}
+	return fmt.Errorf("forward_auth: source %s not in MCP_FORWARD_AUTH_TRUSTED_PROXIES allow-list", ip)
 }
 
 type mtlsAuthenticator struct {

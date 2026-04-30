@@ -173,6 +173,49 @@ func TestDoctorStrictIndividualPostureFindings(t *testing.T) {
 	}
 }
 
+// TestDoctorStrictRequiresForwardAuthTrustedProxies locks the gate
+// added per ChatGPT's audit: a hosted strict deployment using
+// forward_auth must declare its upstream-proxy allow-list. Without
+// MCP_FORWARD_AUTH_TRUSTED_PROXIES, doctor refuses to start the
+// posture because any network-reachable client could spoof
+// X-Forwarded-User / X-Forwarded-Tenant.
+func TestDoctorStrictRequiresForwardAuthTrustedProxies(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
+		"MCP_AUTH_MODE":                    "forward_auth",
+		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "",
+		// forward_auth has no MCP_OIDC_* requirement; clear those so
+		// the test isn't masked by the OIDC gate firing first.
+		"MCP_OIDC_STRICT":          "0",
+		"MCP_OIDC_AUDIENCE":        "",
+		"MCP_RESOURCE_URI":         "",
+		"MCP_REQUIRE_TENANT_CLAIM": "0",
+		"MCP_OIDC_ISSUER":          "",
+	}))
+	if code == 0 {
+		t.Fatalf("expected non-zero exit; output:\n%s", out)
+	}
+	if !strings.Contains(out, "MCP_FORWARD_AUTH_TRUSTED_PROXIES") {
+		t.Fatalf("expected output to mention MCP_FORWARD_AUTH_TRUSTED_PROXIES; output:\n%s", out)
+	}
+}
+
+// TestDoctorStrictAcceptsForwardAuthWithTrustedProxies is the
+// symmetric pass case: with the allow-list set, the gate passes.
+func TestDoctorStrictAcceptsForwardAuthWithTrustedProxies(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
+		"MCP_AUTH_MODE":                    "forward_auth",
+		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
+		"MCP_OIDC_STRICT":                  "0",
+		"MCP_OIDC_AUDIENCE":                "",
+		"MCP_RESOURCE_URI":                 "",
+		"MCP_REQUIRE_TENANT_CLAIM":         "0",
+		"MCP_OIDC_ISSUER":                  "",
+	}))
+	if code != 0 {
+		t.Fatalf("expected zero exit, got %d; output:\n%s", code, out)
+	}
+}
+
 func TestDoctorStrictAcceptsPostgresqlDSN(t *testing.T) {
 	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
 		"MCP_CONTROL_PLANE_DSN": "postgresql://db/mcp",
