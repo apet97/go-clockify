@@ -34,8 +34,36 @@ BRANCH="${BRANCH:-stabilize/quality-perf}"
 AUTO_PUSH="${AUTO_PUSH:-0}"
 CLAUDE_TIMEOUT_SECONDS="${CLAUDE_TIMEOUT_SECONDS:-1800}"
 LOG_DIR="${LOG_DIR:-.claude-loop}"
+RUN_FINAL_REVIEW="${RUN_FINAL_REVIEW:-0}"
+WATCH_CHECKS="${WATCH_CHECKS:-0}"
+PR_NUMBER="${PR_NUMBER:-}"
 
 mkdir -p "$LOG_DIR"
+
+watch_pr_checks() {
+  if [ "$WATCH_CHECKS" != "1" ]; then
+    return 0
+  fi
+
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "== WATCH_CHECKS=1 but gh CLI is not installed; skipping check watch =="
+    return 0
+  fi
+
+  local pr="$PR_NUMBER"
+  if [ -z "$pr" ]; then
+    pr="$(gh pr view --json number -q .number 2>/dev/null || true)"
+  fi
+
+  if [ -z "$pr" ]; then
+    echo "== WATCH_CHECKS=1 but no PR number found; skipping check watch =="
+    return 0
+  fi
+
+  echo "== watching GitHub checks for PR #$pr =="
+  gh pr checks "$pr" --watch
+}
+
 
 # ---- Preflight --------------------------------------------------------------
 
@@ -337,6 +365,7 @@ EOF
   if [ "$AUTO_PUSH" = "1" ]; then
     echo "== AUTO_PUSH=1: pushing $BRANCH =="
     git push -u origin "$BRANCH"
+    watch_pr_checks
   else
     echo "== AUTO_PUSH=0: not pushing (set AUTO_PUSH=1 to enable) =="
   fi
@@ -345,6 +374,15 @@ EOF
 done
 
 # ---- Final review -----------------------------------------------------------
+
+if [ "$RUN_FINAL_REVIEW" != "1" ]; then
+  echo "== RUN_FINAL_REVIEW=0: skipping final release review =="
+  if [ "$AUTO_PUSH" = "1" ]; then
+    watch_pr_checks
+  fi
+  echo "== loop complete =="
+  exit 0
+fi
 
 echo
 echo "============================================================"
@@ -401,6 +439,7 @@ fi
 
 if [ "$AUTO_PUSH" = "1" ]; then
   git push -u origin "$BRANCH" || true
+  watch_pr_checks
 fi
 
 # ---- Summary ----------------------------------------------------------------
