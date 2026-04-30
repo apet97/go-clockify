@@ -3,6 +3,9 @@ package ratelimit
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -109,5 +112,57 @@ func TestAcquireForSubjectDisabledPerTokenLayer(t *testing.T) {
 	defer rel()
 	if scope != ScopeGlobal {
 		t.Fatalf("scope: %s", scope)
+	}
+}
+
+func TestAcquireForSubjectConcurrentWindowRolloverDoesNotOverAdmit(t *testing.T) {
+	const goroutines = 64
+
+	for attempt := 0; attempt < 50; attempt++ {
+		rl := newPerTokenLimiter(0, 0, 0, 1)
+		sub := rl.subjectLimiterFor("alice")
+		sub.windowStart.Store(time.Now().Add(-time.Hour).UnixMilli())
+		sub.windowCount.Store(1)
+
+		var successes atomic.Int64
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		errs := make(chan error, goroutines)
+
+		wg.Add(goroutines)
+		for i := 0; i < goroutines; i++ {
+			go func() {
+				defer wg.Done()
+				<-start
+
+				release, scope, err := rl.AcquireForSubject(context.Background(), "alice")
+				if err != nil {
+					if scope != ScopePerToken || !errors.Is(err, ErrRateLimitExceeded) {
+						errs <- fmt.Errorf("unexpected rejection: scope=%s err=%v", scope, err)
+					}
+					return
+				}
+				if scope != ScopePerToken {
+					errs <- fmt.Errorf("unexpected success scope: %s", scope)
+					release()
+					return
+				}
+				successes.Add(1)
+				release()
+			}()
+		}
+
+		close(start)
+		wg.Wait()
+		close(errs)
+
+		for err := range errs {
+			if err != nil {
+				t.Fatalf("attempt %d: %v", attempt, err)
+			}
+		}
+		if got := successes.Load(); got != 1 {
+			t.Fatalf("attempt %d: successful acquires = %d; want 1", attempt, got)
+		}
 	}
 }

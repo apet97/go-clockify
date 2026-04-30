@@ -58,6 +58,7 @@ type subjectLimiter struct {
 	semaphore      chan struct{}
 	windowCount    atomic.Int64
 	windowStart    atomic.Int64
+	windowMu       sync.Mutex
 	lastSeenMillis atomic.Int64
 	maxPerWindow   int64
 }
@@ -386,8 +387,14 @@ func (sl *subjectLimiter) acquire(ctx context.Context, windowMillis int64, acqui
 	if sl.maxPerWindow > 0 {
 		now := time.Now().UnixMilli()
 		if now-sl.windowStart.Load() > windowMillis {
-			sl.windowStart.Store(now)
-			sl.windowCount.Store(0)
+			sl.windowMu.Lock()
+			// Double-check after acquiring the lock so racing goroutines that
+			// observed the old window do not reset away another call's increment.
+			if time.Now().UnixMilli()-sl.windowStart.Load() > windowMillis {
+				sl.windowStart.Store(time.Now().UnixMilli())
+				sl.windowCount.Store(0)
+			}
+			sl.windowMu.Unlock()
 		}
 		if sl.windowCount.Load() >= sl.maxPerWindow {
 			return nil, &RateLimitError{MaxPerWindow: sl.maxPerWindow, WindowMillis: windowMillis}
