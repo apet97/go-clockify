@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -321,8 +322,14 @@ func TestAddSessionToInitializeResult(t *testing.T) {
 // successive calls produce distinct values (cryptographic randomness, not
 // deterministic across runs).
 func TestRandomID(t *testing.T) {
-	id1 := randomID()
-	id2 := randomID()
+	id1, err := randomID()
+	if err != nil {
+		t.Fatalf("randomID 1: %v", err)
+	}
+	id2, err := randomID()
+	if err != nil {
+		t.Fatalf("randomID 2: %v", err)
+	}
 	if len(id1) != 32 || len(id2) != 32 {
 		t.Fatalf("expected 32-char IDs, got %q %q", id1, id2)
 	}
@@ -333,6 +340,25 @@ func TestRandomID(t *testing.T) {
 		if !strings.ContainsRune("0123456789abcdef", c) {
 			t.Fatalf("unexpected char %q in randomID", c)
 		}
+	}
+}
+
+func TestRandomIDReturnsEntropyErrors(t *testing.T) {
+	orig := randomIDRead
+	t.Cleanup(func() { randomIDRead = orig })
+
+	randomIDRead = func([]byte) (int, error) {
+		return 0, errors.New("entropy unavailable")
+	}
+	if id, err := randomID(); err == nil || id != "" {
+		t.Fatalf("randomID entropy failure = %q, %v; want empty id and error", id, err)
+	}
+
+	randomIDRead = func([]byte) (int, error) {
+		return 8, nil
+	}
+	if id, err := randomID(); err == nil || id != "" {
+		t.Fatalf("randomID short read = %q, %v; want empty id and error", id, err)
 	}
 }
 

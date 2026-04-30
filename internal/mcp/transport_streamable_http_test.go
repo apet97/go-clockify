@@ -303,6 +303,34 @@ func TestStreamableInitializeRequiresID(t *testing.T) {
 	}
 }
 
+func TestStreamableInitializeFailsClosedOnSessionIDEntropyError(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	orig := randomIDRead
+	t.Cleanup(func() { randomIDRead = orig })
+	randomIDRead = func([]byte) (int, error) {
+		return 0, errors.New("entropy unavailable")
+	}
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get(MCPSessionIDHeader) != "" || rec.Header().Get(LegacyMCPSessionIDHeader) != "" {
+		t.Fatal("entropy failure must not emit a session id header")
+	}
+	if len(mgr.items) != 0 {
+		t.Fatalf("entropy failure created session(s): %d", len(mgr.items))
+	}
+	if !strings.Contains(rec.Body.String(), "session id generation failed") {
+		t.Fatalf("body = %q, want generic session id failure", rec.Body.String())
+	}
+}
+
 func TestStreamableSessionPersistenceFailures(t *testing.T) {
 	t.Run("create_failure_aborts_session", func(t *testing.T) {
 		mgr, opts := newTestStreamableStack(t)

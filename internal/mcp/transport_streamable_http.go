@@ -291,7 +291,11 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		var session *streamSession
 		if req.Method == "initialize" {
-			id := randomID()
+			id, err := randomID()
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "session id generation failed")
+				return
+			}
 			session, err = mgr.create(r.Context(), id, principal, opts)
 			if err != nil {
 				writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -876,10 +880,18 @@ func (h *sessionEventHub) SubscriberCount() int {
 	return len(h.subscribers)
 }
 
-func randomID() string {
+var randomIDRead = rand.Read
+
+func randomID() (string, error) {
 	var b [16]byte
-	_, _ = rand.Read(b[:])
-	return hex.EncodeToString(b[:])
+	n, err := randomIDRead(b[:])
+	if err != nil {
+		return "", fmt.Errorf("generate session id: %w", err)
+	}
+	if n != len(b) {
+		return "", fmt.Errorf("generate session id: %w", io.ErrUnexpectedEOF)
+	}
+	return hex.EncodeToString(b[:]), nil
 }
 
 func stringsTrimSpace(s string) string {
