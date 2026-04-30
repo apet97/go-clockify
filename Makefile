@@ -74,9 +74,12 @@ repo-hygiene:
 #   - check-bench-baseline.sh — gates the committed
 #     internal/benchdata/baseline.txt against the bench.yml workflow
 #     (linux/amd64 only, matching package set, sample-count floor).
+#   - check-coverage.sh — enforces global + per-package coverage
+#     floors; called by both CI and `make cover-check`.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
+	bash scripts/test-check-coverage.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool

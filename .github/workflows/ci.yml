@@ -220,6 +220,16 @@ jobs:
         # mismatched baseline through verify-bench. Static input,
         # no event data.
         run: bash scripts/test-check-bench-baseline.sh
+      - name: Verify coverage gate contract
+        # Same playbook as the two filter/baseline tests above.
+        # Guards scripts/check-coverage.sh, which enforces both the
+        # global and per-package coverage floors used by the
+        # `coverage` job and `make cover-check`. The gate is
+        # pure-shell and pure-awk; a typo in any of its parsing
+        # paths would silently turn the floor check into a no-op.
+        # The test stubs `go` via PATH and exercises every exit
+        # branch without running the real test suite.
+        run: bash scripts/test-check-coverage.sh
 
   deploy-render:
     name: Deploy render (k8s + helm)
