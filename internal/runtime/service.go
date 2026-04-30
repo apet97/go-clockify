@@ -234,6 +234,20 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	if baseURL == "" {
 		baseURL = deps.cfg.BaseURL
 	}
+	// Apply the same URL-safety contract used at config-load time.
+	// Hosted profiles refuse plain http (including loopback) so a
+	// tenant credential supplying http://localhost cannot smuggle
+	// cleartext traffic through a production gateway. Self-hosted
+	// profiles preserve the historical loopback + insecure
+	// behaviour. config.IsHostedProfile + cfg.Profile lets the
+	// runtime stay aligned with the env-level posture without
+	// re-reading MCP_PROFILE.
+	if err := config.ValidateBaseURL(baseURL, config.ValidateBaseURLOptions{
+		Hosted:        config.IsHostedProfile(deps.cfg.Profile),
+		AllowInsecure: deps.cfg.Insecure,
+	}); err != nil {
+		return nil, fmt.Errorf("tenant %q: %w", tenant.ID, err)
+	}
 	workspaceID := material.Workspace
 	if workspaceID == "" {
 		workspaceID = tenant.WorkspaceID

@@ -194,6 +194,131 @@ func TestControlPlaneAuditorNilStoreNoOps(t *testing.T) {
 	}
 }
 
+// tenantRuntimeStore is a controlplane.Store fixture that lets
+// per-test cases inject a single Tenant + CredentialRef pair so
+// tenantRuntime can be exercised without standing up a full backend.
+// Only the read paths exercised by tenantRuntime are populated; the
+// rest fall back to the recordingStore zero behaviour.
+type tenantRuntimeStore struct {
+	recordingStore
+	tenant     controlplane.TenantRecord
+	credential controlplane.CredentialRef
+}
+
+func (s *tenantRuntimeStore) Tenant(id string) (controlplane.TenantRecord, bool) {
+	if s.tenant.ID != id {
+		return controlplane.TenantRecord{}, false
+	}
+	return s.tenant, true
+}
+
+func (s *tenantRuntimeStore) CredentialRef(id string) (controlplane.CredentialRef, bool) {
+	if s.credential.ID != id {
+		return controlplane.CredentialRef{}, false
+	}
+	return s.credential, true
+}
+
+// TestTenantRuntime_HostedRejectsTenantHTTP locks the per-tenant
+// equivalent of the env-level CLOCKIFY_BASE_URL guardrail: a tenant
+// credential that resolves a remote http baseURL must be refused
+// when the deployment runs under a hosted profile, even though the
+// material was supplied through the trusted control plane.
+func TestTenantRuntime_HostedRejectsTenantHTTP(t *testing.T) {
+	store := &tenantRuntimeStore{
+		tenant: controlplane.TenantRecord{
+			ID:              "acme",
+			CredentialRefID: "cred-1",
+			BaseURL:         "http://upstream.example.com/api/v1",
+		},
+		credential: controlplane.CredentialRef{
+			ID:        "cred-1",
+			Backend:   "inline",
+			Reference: "secret-key",
+			Workspace: "ws-1",
+		},
+	}
+	deps := runtimeDeps{
+		cfg: config.Config{
+			Profile: "shared-service",
+		},
+		policy:    &policy.Policy{Mode: policy.Standard},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for tenant http baseURL under hosted profile")
+	}
+	if !strings.Contains(err.Error(), "must use https") && !strings.Contains(err.Error(), "https") {
+		t.Fatalf("expected https/url error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_HostedRejectsLoopback locks the loopback close
+// of the same gate. Loopback http is acceptable in self-hosted
+// stdio installs but never in hosted profiles — a tenant supplying
+// http://127.0.0.1 to a sidecar proxy could otherwise hairpin
+// cleartext traffic through a production gateway.
+func TestTenantRuntime_HostedRejectsLoopback(t *testing.T) {
+	store := &tenantRuntimeStore{
+		tenant: controlplane.TenantRecord{
+			ID:              "acme",
+			CredentialRefID: "cred-1",
+			BaseURL:         "http://127.0.0.1:8080/api/v1",
+		},
+		credential: controlplane.CredentialRef{
+			ID:        "cred-1",
+			Backend:   "inline",
+			Reference: "secret-key",
+			Workspace: "ws-1",
+		},
+	}
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "prod-postgres"},
+		policy:    &policy.Policy{Mode: policy.Standard},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for loopback http tenant baseURL under hosted profile")
+	}
+}
+
+// TestTenantRuntime_NonHostedAllowsLoopback verifies the documented
+// permissive path: a self-hosted profile (or no profile) keeps
+// accepting loopback http baseURLs from tenant credentials so local
+// docker-compose / dev backends keep working.
+func TestTenantRuntime_NonHostedAllowsLoopback(t *testing.T) {
+	store := &tenantRuntimeStore{
+		tenant: controlplane.TenantRecord{
+			ID:              "acme",
+			CredentialRefID: "cred-1",
+			BaseURL:         "http://127.0.0.1:8080/api/v1",
+		},
+		credential: controlplane.CredentialRef{
+			ID:        "cred-1",
+			Backend:   "inline",
+			Reference: "secret-key",
+			Workspace: "ws-1",
+		},
+	}
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: ""},
+		policy:    &policy.Policy{Mode: policy.Standard},
+		bootstrap: bootstrap.Config{},
+	}
+	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err != nil {
+		t.Fatalf("expected loopback http to be accepted in non-hosted profile, got: %v", err)
+	}
+	if rt == nil || rt.Server == nil {
+		t.Fatal("expected non-nil runtime + server")
+	}
+	if rt.Close != nil {
+		rt.Close()
+	}
+}
+
 // TestBuildServer_PropagatesSanitizeUpstreamErrors guards the central-
 // wiring fix: every transport (stdio, legacy_http, streamable session,
 // grpc) must observe cfg.SanitizeUpstreamErrors, which means buildServer
