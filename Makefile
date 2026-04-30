@@ -92,9 +92,11 @@ script-tests:
 # when shellcheck isn't installed locally; the CI gate keeps it
 # honest on every PR.
 shellcheck:
-	@which shellcheck > /dev/null 2>&1 \
-		&& shellcheck -S warning scripts/*.sh \
-		|| echo "shellcheck not installed, skipping (CI enforces)"
+	@if which shellcheck > /dev/null 2>&1; then \
+		shellcheck -S warning scripts/*.sh; \
+	else \
+		echo "shellcheck not installed, skipping (CI enforces)"; \
+	fi
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool
