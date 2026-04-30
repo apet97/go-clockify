@@ -414,10 +414,13 @@ run_case "go build failure reports executable parity check skip-fail" \
     FAKE_BUILD_FAILS=1
 
 # --- Case 14: Go absent on PATH ---
-# Restrict PATH to /usr/bin:/bin (real go is at /opt/homebrew/bin/go
-# on this host and not in the restricted PATH; CI runners similarly
-# do not have go in /usr/bin or /bin). The stub at $dir/go is also
-# bypassed by overriding PATH below. The gate reaches the
+# To make `command -v go` return false the test PATH must contain
+# zero `go` binaries. The Ubuntu CI runner image ships go at
+# /usr/bin/go, so the obvious PATH=/usr/bin:/bin shortcut does not
+# isolate from it. Build a per-case sandbox-bin/ with only the two
+# external binaries the gate's Go-absent path actually invokes
+# (grep + rm — every other call is a bash builtin) and run with
+# PATH set exclusively to that sandbox. The gate reaches the
 # `command -v go` check, returns false, calls err — fail=1, exit 1.
 # This pins the fail-closed behaviour: Go-absent is not warn-only.
 run_case_no_go() {
@@ -435,10 +438,24 @@ run_case_no_go() {
     write_baseline_tree "$dir"
     rm "$dir/go"
 
+    # Build the sandbox PATH with bash + grep + rm. /usr/bin/grep
+    # and /bin/rm are present on both macOS and Ubuntu CI runners;
+    # $BASH is the absolute path of the bash currently running this
+    # test (brew /opt/homebrew/bin/bash on macOS, /usr/bin/bash on
+    # Ubuntu) — env -i needs bash on PATH because it consults the
+    # new PATH to exec the command. The symlinks resolve through
+    # the canonical paths so the gate's `grep -E`, `grep -F`,
+    # `grep -Rqs`, and the cleanup trap's `rm -f` all keep working
+    # while `command -v go` finds nothing.
+    mkdir -p "$dir/sandbox-bin"
+    ln -s "$BASH" "$dir/sandbox-bin/bash"
+    ln -s /usr/bin/grep "$dir/sandbox-bin/grep"
+    ln -s /bin/rm "$dir/sandbox-bin/rm"
+
     local out
     local actual_exit=0
     out="$(cd "$dir" \
-        && env -i HOME="$HOME" PATH="/usr/bin:/bin" \
+        && env -i HOME="$HOME" PATH="$dir/sandbox-bin" \
                bash "$script" 2>&1)" || actual_exit=$?
 
     local pass=1
