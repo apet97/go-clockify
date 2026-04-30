@@ -151,7 +151,7 @@ go test -bench=. -benchtime=10x -run=^$ \
   ./internal/clockify
 ```
 
-For a regression check, capture two runs and compare:
+For an ad hoc same-machine comparison, capture two runs and compare:
 
 ```sh
 go install golang.org/x/perf/cmd/benchstat@latest
@@ -162,25 +162,33 @@ benchstat before.txt after.txt
 ```
 
 The benchmarks are **not** wired into PR CI. Microbenchmarks on
-shared CI runners flake on noise; local benchstat is the
-authoritative comparison. Regression checks run through the
-`make verify-bench` target:
+shared CI runners flake on noise; the weekly CI workflow is the
+authoritative regression signal because it compares on one runner
+class against the committed baseline. Regression checks run through
+the `make verify-bench` target:
 
 ```sh
-# 1. Capture a known-good baseline on the branch point.
-make bench BENCH_OUT=.bench/baseline.txt
-
-# 2. ... make changes ...
-
-# 3. Compare. verify-bench writes a fresh profile and prints a
-#    benchstat diff. Non-zero exit on unexplained regressions.
+# Captures .bench/after.txt and compares it to
+# internal/benchdata/baseline.txt, the same baseline CI uses.
 make verify-bench
 ```
 
-`.bench/` is gitignored — baselines live locally per workstation.
-If a regression lands in `main` without going through this flow,
-the next operator to run `make verify-bench` against their own
-baseline will surface it.
+`BENCH_BASELINE` defaults to `internal/benchdata/baseline.txt`, not
+an ignored workstation file. This keeps local and CI policy pointed at
+the same artifact. In that default mode, `make verify-bench` rejects
+benchmark output whose `goos/goarch` differs from the committed
+baseline so benchstat cannot silently print a non-comparison. If you
+need a laptop-only before/after experiment, record it explicitly and
+keep it out of release evidence:
+
+```sh
+make bench BENCH_OUT=.bench/baseline.txt
+# ... make change ...
+make verify-bench BENCH_BASELINE=.bench/baseline.txt
+```
+
+`.bench/` remains gitignored for these experiments; never refresh the
+committed baseline from `.bench/` or from non-CI hardware.
 
 ## Throughput envelope (load harness)
 

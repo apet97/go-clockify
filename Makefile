@@ -210,19 +210,22 @@ release-check:
 #
 # `make bench` runs every package benchmark and writes a text profile
 # to the path in BENCH_OUT (default .bench/after.txt). `make verify-bench`
-# compares that profile to .bench/baseline.txt via benchstat and fails
-# the target when a CI-significant regression appears. The workflow:
+# compares that profile to the committed CI baseline at
+# internal/benchdata/baseline.txt via benchstat. The workflow:
 #
-#   make bench BENCH_OUT=.bench/baseline.txt   # capture a known-good
 #   # ... make change ...
 #   make verify-bench                          # capture .bench/after.txt
-#                                              # and compare to baseline
+#                                              # and compare to CI baseline
 #
-# benchstat is installed on demand if missing. The gate uses the
-# default p=0.05 threshold; sensitive packages can tighten it locally
-# by running benchstat manually with -alpha=0.01 etc.
+# For ad hoc same-machine before/after checks, explicitly override
+# BENCH_BASELINE=.bench/baseline.txt after recording that local baseline.
+# Do not commit or treat workstation baselines as release evidence.
+#
+# benchstat is installed on demand if missing. The comparison uses the
+# default p=0.05 threshold; sensitive packages can tighten it manually
+# with benchstat -alpha=0.01 etc.
 BENCH_OUT ?= .bench/after.txt
-BENCH_BASELINE ?= .bench/baseline.txt
+BENCH_BASELINE ?= internal/benchdata/baseline.txt
 BENCH_PKGS ?= ./internal/...
 
 bench:
@@ -239,9 +242,24 @@ bench:
 
 verify-bench: bench
 	@if [ ! -f $(BENCH_BASELINE) ]; then \
-		echo "[verify-bench] baseline $(BENCH_BASELINE) not present — skipping comparison."; \
-		echo "              Record one with: make bench BENCH_OUT=$(BENCH_BASELINE)"; \
-		exit 0; \
+		echo "[verify-bench] baseline $(BENCH_BASELINE) not present."; \
+		echo "              The default baseline is committed at internal/benchdata/baseline.txt."; \
+		echo "              For local-only experiments, pass BENCH_BASELINE=.bench/baseline.txt explicitly."; \
+		exit 1; \
+	fi
+	@if [ "$(BENCH_BASELINE)" = "internal/benchdata/baseline.txt" ]; then \
+		bash scripts/check-bench-baseline.sh "$(BENCH_BASELINE)"; \
+		base_platform="$$(awk '/^goos: / { goos=$$2 } /^goarch: / { goarch=$$2 } /^pkg: / { print goos "/" goarch; exit }' "$(BENCH_BASELINE)")"; \
+		out_platform="$$(awk '/^goos: / { goos=$$2 } /^goarch: / { goarch=$$2 } /^pkg: / { print goos "/" goarch; exit }' "$(BENCH_OUT)")"; \
+		if [ -z "$$base_platform" ] || [ -z "$$out_platform" ]; then \
+			echo "[verify-bench] unable to read benchmark platform metadata."; \
+			exit 1; \
+		fi; \
+		if [ "$$base_platform" != "$$out_platform" ]; then \
+			echo "[verify-bench] benchmark output platform $$out_platform does not match committed baseline $$base_platform."; \
+			echo "              Run the CI bench workflow for release evidence, or pass BENCH_BASELINE=.bench/baseline.txt for explicit same-machine experiments."; \
+			exit 1; \
+		fi; \
 	fi
 	@BENCHSTAT="$$(command -v benchstat 2>/dev/null)"; \
 	 if [ -z "$$BENCHSTAT" ]; then \
