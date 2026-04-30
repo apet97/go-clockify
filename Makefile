@@ -226,7 +226,7 @@ release-check:
 	@echo "== release-check: config + doc parity =="
 	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
-	$(MAKE) repo-hygiene script-tests build-tags http-smoke stdio-smoke
+	$(MAKE) repo-hygiene script-tests shellcheck build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
 	$(MAKE) verify-doctor-strict
 	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
