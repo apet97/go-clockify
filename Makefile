@@ -6,7 +6,7 @@
         build-postgres test-postgres build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
-        repo-hygiene script-tests shellcheck release-check
+        repo-hygiene script-tests actionlint shellcheck release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -38,7 +38,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests shellcheck
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -96,6 +96,19 @@ shellcheck:
 		shellcheck -S warning scripts/*.sh; \
 	else \
 		echo "shellcheck not installed, skipping (CI enforces)"; \
+	fi
+
+# actionlint statically analyses .github/workflows/*.yml for the
+# workflow-level bug class CI itself can't catch — bad runs-on
+# values, stale action input schemas, malformed ${{ }}
+# expressions, undefined step outputs, and inline run: shell
+# issues (via embedded shellcheck). Skips with a notice when
+# actionlint isn't installed locally; the CI gate enforces.
+actionlint:
+	@if which actionlint > /dev/null 2>&1; then \
+		actionlint -color; \
+	else \
+		echo "actionlint not installed, skipping (CI enforces)"; \
 	fi
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
@@ -228,7 +241,7 @@ release-check:
 	@echo "== release-check: config + doc parity =="
 	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
-	$(MAKE) repo-hygiene script-tests shellcheck build-tags http-smoke stdio-smoke
+	$(MAKE) repo-hygiene script-tests actionlint shellcheck build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
 	$(MAKE) verify-doctor-strict
 	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="

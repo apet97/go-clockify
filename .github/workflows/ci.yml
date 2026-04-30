@@ -260,6 +260,26 @@ jobs:
           severity: warning
           scandir: scripts
 
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.25.9"
+      - name: Run actionlint
+        # Static analysis for every .github/workflows/*.yml file.
+        # Catches the silent-runtime-fail bug class CI itself can't
+        # catch — bad runs-on, stale action input schemas, malformed
+        # ${{ }} expressions, undefined step outputs, and inline
+        # run: shell (via embedded shellcheck). SHA-pinned to the
+        # v1.7.12 tag for supply-chain audit traceability; mirrors
+        # the govulncheck SHA-pin rationale at line 72.
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca
+          actionlint -color
+
   deploy-render:
     name: Deploy render (k8s + helm)
     runs-on: ubuntu-latest

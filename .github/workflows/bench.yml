@@ -101,7 +101,8 @@ jobs:
           THRESHOLD_PCT: "20"
         run: |
           set -euo pipefail
-          export PATH="$PATH:$(go env GOPATH)/bin"
+          gopath_bin="$(go env GOPATH)/bin"
+          export PATH="$PATH:$gopath_bin"
           if [ ! -s internal/benchdata/baseline.txt ]; then
             echo "::error::internal/benchdata/baseline.txt missing or empty"
             exit 1
