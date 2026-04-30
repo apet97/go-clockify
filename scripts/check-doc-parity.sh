@@ -166,8 +166,13 @@ done
 if [ ! -f "$NPM_PACKAGE_JSON" ]; then
   err "npm package file missing: $NPM_PACKAGE_JSON"
 else
-  readme_node=$(grep -E '^\| Node\.js \(npm wrapper\) \|' README.md | sed -E 's/.*\| ([0-9]+)\+ \|/\1/' | tr -d '[:space:]')
-  package_node=$(grep -E '"node": *">=[0-9]+"' "$NPM_PACKAGE_JSON" | sed -E 's/.*">=([0-9]+)".*/\1/' | tr -d '[:space:]')
+  # `|| true` is load-bearing: when the row / engine line is missing,
+  # grep returns 1, and under `set -euo pipefail` the substitution
+  # would otherwise abort silently before the dedicated `[ -z … ]`
+  # err lines below could fire — leaving CI to fail closed with no
+  # diagnostic.
+  readme_node=$(grep -E '^\| Node\.js \(npm wrapper\) \|' README.md | sed -E 's/.*\| ([0-9]+)\+ \|/\1/' | tr -d '[:space:]' || true)
+  package_node=$(grep -E '"node": *">=[0-9]+"' "$NPM_PACKAGE_JSON" | sed -E 's/.*">=([0-9]+)".*/\1/' | tr -d '[:space:]' || true)
   if [ -z "$readme_node" ]; then
     err "README.md missing Node.js (npm wrapper) compatibility row"
   fi

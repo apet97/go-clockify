@@ -19,6 +19,7 @@
 #   11. Phase 4 fail: README missing the Node compat row entirely
 #   12. Phase 5 fail: dangling marker in operator doc
 #   13. Phase 5 pass: marker inside docs/adr/*-superseded.md is filtered
+#   14. Phase 4 fail: package.json missing engines.node declaration
 #
 # Each case builds throwaway fixtures in a per-case tmpdir, runs the
 # script with cwd set to the fixture (the script under test uses
@@ -260,23 +261,17 @@ run_case "Phase 4: README Node compat does not match package.json fails closed" 
     1 'does not match'
 
 # --- Case 11: README missing Node compat row ---
-# Phase 4's `readme_node=$(grep ... | sed ... | tr ...)` has no `|| true`
-# clause; under the script's `set -euo pipefail`, grep returning 1
-# (no row found) propagates through pipefail and aborts the
-# substitution before the dedicated `[ -z "$readme_node" ]` err path
-# can fire. The externally-observable contract — missing Node row
-# refuses to ship a green gate — still holds (exit 1, no
-# `doc-parity: OK`), and that is what we lock here. The empty
-# expect-pattern is intentional: a future fix that adds `|| true`
-# to the pipeline would surface the diagnostic without changing
-# this case's exit code, so the assertion remains stable.
+# Phase 4's `readme_node=$(grep | sed | tr)` pipeline is followed by
+# `|| true` so grep returning 1 (row absent) does not abort the
+# substitution under `set -euo pipefail` — the dedicated
+# `[ -z "$readme_node" ]` err line below it must remain reachable.
 mut_missing_node_row() {
     grep -vF '| Node.js (npm wrapper) |' "$1/README.md" > "$1/README.md.new"
     mv "$1/README.md.new" "$1/README.md"
 }
 MUTATOR=mut_missing_node_row
-run_case "Phase 4: README missing Node compat row refuses to pass" \
-    1 ''
+run_case "Phase 4: README missing Node compat row fails closed" \
+    1 'missing Node\.js .* compatibility row'
 
 # --- Case 12: dangling marker in operator runbook ---
 mut_dangling_marker() {
@@ -295,6 +290,21 @@ mut_superseded_marker() {
 MUTATOR=mut_superseded_marker
 run_case "Phase 5: marker in docs/adr/*-superseded.md is filtered" \
     0 'doc-parity: OK'
+
+# --- Case 14: package.json missing engines.node declaration ---
+# Parallel to case 11 for the package_node branch. Lives under the
+# same `|| true` contract: without the trailing `|| true` on Phase
+# 4's package_node pipeline, this branch would silently abort.
+mut_missing_engines_node() {
+    cat > "$1/npm/clockify-mcp-go/package.json" <<'EOF'
+{
+  "name": "clockify-mcp-go"
+}
+EOF
+}
+MUTATOR=mut_missing_engines_node
+run_case "Phase 4: package.json missing engines.node fails closed" \
+    1 'missing node engine declaration'
 
 # --- Final report ---
 echo
