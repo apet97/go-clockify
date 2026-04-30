@@ -601,6 +601,37 @@ func (s *Server) writeResponse(resp Response) error {
 	return s.encoder.Encode(resp)
 }
 
+// DispatchMessageWithRecover is the recovery-wrapped variant of
+// DispatchMessage for transports whose dispatch goroutines must
+// not let a panicking handler escape the transport boundary.
+// gRPC's per-frame goroutine uses this so a single broken tool
+// cannot kill an in-flight stream — every other concurrent request
+// on the same Exchange would otherwise be aborted.
+//
+// Identical to DispatchMessage on the parse / validate / marshal
+// path; the only difference is that handle() runs through
+// HandleWithRecover so panics are translated into the same stable
+// JSON-RPC tool-error envelope stdio + streamable HTTP emit.
+func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, site string) ([]byte, error) {
+	var req Request
+	if err := json.Unmarshal(msg, &req); err != nil {
+		metrics.ProtocolErrorsTotal.Inc("-32700")
+		return json.Marshal(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
+	}
+	if rpcErr := validateRequest(req); rpcErr != nil {
+		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
+		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
+	}
+	resp := s.HandleWithRecover(ctx, req, site)
+	if resp.Error != nil {
+		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
+	}
+	if req.ID == nil {
+		return nil, nil
+	}
+	return json.Marshal(resp)
+}
+
 // HandleWithRecover invokes handle with structured panic recovery.
 // Used by transports whose dispatch goroutines do not own a higher-
 // level recovery wrapper (streamable HTTP, gRPC) — stdio's loop has

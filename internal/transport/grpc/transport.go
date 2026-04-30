@@ -210,7 +210,16 @@ func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 		wg.Add(1)
 		go func(f []byte) {
 			defer wg.Done()
-			reply, derr := e.srv.DispatchMessage(ctx, f)
+			// DispatchMessageWithRecover wraps the handler call in
+			// the shared mcp.RecoverDispatch path so a panic in any
+			// tool handler is translated into the same stable
+			// JSON-RPC tool-error envelope stdio + streamable HTTP
+			// emit. Without this wrapper, the panic would unwind
+			// through this goroutine, the deferred wg.Done would
+			// fire late, and the parent Exchange would either deadlock
+			// at wg.Wait or abort every other in-flight request on
+			// the stream.
+			reply, derr := e.srv.DispatchMessageWithRecover(ctx, f, "grpc_dispatch")
 			if derr != nil {
 				slog.Error("grpc_dispatch_error", "err", derr)
 				return
