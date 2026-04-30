@@ -27,7 +27,11 @@ vet:
 	go vet ./...
 
 lint:
-	@which golangci-lint > /dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
+	@if which golangci-lint > /dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		echo "golangci-lint not installed, skipping (CI enforces)"; \
+	fi
 
 # Fast inner-loop check — seconds, not minutes. Use `make verify` before a PR.
 check: fmt vet test
