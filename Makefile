@@ -84,11 +84,16 @@ repo-hygiene:
 #     (env-var content, tool-name catalog match, banned strings,
 #     README↔npm engines parity, dangling markers). Wired into
 #     `make verify-core` and the CI `config-doc-parity` job.
+#   - check-repo-hygiene.sh — fails on tracked OS / editor / coverage
+#     junk; called by `make repo-hygiene` and the CI `repo-hygiene`
+#     job. The single-regex gate is small enough that a typo would
+#     silently turn it into a no-op while still printing OK.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
 	bash scripts/test-check-coverage.sh
 	bash scripts/test-check-doc-parity.sh
+	bash scripts/test-check-repo-hygiene.sh
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u

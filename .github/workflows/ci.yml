@@ -227,7 +227,7 @@ jobs:
   repo-hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
-    # Hard ceiling: pure bash/awk gates plus four contract tests,
+    # Hard ceiling: pure bash/awk gates plus five contract tests,
     # 10-20s combined; 5m absorbs runner variance.
     timeout-minutes: 5
     steps:
@@ -277,6 +277,19 @@ jobs:
         # because the gate itself shells out to nothing. Static
         # input, no event data.
         run: bash scripts/test-check-doc-parity.sh
+      - name: Verify repo-hygiene gate contract
+        # Same playbook as the four peer tests above. Guards
+        # scripts/check-repo-hygiene.sh, the single-regex gate that
+        # fails when tracked OS / editor / coverage junk slips into
+        # HEAD. The gate is one `git ls-files | grep -E PATTERN`
+        # pipeline; a typo in PATTERN would silently turn the gate
+        # into a no-op while still printing "repo-hygiene: OK". The
+        # test exercises every alternation branch (named files,
+        # extension classes, ~ suffix) plus negative cases that
+        # confirm the anchors aren't too loose. Each case builds a
+        # throwaway git repo in a tmpdir; static input, no event
+        # data.
+        run: bash scripts/test-check-repo-hygiene.sh
 
   shellcheck:
     name: Shellcheck
