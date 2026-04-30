@@ -49,6 +49,9 @@ document is authoritative for human understanding.
 To refresh `internal/benchdata/baseline.txt` on the CI hardware,
 dispatch `bench.yml` manually with `regenerate-baseline=true` and
 commit the uploaded artifact (procedure in the workflow comment).
+The committed baseline is checked by `scripts/check-bench-baseline.sh`
+before each comparison, so it must contain every workflow package,
+linux/amd64 headers, and the workflow's configured sample count.
 
 ## Hot-path microbenchmarks
 
@@ -115,9 +118,9 @@ observations the numbers make actionable:
 
 All numbers in the table were captured locally via
 `go test -bench=. -benchmem -benchtime=1000x-3000x -count=1 -run='^$'
-./internal/...` with log filtering (`2>&1 | grep -E '^Benchmark'`)
-because slog output from the MCP server's initialize path
-interleaves with bench output on rerun.
+./internal/...` with `scripts/filter-bench-output.sh` because slog
+output from MCP dispatch benchmarks can interleave with benchmark
+result rows on rerun.
 
 How to read this:
 
@@ -317,11 +320,10 @@ self-hosted runner with dedicated hardware.
 
 The committed baseline's `goos`/`goarch`/`cpu` header must match the
 CI runner hardware. Benchmarks run on a different CPU architecture
-produce numbers that can't be compared to the committed baseline at
-all. The seed baseline shipped in wave D was generated on Apple M1
-(darwin/arm64) — the first real scheduled run on
-`ubuntu-latest` will appear to regress on every metric, because the
-CPUs differ.
+produce numbers that cannot be compared to the committed baseline.
+The baseline hygiene gate rejects non-linux/amd64 blocks before
+`benchstat` runs, so refreshes must come from the `bench.yml`
+`regenerate-baseline=true` artifact rather than a laptop run.
 
 ### Bootstrap procedure (first run + intentional refresh)
 
@@ -344,7 +346,11 @@ upgrade, or after an intentional perf change — follow this procedure:
    file, diff against the previous baseline so the commit message can
    document the deltas, and commit under the conventional prefix
    `chore(bench): refresh baseline`.
-5. The next scheduled run (or a manual dispatch without the
+5. Verify the committed artifact locally:
+   ```sh
+   bash scripts/check-bench-baseline.sh
+   ```
+6. The next scheduled run (or a manual dispatch without the
    `regenerate-baseline` flag) will compare against the new baseline.
 
 The workflow file has more detail inline; see

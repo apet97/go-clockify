@@ -77,12 +77,10 @@ jobs:
               cat /tmp/bench-raw.txt
               exit 1
             }
-          # Filter log-line noise (the mcp server bench emits slog INFO
-          # lines that contaminate per-benchmark output) while
+          # Filter and repair slog-contaminated benchmark rows while
           # preserving per-package order so benchstat can parse it.
-          grep -E \
-            '^(goos|goarch|pkg|cpu|PASS|ok|Benchmark[A-Za-z_0-9]+-[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9.]+[[:space:]]+ns/op)' \
-            /tmp/bench-raw.txt > /tmp/bench-current.txt
+          bash scripts/filter-bench-output.sh \
+            < /tmp/bench-raw.txt > /tmp/bench-current.txt
           echo "benchmarks collected:"
           grep -c '^Benchmark' /tmp/bench-current.txt || true
 
@@ -108,6 +106,7 @@ jobs:
             echo "::error::internal/benchdata/baseline.txt missing or empty"
             exit 1
           fi
+          bash scripts/check-bench-baseline.sh
           benchstat internal/benchdata/baseline.txt /tmp/bench-current.txt \
             > /tmp/bench-delta.txt
           echo "=== benchstat delta ==="

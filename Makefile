@@ -2,7 +2,7 @@
         verify verify-core verify-vuln verify-k8s verify-fips \
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         doctor-strict-smoke verify-doctor-strict \
-        secret-scan config-parity bench verify-bench \
+        secret-scan config-parity bench verify-bench bench-baseline-check \
         build-postgres test-postgres build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
@@ -233,7 +233,7 @@ bench:
 	   cat "$$raw"; \
 	   exit 1; \
 	 fi; \
-	 grep -E '^(goos|goarch|pkg|cpu|PASS|ok|Benchmark[A-Za-z_0-9]+-[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9.]+[[:space:]]+ns/op)' "$$raw" | tee "$(BENCH_OUT)"; \
+	 bash scripts/filter-bench-output.sh < "$$raw" | tee "$(BENCH_OUT)"; \
 	 echo "benchmarks collected:"; \
 	 grep -c '^Benchmark' "$(BENCH_OUT)" || true
 
@@ -251,6 +251,9 @@ verify-bench: bench
 	 fi; \
 	 echo "== benchstat $(BENCH_BASELINE) vs $(BENCH_OUT) =="; \
 	 "$$BENCHSTAT" $(BENCH_BASELINE) $(BENCH_OUT)
+
+bench-baseline-check:
+	bash scripts/check-bench-baseline.sh
 
 # Local mutation testing via gremlins.dev (W2-10). Per-package
 # efficacy floors live in .github/workflows/mutation.yml (top-of-file
