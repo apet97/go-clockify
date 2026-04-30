@@ -2345,11 +2345,11 @@
       "description": "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.",
       "group": "tier1",
       "tier": 1,
-      "read_only": true,
+      "read_only": false,
       "destructive": false,
       "idempotent": true,
       "risk_class": [
-        "read"
+        "write"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -2398,7 +2398,7 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true,
-        "readOnlyHint": true,
+        "readOnlyHint": false,
         "title": "Search Tools"
       }
     },

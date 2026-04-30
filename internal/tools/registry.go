@@ -173,11 +173,19 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_policy_info", "Display effective policy configuration", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 			return s.PolicyInfo(ctx)
 		}},
-		{Tool: toolRO("clockify_search_tools", "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.", map[string]any{"type": "object", "properties": map[string]any{
+		// clockify_search_tools is annotated as a write tool (idempotent)
+		// because the activate_group / activate_tool branches mutate the
+		// server's visible tool surface and emit
+		// notifications/tools/list_changed. ChatGPT's audit pointed out
+		// that classifying it read-only let activations bypass the
+		// intent/outcome audit pipeline — read-only tools short-circuit
+		// at audit.go's `hints.ReadOnly` gate. Idempotent because
+		// re-activating an already-active group is a no-op.
+		{Tool: toolRWIdem("clockify_search_tools", "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.", map[string]any{"type": "object", "properties": map[string]any{
 			"query":          map[string]any{"type": "string", "description": "Search query for tools"},
 			"activate_group": map[string]any{"type": "string", "description": "Activate every tool in the named Tier-2 group (e.g. \"invoices\")"},
 			"activate_tool":  map[string]any{"type": "string", "description": "Activate the Tier-2 group that contains the named tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group). For a single Tier-1 tool name, only that tool is activated."},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SearchTools(ctx, args)
 		}},
 	}))

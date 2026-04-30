@@ -425,3 +425,45 @@ func TestAuditDurability_SuccessAuditor_AlwaysPasses(t *testing.T) {
 		})
 	}
 }
+
+// TestAudit_SearchToolsActivationIsRecorded locks the post-ChatGPT-
+// audit contract for clockify_search_tools: it is now a write-
+// classified tool (ReadOnlyHint=false, IdempotentHint=true), so a
+// call invoking it produces both an intent and an outcome audit
+// record. Pre-fix, the descriptor was annotated read-only and the
+// activation paths bypassed the audit pipeline entirely — operators
+// had no signal when a Tier-2 group came online via search_tools.
+//
+// The test uses a stand-in descriptor with the same hint shape; the
+// production descriptor lives in internal/tools/registry.go and is
+// covered indirectly by the dispatch/parity suites.
+func TestAudit_SearchToolsActivationIsRecorded(t *testing.T) {
+	aud := &successAuditor{}
+	srv := NewServer("test", []ToolDescriptor{
+		{
+			Tool:           Tool{Name: "search_tools_stub", Description: "mimics post-audit search_tools"},
+			Handler:        func(_ context.Context, _ map[string]any) (any, error) { return "ok", nil },
+			ReadOnlyHint:   false, // write-classified — audit pipeline fires
+			IdempotentHint: true,  // re-activate is a no-op
+		},
+	}, nil, nil)
+	srv.Auditor = aud
+	srv.AuditDurabilityMode = "best_effort"
+	srv.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_tools_stub","arguments":{"activate_group":"invoices"}}}`
+	var out strings.Builder
+	if err := srv.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if strings.Contains(out.String(), `"isError":true`) {
+		t.Fatalf("unexpected error response: %s", out.String())
+	}
+	// Expect 2 records: intent (pre-handler) + outcome (post-handler).
+	// A read-only descriptor would record 0; a fail_closed mode with a
+	// failing auditor would record 1 (intent only). Both are the wrong
+	// shape for an audit-on-activation story.
+	if aud.calls != 2 {
+		t.Fatalf("expected 2 audit calls (intent + outcome), got %d", aud.calls)
+	}
+}

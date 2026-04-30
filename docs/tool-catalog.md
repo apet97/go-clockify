@@ -33,7 +33,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_policy_info` | `tier1` | yes | no | yes | `read` | Display effective policy configuration |
 | `clockify_quick_report` | `tier1` | yes | no | yes | `read` | Quick high-signal summary for a recent period. Safe helper over the current user's time entries. |
 | `clockify_resolve_debug` | `tier1` | yes | no | yes | `read` | Debug name-to-ID resolution for projects, clients, tags, or users |
-| `clockify_search_tools` | `tier1` | yes | no | yes | `read` | Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name. |
+| `clockify_search_tools` | `tier1` | no | no | yes | `write` | Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name. |
 | `clockify_start_timer` | `tier1` | no | no | no | `write` | Start a new timer |
 | `clockify_stop_timer` | `tier1` | no | no | yes | `write` | Stop the current running timer |
 | `clockify_summary_report` | `tier1` | yes | no | yes | `read` | Summarize entries for a date/time range by project using the current user's time entries |

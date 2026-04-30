@@ -45,6 +45,26 @@ var validDestructiveArgs = map[string]map[string]any{
 	"clockify_create_tag":            {"name": "t"},
 	"clockify_create_task":           {"project": "p", "name": "t"},
 	"clockify_switch_project":        {"project": "p"},
+	// clockify_search_tools is technically write-classified (the
+	// activate_group / activate_tool branches mutate the server's
+	// visible tool surface), but the introspection allowlist in
+	// internal/policy/policy.go isIntrospection() exempts it from
+	// the read_only / time_tracking_safe / safe_core gates. The
+	// query-only path is always safe; the activation path is
+	// separately gated by IsGroupAllowed (which DOES deny in
+	// read_only). The empty args here exercise the query path.
+	"clockify_search_tools": {},
+}
+
+// introspectionExempt returns the names of write-classified tools
+// that the policy isIntrospection() allowlist permits even under
+// read_only / time_tracking_safe / safe_core. Currently only
+// clockify_search_tools (write-classified post-ChatGPT-audit, but
+// query path remains read-safe).
+func introspectionExempt() map[string]bool {
+	return map[string]bool{
+		"clockify_search_tools": true,
+	}
 }
 
 // destructiveToolNames returns the sorted list of every ReadOnlyHint:false
@@ -98,8 +118,18 @@ func TestPolicyCoverageIsComplete(t *testing.T) {
 // reaching Clockify. A regression in this test means the enforcement
 // pipeline let a write through policy — the single most dangerous class
 // of bug for this server.
+//
+// Tools in introspectionExempt() are skipped: they are write-classified
+// (mutate server-visible state via Tier-2 activation) but the
+// policy.isIntrospection() allowlist exempts them so the query path
+// remains usable under read_only. The activation path is gated
+// separately by Activator.IsGroupAllowed.
 func TestReadOnlyPolicy_BlocksAllDestructiveTools(t *testing.T) {
+	exempt := introspectionExempt()
 	for _, name := range destructiveToolNames(t) {
+		if exempt[name] {
+			continue
+		}
 		t.Run(name, func(t *testing.T) {
 			upstream := fakeClockifyEmptyJSON(t)
 			result := testharness.Invoke(t, testharness.InvokeOpts{
