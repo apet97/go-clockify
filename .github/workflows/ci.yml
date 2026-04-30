@@ -210,6 +210,16 @@ jobs:
         # scripts/filter-bench-output.sh because bench.yml pipes raw
         # `go test -bench` output through it.
         run: bash scripts/test-filter-bench-output.sh
+      - name: Verify bench-baseline gate contract
+        # Same playbook as the filter test above. Guards
+        # scripts/check-bench-baseline.sh, which validates that
+        # internal/benchdata/baseline.txt covers every package the
+        # bench.yml workflow runs, has linux/amd64 rows only, and
+        # has at least the workflow's -count= samples per benchmark.
+        # A regression in the gate would silently let a stale or
+        # mismatched baseline through verify-bench. Static input,
+        # no event data.
+        run: bash scripts/test-check-bench-baseline.sh
 
   deploy-render:
     name: Deploy render (k8s + helm)

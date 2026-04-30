@@ -66,11 +66,17 @@ repo-hygiene:
 	bash scripts/check-repo-hygiene.sh
 
 # script-tests runs regression tests for repo shell scripts whose
-# output contract matters (currently: filter-bench-output.sh, which
-# `make bench` pipes raw `go test -bench` output through to produce
-# benchstat-compatible profiles). Pure bash, runs in milliseconds.
+# output contract matters. Pure bash, runs in milliseconds.
+#
+# Covered:
+#   - filter-bench-output.sh — `make bench` pipes raw `go test -bench`
+#     output through it to produce benchstat-compatible profiles.
+#   - check-bench-baseline.sh — gates the committed
+#     internal/benchdata/baseline.txt against the bench.yml workflow
+#     (linux/amd64 only, matching package set, sample-count floor).
 script-tests:
 	bash scripts/test-filter-bench-output.sh
+	bash scripts/test-check-bench-baseline.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool
