@@ -32,3 +32,4 @@ desktop.ini
 # part of the shipped project.
 CLAUDE.md
 AGENTS.md
+.claude-loop/
