@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"crypto/tls"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -223,9 +225,14 @@ func TestSessionEventHubCancelSubscriber(t *testing.T) {
 }
 
 // TestApplyHTTPBaselineHeaders verifies every defense-in-depth header is set.
+// HSTS is only emitted under TLS or behind an HTTPS-terminating proxy; this
+// test exercises the behind-proxy variant so the historical assertion
+// (HSTS present) still passes. Plaintext + no-proxy + no-TLS coverage
+// lives in TestApplyHTTPBaselineHeaders_HSTSConditional.
 func TestApplyHTTPBaselineHeaders(t *testing.T) {
 	rec := httptest.NewRecorder()
-	applyHTTPBaselineHeaders(rec)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	applyHTTPBaselineHeaders(rec, req, true /* behindHTTPSProxy */)
 	expected := map[string]string{
 		"X-Content-Type-Options":    "nosniff",
 		"Cache-Control":             "no-store",
@@ -240,6 +247,44 @@ func TestApplyHTTPBaselineHeaders(t *testing.T) {
 			t.Fatalf("%s: got %q want %q", k, got, want)
 		}
 	}
+}
+
+// TestApplyHTTPBaselineHeaders_HSTSConditional locks the post-audit
+// behaviour: HSTS only ships when the connection is actually
+// HTTPS-secured (r.TLS != nil) or the operator declared a trusted
+// HTTPS-terminating proxy in front via MCP_BEHIND_HTTPS_PROXY=1.
+// Emitting HSTS on plaintext makes honest http:// URLs unreachable
+// for clients that cache it.
+func TestApplyHTTPBaselineHeaders_HSTSConditional(t *testing.T) {
+	t.Run("plaintext_no_proxy_no_hsts", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		applyHTTPBaselineHeaders(rec, req, false)
+		if got := rec.Header().Get("Strict-Transport-Security"); got != "" {
+			t.Fatalf("plaintext+no-proxy emitted HSTS = %q; expected empty", got)
+		}
+		// Other defence-in-depth headers must still be present.
+		if rec.Header().Get("X-Content-Type-Options") == "" {
+			t.Fatal("non-HSTS baseline headers regressed under plaintext")
+		}
+	})
+	t.Run("plaintext_with_proxy_emits_hsts", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		applyHTTPBaselineHeaders(rec, req, true)
+		if rec.Header().Get("Strict-Transport-Security") == "" {
+			t.Fatal("MCP_BEHIND_HTTPS_PROXY=1 should emit HSTS even on plaintext")
+		}
+	})
+	t.Run("tls_emits_hsts", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://example/", nil)
+		req.TLS = &tls.ConnectionState{} // mark connection as TLS
+		applyHTTPBaselineHeaders(rec, req, false)
+		if rec.Header().Get("Strict-Transport-Security") == "" {
+			t.Fatal("r.TLS != nil should emit HSTS regardless of behindHTTPSProxy")
+		}
+	})
 }
 
 // TestAddSessionToInitializeResult covers both branches: a map result gets a

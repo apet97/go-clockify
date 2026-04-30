@@ -96,6 +96,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	server.MaxInFlightToolCalls = deps.cfg.MaxInFlightToolCalls
 	server.MaxMessageSize = deps.cfg.MaxMessageSize
 	server.StrictHostCheck = deps.cfg.StrictHostCheck
+	server.BehindHTTPSProxy = deps.cfg.BehindHTTPSProxy
 	// SanitizeUpstreamErrors must be set centrally so every transport
 	// (stdio, legacy_http, streamable_http session, grpc) honours
 	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1 — pre-fix only legacy_http

@@ -32,14 +32,19 @@ type Config struct {
 	Profile string
 
 	// MCP transport
-	Transport          string
-	AuthMode           string
-	HTTPBind           string
-	GRPCBind           string
-	BearerToken        string
-	AllowedOrigins     []string
-	AllowAnyOrigin     bool
-	StrictHostCheck    bool
+	Transport       string
+	AuthMode        string
+	HTTPBind        string
+	GRPCBind        string
+	BearerToken     string
+	AllowedOrigins  []string
+	AllowAnyOrigin  bool
+	StrictHostCheck bool
+	// BehindHTTPSProxy lets the HTTP transports emit
+	// Strict-Transport-Security on plaintext responses because a
+	// trusted upstream proxy is terminating TLS for us. Wired from
+	// MCP_BEHIND_HTTPS_PROXY=1.
+	BehindHTTPSProxy   bool
 	MaxMessageSize     int64
 	MetricsBind        string
 	MetricsAuthMode    string
@@ -546,6 +551,7 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.StrictHostCheck = strictHostCheck
+	cfg.BehindHTTPSProxy = os.Getenv("MCP_BEHIND_HTTPS_PROXY") == "1"
 
 	// Strict host check + empty allowlist on a non-loopback bind would
 	// reject every request — isHostAllowed admits only loopback hosts

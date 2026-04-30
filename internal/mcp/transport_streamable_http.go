@@ -89,6 +89,13 @@ type StreamableHTTPOptions struct {
 	// certificate required". When nil, the listener serves plain HTTP
 	// (the long-standing default for this transport).
 	TLSConfig *tls.Config
+	// BehindHTTPSProxy, when true, lets the baseline-header middleware
+	// emit Strict-Transport-Security on plaintext responses because a
+	// trusted upstream proxy is terminating TLS for us. Without TLS in
+	// front of the listener and without this flag, HSTS is skipped to
+	// avoid making honest http:// URLs unreachable on misconfigured
+	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
+	BehindHTTPSProxy bool
 }
 
 type streamSession struct {
@@ -239,7 +246,7 @@ func applyOriginPolicy(w http.ResponseWriter, r *http.Request, opts StreamableHT
 
 func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		applyHTTPBaselineHeaders(w)
+		applyHTTPBaselineHeaders(w, r, opts.BehindHTTPSProxy)
 		if opts.StrictHostCheck && !isHostAllowed(r.Host, opts.AllowedOrigins, opts.AllowAnyOrigin) {
 			writeJSONError(w, http.StatusForbidden, "host not allowed")
 			return
@@ -343,7 +350,7 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 
 func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		applyHTTPBaselineHeaders(w)
+		applyHTTPBaselineHeaders(w, r, opts.BehindHTTPSProxy)
 		if opts.StrictHostCheck && !isHostAllowed(r.Host, opts.AllowedOrigins, opts.AllowAnyOrigin) {
 			writeJSONError(w, http.StatusForbidden, "host not allowed")
 			return
@@ -436,10 +443,20 @@ func validateProtocolVersion(r *http.Request, session *streamSession) error {
 	return nil
 }
 
-func applyHTTPBaselineHeaders(w http.ResponseWriter) {
+// applyHTTPBaselineHeaders writes the static security headers all
+// streamable-HTTP responses share. HSTS is conditional: per
+// ChatGPT's audit, advertising Strict-Transport-Security on a
+// plaintext response makes honest http:// URLs unreachable for
+// clients that cache it (browsers in particular). Emit only when
+// the connection actually carries TLS (r.TLS != nil) or when the
+// operator has declared a trusted HTTPS-terminating proxy in front
+// of us via MCP_BEHIND_HTTPS_PROXY=1.
+func applyHTTPBaselineHeaders(w http.ResponseWriter, r *http.Request, behindHTTPSProxy bool) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	if r != nil && (r.TLS != nil || behindHTTPSProxy) {
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	}
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Referrer-Policy", "no-referrer")

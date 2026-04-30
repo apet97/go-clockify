@@ -212,6 +212,14 @@ type Server struct {
 	// production deployments to get the strict guarantee.
 	StrictHostCheck bool
 
+	// BehindHTTPSProxy lets the baseline-header middleware emit
+	// Strict-Transport-Security on plaintext responses because a
+	// trusted upstream proxy is terminating TLS for us. Without TLS
+	// in front of the listener and without this flag, HSTS is skipped
+	// to avoid making honest http:// URLs unreachable on misconfigured
+	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
+	BehindHTTPSProxy bool
+
 	// ExtraHTTPHandlers carries optional handlers that the legacy HTTP
 	// transport mounts on its mux before ListenAndServe. Used by the
 	// -tags=pprof build in cmd/clockify-mcp/ to attach /debug/pprof/*
