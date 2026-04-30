@@ -93,6 +93,14 @@ repo-hygiene:
 #     called from the CI `governance-parity` step. ~13 require/forbid
 #     assertions across two markdown docs; awk-extracted current-state
 #     section is the trickiest branch.
+#   - check-release-assets.sh — fails when goreleaser's dist/ does not
+#     contain the expected 46 release artifacts (5 default + 4 fips +
+#     2 postgres + 2 grpc + 2 grpc-postgres binaries × 3 file shapes
+#     + SHA256SUMS.txt). v0.7.0 silently shipped 19 instead of 28; the
+#     gate exists to fail closed before the release workflow uploads,
+#     and the test pins missing-asset detection plus the cardinality
+#     regex shape. Bash 4+ only (gate uses declare -A); the test
+#     skips with a clear note on bash 3.2.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
@@ -100,6 +108,7 @@ script-tests:
 	bash scripts/test-check-doc-parity.sh
 	bash scripts/test-check-repo-hygiene.sh
 	bash scripts/test-check-governance-parity.sh
+	bash scripts/test-check-release-assets.sh
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u

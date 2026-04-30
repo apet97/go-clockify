@@ -227,7 +227,7 @@ jobs:
   repo-hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
-    # Hard ceiling: pure bash/awk gates plus six contract tests,
+    # Hard ceiling: pure bash/awk gates plus seven contract tests,
     # 10-20s combined; 5m absorbs runner variance.
     timeout-minutes: 5
     steps:
@@ -301,6 +301,18 @@ jobs:
         # writes a tmpdir baseline and mutates one file; static
         # input, no event data.
         run: bash scripts/test-check-governance-parity.sh
+      - name: Verify release-assets gate contract
+        # Same playbook as the six peer tests above. Guards
+        # scripts/check-release-assets.sh, the post-goreleaser gate
+        # added after v0.7.0 silently shipped with all nine SBOMs
+        # missing. The gate enumerates the exact 46-asset matrix
+        # from .goreleaser.yaml; missing files (Pass 1) and unexpected
+        # extras (Pass 2 cardinality regex) both fail closed. The
+        # test exercises the find-fallback path, the jq path (when
+        # jq is available — runner image always ships it), and the
+        # exit-2 directory-absent surface. Static input, no event
+        # data.
+        run: bash scripts/test-check-release-assets.sh
 
   shellcheck:
     name: Shellcheck
