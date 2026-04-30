@@ -572,6 +572,12 @@ var (
 	ProtocolErrorsTotal *Counter
 	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
 	PanicsRecoveredTotal *Counter
+	// ClockifyResponsesOversizeTotal counts upstream Clockify responses
+	// rejected because the body exceeded the client's hard cap. Lets
+	// operators detect adversarial / misconfigured upstreams that
+	// emit responses large enough to threaten OOM. Labelled by the
+	// HTTP method so a single offending endpoint stands out.
+	ClockifyResponsesOversizeTotal *Counter
 	// GRPCAuthRejectionsTotal counts gRPC auth interceptor rejections by reason.
 	GRPCAuthRejectionsTotal *Counter
 	// AuditEventsTotal counts audit-record attempts (all non-read-only calls).
@@ -676,6 +682,11 @@ func init() {
 		"clockify_mcp_panics_recovered_total",
 		"Panics recovered from tool handlers or HTTP handlers by site.",
 		"site",
+	)
+	ClockifyResponsesOversizeTotal = Default.NewCounter(
+		"clockify_mcp_responses_oversize_total",
+		"Upstream Clockify responses rejected because the body exceeded the client cap.",
+		"method",
 	)
 	GRPCAuthRejectionsTotal = Default.NewCounter(
 		"clockify_mcp_grpc_auth_rejections_total",

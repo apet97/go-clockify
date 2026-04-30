@@ -281,8 +281,14 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		// Read error body (limited to 64KB) before any other reads.
 		errorReader := io.LimitReader(resp.Body, 64*1024)
 		bodyBytes, _ := io.ReadAll(errorReader)
-		// Drain remaining body to allow connection reuse.
-		_, _ = io.Copy(io.Discard, resp.Body)
+		// Bound the connection-reuse drain. The previous unbounded
+		// io.Copy(io.Discard, resp.Body) would pull a multi-GB error
+		// body off the wire just to keep the keepalive connection
+		// usable — wasted bytes a misconfigured upstream could
+		// weaponise. 1 MiB is well past anything Clockify legitimately
+		// returns on an error path; beyond that, throw the connection
+		// away rather than copy.
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 
 		var retryAfter time.Duration
 		if ra := resp.Header.Get("Retry-After"); ra != "" {
@@ -310,12 +316,30 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	// Read the body into a pooled buffer, then unmarshal. Using
 	// json.NewDecoder here would allocate fresh internal scan state
 	// on every call; io.Copy into a reused buffer is cheaper for the
-	// small-response case that dominates tool traffic. The body size
-	// is still bounded by io.LimitReader(maxResponseBody).
+	// small-response case that dominates tool traffic.
+	//
+	// LimitReader is sized at maxResponseBody+1 so that a body
+	// exceeding the cap surfaces as a clear "response too large"
+	// error rather than silently truncating into a generic JSON
+	// parse failure (the previous behaviour). ChatGPT's audit
+	// flagged this as a defensive correctness gap: a truncated
+	// upstream response is a different operator concern than a
+	// genuinely malformed one, and operators couldn't distinguish
+	// them.
 	respBuf := getBodyBuf()
 	defer putBodyBuf(respBuf)
-	if _, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody)); err != nil {
+	n, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody+1))
+	if err != nil {
 		return err
+	}
+	if n > maxResponseBody {
+		metrics.ClockifyResponsesOversizeTotal.Inc(method)
+		// Drain whatever is left so the connection can be reused
+		// (bounded). The 1 MiB ceiling on the drain mirrors the
+		// error-path drain — past that, we throw the connection
+		// away.
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
 	}
 	return json.Unmarshal(respBuf.Bytes(), out)
 }

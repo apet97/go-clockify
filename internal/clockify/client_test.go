@@ -593,3 +593,83 @@ func TestConcurrentPutsShareBufPoolSafely(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// TestClientOversizeResponseReturnsClearError locks the contract
+// added by ChatGPT's oversized-response audit: when the upstream
+// emits a body larger than maxResponseBody, the client returns a
+// purpose-built "response too large" error rather than letting
+// json.Unmarshal fail on a silently truncated payload. Operators
+// can distinguish a truncated upstream from a genuinely malformed
+// one — they need different follow-up actions.
+func TestClientOversizeResponseReturnsClearError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Emit an obviously-valid-JSON-but-too-large body. The
+		// excess just past maxResponseBody is the boundary the
+		// client now rejects; the request handler tops it off
+		// with garbage so the truncated read would still parse
+		// successfully (proving the size check, not parse luck).
+		_, _ = w.Write([]byte(`{"items":["`))
+		_, _ = w.Write(make([]byte, maxResponseBody))
+		_, _ = w.Write([]byte(`"]}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	defer c.Close()
+
+	var out map[string]any
+	err := c.Get(context.Background(), "/items", nil, &out)
+	if err == nil {
+		t.Fatal("expected oversize error, got nil")
+	}
+	if got := err.Error(); !contains(got, "response too large") {
+		t.Fatalf("expected error to mention 'response too large', got: %v", err)
+	}
+	if got := err.Error(); !contains(got, "method=GET") {
+		t.Fatalf("expected error to include method label, got: %v", err)
+	}
+}
+
+// TestClientUnderLimitResponseStillSucceeds is the symmetric
+// guardrail: a body just under the cap must still parse cleanly,
+// otherwise we'd push the boundary too low and break legitimate
+// large reports.
+func TestClientUnderLimitResponseStillSucceeds(t *testing.T) {
+	// Build a JSON payload that is large but well under the cap.
+	const padSize = 1 * 1024 * 1024 // 1 MiB
+	pad := make([]byte, padSize)
+	for i := range pad {
+		pad[i] = 'a'
+	}
+	body := append([]byte(`{"pad":"`), pad...)
+	body = append(body, []byte(`"}`)...)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	defer c.Close()
+
+	var out map[string]any
+	if err := c.Get(context.Background(), "/items", nil, &out); err != nil {
+		t.Fatalf("unexpected error for under-limit response: %v", err)
+	}
+	if got, _ := out["pad"].(string); len(got) != padSize {
+		t.Fatalf("pad length = %d, want %d", len(got), padSize)
+	}
+}
+
+// contains is a tiny strings.Contains shim so this file doesn't
+// need to import strings just for two test sites.
+func contains(haystack, needle string) bool {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return true
+		}
+	}
+	return false
+}
