@@ -227,7 +227,15 @@ BENCH_PKGS ?= ./internal/...
 
 bench:
 	@mkdir -p $(dir $(BENCH_OUT))
-	go test -run=^$$ -bench=. -benchmem -count=5 $(BENCH_PKGS) | tee $(BENCH_OUT)
+	@raw="$$(mktemp "$${TMPDIR:-/tmp}/clockify-bench.XXXXXX")"; \
+	 trap 'rm -f "$$raw"' EXIT; \
+	 if ! go test -run=^$$ -bench=. -benchmem -count=5 $(BENCH_PKGS) > "$$raw" 2>&1; then \
+	   cat "$$raw"; \
+	   exit 1; \
+	 fi; \
+	 grep -E '^(goos|goarch|pkg|cpu|PASS|ok|Benchmark[A-Za-z_0-9]+-[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9.]+[[:space:]]+ns/op)' "$$raw" | tee "$(BENCH_OUT)"; \
+	 echo "benchmarks collected:"; \
+	 grep -c '^Benchmark' "$(BENCH_OUT)" || true
 
 verify-bench: bench
 	@if [ ! -f $(BENCH_BASELINE) ]; then \
