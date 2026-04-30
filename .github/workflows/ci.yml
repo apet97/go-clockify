@@ -227,7 +227,7 @@ jobs:
   repo-hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
-    # Hard ceiling: pure bash/awk gates plus five contract tests,
+    # Hard ceiling: pure bash/awk gates plus six contract tests,
     # 10-20s combined; 5m absorbs runner variance.
     timeout-minutes: 5
     steps:
@@ -290,6 +290,17 @@ jobs:
         # throwaway git repo in a tmpdir; static input, no event
         # data.
         run: bash scripts/test-check-repo-hygiene.sh
+      - name: Verify governance-parity gate contract
+        # Same playbook as the five peer tests above. Guards
+        # scripts/check-governance-parity.sh, which fails when
+        # GOVERNANCE.md claims controls that docs/branch-protection.md
+        # says are not enforced. ~13 require/forbid assertions across
+        # two markdown docs; the awk-extracted current-state section
+        # plus the case-insensitive forbid patterns are the
+        # silent-no-op surfaces a contract test must lock. Each case
+        # writes a tmpdir baseline and mutates one file; static
+        # input, no event data.
+        run: bash scripts/test-check-governance-parity.sh
 
   shellcheck:
     name: Shellcheck
