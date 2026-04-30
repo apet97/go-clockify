@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"math"
 	"testing"
 )
 
@@ -11,8 +12,8 @@ import (
 // concurrency semaphore + per-subject map lookup + per-subject window
 // check — the full happy path for an authenticated production call.
 func BenchmarkAcquireForSubjectSteady(b *testing.B) {
-	rl := New(10000, 1000000, 60000)
-	rl.SetPerTokenLimits(1000, 100000)
+	rl := New(10000, math.MaxInt64, 60000)
+	rl.SetPerTokenLimits(1000, math.MaxInt64)
 	const subject = "bench-subject"
 	ctx := context.Background()
 
@@ -33,7 +34,7 @@ func BenchmarkAcquireForSubjectSteady(b *testing.B) {
 // (empty subject → per-token sub-layer skipped). This is the floor
 // cost of the limiter and the baseline for measuring per-token overhead.
 func BenchmarkAcquireForSubjectNoPerToken(b *testing.B) {
-	rl := New(10000, 1000000, 60000)
+	rl := New(10000, math.MaxInt64, 60000)
 	ctx := context.Background()
 
 	b.ReportAllocs()
@@ -54,7 +55,7 @@ func BenchmarkAcquireForSubjectNoPerToken(b *testing.B) {
 // BenchmarkAcquireForSubjectNoPerToken to attribute the subject-branch
 // overhead.
 func BenchmarkAcquireGlobal(b *testing.B) {
-	rl := New(10000, 1000000, 60000)
+	rl := New(10000, math.MaxInt64, 60000)
 	ctx := context.Background()
 
 	b.ReportAllocs()
