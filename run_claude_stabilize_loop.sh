@@ -22,6 +22,9 @@
 
 set -euo pipefail
 
+export GIT_PAGER=cat
+export PAGER=cat
+
 # ---- Config -----------------------------------------------------------------
 
 MAX_PASSES="${MAX_PASSES:-3}"
@@ -408,7 +411,7 @@ echo "== Loop finished                                             "
 echo "============================================================"
 echo "Branch:     $(git rev-parse --abbrev-ref HEAD)"
 echo "Recent commits:"
-git log --oneline -5
+git --no-pager log --oneline -5
 echo
 echo "Working tree status:"
 git status
