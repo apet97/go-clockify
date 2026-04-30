@@ -166,9 +166,16 @@ var hostedProfiles = map[string]bool{
 	"prod-postgres":  true,
 }
 
-// isHostedProfile reports whether the given profile name is one of the
-// hosted profiles whose strict gates apply.
-func isHostedProfile(name string) bool { return hostedProfiles[name] }
+// IsHostedProfile reports whether the given profile name is one of the
+// hosted profiles whose strict gates apply (currently shared-service
+// and prod-postgres). Exported so packages outside config (runtime,
+// authn) can take the same posture decision without re-implementing
+// the registry.
+func IsHostedProfile(name string) bool { return hostedProfiles[name] }
+
+// isHostedProfile is the legacy unexported alias kept for the existing
+// internal callers; new code should call IsHostedProfile.
+func isHostedProfile(name string) bool { return IsHostedProfile(name) }
 
 // applyProfile materialises the named profile's defaults into the
 // process environment for any currently-unset key. Called exactly once

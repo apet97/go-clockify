@@ -35,6 +35,49 @@ func TestValidateBaseURL(t *testing.T) {
 	}
 }
 
+func TestValidateBaseURL_HostedRejectsHTTP(t *testing.T) {
+	// Hosted mode must refuse plain http even when the host is remote
+	// — same posture as the env-level guardrail in Load().
+	if err := ValidateBaseURL("http://example.com", ValidateBaseURLOptions{Hosted: true}); err == nil {
+		t.Fatal("expected error for http baseURL under hosted profile")
+	}
+}
+
+func TestValidateBaseURL_HostedRejectsLoopback(t *testing.T) {
+	// Hosted mode must refuse loopback http even though loopback is
+	// trusted in the self-hosted path. A tenant that smuggled
+	// http://localhost via control-plane credentials would otherwise
+	// be allowed to hairpin off-host through a sidecar proxy.
+	if err := ValidateBaseURL("http://localhost:8080", ValidateBaseURLOptions{Hosted: true}); err == nil {
+		t.Fatal("expected error for loopback http baseURL under hosted profile")
+	}
+}
+
+func TestValidateBaseURL_HostedIgnoresAllowInsecure(t *testing.T) {
+	// AllowInsecure is the operator-level CLOCKIFY_INSECURE escape;
+	// hosted mode ignores it so an inherited env var cannot defeat
+	// the production posture.
+	if err := ValidateBaseURL("http://example.com", ValidateBaseURLOptions{Hosted: true, AllowInsecure: true}); err == nil {
+		t.Fatal("expected error: hosted mode must not honor AllowInsecure")
+	}
+}
+
+func TestValidateBaseURL_NonHostedAllowsLoopback(t *testing.T) {
+	// Self-hosted path keeps the loopback bypass — Claude/Cursor/Codex
+	// stdio installs and local docker-compose stacks rely on it.
+	if err := ValidateBaseURL("http://127.0.0.1:8080", ValidateBaseURLOptions{}); err != nil {
+		t.Fatalf("unexpected error for loopback baseURL in non-hosted mode: %v", err)
+	}
+}
+
+func TestValidateBaseURL_NonHostedAllowsInsecure(t *testing.T) {
+	// AllowInsecure remains the documented operator escape hatch
+	// outside hosted profiles.
+	if err := ValidateBaseURL("http://example.com", ValidateBaseURLOptions{AllowInsecure: true}); err != nil {
+		t.Fatalf("unexpected error for insecure baseURL in non-hosted mode: %v", err)
+	}
+}
+
 // setEnvs is a test helper that sets multiple env vars and returns a cleanup function.
 func setEnvs(t *testing.T, envs map[string]string) {
 	t.Helper()

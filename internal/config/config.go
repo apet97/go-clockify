@@ -24,6 +24,13 @@ type Config struct {
 	Insecure       bool
 	Timezone       string
 
+	// Profile is the resolved value of MCP_PROFILE for this load cycle
+	// (empty when unset). Surfaces the deployment posture to packages
+	// outside config (e.g. runtime/tenantRuntime, which needs to know
+	// whether hosted-mode validation should apply to per-tenant
+	// baseURLs). Read-only after Load; do not mutate.
+	Profile string
+
 	// MCP transport
 	Transport          string
 	AuthMode           string
@@ -222,6 +229,7 @@ func Load() (Config, error) {
 		WorkspaceID: os.Getenv("CLOCKIFY_WORKSPACE_ID"),
 		BaseURL:     strings.TrimRight(os.Getenv("CLOCKIFY_BASE_URL"), "/"),
 		Insecure:    os.Getenv("CLOCKIFY_INSECURE") == "1",
+		Profile:     profileName,
 	}
 	// Hosted-profile guardrail: a multi-tenant deployment that points at a
 	// remote HTTP endpoint with TLS off is almost certainly a misconfiguration
@@ -277,7 +285,10 @@ func Load() (Config, error) {
 				"(profile bootstraps the default tenant from the env API key)")
 	}
 	if cfg.APIKey != "" {
-		if err := validateBaseURL(cfg.BaseURL, cfg.Insecure); err != nil {
+		if err := ValidateBaseURL(cfg.BaseURL, ValidateBaseURLOptions{
+			Hosted:        IsHostedProfile(profileName),
+			AllowInsecure: cfg.Insecure,
+		}); err != nil {
 			return Config{}, err
 		}
 	}
@@ -800,7 +811,26 @@ func (c Config) Fingerprint() map[string]any {
 	}
 }
 
-func validateBaseURL(raw string, insecure bool) error {
+// ValidateBaseURLOptions controls how ValidateBaseURL interprets a
+// candidate Clockify API URL. Hosted reflects whether the deployment
+// is one of the multi-tenant profiles (shared-service, prod-postgres);
+// hosted mode demands HTTPS unconditionally — no loopback bypass and
+// no CLOCKIFY_INSECURE escape — so a tenant that supplies an http://
+// or loopback baseURL via control-plane credentials cannot smuggle
+// cleartext traffic through a production gateway. AllowInsecure
+// honours the operator's CLOCKIFY_INSECURE flag for self-hosted
+// deployments where the operator owns both ends of the wire.
+type ValidateBaseURLOptions struct {
+	Hosted        bool
+	AllowInsecure bool
+}
+
+// ValidateBaseURL enforces the URL-safety contract for Clockify base
+// URLs across config-load and per-tenant credential resolution. Same
+// behaviour for self-hosted profiles as the historical helper; hosted
+// profiles refuse anything that isn't HTTPS regardless of loopback or
+// the insecure escape hatch.
+func ValidateBaseURL(raw string, opts ValidateBaseURLOptions) error {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: %w", err)
@@ -814,10 +844,20 @@ func validateBaseURL(raw string, insecure bool) error {
 	if u.Scheme != "http" {
 		return fmt.Errorf("unsupported CLOCKIFY_BASE_URL scheme: %s", u.Scheme)
 	}
-	if isLoopbackHost(u.Hostname()) || insecure {
+	if opts.Hosted {
+		return fmt.Errorf("CLOCKIFY_BASE_URL must use https under a hosted profile (no loopback or insecure bypass)")
+	}
+	if isLoopbackHost(u.Hostname()) || opts.AllowInsecure {
 		return nil
 	}
 	return fmt.Errorf("insecure CLOCKIFY_BASE_URL requires loopback host or CLOCKIFY_INSECURE=1")
+}
+
+// validateBaseURL preserves the legacy two-arg signature used by the
+// pre-export call sites and tests; new code should call
+// ValidateBaseURL with explicit options.
+func validateBaseURL(raw string, insecure bool) error {
+	return ValidateBaseURL(raw, ValidateBaseURLOptions{AllowInsecure: insecure})
 }
 
 func isLoopbackHost(host string) bool {
