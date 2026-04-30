@@ -43,3 +43,21 @@ MCP_PROFILE                        — invocation-time selector for the five
                                      operators who do want a profile add it
                                      via values.extraEnv (same pattern as
                                      ENVIRONMENT above). See ADR-0015.
+MCP_FORWARD_AUTH_TRUSTED_PROXIES   — security gate added 2026-04-30 per
+                                     ChatGPT audit. Defaults to empty (legacy
+                                     trust-everything posture for self-hosted
+                                     installs). Hosted profiles + doctor
+                                     --strict refuse to start without it,
+                                     so operators add it to values.extraEnv
+                                     when wiring forward_auth behind a known
+                                     proxy. Pattern matches MCP_PROFILE /
+                                     ENVIRONMENT — operator-supplied at
+                                     deploy time, not a templated default.
+MCP_BEHIND_HTTPS_PROXY             — security gate added 2026-04-30 per
+                                     ChatGPT audit. Default 0 keeps HSTS off
+                                     on plaintext responses. Operators behind
+                                     an HTTPS-terminating proxy set =1 via
+                                     values.extraEnv. Templating a default
+                                     here would silently flip on HSTS for
+                                     every Helm install regardless of
+                                     ingress posture.
