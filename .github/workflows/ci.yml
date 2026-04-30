@@ -13,6 +13,9 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
+    # Hard ceiling: gofmt scan + diff is seconds; 5m absorbs cold-cache
+    # setup-go without letting a stuck step monopolise the runner.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -31,6 +34,9 @@ jobs:
   vet:
     name: Vet
     runs-on: ubuntu-latest
+    # Hard ceiling: go vet is pure AST analysis, seconds; 5m absorbs
+    # cold-cache setup-go.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -41,6 +47,10 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    # Hard ceiling: golangci-lint v2.5.0 typically runs 10-30s warm,
+    # but the action pulls a sizeable tool on cold cache; 10m leaves
+    # headroom without letting a hung analyser monopolise the runner.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -53,6 +63,9 @@ jobs:
   vulncheck:
     name: Vulncheck
     runs-on: ubuntu-latest
+    # Hard ceiling: govulncheck install + scan is 20-60s warm; 10m
+    # leaves headroom for cold module downloads.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -75,6 +88,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    # Hard ceiling: compile-only across 4 build-tag combos is 10-20s;
+    # 5m leaves headroom for cold-cache go install.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -88,6 +104,11 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    # Hard ceiling: full race suite typically completes in 1-2min and
+    # the inner -timeout 120s caps an individual hang; 10m bounds the
+    # whole job in case the runner stalls before the inner timeout
+    # fires.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -98,6 +119,10 @@ jobs:
   test-grpc:
     name: Test (gRPC tag)
     runs-on: ubuntu-latest
+    # Hard ceiling: -tags=grpc E2E typically completes in 2-3min and
+    # the inner -timeout 180s caps an individual hang; 10m bounds the
+    # whole job.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -123,6 +148,9 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    # Hard ceiling: re-runs the full suite under cover profile, 2-3min
+    # warm; 10m leaves headroom for cold-cache module downloads.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -171,6 +199,9 @@ jobs:
   config-doc-parity:
     name: Config doc parity
     runs-on: ubuntu-latest
+    # Hard ceiling: three static parity scripts, 10-30s combined;
+    # 5m absorbs cold-cache setup-go.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -196,6 +227,9 @@ jobs:
   repo-hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
+    # Hard ceiling: pure bash/awk gates plus four contract tests,
+    # 10-20s combined; 5m absorbs runner variance.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Check for tracked OS / editor / coverage junk
@@ -247,6 +281,9 @@ jobs:
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
+    # Hard ceiling: shellcheck over scripts/ is 5-10s; 5m absorbs
+    # action-fetch and runner variance.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run shellcheck on scripts/
@@ -263,6 +300,9 @@ jobs:
   actionlint:
     name: Actionlint
     runs-on: ubuntu-latest
+    # Hard ceiling: go install + actionlint scan is 10-20s; 5m absorbs
+    # cold-cache module download for the pinned commit.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -283,6 +323,10 @@ jobs:
   deploy-render:
     name: Deploy render (k8s + helm)
     runs-on: ubuntu-latest
+    # Hard ceiling: kubeconform install + kustomize/helm render is
+    # 20-60s warm; 10m leaves headroom for cold-cache helm fetch
+    # without letting a hung renderer monopolise the runner.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -298,6 +342,10 @@ jobs:
   test-http:
     name: Test (HTTP smoke)
     runs-on: ubuntu-latest
+    # Hard ceiling: build + HTTP/stdio probes typically complete in
+    # 20-60s; 10m leaves headroom for cold-cache go build without
+    # letting a hung probe monopolise the runner.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -325,6 +373,9 @@ jobs:
     # Authorization metadata. The build-tag matrix is compile-only;
     # the remaining risk after that is behavioural, so this is its
     # own job rather than hiding inside `test`.
+    # Hard ceiling: build + gRPC mTLS regression smoke is 20-30s
+    # warm; 10m leaves headroom for cold-cache module downloads.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -336,6 +387,9 @@ jobs:
   doctor-strict:
     name: Doctor strict smoke
     runs-on: ubuntu-latest
+    # Hard ceiling: offline synthetic env smoke is 10-20s; 5m absorbs
+    # cold-cache setup-go and runner variance.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
