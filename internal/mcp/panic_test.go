@@ -1,6 +1,9 @@
 package mcp
 
 import (
+	"context"
+	"encoding/json"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -80,6 +83,93 @@ func TestRecoverDispatch_NilSink(t *testing.T) {
 		defer RecoverDispatch("req-1", "test_site", "tool", nil)
 		panic("boom")
 	}()
+}
+
+// TestHandleWithRecover_ReturnsStableEnvelopeOnPanic locks the
+// streamable-HTTP / gRPC recovery path: a panicking tool routed
+// through HandleWithRecover must produce the same JSON-RPC tool-
+// error envelope stdio has emitted since the original wave. The
+// streamable HTTP dispatch handler calls this method directly at
+// transport_streamable_http.go:319 — without the named-return
+// recovery wrapper, the panic would propagate to the http.Handler
+// boundary and surface as a 500 with no JSON-RPC framing.
+func TestHandleWithRecover_ReturnsStableEnvelopeOnPanic(t *testing.T) {
+	const fakeSecret = "sk-handle-with-recover-12345"
+	srv := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "panicker", Description: "panics with a secret-shaped string"},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			panic("upstream failure containing " + fakeSecret)
+		},
+	}}, nil, nil)
+	srv.initialized.Store(true)
+
+	resp := srv.HandleWithRecover(context.Background(), Request{
+		JSONRPC: "2.0",
+		ID:      99,
+		Method:  "tools/call",
+		Params:  map[string]any{"name": "panicker", "arguments": map[string]any{}},
+	}, "test_site")
+
+	if resp.JSONRPC != "2.0" {
+		t.Errorf("JSONRPC = %q", resp.JSONRPC)
+	}
+	if id, ok := resp.ID.(int); !ok || id != 99 {
+		t.Errorf("ID = %v (%T), want int 99", resp.ID, resp.ID)
+	}
+	result, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("Result is not map[string]any: %T", resp.Result)
+	}
+	if result["isError"] != true {
+		t.Errorf("isError = %v, want true", result["isError"])
+	}
+	content, ok := result["content"].([]map[string]any)
+	if !ok {
+		t.Fatalf("content not []map[string]any: %T", result["content"])
+	}
+	if len(content) != 1 || content[0]["text"] != "internal tool error; request logged" {
+		t.Errorf("content text = %v, want generic helper text", content)
+	}
+	// Marshal+stringify the entire response and confirm the panic
+	// value did not leak.
+	full, _ := jsonMarshalForTest(resp)
+	if strings.Contains(full, fakeSecret) {
+		t.Fatalf("panic value leaked through HandleWithRecover envelope: %s", full)
+	}
+}
+
+// jsonMarshalForTest is a tiny helper used by recovery tests so
+// they can stringify a Response for substring checks.
+func jsonMarshalForTest(r Response) (string, error) {
+	b, err := json.Marshal(r)
+	return string(b), err
+}
+
+// TestHandleWithRecover_PassthroughWhenNoPanic verifies the wrapper
+// is transparent when the handler returns normally — no spurious
+// envelope, ID/Result preserved.
+func TestHandleWithRecover_PassthroughWhenNoPanic(t *testing.T) {
+	srv := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "echo", Description: "returns ok"},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			return map[string]string{"status": "ok"}, nil
+		},
+	}}, nil, nil)
+	srv.initialized.Store(true)
+
+	resp := srv.HandleWithRecover(context.Background(), Request{
+		JSONRPC: "2.0",
+		ID:      7,
+		Method:  "tools/call",
+		Params:  map[string]any{"name": "echo", "arguments": map[string]any{}},
+	}, "test_site")
+
+	if id, ok := resp.ID.(int); !ok || id != 7 {
+		t.Fatalf("ID = %v, want 7", resp.ID)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected RPC error: %+v", resp.Error)
+	}
 }
 
 // TestRecoverDispatch_ConcurrentSafety smokes the helper under

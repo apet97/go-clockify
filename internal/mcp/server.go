@@ -601,6 +601,28 @@ func (s *Server) writeResponse(resp Response) error {
 	return s.encoder.Encode(resp)
 }
 
+// HandleWithRecover invokes handle with structured panic recovery.
+// Used by transports whose dispatch goroutines do not own a higher-
+// level recovery wrapper (streamable HTTP, gRPC) — stdio's loop has
+// its own RecoverDispatch deferred at the goroutine boundary in Run.
+//
+// site is the metric/log label that lets operators distinguish where
+// a panic originated. Returns the stable JSON-RPC tool-error response
+// when a panic was recovered; otherwise the handler's normal Response.
+//
+// Why a named-return wrapper: recover() only sees the panic when
+// called by the deferred function directly; the sink callback then
+// writes the panic envelope into the named return variable so the
+// caller observes the structured response rather than the zero
+// value. RecoverDispatch handles metric increment + slog event.
+func (s *Server) HandleWithRecover(ctx context.Context, req Request, site string) (resp Response) {
+	defer RecoverDispatch(req.ID, site, toolNameFromRequest(req), func(r Response) {
+		resp = r
+	})
+	resp = s.handle(ctx, req)
+	return
+}
+
 func (s *Server) handle(ctx context.Context, req Request) Response {
 	resp := Response{JSONRPC: "2.0", ID: req.ID}
 

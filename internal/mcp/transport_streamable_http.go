@@ -316,7 +316,12 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		if req.Method != "initialize" {
 			mgr.touch(session.id)
 		}
-		resp := session.server.handle(r.Context(), req)
+		// HandleWithRecover wraps handle with structured panic
+		// recovery so a crashing tool handler returns a stable
+		// JSON-RPC tool-error envelope instead of taking the
+		// connection down at the http.Server boundary. Same shape
+		// emitted by stdio + gRPC for cross-transport parity.
+		resp := session.server.HandleWithRecover(r.Context(), req, "streamable_http_dispatch")
 		if req.ID == nil {
 			w.WriteHeader(http.StatusAccepted)
 			return
