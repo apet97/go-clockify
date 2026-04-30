@@ -699,6 +699,15 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// RFC 7517 §4.5: kid MUST be unique within a JWKS. A
+		// duplicate is silent loss — last-write-wins would mask a
+		// legitimate key without raising any error and surface only
+		// later as a confusing crypto verification failure attributed
+		// to the wrong kid. Fail closed instead, leaving c.keys / c.expires
+		// untouched so the next reload pays a fresh round trip.
+		if _, dup := keys[key.KID]; dup {
+			return fmt.Errorf("jwks document has duplicate kid %q", key.KID)
+		}
 		keys[key.KID] = pub
 	}
 	c.keys = keys
