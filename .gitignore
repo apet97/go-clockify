@@ -33,3 +33,6 @@ desktop.ini
 CLAUDE.md
 AGENTS.md
 .claude-loop/
+
+*.test
+*.exe

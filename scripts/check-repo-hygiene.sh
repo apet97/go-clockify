@@ -13,6 +13,7 @@
 #   *.swp / *.swo / *~                  — editor swap/backup files
 #   *.orig                              — merge leftovers
 #   coverage.out / *.prof                — build/profile artefacts
+#   *.test / *.exe                      — compiled Go test binaries and Windows executables
 #
 # Usage:
 #   bash scripts/check-repo-hygiene.sh
@@ -27,7 +28,7 @@ set -euo pipefail
 
 echo "== repo-hygiene =="
 
-pattern='(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini|coverage\.out)$|\.(swp|swo|orig|prof)$|~$'
+pattern='(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini|coverage\.out)$|\.(swp|swo|orig|prof|test|exe)$|~$'
 
 offenders=$(git ls-files | grep -E "$pattern" || true)
 

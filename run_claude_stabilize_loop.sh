@@ -10,6 +10,7 @@
 #   MAX_PASSES=1 ./run_claude_stabilize_loop.sh
 #   MAX_PASSES=3 ./run_claude_stabilize_loop.sh
 #   MAX_PASSES=3 AUTO_PUSH=1 ./run_claude_stabilize_loop.sh
+#   MAX_PASSES=1 AUTO_PUSH=1 WATCH_CHECKS=1 PR_NUMBER=48 RUN_FINAL_REVIEW=0 ./run_claude_stabilize_loop.sh
 #
 # Env knobs (with defaults):
 #   MAX_PASSES=3
@@ -19,6 +20,9 @@
 #   AUTO_PUSH=0
 #   CLAUDE_TIMEOUT_SECONDS=1800
 #   LOG_DIR=.claude-loop
+#   RUN_FINAL_REVIEW=0
+#   WATCH_CHECKS=0
+#   PR_NUMBER=
 
 set -euo pipefail
 
