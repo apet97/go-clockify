@@ -9,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -485,40 +484,17 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 						defer func() { <-s.toolCallSem }()
 					}
 					// Panic recovery: a crashing tool handler must not
-					// take down the whole stdio loop. Emit a structured
-					// panic event and surface a tool-error to the client.
-					defer func() {
-						if rec := recover(); rec != nil {
-							metrics.PanicsRecoveredTotal.Inc("stdio_tool_dispatch")
-							stack := string(debug.Stack())
-							slog.Error("panic_recovered",
-								"site", "stdio_tool_dispatch",
-								"tool", toolNameFromRequest(r),
-								"panic", fmt.Sprintf("%v", rec),
-								"stack", stack,
-							)
-							// Generic message — full panic value and stack are
-							// already in the slog event above. Returning the
-							// raw recovered value to the client risks leaking
-							// internal state, request data, or upstream error
-							// strings; the client gets a stable identifier
-							// instead.
-							panicResp := Response{
-								JSONRPC: "2.0",
-								ID:      r.ID,
-								Result: map[string]any{
-									"content": []map[string]any{{
-										"type": "text",
-										"text": "internal tool error; request logged",
-									}},
-									"isError": true,
-								},
-							}
-							if err := s.writeResponse(panicResp); err != nil {
-								slog.Warn("async_response_failed", "error", err.Error())
-							}
+					// take down the whole stdio loop. RecoverDispatch
+					// emits a structured panic event and hands the
+					// stable JSON-RPC tool-error envelope to the sink
+					// for transport delivery. Same shape used by
+					// streamable HTTP and gRPC for cross-transport
+					// parity.
+					defer RecoverDispatch(r.ID, "stdio_tool_dispatch", toolNameFromRequest(r), func(resp Response) {
+						if err := s.writeResponse(resp); err != nil {
+							slog.Warn("async_response_failed", "error", err.Error())
 						}
-					}()
+					})
 					resp := s.handle(ctx, r)
 					if resp.Error != nil {
 						metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
