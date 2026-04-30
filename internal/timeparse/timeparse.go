@@ -87,27 +87,33 @@ func ParseDatetime(s string, loc *time.Location) (time.Time, error) {
 		return t.UTC(), nil
 	}
 
-	// 8. RFC3339
+	// 8. date-only fast path: "2006-01-02" is the only supported format of
+	// length 10.  RFC3339 needs ≥20 chars; all datetime-with-time layouts
+	// need ≥16.  Jumping straight to the date parse avoids one RFC3339 and
+	// four layout parse attempts — each failure allocates a *time.ParseError.
+	if len(s) == 10 {
+		if t, err := time.ParseInLocation("2006-01-02", s, loc); err == nil {
+			return t.UTC(), nil
+		}
+		return time.Time{}, fmt.Errorf("unrecognized datetime format: %q", s)
+	}
+
+	// 9. RFC3339
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t.UTC(), nil
 	}
 
-	// 9-12. datetime layouts without timezone
+	// 10-13. datetime layouts without timezone
 	layouts := []string{
-		"2006-01-02T15:04",    // 9
-		"2006-01-02 15:04",    // 10
-		"2006-01-02T15:04:05", // 11
-		"2006-01-02 15:04:05", // 12
+		"2006-01-02T15:04",    // 10
+		"2006-01-02 15:04",    // 11
+		"2006-01-02T15:04:05", // 12
+		"2006-01-02 15:04:05", // 13
 	}
 	for _, layout := range layouts {
 		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
 			return t.UTC(), nil
 		}
-	}
-
-	// 13. date only
-	if t, err := time.ParseInLocation("2006-01-02", s, loc); err == nil {
-		return t.UTC(), nil
 	}
 
 	// 14. give up

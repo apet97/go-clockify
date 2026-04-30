@@ -2,6 +2,7 @@ package enforcement
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/authn"
@@ -17,8 +18,8 @@ import (
 // production tools/call traverses when an OIDC principal is on the
 // context.
 func BenchmarkPipelineBeforeCall(b *testing.B) {
-	rl := ratelimit.New(10000, 1000000, 60000)
-	rl.SetPerTokenLimits(1000, 100000)
+	rl := ratelimit.New(10000, math.MaxInt64, 60000)
+	rl.SetPerTokenLimits(1000, math.MaxInt64)
 	p := &Pipeline{
 		Policy:    standardPolicy(),
 		RateLimit: rl,
@@ -46,7 +47,7 @@ func BenchmarkPipelineBeforeCall(b *testing.B) {
 // This is the stdio transport's hot path when no authenticator is
 // installed.
 func BenchmarkPipelineBeforeCallNoPrincipal(b *testing.B) {
-	rl := ratelimit.New(10000, 1000000, 60000)
+	rl := ratelimit.New(10000, math.MaxInt64, 60000)
 	p := &Pipeline{
 		Policy:    standardPolicy(),
 		RateLimit: rl,
