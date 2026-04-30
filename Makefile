@@ -76,10 +76,15 @@ repo-hygiene:
 #     (linux/amd64 only, matching package set, sample-count floor).
 #   - check-coverage.sh — enforces global + per-package coverage
 #     floors; called by both CI and `make cover-check`.
+#   - check-doc-parity.sh — keeps operator docs in sync with code
+#     (env-var content, tool-name catalog match, banned strings,
+#     README↔npm engines parity, dangling markers). Wired into
+#     `make verify-core` and the CI `config-doc-parity` job.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
 	bash scripts/test-check-coverage.sh
+	bash scripts/test-check-doc-parity.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool

@@ -230,6 +230,19 @@ jobs:
         # The test stubs `go` via PATH and exercises every exit
         # branch without running the real test suite.
         run: bash scripts/test-check-coverage.sh
+      - name: Verify doc-parity gate contract
+        # Same playbook as the three peer tests above. Guards
+        # scripts/check-doc-parity.sh, the release-blocking gate
+        # that keeps operator-facing docs in sync with code across
+        # five phases (env-var content, tool-name catalog match,
+        # banned strings, README<->npm engines parity, dangling
+        # markers). The gate is pure shell+grep+awk; a typo in any
+        # phase silently turns the gate into a no-op while still
+        # printing "doc-parity: OK". The test exercises every phase
+        # via per-case tmpdir fixtures; no `go` stub is needed
+        # because the gate itself shells out to nothing. Static
+        # input, no event data.
+        run: bash scripts/test-check-doc-parity.sh
 
   deploy-render:
     name: Deploy render (k8s + helm)
