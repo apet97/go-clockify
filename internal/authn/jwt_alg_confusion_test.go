@@ -69,7 +69,7 @@ func TestOIDCAuthenticator_RejectsHS256Token(t *testing.T) {
 	hb, _ := json.Marshal(header)
 	cb, _ := json.Marshal(claims)
 	signing := base64.RawURLEncoding.EncodeToString(hb) + "." + base64.RawURLEncoding.EncodeToString(cb)
-	mac := hmac.New(sha256.New, privKey.PublicKey.N.Bytes())
+	mac := hmac.New(sha256.New, privKey.N.Bytes())
 	_, _ = mac.Write([]byte(signing))
 	forged := signing + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
