@@ -24,6 +24,11 @@ import (
 // to prevent OOM on unexpectedly large or malicious responses.
 const maxResponseBody = 10 * 1024 * 1024 // 10 MB
 
+// responseDrainLimit caps best-effort connection-reuse drains once the caller
+// no longer needs the response body. Past this, close the connection instead
+// of pulling unbounded bytes from a bad upstream.
+const responseDrainLimit = 1 << 20 // 1 MiB
+
 // bodyBufPoolMaxCap caps the capacity of a bytes.Buffer we're willing
 // to return to the pool. A single oversized response would otherwise
 // pin a multi-MB allocation in the pool forever, which hurts working
@@ -288,7 +293,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		// weaponise. 1 MiB is well past anything Clockify legitimately
 		// returns on an error path; beyond that, throw the connection
 		// away rather than copy.
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 
 		var retryAfter time.Duration
 		if ra := resp.Header.Get("Retry-After"); ra != "" {
@@ -310,7 +315,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	}
 
 	if out == nil {
-		_, _ = io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 		return nil
 	}
 	// Read the body into a pooled buffer, then unmarshal. Using
@@ -338,7 +343,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		// (bounded). The 1 MiB ceiling on the drain mirrors the
 		// error-path drain — past that, we throw the connection
 		// away.
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
 	}
 	return json.Unmarshal(respBuf.Bytes(), out)

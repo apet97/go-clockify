@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -526,6 +527,66 @@ func TestPostWithBody(t *testing.T) {
 	if out["name"] != "test-project" {
 		t.Fatalf("unexpected name: %v", out["name"])
 	}
+}
+
+func TestClientNoOutputSuccessDrainsResponseBodyBounded(t *testing.T) {
+	body := &countingBody{remaining: responseDrainLimit * 2}
+	c := NewClient("test-key", "http://clockify.test", 5*time.Second, 0)
+	c.httpClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Method != http.MethodDelete {
+			t.Fatalf("method = %s, want DELETE", r.Method)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     make(http.Header),
+			Body:       body,
+			Request:    r,
+		}, nil
+	})
+
+	if err := c.Delete(context.Background(), "/items/delete-me"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if body.read != responseDrainLimit {
+		t.Fatalf("drained %d bytes, want bounded drain of %d", body.read, responseDrainLimit)
+	}
+	if !body.closed {
+		t.Fatal("response body was not closed")
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+type countingBody struct {
+	remaining int64
+	read      int64
+	closed    bool
+}
+
+func (b *countingBody) Read(p []byte) (int, error) {
+	if b.remaining <= 0 {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > b.remaining {
+		p = p[:b.remaining]
+	}
+	for i := range p {
+		p[i] = 'x'
+	}
+	n := len(p)
+	b.remaining -= int64(n)
+	b.read += int64(n)
+	return n, nil
+}
+
+func (b *countingBody) Close() error {
+	b.closed = true
+	return nil
 }
 
 // TestConcurrentPutsShareBufPoolSafely drives 100 parallel Put calls
