@@ -244,6 +244,22 @@ jobs:
         # input, no event data.
         run: bash scripts/test-check-doc-parity.sh
 
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run shellcheck on scripts/
+        # Static analysis for every shell script in scripts/. Catches
+        # the silent-no-op bug class that contract tests miss
+        # (unquoted vars, set -u violations, [ ] vs [[ ]] mistakes).
+        # Severity floor: warning. Errors only fail; info/style are
+        # advisory.
+        uses: ludeeus/action-shellcheck@00b27aa7cb85167568cb48a3838b75f4265f2bca # v2.0.0
+        with:
+          severity: warning
+          scandir: scripts
+
   deploy-render:
     name: Deploy render (k8s + helm)
     runs-on: ubuntu-latest

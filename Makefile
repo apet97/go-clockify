@@ -6,7 +6,7 @@
         build-postgres test-postgres build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
-        repo-hygiene script-tests release-check
+        repo-hygiene script-tests shellcheck release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -38,7 +38,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests shellcheck
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -85,6 +85,16 @@ script-tests:
 	bash scripts/test-check-bench-baseline.sh
 	bash scripts/test-check-coverage.sh
 	bash scripts/test-check-doc-parity.sh
+
+# shellcheck statically analyses every shell script in scripts/ for
+# the bug classes contract tests can't catch — unquoted vars, set -u
+# violations, [ ] vs [[ ]] typos, dead branches. Skips with a warning
+# when shellcheck isn't installed locally; the CI gate keeps it
+# honest on every PR.
+shellcheck:
+	@which shellcheck > /dev/null 2>&1 \
+		&& shellcheck -S warning scripts/*.sh \
+		|| echo "shellcheck not installed, skipping (CI enforces)"
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # live registry. Run after adding, removing, or changing any tool
