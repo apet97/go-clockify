@@ -341,6 +341,14 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	if err != nil || u.Scheme == "" {
 		return nil, fmt.Errorf("invalid MCP_OIDC_ISSUER %q (must be absolute URL with scheme)", cfg.OIDCIssuer)
 	}
+	// Hosted-grade posture: an OIDC strict deployment must fetch JWKS
+	// over TLS. Without HTTPS, the JWKS payload (the public keys used
+	// to verify every JWT) is fetched in cleartext and any on-path
+	// adversary can swap it for keys they control. ChatGPT flagged
+	// this as the second go/no-go gate for shared-service.
+	if cfg.OIDCStrict && u.Scheme != "https" {
+		return nil, fmt.Errorf("MCP_OIDC_ISSUER %q must use https in OIDC strict mode", cfg.OIDCIssuer)
+	}
 	if cfg.OIDCJWKSURL == "" && cfg.OIDCJWKSPath == "" {
 		cfg.OIDCJWKSURL = strings.TrimRight(cfg.OIDCIssuer, "/") + "/.well-known/jwks.json"
 	}
@@ -348,6 +356,9 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 		uj, err := url.Parse(cfg.OIDCJWKSURL)
 		if err != nil || uj.Scheme == "" {
 			return nil, fmt.Errorf("invalid OIDCJWKSURL %q (must be absolute URL with scheme)", cfg.OIDCJWKSURL)
+		}
+		if cfg.OIDCStrict && uj.Scheme != "https" {
+			return nil, fmt.Errorf("OIDCJWKSURL %q must use https in OIDC strict mode", cfg.OIDCJWKSURL)
 		}
 	}
 	// Surface the revocation-window tradeoff when operators raise the
@@ -543,11 +554,24 @@ func claimString(raw map[string]any, key string) string {
 	return ""
 }
 
+// jwksFetchTimeout bounds the per-request JWKS fetch when the
+// authenticator did not receive an explicit *http.Client. Five
+// seconds is generous for a regional IdP yet small enough that a
+// hung issuer cannot stall the auth path past the typical client
+// request budget.
+const jwksFetchTimeout = 5 * time.Second
+
+// jwksDefaultHTTPClient is the package-level fallback used by
+// jwksCache.reload when the authenticator was constructed without
+// an explicit client. Reused across cache instances to avoid
+// repeated transport allocation.
+var jwksDefaultHTTPClient = &http.Client{Timeout: jwksFetchTimeout}
+
 type jwksCache struct {
 	mu      sync.Mutex
 	url     string
 	path    string
-	client  *http.Client // nil = http.DefaultClient
+	client  *http.Client // nil = jwksDefaultHTTPClient (5s timeout)
 	expires time.Time
 	keys    map[string]crypto.PublicKey
 }
@@ -585,7 +609,12 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		}
 		client := c.client
 		if client == nil {
-			client = http.DefaultClient
+			// Bound the JWKS fetch so a slow/hung issuer cannot stall the
+			// auth path indefinitely. http.DefaultClient has no timeout,
+			// which would let a non-responsive issuer freeze every
+			// concurrent verify after the cache expires. ChatGPT flagged
+			// this as a hosted-OIDC reliability gap.
+			client = jwksDefaultHTTPClient
 		}
 		resp, doErr := client.Do(req)
 		if doErr != nil {
