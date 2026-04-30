@@ -112,7 +112,9 @@ verify-fips:
 	}
 
 cover-check:
-	bash scripts/check-coverage.sh
+	@tmp="$$(mktemp "$${TMPDIR:-/tmp}/clockify-coverage.XXXXXX")"; \
+	 trap 'rm -f "$$tmp"' EXIT; \
+	 COVERAGE_OUT="$$tmp" bash scripts/check-coverage.sh
 
 # Short fuzz budget for local runs. Count-based (-fuzztime=Nx) instead
 # of duration-based (-fuzztime=Ns) to sidestep a Go fuzz engine race:
