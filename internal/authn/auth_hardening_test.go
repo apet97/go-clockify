@@ -193,12 +193,12 @@ func TestForwardAuth_RejectsControlBytesInHeaders(t *testing.T) {
 		{"subject_cr", "X-Forwarded-User", "alice\rattacker"},
 		{"subject_nul", "X-Forwarded-User", "alice\x00attacker"},
 		{"subject_us", "X-Forwarded-User", "alice\x1fattacker"},
-		{"subject_zwsp", "X-Forwarded-User", "alice​attacker"},
+		{"subject_zwsp", "X-Forwarded-User", "alice\u200battacker"},
 		{"tenant_lf", "X-Forwarded-Tenant", "acme\nattacker"},
 		{"tenant_cr", "X-Forwarded-Tenant", "acme\rattacker"},
 		{"tenant_nul", "X-Forwarded-Tenant", "acme\x00attacker"},
 		{"tenant_us", "X-Forwarded-Tenant", "acme\x1fattacker"},
-		{"tenant_zwsp", "X-Forwarded-Tenant", "acme​attacker"},
+		{"tenant_zwsp", "X-Forwarded-Tenant", "acme\u200battacker"},
 	}
 
 	for _, tc := range cases {
