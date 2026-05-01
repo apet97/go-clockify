@@ -27,6 +27,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Mode string
@@ -208,11 +210,18 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 			return Principal{}, err
 		}
 	}
-	subject := strings.TrimSpace(r.Header.Get(a.cfg.ForwardSubjectHeader))
-	if subject == "" {
+	rawSubject := r.Header.Get(a.cfg.ForwardSubjectHeader)
+	if strings.TrimSpace(rawSubject) == "" {
 		return Principal{}, fmt.Errorf("missing %s header", a.cfg.ForwardSubjectHeader)
 	}
-	tenant := strings.TrimSpace(r.Header.Get(a.cfg.ForwardTenantHeader))
+	subject, err := sanitizePrincipalString(rawSubject, "subject")
+	if err != nil {
+		return Principal{}, err
+	}
+	tenant, err := sanitizePrincipalString(r.Header.Get(a.cfg.ForwardTenantHeader), "tenant")
+	if err != nil {
+		return Principal{}, err
+	}
 	if tenant == "" {
 		tenant = a.cfg.DefaultTenantID
 	}
@@ -225,6 +234,38 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 			"forward_tenant_header":  a.cfg.ForwardTenantHeader,
 		},
 	}, nil
+}
+
+// sanitizePrincipalString rejects header bytes that have no business
+// minting an authentication identity. The caller passes the raw
+// header value plus a short label ("subject" / "tenant") for the
+// error message. The function trims surrounding whitespace and
+// then walks the runes:
+//
+//   - utf8.RuneError is refused so a malformed UTF-8 sequence
+//     cannot smuggle a byte the rest of the system mis-decodes.
+//   - !unicode.IsPrint is refused so control bytes (\n, \r, \x00,
+//     \x1f, \x7f), surrogate halves, format characters
+//     (zero-width space U+200B, RTL override U+202E, BOM U+FEFF),
+//     and other non-printable codepoints are kept out of
+//     Principal.Subject / Principal.TenantID — and out of the
+//     downstream slog `subject` / `tenant_id` keys
+//     (internal/mcp/audit.go, internal/mcp/tools.go) and
+//     tenant-scoping keys.
+//
+// ASCII space (0x20) is unicode.IsPrint, so legitimate values
+// like "alice doe" or "my org" still pass. Returns the trimmed
+// value when accepted; an error of the form
+// "forward_auth: <label> contains disallowed byte 0x<hex>"
+// otherwise.
+func sanitizePrincipalString(s, label string) (string, error) {
+	s = strings.TrimSpace(s)
+	for _, r := range s {
+		if r == utf8.RuneError || !unicode.IsPrint(r) {
+			return "", fmt.Errorf("forward_auth: %s contains disallowed byte 0x%x", label, r)
+		}
+	}
+	return s, nil
 }
 
 // requireTrustedProxySource enforces the

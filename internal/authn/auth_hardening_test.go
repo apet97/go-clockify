@@ -163,6 +163,65 @@ func TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour(t *testing.T) {
 	}
 }
 
+// TestForwardAuth_RejectsControlBytesInHeaders pins the
+// principal-header sanitization gate. X-Forwarded-User and
+// X-Forwarded-Tenant are attacker-controlled bytes (any
+// misconfigured / compromised upstream proxy or any deployment
+// running the deliberate empty-allow-list legacy mode can deliver
+// them). They flow into Principal.Subject and Principal.TenantID,
+// which then enter structured slog records as `subject` / `tenant_id`
+// keys (internal/mcp/audit.go:83-84, internal/mcp/tools.go:142-143)
+// and into downstream tenant scoping. Control bytes / CRLF / NUL /
+// non-printable Unicode must be refused at the boundary so they
+// cannot mint a Principal.
+func TestForwardAuth_RejectsControlBytesInHeaders(t *testing.T) {
+	auth, err := New(Config{
+		Mode:                 ModeForwardAuth,
+		ForwardSubjectHeader: "X-Forwarded-User",
+		ForwardTenantHeader:  "X-Forwarded-Tenant",
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	cases := []struct {
+		name   string
+		header string
+		value  string
+	}{
+		{"subject_lf", "X-Forwarded-User", "alice\nattacker"},
+		{"subject_cr", "X-Forwarded-User", "alice\rattacker"},
+		{"subject_nul", "X-Forwarded-User", "alice\x00attacker"},
+		{"subject_us", "X-Forwarded-User", "alice\x1fattacker"},
+		{"subject_zwsp", "X-Forwarded-User", "alice​attacker"},
+		{"tenant_lf", "X-Forwarded-Tenant", "acme\nattacker"},
+		{"tenant_cr", "X-Forwarded-Tenant", "acme\rattacker"},
+		{"tenant_nul", "X-Forwarded-Tenant", "acme\x00attacker"},
+		{"tenant_us", "X-Forwarded-Tenant", "acme\x1fattacker"},
+		{"tenant_zwsp", "X-Forwarded-Tenant", "acme​attacker"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			// Both headers must be set on every case so a single
+			// missing header doesn't masquerade as the rejection
+			// we're trying to pin.
+			req.Header.Set("X-Forwarded-User", "alice")
+			req.Header.Set("X-Forwarded-Tenant", "acme")
+			req.Header.Set(tc.header, tc.value)
+
+			_, gotErr := auth.Authenticate(context.Background(), req)
+			if gotErr == nil {
+				t.Fatalf("expected error for %s=%q, got nil", tc.header, tc.value)
+			}
+			if !strings.Contains(gotErr.Error(), "disallowed byte") {
+				t.Fatalf("expected error to mention 'disallowed byte', got: %v", gotErr)
+			}
+		})
+	}
+}
+
 // TestNewOIDCAuth_StrictRejectsHTTPIssuer locks the second go/no-go
 // gate from ChatGPT's hosted-OIDC review. Strict mode binds tokens
 // to this server (audience/resource), so the public keys used to

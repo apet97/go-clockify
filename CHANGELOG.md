@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **`forward_auth` rejects control bytes / non-printable Unicode in
+  principal headers before they mint a `Principal`.**
+  `forwardAuthAuthenticator.Authenticate`
+  (`internal/authn/authn.go:211,215`) previously only
+  `strings.TrimSpace`d `X-Forwarded-User` / `X-Forwarded-Tenant`
+  before assigning them to `Principal.Subject` /
+  `Principal.TenantID`. Those two fields then enter structured slog
+  records as `subject` / `tenant_id` keys
+  (`internal/mcp/audit.go:83-84`,
+  `internal/mcp/tools.go:142-143`) and downstream tenant-scope keys.
+  An upstream proxy that is misconfigured, compromised, or absent
+  (legacy empty-allow-list mode) could deliver headers carrying
+  CR/LF (log-forging payloads), NUL, other control bytes, or
+  non-printable Unicode (zero-width space U+200B, RTL override
+  U+202E, BOM U+FEFF) and the bytes would propagate unfiltered into
+  audit logs, dashboard filters, and tenant-scoping keys. New
+  `sanitizePrincipalString` helper in
+  `internal/authn/authn.go` rejects (returns error,
+  reason `forward_auth: <subject|tenant> contains disallowed byte
+  0x<hex>`) any rune that is `utf8.RuneError` or fails
+  `unicode.IsPrint` — broader than `unicode.IsControl` so the Cf
+  (Format) category is also caught while ASCII space stays allowed.
+  Locked by `TestForwardAuth_RejectsControlBytesInHeaders` in
+  `internal/authn/auth_hardening_test.go` (10 sub-cases: `\n`,
+  `\r`, `\x00`, `\x1f`, `U+200B` × subject + tenant). Drift-checked
+  by bypassing the sanitizer for each header in turn — both
+  produced the matching 5-case failure set; restoring repaired the
+  suite. The OIDC `claimString` path
+  (`internal/authn/authn.go:625-630`) shares the same trim-only
+  shape and is left for a separate atomic commit (Finding #3 in
+  `~/.claude/plans/you-are-in-floating-fountain.md`); OIDC tokens
+  are signed end-to-end so the attack surface is narrower.
 - **`docs/runbooks/auth-failures.md` lists the full set of gRPC
   auth-rejection reasons.** §1 Symptoms named four `reason` label
   values (`auth_failed`, `missing_authorization`,
