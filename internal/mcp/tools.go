@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -44,6 +45,66 @@ func (s *Server) listTools() []Tool {
 	return cloneToolList(s.toolListCache)
 }
 
+type toolsListResult struct {
+	Tools []Tool `json:"tools"`
+}
+
+func (s *Server) tryMarshalCachedToolsListResponse(req Request) ([]byte, bool, error) {
+	if req.Method != "tools/list" || req.ID == nil || !s.initialized.Load() {
+		return nil, false, nil
+	}
+	out, err := s.marshalCachedToolsListResponse(req.ID)
+	return out, true, err
+}
+
+func (s *Server) marshalCachedToolsListResponse(id any) ([]byte, error) {
+	result, err := s.toolsListResultJSONBytes()
+	if err != nil {
+		return nil, err
+	}
+	idBytes, err := json.Marshal(id)
+	if err != nil {
+		return nil, err
+	}
+
+	const prefix = `{"jsonrpc":"2.0","id":`
+	const resultKey = `,"result":`
+	out := make([]byte, 0, len(prefix)+len(idBytes)+len(resultKey)+len(result)+1)
+	out = append(out, prefix...)
+	out = append(out, idBytes...)
+	out = append(out, resultKey...)
+	out = append(out, result...)
+	out = append(out, '}')
+	return out, nil
+}
+
+func (s *Server) toolsListResultJSONBytes() ([]byte, error) {
+	s.mu.RLock()
+	if s.toolListResultJSONValid {
+		out := s.toolListResultJSON
+		s.mu.RUnlock()
+		return out, nil
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.toolListResultJSONValid {
+		return s.toolListResultJSON, nil
+	}
+	if !s.toolListCacheValid {
+		s.toolListCache = s.buildToolListLocked()
+		s.toolListCacheValid = true
+	}
+	out, err := json.Marshal(toolsListResult{Tools: s.toolListCache})
+	if err != nil {
+		return nil, err
+	}
+	s.toolListResultJSON = out
+	s.toolListResultJSONValid = true
+	return s.toolListResultJSON, nil
+}
+
 func (s *Server) buildToolListLocked() []Tool {
 	keys := make([]string, 0, len(s.tools))
 	for k := range s.tools {
@@ -75,6 +136,8 @@ func cloneToolList(in []Tool) []Tool {
 func (s *Server) invalidateToolListCacheLocked() {
 	s.toolListCache = nil
 	s.toolListCacheValid = false
+	s.toolListResultJSON = nil
+	s.toolListResultJSONValid = false
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {

@@ -234,7 +234,11 @@ type Server struct {
 	// activation visibility change.
 	toolListCache      []Tool
 	toolListCacheValid bool
-	initialized        atomic.Bool
+	// toolListResultJSON stores the serialized tools/list result only.
+	// JSON-RPC ids stay outside this cache and are marshaled per request.
+	toolListResultJSON      []byte
+	toolListResultJSONValid bool
+	initialized             atomic.Bool
 	// advertiseListChanged controls whether initialize reports
 	// capabilities.tools.listChanged=true. Only transports that can actually
 	// deliver notifications/tools/list_changed should set this.
@@ -556,6 +560,9 @@ func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error
 		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
 		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
 	}
+	if out, ok, err := s.tryMarshalCachedToolsListResponse(req); ok || err != nil {
+		return out, err
+	}
 	resp := s.handle(ctx, req)
 	if resp.Error != nil {
 		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
@@ -634,6 +641,9 @@ func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, sit
 	if rpcErr := validateRequest(req); rpcErr != nil {
 		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
 		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
+	}
+	if out, ok, err := s.tryMarshalCachedToolsListResponse(req); ok || err != nil {
+		return out, err
 	}
 	resp := s.HandleWithRecover(ctx, req, site)
 	if resp.Error != nil {
