@@ -615,13 +615,28 @@ const jwksFetchTimeout = 5 * time.Second
 // repeated transport allocation.
 var jwksDefaultHTTPClient = &http.Client{Timeout: jwksFetchTimeout}
 
+// jwksKidMissRefreshMinInterval is the floor between
+// kid-miss-triggered JWKS reloads. When the IdP rotates keys
+// between scheduled cache refreshes, the next request lands with a
+// kid the cache has never seen; without this path, every such
+// request rejects the token for up to a full TTL window. The
+// rate-limit prevents a flood of unknown-kid tokens from amplifying
+// into a JWKS-fetch DoS — every rejected verify would otherwise
+// trigger one fetch.
+//
+// Declared as var (not const) so tests can shorten the window via
+// the in-package setKidMissRefreshInterval helper. Production code
+// never mutates it.
+var jwksKidMissRefreshMinInterval = 30 * time.Second
+
 type jwksCache struct {
-	mu      sync.Mutex
-	url     string
-	path    string
-	client  *http.Client // nil = jwksDefaultHTTPClient (5s timeout)
-	expires time.Time
-	keys    map[string]crypto.PublicKey
+	mu         sync.Mutex
+	url        string
+	path       string
+	client     *http.Client // nil = jwksDefaultHTTPClient (5s timeout)
+	expires    time.Time
+	lastReload time.Time
+	keys       map[string]crypto.PublicKey
 }
 
 func (c *jwksCache) key(ctx context.Context, kid string) (crypto.PublicKey, error) {
@@ -632,16 +647,41 @@ func (c *jwksCache) key(ctx context.Context, kid string) (crypto.PublicKey, erro
 			return nil, err
 		}
 	}
+	if k, ok := c.lookupLocked(kid); ok {
+		return k, nil
+	}
+	// Kid-miss: the IdP may have rotated keys between scheduled
+	// reloads. Trigger one rate-limited refresh and retry. The
+	// floor (jwksKidMissRefreshMinInterval, default 30s) keeps a
+	// flood of unknown-kid tokens from amplifying into a JWKS-fetch
+	// DoS — every rejected verify would otherwise hit the IdP. On
+	// reload error or kid still absent post-refresh, fall through
+	// with the original not-found error: reload() leaves c.keys
+	// intact on failure, so the cache keeps serving stale-but-
+	// working keys for any kid we already know.
+	if time.Since(c.lastReload) >= jwksKidMissRefreshMinInterval {
+		if err := c.reload(ctx); err == nil {
+			if k, ok := c.lookupLocked(kid); ok {
+				return k, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("oidc key %q not found", kid)
+}
+
+// lookupLocked resolves a kid to its public key under the assumption
+// the caller already holds c.mu. The empty-kid single-key fallback
+// preserves the historical kid-less-token behaviour: when JWKS has
+// exactly one key, an unspecified kid resolves to it; with multiple
+// keys, a kid-less token fails closed.
+func (c *jwksCache) lookupLocked(kid string) (crypto.PublicKey, bool) {
 	if kid == "" && len(c.keys) == 1 {
 		for _, key := range c.keys {
-			return key, nil
+			return key, true
 		}
 	}
 	key, ok := c.keys[kid]
-	if !ok {
-		return nil, fmt.Errorf("oidc key %q not found", kid)
-	}
-	return key, nil
+	return key, ok
 }
 
 func (c *jwksCache) reload(ctx context.Context) error {
@@ -711,7 +751,9 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		keys[key.KID] = pub
 	}
 	c.keys = keys
-	c.expires = time.Now().Add(5 * time.Minute)
+	now := time.Now()
+	c.expires = now.Add(5 * time.Minute)
+	c.lastReload = now
 	return nil
 }
 

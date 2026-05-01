@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -141,6 +142,197 @@ func TestJWKSCache_RejectsDuplicateEmptyKid(t *testing.T) {
 	if !strings.Contains(err.Error(), "duplicate kid") {
 		t.Fatalf("expected error to mention duplicate kid, got: %v", err)
 	}
+}
+
+// TestJWKSCache_RefreshesOnKidMissAfterRotation pins the F2 invariant:
+// when the IdP rotates keys between scheduled JWKS reloads, the
+// authenticator must trigger one extra refresh on kid-miss instead of
+// rejecting valid post-rotation tokens for the full 5-minute cache
+// window. Pre-fix, jwksCache.key returned `oidc key "<kid>" not found`
+// for every token signed by the new key until the cache expired —
+// every operator-side rotation produced up to a 5-minute customer-
+// visible auth outage.
+//
+// The test stands up a JWKS server whose response can be atomically
+// swapped, primes the cache with key A, "rotates" to key B by
+// swapping the payload, and drives a token signed with B through the
+// authenticator. The verify must succeed and the server must have
+// been hit exactly twice (initial fetch + kid-miss-triggered refresh).
+func TestJWKSCache_RefreshesOnKidMissAfterRotation(t *testing.T) {
+	const issuer = "https://issuer.example.test"
+
+	privA, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa A: %v", err)
+	}
+	privB, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa B: %v", err)
+	}
+
+	jwksA := buildJWKS(t, "kA", &privA.PublicKey)
+	jwksB := buildJWKS(t, "kB", &privB.PublicKey)
+	var current atomic.Pointer[[]byte]
+	current.Store(&jwksA)
+
+	var fetches atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		body := *current.Load()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	defer ts.Close()
+
+	// Tests use a near-zero rate-limit so kid-miss refresh fires
+	// without a real-time wall-clock wait. Production default is 30s
+	// — the testing seam is the package-level var.
+	defer setKidMissRefreshInterval(0)()
+
+	auth, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  issuer,
+		OIDCJWKSURL: ts.URL,
+		HTTPClient:  ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	now := time.Now().Unix()
+	tokA := signJWT(t, privA, "kA", map[string]any{
+		"iss": issuer,
+		"sub": "alice",
+		"exp": now + 300,
+	})
+	if _, err := authenticate(t, auth, tokA); err != nil {
+		t.Fatalf("kA verify (pre-rotation) failed: %v", err)
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("expected 1 fetch after priming with kA, got %d", got)
+	}
+
+	// Operator rotates: JWKS server now returns kB.
+	current.Store(&jwksB)
+
+	tokB := signJWT(t, privB, "kB", map[string]any{
+		"iss": issuer,
+		"sub": "alice",
+		"exp": now + 300,
+	})
+	if _, err := authenticate(t, auth, tokB); err != nil {
+		t.Fatalf("kB verify after rotation failed; kid-miss refresh did not pick up the new JWKS: %v", err)
+	}
+	if got := fetches.Load(); got != 2 {
+		t.Fatalf("expected 2 fetches after rotation (initial + kid-miss refresh), got %d", got)
+	}
+}
+
+// TestJWKSCache_KidMissRateLimited locks the rate-limit gate. A flood
+// of tokens carrying an unknown kid must NOT amplify into a flood of
+// JWKS fetches — that would let an attacker DoS the IdP via the
+// authenticator. The test sends six unknown-kid tokens within a 200ms
+// window; only one refresh fires (the first). Past the window, a
+// fresh kid-miss must trigger another refresh.
+func TestJWKSCache_KidMissRateLimited(t *testing.T) {
+	const issuer = "https://issuer.example.test"
+
+	privA, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa A: %v", err)
+	}
+	privB, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa B: %v", err)
+	}
+
+	// JWKS only ever publishes kA — kB never appears, so every kid-miss
+	// refresh ends in not-found. That isolates the rate-limit invariant
+	// from the success path.
+	jwks := buildJWKS(t, "kA", &privA.PublicKey)
+	var fetches atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	const window = 200 * time.Millisecond
+	defer setKidMissRefreshInterval(window)()
+
+	auth, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  issuer,
+		OIDCJWKSURL: ts.URL,
+		HTTPClient:  ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	now := time.Now().Unix()
+	tokA := signJWT(t, privA, "kA", map[string]any{
+		"iss": issuer,
+		"sub": "alice",
+		"exp": now + 300,
+	})
+	if _, err := authenticate(t, auth, tokA); err != nil {
+		t.Fatalf("kA prime failed: %v", err)
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("expected 1 fetch after priming, got %d", got)
+	}
+
+	mkUnknown := func(salt int64) string {
+		return signJWT(t, privB, "kB", map[string]any{
+			"iss": issuer,
+			"sub": "alice",
+			"exp": now + 300,
+			"iat": salt,
+		})
+	}
+
+	// First kid-miss: rate-limit window crossed (since c.lastReload
+	// was set during priming and we set the window to 200ms — the
+	// prime is ~immediate, so we sleep just past the window first).
+	time.Sleep(window + 25*time.Millisecond)
+	if _, err := authenticate(t, auth, mkUnknown(1)); err == nil {
+		t.Fatal("kid-miss for kB must fail (kB not in JWKS)")
+	}
+	if got := fetches.Load(); got != 2 {
+		t.Fatalf("expected refresh on first kid-miss past window: got %d, want 2", got)
+	}
+
+	// Five subsequent kid-misses inside the rate-limit window must
+	// not refresh. The second authenticate(...) above bumped
+	// c.lastReload, so we are now inside the 200ms window again.
+	for i := range 5 {
+		if _, err := authenticate(t, auth, mkUnknown(int64(10+i))); err == nil {
+			t.Fatal("kid-miss for kB must fail (kB not in JWKS)")
+		}
+	}
+	if got := fetches.Load(); got != 2 {
+		t.Fatalf("rate-limit allowed extra fetches inside window: got %d, want 2", got)
+	}
+
+	// Past the window, a fresh kid-miss must trigger another refresh.
+	time.Sleep(window + 25*time.Millisecond)
+	if _, err := authenticate(t, auth, mkUnknown(99)); err == nil {
+		t.Fatal("kid-miss for kB must fail (kB not in JWKS)")
+	}
+	if got := fetches.Load(); got != 3 {
+		t.Fatalf("expected refresh after window expired: got %d, want 3", got)
+	}
+}
+
+// setKidMissRefreshInterval swaps the package-level rate-limit and
+// returns a restore func. Used as `defer setKidMissRefreshInterval(0)()`
+// to keep tests fast without leaking the override into other suites.
+func setKidMissRefreshInterval(d time.Duration) func() {
+	prev := jwksKidMissRefreshMinInterval
+	jwksKidMissRefreshMinInterval = d
+	return func() { jwksKidMissRefreshMinInterval = prev }
 }
 
 // buildDuplicateKidJWKS produces a JWKS document with two RSA
