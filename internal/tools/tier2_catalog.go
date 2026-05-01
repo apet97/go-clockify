@@ -72,5 +72,95 @@ func (s *Service) Tier2Handlers(groupName string) ([]mcp.ToolDescriptor, bool) {
 	if !ok {
 		return nil, false
 	}
-	return applyOpaqueOutputSchemas(normalizeDescriptors(g.Builder(s))), true
+	if s == nil {
+		return applyOpaqueOutputSchemas(normalizeDescriptors(g.Builder(s))), true
+	}
+
+	s.tier2CacheMu.Lock()
+	if cached, ok := s.tier2Cache[groupName]; ok {
+		s.tier2CacheMu.Unlock()
+		return cloneToolDescriptors(cached), true
+	}
+
+	descriptors := applyOpaqueOutputSchemas(normalizeDescriptors(g.Builder(s)))
+	if s.tier2Cache == nil {
+		s.tier2Cache = make(map[string][]mcp.ToolDescriptor, len(Tier2Groups))
+	}
+	s.tier2Cache[groupName] = descriptors
+	s.tier2CacheMu.Unlock()
+	return cloneToolDescriptors(descriptors), true
+}
+
+func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
+	out := make([]mcp.ToolDescriptor, len(in))
+	for i, descriptor := range in {
+		out[i] = descriptor
+		out[i].Tool.InputSchema = cloneDescriptorMap(descriptor.Tool.InputSchema)
+		out[i].Tool.OutputSchema = cloneOutputSchema(descriptor.Tool)
+		out[i].Tool.Annotations = cloneAnnotations(descriptor.Tool.Annotations)
+		out[i].AuditKeys = append([]string(nil), descriptor.AuditKeys...)
+	}
+	return out
+}
+
+func cloneOutputSchema(tool mcp.Tool) map[string]any {
+	if tool.OutputSchema == nil {
+		return nil
+	}
+	if isOpaqueOutputSchema(tool.OutputSchema, tool.Name) {
+		return envelopeOpaque(tool.Name)
+	}
+	return cloneDescriptorMap(tool.OutputSchema)
+}
+
+func isOpaqueOutputSchema(schema map[string]any, action string) bool {
+	typ, _ := schema["type"].(string)
+	required, _ := schema["required"].([]string)
+	properties, _ := schema["properties"].(map[string]any)
+	actionSchema, _ := properties["action"].(map[string]any)
+	constValue, _ := actionSchema["const"].(string)
+	return typ == "object" &&
+		len(required) == 2 &&
+		required[0] == "ok" &&
+		required[1] == "action" &&
+		constValue == action
+}
+
+func cloneAnnotations(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func cloneDescriptorMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = cloneDescriptorValue(value)
+	}
+	return out
+}
+
+func cloneDescriptorValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		return cloneDescriptorMap(typed)
+	case []any:
+		out := make([]any, len(typed))
+		for i, item := range typed {
+			out[i] = cloneDescriptorValue(item)
+		}
+		return out
+	case []string:
+		return append([]string(nil), typed...)
+	default:
+		return value
+	}
 }

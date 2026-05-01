@@ -76,6 +76,8 @@ type Service struct {
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache
+	tier2CacheMu  sync.Mutex
+	tier2Cache    map[string][]mcp.ToolDescriptor
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was
