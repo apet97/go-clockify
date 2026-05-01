@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/jsonschema"
 )
 
 // TestSchemaFor_Primitives spot-checks the kind→type mapping for every
@@ -196,17 +198,36 @@ func TestEnvelopeSchemaFor(t *testing.T) {
 	}
 }
 
-// TestEnvelopeOpaque produces a wrapper for tools whose data field is
-// open-shape. Data must be present but unconstrained inside.
+// TestEnvelopeOpaque produces a compact wrapper for tools whose data field is
+// open-shape. It keeps the stable envelope fields without repeating
+// unconstrained data/meta property schemas in every tools/list descriptor.
 func TestEnvelopeOpaque(t *testing.T) {
 	got := envelopeOpaque("clockify_list_invoices")
 	props := got["properties"].(map[string]any)
-	if props["data"] == nil {
-		t.Fatal("data property missing")
+	if props["ok"] == nil {
+		t.Fatal("ok property missing")
 	}
-	data := props["data"].(map[string]any)
-	if data["additionalProperties"] != true {
-		t.Fatal("opaque data should allow additionalProperties")
+	action, ok := props["action"].(map[string]any)
+	if !ok {
+		t.Fatalf("action property missing or wrong type: %T", props["action"])
+	}
+	if action["const"] != "clockify_list_invoices" {
+		t.Fatalf("action const = %v", action["const"])
+	}
+	if _, hasData := props["data"]; hasData {
+		t.Fatal("compact opaque schema should omit unconstrained data property")
+	}
+	if _, hasMeta := props["meta"]; hasMeta {
+		t.Fatal("compact opaque schema should omit unconstrained meta property")
+	}
+	value := map[string]any{
+		"ok":     true,
+		"action": "clockify_list_invoices",
+		"data":   map[string]any{"invoice_id": "inv1"},
+		"meta":   map[string]any{"count": 1},
+	}
+	if err := jsonschema.Validate(got, value); err != nil {
+		t.Fatalf("compact opaque schema should allow open data/meta fields: %v", err)
 	}
 }
 

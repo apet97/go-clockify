@@ -166,24 +166,17 @@ func envelopeSchemaFor[T any](action string) map[string]any {
 
 // envelopeOpaque produces an outputSchema for tools whose Data field is
 // an open-shape map[string]any (most Tier 2 CRUD wrappers). It still
-// pins the action field as a const and validates the envelope wrapper,
-// while leaving the data payload unconstrained.
+// pins the action field as a const and validates the required envelope
+// fields. Optional data/meta fields remain allowed by the schema's default
+// open-object behavior without repeating unconstrained property schemas in
+// every tools/list descriptor.
 func envelopeOpaque(action string) map[string]any {
 	return map[string]any{
-		"type":                 "object",
-		"additionalProperties": false,
-		"required":             []string{"ok", "action"},
+		"type":     "object",
+		"required": []string{"ok", "action"},
 		"properties": map[string]any{
 			"ok":     map[string]any{"type": "boolean"},
 			"action": map[string]any{"type": "string", "const": action},
-			"data": map[string]any{
-				"type":                 "object",
-				"additionalProperties": true,
-			},
-			"meta": map[string]any{
-				"type":                 "object",
-				"additionalProperties": true,
-			},
 		},
 	}
 }

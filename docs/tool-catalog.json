@@ -545,19 +545,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_entry",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -1175,19 +1166,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_workspace",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -1980,19 +1962,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_policy_info",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -2308,19 +2281,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_resolve_debug",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -2370,19 +2334,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_search_tools",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -2539,19 +2494,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_stop_timer",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -2919,19 +2865,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_timer_status",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3550,19 +3487,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_approve_timesheet",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3606,19 +3534,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_approval_request",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3671,19 +3590,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_approval_requests",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3735,19 +3645,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_reject_timesheet",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3797,19 +3698,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_submit_for_approval",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3853,19 +3745,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_withdraw_approval",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3926,19 +3809,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_custom_field",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3986,19 +3860,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_custom_field",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4042,19 +3907,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_custom_field",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4103,19 +3959,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_custom_fields",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4172,19 +4019,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_set_custom_field_value",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4240,19 +4078,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_custom_field",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4314,19 +4143,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_expense",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4371,19 +4191,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_expense_category",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4430,19 +4241,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_expense",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4489,19 +4291,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_expense_category",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4558,19 +4351,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_expense_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4614,19 +4398,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_expense",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4662,19 +4437,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_expense_categories",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4723,19 +4489,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_expenses",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4794,19 +4551,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_expense",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4853,19 +4601,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_expense_category",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4919,19 +4658,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_holiday",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4983,19 +4713,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_user_group_admin",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5043,19 +4764,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_holiday",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5103,19 +4815,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_user_group_admin",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5159,19 +4862,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_user_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5207,19 +4901,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_holidays",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5255,19 +4940,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_user_groups_admin",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5321,19 +4997,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_user_group_admin",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5393,19 +5060,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_add_invoice_item",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5468,19 +5126,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_invoice",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5531,19 +5180,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_invoice",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5599,19 +5239,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_invoice_item",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5655,19 +5286,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_invoice",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5720,19 +5342,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_invoice_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5776,19 +5389,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_invoice_items",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5837,19 +5441,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_invoices",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5901,19 +5496,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_mark_invoice_paid",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5965,19 +5551,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_send_invoice",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6043,19 +5620,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_invoice",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6120,19 +5688,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_invoice_item",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6180,19 +5739,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_archive_projects",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6252,19 +5802,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_project_template",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6308,19 +5849,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_project_template",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6356,19 +5888,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_project_templates",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6424,19 +5947,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_set_project_memberships",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6490,19 +6004,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_project_estimate",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6569,19 +6074,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_assignment",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6637,19 +6133,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_schedule",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6697,19 +6184,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_assignment",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6763,19 +6241,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_filter_schedule_capacity",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6819,19 +6288,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_assignment",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6873,19 +6333,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_project_schedule_totals",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6929,19 +6380,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_schedule",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6998,19 +6440,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_assignments",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7057,19 +6490,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_schedules",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7127,19 +6551,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_assignment",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7194,19 +6609,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_shared_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7254,19 +6660,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_shared_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7314,19 +6711,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_export_shared_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7370,19 +6758,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_shared_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7431,19 +6810,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_shared_reports",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7497,19 +6867,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_shared_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7561,19 +6922,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_approve_time_off",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7639,19 +6991,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_time_off_policy",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7713,19 +7056,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_time_off_request",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7777,19 +7111,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_time_off_request",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7841,19 +7166,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_deny_time_off",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7897,19 +7213,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_time_off_policy",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7957,19 +7264,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_time_off_request",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8016,19 +7314,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_time_off_policies",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8083,19 +7372,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_time_off_requests",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8144,19 +7424,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_time_off_balance",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8221,19 +7492,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_time_off_policy",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8293,19 +7555,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_time_off_request",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8360,19 +7613,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_add_user_to_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8421,19 +7665,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_user_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8486,19 +7721,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_deactivate_user",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8551,19 +7777,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_user_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8612,19 +7829,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_user_groups",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8683,19 +7891,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_remove_user_from_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8750,19 +7949,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_user_group",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8824,19 +8014,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_user_role",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8898,19 +8079,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_create_webhook",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8963,19 +8135,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_delete_webhook",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -9020,19 +8183,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_webhook",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -9068,19 +8222,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_webhook_events",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -9129,19 +8274,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_webhooks",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -9194,19 +8330,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_test_webhook",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -9272,19 +8399,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_update_webhook",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
