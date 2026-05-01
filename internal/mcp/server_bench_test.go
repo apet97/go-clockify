@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"testing"
 )
 
@@ -106,6 +108,8 @@ func BenchmarkDispatchInitialize(b *testing.B) {
 // between runs — variation in marshaled payload size would obscure
 // the dispatcher-level delta we're trying to measure.
 func BenchmarkDispatchToolsCall(b *testing.B) {
+	quietSlogForBenchmark(b)
+
 	server := newBenchServer(b, 1)
 	server.initialized.Store(true)
 
@@ -163,4 +167,14 @@ func mustMarshalRequest(b *testing.B, req Request) []byte {
 		b.Fatalf("marshal request: %v", err)
 	}
 	return out
+}
+
+func quietSlogForBenchmark(b *testing.B) {
+	b.Helper()
+
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	b.Cleanup(func() {
+		slog.SetDefault(prev)
+	})
 }
