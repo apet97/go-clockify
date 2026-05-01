@@ -44,8 +44,9 @@ func TestParity_ToolsCallSchemaValidationErrorCarriesPointer(t *testing.T) {
 			if resp.Error.Code != -32602 {
 				t.Fatalf("error.code = %d, want -32602", resp.Error.Code)
 			}
-			if pointer := errorDataPointer(resp.Error); pointer != "/billable" {
-				t.Fatalf("error.data.pointer = %q, want /billable", pointer)
+			if pointer, ok := errorDataPointer(resp.Error); !ok || pointer != "/billable" {
+				t.Fatalf("error.data.pointer = %q (present=%v), want /billable; data=%#v",
+					pointer, ok, resp.Error.Data)
 			}
 		})
 	}
@@ -77,11 +78,11 @@ func schemaValidationParityOptions() harness.Options {
 	}
 }
 
-func errorDataPointer(err *harness.RPCError) string {
+func errorDataPointer(err *harness.RPCError) (string, bool) {
 	data, ok := err.Data.(map[string]any)
 	if !ok {
-		return ""
+		return "", false
 	}
-	pointer, _ := data["pointer"].(string)
-	return pointer
+	pointer, ok := data["pointer"].(string)
+	return pointer, ok
 }
