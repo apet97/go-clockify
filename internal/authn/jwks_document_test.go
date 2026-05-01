@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -523,13 +524,184 @@ func TestJWKSCache_ConfigurableTTL(t *testing.T) {
 	}
 
 	// Past the TTL the cache must reload. Pre-F5 the cache lived 5min
-	// regardless and this would still see 1 fetch.
+	// regardless and would still see 1 fetch. F6 turned the post-TTL
+	// refresh async (stale-while-revalidate) so the verify call
+	// returns immediately and the refresh fires in the background —
+	// poll briefly for fetches=2.
 	time.Sleep(ttl + 75*time.Millisecond)
 	if _, err := authenticate(t, auth, sign(3)); err != nil {
 		t.Fatalf("third verify: %v", err)
 	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && fetches.Load() < 2 {
+		time.Sleep(20 * time.Millisecond)
+	}
 	if got := fetches.Load(); got != 2 {
 		t.Fatalf("expected refresh after TTL, got %d", got)
+	}
+}
+
+// TestJWKSCache_StaleServesDuringRefresh pins the F6 stale-while-
+// revalidate invariant: when the cache holds a kid the request asks
+// for, an expired-TTL lookup must return the (stale) key
+// immediately and kick the refresh in the background. Pre-F6 the
+// caller paid the full JWKS HTTP round trip (up to 5s) under the
+// cache mutex, blocking every concurrent verify.
+func TestJWKSCache_StaleServesDuringRefresh(t *testing.T) {
+	const issuer = "https://issuer.example.test"
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	jwks := buildJWKS(t, "kA", &priv.PublicKey)
+
+	var fetches atomic.Int32
+	const slowDelay = 750 * time.Millisecond
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := fetches.Add(1)
+		if n > 1 {
+			// Slow path on every refresh after the prime so a
+			// pre-F6 synchronous reload would block the caller.
+			time.Sleep(slowDelay)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	defer func(orig time.Duration) { jwksCacheMinTTL = orig }(jwksCacheMinTTL)
+	jwksCacheMinTTL = time.Millisecond
+
+	auth, err := New(Config{
+		Mode:             ModeOIDC,
+		OIDCIssuer:       issuer,
+		OIDCJWKSURL:      ts.URL,
+		OIDCJWKSCacheTTL: 50 * time.Millisecond,
+		HTTPClient:       ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	sign := func(salt int64) string {
+		return signJWT(t, priv, "kA", map[string]any{
+			"iss": issuer,
+			"sub": "alice",
+			"exp": time.Now().Unix() + 300,
+			"iat": salt,
+		})
+	}
+
+	// Prime cache (first fetch is fast).
+	if _, err := authenticate(t, auth, sign(1)); err != nil {
+		t.Fatalf("prime verify: %v", err)
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("expected 1 fetch after prime, got %d", got)
+	}
+
+	// Wait past TTL — the cache is now stale.
+	time.Sleep(75 * time.Millisecond)
+
+	// Stale-while-revalidate: this call must return immediately with
+	// the cached kA and kick the refresh asynchronously. Pre-F6 it
+	// would have paid `slowDelay` waiting on the mutex-held HTTP fetch.
+	start := time.Now()
+	if _, err := authenticate(t, auth, sign(2)); err != nil {
+		t.Fatalf("stale verify: %v", err)
+	}
+	elapsed := time.Since(start)
+	const fastBudget = 200 * time.Millisecond
+	if elapsed > fastBudget {
+		t.Fatalf("stale-while-revalidate broke: call took %s; pre-F6 it would have been ~%s", elapsed, slowDelay)
+	}
+
+	// The async refresh must eventually fire so the next TTL window
+	// gets fresh material. Poll briefly — the slow path sleeps 750ms.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && fetches.Load() < 2 {
+		time.Sleep(25 * time.Millisecond)
+	}
+	if got := fetches.Load(); got < 2 {
+		t.Fatalf("async refresh never fired: fetches=%d, want ≥2", got)
+	}
+}
+
+// TestJWKSCache_SingleFlightCoalescesConcurrentReloads pins the F6
+// single-flight invariant: when N concurrent verify calls arrive on
+// an empty cache, only ONE JWKS HTTP fetch fires; the rest wait for
+// it. Pre-F6 the cache mutex serialised the requests but each one
+// re-entered reload(); with a slow IdP, every concurrent call paid
+// the round-trip latency.
+func TestJWKSCache_SingleFlightCoalescesConcurrentReloads(t *testing.T) {
+	const issuer = "https://issuer.example.test"
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	jwks := buildJWKS(t, "kA", &priv.PublicKey)
+
+	var fetches atomic.Int32
+	const fetchDelay = 200 * time.Millisecond
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		time.Sleep(fetchDelay)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	auth, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  issuer,
+		OIDCJWKSURL: ts.URL,
+		HTTPClient:  ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	const N = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, N)
+	start := time.Now()
+	for i := range N {
+		wg.Add(1)
+		go func(salt int64) {
+			defer wg.Done()
+			tok := signJWT(t, priv, "kA", map[string]any{
+				"iss": issuer,
+				"sub": "alice",
+				"exp": time.Now().Unix() + 300,
+				"iat": salt,
+			})
+			_, err := authenticate(t, auth, tok)
+			errs <- err
+		}(int64(i))
+	}
+	wg.Wait()
+	close(errs)
+	elapsed := time.Since(start)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent verify failed: %v", err)
+		}
+	}
+
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("single-flight broke: got %d JWKS fetches, want 1", got)
+	}
+	// Concurrent callers should all complete within roughly the
+	// fetch window plus signing overhead. Pre-F6 with mutex held
+	// during reload, N callers serialise → N × fetchDelay = ~4s for
+	// N=20. Generous ceiling here covers slow CI; the discriminating
+	// signal is fetches==1.
+	const ceiling = 1500 * time.Millisecond
+	if elapsed > ceiling {
+		t.Fatalf("concurrent calls did not coalesce: took %s for %d callers (fetch was %s)", elapsed, N, fetchDelay)
 	}
 }
 

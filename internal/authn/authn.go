@@ -685,36 +685,123 @@ type jwksCache struct {
 	expires    time.Time
 	lastReload time.Time
 	keys       map[string]crypto.PublicKey
+	// inflight is non-nil while a goroutine is performing a JWKS
+	// fetch. Other callers either wait on the channel (kid-miss path)
+	// or skip kicking another refresh (TTL-expired stale-while-
+	// revalidate path). Closed by the fetcher when reload returns;
+	// inflightErr carries the result for waiters.
+	inflight    chan struct{}
+	inflightErr error
 }
 
+// key resolves a kid to its public key. Concurrent callers coalesce
+// on a single in-flight JWKS fetch (single-flight) and lookups for
+// any cached kid return immediately even if the TTL has expired
+// (stale-while-revalidate). Pre-F6 the cache mutex was held for the
+// duration of the fetch — a 5s timeout cascade could pin every
+// concurrent verify behind a single hung HTTP round trip.
 func (c *jwksCache) key(ctx context.Context, kid string) (crypto.PublicKey, error) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.keys == nil || time.Now().After(c.expires) {
-		if err := c.reload(ctx); err != nil {
+	if c.keys != nil {
+		if k, ok := c.lookupLocked(kid); ok {
+			// Stale-while-revalidate: serve the known kid immediately.
+			// If the TTL has expired, kick a single-flight async refresh
+			// so the next request gets fresh material. The inflight
+			// guard prevents stampede; no rate-limit gate here because
+			// TTL itself bounds how often this fires.
+			if time.Now().After(c.expires) {
+				c.kickAsyncReloadLocked()
+			}
+			c.mu.Unlock()
+			return k, nil
+		}
+		// kid is unknown to the cache. Apply the F2 rate-limit gate
+		// (default 30s) so a flood of unknown-kid tokens cannot
+		// amplify into a JWKS-fetch DoS. canRefresh false means we
+		// return not-found immediately without burning a fetch.
+		if time.Since(c.lastReload) < jwksKidMissRefreshMinInterval {
+			c.mu.Unlock()
+			return nil, fmt.Errorf("oidc key %q not found", kid)
+		}
+	}
+	c.mu.Unlock()
+	// Cache empty (cold start) OR cache present but kid missing and
+	// the rate-limit window has elapsed. A coalesced synchronous
+	// reload either starts a fetch or waits on the in-flight one.
+	if err := c.coalescedReload(ctx); err != nil {
+		c.mu.Lock()
+		haveKeys := c.keys != nil
+		c.mu.Unlock()
+		// Reload failed but we have stale keys for some other kid —
+		// the caller's specific kid is still missing, so report
+		// not-found rather than the transport error. Cold-start
+		// failures (no keys at all) propagate the original error.
+		if !haveKeys {
 			return nil, err
 		}
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if k, ok := c.lookupLocked(kid); ok {
 		return k, nil
 	}
-	// Kid-miss: the IdP may have rotated keys between scheduled
-	// reloads. Trigger one rate-limited refresh and retry. The
-	// floor (jwksKidMissRefreshMinInterval, default 30s) keeps a
-	// flood of unknown-kid tokens from amplifying into a JWKS-fetch
-	// DoS — every rejected verify would otherwise hit the IdP. On
-	// reload error or kid still absent post-refresh, fall through
-	// with the original not-found error: reload() leaves c.keys
-	// intact on failure, so the cache keeps serving stale-but-
-	// working keys for any kid we already know.
-	if time.Since(c.lastReload) >= jwksKidMissRefreshMinInterval {
-		if err := c.reload(ctx); err == nil {
-			if k, ok := c.lookupLocked(kid); ok {
-				return k, nil
-			}
+	return nil, fmt.Errorf("oidc key %q not found", kid)
+}
+
+// coalescedReload performs a JWKS fetch shared with concurrent
+// callers. If a fetch is already in flight, this call waits on it
+// instead of starting a new one — that's the single-flight
+// invariant. Cancellable via ctx.
+func (c *jwksCache) coalescedReload(ctx context.Context) error {
+	c.mu.Lock()
+	if c.inflight != nil {
+		wait := c.inflight
+		c.mu.Unlock()
+		select {
+		case <-wait:
+			c.mu.Lock()
+			err := c.inflightErr
+			c.mu.Unlock()
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
-	return nil, fmt.Errorf("oidc key %q not found", kid)
+	ch := make(chan struct{})
+	c.inflight = ch
+	c.mu.Unlock()
+
+	err := c.reload(ctx)
+
+	c.mu.Lock()
+	c.inflightErr = err
+	c.inflight = nil
+	c.mu.Unlock()
+	close(ch)
+	return err
+}
+
+// kickAsyncReloadLocked spawns a single-flight background refresh
+// when the TTL has expired but the requested kid is in the stale
+// cache. Caller must hold c.mu. No-op if a fetch is already in
+// flight. The refresh detaches from the request context and uses a
+// fresh background context so the request can return promptly.
+func (c *jwksCache) kickAsyncReloadLocked() {
+	if c.inflight != nil {
+		return
+	}
+	ch := make(chan struct{})
+	c.inflight = ch
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 2*jwksFetchTimeout)
+		defer cancel()
+		err := c.reload(bgCtx)
+		c.mu.Lock()
+		c.inflightErr = err
+		c.inflight = nil
+		c.mu.Unlock()
+		close(ch)
+	}()
 }
 
 // lookupLocked resolves a kid to its public key under the assumption
@@ -732,6 +819,12 @@ func (c *jwksCache) lookupLocked(kid string) (crypto.PublicKey, bool) {
 	return key, ok
 }
 
+// reload performs the JWKS fetch + parse without holding c.mu, then
+// commits the resulting keys under a brief lock. c.url, c.path,
+// c.client, and c.ttl are immutable after construction so reading
+// them lock-free is safe. Pre-F6 the entire reload — including the
+// up-to-5s HTTP round trip — ran under c.mu, blocking every
+// concurrent verify behind a single fetcher.
 func (c *jwksCache) reload(ctx context.Context) error {
 	var b []byte
 	var err error
@@ -802,10 +895,12 @@ func (c *jwksCache) reload(ctx context.Context) error {
 	if ttl <= 0 {
 		ttl = jwksCacheDefaultTTL
 	}
-	c.keys = keys
 	now := time.Now()
+	c.mu.Lock()
+	c.keys = keys
 	c.expires = now.Add(ttl)
 	c.lastReload = now
+	c.mu.Unlock()
 	return nil
 }
 
