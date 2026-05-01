@@ -49,6 +49,11 @@ type Options struct {
 	// Tools lists the ToolDescriptors the mock server should expose. Nil
 	// means the harness registers only the default mock_tool.
 	Tools []mcp.ToolDescriptor
+
+	// Enforcement, if non-nil, is installed on the mock server. Most harness
+	// tests leave this nil; parity tests that exercise protocol-level
+	// validation can opt in without rebuilding each transport fixture.
+	Enforcement mcp.Enforcement
 }
 
 // ServerSharer is an optional interface implemented by transports whose
@@ -114,7 +119,7 @@ func buildMockServer(opts Options) *mcp.Server {
 			},
 		}}
 	}
-	srv := mcp.NewServer("harness-test", tools, nil, nil)
+	srv := mcp.NewServer("harness-test", tools, opts.Enforcement, nil)
 	if opts.MaxMessageSize > 0 {
 		srv.MaxMessageSize = opts.MaxMessageSize
 	}
