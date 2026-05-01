@@ -453,6 +453,86 @@ func TestJWKPublicKey_RejectsZeroECPoint(t *testing.T) {
 	}
 }
 
+// TestJWKSCache_ConfigurableTTL pins the F5 invariant: an operator
+// who sets Config.OIDCJWKSCacheTTL (wired from MCP_OIDC_JWKS_CACHE_TTL)
+// gets that TTL applied to the JWKS-document cache, not the
+// hardcoded 5-minute default. Pre-fix the cache always lived for 5
+// minutes regardless of operator config — fine for a single-tenant
+// dev setup, too coarse for a hosted service whose IdP rotates keys
+// hourly. Combined with F2 (kid-miss refresh) the JWKS path is now
+// fully tunable.
+func TestJWKSCache_ConfigurableTTL(t *testing.T) {
+	const issuer = "https://issuer.example.test"
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	jwks := buildJWKS(t, "kA", &priv.PublicKey)
+	var fetches atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	// The MinTTL clamp would otherwise pin our 100ms to 1 minute; the
+	// var seam (matching the kid-miss-refresh pattern) lets the test
+	// drive the TTL boundary in milliseconds. Production never mutates it.
+	defer func(orig time.Duration) { jwksCacheMinTTL = orig }(jwksCacheMinTTL)
+	jwksCacheMinTTL = time.Millisecond
+
+	const ttl = 100 * time.Millisecond
+	auth, err := New(Config{
+		Mode:             ModeOIDC,
+		OIDCIssuer:       issuer,
+		OIDCJWKSURL:      ts.URL,
+		OIDCJWKSCacheTTL: ttl,
+		HTTPClient:       ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	sign := func(salt int64) string {
+		return signJWT(t, priv, "kA", map[string]any{
+			"iss": issuer,
+			"sub": "alice",
+			"exp": time.Now().Unix() + 300,
+			"iat": salt,
+		})
+	}
+
+	// First call primes the cache via a single fetch.
+	if _, err := authenticate(t, auth, sign(1)); err != nil {
+		t.Fatalf("first verify: %v", err)
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("expected 1 fetch after prime, got %d", got)
+	}
+
+	// Second call inside the TTL window must hit the cache — different
+	// token bytes (salted iat) bypass the verify cache, so this isolates
+	// jwksCache reuse. If F5 wired the TTL correctly, no extra fetch.
+	if _, err := authenticate(t, auth, sign(2)); err != nil {
+		t.Fatalf("second verify: %v", err)
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("TTL-cached call must not fetch, got %d", got)
+	}
+
+	// Past the TTL the cache must reload. Pre-F5 the cache lived 5min
+	// regardless and this would still see 1 fetch.
+	time.Sleep(ttl + 75*time.Millisecond)
+	if _, err := authenticate(t, auth, sign(3)); err != nil {
+		t.Fatalf("third verify: %v", err)
+	}
+	if got := fetches.Load(); got != 2 {
+		t.Fatalf("expected refresh after TTL, got %d", got)
+	}
+}
+
 // buildDuplicateKidJWKS produces a JWKS document with two RSA
 // public keys both stamped with the same kid. Variant of buildJWKS
 // (oidc_integration_test.go) extended to two keys; kept here so the

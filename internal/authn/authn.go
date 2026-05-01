@@ -116,6 +116,15 @@ type Config struct {
 	// call re-checks the claims. Operators should pick this
 	// consciously; the default stays conservative at 60s.
 	OIDCVerifyCacheTTL time.Duration
+	// OIDCJWKSCacheTTL is the lifetime of the in-memory JWKS document
+	// cache. Zero selects the conservative 5-minute default; values
+	// are clamped to [jwksCacheMinTTL, jwksCacheMaxTTL] (1 minute to
+	// 24 hours). Hosted services that rotate keys frequently can
+	// shorten the window so a rotation lands without waiting for the
+	// next periodic reload; F2's kid-miss-triggered refresh covers
+	// the rotation-in-flight case independently. Wired from
+	// MCP_OIDC_JWKS_CACHE_TTL.
+	OIDCJWKSCacheTTL time.Duration
 	// HTTPClient overrides the JWKS fetcher's transport. Tests inject
 	// httptest-backed clients here; production code leaves it nil and
 	// uses http.DefaultClient.
@@ -421,12 +430,29 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 			"default", oidcVerifyCacheMaxTTL,
 			"note", "cached verify results live longer; revocation propagates only after ttl expires")
 	}
+	// Resolve the JWKS cache TTL: zero or negative selects the
+	// conservative default; values outside the operator-tunable
+	// bracket are clamped silently. config.Load applies a stricter
+	// range check at startup so out-of-bracket values surface as a
+	// config error there; this clamp catches programmatic embedders
+	// that build authn.Config directly.
+	jwksTTL := cfg.OIDCJWKSCacheTTL
+	if jwksTTL <= 0 {
+		jwksTTL = jwksCacheDefaultTTL
+	}
+	if jwksTTL < jwksCacheMinTTL {
+		jwksTTL = jwksCacheMinTTL
+	}
+	if jwksTTL > jwksCacheMaxTTL {
+		jwksTTL = jwksCacheMaxTTL
+	}
 	return oidcAuthenticator{
 		cfg: cfg,
 		cache: &jwksCache{
 			url:    cfg.OIDCJWKSURL,
 			path:   cfg.OIDCJWKSPath,
 			client: cfg.HTTPClient,
+			ttl:    jwksTTL,
 		},
 		verifyCache: newOIDCVerifyCache(oidcVerifyCacheSize, cfg.OIDCVerifyCacheTTL),
 	}, nil
@@ -616,6 +642,26 @@ const jwksFetchTimeout = 5 * time.Second
 // repeated transport allocation.
 var jwksDefaultHTTPClient = &http.Client{Timeout: jwksFetchTimeout}
 
+// jwksCache lifetime parameters. The TTL governs how long a fetched
+// JWKS document is reused before a periodic reload fires. The bounds
+// reject obvious misconfiguration at construction time:
+//   - Below 1m: every verify pays a JWKS round trip; the cache adds
+//     no value and the IdP catches the brunt of traffic.
+//   - Above 24h: a revoked / rotated key would persist far past any
+//     reasonable rotation window; even rarely-rotated providers
+//     publish daily.
+//
+// The default (5m) preserves pre-F5 behaviour; the operator opts in
+// via MCP_OIDC_JWKS_CACHE_TTL. Min/max are vars (not consts) to give
+// tests a seam — production code never mutates them; the documented
+// startup path applies the same range check at config.Load().
+const jwksCacheDefaultTTL = 5 * time.Minute
+
+var (
+	jwksCacheMinTTL = 1 * time.Minute
+	jwksCacheMaxTTL = 24 * time.Hour
+)
+
 // jwksKidMissRefreshMinInterval is the floor between
 // kid-miss-triggered JWKS reloads. When the IdP rotates keys
 // between scheduled cache refreshes, the next request lands with a
@@ -634,7 +680,8 @@ type jwksCache struct {
 	mu         sync.Mutex
 	url        string
 	path       string
-	client     *http.Client // nil = jwksDefaultHTTPClient (5s timeout)
+	client     *http.Client  // nil = jwksDefaultHTTPClient (5s timeout)
+	ttl        time.Duration // 0 = jwksCacheDefaultTTL
 	expires    time.Time
 	lastReload time.Time
 	keys       map[string]crypto.PublicKey
@@ -751,9 +798,13 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		}
 		keys[key.KID] = pub
 	}
+	ttl := c.ttl
+	if ttl <= 0 {
+		ttl = jwksCacheDefaultTTL
+	}
 	c.keys = keys
 	now := time.Now()
-	c.expires = now.Add(5 * time.Minute)
+	c.expires = now.Add(ttl)
 	c.lastReload = now
 	return nil
 }

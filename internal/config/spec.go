@@ -78,6 +78,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_OIDC_JWKS_URL", Group: "Auth", Help: "Optional JWKS URL override"},
 		{Name: "MCP_OIDC_JWKS_PATH", Group: "Auth", Help: "Local JWKS file (tests/dev only)"},
 		{Name: "MCP_OIDC_VERIFY_CACHE_TTL", Group: "Auth", Default: "60s", Help: "OIDC verify cache TTL [1s,5m]", EssentialDoc: true},
+		{Name: "MCP_OIDC_JWKS_CACHE_TTL", Group: "Auth", Default: "5m", Help: "OIDC JWKS document cache TTL [1m,24h]"},
 		{Name: "MCP_OIDC_STRICT", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, fail config load if oidc selected without MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI; reject tokens missing exp claim"},
 		{Name: "MCP_REQUIRE_TENANT_CLAIM", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, oidc tokens missing the tenant claim are rejected (no fallback to MCP_DEFAULT_TENANT_ID)"},
 		{Name: "MCP_RESOURCE_URI", Group: "Auth", Help: "RFC 8707 resource indicator"},

@@ -84,6 +84,14 @@ type Config struct {
 	// outside [1s, 5m] are clamped at the authn layer. Wired from
 	// MCP_OIDC_VERIFY_CACHE_TTL.
 	OIDCVerifyCacheTTL time.Duration
+	// OIDCJWKSCacheTTL is the lifetime of the in-memory JWKS document
+	// cache. Zero leaves authn at its 5-minute default; explicit values
+	// are validated at Load() to lie in [1m, 24h]. Hosted services
+	// that rotate keys frequently can shorten the window so a
+	// rotation lands without process restart. Pairs with the F2
+	// kid-miss-triggered refresh for in-flight rotation handling.
+	// Wired from MCP_OIDC_JWKS_CACHE_TTL.
+	OIDCJWKSCacheTTL time.Duration
 	// OIDCStrict opts the server into stricter OIDC behaviour for
 	// shared-service / hosted deployments. When true, config.Load
 	// rejects oidc + (no audience + no resource URI) and the OIDC
@@ -448,6 +456,16 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("MCP_OIDC_VERIFY_CACHE_TTL must be between 1s and 5m, got %s", d)
 		}
 		cfg.OIDCVerifyCacheTTL = d
+	}
+	if v := strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_CACHE_TTL")); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MCP_OIDC_JWKS_CACHE_TTL %q: %w", v, err)
+		}
+		if d < time.Minute || d > 24*time.Hour {
+			return Config{}, fmt.Errorf("MCP_OIDC_JWKS_CACHE_TTL must be between 1m and 24h, got %s", d)
+		}
+		cfg.OIDCJWKSCacheTTL = d
 	}
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))

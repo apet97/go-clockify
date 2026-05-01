@@ -1379,6 +1379,70 @@ func TestOIDCVerifyCacheTTL_InvalidDurationRejected(t *testing.T) {
 	}
 }
 
+// --- OIDC JWKS cache TTL ----------------------------------------------------
+//
+// Mirrors the verify-cache TTL coverage above. Pre-F5 the JWKS cache
+// hardcoded a 5-minute TTL with no operator knob; an IdP that rotates
+// keys hourly forced a process restart for the rotation to land
+// promptly. MCP_OIDC_JWKS_CACHE_TTL accepts [1m, 24h]; values outside
+// the bracket are rejected at config load. authn picks 5m if Config
+// leaves it zero.
+
+func TestOIDCJWKSCacheTTL_Default(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key"})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OIDCJWKSCacheTTL != 0 {
+		t.Fatalf("unset TTL should leave config at 0 (authn picks default), got %s", cfg.OIDCJWKSCacheTTL)
+	}
+}
+
+func TestOIDCJWKSCacheTTL_Custom(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":        "test-key",
+		"MCP_OIDC_JWKS_CACHE_TTL": "30m",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OIDCJWKSCacheTTL != 30*time.Minute {
+		t.Fatalf("expected 30m, got %s", cfg.OIDCJWKSCacheTTL)
+	}
+}
+
+func TestOIDCJWKSCacheTTL_BelowMinRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":        "test-key",
+		"MCP_OIDC_JWKS_CACHE_TTL": "30s",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for TTL below 1m")
+	}
+}
+
+func TestOIDCJWKSCacheTTL_AboveMaxRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":        "test-key",
+		"MCP_OIDC_JWKS_CACHE_TTL": "48h",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for TTL above 24h")
+	}
+}
+
+func TestOIDCJWKSCacheTTL_InvalidDurationRejected(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":        "test-key",
+		"MCP_OIDC_JWKS_CACHE_TTL": "carrots",
+	})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for unparseable duration")
+	}
+}
+
 // TestLoad_RejectsBadWorkspaceID verifies CLOCKIFY_WORKSPACE_ID is run
 // through resolve.ValidateID at startup so a malformed value (path-injection
 // shaped, fragment, query, or .. traversal) cannot reach handler-level
