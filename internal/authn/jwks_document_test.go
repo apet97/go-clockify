@@ -1,6 +1,8 @@
 package authn
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -333,6 +335,122 @@ func setKidMissRefreshInterval(d time.Duration) func() {
 	prev := jwksKidMissRefreshMinInterval
 	jwksKidMissRefreshMinInterval = d
 	return func() { jwksKidMissRefreshMinInterval = prev }
+}
+
+// TestJWKPublicKey_RejectsShortRSAModulus pins the F3 invariant:
+// jwkPublicKey must refuse RSA keys whose modulus is below 2048
+// bits. PKCS1v15 verification is mathematically sound at any bit
+// length, so without this check a JWKS that publishes a 1024-bit
+// modulus produces a verifier that accepts forged tokens after the
+// modulus is factored — feasible in hours/days for ≤1024-bit RSA on
+// commodity hardware. NIST SP 800-131A and RFC 7518 §6.3.2 require
+// ≥2048.
+func TestJWKPublicKey_RejectsShortRSAModulus(t *testing.T) {
+	short, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatalf("rsa-1024: %v", err)
+	}
+	nEnc := base64.RawURLEncoding.EncodeToString(short.N.Bytes())
+	eEnc := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(short.E)).Bytes())
+	_, err = jwkPublicKey("RSA", nEnc, eEnc, "", "", "")
+	if err == nil {
+		t.Fatal("expected jwkPublicKey to reject 1024-bit RSA modulus")
+	}
+	if !strings.Contains(err.Error(), "modulus") {
+		t.Fatalf("expected error to mention modulus, got: %v", err)
+	}
+}
+
+// TestJWKPublicKey_RejectsSmallRSAExponent pins the F7 invariant for
+// a too-small exponent: e=1 makes encryption the identity function
+// (every "ciphertext" equals the plaintext), so any signature
+// verifier built on it accepts arbitrary forgeries. RFC 7518 §6.3.1.2
+// permits e≥3; real IdPs publish 65537. Pre-fix only e=0 / empty /
+// overflow were rejected, leaving e=1 silently accepted.
+func TestJWKPublicKey_RejectsSmallRSAExponent(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	nEnc := base64.RawURLEncoding.EncodeToString(rsaKey.N.Bytes())
+	for _, e := range []int{1, 2} {
+		eEnc := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(e)).Bytes())
+		_, err := jwkPublicKey("RSA", nEnc, eEnc, "", "", "")
+		if err == nil {
+			t.Fatalf("expected jwkPublicKey to reject exponent %d", e)
+		}
+		if !strings.Contains(err.Error(), "exponent") {
+			t.Fatalf("e=%d: expected error to mention exponent, got: %v", e, err)
+		}
+	}
+}
+
+// TestJWKPublicKey_RejectsEvenRSAExponent pins the F7 parity invariant:
+// a valid RSA encryption exponent must be coprime to lambda(N). Since
+// lambda(N) is always even for non-trivial N, an even e violates the
+// gcd=1 constraint and breaks RSA's invertibility. e=4 (and any even
+// value) must be rejected. Pre-fix the checks looked only at zero/
+// negative/overflow and any odd-or-even positive value was accepted.
+func TestJWKPublicKey_RejectsEvenRSAExponent(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	nEnc := base64.RawURLEncoding.EncodeToString(rsaKey.N.Bytes())
+	for _, e := range []int{4, 6, 256} {
+		eEnc := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(e)).Bytes())
+		_, err := jwkPublicKey("RSA", nEnc, eEnc, "", "", "")
+		if err == nil {
+			t.Fatalf("expected jwkPublicKey to reject even exponent %d", e)
+		}
+		if !strings.Contains(err.Error(), "exponent") {
+			t.Fatalf("e=%d: expected error to mention exponent, got: %v", e, err)
+		}
+	}
+}
+
+// TestJWKPublicKey_RejectsOffCurveECPoint pins the F4 invariant:
+// jwkPublicKey must validate that (X, Y) is a point on the named
+// curve at parse time. ecdsa.VerifyASN1 (Go ≥ 1.20) does check curve
+// membership, so an off-curve key in the JWKS would already fail
+// signature verification — but the gap is that jwkPublicKey happily
+// returns a malformed *ecdsa.PublicKey, leaving any future caller
+// that does not go through ecdsa.VerifyASN1 (a custom verifier, a
+// non-ECDSA consumer) silently accepting an unverifiable key.
+//
+// Construction: take the X coordinate of a real P-256 key but flip a
+// byte in Y so the resulting (X, Y) is no longer on the curve.
+func TestJWKPublicKey_RejectsOffCurveECPoint(t *testing.T) {
+	ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("ec: %v", err)
+	}
+	xb := ecKey.X.Bytes()
+	yb := ecKey.Y.Bytes()
+	// Flip one byte in Y to put the point off the curve.
+	yb[len(yb)/2] ^= 0xFF
+
+	xEnc := base64.RawURLEncoding.EncodeToString(xb)
+	yEnc := base64.RawURLEncoding.EncodeToString(yb)
+	_, err = jwkPublicKey("EC", "", "", xEnc, yEnc, "P-256")
+	if err == nil {
+		t.Fatal("expected jwkPublicKey to reject off-curve EC point")
+	}
+	if !strings.Contains(err.Error(), "curve") && !strings.Contains(err.Error(), "point") {
+		t.Fatalf("expected error to mention curve/point, got: %v", err)
+	}
+}
+
+// TestJWKPublicKey_RejectsZeroECPoint exercises the special case
+// (0, 0): a point that no NIST curve contains and that some naive
+// verifiers accidentally treat as the point at infinity. The on-
+// curve check (and crypto/ecdh's NewPublicKey) reject it explicitly.
+func TestJWKPublicKey_RejectsZeroECPoint(t *testing.T) {
+	zero := base64.RawURLEncoding.EncodeToString([]byte{0})
+	_, err := jwkPublicKey("EC", "", "", zero, zero, "P-256")
+	if err == nil {
+		t.Fatal("expected jwkPublicKey to reject (0, 0)")
+	}
 }
 
 // buildDuplicateKidJWKS produces a JWKS document with two RSA

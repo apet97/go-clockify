@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
@@ -757,6 +758,16 @@ func (c *jwksCache) reload(ctx context.Context) error {
 	return nil
 }
 
+// rsaMinModulusBits is the lower bound on RSA modulus length accepted
+// from a JWKS. NIST SP 800-131A and RFC 7518 §6.3.2 require ≥2048 for
+// RSA used in signature verification; PKCS1v15 verify is
+// mathematically sound at any bit length, so without this floor a
+// JWKS publishing a short modulus produces a verifier that accepts
+// forged tokens once the modulus is factored. 1024-bit RSA is
+// factorable on commodity hardware in hours/days; the floor is the
+// only barrier between a poisoned JWKS and a viable forgery oracle.
+const rsaMinModulusBits = 2048
+
 func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 	switch kty {
 	case "RSA":
@@ -782,7 +793,20 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 		if exp == 0 {
 			return nil, fmt.Errorf("rsa exponent 'e' must be positive")
 		}
-		return &rsa.PublicKey{N: new(big.Int).SetBytes(nb), E: int(exp)}, nil
+		// RFC 7518 §6.3.1.2 admits any e ≥ 3 coprime to lambda(N);
+		// real IdPs publish 65537. e=1 is the identity (trivially
+		// breakable); e=2 / any even value violates gcd(e,
+		// lambda(N))=1 because lambda(N) is always even. Reject both
+		// at parse time so a poisoned or misconfigured JWKS cannot
+		// install a non-invertible / trivially-invertible verifier.
+		if exp < 3 || exp%2 == 0 {
+			return nil, fmt.Errorf("rsa exponent %d invalid: must be ≥3 and odd", exp)
+		}
+		modulus := new(big.Int).SetBytes(nb)
+		if bits := modulus.BitLen(); bits < rsaMinModulusBits {
+			return nil, fmt.Errorf("rsa modulus %d bits below minimum %d", bits, rsaMinModulusBits)
+		}
+		return &rsa.PublicKey{N: modulus, E: int(exp)}, nil
 	case "EC":
 		xb, err := base64.RawURLEncoding.DecodeString(x)
 		if err != nil {
@@ -796,6 +820,18 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Validate the point lies on the named curve via crypto/ecdh,
+		// which performs the on-curve check at NewPublicKey time and
+		// also rejects the point at infinity. The non-deprecated
+		// modern API: elliptic.Curve.IsOnCurve is documented as
+		// "low-level unsafe" and slated for removal. ecdsa.VerifyASN1
+		// already performs the same membership check at signature
+		// verification time, so an off-curve key would fail later;
+		// rejecting at parse closes the gap for any future caller
+		// that does not route through VerifyASN1.
+		if err := validateECPointOnCurve(curve, crv, xb, yb); err != nil {
+			return nil, err
+		}
 		return &ecdsa.PublicKey{
 			Curve: curve,
 			X:     new(big.Int).SetBytes(xb),
@@ -803,6 +839,48 @@ func jwkPublicKey(kty, n, e, x, y, crv string) (crypto.PublicKey, error) {
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported jwk kty %q", kty)
+	}
+}
+
+// validateECPointOnCurve verifies that the JWK-supplied (xb, yb)
+// coordinates encode a point on the named curve. Uses crypto/ecdh's
+// NewPublicKey, which expects a SEC1 uncompressed point (0x04 || X ||
+// Y) with each coordinate left-padded to the curve's field byte
+// length. Any deviation — coordinate longer than the field, point at
+// infinity, off-curve point — surfaces as a parse-time error.
+func validateECPointOnCurve(curve elliptic.Curve, crvName string, xb, yb []byte) error {
+	fieldSize := (curve.Params().BitSize + 7) / 8
+	if len(xb) > fieldSize || len(yb) > fieldSize {
+		return fmt.Errorf("ec coordinate exceeds curve %q field size", crvName)
+	}
+	point := make([]byte, 1+2*fieldSize)
+	point[0] = 0x04
+	copy(point[1+fieldSize-len(xb):1+fieldSize], xb)
+	copy(point[1+2*fieldSize-len(yb):1+2*fieldSize], yb)
+	ec, err := ecdhCurveFor(crvName)
+	if err != nil {
+		return err
+	}
+	if _, err := ec.NewPublicKey(point); err != nil {
+		return fmt.Errorf("ec point not on curve %q: %w", crvName, err)
+	}
+	return nil
+}
+
+// ecdhCurveFor mirrors curveFor for the crypto/ecdh package. Kept
+// separate so the elliptic.Curve mapping (used by ecdsa.VerifyASN1)
+// and the ecdh.Curve mapping (used by NewPublicKey for on-curve
+// validation) can evolve independently if Go stdlib ever splits them.
+func ecdhCurveFor(name string) (ecdh.Curve, error) {
+	switch name {
+	case "P-256":
+		return ecdh.P256(), nil
+	case "P-384":
+		return ecdh.P384(), nil
+	case "P-521":
+		return ecdh.P521(), nil
+	default:
+		return nil, fmt.Errorf("unsupported EC curve %q", name)
 	}
 }
 
