@@ -133,10 +133,10 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 // AfterCall applies post-processing (truncation) to a successful result.
 //
 // Tool handlers return typed structs (e.g. ResultEnvelope) which the truncate
-// package's type switch can't walk. We JSON-roundtrip the result into a
-// generic map[string]any / []any tree before calling Truncate so the walker
-// sees the whole structure. The extra marshal cost is acceptable because the
-// server marshals the result for wire transport moments later anyway.
+// package's type switch can't walk. We first marshal once to estimate the
+// response size; under-budget results return unchanged. Over-budget results
+// are JSON-roundtripped into a generic map[string]any / []any tree before
+// calling Truncate so the walker sees the whole structure.
 //
 // On marshal/unmarshal failure we fail open and return the original result
 // unchanged — dropping a tool response because truncation misbehaved would be
@@ -150,6 +150,9 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 		slog.Debug("truncate_marshal_failed", "error", err.Error())
 		return result, nil
 	}
+	if p.Truncation.TokenBudget > 0 && estimatedTokensFromJSONLen(len(b)) <= p.Truncation.TokenBudget {
+		return result, nil
+	}
 	var generic any
 	if err := json.Unmarshal(b, &generic); err != nil {
 		slog.Debug("truncate_unmarshal_failed", "error", err.Error())
@@ -160,6 +163,10 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 		slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
 	}
 	return truncated, nil
+}
+
+func estimatedTokensFromJSONLen(n int) int {
+	return (n + 3) / 4
 }
 
 func (p *Pipeline) executeDryRun(ctx context.Context, action dryrun.Action, name string, args map[string]any, hints mcp.ToolHints, lookupHandler func(string) (mcp.ToolHandler, bool)) (any, error) {

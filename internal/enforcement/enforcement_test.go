@@ -826,6 +826,44 @@ func TestAfterCall_TruncationEnabled_SmallResult(t *testing.T) {
 	}
 }
 
+func TestAfterCall_TruncationEnabled_SmallTypedResultPreservesType(t *testing.T) {
+	type envelope struct {
+		OK     bool           `json:"ok"`
+		Action string         `json:"action"`
+		Data   any            `json:"data,omitempty"`
+		Meta   map[string]any `json:"meta,omitempty"`
+	}
+	input := envelope{
+		OK:     true,
+		Action: "clockify_quick_report",
+		Data:   map[string]any{"entries": 3, "totalSeconds": 5400},
+		Meta:   map[string]any{"workspaceId": "ws1"},
+	}
+	p := &Pipeline{
+		Truncation: truncate.Config{Enabled: true, TokenBudget: 8000},
+	}
+
+	result, err := p.AfterCall(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := result.(envelope); !ok {
+		t.Fatalf("small typed result should return unchanged, got %T", result)
+	}
+
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if _, hasTrunc := decoded["_truncation"]; hasTrunc {
+		t.Fatal("did not expect _truncation metadata for small typed result within budget")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Gate.IsGroupAllowed
 // ---------------------------------------------------------------------------
