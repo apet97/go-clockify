@@ -20,7 +20,16 @@ func init() {
 		Name:        "webhooks",
 		Description: "Webhook management",
 		Keywords:    []string{"webhook", "event", "subscribe", "notification", "callback"},
-		Builder:     webhookHandlers,
+		ToolNames: []string{
+			"clockify_list_webhooks",
+			"clockify_get_webhook",
+			"clockify_create_webhook",
+			"clockify_update_webhook",
+			"clockify_delete_webhook",
+			"clockify_list_webhook_events",
+			"clockify_test_webhook",
+		},
+		Builder: webhookHandlers,
 	})
 }
 

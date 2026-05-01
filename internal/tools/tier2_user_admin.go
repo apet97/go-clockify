@@ -16,7 +16,17 @@ func init() {
 		Name:        "user_admin",
 		Description: "User and group management",
 		Keywords:    []string{"user", "group", "role", "admin", "deactivate", "permission"},
-		Builder:     userAdminHandlers,
+		ToolNames: []string{
+			"clockify_list_user_groups",
+			"clockify_create_user_group",
+			"clockify_update_user_group",
+			"clockify_delete_user_group",
+			"clockify_add_user_to_group",
+			"clockify_remove_user_from_group",
+			"clockify_update_user_role",
+			"clockify_deactivate_user",
+		},
+		Builder: userAdminHandlers,
 	})
 }
 

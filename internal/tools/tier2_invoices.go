@@ -15,7 +15,21 @@ func init() {
 		Name:        "invoices",
 		Description: "Invoice management — create, send, track payments",
 		Keywords:    []string{"invoice", "billing", "payment", "send"},
-		Builder:     invoiceHandlers,
+		ToolNames: []string{
+			"clockify_list_invoices",
+			"clockify_get_invoice",
+			"clockify_create_invoice",
+			"clockify_update_invoice",
+			"clockify_delete_invoice",
+			"clockify_send_invoice",
+			"clockify_mark_invoice_paid",
+			"clockify_list_invoice_items",
+			"clockify_add_invoice_item",
+			"clockify_update_invoice_item",
+			"clockify_delete_invoice_item",
+			"clockify_invoice_report",
+		},
+		Builder: invoiceHandlers,
 	})
 }
 

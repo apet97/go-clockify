@@ -509,9 +509,6 @@ func intArg(args map[string]any, key string, fallback int) int {
 }
 
 func ok(action string, data any, meta map[string]any) ResultEnvelope {
-	if meta == nil {
-		meta = map[string]any{}
-	}
 	return ResultEnvelope{OK: true, Action: action, Data: data, Meta: meta}
 }
 

@@ -38,9 +38,9 @@ Each Tier-2 group (invoices, expenses, scheduling, time_off, …) is the
 unit of activation. Calling `clockify_search_tools` with either
 `activate_group:"<group>"` **or** `activate_tool:"<tool>"` brings the
 **entire containing group** online — the response payload includes
-`activated_tools: [...]` enumerating every tool name now reachable, and
-the `activation_message` lists them inline so the LLM can see what
-sibling capabilities it just gained. `activate_group` is the
+`activated_tools: [...]` enumerating every tool name now reachable,
+while `activation_message` stays concise and identifies the activated
+group/count without repeating the tool list. `activate_group` is the
 preferred form for new code; `activate_tool` is preserved for
 backwards compatibility.
 

@@ -711,6 +711,9 @@ func TestMissingMethodInvalidRequest(t *testing.T) {
 
 func TestActivateGroupAddsTools(t *testing.T) {
 	server := NewServer("test", nil, nil, nil)
+	if got := server.listTools(); len(got) != 0 {
+		t.Fatalf("expected empty tools/list before activation, got %d", len(got))
+	}
 
 	newTools := []ToolDescriptor{
 		{
@@ -808,6 +811,58 @@ func TestToolsListReturnsSorted(t *testing.T) {
 	}
 	if listed[0].Name != "a_tool" || listed[1].Name != "m_tool" || listed[2].Name != "z_tool" {
 		t.Fatalf("tools not sorted: %s, %s, %s", listed[0].Name, listed[1].Name, listed[2].Name)
+	}
+}
+
+func TestToolsListCacheReturnsDefensiveSlice(t *testing.T) {
+	tools := []ToolDescriptor{
+		{Tool: Tool{Name: "a_tool", Description: "a", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
+		{Tool: Tool{Name: "b_tool", Description: "b", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
+	}
+	server := NewServer("test", tools, nil, nil)
+
+	first := server.listTools()
+	if len(first) != 2 {
+		t.Fatalf("expected 2 tools, got %d", len(first))
+	}
+	first[0].Name = "mutated_tool"
+	first[1].Description = "mutated description"
+
+	second := server.listTools()
+	if second[0].Name != "a_tool" || second[1].Description != "b" {
+		t.Fatalf("tools/list returned mutable cached slice: %+v", second)
+	}
+}
+
+func TestActivateTier1ToolInvalidatesToolsListCache(t *testing.T) {
+	bc := &bootstrap.Config{
+		Mode:        bootstrap.Custom,
+		CustomTools: map[string]bool{"visible_tool": true},
+	}
+	bc.SetTier1Tools(map[string]bool{
+		"visible_tool": true,
+		"hidden_tool":  true,
+	})
+	descriptors := []ToolDescriptor{
+		{Tool: Tool{Name: "visible_tool", Description: "visible", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
+		{Tool: Tool{Name: "hidden_tool", Description: "hidden", InputSchema: map[string]any{"type": "object"}, Annotations: map[string]any{"readOnlyHint": true}}, ReadOnlyHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) { return nil, nil }},
+	}
+	server := NewServer("test", descriptors, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
+
+	before := server.listTools()
+	if len(before) != 1 || before[0].Name != "visible_tool" {
+		t.Fatalf("expected only visible_tool before activation, got %+v", before)
+	}
+	if err := server.ActivateTier1Tool("hidden_tool"); err != nil {
+		t.Fatalf("activate tier1: %v", err)
+	}
+	after := server.listTools()
+	names := map[string]bool{}
+	for _, tool := range after {
+		names[tool.Name] = true
+	}
+	if len(after) != 2 || !names["visible_tool"] || !names["hidden_tool"] {
+		t.Fatalf("expected visible and hidden tools after activation, got %+v", after)
 	}
 }
 

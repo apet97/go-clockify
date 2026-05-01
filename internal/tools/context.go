@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
@@ -83,8 +82,8 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 			return ResultEnvelope{}, err
 		}
 		return ok("clockify_search_tools", activationPayload(result, fmt.Sprintf(
-			"Activated group %q (%d tools now available): %s",
-			result.Group, result.ToolCount, strings.Join(result.ActivatedTools, ", "),
+			"Activated group %q (%d tools now available)",
+			result.Group, result.ToolCount,
 		)), nil), nil
 	}
 	if activateTool != "" {
@@ -101,8 +100,8 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		var message string
 		if result.Group != "" {
 			message = fmt.Sprintf(
-				"Activated tool %q via group %q — the entire group is now available (%d tools): %s",
-				result.Name, result.Group, result.ToolCount, strings.Join(result.ActivatedTools, ", "),
+				"Activated tool %q via group %q (%d tools now available)",
+				result.Name, result.Group, result.ToolCount,
 			)
 		} else {
 			message = fmt.Sprintf("Activated tool %q", result.Name)
@@ -123,24 +122,14 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 		})
 	}
 
-	tier2Names := make([]string, 0, len(Tier2Groups))
-	for name := range Tier2Groups {
-		tier2Names = append(tier2Names, name)
-	}
-	sort.Strings(tier2Names)
 	q := strings.ToLower(strings.TrimSpace(query))
-	for _, name := range tier2Names {
+	for _, name := range tier2GroupNames() {
 		group := Tier2Groups[name]
 		if q != "" &&
 			!strings.Contains(strings.ToLower(group.Name), q) &&
 			!strings.Contains(strings.ToLower(group.Description), q) &&
 			!containsKeyword(group.Keywords, q) {
 			continue
-		}
-		descriptors, ok := s.Tier2Handlers(name)
-		toolCount := 0
-		if ok {
-			toolCount = len(descriptors)
 		}
 		results = append(results, map[string]any{
 			"type":         "group",
@@ -149,7 +138,7 @@ func (s *Service) SearchTools(ctx context.Context, args map[string]any) (ResultE
 			"description":  group.Description,
 			"keywords":     group.Keywords,
 			"availability": "tier2",
-			"tool_count":   toolCount,
+			"tool_count":   len(group.ToolNames),
 		})
 	}
 

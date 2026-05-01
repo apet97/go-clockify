@@ -14,7 +14,15 @@ func init() {
 		Name:        "project_admin",
 		Description: "Project templates, estimates, memberships, and archival",
 		Keywords:    []string{"template", "estimate", "membership", "archive", "budget"},
-		Builder:     projectAdminHandlers,
+		ToolNames: []string{
+			"clockify_list_project_templates",
+			"clockify_get_project_template",
+			"clockify_create_project_template",
+			"clockify_update_project_estimate",
+			"clockify_set_project_memberships",
+			"clockify_archive_projects",
+		},
+		Builder: projectAdminHandlers,
 	})
 }
 

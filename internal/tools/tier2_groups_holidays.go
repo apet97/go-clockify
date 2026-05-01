@@ -16,7 +16,17 @@ func init() {
 		Name:        "groups_holidays",
 		Description: "User groups (admin view) and workspace holidays",
 		Keywords:    []string{"group", "holiday", "public holiday", "recurring", "user group"},
-		Builder:     groupsHolidaysHandlers,
+		ToolNames: []string{
+			"clockify_list_user_groups_admin",
+			"clockify_get_user_group",
+			"clockify_create_user_group_admin",
+			"clockify_update_user_group_admin",
+			"clockify_delete_user_group_admin",
+			"clockify_list_holidays",
+			"clockify_create_holiday",
+			"clockify_delete_holiday",
+		},
+		Builder: groupsHolidaysHandlers,
 	})
 }
 

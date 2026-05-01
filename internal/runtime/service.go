@@ -139,26 +139,21 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 				ActivatedTools: []string{name},
 			}, nil
 		}
-		for groupName := range tools.Tier2Groups {
+		if groupName, ok := tools.Tier2GroupForTool(name); ok {
 			descriptors, ok := service.Tier2Handlers(groupName)
 			if !ok {
-				continue
+				return tools.ActivationResult{}, fmt.Errorf("unknown group: %s", groupName)
 			}
-			for _, d := range descriptors {
-				if d.Tool.Name != name {
-					continue
-				}
-				if err := server.ActivateGroup(groupName, descriptors); err != nil {
-					return tools.ActivationResult{}, err
-				}
-				return tools.ActivationResult{
-					Kind:           "tool",
-					Name:           name,
-					Group:          groupName,
-					ToolCount:      len(descriptors),
-					ActivatedTools: toolNames(descriptors),
-				}, nil
+			if err := server.ActivateGroup(groupName, descriptors); err != nil {
+				return tools.ActivationResult{}, err
 			}
+			return tools.ActivationResult{
+				Kind:           "tool",
+				Name:           name,
+				Group:          groupName,
+				ToolCount:      len(descriptors),
+				ActivatedTools: toolNames(descriptors),
+			}, nil
 		}
 		return tools.ActivationResult{}, fmt.Errorf("unknown tool: %s", name)
 	}

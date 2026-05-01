@@ -174,6 +174,61 @@ func TestTier2PerGroupToolCounts(t *testing.T) {
 	}
 }
 
+func TestTier2GroupToolNamesMatchDescriptors(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	for name, group := range Tier2Groups {
+		descriptors, ok := svc.Tier2Handlers(name)
+		if !ok {
+			t.Fatalf("Tier2Handlers(%q) returned !ok", name)
+		}
+		if len(group.ToolNames) != len(descriptors) {
+			t.Fatalf("group %s: ToolNames has %d entries, descriptors has %d", name, len(group.ToolNames), len(descriptors))
+		}
+		for i, descriptor := range descriptors {
+			if group.ToolNames[i] != descriptor.Tool.Name {
+				t.Fatalf("group %s: ToolNames[%d] = %q, descriptor name = %q", name, i, group.ToolNames[i], descriptor.Tool.Name)
+			}
+		}
+	}
+}
+
+func TestTier2CatalogIndex(t *testing.T) {
+	names := Tier2GroupNames()
+	if len(names) != len(Tier2Groups) {
+		t.Fatalf("Tier2GroupNames returned %d groups, want %d", len(names), len(Tier2Groups))
+	}
+	if !sort.StringsAreSorted(names) {
+		t.Fatalf("Tier2GroupNames must be sorted, got %v", names)
+	}
+	if len(names) > 0 {
+		original := names[0]
+		names[0] = "mutated"
+		if got := Tier2GroupNames()[0]; got != original {
+			t.Fatalf("Tier2GroupNames returned mutable cache: got %q, want %q", got, original)
+		}
+	}
+
+	seen := map[string]string{}
+	for groupName, group := range Tier2Groups {
+		for _, toolName := range group.ToolNames {
+			if previous, ok := seen[toolName]; ok {
+				t.Fatalf("tool %s appears in both %s and %s", toolName, previous, groupName)
+			}
+			seen[toolName] = groupName
+			got, ok := Tier2GroupForTool(toolName)
+			if !ok {
+				t.Fatalf("Tier2GroupForTool(%q) returned !ok", toolName)
+			}
+			if got != groupName {
+				t.Fatalf("Tier2GroupForTool(%q) = %q, want %q", toolName, got, groupName)
+			}
+		}
+	}
+	if _, ok := Tier2GroupForTool("clockify_missing_tool"); ok {
+		t.Fatal("Tier2GroupForTool returned ok for missing tool")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // 3. Schema validation — every tool has a valid InputSchema
 // ---------------------------------------------------------------------------

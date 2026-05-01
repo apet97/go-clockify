@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -17,6 +18,32 @@ import (
 func BenchmarkDispatchToolsList(b *testing.B) {
 	server := newBenchServer(b, 5)
 	server.initialized.Store(true) // skip the initialize handshake
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/list",
+		Params:  map[string]any{},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
+// BenchmarkDispatchToolsListLarge measures tools/list with a registry size
+// close to the full Clockify surface after Tier-2 activation. It keeps the
+// same synthetic no-op descriptors as BenchmarkDispatchToolsList to avoid an
+// import cycle from mcp back into internal/tools.
+func BenchmarkDispatchToolsListLarge(b *testing.B) {
+	server := newBenchServer(b, 124)
+	server.initialized.Store(true)
 
 	msg := mustMarshalRequest(b, Request{
 		JSONRPC: "2.0",
@@ -113,7 +140,7 @@ func newBenchServer(b *testing.B, n int) *Server {
 	for i := range n {
 		name := "bench_tool"
 		if i > 0 {
-			name = "bench_tool_" + string(rune('a'+i))
+			name = fmt.Sprintf("bench_tool_%03d", i)
 		}
 		descriptors = append(descriptors, ToolDescriptor{
 			Tool: Tool{

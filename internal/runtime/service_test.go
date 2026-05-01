@@ -350,3 +350,36 @@ func TestBuildServer_PropagatesSanitizeUpstreamErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildServer_ActivateToolByTier2Name(t *testing.T) {
+	client := clockify.NewClient("k", "https://api.clockify.me/api/v1", time.Second, 0)
+	service := tools.New(client, "ws-test")
+	pol := &policy.Policy{Mode: policy.Standard}
+	bc := &bootstrap.Config{Mode: bootstrap.Minimal}
+	deps := runtimeDeps{cfg: config.Config{}}
+	server := buildServer("test-version", deps, service, pol, bc)
+	if server == nil {
+		t.Fatal("expected server")
+	}
+
+	result, err := service.ActivateTool(context.Background(), "clockify_send_invoice")
+	if err != nil {
+		t.Fatalf("activate tool by tier2 name: %v", err)
+	}
+	if result.Kind != "tool" || result.Name != "clockify_send_invoice" || result.Group != "invoices" {
+		t.Fatalf("unexpected activation result: %+v", result)
+	}
+	if result.ToolCount != 12 {
+		t.Fatalf("expected invoices tool count 12, got %d", result.ToolCount)
+	}
+	found := false
+	for _, name := range result.ActivatedTools {
+		if name == "clockify_send_invoice" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("activated tools does not include requested tool: %+v", result.ActivatedTools)
+	}
+}

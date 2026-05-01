@@ -17,7 +17,15 @@ func init() {
 		Name:        "custom_fields",
 		Description: "Custom metadata fields for entries and projects",
 		Keywords:    []string{"custom", "field", "metadata", "dropdown", "value"},
-		Builder:     customFieldHandlers,
+		ToolNames: []string{
+			"clockify_list_custom_fields",
+			"clockify_get_custom_field",
+			"clockify_create_custom_field",
+			"clockify_update_custom_field",
+			"clockify_delete_custom_field",
+			"clockify_set_custom_field_value",
+		},
+		Builder: customFieldHandlers,
 	})
 }
 

@@ -15,7 +15,19 @@ func init() {
 		Name:        "expenses",
 		Description: "Expense tracking — log, categorize, and report expenses",
 		Keywords:    []string{"expense", "cost", "receipt", "category", "reimbursement"},
-		Builder:     expenseHandlers,
+		ToolNames: []string{
+			"clockify_list_expenses",
+			"clockify_get_expense",
+			"clockify_create_expense",
+			"clockify_update_expense",
+			"clockify_delete_expense",
+			"clockify_list_expense_categories",
+			"clockify_create_expense_category",
+			"clockify_update_expense_category",
+			"clockify_delete_expense_category",
+			"clockify_expense_report",
+		},
+		Builder: expenseHandlers,
 	})
 }
 

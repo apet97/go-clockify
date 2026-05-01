@@ -15,7 +15,19 @@ func init() {
 		Name:        "scheduling",
 		Description: "Resource scheduling and capacity planning",
 		Keywords:    []string{"schedule", "assignment", "capacity", "resource"},
-		Builder:     schedulingHandlers,
+		ToolNames: []string{
+			"clockify_list_assignments",
+			"clockify_get_assignment",
+			"clockify_create_assignment",
+			"clockify_update_assignment",
+			"clockify_delete_assignment",
+			"clockify_list_schedules",
+			"clockify_get_schedule",
+			"clockify_create_schedule",
+			"clockify_get_project_schedule_totals",
+			"clockify_filter_schedule_capacity",
+		},
+		Builder: schedulingHandlers,
 	})
 }
 

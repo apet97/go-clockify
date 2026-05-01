@@ -27,8 +27,24 @@ func (e *UnknownToolError) Error() string {
 
 func (s *Server) listTools() []Tool {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	if s.toolListCacheValid {
+		out := cloneToolList(s.toolListCache)
+		s.mu.RUnlock()
+		return out
+	}
+	s.mu.RUnlock()
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.toolListCacheValid {
+		return cloneToolList(s.toolListCache)
+	}
+	s.toolListCache = s.buildToolListLocked()
+	s.toolListCacheValid = true
+	return cloneToolList(s.toolListCache)
+}
+
+func (s *Server) buildToolListLocked() []Tool {
 	keys := make([]string, 0, len(s.tools))
 	for k := range s.tools {
 		keys = append(keys, k)
@@ -48,6 +64,17 @@ func (s *Server) listTools() []Tool {
 		tools = append(tools, d.Tool)
 	}
 	return tools
+}
+
+func cloneToolList(in []Tool) []Tool {
+	out := make([]Tool, len(in))
+	copy(out, in)
+	return out
+}
+
+func (s *Server) invalidateToolListCacheLocked() {
+	s.toolListCache = nil
+	s.toolListCacheValid = false
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
@@ -224,9 +251,13 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 		s.tools[d.Tool.Name] = d
 		activatedNames = append(activatedNames, d.Tool.Name)
 	}
+	s.invalidateToolListCacheLocked()
 	s.mu.Unlock()
 	if s.Activator != nil {
 		s.Activator.OnActivate(activatedNames)
+		s.mu.Lock()
+		s.invalidateToolListCacheLocked()
+		s.mu.Unlock()
 	}
 	s.notifyToolsChanged()
 	slog.Info("group_activated", "group", groupName, "tools_added", len(descriptors))
@@ -240,9 +271,13 @@ func (s *Server) ActivateTier1Tool(name string) error {
 		s.mu.Unlock()
 		return fmt.Errorf("unknown tool: %s", name)
 	}
+	s.invalidateToolListCacheLocked()
 	s.mu.Unlock()
 	if s.Activator != nil {
 		s.Activator.OnActivate([]string{name})
+		s.mu.Lock()
+		s.invalidateToolListCacheLocked()
+		s.mu.Unlock()
 	}
 	s.notifyToolsChanged()
 	slog.Info("tier1_tool_activated", "tool", name)

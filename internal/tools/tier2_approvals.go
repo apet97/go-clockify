@@ -15,7 +15,15 @@ func init() {
 		Name:        "approvals",
 		Description: "Timesheet approval workflows",
 		Keywords:    []string{"approval", "timesheet", "approve", "reject", "submit"},
-		Builder:     approvalHandlers,
+		ToolNames: []string{
+			"clockify_list_approval_requests",
+			"clockify_get_approval_request",
+			"clockify_submit_for_approval",
+			"clockify_approve_timesheet",
+			"clockify_reject_timesheet",
+			"clockify_withdraw_approval",
+		},
+		Builder: approvalHandlers,
 	})
 }
 

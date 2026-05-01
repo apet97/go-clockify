@@ -227,9 +227,14 @@ type Server struct {
 	// empty = no extras registered, which is the default production path.
 	ExtraHTTPHandlers []ExtraHandler
 
-	mu          sync.RWMutex
-	tools       map[string]ToolDescriptor
-	initialized atomic.Bool
+	mu    sync.RWMutex
+	tools map[string]ToolDescriptor
+	// toolListCache stores the sorted, enforcement-filtered tools/list
+	// snapshot. Protected by mu and invalidated when descriptors or
+	// activation visibility change.
+	toolListCache      []Tool
+	toolListCacheValid bool
+	initialized        atomic.Bool
 	// advertiseListChanged controls whether initialize reports
 	// capabilities.tools.listChanged=true. Only transports that can actually
 	// deliver notifications/tools/list_changed should set this.

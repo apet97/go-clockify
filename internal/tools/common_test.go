@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 )
@@ -79,5 +80,23 @@ func TestBoolArgMissing(t *testing.T) {
 	got := boolArg(map[string]any{}, "flag")
 	if got {
 		t.Error("boolArg(missing) = true; want false")
+	}
+}
+
+func TestOKLeavesNilMetaOmitted(t *testing.T) {
+	result := ok("clockify_probe", map[string]any{"ok": true}, nil)
+	if result.Meta != nil {
+		t.Fatalf("expected nil meta, got %+v", result.Meta)
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if _, ok := decoded["meta"]; ok {
+		t.Fatalf("meta should be omitted for nil meta, got JSON %s", raw)
 	}
 }

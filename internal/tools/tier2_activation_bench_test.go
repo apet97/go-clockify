@@ -27,6 +27,7 @@ package tools_test
 //	  -run='^$' ./internal/tools/...
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -79,6 +80,41 @@ func BenchmarkTier2ActivationAll(b *testing.B) {
 			if !ok || len(ds) == 0 {
 				b.Fatalf("group %s empty", n)
 			}
+		}
+	}
+}
+
+func BenchmarkSearchToolsTier2GroupQuery(b *testing.B) {
+	svc := newActivationService(b)
+	ctx := context.Background()
+	args := map[string]any{"query": "invoice"}
+	if _, err := svc.SearchTools(ctx, args); err != nil {
+		b.Fatalf("SearchTools warmup: %v", err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result, err := svc.SearchTools(ctx, args)
+		if err != nil {
+			b.Fatalf("SearchTools: %v", err)
+		}
+		if result.Action != "clockify_search_tools" {
+			b.Fatalf("unexpected action %q", result.Action)
+		}
+	}
+}
+
+func BenchmarkTier2GroupForTool(b *testing.B) {
+	const toolName = "clockify_send_invoice"
+	if group, ok := tools.Tier2GroupForTool(toolName); !ok || group != "invoices" {
+		b.Fatalf("Tier2GroupForTool warmup = %q, %v", group, ok)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		group, ok := tools.Tier2GroupForTool(toolName)
+		if !ok || group != "invoices" {
+			b.Fatalf("Tier2GroupForTool(%q) = %q, %v", toolName, group, ok)
 		}
 	}
 }

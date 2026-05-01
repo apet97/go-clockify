@@ -264,8 +264,8 @@ func TestSearchToolsActivateTool(t *testing.T) {
 // TestSearchToolsActivateToolEnumeratesGroup locks in the audit-finding-1
 // fix: when an LLM activates a single Tier-2 tool name, the response must
 // surface the entire containing group so the LLM sees what other
-// capabilities it just gained. Pre-fix the message said only "12 tools
-// now available" without naming them.
+// capabilities it just gained. The structured activated_tools field is the
+// contract; activation_message stays concise to avoid duplicating tokens.
 func TestSearchToolsActivateToolEnumeratesGroup(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	siblings := []string{
@@ -299,14 +299,20 @@ func TestSearchToolsActivateToolEnumeratesGroup(t *testing.T) {
 	}
 	msg, _ := data["activation_message"].(string)
 	for _, sibling := range siblings {
-		if !strings.Contains(msg, sibling) {
-			t.Errorf("activation_message %q must enumerate sibling %q", msg, sibling)
+		if sibling == "clockify_send_invoice" {
+			continue
 		}
+		if strings.Contains(msg, sibling) {
+			t.Errorf("activation_message %q should not duplicate activated_tools entry %q", msg, sibling)
+		}
+	}
+	if !strings.Contains(msg, `group "invoices"`) {
+		t.Errorf("activation_message %q should identify the activated group", msg)
 	}
 }
 
 // TestSearchToolsActivateGroupEnumerates covers the activate_group
-// branch — same enumeration contract as the tool-name branch above.
+// branch — same structured enumeration contract as the tool-name branch above.
 func TestSearchToolsActivateGroupEnumerates(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	members := []string{"clockify_create_webhook", "clockify_test_webhook"}
@@ -330,6 +336,12 @@ func TestSearchToolsActivateGroupEnumerates(t *testing.T) {
 	tools, ok := data["activated_tools"].([]string)
 	if !ok || len(tools) != len(members) {
 		t.Fatalf("expected %d activated_tools, got %T %v", len(members), data["activated_tools"], data["activated_tools"])
+	}
+	msg, _ := data["activation_message"].(string)
+	for _, member := range members {
+		if strings.Contains(msg, member) {
+			t.Errorf("activation_message %q should not duplicate activated_tools entry %q", msg, member)
+		}
 	}
 }
 
