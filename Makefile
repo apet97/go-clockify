@@ -6,7 +6,8 @@
         build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
-        repo-hygiene script-tests actionlint shellcheck release-check
+        repo-hygiene script-tests actionlint shellcheck live-contract-local \
+        release-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -409,3 +410,48 @@ shared-service-e2e:
 	cd internal/controlplane/postgres && \
 	go test -tags=postgres -count=1 -timeout 5m -run '^TestSharedServicePostgresE2E$$|^TestStreamableHTTPCrossInstanceRehydration$$' ./... && \
 	echo "shared-service-e2e: OK"
+
+# live-contract-local runs the livee2e suite against a real Clockify
+# workspace. It requires CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY +
+# CLOCKIFY_WORKSPACE_ID pointing at the sacrificial workspace named in
+# docs/live-tests.md.
+#
+# IMPORTANT: a green run here is NOT launch-candidate evidence.
+# Group 1 of docs/launch-candidate-checklist.md requires two consecutive
+# *scheduled* (cron) green runs of .github/workflows/live-contract.yml
+# on the candidate SHA — local results, manual dispatches, and PR CI
+# runs do not count. This target is for pre-flight debugging only.
+#
+# Read-only tier (always): set CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY
+#   + CLOCKIFY_WORKSPACE_ID.
+# Mutating tier (adds write tests): also set CLOCKIFY_LIVE_WRITE_ENABLED=true.
+live-contract-local:
+	@echo "============================================================" >&2
+	@echo "  live-contract-local: PRE-FLIGHT DEBUG ONLY" >&2
+	@echo "  Local results are NOT launch-candidate Group 1 evidence." >&2
+	@echo "  Scheduled cron runs of live-contract.yml are authoritative." >&2
+	@echo "  See docs/launch-candidate-checklist.md Group 1 for the bar." >&2
+	@echo "============================================================" >&2
+	@if [ "$${CLOCKIFY_RUN_LIVE_E2E:-}" != "1" ] || [ -z "$${CLOCKIFY_API_KEY:-}" ]; then \
+		echo "live-contract-local: CLOCKIFY_RUN_LIVE_E2E=1 and CLOCKIFY_API_KEY required." >&2; \
+		echo "  Read docs/live-tests.md before running this target." >&2; \
+		exit 1; \
+	fi
+	@echo "== read-only tier =="
+	go test -tags=livee2e -count=1 -timeout 5m \
+		-run '^(TestE2E(ReadOnly|Errors)|TestLiveReadSideSchemaDiff)$$' \
+		./tests/...
+	@if [ "$${CLOCKIFY_LIVE_WRITE_ENABLED:-}" = "true" ]; then \
+		echo "== mutating + MCP-path safety tier =="; \
+		go test -tags=livee2e -count=1 -timeout 10m \
+			-run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$$' \
+			./tests/...; \
+	else \
+		echo "== mutating tier skipped (CLOCKIFY_LIVE_WRITE_ENABLED != true) =="; \
+	fi
+	@echo ""
+	@echo "============================================================" >&2
+	@echo "  Reminder: local green != Group 1 evidence." >&2
+	@echo "  Two consecutive scheduled cron greens on the candidate SHA" >&2
+	@echo "  in .github/workflows/live-contract.yml are required." >&2
+	@echo "============================================================" >&2
