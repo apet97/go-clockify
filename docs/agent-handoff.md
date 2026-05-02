@@ -137,11 +137,12 @@ prose below as the checklist.
    `bench-current-25255062599` (workflow run 25255062599,
    linux/amd64 GitHub Actions runner) after the cached tools/list,
    Tier 2 descriptor cache, and schema compaction commits.
-   Verified locally with `make bench-baseline-check`. On macOS
+   Verified locally with `make bench-baseline-check`; follow-up
+   `Bench` workflow run 25255216987 compared fresh linux/amd64
+   samples against the refreshed baseline and passed. On macOS
    arm64, default `make verify-bench` still fails closed with the
    intended platform guard (`darwin/arm64` output cannot be compared
-   to the committed `linux/amd64` baseline); use the CI bench
-   workflow for release-grade comparison evidence.
+   to the committed `linux/amd64` baseline).
 7. ~~**Security review walk-through**~~ **Closed 2026-05-02.**
    `make verify-vuln` (with `govulncheck` on PATH),
    `make verify-fips`, gitleaks, Semgrep, and `make check` are
@@ -317,9 +318,9 @@ verifiable.
 7. **Refresh bench baseline.** Closed 2026-05-02 on fwbranch by
    committing the `bench-current-25255062599` Actions artifact as
    `internal/benchdata/baseline.txt`; `make bench-baseline-check`
-   validates the committed baseline shape. The release-grade
-   regression comparison still belongs to the CI bench workflow
-   because the committed baseline is linux/amd64.
+   validates the committed baseline shape. `Bench` workflow run
+   25255216987 is the release-grade linux/amd64 comparison evidence
+   for this baseline refresh.
 8. **Security review walk-through.** Closed 2026-05-02; re-run
    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
    on the final candidate tag. File any new findings in

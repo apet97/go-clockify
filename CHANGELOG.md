@@ -101,6 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   artifact was validated with `bash scripts/check-bench-baseline.sh
   /tmp/go-clockify-bench-25255062599/bench-current.txt`, and the
   committed file is validated by `make bench-baseline-check`.
+  Follow-up `Bench` workflow run 25255216987 compared fresh
+  linux/amd64 samples against the refreshed baseline and passed.
 
 ### Added
 

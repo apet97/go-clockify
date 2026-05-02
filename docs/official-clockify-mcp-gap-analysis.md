@@ -192,8 +192,8 @@ What is missing for tier 3 is intentionally narrow:
    25255062599 (`bench-current-25255062599`) after the cached
    tools/list, Tier 2 descriptor cache, and schema compaction
    wave. `make bench-baseline-check` validates the committed
-   artifact shape. Release-grade regression evidence still comes
-   from the CI bench workflow, not a macOS/arm64 workstation run.
+   artifact shape, and follow-up `Bench` workflow run 25255216987
+   passed the linux/amd64 regression comparison.
 
 ---
 
@@ -258,7 +258,9 @@ What is missing for tier 3 is intentionally narrow:
   on 2026-05-02 after the cached tools/list, Tier 2 descriptor cache,
   and schema compaction wave. `make bench-baseline-check` validates
   that the baseline remains linux/amd64, covers every workflow
-  package, and has the configured 10-sample floor.
+  package, and has the configured 10-sample floor. Follow-up
+  `Bench` workflow run 25255216987 passed the linux/amd64 regression
+  comparison against the refreshed baseline.
 
 ---
 
@@ -301,10 +303,10 @@ unblocks the next.
 6. ~~**Bench baseline refresh.**~~ **Closed 2026-05-02 on
    fwbranch.** `internal/benchdata/baseline.txt` now comes from
    `Bench` workflow run 25255062599 (`bench-current-25255062599`)
-   and `make bench-baseline-check` is green locally. The default
-   `make verify-bench` comparison is intentionally platform-guarded:
-   macOS/arm64 output cannot be compared to the committed
-   linux/amd64 baseline.
+   and `make bench-baseline-check` is green locally; follow-up
+   `Bench` workflow run 25255216987 passed the linux/amd64 regression
+   comparison. The default `make verify-bench` comparison is
+   intentionally platform-guarded on macOS/arm64 workstations.
 
 7. ~~**Security review walk-through.**~~ **Closed 2026-05-02.**
    `make verify-vuln` (with `govulncheck` on PATH), gitleaks,
@@ -328,7 +330,7 @@ work happens, not how. The agent slash commands
 | 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
 | 4. ~~Auth-model docs~~ | _closed 2026-05-02_ — `docs/auth-model.md` (new), `docs/production-readiness.md` "Pick an auth mode" + `docs/runbooks/auth-failures.md` cross-links | Done. |
 | 5. ~~Launch docs~~ | _closed 2026-05-02_ — `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | Done; `make doc-parity` plus manual review of client/profile/support docs. |
-| 6. ~~Bench baseline~~ | _closed 2026-05-02 on fwbranch_ — `internal/benchdata/baseline.txt`, `bench.yml` workflow run 25255062599, `make bench-baseline-check` | Done; release-grade regression comparison remains a CI bench workflow responsibility. |
+| 6. ~~Bench baseline~~ | _closed 2026-05-02 on fwbranch_ — `internal/benchdata/baseline.txt`, `bench.yml` workflow runs 25255062599 + 25255216987, `make bench-baseline-check` | Done. |
 | 7. ~~Security review~~ | _closed 2026-05-02_ — `make verify-vuln`, gitleaks, Semgrep, `make verify-fips`, production dev-backend regression test | Done on the launch-review tree; re-run on the candidate tag. |
 
 ---
