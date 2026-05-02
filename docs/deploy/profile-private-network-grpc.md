@@ -141,3 +141,43 @@ When a public-internet caller appears, move to
 `production-profile-shared-service.md` (OIDC). The gRPC transport
 does not ship a "public" variant — public-internet gRPC is
 typically terminated at a gateway that translates to HTTP anyway.
+
+## How to verify this deployment
+
+Verify with the same gRPC-capable binary you plan to deploy. The
+default `clockify-mcp` binary does not include this transport; use a
+published `clockify-mcp-grpc-*` or `clockify-mcp-grpc-postgres-*`
+artifact, or a local build made with `-tags=grpc`.
+
+```bash
+export CLOCKIFY_API_KEY=pk_xxx
+export CLOCKIFY_POLICY=time_tracking_safe
+export MCP_DISABLE_INLINE_SECRETS=1
+export MCP_CONTROL_PLANE_DSN='postgres://user:pass@db:5432/clockify_mcp?sslmode=verify-full'
+export MCP_GRPC_TLS_CERT=/etc/clockify-mcp/server.crt
+export MCP_GRPC_TLS_KEY=/etc/clockify-mcp/server.key
+export MCP_MTLS_CA_CERT_PATH=/etc/clockify-mcp/client-ca.pem
+export MCP_REQUIRE_MTLS_TENANT=1
+
+clockify-mcp-grpc-postgres doctor \
+  --profile=private-network-grpc \
+  --strict --check-backends
+```
+
+Expected result: `Load() result: OK`, `transport=grpc`,
+`auth=mtls`, `audit=fail_closed`, and `Strict posture: OK`. With
+`--check-backends`, the Postgres-tagged artifact also proves the
+configured control-plane DSN is reachable and migrated.
+
+The CI-backed smoke for the gRPC auth boundary is:
+
+```bash
+make grpc-auth-smoke
+```
+
+That target runs the focused interceptor tests for mTLS and static
+bearer rejection behaviour. The broader release gate also runs
+`make build-grpc`, `make build-grpc-postgres`, and
+`make grpc-release-parity` so the documented gRPC artifact names,
+GoReleaser matrix, Docker build tags, and release-asset count stay
+in sync.

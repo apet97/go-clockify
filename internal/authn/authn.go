@@ -40,6 +40,8 @@ const (
 	ModeMTLS         Mode = "mtls"
 )
 
+const maxForwardAuthHeaderBytes = 1024
+
 type Principal struct {
 	Subject   string
 	TenantID  string
@@ -210,15 +212,11 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 			return Principal{}, err
 		}
 	}
-	rawSubject := r.Header.Get(a.cfg.ForwardSubjectHeader)
-	if strings.TrimSpace(rawSubject) == "" {
-		return Principal{}, fmt.Errorf("missing %s header", a.cfg.ForwardSubjectHeader)
-	}
-	subject, err := sanitizePrincipalString(rawSubject, "subject")
+	subject, err := forwardAuthHeaderValue(r.Header, a.cfg.ForwardSubjectHeader, "subject", true)
 	if err != nil {
 		return Principal{}, err
 	}
-	tenant, err := sanitizePrincipalString(r.Header.Get(a.cfg.ForwardTenantHeader), "tenant")
+	tenant, err := forwardAuthHeaderValue(r.Header, a.cfg.ForwardTenantHeader, "tenant", false)
 	if err != nil {
 		return Principal{}, err
 	}
@@ -234,6 +232,27 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 			"forward_tenant_header":  a.cfg.ForwardTenantHeader,
 		},
 	}, nil
+}
+
+func forwardAuthHeaderValue(h http.Header, name, label string, required bool) (string, error) {
+	values := h.Values(name)
+	if len(values) == 0 {
+		if required {
+			return "", fmt.Errorf("missing %s header", name)
+		}
+		return "", nil
+	}
+	if len(values) > 1 {
+		return "", fmt.Errorf("forward_auth: %s header %s has duplicated values", label, name)
+	}
+	raw := values[0]
+	if len(raw) > maxForwardAuthHeaderBytes {
+		return "", fmt.Errorf("forward_auth: %s header %s is too large: %d > %d bytes", label, name, len(raw), maxForwardAuthHeaderBytes)
+	}
+	if required && strings.TrimSpace(raw) == "" {
+		return "", fmt.Errorf("missing %s header", name)
+	}
+	return sanitizePrincipalString(raw, label)
 }
 
 // sanitizePrincipalString rejects header bytes that have no business

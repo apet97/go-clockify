@@ -435,7 +435,8 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		}
 		ch, cancel := session.events.subscribeFrom(lastEventID)
 		defer cancel()
-		_, _ = fmt.Fprintf(w, ": session %s\n\n", session.id)
+		// SSE direct writes are text/event-stream framing, not HTML; see ADR 0017.
+		_, _ = io.WriteString(w, ": session "+session.id+"\n\n") // nosemgrep
 		flusher.Flush()
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
@@ -455,9 +456,12 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 					"method":  event.method,
 					"params":  event.params,
 				})
-				_, _ = fmt.Fprintf(w, "id: %d\n", event.id)
-				_, _ = fmt.Fprintf(w, "event: %s\n", event.method)
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", payload)
+				// SSE direct writes are text/event-stream framing, not HTML; see ADR 0017.
+				_, _ = io.WriteString(w, "id: "+strconv.FormatUint(event.id, 10)+"\n") // nosemgrep
+				// Event names are server constants in an SSE frame; see ADR 0017.
+				_, _ = io.WriteString(w, "event: "+event.method+"\n") // nosemgrep
+				// Payload is JSON marshaled before SSE framing; see ADR 0017.
+				_, _ = io.WriteString(w, "data: "+string(payload)+"\n\n") // nosemgrep
 				flusher.Flush()
 			}
 		}

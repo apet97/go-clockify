@@ -133,7 +133,8 @@ returned over the wire by
 | OIDC strict mode rejects token without `exp` | 401 | `Unauthenticated` | `token missing exp claim (strict mode)` | `token_verification` |
 | OIDC tenant claim missing under `MCP_REQUIRE_TENANT_CLAIM=1` | 401 | `Unauthenticated` | `oidc token missing tenant claim` | `tenant_claim` |
 | `forward_auth` source not in CIDR allow-list | 401 | `Unauthenticated` | `forward_auth: source X.X.X.X not in MCP_FORWARD_AUTH_TRUSTED_PROXIES allow-list` | `invalid_token` |
-| `forward_auth` header carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `forward_auth: <subject\|tenant> contains disallowed byte 0x<hex>` | `invalid_token` |
+| `forward_auth` header carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `forward_auth: <subject\|tenant> contains disallowed byte 0x<hex>` | `claim_validation` / `tenant_claim` |
+| `forward_auth` header is duplicated or larger than 1024 bytes | 401 | `Unauthenticated` | `forward_auth: <subject\|tenant> header <name> has duplicated values`, `forward_auth: <subject\|tenant> header <name> is too large` | `claim_validation` / `tenant_claim` |
 | `forward_auth` subject header empty/missing | 401 | `Unauthenticated` | `missing <header>` | `missing_credentials` |
 | `mtls` client did not present a verified cert | 401 | `Unauthenticated` | `verified mTLS client certificate required`, `missing client certificate` | `client_certificate` |
 | `mtls` tenant required but unresolvable | 401 | `Unauthenticated` | `mtls client has no tenant identity (source=<src>)` | `tenant_claim` |
@@ -155,6 +156,7 @@ lines 20-36).
 | HTTP-level auth surface (handler integration) | [`internal/mcp/transport_http_authmatrix_test.go`](../internal/mcp/transport_http_authmatrix_test.go), [`internal/mcp/transport_auth_errors_test.go`](../internal/mcp/transport_auth_errors_test.go) |
 | gRPC interceptor behaviour, including stream re-auth | [`internal/transport/grpc/auth_test.go`](../internal/transport/grpc/auth_test.go) |
 | `forward_auth` control-byte / non-printable rejection | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsControlBytesInHeaders` |
+| `forward_auth` duplicate-value and oversized-header rejection | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders` |
 | `forward_auth` trusted-proxy CIDR gate | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsUntrustedSource`, `TestForwardAuth_AcceptsTrustedCIDR`, `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour` |
 | OIDC strict mode rejects HTTP issuer / JWKS | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestNewOIDCAuth_StrictRejectsHTTPIssuer`, `TestNewOIDCAuth_StrictRejectsHTTPJWKS` |
 | OIDC verify-cache TTL clamp | [`internal/authn/oidc_verify_cache_test.go`](../internal/authn/oidc_verify_cache_test.go) |
@@ -176,6 +178,11 @@ lines 20-36).
   control bytes, and any rune that fails `unicode.IsPrint()`.
   ASCII space passes (legitimate in display names / org names).
   Applied to **both** subject and tenant headers.
+- **`forward_auth` header cardinality and size** are checked before
+  sanitization: each configured header may appear at most once, and
+  each raw value must be 1024 bytes or smaller. That keeps identity
+  selection unambiguous when proxy chains drift and keeps principal
+  strings bounded before they enter audit/log/tenant-scoping paths.
 - **mTLS `header_or_cert` mode** is a migration-window hybrid
   (header takes precedence, cert is the fallback). Only safe
   behind a proxy that strips client-supplied tenant headers,

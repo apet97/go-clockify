@@ -110,7 +110,7 @@ jobs:
           echo "::error::live contract tests require secrets on the main repo; none configured."
           exit 1
 
-      - name: Run read-only live tests (TestE2EReadOnly, TestE2EErrors)
+      - name: Run read-only live tests (TestE2EReadOnly, TestE2EErrors, TestLiveReadSideSchemaDiff)
         if: steps.secrets_check.outputs.skip != 'true'
         env:
           CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
@@ -118,7 +118,7 @@ jobs:
           CLOCKIFY_RUN_LIVE_E2E: "1"
         run: |
           go test -tags=livee2e -count=1 -timeout 5m \
-            -run '^TestE2E(ReadOnly|Errors)$' \
+            -run '^(TestE2E(ReadOnly|Errors)|TestLiveReadSideSchemaDiff)$' \
             ./tests/...
 
       - name: Run mutating live tests (TestE2EMutating + MCP-path safety contracts)

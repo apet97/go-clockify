@@ -9,6 +9,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Live read-side schema drift is now a first-class contract.**
+  Added `tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`,
+  which fetches raw Clockify JSON for the read-side endpoints this
+  MCP consumes and fails if top-level response fields are missing
+  from the corresponding `internal/clockify` structs. The read-only
+  `live-contract.yml` step now runs it alongside `TestE2EReadOnly`
+  and `TestE2EErrors`. Expanded the core Clockify models for the
+  documented workspace, user, project, client, tag, task, and time
+  entry fields so output schemas and typed tool results no longer
+  silently discard those fields.
+
+- **`forward_auth` now fails closed on ambiguous or oversized
+  principal headers.** The authenticator rejects duplicated
+  `X-Forwarded-User` / `X-Forwarded-Tenant` values before choosing a
+  Principal, and caps each raw forwarded identity value at 1024 bytes
+  before sanitization. Pinned by
+  `internal/authn/auth_hardening_test.go::TestForwardAuth_RejectsDuplicatedAndOversizedHeaders`
+  and reflected in `docs/auth-model.md`,
+  `docs/runbooks/auth-failures.md`, and Group 4 of
+  `docs/launch-candidate-checklist.md`.
+
+- **`make test-postgres` is self-contained for the launch checklist's
+  integration gate.** The target now normalizes Unix Docker contexts
+  with `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`
+  when the caller has not set an override, so Colima/Docker Desktop
+  socket paths do not break Testcontainers/Ryuk. The shared-service
+  and streamable-HTTP rehydration E2Es now reuse the package
+  Testcontainers DSN under `-tags=postgres,integration`, while
+  `make shared-service-e2e` keeps the existing explicit
+  `MCP_LIVE_CONTROL_PLANE_DSN` path.
+
+- **Product launch docs verification closes Group 5 of
+  `docs/launch-candidate-checklist.md`.** `docs/clients.md` now
+  separates release-tested stdio clients from compatible
+  operator-owned HTTP/gRPC clients, names the exact transport +
+  auth shape for Claude Code, Claude Desktop, Cursor, Codex, and
+  VS Code MCP, and flags untested non-stdio desktop-client
+  combinations. `docs/support-matrix.md` now records the Go 1.25.9
+  pin, default/Postgres/gRPC/FIPS artifact OS-arch matrix,
+  container-platform coverage, Windows limitations, FIPS posture,
+  and the absence of project-specific Linux kernel requirements.
+  Every deployment profile doc under `docs/deploy/` now ends with
+  a "How to verify this deployment" section naming the doctor
+  command and the smoke target that backs the profile; local and
+  small-team profiles explicitly explain that `doctor --strict` is
+  a negative hosted-posture check, while shared-service and
+  private-network gRPC document the strict positive gate. Verified
+  with `make doc-parity`, `make config-doc-parity`, `make
+  catalog-drift`, and `make launch-checklist-parity`.
+
+- **Security-review cleanup closes Group 6 of
+  `docs/launch-candidate-checklist.md`.** The Clockify upstream
+  retry jitter now uses `crypto/rand` instead of `math/rand/v2`;
+  the OAuth protected-resource metadata endpoint writes through
+  `json.Encoder`; and the streamable-HTTP SSE handler carries
+  scoped `nosemgrep` suppressions with nearby comments plus an
+  ADR 0017 note explaining why direct `text/event-stream` frame
+  writes are not an HTML rendering path. Added
+  `TestProdDefaults_RejectsDevBackendEscapeHatch` to pin that
+  `ENVIRONMENT=prod` rejects `MCP_ALLOW_DEV_BACKEND=1` even when
+  the DSN is already Postgres-shaped. Verified with
+  `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`,
+  `make secret-scan`, `semgrep scan --config p/default
+  --metrics=off --error --exclude .git --exclude .bench --exclude
+  clockify-mcp .`, `make verify-fips`, and `make check`.
+
 - **`Shared-service Postgres E2E` is now a required-status check
   for `main` branch protection.** Promoted on 2026-05-02 after
   three consecutive green runs on `main` (ci.yml runs 25240007056,
@@ -62,12 +128,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checklist closed with terminology fix (the prior box-1 named
   modes — `disabled`, `bearer`, `jwt` — that do not exist in
   the implementation; corrected to the actual constants
-  `static_bearer`, `oidc`, `forward_auth`, `mtls`) and an honest
-  downgrade of box 3 (forward_auth duplicated/oversized header
-  pins deferred; net/http's `Server.MaxHeaderBytes` cap bounds
-  the worst case server-side; control-byte injection — the
-  realistic abuse vector — remains pinned by
-  `TestForwardAuth_RejectsControlBytesInHeaders`). Commits
+  `static_bearer`, `oidc`, `forward_auth`, `mtls`) and the
+  forward-auth header-boundary pins now covering control bytes,
+  duplicated values, and oversized values. Commits
   0bcd30b (auth-model.md) + 8a627d6 (operator-doc cross-links)
   + 222c206 (Group 4 checklist) + 4f502ff (handoff +
   gap-analysis closure) + this commit (CHANGELOG).

@@ -84,6 +84,11 @@ What earned the tier:
   per-tenant policy-mode enforcement. Closed Group 2 of the
   launch-candidate checklist (commits 42502cf + 79f0769;
   first CI green: ci.yml run 25240007056 on 2026-05-02).
+  The local `make test-postgres` gate is also self-contained:
+  under `-tags=postgres,integration`, these E2Es reuse the package
+  Testcontainers DSN when `MCP_LIVE_CONTROL_PLANE_DSN` is unset,
+  and the Makefile normalizes Unix Docker sockets for Colima /
+  Docker Desktop.
   **Promoted to required-status check on `main` on 2026-05-02**
   after three consecutive green runs (25240007056, 25240085916,
   25240163213); the snapshot in
@@ -100,12 +105,12 @@ What earned the tier:
   answers. Cross-linked from `docs/production-readiness.md` "Pick
   an auth mode" and from `docs/runbooks/auth-failures.md`. The
   Group 4 checklist's mode-naming bug
-  (`disabled, bearer, jwt`) is fixed in the same wave; box 3
-  (forward_auth duplicated/oversized header pins) is honestly
-  downgraded with a sub-bullet citing net/http's
-  `Server.MaxHeaderBytes` cap as the server-side bound for the
-  oversized-header risk. Closed Group 4 of the launch-candidate
-  checklist (commits 0bcd30b + 8a627d6 + 222c206 on 2026-05-02).
+  (`disabled, bearer, jwt`) is fixed in the same wave; the
+  `forward_auth` boundary now rejects duplicated identity headers
+  and principal values larger than 1024 bytes before sanitization,
+  closing the earlier box-3 deferral. Closed Group 4 of the
+  launch-candidate checklist (commits 0bcd30b + 8a627d6 + 222c206
+  plus the 2026-05-02 forward-auth hardening pass).
 - **Streamable-HTTP cross-pod session rehydration shipped
   (ADR 0017 Path A).** `streamSessionManager.get` consults the
   shared `controlplane.Store` on a local miss, strict-validates
@@ -134,6 +139,11 @@ Caveats that the tier carries today:
   reports green nightlies because the test steps gate on `if:`. A
   green nightly badge does not by itself prove the live tests
   ran. The maintainer reads the warning annotations.
+- Read-side schema drift is now mechanically checked by
+  `tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`,
+  which compares raw Clockify JSON field sets against the
+  `internal/clockify` structs. It still needs a scheduled green run
+  on the candidate SHA before the launch checklist box can close.
 
 ### Tier 3 — Official Clockify product launch (⛔ not yet)
 
@@ -165,14 +175,17 @@ What is missing for tier 3 is intentionally narrow:
    (implement); Path B (single-replica documentation) is not
    taken. Pinned by `TestStreamableHTTPCrossInstanceRehydration`
    under the `Shared-service Postgres E2E` CI job.
-4. **Auth-model docs are scattered across multiple docs.** A
-   reviewer cannot answer "what does auth look like?" in five
-   minutes without reading ADRs and grepping the codebase.
-5. **Product launch docs are not verified end-to-end.** Some
-   profile docs do not name a verification command; some
-   reference older flag names; the README's tool-count claim
-   floats. A `make doc-parity` pass plus a docs review will catch
-   these.
+4. ~~**Auth-model docs are scattered across multiple docs.**~~
+   **Closed 2026-05-02** by `docs/auth-model.md` and the
+   operator-doc cross-links; a reviewer can now answer the auth
+   model questions from one page with test pins.
+5. ~~**Product launch docs are not verified end-to-end.**~~
+   **Closed 2026-05-02** by the launch-doc verification pass:
+   client support now names tested transport/auth combinations and
+   flags untested combos, the support matrix names Go/OS/FIPS/kernel
+   posture, every deployment profile ends with an explicit
+   verification section, and the docs parity gates are the recorded
+   local proof.
 6. **Bench baseline check has not been re-run on the candidate
    shape.** Recent perf wave (cached tools/list, tier-2
    descriptor cache, schema compaction) needs the baseline
@@ -212,6 +225,20 @@ What is missing for tier 3 is intentionally narrow:
 - **Release artefacts are reviewable.** Signed binaries, FIPS
   variant, SBOM, SLSA attestations, and a `release-smoke.yml`
   workflow that exercises every artefact.
+- **Product launch docs are operator-verifiable.** The publishable
+  surface now has one place for client compatibility, one support
+  matrix for Go / OS / FIPS / kernel posture, and a "How to verify
+  this deployment" section at the end of every deployment-profile
+  doc. Non-hosted profiles explicitly say that `doctor --strict` is
+  a negative hosted-posture check, so operators do not mistake exit
+  3 for a broken local or small-team install.
+- **Security-review walk-through is clean on the current tree.**
+  `govulncheck`, gitleaks, Semgrep (`p/default`, metrics off), and
+  the local FIPS build-tag check are green. The only Semgrep
+  suppressions are scoped to streamable-HTTP SSE frame writes and
+  are justified both in code and ADR 0017. The production
+  `MCP_ALLOW_DEV_BACKEND=1` rejection now has a dedicated regression
+  test.
 
 ---
 
@@ -229,8 +256,9 @@ unblocks the next.
    with a known-cause note, the candidate clock has not started.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
-   (commits 42502cf + 79f0769). See Tier 2 "What earned the
-   tier" for the test name, Make target, and CI job name.
+   (commits 42502cf + 79f0769 plus the local `make test-postgres`
+   self-containment pass). See Tier 2 "What earned the tier" for
+   the test name, Make targets, and CI job name.
 
 3. ~~**ADR 0017 resolution.**~~ **Closed 2026-05-02** (commits
    eb5351c + 8353934 + fcfd7f0 + 5e566e8). See Tier 2 "What
@@ -243,11 +271,12 @@ unblocks the next.
    earned the tier" for the new `docs/auth-model.md` anchor and
    the operator-doc cross-links.
 
-5. **Product launch docs verification.**
-   *Where:* `README.md` claims, `docs/clients.md`,
-   `docs/support-matrix.md`, every `docs/deploy/profile-*.md`.
-   *Why blocking:* docs that diverge from behaviour erode trust
-   the moment a customer notices.
+5. ~~**Product launch docs verification.**~~ **Closed 2026-05-02.**
+   `README.md` claims are covered by `make doc-parity`,
+   `docs/clients.md` now names exact tested transport/auth
+   combinations plus untested combos, `docs/support-matrix.md`
+   names Go/OS/FIPS/kernel posture, and every deployment profile
+   ends with a verification section.
 
 6. **Bench baseline refresh.**
    *Where:* `make bench-baseline-check` against the candidate
@@ -256,12 +285,11 @@ unblocks the next.
    needs a baseline that reflects the current code. Today the
    baseline is from before the perf wave.
 
-7. **Security review walk-through.**
-   *Where:* `make verify-vuln`, `gitleaks`, `semgrep`,
-   `make verify-fips` — each green on the candidate tag with the
-   findings filed in `SECURITY.md` if any.
-   *Why blocking:* this is mostly mechanical but cannot be
-   skipped.
+7. ~~**Security review walk-through.**~~ **Closed 2026-05-02.**
+   `make verify-vuln` (with `govulncheck` on PATH), gitleaks,
+   Semgrep, `make verify-fips`, and `make check` are green on the
+   current launch-review tree. Re-run these unchanged after a
+   candidate tag is cut.
 
 ---
 
@@ -274,13 +302,13 @@ work happens, not how. The agent slash commands
 
 | Blocker | First file an agent should open | Smallest verifiable green |
 |---|---|---|
-| 1. Live contract | `.github/workflows/live-contract.yml`, the rolling `live-test-failure` issue, `tests/e2e_live_test.go`, `tests/e2e_live_mcp_test.go` | One green nightly run with mutating tier on. |
-| 2. ~~Shared-service Postgres E2E~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_shared_service_test.go`, `make shared-service-e2e`, `Shared-service Postgres E2E` job in `ci.yml` | Done. |
+| 1. Live contract | `.github/workflows/live-contract.yml`, the rolling `live-test-failure` issue, `tests/e2e_live_test.go`, `tests/e2e_live_mcp_test.go`, `tests/e2e_live_schema_test.go` | One green nightly run with mutating tier and read-side schema diff on. |
+| 2. ~~Shared-service Postgres E2E~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_shared_service_test.go`, `make shared-service-e2e`, `make test-postgres`, `Shared-service Postgres E2E` job in `ci.yml` | Done. |
 | 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
 | 4. ~~Auth-model docs~~ | _closed 2026-05-02_ — `docs/auth-model.md` (new), `docs/production-readiness.md` "Pick an auth mode" + `docs/runbooks/auth-failures.md` cross-links | Done. |
-| 5. Launch docs | `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | `make doc-parity` green and a manual review pass. |
+| 5. ~~Launch docs~~ | _closed 2026-05-02_ — `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | Done; `make doc-parity` plus manual review of client/profile/support docs. |
 | 6. Bench baseline | `.bench/`, `bench.yml` workflow, `Makefile` `verify-bench` target | Updated baseline file committed; `make bench-baseline-check` green. |
-| 7. Security review | `make verify-vuln`, `make verify-fips`, `.gitleaks.toml`, `SECURITY.md` | All four green on the candidate tag, findings filed. |
+| 7. ~~Security review~~ | _closed 2026-05-02_ — `make verify-vuln`, gitleaks, Semgrep, `make verify-fips`, production dev-backend regression test | Done on the launch-review tree; re-run on the candidate tag. |
 
 ---
 

@@ -42,6 +42,8 @@ func TestFailureCategory(t *testing.T) {
 		{"tenant_claim_missing", errors.New("tenant claim missing or empty"), "tenant_claim"},
 		{"claim_validation_failed", errors.New("required claim missing"), "claim_validation"},
 		{"subject_invalid", errors.New("subject claim malformed"), "claim_validation"},
+		{"forward_auth_subject_duplicate", errors.New("forward_auth: subject header X-Forwarded-User has duplicated values"), "claim_validation"},
+		{"forward_auth_tenant_too_large", errors.New("forward_auth: tenant header X-Forwarded-Tenant is too large: 1025 > 1024 bytes"), "tenant_claim"},
 		{"mtls_handshake_failed", errors.New("mtls handshake failed"), "client_certificate"},
 		// "missing client certificate" lacks "authorization" so it falls
 		// past the missing_credentials guard (which is missing+authorization)

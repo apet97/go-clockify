@@ -222,6 +222,84 @@ func TestForwardAuth_RejectsControlBytesInHeaders(t *testing.T) {
 	}
 }
 
+// TestForwardAuth_RejectsDuplicatedAndOversizedHeaders pins the
+// single-authority contract for reverse-proxy identity headers. If a
+// proxy accidentally forwards two copies of X-Forwarded-User /
+// X-Forwarded-Tenant, or a client can stuff a large identity payload
+// through the proxy, the authenticator must reject the request instead
+// of silently choosing one value.
+func TestForwardAuth_RejectsDuplicatedAndOversizedHeaders(t *testing.T) {
+	auth, err := New(Config{
+		Mode:                 ModeForwardAuth,
+		ForwardSubjectHeader: "X-Forwarded-User",
+		ForwardTenantHeader:  "X-Forwarded-Tenant",
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	cases := []struct {
+		name string
+		req  func() *http.Request
+		want string
+	}{
+		{
+			name: "duplicate_subject",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Add("X-Forwarded-User", "alice")
+				req.Header.Add("X-Forwarded-User", "mallory")
+				req.Header.Set("X-Forwarded-Tenant", "acme")
+				return req
+			},
+			want: "duplicated values",
+		},
+		{
+			name: "duplicate_tenant",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Forwarded-User", "alice")
+				req.Header.Add("X-Forwarded-Tenant", "acme")
+				req.Header.Add("X-Forwarded-Tenant", "evil")
+				return req
+			},
+			want: "duplicated values",
+		},
+		{
+			name: "oversized_subject",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Forwarded-User", strings.Repeat("a", maxForwardAuthHeaderBytes+1))
+				req.Header.Set("X-Forwarded-Tenant", "acme")
+				return req
+			},
+			want: "too large",
+		},
+		{
+			name: "oversized_tenant",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Forwarded-User", "alice")
+				req.Header.Set("X-Forwarded-Tenant", strings.Repeat("t", maxForwardAuthHeaderBytes+1))
+				return req
+			},
+			want: "too large",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, gotErr := auth.Authenticate(context.Background(), tc.req())
+			if gotErr == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(gotErr.Error(), tc.want) {
+				t.Fatalf("expected error to mention %q, got: %v", tc.want, gotErr)
+			}
+		})
+	}
+}
+
 // TestNewOIDCAuth_StrictRejectsHTTPIssuer locks the second go/no-go
 // gate from ChatGPT's hosted-OIDC review. Strict mode binds tokens
 // to this server (audience/resource), so the public keys used to

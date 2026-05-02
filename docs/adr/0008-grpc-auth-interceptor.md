@@ -105,6 +105,11 @@ an explicit "rebuild with -tags=grpc" error. ADR 0001 and the
   `Unary` interceptor because the gRPC transport exposes exactly
   one bidirectional streaming method (`Exchange`) — there are no
   unary RPCs to intercept.
+- The test harness in `tests/harness/grpc.go` dials the server over
+  `bufconn` with `insecure.NewCredentials()`. That `nosemgrep`
+  suppression is scoped to an in-memory connection that never leaves
+  the process; production gRPC auth and mTLS coverage lives in
+  `internal/transport/grpc/` tests and the `grpc-auth-smoke` target.
 
 ## Alternatives considered
 

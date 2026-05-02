@@ -12,6 +12,7 @@ changes break customer integrations without anyone noticing.
 |---|---|---|
 | `TestE2EReadOnly`  (whoami, get_workspace, list_projects) | ✅ | ✅ |
 | `TestE2EErrors`    (invalid ID, missing args) | ✅ | ✅ |
+| `TestLiveReadSideSchemaDiff` (raw Clockify JSON field set versus `internal/clockify` structs) | ✅ | ✅ |
 | `TestE2EMutating`  (create_client → create_project → start_timer → stop_timer → delete_entry, with full cleanup) | ❌ | ✅ |
 | `TestLiveDryRunDoesNotMutate`                         (MCP-path: confirms `clockify_delete_entry` with `dry_run:true` previews instead of deleting) | ❌ | ✅ |
 | `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`   (MCP-path: confirms `time_tracking_safe` rejects `clockify_create_project` before the handler runs) | ❌ | ✅ |
@@ -170,6 +171,7 @@ read-only and mutating suites:
 
 | Contract test | What it proves | Where it lives |
 |---|---|---|
+| `TestLiveReadSideSchemaDiff` | The read-side Clockify responses used by this MCP (`/user`, `/workspaces`, projects, clients, tags, tasks when present, and user time entries when present) do not contain top-level fields missing from the corresponding `internal/clockify` structs. | `tests/e2e_live_schema_test.go` |
 | `TestLiveDryRunDoesNotMutate` | When `clockify_delete_entry` is invoked with `dry_run:true` through the MCP enforcement pipeline, the destructive handler never runs, the response carries the dry-run envelope, and the entry still exists upstream. | `tests/e2e_live_mcp_test.go` |
 | `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | With `CLOCKIFY_POLICY=time_tracking_safe`, calling `clockify_create_project` through the MCP path returns a policy-deny error and the project is never created upstream. | `tests/e2e_live_mcp_test.go` |
 | `TestLiveCreateUpdateDeleteEntryAuditPhases` | A real create→update→delete entry cycle, driven through the MCP server and persisted to a Postgres-backed control plane, lands six rows in `audit_events` (3 `intent` + 3 `outcome`, paired per tool, with `outcome=success` on the outcome row and distinct `external_id`s). | `internal/controlplane/postgres/live_audit_phases_test.go` (build tags `postgres,livee2e`) |
@@ -199,6 +201,10 @@ export CLOCKIFY_WORKSPACE_ID='...'
 export CLOCKIFY_RUN_LIVE_E2E=1
 export CLOCKIFY_LIVE_WRITE_ENABLED=true
 export MCP_LIVE_CONTROL_PLANE_DSN='postgres://cp:cp@localhost:5432/cp_live_audit?sslmode=disable'
+# Read-only/schema contracts:
+go test -tags=livee2e -count=1 -timeout 5m \
+  -run '^(TestE2E(ReadOnly|Errors)|TestLiveReadSideSchemaDiff)$' \
+  ./tests/...
 # Read/write/dry-run/policy contracts:
 go test -tags=livee2e -count=1 -timeout 10m \
   -run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$' \

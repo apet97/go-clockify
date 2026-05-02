@@ -33,8 +33,9 @@ The nightly **Live contract** workflow
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
       _Tracking 2026-05-02: two manual-dispatch runs green
       (25238997088 read-only-only, 25239216412 full-tier);
-      next scheduled cron run is at 02:30 UTC. Awaiting first
-      cron-event green._
+      as of 03:25 UTC, no 2026-05-02 scheduled run is listed by
+      GitHub Actions. Latest scheduled run remains the 2026-05-01
+      failure 25204240398. Awaiting first cron-event green._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -45,21 +46,20 @@ The nightly **Live contract** workflow
 - [ ] Two consecutive nightly runs green with no flakes; if there
       is a flake, the rolling `live-test-failure` GitHub issue is
       closed and the root cause is documented in `CHANGELOG.md`.
-      _Tracking 2026-05-02: 0/2 nightly cron greens. The
+      _Tracking 2026-05-02 03:25 UTC: 0/2 nightly cron greens. The
       live-test-failure issue (#41) was auto-closed by the manual
-      run 25238997088. Calendar-bound on the next two 02:30 UTC
-      cron firings._
+      run 25238997088, and issue #50 is also closed. Calendar-bound
+      on the next two visible 02:30 UTC cron firings._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
       candidate cut, recorded in the wave's commit messages).
-      _Tracking 2026-05-02: the JSON decoder (`json.NewDecoder`
-      in `internal/clockify/client.go`) does **not** call
-      `DisallowUnknownFields`, so silent drops would not surface
-      via `TestE2EReadOnly`. This box requires a hand-comparison
-      between `internal/clockify/models.go` and the live API
-      responses captured at the candidate-cut moment; defer to
-      that point._
+      _Tracking 2026-05-02: `TestLiveReadSideSchemaDiff` now fetches
+      raw read-side Clockify JSON and fails on top-level fields not
+      represented in `internal/clockify/models.go`; the read-only
+      `live-contract.yml` step runs it alongside `TestE2EReadOnly`.
+      Awaiting scheduled-run evidence on the candidate SHA before
+      this box can close._
 
 **Definition of done.** Two clean nightly runs in a row with
 mutating + audit tiers enabled, no open `live-test-failure` issue,
@@ -80,8 +80,13 @@ that boots a Postgres-tagged binary, drives traffic through the
 streamable-HTTP transport with the shared-service profile, and
 asserts the tenant + audit invariants.
 
-- [ ] `make test-postgres` runs green from a clean checkout
+- [x] `make test-postgres` runs green from a clean checkout
       (Testcontainers, `INTEGRATION_REQUIRED=1`).
+      _Closed 2026-05-02: the target now normalizes Unix Docker
+      contexts with `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`
+      when unset, and the shared-service / rehydration E2Es reuse the
+      package Testcontainers DSN under the `integration` tag. Verified
+      locally with Colima (`ok github.com/apet97/go-clockify/internal/controlplane/postgres`)._
 - [x] `MCP_LIVE_CONTROL_PLANE_DSN` configured against a sacrificial
       Postgres database; `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` set as
       a repo variable.
@@ -197,23 +202,19 @@ read every commit.
       error), and `internal/mcp/transport_http_authmatrix_test.go`
       pins the HTTP-handler-level rejection for each mode. _Pre-
       existing; cross-cited in `docs/auth-model.md` "Test pins"._
-- [ ] `forward_auth` headers are rejected for control bytes,
+- [x] `forward_auth` headers are rejected for control bytes,
       duplicated values, and oversized payloads; tests pin all
       three boundaries.
-      _2026-05-02: control-byte boundary pinned by
+      _Closed 2026-05-02: control-byte boundary pinned by
       `internal/authn/auth_hardening_test.go::TestForwardAuth_RejectsControlBytesInHeaders`
-      and the trusted-proxy CIDR gate pinned by
+      and duplicated/oversized boundary pinned by
+      `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders`
+      (`forward_auth` accepts at most one value per configured
+      principal header and caps each raw value at 1024 bytes), with
+      the trusted-proxy CIDR gate pinned by
       `TestForwardAuth_RejectsUntrustedSource` /
       `TestForwardAuth_AcceptsTrustedCIDR` /
-      `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour`.
-      Duplicated-value and oversized-payload pins are deferred to
-      a follow-up: net/http's `Server.MaxHeaderBytes` (default
-      1 MiB, configurable) bounds the worst-case oversized-header
-      attack server-side, and duplicated headers in production
-      proxy chains are rare. The realistic abuse vector
-      (control-byte injection / log forging) is covered. Doc
-      caveat lives in `docs/auth-model.md` "Edge cases worth
-      knowing"._
+      `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour`._
 - [x] OIDC strict mode is the documented default for the
       shared-service profile; the JWKS rotation path is covered by
       a test that exercises a key swap mid-session.
@@ -255,26 +256,55 @@ pinned by a test cited in the same doc.
 The publishable docs surface that anyone outside the maintainer
 will read.
 
-- [ ] `README.md` — top-of-file claims (transport list, policy
+- [x] `README.md` — top-of-file claims (transport list, policy
       modes, tool count, supported deployments) match the live
       `docs/tool-catalog.md` count, the `internal/config/spec.go`
       surface, and the deployment profile docs. Run
       `make doc-parity` to verify.
-- [ ] `CHANGELOG.md` Unreleased section has a clear,
+      _Verified 2026-05-02: `docs/tool-catalog.json` has
+      33 Tier 1 tools + 91 Tier 2 tools = 124 total, matching
+      README. `make doc-parity`, `make config-doc-parity`,
+      `make catalog-drift`, and `make launch-checklist-parity`
+      all green after the launch-doc pass._
+- [x] `CHANGELOG.md` Unreleased section has a clear,
       user-facing summary of every behavioural change since
       v1.2.0; no "internal only" hand-waving for changes that
       affect operators.
-- [ ] `docs/clients.md` lists every supported MCP client we have
+      _Verified 2026-05-02: Unreleased has operator-facing entries
+      for shared-service E2E, session rehydration, auth-model docs,
+      branch-protection promotion, and this launch-doc verification
+      pass._
+- [x] `docs/clients.md` lists every supported MCP client we have
       tested against (Claude Desktop, Claude Code, Cursor,
       VS Code MCP, …) with the exact transport + auth combo each
       one uses. Untested combos are flagged.
-- [ ] `docs/support-matrix.md` is current for the candidate tag:
+      _Closed 2026-05-02: client matrix now names the exact
+      stdio + env-auth shape for Claude Code, Claude Desktop,
+      Cursor, Codex, and VS Code MCP; custom streamable HTTP and
+      gRPC client rows separate server-transport support from
+      operator-owned client semantics. Untested non-stdio desktop
+      combos are explicitly flagged._
+- [x] `docs/support-matrix.md` is current for the candidate tag:
       Go version pin, OS/arch matrix, FIPS posture, kernel
       requirements (if any).
-- [ ] Every deployment profile doc under `docs/deploy/` ends with
+      _Closed 2026-05-02: support matrix now records Go 1.25.9,
+      default/Postgres/gRPC/FIPS artifact OS-arch coverage,
+      container platform coverage, Windows limitations, FIPS
+      posture, and the absence of project-specific Linux kernel
+      requirements._
+- [x] Every deployment profile doc under `docs/deploy/` ends with
       a "How to verify this deployment" section that names the
       `doctor --strict` invocation and the smoke-test workflow
       that backs it.
+      _Closed 2026-05-02: `profile-local-stdio.md`,
+      `profile-single-tenant-http.md`,
+      `profile-private-network-grpc.md`,
+      `profile-self-hosted.md`, and
+      `production-profile-shared-service.md` all end with a
+      verification section. Non-hosted profiles explicitly mark
+      `doctor --strict` as a negative hosted-posture check and
+      name the positive smoke target (`stdio-smoke`,
+      `http-smoke`, `grpc-auth-smoke`, or `shared-service-e2e`)._
 
 **Definition of done.** A new operator can pick a profile,
 deploy, and verify success without reading source code.
@@ -283,24 +313,59 @@ deploy, and verify success without reading source code.
 
 ## 6. Security and policy review
 
-- [ ] `make verify-vuln` green for the candidate tag (govulncheck
+- [x] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
-- [ ] `gitleaks` scan green (config in `.gitleaks.toml`).
-- [ ] `semgrep` review green; any `// nosemgrep` directive has a
+      _Verified 2026-05-02 on the launch-doc/security-review
+      working tree: installed `govulncheck` and ran
+      `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`;
+      result: `No vulnerabilities found.` Re-run unchanged on the
+      final candidate tag before promotion._
+- [x] `gitleaks` scan green (config in `.gitleaks.toml`).
+      _Verified 2026-05-02: `make secret-scan` ran
+      `gitleaks detect --no-git --source . --redact --config
+      .gitleaks.toml`; no leaks found._
+- [x] `semgrep` review green; any `// nosemgrep` directive has a
       justification comment within five lines and is referenced
       from the relevant ADR or runbook.
-- [ ] `make verify-fips` green when the FIPS-aware tooling is
+      _Verified 2026-05-02: `semgrep scan --config p/default
+      --metrics=off --error --exclude .git --exclude .bench
+      --exclude clockify-mcp .` scanned 1094 tracked files and
+      returned 0 findings. The SSE `text/event-stream` suppressions
+      in `internal/mcp/transport_streamable_http.go` have inline
+      justification comments and are recorded in ADR 0017._
+- [x] `make verify-fips` green when the FIPS-aware tooling is
       installed (auto-skips otherwise — record the run on a host
       that has it).
-- [ ] No public AI-facing deployment can boot with a policy
+      _Verified 2026-05-02 on macOS arm64 with a FIPS-capable Go
+      toolchain: `make verify-fips` built and tested `-tags=fips`
+      plus the `-tags=fips,grpc` build combination._
+- [x] No public AI-facing deployment can boot with a policy
       weaker than `time_tracking_safe`; the load-time guard
       remains in place.
-- [ ] `MCP_AUDIT_DURABILITY=fail_closed` is the effective default
+      _Pinned by `internal/config/profile_test.go`:
+      `TestProfile_SingleTenantHTTPDefaults`,
+      `TestProfile_SharedServiceIsStrict`, and
+      `TestProfile_ProdPostgresIsStrict` assert the AI-facing
+      profile defaults; `cmd/clockify-mcp/main_test.go::
+      TestDoctorStrictAllowBroadPolicyFlag` asserts hosted
+      `doctor --strict` rejects broader explicit overrides unless
+      the operator passes `--allow-broad-policy`._
+- [x] `MCP_AUDIT_DURABILITY=fail_closed` is the effective default
       under `ENVIRONMENT=prod` (locked by tests in
       `internal/config/prod_defaults_test.go`).
-- [ ] `MCP_ALLOW_DEV_BACKEND=1` cannot survive a load-time check
+      _Pinned by
+      `internal/config/prod_defaults_test.go::
+      TestProdDefaults_AuditDurability`; covered by `make check`._
+- [x] `MCP_ALLOW_DEV_BACKEND=1` cannot survive a load-time check
       under any production-shaped profile; the dev-backend
       escape hatch is documented and its risks are spelled out.
+      _Pinned by
+      `internal/config/prod_defaults_test.go::
+      TestProdDefaults_RejectsDevBackendEscapeHatch`, which rejects
+      `ENVIRONMENT=prod` + `MCP_ALLOW_DEV_BACKEND=1` even with a
+      Postgres DSN. The risk and escape-hatch scope are documented
+      in ADR 0014, `docs/production-readiness.md`, and the
+      deployment profile docs._
 
 **Definition of done.** No HIGH/CRITICAL vulnerability findings;
 no policy regression; no escape-hatch can be activated by

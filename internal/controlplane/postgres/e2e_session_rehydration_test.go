@@ -37,9 +37,11 @@
 // after this test goes GREEN, flip step 1's success assertion
 // negative, confirm RED with "session not found" / 404, restore.
 //
-// Activation: build tag `postgres` + a non-empty
-// MCP_LIVE_CONTROL_PLANE_DSN env var. Same convention as
-// e2e_shared_service_test.go and live_audit_phases_test.go.
+// Activation: build tag `postgres`. With the `integration` tag, the
+// test reuses the package Testcontainers DSN when
+// MCP_LIVE_CONTROL_PLANE_DSN is unset, which keeps `make
+// test-postgres` self-contained. Without `integration`, the env var
+// must point at a sacrificial Postgres database.
 
 package postgres_test
 
@@ -47,7 +49,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -73,13 +74,7 @@ const (
 )
 
 func TestStreamableHTTPCrossInstanceRehydration(t *testing.T) {
-	dsn := strings.TrimSpace(os.Getenv("MCP_LIVE_CONTROL_PLANE_DSN"))
-	if dsn == "" {
-		if os.Getenv("INTEGRATION_REQUIRED") == "1" {
-			t.Fatalf("MCP_LIVE_CONTROL_PLANE_DSN unset under INTEGRATION_REQUIRED=1")
-		}
-		t.Skip("MCP_LIVE_CONTROL_PLANE_DSN not set; skipping cross-instance rehydration E2E")
-	}
+	dsn := e2eControlPlaneDSN(t, "MCP_LIVE_CONTROL_PLANE_DSN not set; skipping cross-instance rehydration E2E")
 
 	store, err := controlplane.Open(dsn)
 	if err != nil {

@@ -143,3 +143,42 @@ an audit trail for compliance), move to
 `profile-single-tenant-http.md` first, then to
 `production-profile-shared-service.md`. See
 `docs/upgrade-checklist.md` for the step-by-step migration.
+
+## How to verify this deployment
+
+Run the profile audit first:
+
+```bash
+CLOCKIFY_API_KEY=pk_xxx \
+  clockify-mcp doctor --profile=local-stdio
+```
+
+Expected result: `Load() result: OK`, `transport=stdio`, no inbound
+auth mode, and `CLOCKIFY_POLICY=safe_core` from the profile. The
+doctor command does not contact Clockify; `pk_xxx` can be a dummy
+value for this local config check.
+
+`doctor --strict` is a hosted-service posture gate, not the success
+criterion for local stdio. Run it only as a negative check when you
+want to prove this profile is not accidentally being treated as a
+hosted deployment:
+
+```bash
+CLOCKIFY_API_KEY=pk_xxx \
+  clockify-mcp doctor --profile=local-stdio --strict
+```
+
+Expected result: exit 3 with hosted-strict findings such as missing
+Postgres control-plane DSN and `fail_closed` audit durability. That
+is correct for this profile.
+
+The CI-backed smoke for this deployment shape is:
+
+```bash
+make stdio-smoke
+```
+
+That target builds the binary, sends newline-delimited MCP
+`initialize` and `tools/list` requests over stdio, and verifies both
+JSON-RPC responses. It runs in the `stdio-smoke` path of `make
+verify-core` and the corresponding PR CI job.

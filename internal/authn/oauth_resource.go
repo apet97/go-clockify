@@ -38,14 +38,6 @@ func ProtectedResourceHandler(cfg Config) http.Handler {
 	if cfg.OIDCIssuer != "" {
 		doc.AuthorizationServers = []string{cfg.OIDCIssuer}
 	}
-	body, err := json.Marshal(doc)
-	if err != nil {
-		// Marshalling a fixed map cannot realistically fail; fall back
-		// to a 500 from a no-op handler so the server still starts.
-		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			http.Error(w, "metadata marshal failed: "+err.Error(), http.StatusInternalServerError)
-		})
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.Header().Set("Allow", "GET, HEAD")
@@ -56,7 +48,7 @@ func ProtectedResourceHandler(cfg Config) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=300")
 		w.WriteHeader(http.StatusOK)
 		if r.Method != http.MethodHead {
-			_, _ = w.Write(body)
+			_ = json.NewEncoder(w).Encode(doc)
 		}
 	})
 }

@@ -27,10 +27,11 @@
 // inline at sharedSvcFactory below.
 //
 // Activation: build tag `postgres` (the postgres sub-module is gated
-// by it) plus a non-empty MCP_LIVE_CONTROL_PLANE_DSN env var. CI
-// runs this in a per-PR job with a postgres:16-alpine service
-// container; locally the Railway sacrificial cluster
-// (clockify_mcp_e2e DB) is the convention.
+// by it). With the `integration` tag, the test reuses the package
+// Testcontainers DSN when MCP_LIVE_CONTROL_PLANE_DSN is unset, which
+// keeps `make test-postgres` self-contained. Without `integration`,
+// MCP_LIVE_CONTROL_PLANE_DSN must point at a sacrificial Postgres
+// database; `make shared-service-e2e` uses that path.
 
 package postgres_test
 
@@ -44,7 +45,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -385,13 +385,7 @@ func readBody(resp *http.Response) string {
 }
 
 func TestSharedServicePostgresE2E(t *testing.T) {
-	dsn := strings.TrimSpace(os.Getenv("MCP_LIVE_CONTROL_PLANE_DSN"))
-	if dsn == "" {
-		if os.Getenv("INTEGRATION_REQUIRED") == "1" {
-			t.Fatalf("MCP_LIVE_CONTROL_PLANE_DSN unset under INTEGRATION_REQUIRED=1")
-		}
-		t.Skip("MCP_LIVE_CONTROL_PLANE_DSN not set; skipping shared-service Postgres E2E")
-	}
+	dsn := e2eControlPlaneDSN(t, "MCP_LIVE_CONTROL_PLANE_DSN not set; skipping shared-service Postgres E2E")
 
 	store, err := controlplane.Open(dsn)
 	if err != nil {

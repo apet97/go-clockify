@@ -154,3 +154,46 @@ swaps:
 
 See `docs/upgrade-checklist.md` for the full pre-flight /
 rollout / post-flight flow.
+
+## How to verify this deployment
+
+Run the profile audit against the same env your service manager or
+container will use:
+
+```bash
+export CLOCKIFY_API_KEY=pk_xxx
+export MCP_BEARER_TOKEN="$(openssl rand -hex 32)"
+export MCP_CONTROL_PLANE_DSN=file:///var/lib/clockify-mcp/audit.db
+
+clockify-mcp doctor --profile=single-tenant-http
+```
+
+Expected result: `Load() result: OK`,
+`transport=streamable_http`, `auth=static_bearer`,
+`CLOCKIFY_POLICY=time_tracking_safe`, and a `file://` control-plane
+DSN. The doctor command checks configuration only; it does not call
+Clockify or open the listener.
+
+`doctor --strict` is the hosted-service gate. For this small-team
+profile it is a negative posture check, not the success criterion:
+
+```bash
+clockify-mcp doctor --profile=single-tenant-http --strict
+```
+
+Expected result: exit 3 with hosted-strict findings such as "requires
+a postgres:// control-plane DSN" and
+`MCP_AUDIT_DURABILITY=fail_closed`. That proves the deployment has
+not been mistaken for the multi-tenant hosted profile.
+
+The CI-backed smoke for the HTTP-shaped listener is:
+
+```bash
+make http-smoke
+```
+
+That target builds the binary, starts an HTTP listener with a dummy
+Clockify key, verifies `/health`, and verifies `/ready` is reachable
+(200 when dependencies are reachable, 503 when the dummy key cannot
+reach Clockify). It runs in `make verify-core` and the PR CI smoke
+path.

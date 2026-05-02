@@ -145,3 +145,25 @@ func TestProdDefaults_ErrorMessages(t *testing.T) {
 		}
 	}
 }
+
+// TestProdDefaults_RejectsDevBackendEscapeHatch locks the production
+// guard that forbids carrying the single-process dev-backend acknowledgement
+// into ENVIRONMENT=prod, even when the DSN itself is production-shaped.
+func TestProdDefaults_RejectsDevBackendEscapeHatch(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"ENVIRONMENT":           "prod",
+		"MCP_TRANSPORT":         "streamable_http",
+		"MCP_AUTH_MODE":         "oidc",
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+		"MCP_ALLOW_DEV_BACKEND": "1",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected prod guard to reject MCP_ALLOW_DEV_BACKEND=1, got nil")
+	}
+	if !strings.Contains(err.Error(), "MCP_ALLOW_DEV_BACKEND=1 is prohibited") {
+		t.Fatalf("error %q should name the prohibited dev-backend escape hatch", err.Error())
+	}
+}

@@ -45,3 +45,30 @@ add `MCP_PROFILE=local-stdio` to the file (matches the existing
 stdio + `best_effort` audit shape). The profile then turns into a
 documented default surface that the `clockify-mcp doctor`
 subcommand can audit.
+
+## How to verify this deployment
+
+`self-hosted` is not a registered profile name, so verification starts
+by choosing the concrete profile that matches your shape:
+
+| Shape | Profile | Doctor command | Smoke target |
+|---|---|---|---|
+| One user, local subprocess | `local-stdio` | `CLOCKIFY_API_KEY=pk_xxx clockify-mcp doctor --profile=local-stdio` | `make stdio-smoke` |
+| Small team, one HTTP listener | `single-tenant-http` | `CLOCKIFY_API_KEY=pk_xxx MCP_BEARER_TOKEN=<32+ random chars> clockify-mcp doctor --profile=single-tenant-http` | `make http-smoke` |
+
+For both rows, `doctor --strict` is a negative hosted-posture check,
+not the success criterion. It is still useful during migration:
+
+```bash
+CLOCKIFY_API_KEY=pk_xxx \
+  clockify-mcp doctor --profile=local-stdio --strict
+```
+
+Expected result for the local row is exit 3 with hosted-strict
+findings; the single-tenant row behaves the same unless you have
+promoted it all the way to Postgres + `fail_closed`, in which case it
+is no longer this legacy self-hosted shape and should move to
+`production-profile-shared-service.md`.
+
+Use the smoke target named in the table as the CI-backed proof that
+the selected transport still speaks MCP.

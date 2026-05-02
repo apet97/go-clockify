@@ -4,12 +4,22 @@ This document provides guidance on how various Model Context Protocol (MCP) clie
 
 ## Supported Client Matrix
 
-| Client | Connection Mode | Stability | Notes |
-|--------|-----------------|-----------|-------|
-| Claude Code | `stdio` | Tier 1 | Full support for all tools and resources. |
-| Claude Desktop | `stdio` | Tier 1 | Renders tool confirmation dialogs for `destructiveHint: true` tools. |
-| Cursor | `stdio` | Tier 1 | Supports via `.cursor/mcp.json`. |
-| Codex | `stdio` | Tier 1 | Lightweight CLI. |
+The release-tested client surface is intentionally narrow: MCP
+clients launch `clockify-mcp` as a subprocess over stdio, and the
+Clockify API key is passed through the child-process environment.
+HTTP and gRPC are supported server transports, but the project does
+not claim that any off-the-shelf desktop client has been release-tested
+against those modes unless the table says so.
+
+| Client | Tested connection | Auth mode | Release status | Untested combinations |
+|--------|-------------------|-----------|----------------|-----------------------|
+| Claude Code | `stdio` subprocess | n/a; parent process supplies `CLOCKIFY_API_KEY` | Tier 1, release-tested via stdio smoke and manual client use | `streamable_http`, `grpc`, hosted OIDC, `forward_auth`, `mtls` |
+| Claude Desktop | `stdio` subprocess from `claude_desktop_config.json` | n/a; env block supplies `CLOCKIFY_API_KEY` | Tier 1, release-tested manually; renders confirmation dialogs for `destructiveHint: true` tools | `streamable_http`, `grpc`, hosted OIDC, `forward_auth`, `mtls` |
+| Cursor | `stdio` subprocess from `.cursor/mcp.json` | n/a; env block supplies `CLOCKIFY_API_KEY` | Tier 1, release-tested manually | `streamable_http`, `grpc`, hosted OIDC, `forward_auth`, `mtls` |
+| Codex | `stdio` subprocess from Codex MCP config | n/a; env block supplies `CLOCKIFY_API_KEY` | Tier 1, release-tested manually | `streamable_http`, `grpc`, hosted OIDC, `forward_auth`, `mtls` |
+| VS Code MCP | `stdio` subprocess from VS Code MCP server config | n/a; env block supplies `CLOCKIFY_API_KEY` | Compatible shape, not a release-blocking client until a repeatable VS Code smoke is added | All non-stdio transports; any hosted auth mode |
+| Custom Streamable HTTP client | `streamable_http` on `/mcp` | `static_bearer`, `oidc`, `forward_auth`, or `mtls` per `docs/auth-model.md` | Server transport is release-tested by parity, smoke, and shared-service E2E; the custom client implementation is operator-owned | Client-specific UI semantics, retry policy, and auth-token refresh |
+| Custom gRPC client | `grpc` bidirectional `Exchange` stream | `static_bearer`, `oidc`, `forward_auth`, or `mtls` per `docs/auth-model.md` | Server transport is release-tested behind `-tags=grpc`; use the private-network gRPC profile | Public-internet gRPC, browser clients, and clients without mTLS / token refresh support |
 
 ## Expected Client Behavior
 

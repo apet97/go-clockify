@@ -111,6 +111,15 @@ cross-instance Postgres `Session(id)` lookups for the
 common-case client whose load balancer keeps it pinned to one
 pod.
 
+Security-review note: the SSE handler writes `text/event-stream`
+frames directly to `http.ResponseWriter`. That is intentional and is
+the wire protocol for server-sent events, not an HTML rendering path.
+The scoped `nosemgrep` suppressions in
+`internal/mcp/transport_streamable_http.go` cover only those SSE frame
+writes: comment frames, numeric event IDs, server-controlled event
+names, and `data:` payloads that are produced by `json.Marshal` before
+framing.
+
 ### Q1: Factory contract widening
 
 The current `StreamableSessionFactory` signature

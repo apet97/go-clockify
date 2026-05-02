@@ -68,7 +68,7 @@ func NewGRPC(ctx context.Context, opts Options) (Transport, error) {
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return lis.DialContext(ctx)
 		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()), // nosemgrep
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // nosemgrep: bufconn-only in-memory test transport; ADR 0008 records why TLS is not part of this harness.
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(harnessBytesCodec{})),
 	)
 	if err != nil {

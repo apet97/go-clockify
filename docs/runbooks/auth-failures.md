@@ -46,6 +46,12 @@ layer is failing.
     proxy to scrub control characters from principal headers before
     forwarding; the authenticator refuses these to keep log-forging
     payloads and tenant-scope keys clean.
+  - `auth_failed="forward_auth: subject header X-Forwarded-User has
+    duplicated values"` or `auth_failed="forward_auth: tenant header
+    X-Forwarded-Tenant is too large: ..."` — the proxy chain forwarded
+    more than one identity value or a value larger than the 1024-byte
+    per-header bound. Strip client-supplied copies before stamping
+    trusted headers and keep principal identifiers short.
 - gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|missing_metadata|reauth_expired"}` rises. (`missing_metadata` fires when the gRPC stream lands without any metadata at all — earlier than `missing_authorization`, which fires when metadata exists but the `authorization` key is absent.)
 - Upstream Clockify auth failure: `msg=tool_call` errors consistently
   include `401 Unauthorized` from `api.clockify.me` across multiple
@@ -165,8 +171,9 @@ record (`msg=grpc_reauth_failed`).
 - [ ] **Forward-auth header drift.** `MCP_AUTH_MODE=forward_auth`
   trusts a header set by an upstream proxy. If the proxy was
   reconfigured to send a different header, every request fails
-  closed. Check the proxy config and both
-  `MCP_FORWARD_SUBJECT_HEADER` + `MCP_FORWARD_TENANT_HEADER`.
+  closed. If the proxy forwards duplicate values or oversized values,
+  the authenticator also fails closed. Check the proxy config and
+  both `MCP_FORWARD_SUBJECT_HEADER` + `MCP_FORWARD_TENANT_HEADER`.
 - [ ] **CORS mistakenly diagnosed as auth.** A browser client that
   is blocked by CORS can present as "401" in the client UI even
   though the server returned 403 + CORS-rejection. Check

@@ -2,6 +2,18 @@
 
 This document outlines the supported configurations and clients for `clockify-mcp-go`.
 
+## Candidate runtime pins
+
+| Surface | Current support statement | Source of truth |
+|---------|---------------------------|-----------------|
+| Go toolchain | Go `1.25.9` for local builds and CI. The module's `go` directive is `1.25.9`; workflows pin the same version unless they deliberately read `go.mod`. | [`go.mod`](../go.mod), `.github/workflows/*.yml` |
+| Default binary platforms | `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`. Windows arm64 is intentionally not shipped. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`scripts/check-release-assets.sh`](../scripts/check-release-assets.sh) |
+| Tagged server artifacts | Postgres, gRPC, and gRPC+Postgres artifacts are Linux-only (`amd64`, `arm64`) because those profiles target hosted or private-network server deployments. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/verification.md`](verification.md) |
+| Container image | Linux `amd64` and `arm64`, distroless runtime, non-root. The builder image is pinned by digest. | [`deploy/Dockerfile`](../deploy/Dockerfile), [`.github/workflows/docker-image.yml`](../.github/workflows/docker-image.yml) |
+| FIPS posture | Separate `clockify-mcp-fips-*` binaries for Linux and Darwin (`amd64`, `arm64`) built with `-tags=fips` and `GOFIPS140=latest`. Windows FIPS binaries are not shipped. Local `make verify-fips` auto-skips when the toolchain lacks GOFIPS140 support; CI is the release gate. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/adr/0007-fips-build-tag.md`](adr/0007-fips-build-tag.md) |
+| Kernel requirements | No project-specific Linux kernel feature is required by the default binary. Container and Kubernetes deployments inherit the baseline of the runtime, CNI, and storage driver; Postgres-backed profiles require normal TCP reachability to Postgres. | [`deploy/k8s/README.md`](../deploy/k8s/README.md), [`docs/deploy/production-profile-shared-service.md`](deploy/production-profile-shared-service.md) |
+| Active release line | `v1.2.0` is the current Active line referenced by release-verification docs. A launch-candidate tag must update this row if it changes the supported Go version, artifact matrix, or FIPS posture. | [`SUPPORT.md`](../SUPPORT.md), [`docs/verification.md`](verification.md) |
+
 ## Transports and Auth Modes
 
 The following matrix shows supported authentication modes for each transport.
@@ -94,24 +106,28 @@ Every "Recommended" row has a corresponding file under
 
 ## Supported MCP Clients
 
-`clockify-mcp-go` is tested against the following MCP-compliant clients.
+Client-level support is documented in
+[`docs/clients.md`](clients.md), which separates release-tested
+clients from compatible-but-not-release-blocking shapes. The short
+version:
 
-| Client | Mode | Transport | Notes |
-|--------|------|-----------|-------|
-| Claude Code | CLI | `stdio` | Recommended for terminal users |
-| Claude Desktop | Desktop App | `stdio` | Official Anthropic client |
-| Cursor | IDE | `stdio` | Deep IDE integration via `.cursor/mcp.json` |
-| Codex | CLI | `stdio` | Lightweight CLI |
-| Custom HTTP Client | API | `streamable_http` | For building custom dashboards/tools |
+| Client shape | Transport | Support level |
+|--------------|-----------|---------------|
+| Claude Code, Claude Desktop, Cursor, Codex | `stdio` | Tier 1; exact config examples live in README and `docs/clients.md` |
+| VS Code MCP | `stdio` | Compatible shape; not release-blocking until a repeatable VS Code smoke exists |
+| Custom Streamable HTTP client | `streamable_http` | Server transport supported; client implementation is operator-owned |
+| Custom gRPC client | `grpc` | Server transport supported behind `-tags=grpc`; private-network profile only |
 
 ## Runtime Environments
 
-| Platform | Support Level | Notes |
-|----------|---------------|-------|
-| Linux (amd64/arm64) | Tier 1 | Full CI coverage, distroless images |
-| macOS (Darwin/Silicon) | Tier 1 | Primary development platform |
-| Windows (x64) | Tier 2 | Binary release, limited CI |
-| Kubernetes | Tier 1 | Reference Helm/Kustomize manifests |
+| Platform | Artifact | Support Level | Notes |
+|----------|----------|---------------|-------|
+| Linux amd64 | default, FIPS, Postgres, gRPC, gRPC+Postgres, container | Tier 1 | Full CI and release-smoke coverage; canonical hosted deployment platform |
+| Linux arm64 | default, FIPS, Postgres, gRPC, gRPC+Postgres, container | Tier 1 | Same release artifact set as linux amd64; container image is multi-arch |
+| macOS arm64 | default, FIPS | Tier 1 | Primary development platform; `make release-check` must stay green here before candidate tagging |
+| macOS amd64 | default, FIPS | Tier 2 | Binary release and FIPS artifact; limited local developer coverage |
+| Windows amd64 | default | Tier 2 | Binary release; no FIPS, Postgres, or gRPC release artifact |
+| Kubernetes | container, Helm, Kustomize | Tier 1 | Reference manifests render in CI; operators still own cluster-specific ingress, storage, and NetworkPolicy integration |
 
 ## Control-Plane Backends
 

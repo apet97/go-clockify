@@ -374,7 +374,14 @@ test-postgres:
 	# instead of t.Skip. Without it, the suite would report green when
 	# Docker is unreachable, masking regressions in the postgres
 	# control-plane backend. See store_test.go::dsn for the gate.
-	cd internal/controlplane/postgres && INTEGRATION_REQUIRED=1 go test -tags=postgres,integration -count=1 -timeout 180s ./...
+	@tc_sock="$${TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE:-}"; \
+	if [ -z "$$tc_sock" ]; then \
+	  docker_host="$$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"; \
+	  case "$$docker_host" in unix://*) tc_sock="/var/run/docker.sock" ;; esac; \
+	fi; \
+	cd internal/controlplane/postgres && \
+	  INTEGRATION_REQUIRED=1 TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE="$$tc_sock" \
+	  go test -tags=postgres,integration -count=1 -timeout 180s ./...
 
 # shared-service-e2e drives the streamable HTTP transport in-process
 # against a Postgres-backed control plane and pins two launch-candidate

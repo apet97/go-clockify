@@ -3,12 +3,13 @@ package clockify
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
 	"math"
-	"math/rand/v2"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -358,7 +359,10 @@ func isRetryableStatus(code int) bool {
 
 func backoff(attempt int) time.Duration {
 	base := 250.0 * math.Pow(2, float64(attempt-1))
-	jitter := rand.IntN(125)
+	jitter := 0
+	if n, err := rand.Int(rand.Reader, big.NewInt(125)); err == nil {
+		jitter = int(n.Int64())
+	}
 	return time.Duration(base+float64(jitter)) * time.Millisecond
 }
 

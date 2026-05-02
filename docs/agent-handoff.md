@@ -41,35 +41,65 @@ under the workstation-private `.claude/commands/` directory
 (gitignored). If you are running outside Claude Code, treat the
 prose below as the checklist.
 
-1. **Live contract failures** — `.github/workflows/live-contract.yml`
-   has been intermittently red. The promotion gate starts with
-   two consecutive green nightlies. Slash command:
-   `/fix-live-contract`.
-2. **No shared-service Postgres E2E** — pieces exist
-   (`make test-postgres`, `TestLiveCreateUpdateDeleteEntryAuditPhases`)
-   but no single test exercises the full shared-service stack
-   end-to-end. Slash command: `/postgres-e2e`.
-3. **ADR 0017 unresolved** — streamable-HTTP session rehydration
-   is "Proposed + band-aid". Either ship the fix or document the
-   single-replica limitation. Slash command:
-   `/session-rehydration`.
+1. **Live contract — calendar-bound scheduled-cron evidence on the
+   candidate SHA.** The rolling `live-test-failure` issue is closed
+   (auto-closed by manual run 25238997088). Two manual-dispatch
+   runs are green (read-only 25238997088, full-tier 25239216412).
+   `TestLiveReadSideSchemaDiff` is wired into the read-only step of
+   `.github/workflows/live-contract.yml` and locally green.
+   What is still open: two consecutive **scheduled** (cron) green
+   runs of `live-contract.yml` on the candidate SHA, with the
+   schema-diff evidence captured. Slash command:
+   `/fix-live-contract` if a future cron firing reds.
+2. ~~**No shared-service Postgres E2E**~~ **Closed 2026-05-02** by
+   commits eb5351c → abad73b. The shared-service E2E lives at
+   `internal/controlplane/postgres/e2e_shared_service_test.go`
+   (`make shared-service-e2e`) and runs per-PR as the
+   `Shared-service Postgres E2E` job in `.github/workflows/ci.yml`.
+   **Promoted to required-status check on `main`** as commit
+   `50aa87f` after three consecutive green runs (25240007056,
+   25240085916, 25240163213); the snapshot in
+   [`branch-protection.md`](branch-protection.md) is the audit
+   trail.
+3. ~~**ADR 0017 unresolved**~~ **Closed 2026-05-02** by Path A.
+   `streamSessionManager.get` consults the shared
+   `controlplane.Store` on a local miss, strict-validates the
+   freshly-authenticated principal against the persisted
+   Subject/TenantID, and rebuilds the per-tenant runtime via the
+   existing principal-aware Factory. Pinned by
+   `TestStreamableHTTPCrossInstanceRehydration` in
+   `internal/controlplane/postgres/e2e_session_rehydration_test.go`,
+   which boots two listeners against the same Postgres store and
+   asserts the cross-instance happy path, cross-tenant 403, and
+   expired-session 404 + row removal. Runs in the existing
+   `Shared-service Postgres E2E` CI job. The `sessionAffinity:
+   ClientIP` band-aid stays as defence-in-depth + perf
+   optimisation. ADR 0017 is **Accepted** with explicit Q1-Q4
+   decisions (commits eb5351c + 8353934 + fcfd7f0 + 5e566e8).
 4. ~~**Auth-model docs scattered**~~ **Closed 2026-05-02** by
    commits 0bcd30b (new `docs/auth-model.md`: 4-mode table,
    Principal mapping, tenant resolution, failure modes, test
    pins, 5-question reviewer self-quiz) + 8a627d6 (operator-doc
    cross-links from `docs/production-readiness.md` "Pick an
    auth mode" and `docs/runbooks/auth-failures.md`) +
-   222c206 (Group 4 checklist terminology fix + boxes ticked).
-5. **Launch docs not verified end-to-end** — `README.md`,
-   `docs/clients.md`, `docs/support-matrix.md`, and the
-   `docs/deploy/profile-*.md` set need a parity pass.
+   222c206 (Group 4 checklist terminology fix) + the current
+   forward-auth hardening pass (duplicate-value and 1024-byte
+   principal-header caps pinned by
+   `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders`).
+5. ~~**Launch docs not verified end-to-end**~~ **Closed
+   2026-05-02.** `docs/clients.md` names exact tested
+   transport/auth combinations and flags untested combos,
+   `docs/support-matrix.md` names Go / OS / FIPS / kernel posture,
+   and every deployment profile ends with a "How to verify this
+   deployment" section naming the doctor command and smoke target.
 6. **Bench baseline pre-dates the perf wave** — `.bench/` baseline
    needs refreshing after the cached tools/list, tier-2 cache,
    and schema compaction commits.
-7. **Security review walk-through** —
-   `make verify-vuln`, `make verify-fips`, `gitleaks`, `semgrep`
-   all green on the candidate tag with findings filed in
-   `SECURITY.md`.
+7. ~~**Security review walk-through**~~ **Closed 2026-05-02.**
+   `make verify-vuln` (with `govulncheck` on PATH),
+   `make verify-fips`, gitleaks, Semgrep, and `make check` are
+   green on the launch-review tree. Re-run the same commands on
+   the final candidate tag.
 
 For the full audit framing run `/launch-candidate` from a Claude
 Code session inside this repo (the slash command is gitignored
@@ -92,6 +122,10 @@ to required-status check on `main` 2026-05-02)
 - `internal/controlplane/postgres/e2e_shared_service_test.go` —
   the test that closed Group 2; runs as the
   `Shared-service Postgres E2E` CI job on every PR.
+- `make test-postgres` is now self-contained for local launch
+  verification: under `-tags=postgres,integration`, the shared-service
+  E2Es reuse the package Testcontainers DSN, and the Makefile target
+  normalizes Unix Docker sockets for Colima / Docker Desktop.
 - `internal/controlplane/postgres/`
 - `internal/runtime/service.go`, `internal/runtime/store.go`
 - `tests/harness/streamable.go`
@@ -114,7 +148,8 @@ to required-status check on `main` 2026-05-02)
 - [`docs/auth-model.md`](auth-model.md) — one-page reviewer
   summary; start here.
 - `internal/authn/` — implementation (mode constants at
-  `authn.go:36-41`).
+  `authn.go:36-41`, `forward_auth` header cardinality/size guard
+  in `forwardAuthHeaderValue`).
 - `internal/config/transport_auth_matrix_test.go::TestTransportAuthMatrix` —
   `{transport × auth_mode}` config-load surface.
 - `internal/mcp/transport_http_authmatrix_test.go` — HTTP
@@ -145,7 +180,7 @@ exist, propose it as a Makefile target before using it.
 | gRPC build / parity | `make build-grpc`, `make grpc-release-parity`, `make grpc-auth-smoke` |
 | Postgres build | `make build-postgres` |
 | Postgres integration tests | `make test-postgres` (requires Docker; uses Testcontainers + `INTEGRATION_REQUIRED=1`) |
-| Live-contract tests (read-only) | `CLOCKIFY_LIVE_API_KEY=... CLOCKIFY_LIVE_WORKSPACE_ID=... go test -tags=livee2e -run '^TestE2EReadOnly$\|^TestE2EErrors$' ./tests/` |
+| Live-contract tests (read-only) | `CLOCKIFY_LIVE_API_KEY=... CLOCKIFY_LIVE_WORKSPACE_ID=... go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/` |
 | Live-contract tests (mutating, sacrificial only) | append `-run '^TestE2EMutating$\|^TestLiveDryRunDoesNotMutate$\|^TestLivePolicyTimeTrackingSafeBlocksProjectCreate$'` and only against the workspace named in `docs/live-tests.md` |
 | Doctor (config-strict) | `clockify-mcp doctor --profile=<profile> --strict` |
 | Doctor (backends) | `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` |
@@ -226,15 +261,17 @@ verifiable.
 5. **Consolidate auth-model docs.** One page that maps every
    Clockify auth requirement to an MCP config knob. Cross-link
    from `README.md`.
-6. **Verify launch docs.** `make doc-parity`, then a manual
-   review pass over `docs/clients.md`, `docs/support-matrix.md`,
-   `docs/deploy/profile-*.md`, and the `README.md` claims.
+6. **Verify launch docs.** Closed 2026-05-02; re-run
+   `make doc-parity` after any future change to `README.md`,
+   `docs/clients.md`, `docs/support-matrix.md`, or
+   `docs/deploy/profile-*.md`.
 7. **Refresh bench baseline.** Run `make verify-bench` on the
    candidate shape, commit the new `.bench/` baseline file with
    a `Why:` line that names the perf wave it reflects.
-8. **Security review walk-through.** `make verify-vuln`,
-   `make verify-fips`, `gitleaks`, `semgrep`. File any findings
-   in `SECURITY.md`.
+8. **Security review walk-through.** Closed 2026-05-02; re-run
+   `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
+   on the final candidate tag. File any new findings in
+   `SECURITY.md`.
 9. **Cut a release candidate** (`vX.Y.Z-rc.N`), watch
    `release-smoke.yml`, archive the green run.
 10. **Open the launch-candidate tracking issue.** Link to the

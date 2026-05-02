@@ -61,10 +61,19 @@
               "billable": {
                 "type": "boolean"
               },
+              "costRate": {},
+              "customFieldValues": {},
               "description": {
                 "type": "string"
               },
+              "hourlyRate": {},
               "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
                 "type": "string"
               },
               "projectId": {
@@ -99,6 +108,9 @@
                   "start"
                 ],
                 "type": "object"
+              },
+              "type": {
+                "type": "string"
               },
               "userId": {
                 "type": "string"
@@ -171,10 +183,32 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "address": {
+                "type": "string"
+              },
+              "archived": {
+                "type": "boolean"
+              },
+              "ccEmails": {},
+              "currencyCode": {
+                "type": "string"
+              },
+              "currencyId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
               "id": {
                 "type": "string"
               },
               "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "workspaceId": {
                 "type": "string"
               }
             },
@@ -258,24 +292,50 @@
               "archived": {
                 "type": "boolean"
               },
+              "billable": {
+                "type": "boolean"
+              },
+              "budgetEstimate": {},
               "clientId": {
+                "type": "string"
+              },
+              "clientName": {
                 "type": "string"
               },
               "color": {
                 "type": "string"
               },
+              "costRate": {},
+              "duration": {
+                "type": "string"
+              },
+              "estimate": {},
+              "estimateReset": {},
+              "hourlyRate": {},
               "id": {
                 "type": "string"
               },
+              "memberships": {},
               "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "public": {
+                "type": "boolean"
+              },
+              "template": {
+                "type": "boolean"
+              },
+              "timeEstimate": {},
+              "workspaceId": {
                 "type": "string"
               }
             },
             "required": [
               "id",
               "name",
-              "clientId",
-              "color",
               "archived"
             ],
             "type": "object"
@@ -336,10 +396,16 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "archived": {
+                "type": "boolean"
+              },
               "id": {
                 "type": "string"
               },
               "name": {
+                "type": "string"
+              },
+              "workspaceId": {
                 "type": "string"
               }
             },
@@ -413,6 +479,29 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "assigneeId": {
+                "type": "string"
+              },
+              "assigneeIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "billable": {
+                "type": "boolean"
+              },
+              "budgetEstimate": {
+                "type": "integer"
+              },
+              "costRate": {},
+              "duration": {
+                "type": "string"
+              },
+              "estimate": {
+                "type": "string"
+              },
+              "hourlyRate": {},
               "id": {
                 "type": "string"
               },
@@ -421,6 +510,15 @@
               },
               "projectId": {
                 "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "userGroupIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               }
             },
             "required": [
@@ -478,13 +576,28 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "activeWorkspace": {
+                "type": "string"
+              },
+              "customFields": {},
+              "defaultWorkspace": {
+                "type": "string"
+              },
               "email": {
                 "type": "string"
               },
               "id": {
                 "type": "string"
               },
+              "memberships": {},
               "name": {
+                "type": "string"
+              },
+              "profilePicture": {
+                "type": "string"
+              },
+              "settings": {},
+              "status": {
                 "type": "string"
               }
             },
@@ -657,10 +770,19 @@
                     "billable": {
                       "type": "boolean"
                     },
+                    "costRate": {},
+                    "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
+                    "hourlyRate": {},
                     "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
                       "type": "string"
                     },
                     "projectId": {
@@ -695,6 +817,9 @@
                         "start"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
                     },
                     "userId": {
                       "type": "string"
@@ -861,10 +986,19 @@
                   "billable": {
                     "type": "boolean"
                   },
+                  "costRate": {},
+                  "customFieldValues": {},
                   "description": {
                     "type": "string"
                   },
+                  "hourlyRate": {},
                   "id": {
+                    "type": "string"
+                  },
+                  "isLocked": {
+                    "type": "boolean"
+                  },
+                  "kioskId": {
                     "type": "string"
                   },
                   "projectId": {
@@ -899,6 +1033,9 @@
                       "start"
                     ],
                     "type": "object"
+                  },
+                  "type": {
+                    "type": "string"
                   },
                   "userId": {
                     "type": "string"
@@ -992,10 +1129,19 @@
               "billable": {
                 "type": "boolean"
               },
+              "costRate": {},
+              "customFieldValues": {},
               "description": {
                 "type": "string"
               },
+              "hourlyRate": {},
               "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
                 "type": "string"
               },
               "projectId": {
@@ -1030,6 +1176,9 @@
                   "start"
                 ],
                 "type": "object"
+              },
+              "type": {
+                "type": "string"
               },
               "userId": {
                 "type": "string"
@@ -1105,24 +1254,50 @@
               "archived": {
                 "type": "boolean"
               },
+              "billable": {
+                "type": "boolean"
+              },
+              "budgetEstimate": {},
               "clientId": {
+                "type": "string"
+              },
+              "clientName": {
                 "type": "string"
               },
               "color": {
                 "type": "string"
               },
+              "costRate": {},
+              "duration": {
+                "type": "string"
+              },
+              "estimate": {},
+              "estimateReset": {},
+              "hourlyRate": {},
               "id": {
                 "type": "string"
               },
+              "memberships": {},
               "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "public": {
+                "type": "boolean"
+              },
+              "template": {
+                "type": "boolean"
+              },
+              "timeEstimate": {},
+              "workspaceId": {
                 "type": "string"
               }
             },
             "required": [
               "id",
               "name",
-              "clientId",
-              "color",
               "archived"
             ],
             "type": "object"
@@ -1228,10 +1403,32 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "address": {
+                  "type": "string"
+                },
+                "archived": {
+                  "type": "boolean"
+                },
+                "ccEmails": {},
+                "currencyCode": {
+                  "type": "string"
+                },
+                "currencyId": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
                 "id": {
                   "type": "string"
                 },
                 "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "workspaceId": {
                   "type": "string"
                 }
               },
@@ -1320,10 +1517,19 @@
                 "billable": {
                   "type": "boolean"
                 },
+                "costRate": {},
+                "customFieldValues": {},
                 "description": {
                   "type": "string"
                 },
+                "hourlyRate": {},
                 "id": {
+                  "type": "string"
+                },
+                "isLocked": {
+                  "type": "boolean"
+                },
+                "kioskId": {
                   "type": "string"
                 },
                 "projectId": {
@@ -1358,6 +1564,9 @@
                     "start"
                   ],
                   "type": "object"
+                },
+                "type": {
+                  "type": "string"
                 },
                 "userId": {
                   "type": "string"
@@ -1441,24 +1650,50 @@
                 "archived": {
                   "type": "boolean"
                 },
+                "billable": {
+                  "type": "boolean"
+                },
+                "budgetEstimate": {},
                 "clientId": {
+                  "type": "string"
+                },
+                "clientName": {
                   "type": "string"
                 },
                 "color": {
                   "type": "string"
                 },
+                "costRate": {},
+                "duration": {
+                  "type": "string"
+                },
+                "estimate": {},
+                "estimateReset": {},
+                "hourlyRate": {},
                 "id": {
                   "type": "string"
                 },
+                "memberships": {},
                 "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "public": {
+                  "type": "boolean"
+                },
+                "template": {
+                  "type": "boolean"
+                },
+                "timeEstimate": {},
+                "workspaceId": {
                   "type": "string"
                 }
               },
               "required": [
                 "id",
                 "name",
-                "clientId",
-                "color",
                 "archived"
               ],
               "type": "object"
@@ -1527,10 +1762,16 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "archived": {
+                  "type": "boolean"
+                },
                 "id": {
                   "type": "string"
                 },
                 "name": {
+                  "type": "string"
+                },
+                "workspaceId": {
                   "type": "string"
                 }
               },
@@ -1611,6 +1852,29 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "assigneeId": {
+                  "type": "string"
+                },
+                "assigneeIds": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "billable": {
+                  "type": "boolean"
+                },
+                "budgetEstimate": {
+                  "type": "integer"
+                },
+                "costRate": {},
+                "duration": {
+                  "type": "string"
+                },
+                "estimate": {
+                  "type": "string"
+                },
+                "hourlyRate": {},
                 "id": {
                   "type": "string"
                 },
@@ -1619,6 +1883,15 @@
                 },
                 "projectId": {
                   "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "userGroupIds": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 }
               },
               "required": [
@@ -1692,13 +1965,28 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "activeWorkspace": {
+                  "type": "string"
+                },
+                "customFields": {},
+                "defaultWorkspace": {
+                  "type": "string"
+                },
                 "email": {
                   "type": "string"
                 },
                 "id": {
                   "type": "string"
                 },
+                "memberships": {},
                 "name": {
+                  "type": "string"
+                },
+                "profilePicture": {
+                  "type": "string"
+                },
+                "settings": {},
+                "status": {
                   "type": "string"
                 }
               },
@@ -1760,12 +2048,33 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "cakeOrganizationId": {
+                  "type": "string"
+                },
+                "costRate": {},
+                "currencies": {},
+                "featureSubscriptionType": {
+                  "type": "string"
+                },
+                "features": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "hourlyRate": {},
                 "id": {
                   "type": "string"
                 },
+                "imageUrl": {
+                  "type": "string"
+                },
+                "memberships": {},
                 "name": {
                   "type": "string"
-                }
+                },
+                "subdomain": {},
+                "workspaceSettings": {}
               },
               "required": [
                 "id",
@@ -1860,10 +2169,19 @@
                   "billable": {
                     "type": "boolean"
                   },
+                  "costRate": {},
+                  "customFieldValues": {},
                   "description": {
                     "type": "string"
                   },
+                  "hourlyRate": {},
                   "id": {
+                    "type": "string"
+                  },
+                  "isLocked": {
+                    "type": "boolean"
+                  },
+                  "kioskId": {
                     "type": "string"
                   },
                   "projectId": {
@@ -1898,6 +2216,9 @@
                       "start"
                     ],
                     "type": "object"
+                  },
+                  "type": {
+                    "type": "string"
                   },
                   "userId": {
                     "type": "string"
@@ -2032,10 +2353,19 @@
                     "billable": {
                       "type": "boolean"
                     },
+                    "costRate": {},
+                    "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
+                    "hourlyRate": {},
                     "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
                       "type": "string"
                     },
                     "projectId": {
@@ -2070,6 +2400,9 @@
                         "start"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
                     },
                     "userId": {
                       "type": "string"
@@ -2114,10 +2447,19 @@
                     "billable": {
                       "type": "boolean"
                     },
+                    "costRate": {},
+                    "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
+                    "hourlyRate": {},
                     "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
                       "type": "string"
                     },
                     "projectId": {
@@ -2152,6 +2494,9 @@
                         "start"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
                     },
                     "userId": {
                       "type": "string"
@@ -2396,10 +2741,19 @@
               "billable": {
                 "type": "boolean"
               },
+              "costRate": {},
+              "customFieldValues": {},
               "description": {
                 "type": "string"
               },
+              "hourlyRate": {},
               "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
                 "type": "string"
               },
               "projectId": {
@@ -2434,6 +2788,9 @@
                   "start"
                 ],
                 "type": "object"
+              },
+              "type": {
+                "type": "string"
               },
               "userId": {
                 "type": "string"
@@ -2599,10 +2956,19 @@
                     "billable": {
                       "type": "boolean"
                     },
+                    "costRate": {},
+                    "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
+                    "hourlyRate": {},
                     "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
                       "type": "string"
                     },
                     "projectId": {
@@ -2637,6 +3003,9 @@
                         "start"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
                     },
                     "userId": {
                       "type": "string"
@@ -2772,10 +3141,19 @@
               "billable": {
                 "type": "boolean"
               },
+              "costRate": {},
+              "customFieldValues": {},
               "description": {
                 "type": "string"
               },
+              "hourlyRate": {},
               "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
                 "type": "string"
               },
               "projectId": {
@@ -2810,6 +3188,9 @@
                   "start"
                 ],
                 "type": "object"
+              },
+              "type": {
+                "type": "string"
               },
               "userId": {
                 "type": "string"
@@ -2928,10 +3309,19 @@
                 "billable": {
                   "type": "boolean"
                 },
+                "costRate": {},
+                "customFieldValues": {},
                 "description": {
                   "type": "string"
                 },
+                "hourlyRate": {},
                 "id": {
+                  "type": "string"
+                },
+                "isLocked": {
+                  "type": "boolean"
+                },
+                "kioskId": {
                   "type": "string"
                 },
                 "projectId": {
@@ -2966,6 +3356,9 @@
                     "start"
                   ],
                   "type": "object"
+                },
+                "type": {
+                  "type": "string"
                 },
                 "userId": {
                   "type": "string"
@@ -3064,10 +3457,19 @@
               "billable": {
                 "type": "boolean"
               },
+              "costRate": {},
+              "customFieldValues": {},
               "description": {
                 "type": "string"
               },
+              "hourlyRate": {},
               "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
                 "type": "string"
               },
               "projectId": {
@@ -3102,6 +3504,9 @@
                   "start"
                 ],
                 "type": "object"
+              },
+              "type": {
+                "type": "string"
               },
               "userId": {
                 "type": "string"
@@ -3248,10 +3653,19 @@
                     "billable": {
                       "type": "boolean"
                     },
+                    "costRate": {},
+                    "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
+                    "hourlyRate": {},
                     "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
                       "type": "string"
                     },
                     "projectId": {
@@ -3286,6 +3700,9 @@
                         "start"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
                     },
                     "userId": {
                       "type": "string"
@@ -3407,13 +3824,28 @@
               "user": {
                 "additionalProperties": false,
                 "properties": {
+                  "activeWorkspace": {
+                    "type": "string"
+                  },
+                  "customFields": {},
+                  "defaultWorkspace": {
+                    "type": "string"
+                  },
                   "email": {
                     "type": "string"
                   },
                   "id": {
                     "type": "string"
                   },
+                  "memberships": {},
                   "name": {
+                    "type": "string"
+                  },
+                  "profilePicture": {
+                    "type": "string"
+                  },
+                  "settings": {},
+                  "status": {
                     "type": "string"
                   }
                 },
