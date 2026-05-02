@@ -2,12 +2,12 @@
 
 ## Status
 
-Proposed — recorded as a follow-up to the 2026-04-28 ChatGPT-review
-wave that shipped ClientIP session affinity on the Helm/k8s Service
-templates as the immediate band-aid (see commits `6f50551` and
-`a2d99f9`). The architectural fix in this ADR is intentionally
-deferred: the design questions below need explicit resolution before
-landing.
+Accepted — 2026-05-02 (commits `eb5351c` failing-first test +
+`8353934` implementation; this commit moves the ADR to Accepted
+and records the Decision below). The 2026-04-28 ChatGPT-review
+wave's ClientIP session-affinity band-aid (commits `6f50551` and
+`a2d99f9`) remains in place as defence-in-depth + perf
+optimisation; correctness no longer depends on it.
 
 ## Context
 
@@ -50,12 +50,66 @@ the control-plane store and rebuild a `streamSession` via the same
 ADR is that the Factory contract widens, the auth model changes
 shape, and several persistence questions need explicit resolution.
 
-## Decision (to be made)
+## Decision
 
-Defer until the four design questions below are settled. The ADR
-exists to (a) capture the band-aid as load-bearing context and (b)
-prevent a future implementation from being landed without addressing
-the questions.
+Implement the rehydration fix (Path A in
+`docs/launch-candidate-checklist.md` Group 3). On a local miss
+`streamSessionManager.get` consults `controlplane.Store.Session(id)`,
+strict-validates the freshly-authenticated principal against the
+persisted Subject/TenantID, invokes the existing principal-aware
+`opts.Factory(ctx, principal, id)` to rebuild the per-tenant
+runtime, seeds the rebuilt `mcp.Server` with the persisted
+`ProtocolVersion` + `ClientName` + `ClientVersion` via the new
+`Server.MarkInitialized` setter, and inserts the rehydrated
+session into the local `items` map. The persisted CreatedAt /
+ExpiresAt / LastSeenAt are preserved (no fresh TTL).
+
+Resolutions to the four design questions:
+
+- **Q1 (Factory contract widening)** → **Option A**. Pass
+  `authn.Principal` into `get()` from the handler. Factory
+  signature is unchanged (it was already principal-aware). No
+  Postgres schema migration. Option C (persist Principal claims)
+  is rejected: the strict re-auth check makes persisted claims
+  redundant and adds a security-review burden for no operational
+  win.
+- **Q2 (Auth re-validation)** → **Strict re-authentication.**
+  `get()` rejects with the new `errSessionPrincipalMismatch`
+  sentinel when the incoming principal does not match the
+  persisted record; the handler maps that to 403 alongside the
+  existing local-hit defence-in-depth check. Stolen session ID +
+  revoked credentials = 403 across pods, same as today's
+  local-hit behaviour. No change to
+  `docs/security/threat-model.md` is needed because runtime
+  semantics are unchanged.
+- **Q3 (Lost in-memory state)** → **Fresh session, same ID.**
+  In-flight tool-call cancellation and the `sessionEventHub`
+  SSE backlog do NOT survive the rehydration boundary; clients
+  see the existing `SSEReplayMissesTotal` metric increment on
+  the SSE side and a silent no-op for cross-instance
+  `notifications/cancelled`. Protocol-version + clientInfo state
+  DOES survive — the persisted record carries it and requiring a
+  re-initialize after every cross-pod hop would defeat the
+  rehydration contract. Documented in `docs/clients.md` under
+  "Session rehydration boundaries" so client implementers know
+  to retry idempotent calls and accept that cancellation is
+  best-effort across the boundary.
+- **Q4 (Eviction-on-restore)** → **Preserve stored ExpiresAt.**
+  The rehydrated session inherits the original eviction window;
+  `touch()` advances `lastSeenAt` and `expiresAt = lastSeenAt +
+  ttl` normally on the next request. A session idle for 29
+  minutes does not reset to a fresh 30-minute TTL just because
+  traffic crossed a pod boundary; that would weaken the eviction
+  contract.
+
+The ClientIP session-affinity band-aid stays. It is no longer
+load-bearing for correctness (the rehydration path covers what
+the band-aid did not: shared-NAT egress, pod restart/eviction,
+rolling upgrade, cross-AZ failover) but remains as defence-in-
+depth and as a perf optimisation: warm caches and fewer
+cross-instance Postgres `Session(id)` lookups for the
+common-case client whose load balancer keeps it pinned to one
+pod.
 
 ### Q1: Factory contract widening
 
@@ -99,11 +153,12 @@ synthesises an `authn.Principal` without consulting the request.
 Cost: Postgres schema migration; `controlplane.Store` interface
 widens; security review of which Claims are safe to persist.
 
-**Recommendation in this ADR**: **Option A**, because it preserves
-the request-time security model (the rehydrated session inherits
-the freshly-authenticated Principal of the second request, not a
-stale one frozen from initialize) and avoids a Postgres migration.
-But this is not a final decision; pick after Q2 / Q3.
+**Decision (2026-05-02)**: **Option A** — implemented in commit
+`8353934`. Preserves the request-time security model (the rehydrated
+session inherits the freshly-authenticated Principal of the
+request that triggered rehydration, not a stale one frozen from
+initialize) and avoids a Postgres migration. See the Decision
+section above for the full rationale.
 
 ### Q2: Auth re-validation semantics
 
@@ -124,10 +179,15 @@ When pod B rehydrates a session that pod A created, what does
 Streamable-HTTP today validates the Authorization header on every
 request (`transport_streamable_http.go:261-354`), so strict
 re-authentication is already the runtime behaviour for the
-local-hit path. **The architectural fix should preserve that.** Any
-proposal that lands "lenient" semantics needs an explicit
+local-hit path. **The architectural fix preserves that.** Any
+future proposal that lands "lenient" semantics needs an explicit
 security-review sign-off and a corresponding update to
 `docs/security/threat-model.md`.
+
+**Decision (2026-05-02)**: **Strict** — implemented in commit
+`8353934` via the `errSessionPrincipalMismatch` sentinel returned
+from `streamSessionManager.get` and mapped to 403 in both the
+RPC and SSE handlers.
 
 ### Q3: Lost in-memory state and user-visible effect
 
@@ -146,10 +206,16 @@ in-memory by design and would NOT survive rehydration:
   on the old pod cannot be cancelled from the new pod's
   `notifications/cancelled` after rehydration.
 
-**Recommendation**: rehydration produces a "fresh" session with the
-same ID and persistent metadata but no carry-over for in-flight
-work. Document this in `docs/clients.md` so client implementers know
-to retry idempotent calls after a rehydration boundary.
+**Decision (2026-05-02)**: **Fresh session, same ID** — implemented
+in commit `8353934`. Protocol-version + clientInfo state DOES
+survive (the persisted record carries it; the new
+`Server.MarkInitialized` setter seeds the rebuilt server). The
+SSE backlog and in-flight cancellation handles do NOT survive;
+clients see the existing `SSEReplayMissesTotal` metric increment
+on the SSE side and a silent no-op for cross-instance
+`notifications/cancelled`. Documented in `docs/clients.md` under
+"Session rehydration boundaries" so client implementers know to
+retry idempotent calls after a rehydration boundary.
 
 ### Q4: Test strategy
 
@@ -167,10 +233,28 @@ Two options:
   graph the operator actually runs. Expensive; lands as a separate
   CI workflow or a release-time smoke test.
 
-**Recommendation**: ship both. The in-process test gates the PR;
-the real-cluster test runs nightly so a regression in the deploy
-graph (Helm chart default change, kustomize overlay drift) is
-caught within 24h.
+**Decision (2026-05-02)**: **Ship the in-process two-server
+harness** — implemented in commit `eb5351c` as
+`TestStreamableHTTPCrossInstanceRehydration`
+(`internal/controlplane/postgres/e2e_session_rehydration_test.go`).
+Two `mcp.ServeStreamableHTTP` listeners bound to ephemeral
+127.0.0.1 ports share a single Postgres-backed
+`controlplane.Store`; the test pins the cross-instance happy
+path, cross-tenant 403, expired-session 404 + row removal, and
+audit-row session-id continuity. Runs in CI under the same
+`Shared-service Postgres E2E` job (the test pattern in the
+`shared-service-e2e` Make target was extended in the docs+CI
+follow-up commit). The real-multi-pod kind/k3d test is deferred
+to a later release smoke; the in-process harness covers the
+unit-of-work this ADR delivers.
+
+(Q4 — Eviction-on-restore — was an open question in the original
+draft. **Decision (2026-05-02)**: **Preserve stored ExpiresAt**.
+A session idle for 29 minutes does not reset to a fresh
+30-minute TTL just because traffic crossed a pod boundary; that
+would weaken the eviction contract. `touch()` advances
+`lastSeenAt` and `expiresAt = lastSeenAt + ttl` normally on the
+next request after rehydration.)
 
 ## Consequences
 
