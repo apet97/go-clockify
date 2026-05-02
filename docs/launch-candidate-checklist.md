@@ -31,16 +31,35 @@ The nightly **Live contract** workflow
       tests run, not just read-only.
 - [ ] Latest scheduled run of `live-contract.yml` is green with
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
+      _Tracking 2026-05-02: two manual-dispatch runs green
+      (25238997088 read-only-only, 25239216412 full-tier);
+      next scheduled cron run is at 02:30 UTC. Awaiting first
+      cron-event green._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
+      _Tracking 2026-05-02: both green on the manual full-tier
+      run 25239216412 (after the dry-run envelope fix in
+      commit 71c4f8a). Restating the proof on a scheduled run is
+      gated on box 3._
 - [ ] Two consecutive nightly runs green with no flakes; if there
       is a flake, the rolling `live-test-failure` GitHub issue is
       closed and the root cause is documented in `CHANGELOG.md`.
+      _Tracking 2026-05-02: 0/2 nightly cron greens. The
+      live-test-failure issue (#41) was auto-closed by the manual
+      run 25238997088. Calendar-bound on the next two 02:30 UTC
+      cron firings._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
       candidate cut, recorded in the wave's commit messages).
+      _Tracking 2026-05-02: the JSON decoder (`json.NewDecoder`
+      in `internal/clockify/client.go`) does **not** call
+      `DisallowUnknownFields`, so silent drops would not surface
+      via `TestE2EReadOnly`. This box requires a hand-comparison
+      between `internal/clockify/models.go` and the live API
+      responses captured at the candidate-cut moment; defer to
+      that point._
 
 **Definition of done.** Two clean nightly runs in a row with
 mutating + audit tiers enabled, no open `live-test-failure` issue,
