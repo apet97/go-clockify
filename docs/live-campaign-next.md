@@ -1,6 +1,6 @@
 # Live-Validation Campaign — Continuation Handoff
 
-Date: 2026-05-02
+Date: 2026-05-02 (status note added 2026-05-03)
 Branch: `test/full-live-workspace-validation` (12 commits ahead of `main`,
 pushed to `origin`)
 Draft PR: https://github.com/apet97/go-clockify/pull/53
@@ -8,6 +8,64 @@ Draft PR: https://github.com/apet97/go-clockify/pull/53
 This doc tells the next agent (or maintainer) exactly what state the
 live-validation campaign is in, what tests pass, what bugs were
 surfaced, what's left to do, and how to re-run everything locally.
+
+## Status update — 2026-05-03 (post-PR #53–#56)
+
+The bulk of the bug inventory below was closed across four merged
+PRs (#53–#56) and one cleanup branch removing the matching phantom
+schedule tools. The status, item-by-item against the numbered list:
+
+- **#1, #2, #3, #4 — list-shape envelopes** (`list_invoices`,
+  `invoice_report`, `list_expenses`, `expense_report`,
+  `list_expense_categories`, `list_webhooks`): **fixed in PR #53.**
+- **#5 — `list_webhook_events` route**: **fixed in PR #53** (handler
+  now returns the static enum; the dedicated `/events` route was
+  proven not to exist).
+- **#6 — shared_reports host / route**: **fixed in PRs #53 and #56**
+  (host moved to `reports.api.clockify.me`; write/export tools
+  rewired to `type`/`filter` body keys, ws-prefixed PUT/DELETE,
+  bare-id GET, and binary-aware export envelope).
+- **#7 — scheduling 10 tools "wrong host"**: **partially fixed.**
+  PR #53 fixed `list_assignments` (`/all` suffix + `start`/`end`).
+  PR #55 repointed `filter_schedule_capacity` to per-user totals
+  and removed the phantom `list_schedules` tool. The 2026-05-03
+  cleanup removed the matching phantom `get_` and `create_`
+  schedule tools (no `/scheduling/{id}` or `POST /scheduling`
+  surface exists). The four assignment-CRUD tools (get / create /
+  update / delete on `/assignments/{id}`) still hit a path that
+  was 404 in the probe lab matrix and remain pinned in
+  `TestLiveT2BlockedGroups` — they're a candidate for a future
+  probe + re-route batch but are not in scope for the PR #53–#56
+  wave.
+- **#8 — `list_time_off_requests` GET→POST**: **fixed in PR #53.**
+- **#9 — `get_user_group` 405**: **fixed in PR #53** (handler scans
+  the LIST response).
+- **#10 — `set_project_memberships` PUT→PATCH + envelope**: **fixed
+  in PR #53** (PATCH semantics; full project response; REPLACE
+  semantics pinned in tests).
+- **#11 — `create_expense` multipart**: **fixed in PR #53**
+  (multipart body builder threaded through the client).
+- **#12 — `create_holiday` body shape**: **fixed in PR #53**
+  (`datePeriod.{startDate,endDate}` + `users.ids`/`userGroups.ids`
+  + `occursAnnually`).
+- **#13 — `create_custom_field` enum**: **fixed in PR #53** (enum
+  widened to `{TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE,
+  CHECKBOX, LINK}`).
+
+Not changed: the binding rules in this doc (manual livee2e is **not**
+launch evidence; live-contract.yml stays untouched; nothing here
+ticks Group 1/6/7 boxes on the launch-candidate checklist). Unresolved
+**numeric / unit questions** (invoice `unitPrice` cents, expense
+`amount`/`total` scaling, expense `projectId` optional-vs-required,
+shared-reports non-`SUMMARY` filter requirements) are now documented
+in `docs/api-coverage.md` under "Known unresolved API contract
+questions" rather than tracked here.
+
+The "Bug inventory" and "Remaining work" sections below are
+preserved verbatim as the historical campaign artifact. Treat them
+as a record of what got found, not as a current task list — the
+task list is in `docs/launch-candidate-checklist.md` and
+`docs/api-coverage.md`.
 
 ## Branch state
 

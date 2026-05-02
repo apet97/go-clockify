@@ -67,7 +67,7 @@ mutating + audit tiers enabled, no open `live-test-failure` issue,
 and no upstream schema field that the client silently discards.
 
 See also: [`docs/api-coverage.md`](api-coverage.md) for the full
-124-tool coverage matrix, per-tool dry-run/policy breakdown, and
+121-tool coverage matrix, per-tool dry-run/policy breakdown, and
 evidence hierarchy.
 
 ---
@@ -266,11 +266,15 @@ will read.
       `docs/tool-catalog.md` count, the `internal/config/spec.go`
       surface, and the deployment profile docs. Run
       `make doc-parity` to verify.
-      _Verified 2026-05-02: `docs/tool-catalog.json` has
-      33 Tier 1 tools + 91 Tier 2 tools = 124 total, matching
-      README. `make doc-parity`, `make config-doc-parity`,
-      `make catalog-drift`, and `make launch-checklist-parity`
-      all green after the launch-doc pass._
+      _Verified 2026-05-03: `docs/tool-catalog.json` has
+      33 Tier 1 tools + 88 Tier 2 tools = 121 total, matching
+      README. Tier 2 dropped from 91 → 88 over PR #55 (phantom
+      `list_schedules` removed) and the matching cleanup branch
+      removing the equivalent phantom `get_` and `create_` schedule
+      tools (no `/scheduling/{id}` surface exists upstream).
+      `make doc-parity`, `make config-doc-parity`,
+      `make catalog-drift`, and `make launch-checklist-parity` all
+      green after the regeneration._
 - [x] `CHANGELOG.md` Unreleased section has a clear,
       user-facing summary of every behavioural change since
       v1.2.0; no "internal only" hand-waving for changes that

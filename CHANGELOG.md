@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Phantom Tier-2 schedule tools removed.** PR #55 already
+  removed the phantom `list_schedules` tool after the probe lab
+  proved no list-schedules surface exists on Clockify (only
+  `/scheduling/assignments/...` paths). The same evidence applies
+  to the matching `get_` and `create_` schedule variants — there
+  is no `/scheduling/{id}` or `POST /scheduling` endpoint at any
+  Clockify host. The catalog drops from 90 → 88 Tier 2 tools
+  (123 → 121 total). The blocked-groups live test no longer pins
+  these two tools, and the scheduling group's tool count in
+  `docs/api-coverage.md` is now 7. Numeric / unit questions
+  surfaced by the same probe lab pass (invoice `unitPrice`, expense
+  `amount`/`total`, expense `projectId` optional-vs-required,
+  shared-reports non-`SUMMARY` filter requirements) are now
+  documented in `docs/api-coverage.md` under "Known unresolved
+  API contract questions" rather than carried as open inventory
+  items.
+
 ### Changed
 
 - **Live read-side schema drift is now a first-class contract.**
