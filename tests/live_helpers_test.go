@@ -193,6 +193,26 @@ func (c *liveCampaignContext) rawDeletePath(ctx context.Context, path string) er
 	return c.h.Service.Client.Delete(ctx, "/workspaces/"+c.WorkspaceID+path)
 }
 
+// rawArchiveAndDeleteProject is the cleanup primitive for projects.
+// Clockify rejects DELETE on active projects ("Cannot delete an
+// active project") — the project must first be archived via PUT
+// {archived:true}. This helper archives then deletes, returning the
+// underlying delete error (or any non-archive PUT error). Idempotent:
+// if the project is already archived or already gone, both phases
+// return cleanly enough that the cleanup log just notes the no-op.
+func (c *liveCampaignContext) rawArchiveAndDeleteProject(ctx context.Context, projectID string) error {
+	path := "/workspaces/" + c.WorkspaceID + "/projects/" + projectID
+	var ignored map[string]any
+	if err := c.h.Service.Client.Put(ctx, path, map[string]any{"archived": true}, &ignored); err != nil {
+		// If the project is already archived/deleted, the PUT can
+		// 404 or 400. We continue to the delete attempt regardless;
+		// the delete will surface a clearer error if the project is
+		// truly missing.
+		c.t.Logf("archive-before-delete %s returned %v (continuing to delete)", projectID, err)
+	}
+	return c.h.Service.Client.Delete(ctx, path)
+}
+
 // rawGetPath performs a GET through the raw Clockify client. Used as an
 // independent verification mechanism: a test asserts something through
 // the MCP path, then re-reads via raw to confirm the upstream actually
