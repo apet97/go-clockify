@@ -102,6 +102,8 @@ func setupLiveMCPHarness(t *testing.T, opts liveMCPOptions) *liveMCPHarness {
 	}
 	t.Setenv("CLOCKIFY_DRY_RUN", "off")
 
+	MarkLiveTestRan()
+
 	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("config.Load: %v", err)
