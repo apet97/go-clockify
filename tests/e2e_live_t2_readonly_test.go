@@ -31,11 +31,14 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 	h := setupLiveMCPHarness(t, liveMCPOptions{})
 	c := setupLiveCampaign(t, h)
 
-	end := time.Now().UTC()
+	// Scheduling endpoints reject calendar-day strings; RFC3339
+	// "yyyy-MM-ddThh:mm:ssZ" is required (the upstream's error
+	// message names that exact format).
+	end := time.Now().UTC().Truncate(time.Second)
 	start := end.Add(-24 * time.Hour)
 	scheduleArgs := map[string]any{
-		"start": start.Format("2006-01-02"),
-		"end":   end.Format("2006-01-02"),
+		"start": start.Format("2006-01-02T15:04:05Z"),
+		"end":   end.Format("2006-01-02T15:04:05Z"),
 	}
 
 	type call struct {
@@ -65,14 +68,13 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 			{"clockify_list_expense_categories", nil, ""},
 		}},
 		{"scheduling", []call{
-			// /workspaces/{id}/assignments returns 404 ("No static
-			// resource" / code 3000). Scheduling endpoints live under
-			// a separate Clockify scheduling API host. Likely fix:
-			// thread a reports/scheduling base URL through the client
-			// and route these handlers there.
-			{"clockify_list_assignments", nil, "No static resource"},
+			{"clockify_list_assignments", scheduleArgs, ""},
+			// /scheduling (list_schedules) and /scheduling/capacity
+			// (filter_schedule_capacity) still return 404. They were
+			// not in the safe-batch scope (probe didn't surface the
+			// correct paths); their pins stay as regression alarms.
 			{"clockify_list_schedules", nil, "No static resource"},
-			{"clockify_get_project_schedule_totals", nil, "No static resource"},
+			{"clockify_get_project_schedule_totals", scheduleArgs, ""},
 			{"clockify_filter_schedule_capacity", scheduleArgs, "No static resource"},
 		}},
 		{"time_off", []call{

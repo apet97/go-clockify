@@ -38,12 +38,13 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`[{"id":"bbbbbbbbbbbbbbbbbbbbbbb1","name":"Active project","archived":false}]`))
 	})
 
-	// Assignments collection — list + create.
+	// Assignments collection — POST (create) only on the bare path.
+	// The list path moved to /assignments/all per SUMMARY rev 3 #4
+	// (the bare path returns 404 in production); a regression there
+	// must surface in this test.
 	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
-		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"a-1","userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1"}]`))
 		case http.MethodPost:
 			body := map[string]any{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
@@ -54,10 +55,36 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 	})
 
-	// Project totals.
-	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/project-totals", func(w http.ResponseWriter, r *http.Request) {
+	// Assignments list — required start/end query params, hyphenated
+	// page-size per SCHEDULINGDOC.md.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/all", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.URL.Query().Get("start") == "" || r.URL.Query().Get("end") == "" {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"totalSeconds":36000,"projectId":"bbbbbbbbbbbbbbbbbbbbbbb1"}`))
+		_, _ = w.Write([]byte(`[{"id":"a-1","userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","period":{"start":"2026-04-01T00:00:00Z","end":"2026-04-07T23:59:59Z"}}]`))
+	})
+
+	// Project totals — POST with JSON body, returns bare array per
+	// SUMMARY rev 3 #18.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/projects/totals", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body["start"] == nil || body["end"] == nil {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","projectName":"Active project","totalHours":36.0,"assignments":[]}]`))
 	})
 
 	// Per-assignment endpoint — get / put (update merge) / delete (live + dry-run preview).
@@ -113,9 +140,14 @@ func TestTier2Dispatch_Scheduling_AssignmentsListAndGet(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
 	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:    "scheduling",
-		Tool:     "clockify_list_assignments",
-		Args:     map[string]any{"page": 1, "page_size": 25},
+		Group: "scheduling",
+		Tool:  "clockify_list_assignments",
+		Args: map[string]any{
+			"start":     "2026-04-01T00:00:00Z",
+			"end":       "2026-04-07T23:59:59Z",
+			"page":      1,
+			"page_size": 25,
+		},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {
@@ -123,6 +155,12 @@ func TestTier2Dispatch_Scheduling_AssignmentsListAndGet(t *testing.T) {
 	}
 	if !strings.Contains(res.ResultText, "a-1") {
 		t.Fatalf("list result missing assignment id: %q", res.ResultText)
+	}
+	// Pin SUMMARY rev 3 #4: the new /all suffix path must be hit.
+	// The mux above 400s the no-suffix path on GET, so a regression
+	// would surface as outcome != success here.
+	if !strings.Contains(res.ResultText, "period") {
+		t.Fatalf("list result missing period field (regression to old path?): %q", res.ResultText)
 	}
 
 	res = dispatchTier2(t, tier2InvokeOpts{
@@ -267,16 +305,27 @@ func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T)
 	upstream := newSchedulingUpstream(t)
 
 	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:    "scheduling",
-		Tool:     "clockify_get_project_schedule_totals",
-		Args:     map[string]any{"project_id": "bbbbbbbbbbbbbbbbbbbbbbb1"},
+		Group: "scheduling",
+		Tool:  "clockify_get_project_schedule_totals",
+		Args: map[string]any{
+			"start":      "2026-04-01T00:00:00Z",
+			"end":        "2026-04-30T23:59:59Z",
+			"project_id": "bbbbbbbbbbbbbbbbbbbbbbb1",
+		},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {
 		t.Fatalf("totals outcome=%q err=%q", res.Outcome, res.ErrorMessage)
 	}
-	if !strings.Contains(res.ResultText, "totalSeconds") {
-		t.Fatalf("totals result missing field: %q", res.ResultText)
+	// Pin SUMMARY rev 3 #18: the response shape changed from a wrapped
+	// map ({totalSeconds, projectId}) to a bare array of project rows.
+	// `totalHours` is the new per-row field; `projectName` is also
+	// surfaced.
+	if !strings.Contains(res.ResultText, "totalHours") {
+		t.Fatalf("totals result missing totalHours: %q", res.ResultText)
+	}
+	if !strings.Contains(res.ResultText, "projectName") {
+		t.Fatalf("totals result missing projectName: %q", res.ResultText)
 	}
 
 	res = dispatchTier2(t, tier2InvokeOpts{

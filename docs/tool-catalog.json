@@ -6745,7 +6745,7 @@
     },
     {
       "name": "clockify_get_project_schedule_totals",
-      "description": "Get project scheduling assignment totals",
+      "description": "Get scheduling totals per project across a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6757,11 +6757,29 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "end": {
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Items per page (default 50)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "project_id": {
             "description": "Filter by project ID or name",
             "type": "string"
+          },
+          "start": {
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
           }
         },
+        "required": [
+          "start",
+          "end"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -6837,7 +6855,7 @@
     },
     {
       "name": "clockify_list_assignments",
-      "description": "List scheduling assignments with optional user_id and project_id filters",
+      "description": "List scheduling assignments within a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6849,6 +6867,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "end": {
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -6864,11 +6886,19 @@
             "description": "Filter by project ID or name",
             "type": "string"
           },
+          "start": {
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
           "user_id": {
             "description": "Filter by user ID or name/email",
             "type": "string"
           }
         },
+        "required": [
+          "start",
+          "end"
+        ],
         "type": "object"
       },
       "output_schema": {

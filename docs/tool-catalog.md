@@ -133,9 +133,9 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_delete_assignment` | no | yes | no | `destructive` | Delete a scheduling assignment by ID (supports dry_run preview) |
 | `clockify_filter_schedule_capacity` | yes | no | yes | `read` | Get scheduling capacity data for a date range |
 | `clockify_get_assignment` | yes | no | yes | `read` | Get a scheduling assignment by ID |
-| `clockify_get_project_schedule_totals` | yes | no | yes | `read` | Get project scheduling assignment totals |
+| `clockify_get_project_schedule_totals` | yes | no | yes | `read` | Get scheduling totals per project across a date range |
 | `clockify_get_schedule` | yes | no | yes | `read` | Get a schedule by ID |
-| `clockify_list_assignments` | yes | no | yes | `read` | List scheduling assignments with optional user_id and project_id filters |
+| `clockify_list_assignments` | yes | no | yes | `read` | List scheduling assignments within a date range |
 | `clockify_list_schedules` | yes | no | yes | `read` | List scheduling schedules for the workspace |
 | `clockify_update_assignment` | no | no | no | `write` | Update a scheduling assignment by ID |
 

@@ -36,13 +36,19 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 1. clockify_list_assignments (RO)
 		{
 			Tool: toolRO("clockify_list_assignments",
-				"List scheduling assignments with optional user_id and project_id filters",
-				map[string]any{"type": "object", "properties": map[string]any{
-					"user_id":    map[string]any{"type": "string", "description": "Filter by user ID or name/email"},
-					"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
-					"page":       map[string]any{"type": "integer", "description": "Page number (default 1)"},
-					"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
-				}}),
+				"List scheduling assignments within a date range",
+				map[string]any{
+					"type":     "object",
+					"required": []string{"start", "end"},
+					"properties": map[string]any{
+						"start":      map[string]any{"type": "string", "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"end":        map[string]any{"type": "string", "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"user_id":    map[string]any{"type": "string", "description": "Filter by user ID or name/email"},
+						"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
+						"page":       map[string]any{"type": "integer", "description": "Page number (default 1)"},
+						"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+					},
+				}),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listAssignments(ctx, args)
@@ -150,10 +156,17 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 9. clockify_get_project_schedule_totals (RO)
 		{
 			Tool: toolRO("clockify_get_project_schedule_totals",
-				"Get project scheduling assignment totals",
-				map[string]any{"type": "object", "properties": map[string]any{
-					"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
-				}}),
+				"Get scheduling totals per project across a date range",
+				map[string]any{
+					"type":     "object",
+					"required": []string{"start", "end"},
+					"properties": map[string]any{
+						"start":      map[string]any{"type": "string", "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"end":        map[string]any{"type": "string", "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
+						"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+					},
+				}),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getProjectScheduleTotals(ctx, args)
@@ -186,7 +199,16 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
-	query := map[string]string{}
+	startRaw := stringArg(args, "start")
+	endRaw := stringArg(args, "end")
+	if startRaw == "" || endRaw == "" {
+		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+	}
+
+	query := map[string]string{
+		"start": startRaw,
+		"end":   endRaw,
+	}
 	if uid := stringArg(args, "user_id"); uid != "" {
 		resolved, err := resolve.ResolveUserID(ctx, s.Client, wsID, uid)
 		if err != nil {
@@ -205,10 +227,12 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 	query["page"] = fmt.Sprintf("%d", page)
+	// /scheduling/assignments/all uses hyphenated page-size per
+	// SCHEDULINGDOC.md; the camelCase variant is silently ignored.
 	query["page-size"] = fmt.Sprintf("%d", pageSize)
 
 	var assignments []map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "assignments")
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "all")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -489,25 +513,40 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 		return ResultEnvelope{}, err
 	}
 
-	query := map[string]string{}
+	startRaw := stringArg(args, "start")
+	endRaw := stringArg(args, "end")
+	if startRaw == "" || endRaw == "" {
+		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+	}
+	pageSize := intArg(args, "page_size", 50)
+
+	body := map[string]any{
+		"start":    startRaw,
+		"end":      endRaw,
+		"pageSize": pageSize,
+	}
 	if pid := stringArg(args, "project_id"); pid != "" {
 		resolved, err := resolve.ResolveProjectID(ctx, s.Client, wsID, pid)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
-		query["projectId"] = resolved
+		body["projectId"] = resolved
 	}
 
-	var totals map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "assignments", "project-totals")
+	var totals []map[string]any
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "projects", "totals")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, query, &totals); err != nil {
+	if err := s.Client.Post(ctx, path, body, &totals); err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_get_project_schedule_totals", totals, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_get_project_schedule_totals", totals, map[string]any{
+		"workspaceId": wsID,
+		"count":       len(totals),
+		"pageSize":    pageSize,
+	}), nil
 }
 
 func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
