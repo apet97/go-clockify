@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 20 | 35 | 55 |
+| Read-only | 20 | 34 | 54 |
 | Mutating (non-destructive) | 12 | 43 | 55 |
 | Destructive | 1 | 13 | 14 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **33** | **91** | **124** |
+| **Total tools** | **33** | **90** | **123** |
 
 ## Evidence types
 
@@ -95,7 +95,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 
 ---
 
-## Tier 2 — Domain groups (91 tools)
+## Tier 2 — Domain groups (90 tools)
 
 ### `approvals` (6 tools)
 
@@ -187,7 +187,7 @@ Clockify endpoints: `PUT/DELETE /workspaces/{ws}/projects/*`, `/workspaces/{ws}/
 | `clockify_set_project_memberships` | mutating | unit |
 | `clockify_update_project_estimate` | mutating | unit |
 
-### `scheduling` (10 tools)
+### `scheduling` (9 tools)
 
 Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/scheduling/*`
 
@@ -196,12 +196,11 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/scheduling/*`
 | `clockify_create_assignment` | mutating | unit |
 | `clockify_create_schedule` | mutating | unit |
 | `clockify_delete_assignment` | destructive | unit |
-| `clockify_filter_schedule_capacity` | read-only | unit |
+| `clockify_filter_schedule_capacity` | read-only | unit + live |
 | `clockify_get_assignment` | read-only | unit |
 | `clockify_get_project_schedule_totals` | read-only | unit |
 | `clockify_get_schedule` | read-only | unit |
 | `clockify_list_assignments` | read-only | unit |
-| `clockify_list_schedules` | read-only | unit |
 | `clockify_update_assignment` | mutating | unit |
 
 ### `shared_reports` (6 tools)
@@ -369,7 +368,7 @@ surface and surface latent handler / upstream bugs.
 | `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope; `clockify_create_tag` (Tier 1) seeded × 11 | success path |
 
 **Live-tested tools (campaign expansion):** ~25 of 33 Tier 1 tools
-(76%) and ~38 of 91 Tier 2 tools (42%) are now exercised through the
+(76%) and ~38 of 90 Tier 2 tools (42%) are now exercised through the
 MCP path against the sacrificial workspace — counting both success
 paths and pinned-error contracts. Note that pinned-error coverage is
 not "this tool works" coverage; it is "the protocol layer reaches
@@ -459,13 +458,13 @@ the contract for landing the fix.
 
 ## Gaps
 
-1. **Tier 2 live coverage (success path):** ~38 of 91 Tier 2 tools
+1. **Tier 2 live coverage (success path):** ~38 of 90 Tier 2 tools
    are now exercised through the MCP path; most of the remaining
-   53 are blocked by the bug inventory above. Once those bugs are
+   52 are blocked by the bug inventory above. Once those bugs are
    fixed, the campaign tests will flip from pinned-error to
    success-path automatically (the assertions are inverted by
    design).
-   Read-only Tier 2 tools (39) could safely receive live-read-only tests.
+   Read-only Tier 2 tools (38) could safely receive live-read-only tests.
 2. **Schema-drift for mutating endpoints:** Only read-side schemas are
    drift-checked. Request payload schemas (tool JSON Schema descriptors)
    are not automatically compared against the live API's accepted fields.
@@ -486,8 +485,7 @@ the contract for landing the fix.
 1. Read-only live tests for the remaining 16 Tier 1 read-only tools
    (4 of 20 are covered by `TestE2EReadOnly`)
 2. Read-only live tests for high-value Tier 2 read-only tools
-   (e.g., `clockify_list_custom_fields`, `clockify_list_webhooks`,
-   `clockify_list_schedules`)
+   (e.g., `clockify_list_custom_fields`, `clockify_list_webhooks`)
 3. Schema-drift test extension to mutating endpoint request schemas
 4. Dry-run exhaustiveness sweep across all 14 destructive tools
 
