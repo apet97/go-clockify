@@ -78,11 +78,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 			{"clockify_filter_schedule_capacity", scheduleArgs, "No static resource"},
 		}},
 		{"time_off", []call{
-			// /time-off/requests rejects GET with "Request method
-			// 'GET' is not supported" (405-flavoured 3000). The
-			// endpoint may require a POST search body. Handler likely
-			// needs a different method/path.
-			{"clockify_list_time_off_requests", nil, "method 'GET' is not supported"},
+			{"clockify_list_time_off_requests", nil, ""},
 			{"clockify_list_time_off_policies", nil, ""},
 		}},
 		{"approvals", []call{

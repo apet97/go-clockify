@@ -227,35 +227,43 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	query := map[string]string{}
+	page := intArg(args, "page", 1)
+	pageSize := intArg(args, "page_size", 50)
+
+	// /time-off/requests is POST-only with a JSON search body. Filters
+	// that were query params before now go inside the body — `statuses`
+	// and `users` are array-shaped per TIMEOFFDOC.md.
+	body := map[string]any{
+		"page":     page,
+		"pageSize": pageSize,
+	}
 	if status := stringArg(args, "status"); status != "" {
-		query["status"] = status
+		body["statuses"] = []string{status}
 	}
 	if uid := stringArg(args, "user_id"); uid != "" {
 		resolved, err := resolve.ResolveUserID(ctx, s.Client, wsID, uid)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
-		query["userId"] = resolved
+		body["users"] = []string{resolved}
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-	query["page"] = fmt.Sprintf("%d", page)
-	query["page-size"] = fmt.Sprintf("%d", pageSize)
-
-	var requests []map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "requests")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, query, &requests); err != nil {
+	var envelope struct {
+		Count    int              `json:"count"`
+		Requests []map[string]any `json:"requests"`
+	}
+	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_requests", requests, map[string]any{
+	return ok("clockify_list_time_off_requests", envelope.Requests, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(requests),
+		"count":       len(envelope.Requests),
+		"total":       envelope.Count,
 		"page":        page,
 		"pageSize":    pageSize,
 	}), nil
