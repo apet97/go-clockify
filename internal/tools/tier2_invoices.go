@@ -436,13 +436,22 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
+	// Upstream rejects GET /invoices/{id}/items with 405. Items are
+	// embedded in the single-invoice response; delegate to getInvoice
+	// and extract the items array. Probe evidence: clockify-api-probe-
+	// lab/findings/invoices.md (rev 2 2026-05-02).
+	inv, err := s.getInvoice(ctx, args)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
-		return ResultEnvelope{}, err
+	invoice, _ := inv.Data.(map[string]any)
+	items := []map[string]any{}
+	if raw, ok := invoice["items"].([]any); ok {
+		for _, r := range raw {
+			if item, ok := r.(map[string]any); ok {
+				items = append(items, item)
+			}
+		}
 	}
 	return ok("clockify_list_invoice_items", items, map[string]any{
 		"workspaceId": wsID,
