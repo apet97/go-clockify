@@ -7,8 +7,9 @@
 #   1. Pass: the real checklist (all evidence-required boxes unchecked) → exit 0
 #   2. Fail: a checked box without evidence annotation → exit 1
 #   3. Pass: a checked box with _Closed_ annotation → exit 0
-#   4. Fail: checked box with URL but no annotation pattern match → exit 1
-#   5. Pass: checked box with GitHub Actions run URL → exit 0
+#   4. Pass: checked box with GitHub Actions run URL → exit 0
+#   5. Pass: checked box with workflow_run_id evidence → exit 0
+#   6. Fail: missing checklist file → exit 1
 
 set -euo pipefail
 
@@ -75,6 +76,29 @@ if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   pass "checked box with workflow run URL passes"
 else
   fail "checked box with workflow run URL should pass but exited non-zero"
+fi
+
+# ── Test 5: checked box with workflow_run_id evidence => OK ──────────
+
+echo "== Test 5: checked box with workflow_run_id evidence => OK"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed 's/^- \[ \] Two consecutive nightly runs green with no flakes/- [x] Two consecutive nightly runs green with no flakes\
+      workflow_run_id: 25240000001/' \
+  "$real_checklist" > "$tmp"
+if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
+  pass "checked box with workflow_run_id evidence passes"
+else
+  fail "checked box with workflow_run_id evidence should pass but exited non-zero"
+fi
+
+# ── Test 6: missing checklist file => FAIL ───────────────────────────
+
+echo "== Test 6: missing checklist file => FAIL"
+if LAUNCH_CHECKLIST="/nonexistent/checklist.md" bash "$script" >/dev/null 2>&1; then
+  fail "missing checklist should fail but exited 0"
+else
+  pass "missing checklist fails"
 fi
 
 # ── Summary ────────────────────────────────────────────────────────
