@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -21,6 +22,22 @@ import (
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/controlplane"
 	"github.com/apet97/go-clockify/internal/metrics"
+)
+
+// errSession* sentinels distinguish the three failure modes of
+// streamSessionManager.get so the HTTP handler can map each to the
+// right status code (404 vs 403). Before ADR 0017 (Accepted, Path A)
+// landed the rehydration path, get() only returned a single
+// "session not found" form and the handler always emitted 404; the
+// rehydration path now needs a "session principal mismatch" channel
+// so a stolen-session-ID replay across pods is rejected with 403,
+// the same status the local-hit post-get principal check (defence-
+// in-depth, kept) returns. errors.Is at the call site keeps the
+// error wrapping flexible for future fmt.Errorf("...: %w", ...) uses.
+var (
+	errSessionNotFound          = errors.New("session not found")
+	errSessionExpired           = errors.New("session expired")
+	errSessionPrincipalMismatch = errors.New("session principal mismatch")
 )
 
 type StreamableSessionRuntime struct {
@@ -307,11 +324,22 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 				writeJSONError(w, http.StatusBadRequest, "missing session id")
 				return
 			}
-			session, err = mgr.get(sessionID)
+			session, err = mgr.get(r.Context(), sessionID, principal, opts)
 			if err != nil {
+				if errors.Is(err, errSessionPrincipalMismatch) {
+					writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+					return
+				}
 				writeJSONError(w, http.StatusNotFound, "invalid session")
 				return
 			}
+			// Defence-in-depth on the local-hit path: get() does not
+			// principal-compare on a local hit (the session's stored
+			// principal was set at create time from the same principal
+			// channel), but a stolen session ID replayed against this
+			// instance with a different X-Forwarded-Tenant must still
+			// be rejected here. Rehydration already enforced this
+			// inside get() before invoking Factory.
 			if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
 				writeJSONError(w, http.StatusForbidden, "session principal mismatch")
 				return
@@ -374,11 +402,17 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 			writeJSONError(w, http.StatusBadRequest, "missing session id")
 			return
 		}
-		session, err := mgr.get(sessionID)
+		session, err := mgr.get(r.Context(), sessionID, principal, opts)
 		if err != nil {
+			if errors.Is(err, errSessionPrincipalMismatch) {
+				writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+				return
+			}
 			writeJSONError(w, http.StatusNotFound, "invalid session")
 			return
 		}
+		// Defence-in-depth on the local-hit path; rehydration enforced
+		// inside get(). See streamableRPCHandler for the same pattern.
 		if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
 			writeJSONError(w, http.StatusForbidden, "session principal mismatch")
 			return
@@ -540,17 +574,108 @@ func (m *streamSessionManager) create(ctx context.Context, id string, principal 
 	return session, nil
 }
 
-func (m *streamSessionManager) get(id string) (*streamSession, error) {
+// get returns the streamSession for id. Local hits (the common case)
+// return immediately. On a local miss the manager consults the
+// control-plane store and rebuilds the session via opts.Factory —
+// this is the cross-pod rehydration contract recorded in ADR 0017
+// (Accepted; Path A; Q1=A, Q2=Strict, Q3=Fresh, Q4=PreserveTTL).
+//
+// The persisted Subject/TenantID are checked against the freshly-
+// authenticated principal BEFORE Factory is invoked; a mismatch
+// returns errSessionPrincipalMismatch so a leaked session ID
+// replayed across pods after credential revocation is rejected
+// with 403 just like the local-hit defence-in-depth check at
+// transport_streamable_http.go:streamableRPCHandler.
+//
+// Q4 (eviction): the rehydrated session inherits the persisted
+// CreatedAt / ExpiresAt / LastSeenAt — touch() advances them
+// normally on the next request. A session idle for 29 minutes does
+// not reset to a fresh 30-minute TTL just because traffic crossed
+// a pod boundary.
+func (m *streamSessionManager) get(
+	ctx context.Context,
+	id string,
+	principal authn.Principal,
+	opts StreamableHTTPOptions,
+) (*streamSession, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	session, ok := m.items[id]
+	if session, ok := m.items[id]; ok {
+		if time.Now().After(session.expiresAt) {
+			m.mu.Unlock()
+			go m.destroy(id, session)
+			return nil, errSessionExpired
+		}
+		m.mu.Unlock()
+		return session, nil
+	}
+	m.mu.Unlock()
+
+	// Local miss — consult the shared control-plane store. Without a
+	// store (some test harnesses pass nil) the manager is local-only
+	// and a miss is final, matching the pre-ADR-0017 behaviour.
+	if m.store == nil {
+		return nil, errSessionNotFound
+	}
+	rec, ok := m.store.Session(id)
 	if !ok {
-		return nil, fmt.Errorf("session not found")
+		return nil, errSessionNotFound
 	}
-	if time.Now().After(session.expiresAt) {
-		go m.destroy(id, session)
-		return nil, fmt.Errorf("session expired")
+	if time.Now().After(rec.ExpiresAt) {
+		// Mirror the local-hit eviction: drop the row so the next
+		// request does not see a phantom entry. deleteSession failure
+		// is metric-counted inside putSession's sibling path; not
+		// surfacing it here is intentional — the request still gets
+		// "session expired" either way.
+		_ = m.deleteSession("rehydrate_expired", id)
+		return nil, errSessionExpired
 	}
+	if principal.Subject != rec.Subject || principal.TenantID != rec.TenantID {
+		return nil, errSessionPrincipalMismatch
+	}
+	runtime, err := opts.Factory(ctx, principal, id)
+	if err != nil {
+		return nil, fmt.Errorf("rehydrate session %s: %w", id, err)
+	}
+	session := &streamSession{
+		id:         id,
+		principal:  principal,
+		server:     runtime.Server,
+		runtime:    runtime,
+		events:     newSessionEventHub(64, 32),
+		createdAt:  rec.CreatedAt,
+		expiresAt:  rec.ExpiresAt,
+		lastSeenAt: rec.LastSeenAt,
+	}
+	session.server.SetNotifier(session.events)
+	session.server.advertiseListChanged.Store(true)
+	session.server.AuditSessionID = id
+	session.server.AuditTenantID = runtime.TenantID
+	session.server.AuditSubject = principal.Subject
+	session.server.AuditTransport = "streamable_http"
+	if opts.SanitizeUpstreamErrors {
+		session.server.SanitizeUpstreamErrors = true
+	}
+	// The rebuilt Server is fresh — its `initialized` flag is false
+	// and its NegotiatedProtocolVersion is empty, so without
+	// MarkInitialized the next request would be rejected with
+	// "server not initialized: send initialize first". Q3 ("fresh
+	// session, same ID") is preserved at the SSE-backlog and
+	// in-flight-cancellation level — protocol-version + clientInfo
+	// state survives because the persisted record carries it and
+	// requiring the client to re-initialize after every cross-pod
+	// hop would defeat the rehydration contract.
+	session.server.MarkInitialized(rec.ProtocolVersion, rec.ClientName, rec.ClientVersion)
+	m.mu.Lock()
+	// Race: while we did the rehydration work outside the lock another
+	// concurrent request on this instance may have rehydrated the same
+	// ID. Discard our just-built runtime in that case and use theirs.
+	if existing, ok := m.items[id]; ok {
+		m.mu.Unlock()
+		session.closeRuntime()
+		return existing, nil
+	}
+	m.items[id] = session
+	m.mu.Unlock()
 	return session, nil
 }
 

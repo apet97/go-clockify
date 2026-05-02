@@ -331,6 +331,38 @@ func (s *Server) ClientInfo() (name, version string) {
 	return s.clientName, s.clientVersion
 }
 
+// MarkInitialized seeds a freshly-built Server with the negotiated state
+// it would normally obtain from a live `initialize` exchange. Used by
+// the streamable-HTTP cross-pod rehydration path (ADR 0017, Path A) to
+// rebuild a session whose `initialize` ran on a different replica:
+// the persisted controlplane.SessionRecord carries ProtocolVersion +
+// ClientName + ClientVersion, and the rehydrated Server uses them
+// instead of demanding the client re-initialize. Idempotent — calling
+// it twice with the same values is a no-op.
+//
+// protocolVersion may be empty (a session that was never re-persisted
+// after sync_initialize, or a pre-2025-03-26 client); ClientInfo
+// fields are best-effort. The initialized flag is set unconditionally
+// because the rehydration boundary's contract is that the server is
+// ready to dispatch tool calls; lacking a persisted protocolVersion
+// just means validateProtocolVersion's negotiated-version check
+// degrades to "accept any supported version" (see the comment on
+// validateProtocolVersion in transport_streamable_http.go).
+func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion string) {
+	s.negotiatedMu.Lock()
+	if protocolVersion != "" {
+		s.negotiatedVersion = protocolVersion
+	}
+	if clientName != "" {
+		s.clientName = clientName
+	}
+	if clientVersion != "" {
+		s.clientVersion = clientVersion
+	}
+	s.negotiatedMu.Unlock()
+	s.initialized.Store(true)
+}
+
 func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {

@@ -84,11 +84,11 @@ func TestStreamableHTTPSessionIsolation(t *testing.T) {
 		t.Fatal("session2 should not inherit activated tool")
 	}
 
-	s1, err := mgr.get(session1)
+	s1, err := mgr.get(context.Background(), session1, authn.Principal{}, opts)
 	if err != nil {
 		t.Fatalf("session1 lookup: %v", err)
 	}
-	s2, err := mgr.get(session2)
+	s2, err := mgr.get(context.Background(), session2, authn.Principal{}, opts)
 	if err != nil {
 		t.Fatalf("session2 lookup: %v", err)
 	}
@@ -422,7 +422,7 @@ func TestStreamableSessionPersistenceFailures(t *testing.T) {
 		store.failDeletes = true
 		store.mu.Unlock()
 		baseMetric = metrics.StreamableSessionStoreErrorsTotal.Get("delete")
-		session, _ := mgr.get(sessionID)
+		session, _ := mgr.get(context.Background(), sessionID, authn.Principal{}, opts)
 		mgr.destroy(sessionID, session)
 		if got := metrics.StreamableSessionStoreErrorsTotal.Get("delete") - baseMetric; got < 1 {
 			t.Fatalf("expected delete metric increment, got %d", got)
@@ -445,7 +445,7 @@ func TestStreamableUnifiedRouteSSE(t *testing.T) {
 
 	sessionID := initializeStreamSession(t, mux, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
 
-	session, err := mgr.get(sessionID)
+	session, err := mgr.get(context.Background(), sessionID, authn.Principal{}, opts)
 	if err != nil {
 		t.Fatalf("session lookup: %v", err)
 	}
