@@ -154,3 +154,47 @@ If a rollout fails, revert to the previous working image digest. Do not attempt 
 
 *   **Liveness:** `/health` (Ensures the process is running)
 *   **Readiness:** `/ready` (Ensures the process is ready to accept traffic and can connect to its dependencies, like Postgres)
+
+## How to verify this deployment
+
+Two artefacts gate the shared-service profile:
+
+1.  **Strict doctor** — confirms the configured profile, backend
+    DSN, and audit posture are production-shaped:
+
+    ```bash
+    clockify-mcp-postgres doctor \
+      --profile=shared-service \
+      --strict --check-backends
+    ```
+
+    Exit 0 proves migrations have been applied, the
+    `audit_events.phase` column is present, and the audit
+    round-trip (DoctorCheck) succeeded against the live Postgres
+    DSN. This is the same check the
+    `Doctor Postgres backend` job in `.github/workflows/ci.yml`
+    runs on every PR.
+
+2.  **Shared-service E2E** — proves that streamable HTTP, the
+    Postgres control plane, the per-tenant runtime factory, and
+    the two-phase audit pipeline integrate correctly under
+    multi-tenant traffic:
+
+    ```bash
+    MCP_LIVE_CONTROL_PLANE_DSN=postgres://... \
+      make shared-service-e2e
+    ```
+
+    The target boots `mcp.ServeStreamableHTTP` in-process against
+    the supplied Postgres, drives 5 calls across two distinct
+    `forward_auth` principals (one operator persona, one
+    AI-facing persona on `time_tracking_safe`), and asserts
+    tenant isolation in `audit_events` and `sessions` rows. The
+    test stands up an `httptest` fake Clockify locally so no live
+    upstream secrets are required. CI runs the same target in the
+    `Shared-service Postgres E2E` job in
+    `.github/workflows/ci.yml` against a `postgres:16-alpine`
+    service container.
+
+A green run of both artefacts is the launch-candidate gate for
+this profile (Group 2 of `docs/launch-candidate-checklist.md`).

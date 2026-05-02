@@ -68,19 +68,36 @@ asserts the tenant + audit invariants.
 - [x] `TestLiveCreateUpdateDeleteEntryAuditPhases` is green on the
       latest `live-contract.yml` run (intent + outcome rows for
       every non-read tool call).
-- [ ] **New** shared-service E2E in `tests/` that:
-      - Boots `clockify-mcp-postgres` (the Postgres-tagged binary)
-        with the shared-service profile preset.
+- [x] **New** shared-service E2E
+      (`internal/controlplane/postgres/e2e_shared_service_test.go`,
+      build tag `postgres`, runnable via `make shared-service-e2e`)
+      that:
+      - Boots `mcp.ServeStreamableHTTP` in-process with the same
+        per-tenant runtime shape `clockify-mcp-postgres` uses
+        (per-tenant Clockify client + per-tenant policy +
+        Pipeline/Gate + Postgres-backed control-plane store).
+        In-process boot avoids subprocess flakiness while exercising
+        the same wiring as the binary; the contract is the
+        integration, not the binary packaging.
       - Exercises the streamable-HTTP transport.
-      - Drives a multi-tenant traffic pattern (≥2 tenants, ≥1
-        operator, ≥1 end-user principal each).
+      - Drives a multi-tenant traffic pattern: tenant A (operator,
+        `policy_mode = standard`) and tenant B (AI-facing,
+        `policy_mode = time_tracking_safe`), one principal each
+        via `forward_auth` headers, 5 calls total.
       - Asserts tenant isolation in `audit_events` and `sessions`
-        rows.
-      - Tears down all data it wrote.
-- [ ] The new E2E is wired into a CI workflow (extension of
-      `live-contract.yml` or a new shared-service workflow) and
-      runs on at least the same cadence as the live-contract
-      nightly.
+        rows: per-tenant row counts, per-tenant
+        `(tool, phase, outcome)` tuples, cross-tenant negative
+        (zero rows for `tenant_id = A AND session_id = B` and the
+        mirror), per-tenant `sessions.tenant_id` matches the
+        principal-supplied `X-Forwarded-Tenant`.
+      - Tears down all data it wrote (prefix-scoped `DELETE` in
+        both pre-emptive and `t.Cleanup` passes).
+- [x] The new E2E is wired into a CI workflow
+      (`shared-service-e2e` job in `.github/workflows/ci.yml`,
+      modeled on `doctor-postgres`'s service-container shape) and
+      runs per-PR, which exceeds the live-contract nightly cadence.
+      Required-check status is deferred until three consecutive
+      green runs on `main`.
 
 **Definition of done.** A CI-driven shared-service E2E exists,
 runs nightly, and asserts both functional behaviour (tools
