@@ -5937,6 +5937,10 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "status": {
+            "description": "Filter by status (e.g. PAID, SENT, DRAFT)",
+            "type": "string"
           }
         },
         "type": "object"
