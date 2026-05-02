@@ -84,6 +84,23 @@ What earned the tier:
   per-tenant policy-mode enforcement. Closed Group 2 of the
   launch-candidate checklist (commits 42502cf + 79f0769;
   first CI green: ci.yml run 25240007056 on 2026-05-02).
+- **Auth-model docs consolidation shipped (Group 4).** New
+  one-page reviewer-facing summary at
+  [`docs/auth-model.md`](auth-model.md) covers all four inbound
+  auth modes (`static_bearer`, `oidc`, `forward_auth`, `mtls`),
+  the Principal-construction contract, tenant resolution rules,
+  failure modes with HTTP/gRPC status mapping, an end-to-end
+  test-pin table, the three-layer auth diagram (inbound · upstream
+  · gRPC re-auth), and a five-question reviewer self-quiz with
+  answers. Cross-linked from `docs/production-readiness.md` "Pick
+  an auth mode" and from `docs/runbooks/auth-failures.md`. The
+  Group 4 checklist's mode-naming bug
+  (`disabled, bearer, jwt`) is fixed in the same wave; box 3
+  (forward_auth duplicated/oversized header pins) is honestly
+  downgraded with a sub-bullet citing net/http's
+  `Server.MaxHeaderBytes` cap as the server-side bound for the
+  oversized-header risk. Closed Group 4 of the launch-candidate
+  checklist (commits 0bcd30b + 8a627d6 + 222c206 on 2026-05-02).
 - **Streamable-HTTP cross-pod session rehydration shipped
   (ADR 0017 Path A).** `streamSessionManager.get` consults the
   shared `controlplane.Store` on a local miss, strict-validates
@@ -216,12 +233,10 @@ unblocks the next.
    and the CI job that gates the cross-instance rehydration
    contract per-PR.
 
-4. **Auth-model docs consolidation.**
-   *Where:* `docs/production-readiness.md` plus a possible new
-   `docs/auth-model.md`.
-   *Why blocking:* an external reviewer cannot map a Clockify auth
-   requirement to an MCP config in under five minutes. A
-   one-page summary closes that.
+4. ~~**Auth-model docs consolidation.**~~ **Closed 2026-05-02**
+   (commits 0bcd30b + 8a627d6 + 222c206). See Tier 2 "What
+   earned the tier" for the new `docs/auth-model.md` anchor and
+   the operator-doc cross-links.
 
 5. **Product launch docs verification.**
    *Where:* `README.md` claims, `docs/clients.md`,
@@ -257,7 +272,7 @@ work happens, not how. The agent slash commands
 | 1. Live contract | `.github/workflows/live-contract.yml`, the rolling `live-test-failure` issue, `tests/e2e_live_test.go`, `tests/e2e_live_mcp_test.go` | One green nightly run with mutating tier on. |
 | 2. ~~Shared-service Postgres E2E~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_shared_service_test.go`, `make shared-service-e2e`, `Shared-service Postgres E2E` job in `ci.yml` | Done. |
 | 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
-| 4. Auth-model docs | `docs/production-readiness.md`, `internal/authn/`, `internal/mcp/transport_http_authmatrix_test.go` | A one-page auth-model summary linked from `README.md`. |
+| 4. ~~Auth-model docs~~ | _closed 2026-05-02_ — `docs/auth-model.md` (new), `docs/production-readiness.md` "Pick an auth mode" + `docs/runbooks/auth-failures.md` cross-links | Done. |
 | 5. Launch docs | `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | `make doc-parity` green and a manual review pass. |
 | 6. Bench baseline | `.bench/`, `bench.yml` workflow, `Makefile` `verify-bench` target | Updated baseline file committed; `make bench-baseline-check` green. |
 | 7. Security review | `make verify-vuln`, `make verify-fips`, `.gitleaks.toml`, `SECURITY.md` | All four green on the candidate tag, findings filed. |

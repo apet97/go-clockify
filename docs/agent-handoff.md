@@ -53,10 +53,13 @@ prose below as the checklist.
    is "Proposed + band-aid". Either ship the fix or document the
    single-replica limitation. Slash command:
    `/session-rehydration`.
-4. **Auth-model docs scattered** — a reviewer cannot map a
-   Clockify auth requirement to an MCP config in five minutes.
-   Consolidation lives in `docs/production-readiness.md` or a new
-   `docs/auth-model.md`.
+4. ~~**Auth-model docs scattered**~~ **Closed 2026-05-02** by
+   commits 0bcd30b (new `docs/auth-model.md`: 4-mode table,
+   Principal mapping, tenant resolution, failure modes, test
+   pins, 5-question reviewer self-quiz) + 8a627d6 (operator-doc
+   cross-links from `docs/production-readiness.md` "Pick an
+   auth mode" and `docs/runbooks/auth-failures.md`) +
+   222c206 (Group 4 checklist terminology fix + boxes ticked).
 5. **Launch docs not verified end-to-end** — `README.md`,
    `docs/clients.md`, `docs/support-matrix.md`, and the
    `docs/deploy/profile-*.md` set need a parity pass.
@@ -100,10 +103,17 @@ Group them by blocker so you do not hop around:
 - `deploy/helm-chart/templates/service.yaml` (the `sessionAffinity:
   ClientIP` band-aid).
 
-**Auth model**
-- `internal/authn/`
-- `internal/mcp/transport_http_authmatrix_test.go`
-- `docs/production-readiness.md` "Pick an auth mode" section.
+**Auth model** (Group 4 closed 2026-05-02)
+- [`docs/auth-model.md`](auth-model.md) — one-page reviewer
+  summary; start here.
+- `internal/authn/` — implementation (mode constants at
+  `authn.go:36-41`).
+- `internal/config/transport_auth_matrix_test.go::TestTransportAuthMatrix` —
+  `{transport × auth_mode}` config-load surface.
+- `internal/mcp/transport_http_authmatrix_test.go` — HTTP
+  handler-level rejection per mode.
+- `docs/production-readiness.md` "Pick an auth mode" — operator
+  picker; cross-links into `auth-model.md`.
 
 **Generated docs (parity-gated)**
 - `internal/config/spec.go` — single source of truth.
