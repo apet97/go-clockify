@@ -359,16 +359,23 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var webhooks []map[string]any
-	if err := s.Client.Get(ctx, path, query, &webhooks); err != nil {
+	// Upstream returns {workspaceWebhookCount: N, webhooks: [...]}.
+	// Probe evidence: clockify-api-probe-lab/findings/webhooks.md
+	// (rev 2 2026-05-02).
+	var envelope struct {
+		WorkspaceWebhookCount int              `json:"workspaceWebhookCount"`
+		Webhooks              []map[string]any `json:"webhooks"`
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_webhooks", webhooks, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(webhooks),
-		"page":        page,
-		"pageSize":    pageSize,
+	return ok("clockify_list_webhooks", envelope.Webhooks, map[string]any{
+		"workspaceId":           wsID,
+		"count":                 len(envelope.Webhooks),
+		"workspaceWebhookCount": envelope.WorkspaceWebhookCount,
+		"page":                  page,
+		"pageSize":              pageSize,
 	}), nil
 }
 

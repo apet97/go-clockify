@@ -98,9 +98,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 			{"clockify_list_user_groups", nil, ""},
 		}},
 		{"webhooks", []call{
-			// Upstream returns `{workspaceWebhookCount, webhooks: [...]}`,
-			// handler reads `[]map[string]any`.
-			{"clockify_list_webhooks", nil, "cannot unmarshal object"},
+			{"clockify_list_webhooks", nil, ""},
 			// /webhooks/events 400s with "Webhook doesn't belong to
 			// Workspace" — the upstream endpoint is per-webhook, not
 			// per-workspace, so the handler's URL is wrong. Likely
