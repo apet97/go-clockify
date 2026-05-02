@@ -186,11 +186,14 @@ What is missing for tier 3 is intentionally narrow:
    posture, every deployment profile ends with an explicit
    verification section, and the docs parity gates are the recorded
    local proof.
-6. **Bench baseline check has not been re-run on the candidate
-   shape.** Recent perf wave (cached tools/list, tier-2
-   descriptor cache, schema compaction) needs the baseline
-   refreshed and the regression threshold reaffirmed before any
-   tag claims launch quality.
+6. ~~**Bench baseline check has not been re-run on the candidate
+   shape.**~~ **Closed 2026-05-02 on fwbranch.** The committed
+   linux/amd64 baseline was refreshed from `Bench` workflow run
+   25255062599 (`bench-current-25255062599`) after the cached
+   tools/list, Tier 2 descriptor cache, and schema compaction
+   wave. `make bench-baseline-check` validates the committed
+   artifact shape. Release-grade regression evidence still comes
+   from the CI bench workflow, not a macOS/arm64 workstation run.
 
 ---
 
@@ -249,6 +252,13 @@ What is missing for tier 3 is intentionally narrow:
   (0/91 tools). The evidence hierarchy (scheduled workflow >
   manual dispatch > local with env vars > local without env vars as
   non-evidence) is documented there.
+- **Benchmark baseline is current for the candidate shape.** The
+  committed `internal/benchdata/baseline.txt` was refreshed from the
+  `Bench` workflow bootstrap artifact `bench-current-25255062599`
+  on 2026-05-02 after the cached tools/list, Tier 2 descriptor cache,
+  and schema compaction wave. `make bench-baseline-check` validates
+  that the baseline remains linux/amd64, covers every workflow
+  package, and has the configured 10-sample floor.
 
 ---
 
@@ -288,12 +298,13 @@ unblocks the next.
    names Go/OS/FIPS/kernel posture, and every deployment profile
    ends with a verification section.
 
-6. **Bench baseline refresh.**
-   *Where:* `make bench-baseline-check` against the candidate
-   shape post-perf wave.
-   *Why blocking:* a launch claim that includes "low overhead"
-   needs a baseline that reflects the current code. Today the
-   baseline is from before the perf wave.
+6. ~~**Bench baseline refresh.**~~ **Closed 2026-05-02 on
+   fwbranch.** `internal/benchdata/baseline.txt` now comes from
+   `Bench` workflow run 25255062599 (`bench-current-25255062599`)
+   and `make bench-baseline-check` is green locally. The default
+   `make verify-bench` comparison is intentionally platform-guarded:
+   macOS/arm64 output cannot be compared to the committed
+   linux/amd64 baseline.
 
 7. ~~**Security review walk-through.**~~ **Closed 2026-05-02.**
    `make verify-vuln` (with `govulncheck` on PATH), gitleaks,
@@ -317,7 +328,7 @@ work happens, not how. The agent slash commands
 | 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
 | 4. ~~Auth-model docs~~ | _closed 2026-05-02_ — `docs/auth-model.md` (new), `docs/production-readiness.md` "Pick an auth mode" + `docs/runbooks/auth-failures.md` cross-links | Done. |
 | 5. ~~Launch docs~~ | _closed 2026-05-02_ — `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | Done; `make doc-parity` plus manual review of client/profile/support docs. |
-| 6. Bench baseline | `.bench/`, `bench.yml` workflow, `Makefile` `verify-bench` target | Updated baseline file committed; `make bench-baseline-check` green. |
+| 6. ~~Bench baseline~~ | _closed 2026-05-02 on fwbranch_ — `internal/benchdata/baseline.txt`, `bench.yml` workflow run 25255062599, `make bench-baseline-check` | Done; release-grade regression comparison remains a CI bench workflow responsibility. |
 | 7. ~~Security review~~ | _closed 2026-05-02_ — `make verify-vuln`, gitleaks, Semgrep, `make verify-fips`, production dev-backend regression test | Done on the launch-review tree; re-run on the candidate tag. |
 
 ---

@@ -7,14 +7,15 @@ Prepared 2026-05-02 for human + Claude + Codex review before merge to
 
 - **Branch:** `fwbranch`
 - **Review base:** `origin/main` at `2e59e2b` (docs(agents): add durable launch handoff for AI agents)
-- **Validated tip:** `8fb625e` (docs(handoff): update push status after fwbranch push)
-- **Review span:** 17 commits ahead of `origin/main` before this docs-only
-  handoff refresh. If this file is read from the final handoff commit, the
-  branch has one additional docs-only commit.
+- **Validated tip before bench refresh:** `6e21080` (docs(handoff): refresh fwbranch review state)
+- **Review span:** 18 commits ahead of `origin/main` before the benchmark
+  baseline refresh. If this file is read from the final bench-refresh commit,
+  the branch has one additional generated-baseline/docs commit.
 
 ## Commits
 
 ```
+6e21080 docs(handoff): refresh fwbranch review state
 8fb625e docs(handoff): update push status after fwbranch push
 70dc04e docs(checklist): cross-reference api-coverage.md from Group 1
 ac4fc30 docs(agents): document evidence gate in Local vs CI evidence section
@@ -102,10 +103,17 @@ docs commits corrected counts, coverage gaps, and cross-links:
 | `make doc-parity` | OK — includes launch checklist parity and evidence gate |
 | `make config-doc-parity` | OK |
 | `make catalog-drift` | OK |
+| `make bench-baseline-check` | OK — after replacing `internal/benchdata/baseline.txt` with `bench-current-25255062599` |
+| `Bench` workflow run 25255062599 | OK — bootstrap run on `fwbranch`, artifact `bench-current-25255062599` downloaded and validated |
+| `make release-check` | OK — local macOS arm64 pre-ship gate; `golangci-lint` and `actionlint` skipped locally because not installed, CI enforces them |
 
 ## Checks not run
 
-- `make release-check` — not part of this local handoff refresh
+- `make verify-bench` to completion on this host — the benchmark capture
+  ran, `bench-baseline-check` passed, then the target failed closed because
+  this host emits `darwin/arm64` samples and the committed release baseline
+  is `linux/amd64`. Use the CI `Bench` workflow for release-grade regression
+  comparison evidence.
 - `make live-contract-local` — requires sacrificial workspace credentials
   not available in this session
 - `make verify-vuln` / `make verify-fips` — security scan tools not

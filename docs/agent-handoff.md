@@ -131,9 +131,17 @@ prose below as the checklist.
    `docs/support-matrix.md` names Go / OS / FIPS / kernel posture,
    and every deployment profile ends with a "How to verify this
    deployment" section naming the doctor command and smoke target.
-6. **Bench baseline pre-dates the perf wave** — `.bench/` baseline
-   needs refreshing after the cached tools/list, tier-2 cache,
-   and schema compaction commits.
+6. ~~**Bench baseline pre-dates the perf wave**~~ **Closed
+   2026-05-02 on fwbranch.** `internal/benchdata/baseline.txt`
+   was refreshed from the `Bench` workflow bootstrap artifact
+   `bench-current-25255062599` (workflow run 25255062599,
+   linux/amd64 GitHub Actions runner) after the cached tools/list,
+   Tier 2 descriptor cache, and schema compaction commits.
+   Verified locally with `make bench-baseline-check`. On macOS
+   arm64, default `make verify-bench` still fails closed with the
+   intended platform guard (`darwin/arm64` output cannot be compared
+   to the committed `linux/amd64` baseline); use the CI bench
+   workflow for release-grade comparison evidence.
 7. ~~**Security review walk-through**~~ **Closed 2026-05-02.**
    `make verify-vuln` (with `govulncheck` on PATH),
    `make verify-fips`, gitleaks, Semgrep, and `make check` are
@@ -306,9 +314,12 @@ verifiable.
    `make doc-parity` after any future change to `README.md`,
    `docs/clients.md`, `docs/support-matrix.md`, or
    `docs/deploy/profile-*.md`.
-7. **Refresh bench baseline.** Run `make verify-bench` on the
-   candidate shape, commit the new `.bench/` baseline file with
-   a `Why:` line that names the perf wave it reflects.
+7. **Refresh bench baseline.** Closed 2026-05-02 on fwbranch by
+   committing the `bench-current-25255062599` Actions artifact as
+   `internal/benchdata/baseline.txt`; `make bench-baseline-check`
+   validates the committed baseline shape. The release-grade
+   regression comparison still belongs to the CI bench workflow
+   because the committed baseline is linux/amd64.
 8. **Security review walk-through.** Closed 2026-05-02; re-run
    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
    on the final candidate tag. File any new findings in

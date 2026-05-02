@@ -93,6 +93,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   promoting them is out of scope for this change and tracked
   separately.
 
+- **Benchmark baseline refreshed on the Actions linux/amd64 runner.**
+  Refreshed `internal/benchdata/baseline.txt` from the `Bench`
+  workflow bootstrap artifact `bench-current-25255062599` on
+  `fwbranch`, covering the post-perf-wave tools/list cache, Tier 2
+  descriptor cache, and schema compaction shape. The downloaded
+  artifact was validated with `bash scripts/check-bench-baseline.sh
+  /tmp/go-clockify-bench-25255062599/bench-current.txt`, and the
+  committed file is validated by `make bench-baseline-check`.
+
 ### Added
 
 - **Reviewer-facing one-page auth-model summary closes Group 4
