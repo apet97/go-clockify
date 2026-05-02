@@ -19,6 +19,11 @@ which one is at fault:
 This runbook covers all three. The first job is to identify which
 layer is failing.
 
+> **Need the model first, not the triage?** Read
+> [`docs/auth-model.md`](../auth-model.md) — a one-page reviewer
+> summary of the four inbound auth modes, what principal each
+> produces, what tenant it derives, and which test pins each claim.
+
 ## 1. Symptoms
 
 - HTTP transport: clients see `401 Unauthorized` or `403 Forbidden`

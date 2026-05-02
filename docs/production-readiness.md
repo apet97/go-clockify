@@ -45,7 +45,10 @@ The blessed production profile for shared services is documented in [Production 
 | `forward_auth`  | An upstream reverse proxy (Caddy, Envoy, Traefik) already authenticates and forwards the result via a header. | `MCP_FORWARD_SUBJECT_HEADER` and `MCP_FORWARD_TENANT_HEADER` set by a trusted proxy. |
 | `mtls`          | Both ends present X.509 certs against a private CA. Highest assurance, highest setup cost. | The TLS client cert presented to the listener.        |
 
-Set with `MCP_AUTH_MODE=…`. Auth-failure triage lives in
+Set with `MCP_AUTH_MODE=…`. **For the per-mode principal
+mapping, tenant resolution, failure modes, and test pins,
+see [`docs/auth-model.md`](auth-model.md)** (the one-page
+reviewer summary). Auth-failure triage lives in
 [`docs/runbooks/auth-failures.md`](runbooks/auth-failures.md).
 
 ## Pick a deployment
