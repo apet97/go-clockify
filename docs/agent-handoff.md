@@ -44,6 +44,12 @@ suspiciously fast (≤ ~0.5s), the env-var gate
 it took the silent skip path — `live-contract.yml` is the
 authoritative evidence path.
 
+`TestLiveContractSkipSentinel` (under `-tags=livee2e`) now fails
+explicitly when every live test skipped, so `go test -tags=livee2e
+./tests/...` without env vars reports FAIL instead of a misleading
+`ok`. Use `make live-contract-local` for pre-flight debugging — it
+wraps the test run with evidence warnings.
+
 ## Read first (in this order)
 
 1. [`../AGENTS.md`](../AGENTS.md) — standard agent-spec
@@ -213,7 +219,8 @@ exist, propose it as a Makefile target before using it.
 | gRPC build / parity | `make build-grpc`, `make grpc-release-parity`, `make grpc-auth-smoke` |
 | Postgres build | `make build-postgres` |
 | Postgres integration tests | `make test-postgres` (requires Docker; uses Testcontainers + `INTEGRATION_REQUIRED=1`) |
-| Live-contract tests (read-only) | `CLOCKIFY_LIVE_API_KEY=... CLOCKIFY_LIVE_WORKSPACE_ID=... go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/` |
+| Live-contract local pre-flight | `make live-contract-local` (prints evidence warnings; **local green is not Group 1 evidence**) |
+| Live-contract tests (read-only, raw) | `go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/...` with `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID` set against a sacrificial workspace |
 | Live-contract tests (mutating, sacrificial only) | append `-run '^TestE2EMutating$\|^TestLiveDryRunDoesNotMutate$\|^TestLivePolicyTimeTrackingSafeBlocksProjectCreate$'` and only against the workspace named in `docs/live-tests.md` |
 | Doctor (config-strict) | `clockify-mcp doctor --profile=<profile> --strict` |
 | Doctor (backends) | `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` |
