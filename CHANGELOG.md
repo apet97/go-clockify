@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`Shared-service Postgres E2E` is now a required-status check
+  for `main` branch protection.** Promoted on 2026-05-02 after
+  three consecutive green runs on `main` (ci.yml runs 25240007056,
+  25240085916, 25240163213) per the deferral note in Group 2 of
+  `docs/launch-candidate-checklist.md`. The promotion was applied
+  via the minimal `POST repos/apet97/go-clockify/branches/main/
+  protection/required_status_checks/contexts` endpoint with body
+  `["Shared-service Postgres E2E"]`, leaving the other 18 required
+  contexts untouched; verified by re-reading the live
+  `required_status_checks.contexts` array and by
+  `scripts/audit-branch-protection.sh`. Snapshot in
+  `docs/branch-protection.md` has its "Last reviewed" stamp bumped
+  to 2026-05-02. Audit-gap note: `Doctor strict smoke` and
+  `Doctor Postgres backend` remain documented as required in the
+  snapshot but are not actually in the live required-checks list;
+  promoting them is out of scope for this change and tracked
+  separately.
+
 ### Added
 
 - **Reviewer-facing one-page auth-model summary closes Group 4

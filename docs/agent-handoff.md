@@ -87,12 +87,19 @@ Group them by blocker so you do not hop around:
 - The most recent `live-test-failure` issue on the GitHub repo
   (`gh issue list --label live-test-failure --state all -L 5`).
 
-**Shared-service Postgres E2E**
+**Shared-service Postgres E2E** (Group 2 closed 2026-05-02; promoted
+to required-status check on `main` 2026-05-02)
+- `internal/controlplane/postgres/e2e_shared_service_test.go` —
+  the test that closed Group 2; runs as the
+  `Shared-service Postgres E2E` CI job on every PR.
 - `internal/controlplane/postgres/`
 - `internal/runtime/service.go`, `internal/runtime/store.go`
 - `tests/harness/streamable.go`
 - `docs/deploy/production-profile-shared-service.md`
-- `Makefile` targets `test-postgres`, `build-postgres`, `release-check`.
+- `docs/branch-protection.md` — snapshot of the required-check
+  list including `Shared-service Postgres E2E`.
+- `Makefile` targets `test-postgres`, `build-postgres`,
+  `shared-service-e2e`, `release-check`.
 
 **Session rehydration**
 - `internal/mcp/transport_streamable_http.go`

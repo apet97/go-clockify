@@ -84,6 +84,11 @@ What earned the tier:
   per-tenant policy-mode enforcement. Closed Group 2 of the
   launch-candidate checklist (commits 42502cf + 79f0769;
   first CI green: ci.yml run 25240007056 on 2026-05-02).
+  **Promoted to required-status check on `main` on 2026-05-02**
+  after three consecutive green runs (25240007056, 25240085916,
+  25240163213); the snapshot in
+  [`docs/branch-protection.md`](branch-protection.md) is the
+  audit trail.
 - **Auth-model docs consolidation shipped (Group 4).** New
   one-page reviewer-facing summary at
   [`docs/auth-model.md`](auth-model.md) covers all four inbound

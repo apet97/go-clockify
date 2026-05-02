@@ -116,8 +116,13 @@ asserts the tenant + audit invariants.
       (`shared-service-e2e` job in `.github/workflows/ci.yml`,
       modeled on `doctor-postgres`'s service-container shape) and
       runs per-PR, which exceeds the live-contract nightly cadence.
-      Required-check status is deferred until three consecutive
-      green runs on `main`.
+      _Promoted to required-status check on 2026-05-02 after three
+      consecutive green runs on `main` (25240007056, 25240085916,
+      25240163213) via `gh api POST repos/apet97/go-clockify/branches/
+      main/protection/required_status_checks/contexts` with
+      `["Shared-service Postgres E2E"]`; verified by re-reading
+      `required_status_checks.contexts` and by
+      `scripts/audit-branch-protection.sh`._
 
 **Definition of done.** A CI-driven shared-service E2E exists,
 runs nightly, and asserts both functional behaviour (tools

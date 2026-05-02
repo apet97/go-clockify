@@ -9,7 +9,10 @@ The snapshot exists so an auditor or external reviewer can see what
 the merge gate actually enforces without having admin access to the
 repository.
 
-Last reviewed: 2026-04-22 (post repo-visibility flip + Wave M).
+Last reviewed: 2026-05-02 (Shared-service Postgres E2E promoted
+to required-status check after three consecutive green runs on
+`main`; see Group 2 closure in
+[`launch-candidate-checklist.md`](launch-candidate-checklist.md)).
 
 > ✅ **Applied.** `main` has a classic branch-protection rule applied
 > via `gh api PUT repos/apet97/go-clockify/branches/main/protection`.
