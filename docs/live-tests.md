@@ -152,11 +152,27 @@ last line of defense before customer integrations break.
 
 ## Running locally
 
+Prefer `make live-contract-local` — it wraps the test run with evidence
+warnings reminding you that **local green is not Group 1 launch-candidate
+evidence**. Only scheduled cron runs of `.github/workflows/live-contract.yml`
+on the candidate SHA count.
+
 ```sh
+# Preferred (with evidence warnings):
+make live-contract-local
+
+# Raw (without evidence warnings):
 export CLOCKIFY_API_KEY='...'       # sacrificial workspace key
 export CLOCKIFY_RUN_LIVE_E2E=1      # opt-in gate
 go test -tags=livee2e -count=1 ./tests/...
 ```
+
+**Beware:** running `go test -tags=livee2e` without
+`CLOCKIFY_RUN_LIVE_E2E=1` and `CLOCKIFY_API_KEY` silently skips every
+test and reports `ok` in <0.5s. `TestLiveContractSkipSentinel` (under
+the same build tag) now fails explicitly when this happens, but the
+Makefile target is the safest path — it fails on missing env vars before
+the tests even start.
 
 Never point local live tests at a production workspace. The test will
 create a client, a project, a time entry, and then clean them up — if
