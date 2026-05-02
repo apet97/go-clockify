@@ -127,10 +127,22 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`{"id":"s-1","name":"Q2"}`))
 	})
 
-	// Capacity endpoint.
-	mux.HandleFunc("/workspaces/test-workspace/scheduling/capacity", func(w http.ResponseWriter, r *http.Request) {
+	// Per-user capacity endpoint. The probe lab proved the live shape
+	// at /scheduling/assignments/users/{userId}/totals (flat object,
+	// capacityPerDay in seconds, workingDays + totalHoursPerDay arrays).
+	// The mux 400s when start/end are missing so the handler's required
+	// range params are exercised.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/users/aaaaaaaaaaaaaaaaaaaaaaa1/totals", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.URL.Query().Get("start") == "" || r.URL.Query().Get("end") == "" {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"totalHours":160,"users":[]}`))
+		_, _ = w.Write([]byte(`{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","userName":"Alice","capacityPerDay":25200.0,"workingDays":["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"],"totalHoursPerDay":[{"date":"2026-04-01T00:00:00Z","totalHours":7.0}]}`))
 	})
 
 	return testharness.NewFakeClockify(t, mux)
@@ -341,8 +353,17 @@ func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T)
 	if res.Outcome != testharness.OutcomeSuccess {
 		t.Fatalf("capacity outcome=%q err=%q", res.Outcome, res.ErrorMessage)
 	}
-	if !strings.Contains(res.ResultText, "totalHours") {
-		t.Fatalf("capacity result missing field: %q", res.ResultText)
+	// Pin the per-user-totals shape: handler must hit
+	// /scheduling/assignments/users/{userId}/totals and decode the flat
+	// object the probe lab fixtures show. A regression to the old
+	// /scheduling/capacity path will 404 against the mux above.
+	for _, want := range []string{"capacityPerDay", "workingDays", "totalHoursPerDay"} {
+		if !strings.Contains(res.ResultText, want) {
+			t.Fatalf("capacity result missing %q: %q", want, res.ResultText)
+		}
+	}
+	if !strings.Contains(res.ResultText, `"userId":"aaaaaaaaaaaaaaaaaaaaaaa1"`) {
+		t.Fatalf("capacity result must echo resolved userId: %q", res.ResultText)
 	}
 }
 
