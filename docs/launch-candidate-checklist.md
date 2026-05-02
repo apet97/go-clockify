@@ -386,9 +386,14 @@ accident.
       run), `release-smoke.yml` (latest tag), `link-check.yml`,
       `chaos.yml`, `mutation.yml`, `reproducibility.yml`,
       `bench.yml`. No skipped-but-required steps.
-- [ ] `make verify-bench` and `make bench-baseline-check` green;
+- [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.
+      _Closed 2026-05-02 on fwbranch: refreshed
+      `internal/benchdata/baseline.txt` from `Bench` workflow run
+      25255062599, validated locally with `make bench-baseline-check`,
+      then passed linux/amd64 comparison in
+      https://github.com/apet97/go-clockify/actions/runs/25255216987._
 - [ ] Release artefacts: signed binaries (cosign + SLSA), SBOMs,
       Docker images, FIPS variant. Verified by
       `release-smoke.yml` on the candidate tag.

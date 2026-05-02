@@ -105,6 +105,7 @@ docs commits corrected counts, coverage gaps, and cross-links:
 | `make catalog-drift` | OK |
 | `make bench-baseline-check` | OK — after replacing `internal/benchdata/baseline.txt` with `bench-current-25255062599` |
 | `Bench` workflow run 25255062599 | OK — bootstrap run on `fwbranch`, artifact `bench-current-25255062599` downloaded and validated |
+| `Bench` workflow run 25255216987 | OK — normal comparison run on `da39381`; “Compare against committed baseline” passed |
 | `make release-check` | OK — local macOS arm64 pre-ship gate; `golangci-lint` and `actionlint` skipped locally because not installed, CI enforces them |
 
 ## Checks not run
