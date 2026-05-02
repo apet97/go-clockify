@@ -92,6 +92,50 @@ schema version the binary does not know about (ADR 0011). The file
 and memory stores are the dev / offline fallback and are not
 recommended for any multi-process deployment.
 
+## Session rehydration (streamable-HTTP, multi-replica)
+
+The streamable-HTTP transport's session manager is process-local
+*and* rehydrates on a local miss from the shared control-plane
+store. ADR 0017 (Accepted, 2026-05-02) is the design contract;
+this section is the operator-facing summary.
+
+**What this means in practice.** A client that sent `initialize`
+to replica A and gets routed to replica B by the load balancer
+(ClientIP affinity loss, pod restart, rolling upgrade, cross-AZ
+failover, NAT-egress hash collision) does NOT see "session not
+found" — replica B reads the session record from Postgres,
+rebuilds the per-tenant runtime via the same Factory replica A
+used, and serves the request. The strict per-request
+authentication contract is preserved across the boundary: a
+mismatched `X-Forwarded-Tenant` (or OIDC subject) is rejected
+with 403 "session principal mismatch" exactly as the local-hit
+path returns. See [`adr/0017-streamable-http-session-rehydration.md`](adr/0017-streamable-http-session-rehydration.md)
+for the four design questions Q1-Q4 and their resolutions.
+
+**What does NOT survive the rehydration boundary** (Q3 = "fresh
+session, same ID"): in-flight `tools/call` cancellation handles,
+the SSE backlog ring buffer, and any per-session counters that
+live only in process memory. Protocol version + clientInfo state
+DOES survive (the persisted record carries them; the rebuilt
+server is pre-marked initialized). Client-facing implications
+are listed in [`clients.md` § "Session Rehydration Boundaries"](clients.md#session-rehydration-boundaries).
+
+**Operational contract.** The `sessionAffinity: ClientIP`
+band-aid in the Helm chart and the k8s base manifest stays as
+defence-in-depth + perf optimisation: it keeps the common-case
+client pinned to one replica so the cross-instance Postgres
+`Session(id)` lookup does not fire on every request. Correctness
+no longer depends on it. Operators running `replicaCount: N` for
+N > 1 can rely on the rehydration path to handle the failover
+modes the band-aid does not cover.
+
+**Verification.** The cross-instance rehydration contract is
+pinned by `TestStreamableHTTPCrossInstanceRehydration` in
+`internal/controlplane/postgres/e2e_session_rehydration_test.go`,
+runnable via `make shared-service-e2e` (Postgres DSN required;
+gated by `MCP_LIVE_CONTROL_PLANE_DSN`) and gated per-PR by the
+`Shared-service Postgres E2E` GitHub Actions job.
+
 ## Upgrade path
 
 Versioning, support window, deprecation flow, and the definition of

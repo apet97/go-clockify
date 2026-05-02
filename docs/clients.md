@@ -87,6 +87,27 @@ The server exposes `clockify://` URI templates.
 - Clients should use `resources/templates/list` to discover these.
 - When a user asks for "my current timer," the client should resolve the template to a concrete URI and fetch it via `resources/read`.
 
+### Session Rehydration Boundaries
+The streamable-HTTP transport (MCP 2025-03-26) supports cross-pod session rehydration: when a request lands on a replica that did not run the original `initialize`, the server reads the persisted session from the shared control-plane store and rebuilds the per-tenant runtime in-place. From the client's perspective this is invisible — `tools/call`, `resources/read`, etc. all succeed without the client having to retry or re-initialize. See [`docs/adr/0017-streamable-http-session-rehydration.md`](adr/0017-streamable-http-session-rehydration.md) for the design.
+
+What survives the rehydration boundary:
+- The session ID itself (clients keep using the same `MCP-Session-Id` header).
+- The negotiated MCP protocol version, client name, and client version (the persisted session record carries them; the server seeds them into the rebuilt runtime via `Server.MarkInitialized`).
+- The persisted `expiresAt` / TTL window — rehydration does NOT reset the eviction clock.
+- The strict per-request authentication contract: the rehydrated session inherits the freshly-authenticated principal of the request that triggered it. A leaked session ID replayed with a different `X-Forwarded-Tenant` (or different OIDC subject) is rejected with **403 "session principal mismatch"**, matching the local-hit behaviour.
+
+What does NOT survive the rehydration boundary:
+- **In-flight tool-call cancellation.** A `tools/call` running on instance A cannot be cancelled by sending `notifications/cancelled` to instance B; B has no record of the in-flight call and the cancel is a silent no-op. Clients should treat cancellation as best-effort across rehydration; if a cancel is critical, route the cancel back to the original instance (when sticky-session affinity is in use, this is the common case).
+- **SSE backlog.** A long-lived `GET /mcp` SSE stream that resumes against a freshly-rebuilt session sees `oldest > Last-Event-ID + 1` because the new instance's `sessionEventHub` ring buffer is empty. The server's `SSEReplayMissesTotal` Prometheus counter increments on this boundary; clients should fall back to a fresh subscription and re-fetch any state delta they were tracking (the MCP `notifications/resources/list_changed` contract permits this).
+- **Server-side tool-call counters and rate-limit token state.** Rebuilt fresh; per-tenant rate-limit accounting is best-effort across the boundary. Operators who need strict cross-replica rate limiting should pair the deployment with an external proxy (Envoy, an API gateway) and cap there.
+
+Practical client guidance:
+- **Retry idempotent calls** — `tools/list`, `clockify_list_*`, `clockify_get_*`, and any `resources/read` call are safe to retry verbatim. The MCP spec already recommends this for transient-network errors; rehydration is a bounded subset of the same envelope.
+- **Avoid speculative `notifications/cancelled`** — issue a cancel only after a request goes long enough that the user explicitly asks to stop. Across rehydration the cancel may not reach the original handler.
+- **Subscribe to `notifications/resources/list_changed` and `notifications/tools/list_changed`** — both events fan out from the per-session notifier hub on the instance the client is currently pinned to. Across rehydration you'll receive these on the new instance once a state-affecting tool has run there.
+
+The deployment's load balancer typically pins each client to one replica via ClientIP affinity (the default in the Helm chart's `service.sessionAffinity.enabled`), so most clients never observe a rehydration boundary in normal operation. The boundary is reached during pod restart / eviction, rolling upgrades, cross-AZ failover, and the shared-NAT egress case where many clients hash to the same backend.
+
 ## Compatibility Expectations
 
 ### Breaking Changes
