@@ -26,7 +26,13 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		}{r.Method, r.URL.Path})
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices":
-			respondJSON(t, w, []map[string]any{{"id": "inv1", "status": "DRAFT"}, {"id": "inv2", "status": "PAID"}})
+			respondJSON(t, w, map[string]any{
+				"total": 2,
+				"invoices": []map[string]any{
+					{"id": "inv1", "status": "DRAFT"},
+					{"id": "inv2", "status": "PAID"},
+				},
+			})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			respondJSON(t, w, map[string]any{"id": "inv1", "status": "DRAFT", "currency": "USD"})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices":

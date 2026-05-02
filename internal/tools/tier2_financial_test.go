@@ -86,9 +86,12 @@ func TestListInvoices(t *testing.T) {
 			if got := r.URL.Query().Get("page-size"); got != "50" {
 				t.Fatalf("expected page-size=50, got %s", got)
 			}
-			respondJSON(t, w, []map[string]any{
-				{"id": "inv1", "clientId": "c1", "status": "DRAFT", "amount": 150.0},
-				{"id": "inv2", "clientId": "c2", "status": "SENT", "amount": 300.0},
+			respondJSON(t, w, map[string]any{
+				"total": 2,
+				"invoices": []map[string]any{
+					{"id": "inv1", "clientId": "c1", "status": "DRAFT", "amount": 150.0},
+					{"id": "inv2", "clientId": "c2", "status": "SENT", "amount": 300.0},
+				},
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -116,6 +119,9 @@ func TestListInvoices(t *testing.T) {
 	}
 	if result.Meta["count"] != 2 {
 		t.Fatalf("expected meta count=2, got %v", result.Meta["count"])
+	}
+	if result.Meta["total"] != 2 {
+		t.Fatalf("expected meta total=2, got %v", result.Meta["total"])
 	}
 }
 

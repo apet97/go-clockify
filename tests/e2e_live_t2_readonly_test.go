@@ -56,12 +56,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		tools []call
 	}{
 		{"invoices", []call{
-			// Handler reads `[]map[string]any` but upstream returns
-			// `{total, invoices: [...]}` envelope. Likely fix:
-			// internal/tools/tier2_invoices.go listInvoices unmarshal
-			// into a struct{Total int; Invoices []…} and return the
-			// inner slice.
-			{"clockify_list_invoices", nil, "cannot unmarshal object"},
+			{"clockify_list_invoices", nil, ""},
 			{"clockify_invoice_report", nil, "cannot unmarshal object"},
 		}},
 		{"expenses", []call{

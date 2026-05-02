@@ -204,16 +204,22 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
+	// Upstream returns {total: int, invoices: [...]} — discovered via
+	// clockify-api-probe-lab against the live workspace 2026-05-02.
+	var envelope struct {
+		Total    int              `json:"total"`
+		Invoices []map[string]any `json:"invoices"`
+	}
 	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &items); err != nil {
+	}, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_invoices", items, map[string]any{
+	return ok("clockify_list_invoices", envelope.Invoices, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       len(envelope.Invoices),
+		"total":       envelope.Total,
 		"page":        page,
 	}), nil
 }
