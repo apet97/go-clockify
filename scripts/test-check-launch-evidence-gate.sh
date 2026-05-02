@@ -101,6 +101,19 @@ else
   pass "missing checklist fails"
 fi
 
+# ── Test 7: Group 7 box checked without evidence => FAIL ────────────
+
+echo "== Test 7: Group 7 box checked without evidence => FAIL"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed 's/^- \[ \] All required workflows on .main. green: .ci.yml./- [x] All required workflows on .main. green: .ci.yml./' \
+  "$real_checklist" > "$tmp"
+if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
+  fail "Group 7 checked box without evidence should fail but exited 0"
+else
+  pass "Group 7 checked box without evidence fails"
+fi
+
 # ── Summary ────────────────────────────────────────────────────────
 
 echo ""
