@@ -160,7 +160,8 @@ convenience.
 | gRPC auth smoke | `make grpc-auth-smoke` |
 | Strict deploy gate (config) | `clockify-mcp doctor --profile=<profile> --strict` |
 | Strict deploy gate (backends) | `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` |
-| Live-contract tests (read-only) | `go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/...` with `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID` set against a sacrificial workspace |
+| Live-contract tests (local pre-flight) | `make live-contract-local` with `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID` set against a sacrificial workspace. **Local green is NOT Group 1 launch-candidate evidence** — two consecutive scheduled-cron greens in `.github/workflows/live-contract.yml` on the candidate SHA are the authoritative bar. |
+| Live-contract tests (read-only, raw) | `go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/...` — prefer `make live-contract-local` which wraps this with evidence warnings. |
 | Refresh generated docs/help | `go run ./cmd/gen-config-docs -mode=all && make gen-tool-catalog` |
 | Vuln scan | `make verify-vuln` |
 | FIPS verify | `make verify-fips` |
@@ -175,3 +176,17 @@ X" — hidden uncertainty is worse than documented uncertainty.
 If the uncertainty is a security or default-weakening question:
 **stop and ask the maintainer.** The cost of waiting is low; the
 cost of guessing wrong is high.
+
+## Local vs. CI evidence
+
+`go test -tags=livee2e ./tests/...` without the required env vars
+silently skips every live-contract test and reports `ok` in <0.5s.
+The `TestLiveContractSkipSentinel` test (under the same build tag)
+detects this and fails with an explicit message. If you see that
+failure, set the env vars or stop claiming evidence.
+
+Even with env vars set, a local green run is **not** Group 1
+launch-candidate evidence. Only two consecutive scheduled (cron)
+green runs of `.github/workflows/live-contract.yml` on the
+candidate SHA count. Use `make live-contract-local` for pre-flight
+debugging — it prints this warning automatically.
