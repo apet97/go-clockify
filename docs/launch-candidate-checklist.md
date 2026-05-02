@@ -13,8 +13,9 @@ checkout. "Worked once" is not green.
 
 > **Strict agent rule.** Do not declare "launch candidate" until
 > every group below is ticked **and** the group-level definition of
-> done is satisfied. See [`../CLAUDE.md`](../CLAUDE.md) "Strict agent
-> rules" for the binding constraints.
+> done is satisfied. The binding constraints live in the
+> workstation-private `CLAUDE.md` at the repo root (gitignored;
+> see "Strict agent rules" there).
 
 ---
 

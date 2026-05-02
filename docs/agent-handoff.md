@@ -14,9 +14,10 @@ of useful work and commit it.
 
 ## Read first (in this order)
 
-1. [`../CLAUDE.md`](../CLAUDE.md) — project conventions, "Strict
-   agent rules", and the canonical "Launch Candidate Goal"
-   statement.
+1. The workstation-private `CLAUDE.md` at the repo root
+   (gitignored — fetch from your local clone or the maintainer)
+   — project conventions, "Strict agent rules", and the
+   canonical "Launch Candidate Goal" statement.
 2. [`launch-candidate-checklist.md`](launch-candidate-checklist.md)
    — the bound list of what must be true to declare launch
    candidate.
@@ -34,23 +35,24 @@ of useful work and commit it.
 
 ## Current known blockers
 
-In priority order. Each blocker has a slash command that scopes
-the investigation; if you are running outside Claude Code, treat
-the slash-command file as a checklist.
+In priority order. Each blocker has a Claude-Code slash command
+that scopes the investigation; the slash-command files live
+under the workstation-private `.claude/commands/` directory
+(gitignored). If you are running outside Claude Code, treat the
+prose below as the checklist.
 
 1. **Live contract failures** — `.github/workflows/live-contract.yml`
    has been intermittently red. The promotion gate starts with
    two consecutive green nightlies. Slash command:
-   [`../.claude/commands/fix-live-contract.md`](../.claude/commands/fix-live-contract.md).
+   `/fix-live-contract`.
 2. **No shared-service Postgres E2E** — pieces exist
    (`make test-postgres`, `TestLiveCreateUpdateDeleteEntryAuditPhases`)
    but no single test exercises the full shared-service stack
-   end-to-end. Slash command:
-   [`../.claude/commands/postgres-e2e.md`](../.claude/commands/postgres-e2e.md).
+   end-to-end. Slash command: `/postgres-e2e`.
 3. **ADR 0017 unresolved** — streamable-HTTP session rehydration
    is "Proposed + band-aid". Either ship the fix or document the
    single-replica limitation. Slash command:
-   [`../.claude/commands/session-rehydration.md`](../.claude/commands/session-rehydration.md).
+   `/session-rehydration`.
 4. **Auth-model docs scattered** — a reviewer cannot map a
    Clockify auth requirement to an MCP config in five minutes.
    Consolidation lives in `docs/production-readiness.md` or a new
@@ -66,8 +68,9 @@ the slash-command file as a checklist.
    all green on the candidate tag with findings filed in
    `SECURITY.md`.
 
-For the full audit framing see
-[`/launch-candidate`](../.claude/commands/launch-candidate.md).
+For the full audit framing run `/launch-candidate` from a Claude
+Code session inside this repo (the slash command is gitignored
+under `.claude/commands/`).
 
 ## Likely files to inspect first
 
