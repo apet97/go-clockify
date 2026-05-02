@@ -6,13 +6,26 @@ Prepared 2026-05-02 for human + Claude + Codex review before merge to
 ## Branch state
 
 - **Branch:** `fwbranch`
-- **Base:** `origin/main` at `50aa87f` (chore(governance): promote Shared-service Postgres E2E to required check)
-- **HEAD:** `60350da` (docs(api): add MCP API coverage matrix and fwbranch review handoff)
-- **Commits ahead of origin/main:** 6
+- **Review base:** `origin/main` at `2e59e2b` (docs(agents): add durable launch handoff for AI agents)
+- **Validated tip:** `8fb625e` (docs(handoff): update push status after fwbranch push)
+- **Review span:** 17 commits ahead of `origin/main` before this docs-only
+  handoff refresh. If this file is read from the final handoff commit, the
+  branch has one additional docs-only commit.
 
 ## Commits
 
 ```
+8fb625e docs(handoff): update push status after fwbranch push
+70dc04e docs(checklist): cross-reference api-coverage.md from Group 1
+ac4fc30 docs(agents): document evidence gate in Local vs CI evidence section
+c31f64f docs(live): promote make live-contract-local as preferred local path
+c74b803 test(scripts): add Group 7 box pattern to evidence gate regression tests
+8e1eb2f test(scripts): add workflow_run_id and missing-file test cases to evidence gate regression
+354d28f docs(handoff): add Wave 1 quality fixes summary to review handoff
+58d8800 docs(api): fix missing tool and stale classification counts in coverage matrix
+8c092c7 docs(gap): cross-reference api-coverage.md from gap analysis
+c7be8ba docs(api): add per-tool dry-run breakdown and policy-mode coverage table
+5b7e84b docs(handoff): sync fwbranch review handoff to HEAD at 60350da
 60350da docs(api): add MCP API coverage matrix and fwbranch review handoff
 bed943b scripts(test): add regression test for launch-evidence-gate
 1e6faa7 scripts(parity): add launch-evidence-gate to prevent premature box-ticking
@@ -25,11 +38,11 @@ bed943b scripts(test): add regression test for launch-evidence-gate
 
 ### 1. False-green prevention (core theme)
 
-5 of the 6 commits prevent misinterpreting skipped local live tests as passing
-evidence. Before these changes, `go test -tags=livee2e ./tests/...` without
-the required env vars (`CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`,
-`CLOCKIFY_WORKSPACE_ID`) would silently skip every test and report `ok` —
-visually indistinguishable from a real green run.
+The core theme is preventing skipped local live tests from being mistaken
+for passing evidence. Before these changes, `go test -tags=livee2e
+./tests/...` without the required env vars (`CLOCKIFY_RUN_LIVE_E2E=1`,
+`CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID`) would silently skip every
+test and report `ok`, visually indistinguishable from a real green run.
 
 **What changed (false-green prevention):**
 - `tests/e2e_live_skip_sentinel_test.go` — `TestLiveContractSkipSentinel`
@@ -47,13 +60,16 @@ visually indistinguishable from a real green run.
 
 ### 2. API coverage and reviewer readiness
 
-The 6th commit (`60350da`) adds two new docs for reviewer handoff:
+Commit `60350da` added two new docs for reviewer handoff, and the follow-up
+docs commits corrected counts, coverage gaps, and cross-links:
 
 - `docs/api-coverage.md` — maps all 124 MCP tools to Clockify API endpoints,
   classifies each as read-only/mutating/destructive/billing/admin, lists
   current test coverage per tool, documents schema-drift/dry-run/policy gaps,
   and establishes the evidence hierarchy (scheduled workflow > manual dispatch
-  > local with env vars > local without env vars as non-evidence)
+  > local with env vars > local without env vars as non-evidence). Follow-ups
+  added the missing `clockify_weekly_summary`, corrected Tier 2 counts, and
+  added per-tool dry-run plus per-mode policy coverage tables.
 - `docs/fwbranch-review-handoff.md` — this file; provides reviewer prompts
   for Claude and Codex/OpenAI, a human merge checklist, and live evidence
   caveats
@@ -61,33 +77,35 @@ The 6th commit (`60350da`) adds two new docs for reviewer handoff:
 ### 3. Files changed
 
 ```
- AGENTS.md                                  |  17 +++-
- Makefile                                   |  55 +++++++++++-
+ AGENTS.md                                  |  25 +-
+ Makefile                                   |  55 +++-
  docs/agent-handoff.md                      |   9 +-
- docs/api-coverage.md                       | 353 +++++++++++++++++++++++++++++
- docs/fwbranch-review-handoff.md            | 176 ++++++++++++++++
- scripts/check-launch-evidence-gate.sh      | 134 +++++++++++++++++++
- scripts/test-check-launch-evidence-gate.sh |  88 ++++++++++++
+ docs/api-coverage.md                       | 390 +++++++++++++++++++++++++++++
+ docs/fwbranch-review-handoff.md            | 219 ++++++++++++++++
+ docs/launch-candidate-checklist.md         |   4 +
+ docs/live-tests.md                         |  16 ++
+ docs/official-clockify-mcp-gap-analysis.md |  10 +
+ scripts/check-launch-evidence-gate.sh      | 134 ++++++++++
+ scripts/test-check-launch-evidence-gate.sh | 125 +++++++++
  tests/e2e_live_mcp_test.go                 |   2 +
  tests/e2e_live_schema_test.go              |   1 +
- tests/e2e_live_skip_sentinel_test.go       |  37 ++++++
+ tests/e2e_live_skip_sentinel_test.go       |  37 +++
  tests/e2e_live_test.go                     |   2 +
- 11 files changed, 871 insertions(+), 3 deletions(-)
+ 14 files changed, 1054 insertions(+), 8 deletions(-)
 ```
 
 ## Checks run (2026-05-02)
 
 | Check | Result |
 |-------|--------|
-| `git diff --check` | OK |
-| `make doc-parity` | OK |
-| `make launch-checklist-parity` | OK |
-| `go test ./...` (all packages) | OK — all green (24 packages, no skips) |
-| `make release-check` | Not re-run in this session; last run passed on fwbranch at bed943b |
+| `make check` | OK — requires local port binding for `httptest` packages |
+| `make doc-parity` | OK — includes launch checklist parity and evidence gate |
+| `make config-doc-parity` | OK |
+| `make catalog-drift` | OK |
 
 ## Checks not run
 
-- `make release-check` — requires gRPC build tags; deferred per wave structure
+- `make release-check` — not part of this local handoff refresh
 - `make live-contract-local` — requires sacrificial workspace credentials
   not available in this session
 - `make verify-vuln` / `make verify-fips` — security scan tools not
@@ -143,13 +161,14 @@ and fixed on fwbranch before review:
 | `scripts/check-launch-evidence-gate.sh` | New parity script — parses launch-candidate-checklist.md and maps checkboxes to workflow evidence. Review the checkbox→evidence mapping logic. |
 | `scripts/test-check-launch-evidence-gate.sh` | Regression test for the evidence gate — review that test fixtures accurately model real checklist state. |
 | `Makefile` (live-contract-local target) | New target — review the evidence warning text and env-var passthrough. |
-| `AGENTS.md` | Updated with evidence hierarchy — review for consistency with CLAUDE.md agent rules. |
+| `AGENTS.md` and `docs/agent-handoff.md` | Updated with evidence hierarchy — review for consistency with the launch checklist and optional workstation `CLAUDE.md`. |
 | `docs/api-coverage.md` | Full 124-tool coverage matrix with endpoint mappings, classifications, dry-run/policy breakdown, and gaps. Classification counts cross-verified against tool-catalog.json. |
+| `docs/launch-candidate-checklist.md` | Group 1 now cross-references `docs/api-coverage.md`; verify no external-evidence boxes were ticked prematurely. |
 
 ## Claude review prompt
 
 ```
-Review the 6 commits on fwbranch (43f6788 through 60350da) for:
+Review the 17 commits on fwbranch (43f6788 through 8fb625e) for:
 
 1. False-green prevention correctness: does TestLiveContractSkipSentinel
    correctly detect the all-skipped case without false-positiving when
@@ -163,8 +182,9 @@ Review the 6 commits on fwbranch (43f6788 through 60350da) for:
    pass through env vars? Does the evidence banner render correctly
    on both success and failure paths?
 
-4. Doc consistency: do AGENTS.md and agent-handoff.md agree on the
-   evidence hierarchy? Are there contradictions with CLAUDE.md?
+4. Doc consistency: do AGENTS.md, agent-handoff.md, live-tests.md,
+   api-coverage.md, and the launch checklist agree on the evidence
+   hierarchy? Are there contradictions with any local CLAUDE.md?
 
 5. API coverage accuracy: does docs/api-coverage.md correctly classify
    every MCP tool by read-only/mutating/destructive? Are the endpoint
@@ -177,7 +197,7 @@ Review the 6 commits on fwbranch (43f6788 through 60350da) for:
 ## Codex/OpenAI review prompt
 
 ```
-Review fwbranch (6 commits ahead of origin/main) for the go-clockify
+Review fwbranch (17 commits ahead of origin/main) for the go-clockify
 MCP server. Focus on:
 
 1. The skip sentinel test (tests/e2e_live_skip_sentinel_test.go):
@@ -198,7 +218,7 @@ MCP server. Focus on:
 5. Makefile changes: are the new targets idempotent? Do they depend
    on tools that might not be installed?
 
-Files changed: 11 files, +871/-3 lines.
+Files changed: 14 files, +1054/-8 lines.
 Diff stat: git diff --stat origin/main..fwbranch
 ```
 
@@ -212,7 +232,9 @@ Diff stat: git diff --stat origin/main..fwbranch
       and passes when at least one runs (drift-check)
 - [ ] Confirmed `make launch-checklist-parity` passes (gate wired)
 - [ ] Confirmed `make doc-parity` passes
-- [ ] Confirmed `go test ./...` passes on fwbranch HEAD
+- [ ] Confirmed `make config-doc-parity` passes
+- [ ] Confirmed `make catalog-drift` passes
+- [ ] Confirmed `make check` passes on fwbranch HEAD
 - [ ] No secrets, .env files, .claude/, or machine-specific paths in diff
 - [ ] Push to origin/fwbranch
 - [ ] CI green on fwbranch PR

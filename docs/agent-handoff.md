@@ -232,8 +232,8 @@ exist, propose it as a Makefile target before using it.
 
 ## Non-negotiable safety constraints
 
-These are restated from `CLAUDE.md` "Strict agent rules". If a
-constraint conflicts with a task, the task is wrong, not the
+These are restated from `AGENTS.md` and the launch checklist. If
+a constraint conflicts with a task, the task is wrong, not the
 constraint.
 
 1. **Do not declare launch-ready until live-contract + shared-service
@@ -268,12 +268,13 @@ constraint.
    landing a multi-commit wave, push only when the whole group is
    green locally.
 8. **Do not modify generator-owned files by hand.** Listed in
-   `CLAUDE.md` "Generator-owned files".
+   `CONTRIBUTING.md` and `AGENTS.md`.
 9. **Do not invent commands.** If a command is not in `Makefile`,
    `.github/workflows/`, or the docs, propose it as a Makefile
    target first.
-10. **`CLAUDE.md` and this file are gitignored.** Do not try to
-    commit them; they are per-workstation context.
+10. **Only workstation-private context is gitignored.** `CLAUDE.md`
+    and `.claude/commands/` may exist locally; do not commit them.
+    `AGENTS.md` and this handoff are tracked.
 
 ## Suggested implementation order
 
