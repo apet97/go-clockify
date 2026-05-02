@@ -115,23 +115,65 @@ func (c *Client) SetUserAgent(ua string) {
 }
 
 func (c *Client) Get(ctx context.Context, path string, query map[string]string, out any) error {
-	return c.doJSON(ctx, http.MethodGet, path, query, nil, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
 }
 
 func (c *Client) Post(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPost, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, nil, body, out)
 }
 
 func (c *Client) Put(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPut, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, nil, body, out)
 }
 
 func (c *Client) Patch(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPatch, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPatch, path, nil, body, out)
 }
 
 func (c *Client) Delete(ctx context.Context, path string) error {
-	return c.doJSON(ctx, http.MethodDelete, path, nil, nil, nil)
+	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, nil, nil)
+}
+
+// ReportsBaseURL returns the base URL for endpoints that live on
+// Clockify's reports host (reports.api.clockify.me/v1). The reports
+// API is a separate host from api.clockify.me — hitting the reports
+// paths on the primary host returns 404 ("No static resource"), and
+// hitting them on the reports host with the /api/v1 prefix is also
+// 404. See findings/shared-reports.md.
+//
+// Derivation: when the primary base URL matches the canonical
+// production host, swap to reports.api.clockify.me and drop the /api
+// segment. Otherwise (test stubs, custom proxies, on-prem mirrors),
+// return the primary base URL unchanged so existing fixtures continue
+// to work without per-test wiring.
+func (c *Client) ReportsBaseURL() string {
+	const canonical = "https://api.clockify.me/api/v1"
+	const reports = "https://reports.api.clockify.me/v1"
+	if c.baseURL == canonical {
+		return reports
+	}
+	return c.baseURL
+}
+
+// GetReports performs a GET against the reports host. Use this for
+// shared-report endpoints; everything else should stay on Get.
+func (c *Client) GetReports(ctx context.Context, path string, query map[string]string, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, nil, out)
+}
+
+// PostReports performs a POST against the reports host.
+func (c *Client) PostReports(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPost, path, nil, body, out)
+}
+
+// PutReports performs a PUT against the reports host.
+func (c *Client) PutReports(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPut, path, nil, body, out)
+}
+
+// DeleteReports performs a DELETE against the reports host.
+func (c *Client) DeleteReports(ctx context.Context, path string) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
 }
 
 func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string) ([]T, error) {
@@ -161,7 +203,7 @@ func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[s
 	return all, nil
 }
 
-func (c *Client) doJSON(ctx context.Context, method, path string, query map[string]string, body any, out any) error {
+func (c *Client) doJSON(ctx context.Context, baseURL, method, path string, query map[string]string, body any, out any) error {
 	var payload []byte
 	if body != nil {
 		buf := getBodyBuf()
@@ -211,7 +253,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
-		err := c.doOnce(ctx, method, path, endpoint, query, payload, out)
+		err := c.doOnce(ctx, baseURL, method, path, endpoint, query, payload, out)
 		if err == nil {
 			return nil
 		}
@@ -230,7 +272,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 	return fmt.Errorf("request failed without specific error")
 }
 
-func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, query map[string]string, payload []byte, out any) error {
+func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint string, query map[string]string, payload []byte, out any) error {
 	ctx, span := tracing.Default.Start(ctx, "clockify.http")
 	span.SetAttribute("upstream.endpoint", endpoint)
 	span.SetAttribute("http.method", method)
@@ -247,7 +289,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	if path != "" && path[0] != '/' {
 		path = "/" + path
 	}
-	u, err := url.Parse(c.baseURL + path)
+	u, err := url.Parse(baseURL + path)
 	if err != nil {
 		return err
 	}

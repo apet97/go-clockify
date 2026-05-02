@@ -87,12 +87,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 			{"clockify_list_approval_requests", nil, ""},
 		}},
 		{"shared_reports", []call{
-			// /workspaces/{id}/shared-reports returns 404 ("No static
-			// resource" / code 3000). This Clockify feature is exposed
-			// via the reports API host (reports.api.clockify.me), not
-			// the global API host. Likely fix: route shared-report
-			// handlers at the reports base URL.
-			{"clockify_list_shared_reports", nil, "No static resource"},
+			{"clockify_list_shared_reports", nil, ""},
 		}},
 		{"user_admin", []call{
 			{"clockify_list_user_groups", nil, ""},
