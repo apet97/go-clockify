@@ -72,7 +72,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_expense` | no | no | no | `write` | Create a new expense |
+| `clockify_create_expense` | no | no | no | `write` | Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user. |
 | `clockify_create_expense_category` | no | no | no | `write` | Create a new expense category |
 | `clockify_delete_expense` | no | yes | no | `destructive` | Delete an expense by ID |
 | `clockify_delete_expense_category` | no | yes | no | `destructive` | Delete an expense category |
@@ -80,7 +80,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_get_expense` | yes | no | yes | `read` | Get a single expense by ID |
 | `clockify_list_expense_categories` | yes | no | yes | `read` | List expense categories in the workspace |
 | `clockify_list_expenses` | yes | no | yes | `read` | List expenses in the workspace with pagination |
-| `clockify_update_expense` | no | no | no | `write` | Update an existing expense |
+| `clockify_update_expense` | no | no | no | `write` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent. |
 | `clockify_update_expense_category` | no | no | no | `write` | Update an expense category |
 
 ### `groups_holidays`

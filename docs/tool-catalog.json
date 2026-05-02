@@ -4535,7 +4535,7 @@
     },
     {
       "name": "clockify_create_expense",
-      "description": "Create a new expense",
+      "description": "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
@@ -4548,29 +4548,42 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
-            "description": "Expense amount",
+            "description": "Expense amount (major currency units)",
             "type": "number"
           },
+          "billable": {
+            "description": "Whether the expense is billable",
+            "type": "boolean"
+          },
           "category_id": {
-            "description": "Expense category ID",
+            "description": "Expense category ID (required)",
             "type": "string"
           },
           "date": {
-            "description": "Expense date (YYYY-MM-DD)",
+            "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
-          "description": {
-            "description": "Expense description",
+          "notes": {
+            "description": "Free-form notes",
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID",
+            "description": "Project ID (optional)",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Task ID (optional)",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "User the expense is logged against; defaults to the calling user",
             "type": "string"
           }
         },
         "required": [
           "amount",
-          "date"
+          "date",
+          "category_id"
         ],
         "type": "object"
       },
@@ -4946,7 +4959,7 @@
     },
     {
       "name": "clockify_update_expense",
-      "description": "Update an existing expense",
+      "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
@@ -4961,24 +4974,54 @@
           "amount": {
             "type": "number"
           },
+          "billable": {
+            "type": "boolean"
+          },
           "category_id": {
             "type": "string"
           },
-          "date": {
-            "type": "string"
+          "change_fields": {
+            "description": "Field tokens to update; one or more of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE",
+            "items": {
+              "enum": [
+                "USER",
+                "DATE",
+                "PROJECT",
+                "TASK",
+                "CATEGORY",
+                "NOTES",
+                "AMOUNT",
+                "BILLABLE",
+                "FILE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
           },
-          "description": {
+          "date": {
+            "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ",
             "type": "string"
           },
           "expense_id": {
             "type": "string"
           },
+          "notes": {
+            "type": "string"
+          },
           "project_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Reassign the expense to this user",
             "type": "string"
           }
         },
         "required": [
-          "expense_id"
+          "expense_id",
+          "change_fields"
         ],
         "type": "object"
       },

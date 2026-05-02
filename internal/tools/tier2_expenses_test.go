@@ -46,6 +46,17 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 			}
 			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 200})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+			ct := r.Header.Get("Content-Type")
+			if !strings.HasPrefix(ct, "multipart/form-data") {
+				t.Fatalf("update_expense expected multipart/form-data, got %q", ct)
+			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("update_expense parse multipart: %v", err)
+			}
+			cf := r.MultipartForm.Value["changeFields"]
+			if len(cf) == 0 {
+				t.Fatalf("update_expense missing changeFields")
+			}
 			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 250})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			w.WriteHeader(http.StatusNoContent)
@@ -97,18 +108,34 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 		t.Fatal("expected error for missing date")
 	}
 
-	// updateExpense — every optional field set
+	// updateExpense — every optional field set + change_fields
 	res, err = svc.updateExpense(ctx, map[string]any{
-		"expense_id":  "exp1",
-		"amount":      250.0,
-		"date":        "2026-04-12",
-		"category_id": "cat1",
-		"project_id":  "p2",
-		"description": "Dinner",
+		"expense_id":    "exp1",
+		"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES"},
+		"amount":        250.0,
+		"date":          "2026-04-12T00:00:00Z",
+		"category_id":   "cat1",
+		"project_id":    "p2",
+		"notes":         "Dinner",
 	})
 	mustOK(t, res, err, "clockify_update_expense")
 	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty expense_id")
+	}
+	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1"}); err == nil {
+		t.Fatal("expected validation error for missing change_fields")
+	}
+	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"BOGUS"}}); err == nil {
+		t.Fatal("expected validation error for unsupported change_fields token")
+	}
+	// Drift sentinel: regression to PUT JSON would fail the
+	// content-type assertion in the mock above before this line; this
+	// extra branch ensures the change_fields enum gate also stays
+	// hot — flipping "USER" to "" disables the validator and the
+	// upstream silently no-ops the update, which the next assertion
+	// would not catch on its own.
+	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"USER"}, "user_id": "u-7"}); err != nil {
+		t.Fatalf("change_fields=[USER] with user_id should succeed; got %v", err)
 	}
 
 	// deleteExpense — dry-run, executed, validation
