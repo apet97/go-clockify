@@ -18,11 +18,11 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 19 | 39 | 58 |
-| Mutating (non-destructive) | 12 | 34 | 46 |
+| Read-only | 20 | 35 | 55 |
+| Mutating (non-destructive) | 12 | 43 | 55 |
 | Destructive | 1 | 13 | 14 |
-| Billing | 0 | 6 | 6 |
-| Admin | 0 | 4 | 4 |
+| Billing | 0 | 8 | 8 |
+| Admin | 0 | 7 | 7 |
 | **Total tools** | **33** | **91** | **124** |
 
 ## Evidence types
@@ -45,7 +45,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 `/workspaces/{ws}/users`, `/workspaces/{ws}/reports/*`,
 `/user`, `/workspaces`.
 
-### Read-only (19 tools)
+### Read-only (20 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
@@ -67,6 +67,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_summary_report` | `GET /workspaces/{ws}/reports/summary` | unit |
 | `clockify_timer_status` | `GET /workspaces/{ws}/user/{uid}/time-entries?in-progress=true` | unit |
 | `clockify_today_entries` | `GET /workspaces/{ws}/user/{uid}/time-entries` (filtered) | unit |
+| `clockify_weekly_summary` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries` by day + project) | unit |
 | `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
 
 ### Mutating — non-destructive (12 tools)
@@ -364,8 +365,8 @@ in schema have never been exercised against a live Clockify workspace.
 
 ## Recommended next tests (safe, in priority order)
 
-1. Read-only live tests for the remaining 15 Tier 1 read-only tools
-   (10 of 19 are already covered by `TestE2EReadOnly`)
+1. Read-only live tests for the remaining 16 Tier 1 read-only tools
+   (4 of 20 are covered by `TestE2EReadOnly`)
 2. Read-only live tests for high-value Tier 2 read-only tools
    (e.g., `clockify_list_custom_fields`, `clockify_list_webhooks`,
    `clockify_list_schedules`)
@@ -383,3 +384,7 @@ in schema have never been exercised against a live Clockify workspace.
 | `.github/workflows/ci.yml` (PR) | Authoritative for unit/integration tests |
 | `.github/workflows/live-contract.yml` (manual dispatch) | Strong evidence — one-time verification |
 | `.github/workflows/live-contract.yml` (scheduled cron) | **Authoritative** — the only evidence that counts for Group 1 launch-gate checkboxes |
+
+---
+
+*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-02. Re-run verification after `make gen-tool-catalog`.*
