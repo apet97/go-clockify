@@ -441,6 +441,14 @@ func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint str
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
 	}
+	if n == 0 {
+		// Some Clockify endpoints (notably the scheduling per-user
+		// totals path) reply 200 with a zero-byte body when the query
+		// matches no rows. Treat that as a successful empty response
+		// rather than letting json.Unmarshal surface "unexpected end
+		// of JSON input" as a tool error.
+		return nil
+	}
 	return json.Unmarshal(respBuf.Bytes(), out)
 }
 
