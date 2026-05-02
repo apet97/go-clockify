@@ -6,13 +6,14 @@ Prepared 2026-05-02 for human + Claude + Codex review before merge to
 ## Branch state
 
 - **Branch:** `fwbranch`
-- **Base:** `origin/main` at `2e59e2b` (docs(agents): add durable launch handoff for AI agents)
-- **HEAD:** `bed943b` (scripts(test): add regression test for launch-evidence-gate)
-- **Commits ahead of origin/main:** 5
+- **Base:** `origin/main` at `50aa87f` (chore(governance): promote Shared-service Postgres E2E to required check)
+- **HEAD:** `60350da` (docs(api): add MCP API coverage matrix and fwbranch review handoff)
+- **Commits ahead of origin/main:** 6
 
 ## Commits
 
 ```
+60350da docs(api): add MCP API coverage matrix and fwbranch review handoff
 bed943b scripts(test): add regression test for launch-evidence-gate
 1e6faa7 scripts(parity): add launch-evidence-gate to prevent premature box-ticking
 82452bf docs(agents): reference live-contract-local and skip sentinel
@@ -24,13 +25,13 @@ bed943b scripts(test): add regression test for launch-evidence-gate
 
 ### 1. False-green prevention (core theme)
 
-All 5 commits prevent misinterpreting skipped local live tests as passing
+5 of the 6 commits prevent misinterpreting skipped local live tests as passing
 evidence. Before these changes, `go test -tags=livee2e ./tests/...` without
 the required env vars (`CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`,
 `CLOCKIFY_WORKSPACE_ID`) would silently skip every test and report `ok` —
 visually indistinguishable from a real green run.
 
-**What changed:**
+**What changed (false-green prevention):**
 - `tests/e2e_live_skip_sentinel_test.go` — `TestLiveContractSkipSentinel`
   fails explicitly when every `livee2e` test skipped, turning a misleading
   `ok` into an explicit `FAIL`
@@ -44,19 +45,34 @@ visually indistinguishable from a real green run.
 - `AGENTS.md` and `docs/agent-handoff.md` — document the new targets,
   skip-sentinel, and evidence hierarchy
 
-### 2. Files changed
+### 2. API coverage and reviewer readiness
+
+The 6th commit (`60350da`) adds two new docs for reviewer handoff:
+
+- `docs/api-coverage.md` — maps all 124 MCP tools to Clockify API endpoints,
+  classifies each as read-only/mutating/destructive/billing/admin, lists
+  current test coverage per tool, documents schema-drift/dry-run/policy gaps,
+  and establishes the evidence hierarchy (scheduled workflow > manual dispatch
+  > local with env vars > local without env vars as non-evidence)
+- `docs/fwbranch-review-handoff.md` — this file; provides reviewer prompts
+  for Claude and Codex/OpenAI, a human merge checklist, and live evidence
+  caveats
+
+### 3. Files changed
 
 ```
  AGENTS.md                                  |  17 +++-
  Makefile                                   |  55 +++++++++++-
  docs/agent-handoff.md                      |   9 +-
- scripts/check-launch-evidence-gate.sh      | 134 +++++++++++++++++++++++++++++
- scripts/test-check-launch-evidence-gate.sh |  88 +++++++++++++++++++
+ docs/api-coverage.md                       | 353 +++++++++++++++++++++++++++++
+ docs/fwbranch-review-handoff.md            | 176 ++++++++++++++++
+ scripts/check-launch-evidence-gate.sh      | 134 +++++++++++++++++++
+ scripts/test-check-launch-evidence-gate.sh |  88 ++++++++++++
  tests/e2e_live_mcp_test.go                 |   2 +
  tests/e2e_live_schema_test.go              |   1 +
- tests/e2e_live_skip_sentinel_test.go       |  37 ++++++++
+ tests/e2e_live_skip_sentinel_test.go       |  37 ++++++
  tests/e2e_live_test.go                     |   2 +
- 9 files changed, 342 insertions(+), 3 deletions(-)
+ 11 files changed, 871 insertions(+), 3 deletions(-)
 ```
 
 ## Checks run (2026-05-02)
@@ -66,17 +82,17 @@ visually indistinguishable from a real green run.
 | `git diff --check` | OK |
 | `make doc-parity` | OK |
 | `make launch-checklist-parity` | OK |
-| `go test ./...` (all packages) | OK — all green |
-| `make release-check` | Passed (fmt, vet, lint, coverage floors, parity) — gRPC/postgres build tags not exercised in this run |
+| `go test ./...` (all packages) | OK — all green (24 packages, no skips) |
+| `make release-check` | Not re-run in this session; last run passed on fwbranch at bed943b |
 
 ## Checks not run
 
-- `make release-check` — requires gRPC build tags, postgres build tags,
-  and has not been completed in this session
+- `make release-check` — requires gRPC build tags; deferred per wave structure
 - `make live-contract-local` — requires sacrificial workspace credentials
   not available in this session
 - `make verify-vuln` / `make verify-fips` — security scan tools not
   invoked in this pass
+- `make shared-service-e2e` — requires Postgres DSN not available locally
 - CI (`ci.yml`) — not triggered; fwbranch is not yet pushed
 
 ## Live evidence caveats
@@ -115,7 +131,7 @@ visually indistinguishable from a real green run.
 ## Claude review prompt
 
 ```
-Review the 5 commits on fwbranch (43f6788 through bed943b) for:
+Review the 6 commits on fwbranch (43f6788 through 60350da) for:
 
 1. False-green prevention correctness: does TestLiveContractSkipSentinel
    correctly detect the all-skipped case without false-positiving when
@@ -132,14 +148,18 @@ Review the 5 commits on fwbranch (43f6788 through bed943b) for:
 4. Doc consistency: do AGENTS.md and agent-handoff.md agree on the
    evidence hierarchy? Are there contradictions with CLAUDE.md?
 
-5. Security: do any of these changes weaken security defaults, relax
+5. API coverage accuracy: does docs/api-coverage.md correctly classify
+   every MCP tool by read-only/mutating/destructive? Are the endpoint
+   mappings accurate against internal/clockify/ and internal/paths/?
+
+6. Security: do any of these changes weaken security defaults, relax
    policy enforcement, or introduce new auth bypass paths?
 ```
 
 ## Codex/OpenAI review prompt
 
 ```
-Review fwbranch (5 commits ahead of origin/main) for the go-clockify
+Review fwbranch (6 commits ahead of origin/main) for the go-clockify
 MCP server. Focus on:
 
 1. The skip sentinel test (tests/e2e_live_skip_sentinel_test.go):
@@ -153,10 +173,14 @@ MCP server. Focus on:
 3. The regression test for the evidence gate: does test-check-launch-
    evidence-gate.sh exercise the gate script's error paths?
 
-4. Makefile changes: are the new targets idempotent? Do they depend
+4. The API coverage matrix (docs/api-coverage.md): are all 124 tools
+   accounted for? Are the endpoint mappings verifiable against the
+   source? Are dry-run/policy gaps honestly documented?
+
+5. Makefile changes: are the new targets idempotent? Do they depend
    on tools that might not be installed?
 
-Files changed: 9 files, +342/-3 lines.
+Files changed: 11 files, +871/-3 lines.
 Diff stat: git diff --stat origin/main..fwbranch
 ```
 
@@ -165,6 +189,7 @@ Diff stat: git diff --stat origin/main..fwbranch
 - [ ] `make release-check` green locally
 - [ ] Reviewed `tests/e2e_live_skip_sentinel_test.go` for correctness
 - [ ] Reviewed `scripts/check-launch-evidence-gate.sh` for bash safety
+- [ ] Reviewed `docs/api-coverage.md` for tool classification accuracy
 - [ ] Verified `TestLiveContractSkipSentinel` fails when all live tests skip
       and passes when at least one runs (drift-check)
 - [ ] Confirmed `make launch-checklist-parity` passes (gate wired)
