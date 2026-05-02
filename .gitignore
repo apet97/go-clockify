@@ -27,11 +27,12 @@ desktop.ini
 .serena/
 .remember/
 .planning/
-# Per-workstation assistant context files. Contributors may keep
-# their own CLAUDE.md / AGENTS.md at the repo root; they're not
-# part of the shipped project.
+# Per-workstation Claude Code context. Contributors may keep their
+# own CLAUDE.md at the repo root; it carries machine-specific
+# preferences and is not part of the shipped project. AGENTS.md, by
+# contrast, is the standard agent-spec entrypoint (read by Codex /
+# agent runners) and IS tracked — see the file at the repo root.
 CLAUDE.md
-AGENTS.md
 .claude-loop/
 
 *.test

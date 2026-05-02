@@ -12,12 +12,45 @@ of useful work and commit it.
 > If you ignore the safety constraints in this document the
 > maintainer will revert your work. They are not negotiable.
 
+## Latest pushed state
+
+- **HEAD:** `f33b113 chore(launch): close groups 2/3/4, wire
+  schema-diff, harden forward_auth` — pushed to `origin/main` on
+  2026-05-02.
+- **Closed:** Groups 2 (shared-service Postgres E2E,
+  required-gated on `main` as commit `50aa87f`), 3 (ADR 0017
+  Path A — streamable-HTTP cross-instance session rehydration),
+  4 (auth-model docs + `forward_auth` cardinality/size guard),
+  5 (per-profile "How to verify this deployment" sections,
+  client matrix, support matrix).
+- **Open:**
+  - **Group 1** — two consecutive *scheduled* (cron) green runs
+    of `live-contract.yml` on the candidate SHA, with the
+    `TestLiveReadSideSchemaDiff` evidence captured. The rolling
+    `live-test-failure` issue is closed; two manual-dispatch
+    runs are green; cron is calendar-bound.
+  - **Group 6** — security walk-through (`make verify-vuln`,
+    `make verify-fips`, gitleaks, semgrep) re-run on the final
+    candidate tag.
+  - **Group 7** — bench / release readiness on the candidate
+    tag: cut `vX.Y.Z-rc.N`, run `release-smoke.yml`, verify
+    sigstore + SLSA artefact attestation, archive the
+    `doctor --strict` output.
+
+If a local-shell run of the live-contract suite reports `ok`
+suspiciously fast (≤ ~0.5s), the env-var gate
+(`CLOCKIFY_RUN_LIVE_E2E=1` + `CLOCKIFY_API_KEY` +
+`CLOCKIFY_WORKSPACE_ID`) was not visible to the test process and
+it took the silent skip path — `live-contract.yml` is the
+authoritative evidence path.
+
 ## Read first (in this order)
 
-1. The workstation-private `CLAUDE.md` at the repo root
-   (gitignored — fetch from your local clone or the maintainer)
-   — project conventions, "Strict agent rules", and the
-   canonical "Launch Candidate Goal" statement.
+1. [`../AGENTS.md`](../AGENTS.md) — standard agent-spec
+   entrypoint at the repo root with the binding safety
+   constraints and tight-loop commands. **Always tracked.** If a
+   workstation `CLAUDE.md` also exists it is gitignored
+   per-workstation context, not a source of binding rules.
 2. [`launch-candidate-checklist.md`](launch-candidate-checklist.md)
    — the bound list of what must be true to declare launch
    candidate.
@@ -25,8 +58,8 @@ of useful work and commit it.
    — the narrative of where the project is, what is strong, and
    what blocks tier 3 readiness.
 4. [`adr/0017-streamable-http-session-rehydration.md`](adr/0017-streamable-http-session-rehydration.md)
-   — the open architectural decision; its resolution is on the
-   critical path.
+   — Accepted; Path A landed. Read this before touching session
+   state.
 5. [`live-tests.md`](live-tests.md) — how the live-contract
    nightly works and how the sacrificial workspace is wired.
 6. [`deploy/production-profile-shared-service.md`](deploy/production-profile-shared-service.md)
