@@ -20,17 +20,17 @@ For operator triage during an incident read
 broken" symptom can come from any of them:
 
 ```
-   ┌──────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
-   │  Inbound MCP auth    │    │  Upstream Clockify   │    │  gRPC stream re-auth │
-   │  (this document)     │    │  API key             │    │  (build tag `grpc`)  │
-   ├──────────────────────┤    ├──────────────────────┤    ├──────────────────────┤
-   │ MCP_AUTH_MODE        │    │ CLOCKIFY_API_KEY     │    │ MCP_GRPC_REAUTH_     │
-   │  static_bearer       │    │ (or per-installation │    │   INTERVAL           │
-   │  oidc                │ → →│  token in HTTP       │ → →│ Re-runs the inbound  │
-   │  forward_auth        │    │  multi-tenant)       │    │ Authenticator on     │
-   │  mtls                │    │ Sent as X-Api-Key to │    │ long-lived bidi      │
-   │ Produces a Principal │    │ api.clockify.me      │    │ streams.             │
-   └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
+   ┌──────────────────────────┐  ┌──────────────────────┐  ┌──────────────────────────┐
+   │  Inbound MCP auth        │  │  Upstream Clockify   │  │  gRPC stream re-auth     │
+   │  (this document)         │  │  API key             │  │  (build tag `grpc`)      │
+   ├──────────────────────────┤  ├──────────────────────┤  ├──────────────────────────┤
+   │ MCP_AUTH_MODE            │  │ CLOCKIFY_API_KEY     │  │ MCP_GRPC_REAUTH_INTERVAL │
+   │   static_bearer          │  │ (or per-installation │  │ Re-runs the inbound      │
+   │   oidc                   │→→│  token in HTTP       │→→│ Authenticator on         │
+   │   forward_auth           │  │  multi-tenant)       │  │ long-lived bidi          │
+   │   mtls                   │  │ Sent as X-Api-Key to │  │ streams.                 │
+   │ Produces a Principal     │  │ api.clockify.me      │  │                          │
+   └──────────────────────────┘  └──────────────────────┘  └──────────────────────────┘
 ```
 
 This document covers **only the leftmost layer** — the inbound

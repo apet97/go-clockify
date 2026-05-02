@@ -98,6 +98,14 @@ referenced_vars=$(printf "%s\n" "$referenced_vars" | sort -u | sed '/^$/d')
 for var in $referenced_vars; do
   if echo "$known_vars" | grep -qx "$var"; then continue; fi
   if echo "$opt_out_list" | grep -qx "$var"; then continue; fi
+  # Trailing underscore = grep stopped at a non-word boundary inside
+  # a wider env-var name (e.g. an ASCII-art diagram broke a long var
+  # over two lines, or doc prose used `MCP_FOO_*` as a glob). Skip;
+  # the full name will appear elsewhere in the same doc and be
+  # validated through that match.
+  case "$var" in
+    *_) continue ;;
+  esac
   # A small allowlist for example-only names that never existed and
   # never will (e.g. placeholders in snippets). Expand here rather
   # than adding them to the real opt-out list.
@@ -126,6 +134,14 @@ if [ -f "$CATALOG_FILE" ]; then
   )
 
   for tool in $referenced_tools; do
+    # Trailing underscore = the regex matched a glob-prefix
+    # reference like `clockify_list_*` or `clockify_get_*` in
+    # narrative prose; the asterisk is not [a-z0-9_] so the
+    # capture truncates at the underscore. These are wildcards,
+    # not real tool names — skip without faulting.
+    case "$tool" in
+      *_) continue ;;
+    esac
     # Skip common non-tool prefixes / snippets that share the clockify_ stem.
     case "$tool" in
       clockify_mcp*|clockify_outage*|clockify_upstream*|clockify_policy|clockify_api_key*|clockify_admin) continue ;;
