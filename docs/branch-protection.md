@@ -109,6 +109,16 @@ required-checks list on `main`, as reported by
   and runs `doctor --strict --check-backends`. Exit 0 proves the
   embedded migrations apply, `audit_events.phase` exists, and the
   audit health round-trip through `DoctorCheck(ctx)` succeeds.
+- `Shared-service Postgres E2E` — drives `mcp.ServeStreamableHTTP`
+  in-process against an ephemeral `postgres:16-alpine` service
+  with two distinct `forward_auth` principals and asserts tenant
+  isolation in `audit_events` + `sessions`, the cross-tenant
+  negative, per-tenant policy enforcement
+  (`time_tracking_safe` blocks `clockify_create_project`), and
+  read-only-tools-emit-no-audit. Closes Group 2 of
+  `docs/launch-candidate-checklist.md`. Promoted after three
+  consecutive green runs on `main`
+  (25240007056, 25240085916, 25240163213 on 2026-05-02).
 - `Build, scan, sign` — the container image builds, Trivy passes on
   HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
 - `Lychee` — external Markdown link check across the repo.
