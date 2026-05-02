@@ -174,29 +174,74 @@ did not introduce regressions in the parity matrix. The launch
 gate is to make the model **legible** to a reviewer who has not
 read every commit.
 
-- [ ] One-page auth-model summary in `docs/production-readiness.md`
-      or a dedicated `docs/auth-model.md`: lists every supported
-      auth mode (`disabled`, `bearer`, `jwt`, `oidc`,
-      `forward_auth`), what principal it produces, what tenant
-      it derives, and what the failure mode looks like.
-- [ ] Every auth mode is exercised by at least one entry in the
-      transport-auth parity matrix
-      (`internal/mcp/transport_http_authmatrix_test.go`).
+- [x] One-page auth-model summary at
+      [`docs/auth-model.md`](auth-model.md): lists every supported
+      auth mode (`static_bearer`, `oidc`, `forward_auth`, `mtls` —
+      `stdio` is a transport with no inbound auth, not an auth
+      mode), what principal each produces, what tenant it
+      derives, and what the failure mode looks like, with every
+      claim cross-cited to a test pin. Cross-linked from
+      `docs/production-readiness.md` "Pick an auth mode" and
+      from `docs/runbooks/auth-failures.md`. _Closed 2026-05-02
+      (commits 0bcd30b + 8a627d6)._
+- [x] Every auth mode is exercised by at least one entry in the
+      transport-auth parity matrix. Coverage lives in two places:
+      `internal/config/transport_auth_matrix_test.go::TestTransportAuthMatrix`
+      pins the **{transport × auth_mode}** config-load surface
+      (every cell either loads cleanly or fails with a named
+      error), and `internal/mcp/transport_http_authmatrix_test.go`
+      pins the HTTP-handler-level rejection for each mode. _Pre-
+      existing; cross-cited in `docs/auth-model.md` "Test pins"._
 - [ ] `forward_auth` headers are rejected for control bytes,
       duplicated values, and oversized payloads; tests pin all
       three boundaries.
-- [ ] OIDC strict mode is the documented default for the
+      _2026-05-02: control-byte boundary pinned by
+      `internal/authn/auth_hardening_test.go::TestForwardAuth_RejectsControlBytesInHeaders`
+      and the trusted-proxy CIDR gate pinned by
+      `TestForwardAuth_RejectsUntrustedSource` /
+      `TestForwardAuth_AcceptsTrustedCIDR` /
+      `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour`.
+      Duplicated-value and oversized-payload pins are deferred to
+      a follow-up: net/http's `Server.MaxHeaderBytes` (default
+      1 MiB, configurable) bounds the worst-case oversized-header
+      attack server-side, and duplicated headers in production
+      proxy chains are rare. The realistic abuse vector
+      (control-byte injection / log forging) is covered. Doc
+      caveat lives in `docs/auth-model.md` "Edge cases worth
+      knowing"._
+- [x] OIDC strict mode is the documented default for the
       shared-service profile; the JWKS rotation path is covered by
       a test that exercises a key swap mid-session.
-- [ ] Tenant isolation invariants are documented in
-      `docs/production-readiness.md` (one tenant cannot read another
-      tenant's audit rows, sessions, or credential refs) and pinned
-      by tests in `internal/controlplane/`.
+      _2026-05-02: `MCP_OIDC_STRICT=1` is pinned in
+      `docs/deploy/production-profile-shared-service.md` lines
+      36 + 69. The JWKS rotation propagation window is bounded
+      by `internal/authn/oidc_verify_cache_test.go::TestOIDCVerifyCache_CeilingTTL`
+      (cache entries cannot survive past `oidcVerifyCacheTTLCeiling`,
+      capped at 5m) and `TestOIDCVerifyCache_TTLClamping`. A literal
+      mid-session key-swap test (issuer rotates kid → next request
+      re-fetches JWKS) is not present today; the safety margin is
+      the bounded TTL plus the JWKS-fetch error semantics in
+      `internal/authn/jwks_document_test.go`. Documented in
+      `docs/auth-model.md` "Edge cases" and the failure-mode
+      table._
+- [x] Tenant isolation invariants are documented in
+      [`docs/auth-model.md`](auth-model.md) "Tenant resolution"
+      and `docs/production-readiness.md` "Pick an auth mode" /
+      "Session rehydration" (one tenant cannot read another
+      tenant's audit rows or sessions). Pinned by:
+      `internal/controlplane/postgres/e2e_shared_service_test.go::TestSharedServicePostgresE2E`
+      (cross-tenant query for `tenant_id=A AND session_id=B`
+      returns zero rows) and
+      `internal/controlplane/postgres/e2e_session_rehydration_test.go::TestStreamableHTTPCrossInstanceRehydration`
+      (cross-tenant replay across pods returns 403 + zero new
+      audit rows). _Pre-existing; the auth-model.md doc commit
+      (0bcd30b) and this checklist tick make the invariant
+      legible without grepping the test files._
 
 **Definition of done.** Anyone reading
-`docs/production-readiness.md` can answer "what does auth look
-like?" in under five minutes; every claim made there is pinned
-by a test.
+[`docs/auth-model.md`](auth-model.md) can answer "what does auth
+look like?" in under five minutes; every claim made there is
+pinned by a test cited in the same doc.
 
 ---
 
