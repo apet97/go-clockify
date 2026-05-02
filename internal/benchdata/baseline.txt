@@ -1,330 +1,400 @@
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/timeparse
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkParseDatetime-4   	     100	       807.0 ns/op	     190 B/op	       5 allocs/op
-BenchmarkParseDatetime-4   	     100	       640.7 ns/op	     138 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       710.6 ns/op	     138 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       484.6 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       520.0 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       688.8 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       717.1 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       499.8 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       468.0 ns/op	     138 B/op	       4 allocs/op
-BenchmarkParseDatetime-4   	     100	       425.5 ns/op	     141 B/op	       4 allocs/op
-BenchmarkParseDuration-4   	     100	       393.5 ns/op	      69 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       305.9 ns/op	      69 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       258.8 ns/op	      66 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       261.3 ns/op	      69 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       234.8 ns/op	      66 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       509.5 ns/op	      66 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       315.4 ns/op	      66 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       237.8 ns/op	      69 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       428.6 ns/op	      69 B/op	       3 allocs/op
-BenchmarkParseDuration-4   	     100	       243.2 ns/op	      69 B/op	       3 allocs/op
-ok  	github.com/apet97/go-clockify/internal/timeparse	0.014s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkParseDatetime-4   	     100	       774.6 ns/op	     190 B/op	       5 allocs/op
+BenchmarkParseDatetime-4   	     100	       448.2 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       630.1 ns/op	     138 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       506.4 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       470.2 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       539.4 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       406.6 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       372.4 ns/op	     141 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       385.0 ns/op	     138 B/op	       4 allocs/op
+BenchmarkParseDatetime-4   	     100	       364.7 ns/op	     138 B/op	       4 allocs/op
+BenchmarkParseDuration-4   	     100	       320.3 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       209.9 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       421.7 ns/op	      66 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       358.6 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       241.9 ns/op	      66 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       297.4 ns/op	      66 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       340.3 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       392.7 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       359.8 ns/op	      69 B/op	       3 allocs/op
+BenchmarkParseDuration-4   	     100	       265.6 ns/op	      66 B/op	       3 allocs/op
+ok  	github.com/apet97/go-clockify/internal/timeparse	0.013s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/resolve
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkValidateID-4   	     100	       173.4 ns/op	      38 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       193.1 ns/op	      38 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       179.4 ns/op	      38 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       177.3 ns/op	      38 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       260.5 ns/op	      36 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       214.9 ns/op	      36 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       151.8 ns/op	      36 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       227.2 ns/op	      36 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       150.1 ns/op	      38 B/op	       1 allocs/op
-BenchmarkValidateID-4   	     100	       159.9 ns/op	      36 B/op	       1 allocs/op
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkValidateID-4   	     100	       209.7 ns/op	      38 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       246.4 ns/op	      36 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       190.0 ns/op	      36 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       239.6 ns/op	      36 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       197.6 ns/op	      38 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       181.2 ns/op	      38 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       128.2 ns/op	      36 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       150.0 ns/op	      38 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       338.7 ns/op	      38 B/op	       1 allocs/op
+BenchmarkValidateID-4   	     100	       158.9 ns/op	      38 B/op	       1 allocs/op
 ok  	github.com/apet97/go-clockify/internal/resolve	0.007s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/mcp
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkDispatchToolsList-4    	     100	      4674 ns/op	    1734 B/op	      21 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4907 ns/op	    1616 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4675 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      5147 ns/op	    1616 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4223 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      5325 ns/op	    1616 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4176 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      3765 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4816 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchToolsList-4    	     100	      4363 ns/op	    1625 B/op	      20 allocs/op
-BenchmarkDispatchInitialize-4   	     100	     17076 ns/op	    7011 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     16342 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     16003 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     15771 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     15393 ns/op	    6955 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     15731 ns/op	    6828 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     15701 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     17098 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     15713 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchInitialize-4	100	     14882 ns/op	    6958 B/op	      97 allocs/op
-BenchmarkDispatchToolsCall-4    	     100	     11051 ns/op	    3724 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10616 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10744 ns/op	    3702 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10836 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     11025 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10858 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     13145 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10362 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10165 ns/op	    3714 B/op	      62 allocs/op
-BenchmarkDispatchToolsCall-4	100	     10346 ns/op	    3714 B/op	      62 allocs/op
-ok  	github.com/apet97/go-clockify/internal/mcp	0.046s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkDispatchToolsList-4        	     100	      3294 ns/op	     814 B/op	      13 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      2252 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      1914 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      1928 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      2075 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      1723 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      2009 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      1850 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      1707 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsList-4        	     100	      2206 ns/op	     752 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      6013 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      2827 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      4117 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      4715 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      3100 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      3986 ns/op	    8760 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      3248 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      3046 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      2652 ns/op	    8923 B/op	      12 allocs/op
+BenchmarkDispatchToolsListLarge-4   	     100	      2646 ns/op	    8760 B/op	      12 allocs/op
+BenchmarkDispatchInitialize-4       	     100	     16520 ns/op	    6955 B/op	      98 allocs/op
+BenchmarkDispatchInitialize-4	100	     16504 ns/op	    6958 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     15148 ns/op	    6958 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     16050 ns/op	    6828 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     15762 ns/op	    6958 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     16480 ns/op	    6958 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     16209 ns/op	    6828 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     15852 ns/op	    6828 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     19359 ns/op	    6828 B/op	      97 allocs/op
+BenchmarkDispatchInitialize-4	100	     15757 ns/op	    6958 B/op	      97 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      7897 ns/op	    3708 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	     10813 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      8658 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      9784 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      9348 ns/op	    3697 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      8210 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      9901 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      9748 ns/op	    3697 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      9186 ns/op	    3707 B/op	      62 allocs/op
+BenchmarkDispatchToolsCall-4        	     100	      7968 ns/op	    3707 B/op	      62 allocs/op
+ok  	github.com/apet97/go-clockify/internal/mcp	0.051s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/clockify
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkClient_Get-4    	     100	    122329 ns/op	    9294 B/op	     111 allocs/op
-BenchmarkClient_Get-4    	     100	    116767 ns/op	    9070 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    116755 ns/op	    9055 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    112807 ns/op	    9061 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    114960 ns/op	    8949 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    111965 ns/op	    9008 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    114057 ns/op	    8948 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    114384 ns/op	    9022 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    111691 ns/op	    9018 B/op	     110 allocs/op
-BenchmarkClient_Get-4    	     100	    108871 ns/op	    8944 B/op	     110 allocs/op
-BenchmarkClient_Post-4   	     100	    129410 ns/op	   11731 B/op	     131 allocs/op
-BenchmarkClient_Post-4   	     100	    130662 ns/op	    9961 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    125125 ns/op	    9949 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    121535 ns/op	    9954 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    122269 ns/op	    9999 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    120201 ns/op	   10000 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    122893 ns/op	    9916 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    120724 ns/op	   10092 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    120863 ns/op	   10008 B/op	     130 allocs/op
-BenchmarkClient_Post-4   	     100	    128741 ns/op	   10886 B/op	     130 allocs/op
-ok  	github.com/apet97/go-clockify/internal/clockify	0.255s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkClient_Get-4    	     100	    113046 ns/op	    9326 B/op	     111 allocs/op
+BenchmarkClient_Get-4    	     100	    106322 ns/op	    9061 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    110471 ns/op	    9035 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    106605 ns/op	    9010 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    107795 ns/op	    9066 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    103245 ns/op	    9062 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    106417 ns/op	    8954 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    110312 ns/op	    9013 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    104818 ns/op	    8954 B/op	     110 allocs/op
+BenchmarkClient_Get-4    	     100	    107557 ns/op	    9038 B/op	     110 allocs/op
+BenchmarkClient_Post-4   	     100	    120992 ns/op	   11710 B/op	     131 allocs/op
+BenchmarkClient_Post-4   	     100	    108064 ns/op	    9924 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    116394 ns/op	    9970 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    119796 ns/op	    9920 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    113230 ns/op	   10015 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    112470 ns/op	    9938 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    120348 ns/op	   10059 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    110918 ns/op	    9927 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    111342 ns/op	   10014 B/op	     130 allocs/op
+BenchmarkClient_Post-4   	     100	    114181 ns/op	    9938 B/op	     130 allocs/op
+ok  	github.com/apet97/go-clockify/internal/clockify	0.238s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/enforcement
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkPipelineBeforeCall-4              	     100	      1252 ns/op	     557 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1441 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1133 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	       968.8 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1261 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1147 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1008 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	       996.2 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1195 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	       887.7 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       677.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       548.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       635.5 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       555.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       441.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       782.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       757.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       639.2 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       504.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       546.9 ns/op	     264 B/op	       4 allocs/op
-ok  	github.com/apet97/go-clockify/internal/enforcement	0.012s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkPipelineBeforeCall-4              	     100	      1246 ns/op	     557 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1057 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1337 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1398 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1105 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	       991.5 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1099 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1285 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1111 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCall-4              	     100	      1285 ns/op	     556 B/op	       9 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       583.6 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       500.6 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       541.8 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       735.5 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       667.1 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	      1058 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       689.2 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       722.5 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       768.6 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       739.2 ns/op	     264 B/op	       4 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      2457 ns/op	     560 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1782 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1582 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1499 ns/op	     517 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1255 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1312 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1306 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1451 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1575 ns/op	     517 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallSmallResult-4    	     100	      1504 ns/op	     523 B/op	      12 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3692424 ns/op	 2277807 B/op	   25587 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   4187166 ns/op	 2310778 B/op	   25589 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3719599 ns/op	 2307531 B/op	   25588 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3703904 ns/op	 2277724 B/op	   25586 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3906280 ns/op	 2267868 B/op	   25585 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3709501 ns/op	 2271176 B/op	   25586 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3695233 ns/op	 2267851 B/op	   25585 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3726195 ns/op	 2300769 B/op	   25588 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3942514 ns/op	 2299123 B/op	   25588 allocs/op
+BenchmarkPipelineAfterCallLargeResult-4    	     100	   3681509 ns/op	 2274417 B/op	   25586 allocs/op
+ok  	github.com/apet97/go-clockify/internal/enforcement	3.820s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/ratelimit
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkAcquireForSubjectSteady-4       	     100	      1223 ns/op	     557 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1227 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	       947.7 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1111 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1361 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1165 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1036 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	       998.3 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1087 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectSteady-4       	     100	      1433 ns/op	     556 B/op	       9 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       853.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       570.0 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       579.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       422.3 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       675.3 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       768.3 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       720.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       469.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       847.0 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireForSubjectNoPerToken-4   	     100	       602.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       736.3 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       571.5 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       649.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       497.7 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       748.3 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       645.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       974.9 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       508.4 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       683.0 ns/op	     264 B/op	       4 allocs/op
-BenchmarkAcquireGlobal-4                 	     100	       623.0 ns/op	     264 B/op	       4 allocs/op
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkAcquireForSubjectSteady-4       	     100	      1225 ns/op	     558 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	      1043 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	       943.4 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	      1167 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	       937.4 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	       939.4 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	      1209 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	      1013 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	       965.8 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectSteady-4       	     100	      1102 ns/op	     556 B/op	       9 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       517.4 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       607.3 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       592.7 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       486.7 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       483.1 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       579.3 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       832.9 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       824.8 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       671.6 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireForSubjectNoPerToken-4   	     100	       545.3 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       573.5 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       525.1 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       730.4 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       706.5 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       498.3 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       421.9 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       521.5 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       609.0 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       745.4 ns/op	     264 B/op	       4 allocs/op
+BenchmarkAcquireGlobal-4                 	     100	       637.0 ns/op	     264 B/op	       4 allocs/op
 ok  	github.com/apet97/go-clockify/internal/ratelimit	0.014s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/authn
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkStaticBearer-4       	     100	       202.2 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       428.7 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       262.8 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       154.5 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       225.8 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       158.9 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       169.5 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       211.6 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       156.5 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       303.8 ns/op	      48 B/op	       1 allocs/op
-BenchmarkForwardAuth-4        	     100	       585.0 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       438.6 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       298.3 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       660.3 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       415.6 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       608.3 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       507.2 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       440.0 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       575.5 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       299.3 ns/op	     336 B/op	       2 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       941.4 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       947.9 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       843.3 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       855.1 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       776.5 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       774.9 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       846.0 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1089 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1059 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       768.9 ns/op	     704 B/op	       1 allocs/op
-ok  	github.com/apet97/go-clockify/internal/authn	0.603s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkStaticBearer-4       	     100	       296.0 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       343.3 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       234.1 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       235.3 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       310.6 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       143.7 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       378.4 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       144.5 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       194.0 ns/op	      48 B/op	       1 allocs/op
+BenchmarkStaticBearer-4       	     100	       501.5 ns/op	      48 B/op	       1 allocs/op
+BenchmarkForwardAuth-4        	     100	       499.3 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       536.3 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       753.4 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       465.9 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       574.0 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       582.4 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       639.9 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       629.9 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       603.1 ns/op	     336 B/op	       2 allocs/op
+BenchmarkForwardAuth-4        	     100	       872.8 ns/op	     336 B/op	       2 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       867.8 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       884.7 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       858.5 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       859.4 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       859.4 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	      1518 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       936.6 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	      1232 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       932.3 ns/op	     704 B/op	       1 allocs/op
+BenchmarkOIDCVerifyCached-4   	     100	       884.2 ns/op	     704 B/op	       1 allocs/op
+ok  	github.com/apet97/go-clockify/internal/authn	0.739s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/tools
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkTier2ActivationLookup-4        	     100	     34813 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     45227 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     48553 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     44853 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     49328 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     52393 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     49795 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     49341 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     47551 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationLookup-4        	     100	     42776 ns/op	   52480 B/op	     457 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    264456 ns/op	  388695 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    269704 ns/op	  388697 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    259349 ns/op	  388691 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    256598 ns/op	  388693 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    274495 ns/op	  388691 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    270878 ns/op	  388691 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    258255 ns/op	  388692 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    249544 ns/op	  388693 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    263676 ns/op	  388693 B/op	    3450 allocs/op
-BenchmarkTier2ActivationAll-4           	     100	    262261 ns/op	  388695 B/op	    3450 allocs/op
-BenchmarkClockifyCreateExpense-4        	     100	    191234 ns/op	   21777 B/op	     311 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    184910 ns/op	   19604 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    186972 ns/op	   19657 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    190586 ns/op	   19626 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    188176 ns/op	   19640 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    187932 ns/op	   19681 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    185722 ns/op	   19620 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    188789 ns/op	   19626 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    189283 ns/op	   19689 B/op	     309 allocs/op
-BenchmarkClockifyCreateExpense-4	100	    187747 ns/op	   19664 B/op	     309 allocs/op
-BenchmarkClockifyCreateInvoice-4        	     100	    184749 ns/op	   19796 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    188954 ns/op	   19853 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    187161 ns/op	   19879 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    192112 ns/op	   19772 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    188709 ns/op	   19760 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    190634 ns/op	   19753 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    190990 ns/op	   19760 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    186067 ns/op	   19770 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    185300 ns/op	   19753 B/op	     310 allocs/op
-BenchmarkClockifyCreateInvoice-4	100	    188507 ns/op	   19775 B/op	     310 allocs/op
-BenchmarkClockifyCreateCustomField-4    	     100	    189138 ns/op	   19413 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    174125 ns/op	   19485 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    184078 ns/op	   19484 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    179095 ns/op	   19480 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    183531 ns/op	   19494 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    186100 ns/op	   20520 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    183689 ns/op	   19478 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    181129 ns/op	   19483 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    185594 ns/op	   19399 B/op	     298 allocs/op
-BenchmarkClockifyCreateCustomField-4	100	    187095 ns/op	   19484 B/op	     298 allocs/op
-BenchmarkClockifySubmitForApproval-4    	     100	    182207 ns/op	   19770 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    184188 ns/op	   19673 B/op	     302 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    183710 ns/op	   19751 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    187564 ns/op	   19673 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    184141 ns/op	   19762 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    184373 ns/op	   19672 B/op	     302 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    187619 ns/op	   20219 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    187062 ns/op	   19674 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    189852 ns/op	   19751 B/op	     303 allocs/op
-BenchmarkClockifySubmitForApproval-4	100	    194060 ns/op	   19758 B/op	     303 allocs/op
-BenchmarkClockifyApproveTimesheet-4     	     100	    181266 ns/op	   18811 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    179712 ns/op	   19878 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    181169 ns/op	   18896 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    178951 ns/op	   18894 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    180876 ns/op	   18889 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    179086 ns/op	   18811 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    180773 ns/op	   18804 B/op	     270 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    182228 ns/op	   18899 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    179476 ns/op	   18893 B/op	     271 allocs/op
-BenchmarkClockifyApproveTimesheet-4	100	    176308 ns/op	   18890 B/op	     271 allocs/op
-BenchmarkClockifyLogTime-4              	     100	    192553 ns/op	   21342 B/op	     306 allocs/op
-BenchmarkClockifyLogTime-4	100	    188329 ns/op	   21211 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    200249 ns/op	   21216 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    191342 ns/op	   21129 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    195116 ns/op	   21210 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    194982 ns/op	   21216 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    194128 ns/op	   21209 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    195197 ns/op	   21215 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    195645 ns/op	   21215 B/op	     305 allocs/op
-BenchmarkClockifyLogTime-4	100	    190787 ns/op	   21215 B/op	     305 allocs/op
-BenchmarkClockifyStartTimer-4           	     100	    186711 ns/op	   20710 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    190740 ns/op	   20796 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    189546 ns/op	   20797 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    195366 ns/op	   20713 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    195339 ns/op	   20717 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    194956 ns/op	   20790 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    193091 ns/op	   20790 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    190418 ns/op	   20790 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    189316 ns/op	   20796 B/op	     296 allocs/op
-BenchmarkClockifyStartTimer-4	100	    194864 ns/op	   20712 B/op	     296 allocs/op
-BenchmarkClockifyStopTimer-4            	     100	    197570 ns/op	   20420 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    190618 ns/op	   20475 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    193642 ns/op	   20472 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    189871 ns/op	   20388 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    189839 ns/op	   20475 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    195370 ns/op	   20472 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    190447 ns/op	   20477 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    191438 ns/op	   20393 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    191626 ns/op	   20393 B/op	     291 allocs/op
-BenchmarkClockifyStopTimer-4	100	    191056 ns/op	   20467 B/op	     291 allocs/op
-BenchmarkClockifyAddEntry-4             	     100	    202971 ns/op	   21274 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    202921 ns/op	   21746 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    197788 ns/op	   21286 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    196624 ns/op	   21194 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    197223 ns/op	   21271 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    202031 ns/op	   21182 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    197067 ns/op	   21268 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    193290 ns/op	   21271 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    200198 ns/op	   21266 B/op	     314 allocs/op
-BenchmarkClockifyAddEntry-4	100	    196393 ns/op	   21281 B/op	     314 allocs/op
-BenchmarkClockifyUpdateEntry-4          	     100	    328471 ns/op	   31218 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    337347 ns/op	   31806 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    340265 ns/op	   31172 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    345254 ns/op	   32275 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    346752 ns/op	   31166 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    303976 ns/op	   31163 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    321725 ns/op	   31215 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    324836 ns/op	   32030 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    336274 ns/op	   31352 B/op	     444 allocs/op
-BenchmarkClockifyUpdateEntry-4	100	    351577 ns/op	   31163 B/op	     444 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4   	     100	    318612 ns/op	   33037 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    348256 ns/op	   34318 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    329484 ns/op	   33091 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    333554 ns/op	   33000 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    343786 ns/op	   33010 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    338467 ns/op	   33818 B/op	     452 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    337962 ns/op	   33072 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    343237 ns/op	   34031 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    327809 ns/op	   33040 B/op	     451 allocs/op
-BenchmarkClockifyFindAndUpdateEntry-4	100	    336438 ns/op	   32937 B/op	     451 allocs/op
-ok  	github.com/apet97/go-clockify/internal/tools	2.818s
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkTier2ActivationLookup-4           	     100	     29140 ns/op	   43334 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     41781 ns/op	   43333 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     40635 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     33131 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     36300 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     45712 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     31814 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     37227 ns/op	   43333 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     32325 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationLookup-4           	     100	     29997 ns/op	   43332 B/op	     307 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    199873 ns/op	  317187 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    212828 ns/op	  317190 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    219127 ns/op	  317187 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    220212 ns/op	  317190 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    200524 ns/op	  317189 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    204634 ns/op	  317187 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    200213 ns/op	  317188 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    227855 ns/op	  317188 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    206252 ns/op	  317188 B/op	    2227 allocs/op
+BenchmarkTier2ActivationAll-4              	     100	    210223 ns/op	  317187 B/op	    2227 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	     10477 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	     10200 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	     11168 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9414 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9864 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	     10210 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9601 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9174 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9383 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkSearchToolsTier2GroupQuery-4      	     100	      9460 ns/op	    2784 B/op	      57 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.42 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.52 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.32 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.12 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.02 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        13.92 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.32 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        14.32 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        21.73 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTier2GroupForTool-4               	     100	        23.64 ns/op	       0 B/op	       0 allocs/op
+BenchmarkClockifyCreateExpense-4           	     100	    206614 ns/op	   21805 B/op	     311 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    188549 ns/op	   19626 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    177656 ns/op	   20036 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    179180 ns/op	   19648 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    181830 ns/op	   19685 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    184580 ns/op	   19576 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    181937 ns/op	   19610 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    182460 ns/op	   19615 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    181951 ns/op	   19617 B/op	     309 allocs/op
+BenchmarkClockifyCreateExpense-4	100	    182133 ns/op	   19617 B/op	     309 allocs/op
+BenchmarkClockifyCreateInvoice-4           	     100	    160301 ns/op	   19767 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    182750 ns/op	   19757 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    185962 ns/op	   19776 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    180853 ns/op	   19685 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    185024 ns/op	   19755 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    181886 ns/op	   19809 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    178636 ns/op	   19772 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    177505 ns/op	   19698 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    179441 ns/op	   20527 B/op	     310 allocs/op
+BenchmarkClockifyCreateInvoice-4	100	    182816 ns/op	   19762 B/op	     310 allocs/op
+BenchmarkClockifyCreateCustomField-4       	     100	    160223 ns/op	   19499 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    179115 ns/op	   19491 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    178627 ns/op	   19393 B/op	     297 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    175370 ns/op	   19483 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    180488 ns/op	   19394 B/op	     297 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    177714 ns/op	   19477 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    179107 ns/op	   19477 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    177101 ns/op	   19482 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    180260 ns/op	   19477 B/op	     298 allocs/op
+BenchmarkClockifyCreateCustomField-4	100	    177244 ns/op	   19394 B/op	     297 allocs/op
+BenchmarkClockifySubmitForApproval-4       	     100	    179844 ns/op	   19856 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    177512 ns/op	   19762 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    180082 ns/op	   19761 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    176863 ns/op	   19670 B/op	     302 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    179379 ns/op	   20571 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    180221 ns/op	   19678 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    175669 ns/op	   19758 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    185474 ns/op	   19752 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    177608 ns/op	   19758 B/op	     303 allocs/op
+BenchmarkClockifySubmitForApproval-4	100	    181427 ns/op	   19677 B/op	     302 allocs/op
+BenchmarkClockifyApproveTimesheet-4        	     100	    176363 ns/op	   18912 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    171695 ns/op	   18889 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    176929 ns/op	   18816 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    173029 ns/op	   18810 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    175972 ns/op	   18826 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    174855 ns/op	   18902 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    167255 ns/op	   18804 B/op	     270 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    172326 ns/op	   18810 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    177855 ns/op	   18811 B/op	     271 allocs/op
+BenchmarkClockifyApproveTimesheet-4	100	    176348 ns/op	   18898 B/op	     271 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4         	     100	     13865 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49541 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	      9722 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49548 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     23502 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49548 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     10557 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49546 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     10541 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49546 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     10334 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49548 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	      9481 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49546 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     10674 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49548 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     22463 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49550 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/Tier1-4	100	     11382 ns/op	     27063 output_schema_B	     44004 payload_B	        33.00 tools	   49548 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4      	     100	     31043 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106906 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     36555 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106906 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     34467 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106904 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     27752 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106899 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     44306 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106904 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     39905 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106904 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     44605 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106917 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     37710 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106910 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     41884 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106910 B/op	      12 allocs/op
+BenchmarkDispatchToolsListRealRegistry/AllTools-4	100	     39639 ns/op	     40507 output_schema_B	    102069 payload_B	       124.0 tools	  106910 B/op	      12 allocs/op
+BenchmarkClockifyLogTime-4                             	     100	    200639 ns/op	   23502 B/op	     308 allocs/op
+BenchmarkClockifyLogTime-4	100	    200118 ns/op	   22706 B/op	     306 allocs/op
+BenchmarkClockifyLogTime-4	100	    198116 ns/op	   21594 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    193774 ns/op	   21491 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    197193 ns/op	   21858 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    196647 ns/op	   22723 B/op	     306 allocs/op
+BenchmarkClockifyLogTime-4	100	    202683 ns/op	   21791 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    194431 ns/op	   21714 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    189253 ns/op	   21422 B/op	     305 allocs/op
+BenchmarkClockifyLogTime-4	100	    191287 ns/op	   21334 B/op	     304 allocs/op
+BenchmarkClockifyStartTimer-4                          	     100	    192473 ns/op	   22203 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    188885 ns/op	   21086 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    189474 ns/op	   21140 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    190939 ns/op	   21082 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    187729 ns/op	   21080 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    187780 ns/op	   21077 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    189053 ns/op	   21081 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    188648 ns/op	   21084 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    188871 ns/op	   21082 B/op	     296 allocs/op
+BenchmarkClockifyStartTimer-4	100	    188839 ns/op	   20999 B/op	     296 allocs/op
+BenchmarkClockifyStopTimer-4                           	     100	    189692 ns/op	   20755 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    185525 ns/op	   20760 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    183716 ns/op	   20672 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    189487 ns/op	   20760 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    187851 ns/op	   20755 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    193707 ns/op	   20684 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    190542 ns/op	   20764 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    192796 ns/op	   20755 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    191803 ns/op	   20761 B/op	     291 allocs/op
+BenchmarkClockifyStopTimer-4	100	    192338 ns/op	   20760 B/op	     291 allocs/op
+BenchmarkClockifyAddEntry-4                            	     100	    193238 ns/op	   21563 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    192576 ns/op	   21563 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    193639 ns/op	   21608 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    193061 ns/op	   21554 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    194037 ns/op	   21558 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    191264 ns/op	   21570 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    194163 ns/op	   21559 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    191990 ns/op	   21469 B/op	     313 allocs/op
+BenchmarkClockifyAddEntry-4	100	    191513 ns/op	   21557 B/op	     314 allocs/op
+BenchmarkClockifyAddEntry-4	100	    195521 ns/op	   21561 B/op	     314 allocs/op
+BenchmarkClockifyUpdateEntry-4                         	     100	    324034 ns/op	   31501 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    341788 ns/op	   31543 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    330793 ns/op	   31550 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    340371 ns/op	   31818 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    335198 ns/op	   31472 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    342701 ns/op	   31560 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    331968 ns/op	   31475 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    341043 ns/op	   31614 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    334093 ns/op	   31471 B/op	     444 allocs/op
+BenchmarkClockifyUpdateEntry-4	100	    336728 ns/op	   32708 B/op	     444 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4                  	     100	    341103 ns/op	   33434 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    342510 ns/op	   33397 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    340564 ns/op	   33671 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    338271 ns/op	   33407 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    335622 ns/op	   33325 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    344098 ns/op	   33870 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    335085 ns/op	   33403 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    328442 ns/op	   33360 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    341493 ns/op	   33355 B/op	     451 allocs/op
+BenchmarkClockifyFindAndUpdateEntry-4	100	    343866 ns/op	   33413 B/op	     451 allocs/op
+ok  	github.com/apet97/go-clockify/internal/tools	2.860s
