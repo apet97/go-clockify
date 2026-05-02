@@ -272,13 +272,20 @@ func TestDeleteExpenseDryRun(t *testing.T) {
 }
 
 func TestInvoiceReport(t *testing.T) {
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/invoices" && r.Method == http.MethodGet:
-			respondJSON(t, w, []map[string]any{
-				{"id": "inv1", "status": "PAID", "amount": 200.0},
-				{"id": "inv2", "status": "PAID", "amount": 350.0},
-				{"id": "inv3", "status": "DRAFT", "amount": 100.0},
+		case r.URL.Path == "/workspaces/ws1/invoices/info" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"total": 3,
+				"invoices": []map[string]any{
+					{"id": "inv1", "status": "PAID", "amount": 200.0},
+					{"id": "inv2", "status": "PAID", "amount": 350.0},
+					{"id": "inv3", "status": "DRAFT", "amount": 100.0},
+				},
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -287,12 +294,16 @@ func TestInvoiceReport(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.invoiceReport(context.Background(), map[string]any{})
+	result, err := svc.invoiceReport(context.Background(), map[string]any{"status": "PAID"})
 	if err != nil {
 		t.Fatalf("invoice report failed: %v", err)
 	}
 	if !result.OK {
 		t.Fatal("expected OK=true")
+	}
+	statuses, ok := gotBody["statuses"].([]any)
+	if !ok || len(statuses) != 1 || statuses[0] != "PAID" {
+		t.Fatalf("expected body statuses=[\"PAID\"], got %v", gotBody["statuses"])
 	}
 	data, ok := result.Data.(map[string]any)
 	if !ok {
@@ -310,6 +321,9 @@ func TestInvoiceReport(t *testing.T) {
 	}
 	if statusCounts["DRAFT"] != 1 {
 		t.Fatalf("expected 1 DRAFT, got %d", statusCounts["DRAFT"])
+	}
+	if result.Meta["total"] != 3 {
+		t.Fatalf("expected meta total=3, got %v", result.Meta["total"])
 	}
 }
 

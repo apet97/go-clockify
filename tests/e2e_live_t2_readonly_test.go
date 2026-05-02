@@ -57,7 +57,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 	}{
 		{"invoices", []call{
 			{"clockify_list_invoices", nil, ""},
-			{"clockify_invoice_report", nil, "cannot unmarshal object"},
+			{"clockify_invoice_report", nil, ""},
 		}},
 		{"expenses", []call{
 			// Upstream wraps the expense list in
