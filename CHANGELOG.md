@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Reviewer-facing one-page auth-model summary closes Group 4
+  of `docs/launch-candidate-checklist.md`.** New
+  `docs/auth-model.md` collapses the auth surface — previously
+  spread across README, SECURITY.md, four deploy profiles,
+  `docs/production-readiness.md` "Pick an auth mode", ADR 0003,
+  ADR 0008, ADR 0017, the auth-failures runbook, and
+  `docs/support-matrix.md` — into a single screen designed for a
+  reviewer to absorb in under five minutes. Contents: a
+  three-layer auth diagram (inbound MCP auth · upstream Clockify
+  API key · gRPC stream re-auth) so a reader knows which layer
+  the doc covers; a four-mode table (`static_bearer`, `oidc`,
+  `forward_auth`, `mtls`) with what each trusts and the matrix
+  test that pins the per-transport gating; per-mode Principal
+  mapping (Subject source, TenantID source, when either can be
+  empty or rejected); the tenant-resolution flow naming the
+  streamable-HTTP session manager's pin-and-strict-recompare
+  contract from ADR 0017; a per-mode failure-mode table mapping
+  HTTP status, gRPC status, error string fragment, and
+  `FailureCategory` bucket (including the cross-pod 403 "session
+  principal mismatch" sentinel); a test-pin table covering every
+  claim the doc makes with file:test cites; an edge-case section
+  (forward_auth empty allow-list legacy posture, sanitizer rules,
+  mtls `header_or_cert` migration hybrid, OIDC strict mode,
+  `MCP_EXPOSE_AUTH_ERRORS`, gRPC stream re-auth, per-subject rate
+  limiter); and a five-question reviewer self-quiz with
+  scroll-resistant compressed answers. Cross-linked from
+  `docs/production-readiness.md` "Pick an auth mode" and from
+  `docs/runbooks/auth-failures.md`. Tier 3 blocker #4 in
+  `docs/official-clockify-mcp-gap-analysis.md` moved to Tier 2
+  "What earned the tier"; Group 4 of the launch-candidate
+  checklist closed with terminology fix (the prior box-1 named
+  modes — `disabled`, `bearer`, `jwt` — that do not exist in
+  the implementation; corrected to the actual constants
+  `static_bearer`, `oidc`, `forward_auth`, `mtls`) and an honest
+  downgrade of box 3 (forward_auth duplicated/oversized header
+  pins deferred; net/http's `Server.MaxHeaderBytes` cap bounds
+  the worst case server-side; control-byte injection — the
+  realistic abuse vector — remains pinned by
+  `TestForwardAuth_RejectsControlBytesInHeaders`). Commits
+  0bcd30b (auth-model.md) + 8a627d6 (operator-doc cross-links)
+  + 222c206 (Group 4 checklist) + 4f502ff (handoff +
+  gap-analysis closure) + this commit (CHANGELOG).
+
 - **Streamable-HTTP cross-pod session rehydration closes Group 3
   (ADR 0017 Path A) of `docs/launch-candidate-checklist.md`.**
   `streamSessionManager.get`
