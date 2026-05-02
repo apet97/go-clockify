@@ -331,10 +331,15 @@ func TestExpenseReport(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/workspaces/ws1/expenses" && r.Method == http.MethodGet:
-			respondJSON(t, w, []map[string]any{
-				{"id": "e1", "amount": 50.0, "categoryId": "cat1"},
-				{"id": "e2", "amount": 75.0, "categoryId": "cat1"},
-				{"id": "e3", "amount": 120.0, "categoryId": "cat2"},
+			respondJSON(t, w, map[string]any{
+				"expenses": map[string]any{
+					"expenses": []map[string]any{
+						{"id": "e1", "amount": 50.0, "categoryId": "cat1"},
+						{"id": "e2", "amount": 75.0, "categoryId": "cat1"},
+						{"id": "e3", "amount": 120.0, "categoryId": "cat2"},
+					},
+					"count": 3,
+				},
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)

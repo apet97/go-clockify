@@ -60,18 +60,9 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 			{"clockify_invoice_report", nil, ""},
 		}},
 		{"expenses", []call{
-			// Upstream wraps the expense list in
-			// `{expenses: {expenses: [...]}}` (double nesting). Handler
-			// expects `[]map[string]any` and fails to unmarshal the
-			// outer object — same shape-mismatch class as invoices.
-			// Likely fix: deserialise the outer envelope and return
-			// the inner slice.
-			{"clockify_list_expenses", nil, "cannot unmarshal object"},
-			{"clockify_expense_report", nil, "cannot unmarshal object"},
-			// /expenses/categories returns `{count, categories: [...]}`
-			// — same shape mismatch class. Handler reads the outer
-			// object as a slice.
-			{"clockify_list_expense_categories", nil, "cannot unmarshal object"},
+			{"clockify_list_expenses", nil, ""},
+			{"clockify_expense_report", nil, ""},
+			{"clockify_list_expense_categories", nil, ""},
 		}},
 		{"scheduling", []call{
 			// /workspaces/{id}/assignments returns 404 ("No static

@@ -15,7 +15,12 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses":
-			respondJSON(t, w, []map[string]any{{"id": "exp1", "amount": 100}})
+			respondJSON(t, w, map[string]any{
+				"expenses": map[string]any{
+					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
+					"count":    1,
+				},
+			})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses":
@@ -25,7 +30,10 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			w.WriteHeader(http.StatusNoContent)
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses/categories":
-			respondJSON(t, w, []map[string]any{{"id": "cat1", "name": "Travel"}})
+			respondJSON(t, w, map[string]any{
+				"count":      1,
+				"categories": []map[string]any{{"id": "cat1", "name": "Travel"}},
+			})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses/categories":
 			respondJSON(t, w, map[string]any{"id": "cat-new", "name": "Software"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":

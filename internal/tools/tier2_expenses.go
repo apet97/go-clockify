@@ -169,16 +169,25 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
+	// Upstream wraps the list in a doubly-nested envelope:
+	// {expenses: {expenses: [...], count: N}, dailyTotals: [...], weeklyTotals: [...]}.
+	// Verified live 2026-05-02 via clockify-api-probe-lab.
+	var envelope struct {
+		Expenses struct {
+			Expenses []map[string]any `json:"expenses"`
+			Count    int              `json:"count"`
+		} `json:"expenses"`
+	}
 	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &items); err != nil {
+	}, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	items := envelope.Expenses.Expenses
 	return ok("clockify_list_expenses", items, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       envelope.Expenses.Count,
 		"page":        page,
 	}), nil
 }
@@ -326,13 +335,18 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
+	// Upstream returns {count: N, categories: [...]}. Probe evidence:
+	// clockify-api-probe-lab/findings/expenses.md (rev 2 2026-05-02).
+	var envelope struct {
+		Count      int              `json:"count"`
+		Categories []map[string]any `json:"categories"`
+	}
+	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_expense_categories", items, map[string]any{
+	return ok("clockify_list_expense_categories", envelope.Categories, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       envelope.Count,
 	}), nil
 }
 
@@ -444,10 +458,18 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var expenses []map[string]any
-	if err := s.Client.Get(ctx, path, query, &expenses); err != nil {
+	// Same envelope as listExpenses — the report aggregator hits the
+	// same /expenses endpoint, just with date-range filters.
+	var envelope struct {
+		Expenses struct {
+			Expenses []map[string]any `json:"expenses"`
+			Count    int              `json:"count"`
+		} `json:"expenses"`
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	expenses := envelope.Expenses.Expenses
 
 	// Aggregate by category.
 	var totalAmount float64
@@ -469,7 +491,7 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 		"byCategory":  byCategory,
 	}, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(expenses),
+		"count":       envelope.Expenses.Count,
 		"page":        page,
 	}), nil
 }
