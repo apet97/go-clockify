@@ -377,9 +377,17 @@ test-postgres:
 	cd internal/controlplane/postgres && INTEGRATION_REQUIRED=1 go test -tags=postgres,integration -count=1 -timeout 180s ./...
 
 # shared-service-e2e drives the streamable HTTP transport in-process
-# against a Postgres-backed control plane with two distinct forward_auth
-# principals, then asserts tenant isolation in audit_events + sessions.
-# Closes Group 2 of docs/launch-candidate-checklist.md.
+# against a Postgres-backed control plane and pins two launch-candidate
+# contracts:
+#
+#   1. Group 2 — TestSharedServicePostgresE2E: two distinct forward_auth
+#      principals on one listener; tenant isolation in
+#      audit_events + sessions; per-tenant policy mode honored.
+#   2. Group 3 (ADR 0017 Path A) — TestStreamableHTTPCrossInstanceRehydration:
+#      two listeners sharing the store; initialize on instance A +
+#      tools/call on instance B succeeds (no client-visible
+#      re-initialize); cross-tenant replay rejected with 403; expired
+#      session surfaced as 404 with the row removed.
 #
 # Requires MCP_LIVE_CONTROL_PLANE_DSN against a sacrificial Postgres.
 # Soft-skips when the DSN is unset so laptop runs do not require a DB;
@@ -392,5 +400,5 @@ shared-service-e2e:
 	  exit 0; \
 	fi; \
 	cd internal/controlplane/postgres && \
-	go test -tags=postgres -count=1 -timeout 5m -run '^TestSharedServicePostgresE2E$$' ./... && \
+	go test -tags=postgres -count=1 -timeout 5m -run '^TestSharedServicePostgresE2E$$|^TestStreamableHTTPCrossInstanceRehydration$$' ./... && \
 	echo "shared-service-e2e: OK"

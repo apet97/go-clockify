@@ -12,14 +12,21 @@ image:
   pullPolicy: IfNotPresent
 
 # Number of replicas. The PDB (pdb.enabled below) pins minAvailable: 1
-# so rolling updates stay available at replicaCount >= 2. The Service
-# template enables sessionAffinity=ClientIP for non-gRPC modes so
-# streamable HTTP sessions stay pinned to a single pod (the in-memory
-# session manager is not yet rehydrated from the control-plane store).
-# Clients behind a shared NAT egress will all hash to the same backend
-# under ClientIP affinity — for non-trivial multi-replica deployments,
-# pair this with pod anti-affinity or a per-tenant ingress. The
-# session-rehydration follow-up will lift this constraint.
+# so rolling updates stay available at replicaCount >= 2.
+#
+# Cross-pod streamable-HTTP sessions are correct as of ADR 0017
+# (Accepted 2026-05-02): the in-memory session manager rehydrates
+# from the control-plane store on a local miss, so a request that
+# lands on a fresh pod after eviction / rolling upgrade / cross-AZ
+# failover succeeds without forcing the client to re-initialize.
+# See docs/adr/0017-streamable-http-session-rehydration.md.
+#
+# The Service template still enables sessionAffinity=ClientIP for
+# non-gRPC modes — that is now defence-in-depth + a perf optimisation
+# (warm in-process caches, fewer cross-instance Postgres lookups for
+# the common-case client), not a correctness requirement. Clients
+# behind shared NAT egress hash to one backend under ClientIP affinity;
+# the rehydration path covers the other backends if affinity is lost.
 replicaCount: 2
 
 # Override fullnameOverride to pin the resource prefix. Default is

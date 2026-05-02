@@ -84,13 +84,30 @@ What earned the tier:
   per-tenant policy-mode enforcement. Closed Group 2 of the
   launch-candidate checklist (commits 42502cf + 79f0769;
   first CI green: ci.yml run 25240007056 on 2026-05-02).
+- **Streamable-HTTP cross-pod session rehydration shipped
+  (ADR 0017 Path A).** `streamSessionManager.get` consults the
+  shared `controlplane.Store` on a local miss, strict-validates
+  the freshly-authenticated principal against the persisted
+  Subject/TenantID, and rebuilds the per-tenant runtime via the
+  existing principal-aware Factory. The persisted CreatedAt /
+  ExpiresAt / LastSeenAt are preserved (no fresh TTL); the
+  rebuilt `mcp.Server` is pre-marked initialized with the
+  persisted ProtocolVersion + ClientName + ClientVersion via the
+  new `Server.MarkInitialized` setter. Pinned by
+  `TestStreamableHTTPCrossInstanceRehydration` in
+  `internal/controlplane/postgres/e2e_session_rehydration_test.go`,
+  which boots two listeners against the same Postgres store and
+  asserts the cross-instance happy path, cross-tenant 403, and
+  expired-session 404 + row removal. Runs in the existing
+  `Shared-service Postgres E2E` CI job (test pattern extended
+  in the same wave). The `sessionAffinity: ClientIP` band-aid
+  stays as defence-in-depth + perf optimisation — correctness
+  no longer depends on it. Closed Group 3 of the launch-candidate
+  checklist (commits eb5351c + 8353934 + fcfd7f0 + 5e566e8 on
+  2026-05-02).
 
 Caveats that the tier carries today:
 
-- ADR `0017-streamable-http-session-rehydration.md` is **Proposed**,
-  not implemented. The band-aid covers the common case but not
-  shared-NAT egress, pod eviction, rolling upgrade, or cross-AZ
-  failover.
 - Live-contract is fail-soft on missing secrets: a fresh fork
   reports green nightlies because the test steps gate on `if:`. A
   green nightly badge does not by itself prove the live tests
@@ -116,11 +133,16 @@ What is missing for tier 3 is intentionally narrow:
    `Shared-service Postgres E2E` job in `.github/workflows/ci.yml`
    went green on its first run (ci.yml run 25240007056) and
    gates per-PR.
-3. **ADR 0017 is unresolved.** Either we ship the rehydration fix
-   and gate it with a multi-replica integration test, or we
-   formally document the single-replica posture and pin
-   `replicaCount: 1` in the chart's default. Today neither has
-   happened, so the operational story is "it usually works."
+3. ~~**ADR 0017 is unresolved.**~~ **Closed 2026-05-02** by
+   commits eb5351c (failing-first cross-instance E2E) + 8353934
+   (`streamSessionManager.get` store fallback +
+   `Server.MarkInitialized` setter) + fcfd7f0 (ADR moved to
+   Accepted with Q1=A, Q2=Strict, Q3=Fresh, Q4=PreserveTTL) +
+   5e566e8 (clients.md + production-readiness.md document the
+   rehydration boundaries). The shipped fix is Path A
+   (implement); Path B (single-replica documentation) is not
+   taken. Pinned by `TestStreamableHTTPCrossInstanceRehydration`
+   under the `Shared-service Postgres E2E` CI job.
 4. **Auth-model docs are scattered across multiple docs.** A
    reviewer cannot answer "what does auth look like?" in five
    minutes without reading ADRs and grepping the codebase.
@@ -188,12 +210,11 @@ unblocks the next.
    (commits 42502cf + 79f0769). See Tier 2 "What earned the
    tier" for the test name, Make target, and CI job name.
 
-3. **ADR 0017 resolution.**
-   *Where:* `docs/adr/0017-streamable-http-session-rehydration.md`.
-   *Why blocking:* either the rehydration fix lands and is proven
-   by a multi-replica E2E, or the single-replica limitation is
-   documented and pinned. The current "Proposed + band-aid"
-   posture is not officially defensible.
+3. ~~**ADR 0017 resolution.**~~ **Closed 2026-05-02** (commits
+   eb5351c + 8353934 + fcfd7f0 + 5e566e8). See Tier 2 "What
+   earned the tier" for the test name, the Make-target update,
+   and the CI job that gates the cross-instance rehydration
+   contract per-PR.
 
 4. **Auth-model docs consolidation.**
    *Where:* `docs/production-readiness.md` plus a possible new
@@ -235,7 +256,7 @@ work happens, not how. The agent slash commands
 |---|---|---|
 | 1. Live contract | `.github/workflows/live-contract.yml`, the rolling `live-test-failure` issue, `tests/e2e_live_test.go`, `tests/e2e_live_mcp_test.go` | One green nightly run with mutating tier on. |
 | 2. ~~Shared-service Postgres E2E~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_shared_service_test.go`, `make shared-service-e2e`, `Shared-service Postgres E2E` job in `ci.yml` | Done. |
-| 3. ADR 0017 | `docs/adr/0017-streamable-http-session-rehydration.md`, `internal/mcp/transport_streamable_http.go`, Helm chart `replicaCount` | Either a multi-replica E2E or a doc PR that pins `replicaCount: 1` and documents the limit. |
+| 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
 | 4. Auth-model docs | `docs/production-readiness.md`, `internal/authn/`, `internal/mcp/transport_http_authmatrix_test.go` | A one-page auth-model summary linked from `README.md`. |
 | 5. Launch docs | `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | `make doc-parity` green and a manual review pass. |
 | 6. Bench baseline | `.bench/`, `bench.yml` workflow, `Makefile` `verify-bench` target | Updated baseline file committed; `make bench-baseline-check` green. |

@@ -131,27 +131,34 @@ durability, no cross-tenant leakage).
 Driven by ADR `0017-streamable-http-session-rehydration.md`
 (Proposed). One of the two paths below must be taken.
 
-- [ ] **Path A — implement the rehydration fix.** The four design
+- [x] **Path A — implement the rehydration fix.** The four design
       questions in ADR 0017 (Factory contract widening, Principal
       reconstruction, persistence depth, eviction-on-restore) have
       explicit decisions recorded in the ADR; ADR is moved to
       Accepted; an implementation lands behind a parity test that
       proves cross-pod failover survives without re-initialize.
-- [ ] **OR Path B — document the single-replica limitation.** A
-      "Single-replica deployment" subsection is added to
-      `docs/production-readiness.md` and to every applicable
-      deployment profile doc (`docs/deploy/profile-single-tenant-http.md`,
-      `docs/deploy/production-profile-shared-service.md`); the
-      Helm chart's `replicaCount` default is set to `1` with a
-      comment pointing at ADR 0017; the `sessionAffinity:
-      ClientIP` band-aid is documented as the **partial**
-      multi-replica posture with its limits (NAT egress, pod
-      eviction, rolling upgrade, cross-AZ failover).
-- [ ] In either path, `tests/sse_resume_test.go` and the
+      _Closed 2026-05-02 by commits eb5351c (failing-first test)
+      + 8353934 (`streamSessionManager.get` store fallback +
+      `Server.MarkInitialized`) + fcfd7f0 (ADR Accepted with
+      Q1=A, Q2=Strict, Q3=Fresh, Q4=PreserveTTL)._
+- [ ] ~~**OR Path B — document the single-replica limitation.**~~
+      _Not taken; Path A landed instead._ The
+      `sessionAffinity: ClientIP` band-aid stays as defence-in-
+      depth + perf optimisation per ADR 0017's "Decision" section;
+      correctness no longer depends on it.
+- [x] In either path, `tests/sse_resume_test.go` and the
       streamable-HTTP parity tests stay green.
-- [ ] If Path A is chosen, a multi-replica integration test
+      _Verified post-Path-A: `go test -race ./internal/mcp/...
+      ./tests/...` green; SSE resume test unchanged because the
+      single-instance Last-Event-ID replay path is untouched._
+- [x] If Path A is chosen, a multi-replica integration test
       (≥2 backends, traffic crossing replicas, no re-initialize
       observed) gates the merge.
+      _`TestStreamableHTTPCrossInstanceRehydration` in
+      `internal/controlplane/postgres/e2e_session_rehydration_test.go`
+      pins the contract; runs in CI under the existing
+      `Shared-service Postgres E2E` job (test pattern extended in
+      the same wave's Make-target update)._
 
 **Definition of done.** ADR 0017 is no longer in the "Proposed"
 state; the production posture is unambiguous in the docs; CI

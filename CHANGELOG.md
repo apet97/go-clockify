@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Streamable-HTTP cross-pod session rehydration closes Group 3
+  (ADR 0017 Path A) of `docs/launch-candidate-checklist.md`.**
+  `streamSessionManager.get`
+  (`internal/mcp/transport_streamable_http.go`) now consults the
+  shared `controlplane.Store` on a local miss, strict-validates
+  the freshly-authenticated principal against the persisted
+  Subject/TenantID, and rebuilds the per-tenant runtime via the
+  existing principal-aware `opts.Factory`. The persisted
+  `CreatedAt` / `ExpiresAt` / `LastSeenAt` are preserved (no
+  fresh TTL); the rebuilt `mcp.Server` is pre-marked initialized
+  via the new `Server.MarkInitialized` setter using the persisted
+  `ProtocolVersion` + `ClientName` + `ClientVersion`. New
+  package-level error sentinels (`errSessionNotFound`,
+  `errSessionExpired`, `errSessionPrincipalMismatch`) let the RPC
+  and SSE handlers map a cross-tenant replay across pods to 403
+  alongside the existing local-hit defence-in-depth check. Pinned
+  by `TestStreamableHTTPCrossInstanceRehydration` in
+  `internal/controlplane/postgres/e2e_session_rehydration_test.go`
+  (build tag `postgres`, runnable via `make shared-service-e2e`):
+  two `mcp.ServeStreamableHTTP` listeners share a single Postgres
+  store; the test asserts the cross-instance happy path,
+  cross-tenant 403, expired-session 404 + row removal, and
+  audit-row session-id continuity. Drift-checked twice (flipped
+  cross-tenant negative + expired-session row-removal
+  assertions, both produced expected RED, both restored to
+  GREEN). The `Shared-service Postgres E2E` CI job's test
+  pattern was extended to include the new test, so it gates
+  per-PR alongside the Group 2 contract. ADR 0017 moved from
+  Proposed to Accepted (2026-05-02) recording Q1=A, Q2=Strict,
+  Q3=Fresh, Q4=PreserveTTL. Docs added to `docs/clients.md`
+  ("Session Rehydration Boundaries") and
+  `docs/production-readiness.md` ("Session rehydration
+  (streamable-HTTP, multi-replica)") naming what survives the
+  boundary, what does not, and the practical client guidance
+  (retry idempotent calls, treat `notifications/cancelled` as
+  best-effort across the boundary). Tier 3 blocker #3 in
+  `docs/official-clockify-mcp-gap-analysis.md` moved to Tier 2
+  "What earned the tier". Commits eb5351c (failing-first test)
+  + 8353934 (implementation) + fcfd7f0 (ADR Accepted) +
+  5e566e8 (clients/readiness docs) + this commit
+  (Make/CI/chart/checklist/CHANGELOG/gap-analysis closure).
+
 - **Shared-service Postgres end-to-end test closes the largest
   remaining launch-candidate gap (Group 2 of
   `docs/launch-candidate-checklist.md`).** New
@@ -39,6 +81,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shared-service coverage in
   `docs/official-clockify-mcp-gap-analysis.md` moved into
   Tier 2 "What earned the tier".
+
+### Changed
+
+- **`sessionAffinity: ClientIP` is now defence-in-depth, not a
+  correctness requirement.** The Helm chart
+  (`deploy/helm/clockify-mcp/values.yaml` `replicaCount` comment)
+  and the kustomize base manifest
+  (`deploy/k8s/base/service.yaml` Service comment) now describe
+  ClientIP affinity as a perf optimisation (warm in-process
+  caches, fewer cross-instance Postgres `Session(id)` lookups
+  for the common-case client) rather than as the gate that keeps
+  streamable-HTTP sessions alive. Cross-pod failover is correct
+  via the rehydration path landed under ADR 0017; the band-aid
+  stays because removing it would degrade the steady-state
+  latency for the load-balanced common case. No chart values
+  changed; the runtime behaviour and the rendered manifest are
+  identical to before the comment update. Operators do not need
+  to take action.
 
 ### Security
 

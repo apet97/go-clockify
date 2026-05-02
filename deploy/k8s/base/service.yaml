@@ -9,16 +9,22 @@ spec:
   type: ClusterIP
   selector:
     app.kubernetes.io/name: clockify-mcp
-  # Streamable HTTP sessions are pinned to a pod's in-memory session
-  # manager (internal/mcp/transport_streamable_http.go); a session
-  # created on pod A is invisible to pod B until the control-plane
-  # rehydration follow-up lands. ClientIP affinity keeps a given
-  # client routed to the same pod across the session lifetime so
-  # `initialize` and the subsequent `tools/call` requests do not
-  # split-brain. Tradeoff: clients sharing a NAT egress all hash to
-  # the same backend. The 24h timeout matches the MCP_SESSION_TTL
-  # ceiling defined in internal/config/spec.go ([1m,24h]); a shorter
-  # affinity window would re-hash clients mid-session.
+  # Streamable HTTP sessions are correct across pod boundaries as of
+  # ADR 0017 (Accepted 2026-05-02): the in-memory session manager
+  # (internal/mcp/transport_streamable_http.go) rehydrates from the
+  # control-plane store on a local miss, so a request that lands on
+  # a fresh pod after eviction / rolling upgrade / cross-AZ failover
+  # succeeds without forcing the client to re-initialize.
+  #
+  # ClientIP affinity remains as defence-in-depth + a perf
+  # optimisation: it keeps the common-case client pinned to one pod
+  # so the cross-instance Postgres Session(id) lookup does not fire
+  # on every request. Tradeoff: clients sharing a NAT egress all
+  # hash to the same backend; the rehydration path covers the rest.
+  # The 24h timeout matches the MCP_SESSION_TTL ceiling defined in
+  # internal/config/spec.go ([1m,24h]); a shorter affinity window
+  # would re-hash clients more often, raising rehydration churn but
+  # never breaking correctness.
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:
