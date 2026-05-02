@@ -73,10 +73,17 @@ func setupLiveCampaign(t *testing.T, h *liveMCPHarness) *liveCampaignContext {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// clockify_whoami returns IdentityData: user is the User struct,
+	// workspaceId is the resolved workspace. Owner identity lives under
+	// data.user.id, not flat at data.id.
 	whoami := h.callOK(ctx, "clockify_whoami", nil)
 	data := extractDataMap(t, whoami)
-	ownerID, _ := data["id"].(string)
-	ownerEmail, _ := data["email"].(string)
+	user, ok := data["user"].(map[string]any)
+	if !ok {
+		t.Fatalf("clockify_whoami response missing user object: %#v", data)
+	}
+	ownerID, _ := user["id"].(string)
+	ownerEmail, _ := user["email"].(string)
 	if ownerID == "" {
 		t.Fatalf("clockify_whoami returned no user id; cannot identify workspace owner: %#v", data)
 	}
@@ -194,15 +201,29 @@ func (c *liveCampaignContext) rawGetPath(ctx context.Context, path string, out a
 	return c.h.Service.Client.Get(ctx, "/workspaces/"+c.WorkspaceID+path, nil, out)
 }
 
-// extractListField pulls a slice-shaped envelope out of a tools/call
-// result. Tier-2 list tools vary in the field name (data.items,
-// data.clients, data.entries, etc.) so callers pass the candidate field
-// names; the first match wins. A missing field returns nil — empty
-// workspaces and missing fields collapse to the same observable, which
-// is correct for the read-only sweep.
-func extractListField(t *testing.T, result map[string]any, fields ...string) []any {
+// extractList pulls a slice-shaped envelope out of a tools/call result.
+//
+// Tool result shapes vary on the wire: Tier-1 list tools (list_projects,
+// list_tags, etc.) put the slice directly at structuredContent.data;
+// Tier-2 list tools sometimes wrap it (e.g. structuredContent.data.items
+// or structuredContent.data.entries). When fields is empty the slice
+// must be at data; otherwise the named fields are tried in order and
+// the first match wins. Returns nil when no slice is found — callers
+// treat that as "empty list", which is the correct semantics for an
+// empty-but-valid sacrificial workspace.
+func extractList(t *testing.T, result map[string]any, fields ...string) []any {
 	t.Helper()
-	data := extractDataMap(t, result)
+	sc, ok := result["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("result missing structuredContent: %#v", result)
+	}
+	if list, ok := sc["data"].([]any); ok {
+		return list
+	}
+	data, ok := sc["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("structuredContent.data is neither a slice nor a map: %#v", sc)
+	}
 	for _, f := range fields {
 		if v, ok := data[f].([]any); ok {
 			return v
