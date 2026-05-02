@@ -93,7 +93,7 @@ The 6th commit (`60350da`) adds two new docs for reviewer handoff:
 - `make verify-vuln` / `make verify-fips` — security scan tools not
   invoked in this pass
 - `make shared-service-e2e` — requires Postgres DSN not available locally
-- CI (`ci.yml`) — not triggered; fwbranch is not yet pushed
+- CI (`ci.yml`) — triggered on push to origin/fwbranch; check Actions tab for run status
 
 ## Live evidence caveats
 
