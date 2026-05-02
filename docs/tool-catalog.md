@@ -87,7 +87,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_holiday` | no | no | no | `write` | Create a new holiday in the workspace |
+| `clockify_create_holiday` | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_create_user_group_admin` | no | no | no | `write` | Create a new user group with optional member user IDs |
 | `clockify_delete_holiday` | no | yes | no | `destructive` | Delete a holiday by ID (supports dry_run preview) |
 | `clockify_delete_user_group_admin` | no | yes | no | `destructive` | Delete a user group by ID (supports dry_run preview) |

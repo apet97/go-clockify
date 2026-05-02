@@ -148,28 +148,32 @@ func TestLiveT2GroupsHolidaysCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("create_holiday_blocked_by_handler_date_shape_bug", func(t *testing.T) {
+	t.Run("create_holiday_with_datePeriod_envelope", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// The handler at internal/tools/tier2_groups_holidays.go
-		// CreateHoliday sends `{name, date, recurring?}` (flat date
-		// string), but the upstream holidays endpoint expects a
-		// `datePeriod: {startDate, endDate}` struct (verified by
-		// inspecting an existing holiday's GET response: every
-		// holiday carries a datePeriod object plus userIds /
-		// userGroupIds / occursAnnually / etc., never a flat date).
-		// Upstream rejects with "must not be null"/code 501. Likely
-		// fix: rewrite the handler body to assemble the datePeriod
-		// envelope and include sensible defaults for the other
-		// required fields. For now this assertion pins the current
-		// breakage so a later fix flips the test.
-		errMsg := h.callExpectError(ctx, "clockify_create_holiday", map[string]any{
-			"name": c.LivePrefix("hol", 0),
-			"date": time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"),
+		// SUMMARY rev 3 #8: body must carry datePeriod.{startDate,
+		// endDate} plus at least one of users.ids / userGroups.ids,
+		// and "recurring" is renamed to "occursAnnually". Single-day
+		// holiday +1 year out keeps the calendar clean — clean up
+		// via the raw client below regardless of asserts.
+		startDate := time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02")
+		result := h.callOK(ctx, "clockify_create_holiday", map[string]any{
+			"name":       c.LivePrefix("hol", 0),
+			"start_date": startDate,
+			"user_ids":   []any{c.OwnerUserID},
 		})
-		if !strings.Contains(errMsg, "must not be null") {
-			t.Fatalf("expected upstream null-field rejection, got: %q", errMsg)
+		data := extractDataMap(t, result)
+		id, _ := data["id"].(string)
+		if id == "" {
+			t.Fatalf("create_holiday returned no id: %#v", data)
 		}
+		dp, _ := data["datePeriod"].(map[string]any)
+		if dp == nil || dp["startDate"] == nil {
+			t.Fatalf("create_holiday missing datePeriod in response: %#v", data)
+		}
+		c.RegisterCleanup("holiday", id, func(ctx context.Context) error {
+			return c.rawDeletePath(ctx, "/holidays/"+id)
+		})
 	})
 
 	t.Run("delete_holiday_for_nonexistent_id", func(t *testing.T) {

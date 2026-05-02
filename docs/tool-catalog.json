@@ -5101,7 +5101,7 @@
     },
     {
       "name": "clockify_create_holiday",
-      "description": "Create a new holiday in the workspace",
+      "description": "Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
       "group": "groups_holidays",
       "tier": 2,
       "read_only": false,
@@ -5113,22 +5113,40 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "date": {
-            "description": "Date in YYYY-MM-DD format",
+          "end_date": {
+            "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays",
             "type": "string"
           },
           "name": {
-            "description": "Holiday name",
+            "description": "Holiday name (2–100 chars)",
             "type": "string"
           },
-          "recurring": {
+          "occurs_annually": {
             "description": "Whether the holiday recurs annually",
             "type": "boolean"
+          },
+          "start_date": {
+            "description": "Range start in yyyy-MM-dd format",
+            "type": "string"
+          },
+          "user_group_ids": {
+            "description": "User-group IDs the holiday applies to",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_ids": {
+            "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
           "name",
-          "date"
+          "start_date"
         ],
         "type": "object"
       },
