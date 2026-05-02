@@ -756,3 +756,85 @@ func contains(haystack, needle string) bool {
 	}
 	return false
 }
+
+// ---------------------------------------------------------------------------
+// GetReportsRaw / RawResponse coverage. The shared-reports export
+// handler depends on these; the JSON-mode siblings are well-covered
+// via the Get/Post/Put/Delete tests above, but the raw branch in
+// doOnce was uncovered until 2026-05-03.
+// ---------------------------------------------------------------------------
+
+func TestGetReportsRawSuccessReturnsBytesAndHeaders(t *testing.T) {
+	pdfMagic := []byte{'%', 'P', 'D', 'F'}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/shared-reports/abc" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("exportType") != "PDF" {
+			t.Fatalf("missing ?exportType=PDF query: %q", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", "filename=foo.pdf")
+		_, _ = w.Write(pdfMagic)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/abc", map[string]string{"exportType": "PDF"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := raw.Header.Get("Content-Type"); got != "application/pdf" {
+		t.Fatalf("Content-Type want application/pdf, got %q", got)
+	}
+	if got := raw.Header.Get("Content-Disposition"); got != "filename=foo.pdf" {
+		t.Fatalf("Content-Disposition want filename=foo.pdf, got %q", got)
+	}
+	if string(raw.Body) != string(pdfMagic) {
+		t.Fatalf("body bytes mismatch: want %v got %v", pdfMagic, raw.Body)
+	}
+}
+
+func TestGetReportsRawAPIError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"code":404,"message":"NOT FOUND"}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/missing", nil)
+	if err == nil {
+		t.Fatalf("expected error on 404, got nil (raw=%v)", raw)
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected *APIError, got %T: %v", err, err)
+	}
+	if apiErr.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", apiErr.StatusCode)
+	}
+}
+
+func TestGetReportsRawEmptyBodyOK(t *testing.T) {
+	// Some Reports endpoints reply 200 with no body (e.g. zero-byte
+	// CSV — rare but observed). The raw branch must tolerate it,
+	// returning an empty Body slice rather than erroring.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/csv")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/empty", map[string]string{"exportType": "CSV"})
+	if err != nil {
+		t.Fatalf("unexpected error on empty body: %v", err)
+	}
+	if len(raw.Body) != 0 {
+		t.Fatalf("expected empty body, got %d bytes", len(raw.Body))
+	}
+	if got := raw.Header.Get("Content-Type"); got != "text/csv" {
+		t.Fatalf("Content-Type want text/csv, got %q", got)
+	}
+}

@@ -177,6 +177,29 @@ func (c *Client) DeleteReports(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
 }
 
+// RawResponse is the binary-aware envelope returned by GetReportsRaw —
+// the raw response bytes plus enough header context for callers to
+// recover Content-Type and Content-Disposition (filename). Used by the
+// shared-reports export endpoint where the upstream returns binary
+// (PDF/XLSX) or non-JSON text (CSV).
+type RawResponse struct {
+	Header http.Header
+	Body   []byte
+}
+
+// GetReportsRaw is the binary-aware sibling of GetReports. It runs the
+// same retry/tracing/metrics pipeline but skips the JSON unmarshal,
+// exposing the raw body bytes and response headers so callers can
+// inspect Content-Type and Content-Disposition. Use for export
+// endpoints; use GetReports for JSON-shaped reads.
+func (c *Client) GetReportsRaw(ctx context.Context, path string, query map[string]string) (*RawResponse, error) {
+	raw := &RawResponse{}
+	if err := c.doRequest(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, "", nil, raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
 // PostMultipart performs a POST with a multipart/form-data body. Each
 // form key maps to one or more values; multi-value keys are written as
 // repeated form fields under the same name (the encoding the Clockify
@@ -411,6 +434,28 @@ func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint str
 
 	if out == nil {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
+		return nil
+	}
+	// Binary-aware path: when the caller wants the raw bytes (e.g.
+	// shared-reports PDF/CSV/XLSX export), read into a fresh buffer
+	// and stash headers — no JSON unmarshal. Same size cap as the
+	// JSON path so an oversize binary still surfaces a clear error.
+	if raw, ok := out.(*RawResponse); ok {
+		respBuf := getBodyBuf()
+		defer putBodyBuf(respBuf)
+		n, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody+1))
+		if err != nil {
+			return err
+		}
+		if n > maxResponseBody {
+			metrics.ClockifyResponsesOversizeTotal.Inc(method)
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
+			return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
+		}
+		body := make([]byte, n)
+		copy(body, respBuf.Bytes())
+		raw.Header = resp.Header.Clone()
+		raw.Body = body
 		return nil
 	}
 	// Read the body into a pooled buffer, then unmarshal. Using

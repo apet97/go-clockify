@@ -144,10 +144,10 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 |------|-----------|-------------|------------|------|-------------|
 | `clockify_create_shared_report` | no | no | no | `write` | Create a new shared report |
 | `clockify_delete_shared_report` | no | yes | no | `destructive` | Delete a shared report by ID |
-| `clockify_export_shared_report` | yes | no | yes | `read` | Export a shared report in a specified format |
+| `clockify_export_shared_report` | yes | no | yes | `read` | Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return a binary-aware envelope with base64-encoded body. |
 | `clockify_get_shared_report` | yes | no | yes | `read` | Get a single shared report by ID |
 | `clockify_list_shared_reports` | yes | no | yes | `read` | List shared reports in the workspace with pagination |
-| `clockify_update_shared_report` | no | no | no | `write` | Update an existing shared report |
+| `clockify_update_shared_report` | no | no | no | `write` | Update an existing shared report (PUT semantics is merge — partial body preserves the existing filter) |
 
 ### `time_off`
 

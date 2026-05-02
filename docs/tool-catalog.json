@@ -7085,9 +7085,33 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "filters": {
-            "additionalProperties": false,
-            "description": "Optional filter object (project IDs, user IDs, date range, etc.)",
+          "filter": {
+            "additionalProperties": true,
+            "description": "Required filter object. Live-required: exportType (JSON_V1|PDF|CSV|XLSX), dateRangeStart (ISO 8601), dateRangeEnd (ISO 8601). Optional: summaryFilter / detailedFilter / weeklyFilter / projects / users / etc.",
+            "properties": {
+              "dateRangeEnd": {
+                "description": "ISO 8601 timestamp",
+                "type": "string"
+              },
+              "dateRangeStart": {
+                "description": "ISO 8601 timestamp",
+                "type": "string"
+              },
+              "exportType": {
+                "enum": [
+                  "JSON_V1",
+                  "PDF",
+                  "CSV",
+                  "XLSX"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "exportType",
+              "dateRangeStart",
+              "dateRangeEnd"
+            ],
             "type": "object"
           },
           "name": {
@@ -7095,13 +7119,35 @@
             "type": "string"
           },
           "report_type": {
-            "description": "Report type (e.g. SUMMARY, DETAILED, WEEKLY)",
+            "description": "Report type — common: SUMMARY, DETAILED, WEEKLY. Full upstream enum below.",
+            "enum": [
+              "DETAILED",
+              "WEEKLY",
+              "SUMMARY",
+              "SCHEDULED",
+              "EXPENSE_DETAILED",
+              "EXPENSE_RECEIPT",
+              "PTO_REQUESTS",
+              "PTO_BALANCE",
+              "ATTENDANCE",
+              "INVOICE_EXPENSE",
+              "INVOICE_TIME",
+              "PROJECT",
+              "TEAM_FULL",
+              "TEAM_LIMITED",
+              "TEAM_GROUPS",
+              "INVOICES",
+              "KIOSK_PIN_LIST",
+              "KIOSK_ASSIGNEES",
+              "USER_DATA_EXPORT"
+            ],
             "type": "string"
           }
         },
         "required": [
           "name",
-          "report_type"
+          "report_type",
+          "filter"
         ],
         "type": "object"
       },
@@ -7182,7 +7228,7 @@
     },
     {
       "name": "clockify_export_shared_report",
-      "description": "Export a shared report in a specified format",
+      "description": "Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return a binary-aware envelope with base64-encoded body.",
       "group": "shared_reports",
       "tier": 2,
       "read_only": true,
@@ -7195,7 +7241,14 @@
         "additionalProperties": false,
         "properties": {
           "format": {
-            "description": "Export format: csv, json, pdf, or excel (default json)",
+            "description": "Export format. Accepts: json (default, returns decoded JSON_V1), pdf, csv, xlsx (alias: excel).",
+            "enum": [
+              "json",
+              "pdf",
+              "csv",
+              "xlsx",
+              "excel"
+            ],
             "type": "string"
           },
           "report_id": {
@@ -7332,7 +7385,7 @@
     },
     {
       "name": "clockify_update_shared_report",
-      "description": "Update an existing shared report",
+      "description": "Update an existing shared report (PUT semantics is merge — partial body preserves the existing filter)",
       "group": "shared_reports",
       "tier": 2,
       "read_only": false,
@@ -7344,8 +7397,9 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "filters": {
-            "additionalProperties": false,
+          "filter": {
+            "additionalProperties": true,
+            "description": "Optional filter object — same shape as create. Send only the keys you want to change.",
             "type": "object"
           },
           "name": {
@@ -7355,6 +7409,27 @@
             "type": "string"
           },
           "report_type": {
+            "enum": [
+              "DETAILED",
+              "WEEKLY",
+              "SUMMARY",
+              "SCHEDULED",
+              "EXPENSE_DETAILED",
+              "EXPENSE_RECEIPT",
+              "PTO_REQUESTS",
+              "PTO_BALANCE",
+              "ATTENDANCE",
+              "INVOICE_EXPENSE",
+              "INVOICE_TIME",
+              "PROJECT",
+              "TEAM_FULL",
+              "TEAM_LIMITED",
+              "TEAM_GROUPS",
+              "INVOICES",
+              "KIOSK_PIN_LIST",
+              "KIOSK_ASSIGNEES",
+              "USER_DATA_EXPORT"
+            ],
             "type": "string"
           }
         },
