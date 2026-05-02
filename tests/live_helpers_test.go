@@ -195,11 +195,29 @@ func (c *liveCampaignContext) rawDeletePath(ctx context.Context, path string) er
 
 // rawArchiveAndDeleteClient is the cleanup primitive for clients.
 // Like projects, Clockify rejects DELETE on active clients; the
-// resource must first be archived via PUT {archived:true}. Idempotent.
+// resource must first be archived. Unlike projects, the upstream's
+// PUT validator on /clients/{id} also requires `name` in the body
+// (verified by direct probe: PUT {archived:true} alone returns
+// "Client name is required"). The helper GETs the existing client
+// to read its name, then PUTs {name, archived:true}, then DELETEs.
+// Idempotent: a 404 on the GET means the client is already gone, so
+// the helper short-circuits.
 func (c *liveCampaignContext) rawArchiveAndDeleteClient(ctx context.Context, clientID string) error {
 	path := "/workspaces/" + c.WorkspaceID + "/clients/" + clientID
+	var existing map[string]any
+	if err := c.h.Service.Client.Get(ctx, path, nil, &existing); err != nil {
+		// Already gone — let the DELETE attempt below surface the
+		// canonical not-found error if anything is left.
+		return c.h.Service.Client.Delete(ctx, path)
+	}
+	name, _ := existing["name"].(string)
+	if name == "" {
+		// Bail with a delete attempt; if upstream rejects we'll log
+		// and move on.
+		return c.h.Service.Client.Delete(ctx, path)
+	}
 	var ignored map[string]any
-	if err := c.h.Service.Client.Put(ctx, path, map[string]any{"archived": true}, &ignored); err != nil {
+	if err := c.h.Service.Client.Put(ctx, path, map[string]any{"name": name, "archived": true}, &ignored); err != nil {
 		c.t.Logf("archive-before-delete client %s returned %v (continuing)", clientID, err)
 	}
 	return c.h.Service.Client.Delete(ctx, path)
