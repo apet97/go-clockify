@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 20 | 34 | 54 |
-| Mutating (non-destructive) | 12 | 43 | 55 |
+| Read-only | 20 | 33 | 53 |
+| Mutating (non-destructive) | 12 | 42 | 54 |
 | Destructive | 1 | 13 | 14 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **33** | **90** | **123** |
+| **Total tools** | **33** | **88** | **121** |
 
 ## Evidence types
 
@@ -95,7 +95,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 
 ---
 
-## Tier 2 — Domain groups (90 tools)
+## Tier 2 — Domain groups (88 tools)
 
 ### `approvals` (6 tools)
 
@@ -187,19 +187,22 @@ Clockify endpoints: `PUT/DELETE /workspaces/{ws}/projects/*`, `/workspaces/{ws}/
 | `clockify_set_project_memberships` | mutating | unit |
 | `clockify_update_project_estimate` | mutating | unit |
 
-### `scheduling` (9 tools)
+### `scheduling` (7 tools)
 
-Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/scheduling/*`
+Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/scheduling/assignments/*`
+
+Two phantom schedule tools (`get` and `create`) were removed alongside
+the earlier `list_schedules` removal once the probe lab confirmed
+Clockify has no `/scheduling/{id}` or `POST /scheduling` surface (only
+`/scheduling/assignments/...` paths exist).
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
 | `clockify_create_assignment` | mutating | unit |
-| `clockify_create_schedule` | mutating | unit |
 | `clockify_delete_assignment` | destructive | unit |
 | `clockify_filter_schedule_capacity` | read-only | unit + live |
 | `clockify_get_assignment` | read-only | unit |
 | `clockify_get_project_schedule_totals` | read-only | unit |
-| `clockify_get_schedule` | read-only | unit |
 | `clockify_list_assignments` | read-only | unit |
 | `clockify_update_assignment` | mutating | unit |
 
@@ -359,7 +362,7 @@ surface and surface latent handler / upstream bugs.
 |------|----------------------------|---------------|
 | `TestLiveTier1ReadOnly` | 13 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `quick_report`, `timer_status`, `detailed_report`, `resolve_debug`, `policy_info` | success path |
 | `TestLiveTier2ReadOnlySweep` | 22 Tier-2 read-only and report tools across 11 groups | mixed success / pinned-error |
-| `TestLiveT2BlockedGroups` | 11 tools across `shared_reports` + `scheduling` (groups blocked by upstream-host mismatch) | pinned-error (404 "No static resource") |
+| `TestLiveT2BlockedGroups` | 9 tools across `shared_reports` + `scheduling` (groups blocked by upstream-host mismatch) | pinned-error (404 "No static resource") |
 | `TestLiveT2ExpensesCRUD` | `create_expense_category`, `update_expense_category`, plus pinned-error contracts on `delete_expense_category` (archive-required), `create_expense` (handler content-type bug), `get_expense` (rejects bogus id) | mixed success / pinned-error |
 | `TestLiveT2CustomFieldsCRUD` | `seed_project` works; `create_custom_field` and downstream tests cap-skipped at the upstream's 50-field-per-workspace limit | success on seed; cap-skipped on field tools |
 | `TestLiveT2GroupsHolidaysCRUD` | `create_user_group_admin`, `update_user_group_admin`, `delete_user_group_admin` (real + dry-run); pinned-error on `get_user_group` (upstream 405) and `create_holiday` (handler date-shape bug) | mixed |
@@ -368,7 +371,7 @@ surface and surface latent handler / upstream bugs.
 | `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope; `clockify_create_tag` (Tier 1) seeded × 11 | success path |
 
 **Live-tested tools (campaign expansion):** ~25 of 33 Tier 1 tools
-(76%) and ~38 of 90 Tier 2 tools (42%) are now exercised through the
+(76%) and ~38 of 88 Tier 2 tools (43%) are now exercised through the
 MCP path against the sacrificial workspace — counting both success
 paths and pinned-error contracts. Note that pinned-error coverage is
 not "this tool works" coverage; it is "the protocol layer reaches
@@ -458,13 +461,13 @@ the contract for landing the fix.
 
 ## Gaps
 
-1. **Tier 2 live coverage (success path):** ~38 of 90 Tier 2 tools
+1. **Tier 2 live coverage (success path):** ~38 of 88 Tier 2 tools
    are now exercised through the MCP path; most of the remaining
-   52 are blocked by the bug inventory above. Once those bugs are
+   50 are blocked by the bug inventory above. Once those bugs are
    fixed, the campaign tests will flip from pinned-error to
    success-path automatically (the assertions are inverted by
    design).
-   Read-only Tier 2 tools (38) could safely receive live-read-only tests.
+   Read-only Tier 2 tools (37) could safely receive live-read-only tests.
 2. **Schema-drift for mutating endpoints:** Only read-side schemas are
    drift-checked. Request payload schemas (tool JSON Schema descriptors)
    are not automatically compared against the live API's accepted fields.
@@ -488,6 +491,117 @@ the contract for landing the fix.
    (e.g., `clockify_list_custom_fields`, `clockify_list_webhooks`)
 3. Schema-drift test extension to mutating endpoint request schemas
 4. Dry-run exhaustiveness sweep across all 14 destructive tools
+
+## Known unresolved API contract questions
+
+Probe-lab evidence (`clockify-api-probe-lab/findings/`) raised a small
+number of numeric / shape questions that were not resolved before the
+PRs in the recent contract-fix wave (#53–#56) merged. The handlers
+currently pass through whatever the upstream returns; these notes
+record what would have to be probed before any conversion or
+auto-validation could be added safely.
+
+### invoice line-item amounts (unresolved)
+
+- **Source:** `clockify-api-probe-lab/findings/invoices.md` lines
+  77–95 and the open-questions section.
+- **Observation:** `GET /workspaces/{ws}/invoices/{id}` returns each
+  line item as `{ quantity, unitPrice, amount, ... }`. In one probed
+  fixture, `unitPrice == 100000` and `quantity == 100` produced a row
+  the workspace billed as `$1,000.00`, suggesting `unitPrice` is in
+  integer minor units (cents). The list-invoice envelope's top-level
+  `amount`, `paid`, `balance` fields use the same `<integer cents>`
+  notation in the probe write-up.
+- **Status in go-clockify:** `clockify_get_invoice` and
+  `clockify_list_invoices` (and `clockify_list_invoice_items`, which
+  PR #53 repointed to the embedded array) all surface the upstream
+  numbers verbatim. No conversion is performed and no schema
+  documentation in the descriptors states a unit.
+- **Open question (low priority):** is `unitPrice` always integer
+  minor units, or is the unit currency-dependent? Until that is
+  proved against multiple workspace currencies, the tool output
+  must be treated by callers as raw upstream values, not as a
+  pre-converted decimal amount.
+
+### expense `amount` vs `total` scaling (unresolved)
+
+- **Source:** `clockify-api-probe-lab/findings/expenses.md`
+  lines 155–161 and open-question #1.
+- **Observation:** `POST /workspaces/{ws}/expenses` was probed with
+  `amount=100` (multipart form field). The response surfaced
+  `total: 10000.0`. Two plausible interpretations: (a) the request
+  `amount` is in major units and the response `total` is in minor
+  units (×100 scaling); (b) `amount` is a multiplier against a
+  workspace default rate. The probe could not distinguish these
+  without more workspaces.
+- **Status in go-clockify:** `clockify_create_expense` (fixed in
+  PR #53 to use multipart) accepts whatever the caller passes for
+  `amount`; `clockify_list_expenses` and `clockify_get_expense`
+  return the upstream `total` verbatim.
+- **Open question (low priority):** confirm direction and rate
+  before exposing either number as a "decimal amount" in the tool
+  schema. Until then, the descriptor must keep `amount` documented
+  as "the value the API expects, no client-side scaling".
+
+### expense `projectId` optional-vs-required (unresolved)
+
+- **Source:** `clockify-api-probe-lab/findings/expenses.md` lines
+  44–47 (note in the probe), 141 (response sample), and
+  open-question #2.
+- **Observation:** Clockify's published OpenAPI marks `projectId` as
+  required for `POST /workspaces/{ws}/expenses`. The probe omitted
+  it and still received `201` with `projectId: null` in the
+  response. The probe could not tell whether the workspace had a
+  default project, whether the field is silently nullable, or
+  whether enforcement varies by plan.
+- **Status in go-clockify:** the `clockify_create_expense`
+  descriptor still marks `project_id` as required (matching the
+  documented contract). PR #53 did not flip this.
+- **Open question (low priority):** if Clockify confirms `projectId`
+  is optional, drop it from the descriptor's `required` list. Until
+  then, the conservative descriptor stays in place — callers can
+  always pass a project ID even if the upstream would have accepted
+  none.
+
+### shared-reports cross-type / non-summary filter requirements (unresolved)
+
+- **Source:** `clockify-api-probe-lab/findings/SUMMARY.md` open
+  questions #7, #8, #9 (rev 4, 2026-05-03).
+- **Observation:** the probe lab proved `createSharedReport` and
+  `updateSharedReport` body shape only for `type=SUMMARY`. The
+  remaining 18 enum values (`DETAILED`, `EXPENSE_DETAILED`,
+  `INVOICE_TIME`, `KIOSK_PIN_LIST`, …) and the cross-type validation
+  semantics on `PUT` are untested. Whether `PUT` of a full bare-id
+  GET response (with nested `workspace.workspaceSettings`)
+  round-trips is also untested.
+- **Status in go-clockify:** PR #56 fixed body field names
+  (`type`/`filter`) and pinned them with dispatcher tests. The
+  descriptor exposes the broader enum verbatim. Callers using a
+  non-`SUMMARY` type will see whatever 4xx the upstream returns if
+  the required filter sub-object is wrong.
+- **Open question (low priority):** probe the per-type filter
+  requirements before adding any client-side validation. The
+  descriptor should not over-promise validation it can't enforce.
+
+### scheduling `capacityPerDay` unit (resolved as raw upstream value)
+
+- **Source:** `clockify-api-probe-lab/findings/scheduling.md`
+  open question #4.
+- **Resolution:** the unit is **seconds** per the live response
+  (`25200 = 7 hr/day` default; `3600 = 1 hr/day` workspace
+  override). PR #55 already attaches `capacityUnit: "seconds"` to
+  the `clockify_filter_schedule_capacity` meta envelope. Recording
+  the resolution here so the open-question list does not relitigate
+  it.
+
+### Where to look next
+
+- Per-domain probe summary: `clockify-api-probe-lab/findings/SUMMARY.md`
+- Per-domain fixtures: `clockify-api-probe-lab/fixtures/<domain>/`
+- Official Clockify docs (probe-lab mirror): `clockify-api-probe-lab/<DOMAIN>DOC.md`
+
+The probe lab is a separate workspace; nothing under it is
+committed into go-clockify.
 
 ## Evidence authority
 
