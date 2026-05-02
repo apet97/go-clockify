@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -14,6 +15,10 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		// /user is hit by the createExpense handler when user_id is
+		// not supplied: it resolves the calling user via getCurrentUser.
+		case r.Method == "GET" && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses":
 			respondJSON(t, w, map[string]any{
 				"expenses": map[string]any{
@@ -24,6 +29,21 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses":
+			// The handler now POSTs multipart/form-data. Pin the
+			// content-type and the required form fields here so a
+			// regression to JSON surfaces locally.
+			ct := r.Header.Get("Content-Type")
+			if !strings.HasPrefix(ct, "multipart/form-data") {
+				t.Fatalf("create_expense expected multipart/form-data, got %q", ct)
+			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("create_expense parse multipart: %v", err)
+			}
+			for _, field := range []string{"userId", "amount", "date", "categoryId"} {
+				if r.FormValue(field) == "" {
+					t.Fatalf("create_expense missing required field %q (form=%v)", field, r.Form)
+				}
+			}
 			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 200})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 250})

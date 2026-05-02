@@ -11,29 +11,11 @@ import (
 
 // TestLiveT2ExpensesCRUD covers what is currently exercise-able on the
 // expenses group through the MCP path against a real Clockify backend.
-// The Tier-2 read-only sweep (TestLiveTier2ReadOnlySweep) already
-// flagged that list_expenses / list_expense_categories /
-// expense_report all fail with shape mismatches — this file picks up
-// the still-callable surface (create + update on categories) and
-// pins the upstream archive-required constraint that blocks delete.
-//
-// What this test does NOT exercise (with rationale, so a future fix
-// can flip these to real coverage):
-//
-//   - clockify_create_expense: handler POSTs application/json, but
-//     /workspaces/{id}/expenses rejects with
-//     `Content-Type 'application/json' is not supported`. The
-//     upstream endpoint expects multipart/form-data (likely to
-//     support receipt upload). Verified by direct curl probe:
-//     `application/json` → 3000 error; multipart with named fields
-//     → progresses to "Amount is required". Likely fix: thread a
-//     multipart body builder through internal/clockify.Client and
-//     have createExpense use it.
-//   - clockify_get_expense: an end-to-end test would need a fresh
-//     expense to read, which depends on the broken create path.
-//     Will land alongside the create fix.
-//   - clockify_update_expense / clockify_delete_expense: same
-//     dependency.
+// list_expenses / list_expense_categories / expense_report shape
+// mismatches were closed in Batch 1, and the createExpense multipart
+// fix in Batch 3 unblocks the create-path subtest below. The category
+// archive constraint is still pinned because Clockify exposes no
+// archive-flag mutation route.
 func TestLiveT2ExpensesCRUD(t *testing.T) {
 	h := setupLiveMCPHarness(t, liveMCPOptions{})
 	c := setupLiveCampaign(t, h)
@@ -120,23 +102,34 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("create_expense_blocked_by_handler_content_type_bug", func(t *testing.T) {
+	t.Run("create_expense_returns_id", func(t *testing.T) {
+		if categoryID == "" {
+			t.Skip("create_expense_category did not produce an id")
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// The create-expense handler at
-		// internal/tools/tier2_expenses.go:207 POSTs
-		// application/json, but the upstream expenses endpoint only
-		// accepts multipart/form-data. The handler returns the raw
-		// upstream rejection, which we assert here so that any fix
-		// (multipart body, different endpoint) flips the test and
-		// forces this annotation to be reviewed.
-		errMsg := h.callExpectError(ctx, "clockify_create_expense", map[string]any{
-			"date":   time.Now().UTC().Format("2006-01-02"),
-			"amount": 100.0,
+		// SUMMARY rev 3 #2: the upstream expenses POST is
+		// multipart/form-data with required userId, amount, date
+		// (RFC3339 yyyy-MM-ddThh:mm:ssZ), and categoryId. user_id
+		// defaults to the calling user via /user when omitted. This
+		// subtest pins the success path; cleanup runs through the
+		// raw client below so a leaked expense doesn't survive the
+		// test even if asserts fail.
+		date := time.Now().UTC().Truncate(time.Second).Format("2006-01-02T15:04:05Z")
+		result := h.callOK(ctx, "clockify_create_expense", map[string]any{
+			"amount":      1.0,
+			"date":        date,
+			"category_id": categoryID,
+			"notes":       c.LivePrefix("exp", 0),
 		})
-		if !strings.Contains(errMsg, "Content-Type 'application/json' is not supported") {
-			t.Fatalf("expected upstream content-type rejection, got: %q", errMsg)
+		data := extractDataMap(t, result)
+		id, _ := data["id"].(string)
+		if id == "" {
+			t.Fatalf("create_expense returned no id: %#v", data)
 		}
+		c.RegisterCleanup("expense", id, func(ctx context.Context) error {
+			return c.rawDeletePath(ctx, "/expenses/"+id)
+		})
 	})
 
 	t.Run("get_expense_rejects_nonexistent_id", func(t *testing.T) {

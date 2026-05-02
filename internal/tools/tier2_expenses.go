@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -54,15 +56,18 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Create expense
-		{Tool: toolRW("clockify_create_expense", "Create a new expense", map[string]any{
+		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.", map[string]any{
 			"type":     "object",
-			"required": []string{"amount", "date"},
+			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{
-				"amount":      map[string]any{"type": "number", "description": "Expense amount"},
-				"date":        map[string]any{"type": "string", "description": "Expense date (YYYY-MM-DD)"},
-				"category_id": map[string]any{"type": "string", "description": "Expense category ID"},
-				"project_id":  map[string]any{"type": "string", "description": "Project ID"},
-				"description": map[string]any{"type": "string", "description": "Expense description"},
+				"amount":      map[string]any{"type": "number", "description": "Expense amount (major currency units)"},
+				"date":        map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"category_id": map[string]any{"type": "string", "description": "Expense category ID (required)"},
+				"user_id":     map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
+				"project_id":  map[string]any{"type": "string", "description": "Project ID (optional)"},
+				"task_id":     map[string]any{"type": "string", "description": "Task ID (optional)"},
+				"notes":       map[string]any{"type": "string", "description": "Free-form notes"},
+				"billable":    map[string]any{"type": "boolean", "description": "Whether the expense is billable"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createExpense(ctx, args)
@@ -219,25 +224,46 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{}
-	if v, ok := args["amount"]; ok {
-		body["amount"] = v
-	} else {
+	// Required: amount, date (RFC3339), category_id. user_id defaults
+	// to the calling user via /user — the upstream rejects multipart
+	// POSTs that omit userId with a 400.
+	amount, hasAmount := args["amount"].(float64)
+	if !hasAmount {
 		return ResultEnvelope{}, fmt.Errorf("amount is required")
 	}
-	if v := stringArg(args, "date"); v != "" {
-		body["date"] = v
-	} else {
+	date := stringArg(args, "date")
+	if date == "" {
 		return ResultEnvelope{}, fmt.Errorf("date is required")
 	}
-	if v := stringArg(args, "category_id"); v != "" {
-		body["categoryId"] = v
+	categoryID := stringArg(args, "category_id")
+	if categoryID == "" {
+		return ResultEnvelope{}, fmt.Errorf("category_id is required")
 	}
+	userID := stringArg(args, "user_id")
+	if userID == "" {
+		current, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+		}
+		userID = current.ID
+	}
+
+	form := url.Values{}
+	form.Set("userId", userID)
+	form.Set("amount", strconv.FormatFloat(amount, 'f', -1, 64))
+	form.Set("date", date)
+	form.Set("categoryId", categoryID)
 	if v := stringArg(args, "project_id"); v != "" {
-		body["projectId"] = v
+		form.Set("projectId", v)
 	}
-	if v := stringArg(args, "description"); v != "" {
-		body["description"] = v
+	if v := stringArg(args, "task_id"); v != "" {
+		form.Set("taskId", v)
+	}
+	if v := stringArg(args, "notes"); v != "" {
+		form.Set("notes", v)
+	}
+	if v, ok := args["billable"].(bool); ok {
+		form.Set("billable", strconv.FormatBool(v))
 	}
 
 	path, err := paths.Workspace(wsID, "expenses")
@@ -245,7 +271,7 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, path, body, &created); err != nil {
+	if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_expense", created, map[string]any{"workspaceId": wsID}), nil
