@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -252,6 +253,40 @@ func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 		if d.Handler == nil {
 			t.Fatalf("missing handler: %s", d.Tool.Name)
 		}
+	}
+}
+
+// TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:
+// when the caller passes `status`, the handler must emit ?statuses=
+// (plural) upstream and must NOT emit ?status=. Upstream wire name
+// verified by clockify-api-probe-lab 2026-05-02.
+func TestTier2_Invoices_ListSendsStatusesNotStatus(t *testing.T) {
+	var capturedQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		capturedQuery = r.URL.Query()
+		respondJSON(t, w, map[string]any{
+			"total":    1,
+			"invoices": []map[string]any{{"id": "inv1", "status": "PAID"}},
+		})
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+
+	res, err := svc.listInvoices(context.Background(), map[string]any{
+		"status":    "PAID",
+		"page":      1,
+		"page_size": 50,
+	})
+	mustOK(t, res, err, "clockify_list_invoices")
+
+	if got := capturedQuery.Get("statuses"); got != "PAID" {
+		t.Fatalf("expected ?statuses=PAID, got %q (full query=%q)", got, capturedQuery.Encode())
+	}
+	if got := capturedQuery.Get("status"); got != "" {
+		t.Fatalf("must not send legacy ?status, got %q (full query=%q)", got, capturedQuery.Encode())
 	}
 }
 

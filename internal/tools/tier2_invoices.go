@@ -41,6 +41,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 			"properties": map[string]any{
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+				"status":    map[string]any{"type": "string", "description": "Filter by status (e.g. PAID, SENT, DRAFT)"},
 			},
 		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listInvoices(ctx, args)
@@ -210,10 +211,16 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 		Total    int              `json:"total"`
 		Invoices []map[string]any `json:"invoices"`
 	}
-	if err := s.Client.Get(ctx, path, map[string]string{
+	query := map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &envelope); err != nil {
+	}
+	// Wire param is `statuses` (plural) — verified by clockify-api-probe-lab.
+	// See PR #53 SUMMARY #10. The arg name `status` matches invoice_report.
+	if v := stringArg(args, "status"); v != "" {
+		query["statuses"] = v
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_list_invoices", envelope.Invoices, map[string]any{
