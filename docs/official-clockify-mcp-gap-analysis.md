@@ -239,6 +239,16 @@ What is missing for tier 3 is intentionally narrow:
   are justified both in code and ADR 0017. The production
   `MCP_ALLOW_DEV_BACKEND=1` rejection now has a dedicated regression
   test.
+- **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
+  maps all 124 MCP tools to their Clockify API endpoints, classifies
+  each tool by read-only/mutating/destructive/billing/admin risk, and
+  lists the current unit/integration/live-test coverage per tool.
+  Gaps are explicit — dry-run coverage (6/14 destructive tools wired,
+  1/14 live-tested), policy-mode live coverage (2/5 modes),
+  schema-drift scope (read-side only), and Tier 2 live coverage
+  (0/91 tools). The evidence hierarchy (scheduled workflow >
+  manual dispatch > local with env vars > local without env vars as
+  non-evidence) is documented there.
 
 ---
 
