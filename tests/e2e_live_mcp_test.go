@@ -430,10 +430,13 @@ func TestLiveDryRunDoesNotMutate(t *testing.T) {
 		"entry_id": entryID,
 		"dry_run":  true,
 	})
-	// Tool envelope shape: structuredContent.data should carry dry_run:true
-	// and a preview field populated by the GET counterpart. dryrun.WrapResult
-	// also lives at result-envelope level for compat with older clients.
-	dryData := extractDataMap(t, dryResp)
+	// Dry-run envelope shape (from dryrun.WrapResult): a flat map at the
+	// structuredContent root carrying dry_run:true, tool, preview, and note —
+	// distinct from non-dry-run tools whose data lives under structuredContent.data.
+	dryData, ok := dryResp["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("dry-run delete result missing structuredContent: %#v", dryResp)
+	}
 	if v, _ := dryData["dry_run"].(bool); !v {
 		t.Fatalf("dry-run delete envelope missing dry_run:true: %#v", dryData)
 	}
