@@ -92,11 +92,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		}},
 		{"webhooks", []call{
 			{"clockify_list_webhooks", nil, ""},
-			// /webhooks/events 400s with "Webhook doesn't belong to
-			// Workspace" — the upstream endpoint is per-webhook, not
-			// per-workspace, so the handler's URL is wrong. Likely
-			// fix: route via /webhooks/{webhookId}/events instead.
-			{"clockify_list_webhook_events", nil, "Webhook doesn't belong to Workspace"},
+			{"clockify_list_webhook_events", nil, ""},
 		}},
 		{"custom_fields", []call{
 			{"clockify_list_custom_fields", nil, ""},
