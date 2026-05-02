@@ -6,6 +6,15 @@ Clockify workspace. Its job is to catch upstream drift — response shape
 changes, auth policy changes, rate-limit behavior changes — before those
 changes break customer integrations without anyone noticing.
 
+## Current launch-candidate evidence status
+
+As of 2026-05-02 after PR #51 merged to `main` at
+`adce316d60644fe51365086aba186227c9ae3977`, local live-contract
+false-green prevention is in place, but Group 1 is still open. Two
+manual-dispatch runs are green (read-only 25238997088, full-tier
+25239216412); only two consecutive scheduled cron greens on the
+candidate SHA count as launch-candidate evidence.
+
 ## What runs
 
 | Test | Always runs | Runs when `CLOCKIFY_LIVE_WRITE_ENABLED=true` |

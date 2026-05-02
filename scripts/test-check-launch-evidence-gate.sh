@@ -4,12 +4,15 @@
 # check-launch-evidence-gate.sh.
 #
 # Contract assertions:
-#   1. Pass: the real checklist (all evidence-required boxes unchecked) → exit 0
+#   1. Pass: the real checklist (open external boxes unchecked, or
+#      checked only when carrying evidence) → exit 0
 #   2. Fail: a checked box without evidence annotation → exit 1
 #   3. Pass: a checked box with _Closed_ annotation → exit 0
 #   4. Pass: checked box with GitHub Actions run URL → exit 0
 #   5. Pass: checked box with workflow_run_id evidence → exit 0
 #   6. Fail: missing checklist file → exit 1
+#   7. Fail: Group 7 checked box without evidence → exit 1
+#   8. Fail: Group 6 checked box without evidence → exit 1
 
 set -euo pipefail
 
@@ -30,9 +33,9 @@ fail()  { tests_run=$((tests_run + 1)); tests_failed=$((tests_failed + 1)); echo
 
 # ── Test 1: real checklist passes ──────────────────────────────────
 
-echo "== Test 1: real checklist (all evidence boxes unchecked) => OK"
+echo "== Test 1: real checklist (external evidence boxes guarded) => OK"
 if LAUNCH_CHECKLIST="$real_checklist" bash "$script" >/dev/null 2>&1; then
-  pass "real checklist passes (boxes unchecked)"
+  pass "real checklist passes"
 else
   fail "real checklist should pass but exited non-zero"
 fi
@@ -112,6 +115,19 @@ if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "Group 7 checked box without evidence should fail but exited 0"
 else
   pass "Group 7 checked box without evidence fails"
+fi
+
+# ── Test 8: Group 6 box checked without evidence => FAIL ────────────
+
+echo "== Test 8: Group 6 box checked without evidence => FAIL"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed 's/^- \[ \] `make verify-vuln` green for the candidate tag/- [x] `make verify-vuln` green for the candidate tag/' \
+  "$real_checklist" > "$tmp"
+if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
+  fail "Group 6 checked box without evidence should fail but exited 0"
+else
+  pass "Group 6 checked box without evidence fails"
 fi
 
 # ── Summary ────────────────────────────────────────────────────────

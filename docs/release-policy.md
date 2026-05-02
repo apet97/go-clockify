@@ -147,6 +147,19 @@ image signature on every published release and weekly thereafter, so
 delayed drift surfaces as a `release-smoke-failure` GitHub issue
 rather than silently rotting.
 
+## Launch-candidate evidence
+
+For the current official Clockify launch-candidate workstream, release
+policy evidence is still external. Do not mark the project launch-ready
+from local gates alone. The candidate tag must have:
+
+- `release-smoke.yml` green on `vX.Y.Z-rc.N`.
+- Sigstore bundle, SLSA attestation, SBOM, and Docker image signature
+  verification linked from `docs/launch-candidate-checklist.md`.
+- Reference `clockify-mcp doctor --strict` and
+  `clockify-mcp-postgres doctor --strict --check-backends` outputs
+  archived alongside the release notes.
+
 ## How to check what version is supported
 
 ```sh

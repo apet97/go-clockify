@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `make doc-parity`, `make config-doc-parity`, `make
   catalog-drift`, and `make launch-checklist-parity`.
 
-- **Security-review cleanup closes Group 6 of
+- **Security-review cleanup completed local preflight for Group 6 of
   `docs/launch-candidate-checklist.md`.** The Clockify upstream
   retry jitter now uses `crypto/rand` instead of `math/rand/v2`;
   the OAuth protected-resource metadata endpoint writes through
@@ -73,7 +73,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`,
   `make secret-scan`, `semgrep scan --config p/default
   --metrics=off --error --exclude .git --exclude .bench --exclude
-  clockify-mcp .`, `make verify-fips`, and `make check`.
+  clockify-mcp .`, `make verify-fips`, and `make check`. The same
+  security walk-through still has to be repeated on the final
+  candidate tag before Group 6 can close.
 
 - **`Shared-service Postgres E2E` is now a required-status check
   for `main` branch protection.** Promoted on 2026-05-02 after
@@ -96,13 +98,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Benchmark baseline refreshed on the Actions linux/amd64 runner.**
   Refreshed `internal/benchdata/baseline.txt` from the `Bench`
   workflow bootstrap artifact `bench-current-25255062599` on
-  `fwbranch`, covering the post-perf-wave tools/list cache, Tier 2
+  the PR #51 branch, covering the post-perf-wave tools/list cache, Tier 2
   descriptor cache, and schema compaction shape. The downloaded
   artifact was validated with `bash scripts/check-bench-baseline.sh
   /tmp/go-clockify-bench-25255062599/bench-current.txt`, and the
   committed file is validated by `make bench-baseline-check`.
   Follow-up `Bench` workflow run 25255216987 compared fresh
   linux/amd64 samples against the refreshed baseline and passed.
+
+- **Post-PR #51 continuation docs now point Claude Code at external
+  evidence only.** Added `docs/claude-code-continuation.md` and
+  refreshed the agent handoff surfaces so the next pass starts from
+  the PR #51 merge baseline
+  `adce316d60644fe51365086aba186227c9ae3977`, not the historical
+  branch-review state. The only remaining blockers
+  documented there are scheduled live-contract cron greens,
+  candidate-tag security evidence, and release/sigstore/SLSA
+  evidence.
 
 ### Added
 

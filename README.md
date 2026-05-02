@@ -343,6 +343,10 @@ For a single-page operator overview that links the threat model, transports, aut
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+Autonomous agents should start with [AGENTS.md](AGENTS.md). For the
+current launch-candidate continuation state after PR #51, use
+[docs/claude-code-continuation.md](docs/claude-code-continuation.md).
+
 ## Support
 
 - Adoption expectations, response-time posture, `v1.x` wire-format stability guarantee: [SUPPORT.md](SUPPORT.md)

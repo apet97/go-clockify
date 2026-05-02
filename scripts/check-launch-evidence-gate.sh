@@ -84,17 +84,24 @@ check_unchecked_with_evidence \
   "Group 1: read-side schema diff"
 
 # ── Group 6: Security and policy review ─────────────────────────────
-# All boxes in Group 6 were verified on 2026-05-02 against the
-# launch-review tree and are checked with _Closed_ annotations.
-# If any become unchecked or the closed annotations are removed,
-# that's a regression worth flagging.
+# Candidate-tag scan boxes stay unchecked until the final tag exists.
+# Local preflight evidence is useful but does not close these boxes.
 
-if ! grep -qE '^- \[x\].*_Closed 2026-05-02' "$CHECKLIST" | head -1; then
-  # This is a soft check — Group 6 is closed but the annotation format
-  # could change. We just verify at least one checked box with a closed
-  # annotation exists.
-  :
-fi
+check_unchecked_with_evidence \
+  ".make verify-vuln. green for the candidate tag" \
+  "Group 6: verify-vuln green on candidate tag"
+
+check_unchecked_with_evidence \
+  ".gitleaks. scan green" \
+  "Group 6: gitleaks green on candidate tag"
+
+check_unchecked_with_evidence \
+  ".semgrep. review green" \
+  "Group 6: semgrep green on candidate tag"
+
+check_unchecked_with_evidence \
+  ".make verify-fips. green when the FIPS-aware tooling is" \
+  "Group 6: verify-fips green on candidate tag"
 
 # ── Group 7: CI / release readiness ─────────────────────────────────
 # These boxes require a candidate tag, release-smoke.yml green,

@@ -36,6 +36,17 @@ Coverage for every supported / unsupported cell is locked down by
 ## Production Profile
 The blessed production profile for shared services is documented in [Production Profile: Shared Service](deploy/production-profile-shared-service.md).
 
+## Launch-candidate status
+
+`main` is locally prepared for the official Clockify launch-candidate
+evidence pass as of PR #51 (`adce316d60644fe51365086aba186227c9ae3977`).
+The remaining blockers are external evidence only: two consecutive
+scheduled live-contract cron greens, candidate-tag security
+walk-through evidence, and release/sigstore/SLSA evidence. Local
+`release-check` and PR CI greens are necessary but not sufficient for
+an official launch-ready claim. Agent continuation details live in
+[`docs/claude-code-continuation.md`](claude-code-continuation.md).
+
 ## Pick an auth mode (HTTP / gRPC transports only)
 
 | Mode            | When to use                                                                              | What it trusts                                         |

@@ -14,8 +14,9 @@ checkout. "Worked once" is not green.
 > **Strict agent rule.** Do not declare "launch candidate" until
 > every group below is ticked **and** the group-level definition of
 > done is satisfied. The binding constraints live in the
-> workstation-private `CLAUDE.md` at the repo root (gitignored;
-> see "Strict agent rules" there).
+> tracked [`AGENTS.md`](../AGENTS.md) at the repo root. A local
+> workstation `CLAUDE.md` may exist, but it is gitignored context,
+> not the binding source of truth.
 
 ---
 
@@ -317,32 +318,36 @@ deploy, and verify success without reading source code.
 
 ## 6. Security and policy review
 
-- [x] `make verify-vuln` green for the candidate tag (govulncheck
+- [ ] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
-      _Verified 2026-05-02 on the launch-doc/security-review
+      _Local preflight 2026-05-02 on the launch-doc/security-review
       working tree: installed `govulncheck` and ran
       `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`;
-      result: `No vulnerabilities found.` Re-run unchanged on the
-      final candidate tag before promotion._
-- [x] `gitleaks` scan green (config in `.gitleaks.toml`).
-      _Verified 2026-05-02: `make secret-scan` ran
+      result: `No vulnerabilities found.` Do not tick this box until
+      the same command is re-run on the final candidate tag._
+- [ ] `gitleaks` scan green (config in `.gitleaks.toml`).
+      _Local preflight 2026-05-02: `make secret-scan` ran
       `gitleaks detect --no-git --source . --redact --config
-      .gitleaks.toml`; no leaks found._
-- [x] `semgrep` review green; any `// nosemgrep` directive has a
+      .gitleaks.toml`; no leaks found. Do not tick this box until
+      the scan is re-run on the final candidate tag._
+- [ ] `semgrep` review green; any `// nosemgrep` directive has a
       justification comment within five lines and is referenced
       from the relevant ADR or runbook.
-      _Verified 2026-05-02: `semgrep scan --config p/default
+      _Local preflight 2026-05-02: `semgrep scan --config p/default
       --metrics=off --error --exclude .git --exclude .bench
       --exclude clockify-mcp .` scanned 1094 tracked files and
       returned 0 findings. The SSE `text/event-stream` suppressions
       in `internal/mcp/transport_streamable_http.go` have inline
-      justification comments and are recorded in ADR 0017._
-- [x] `make verify-fips` green when the FIPS-aware tooling is
+      justification comments and are recorded in ADR 0017. Do not
+      tick this box until the scan is re-run on the final candidate
+      tag._
+- [ ] `make verify-fips` green when the FIPS-aware tooling is
       installed (auto-skips otherwise — record the run on a host
       that has it).
-      _Verified 2026-05-02 on macOS arm64 with a FIPS-capable Go
+      _Local preflight 2026-05-02 on macOS arm64 with a FIPS-capable Go
       toolchain: `make verify-fips` built and tested `-tags=fips`
-      plus the `-tags=fips,grpc` build combination._
+      plus the `-tags=fips,grpc` build combination. Do not tick this
+      box until the same gate is re-run on the final candidate tag._
 - [x] No public AI-facing deployment can boot with a policy
       weaker than `time_tracking_safe`; the load-time guard
       remains in place.
@@ -389,7 +394,7 @@ accident.
 - [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.
-      _Closed 2026-05-02 on fwbranch: refreshed
+      _Closed 2026-05-02 by PR #51 on `main`: refreshed
       `internal/benchdata/baseline.txt` from `Bench` workflow run
       25255062599, validated locally with `make bench-baseline-check`,
       then passed linux/amd64 comparison in

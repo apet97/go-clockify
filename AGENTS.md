@@ -32,17 +32,22 @@ Clockify launch candidate** promotion.
 5. [`docs/live-tests.md`](docs/live-tests.md) — how the
    live-contract nightly works and how the **sacrificial
    workspace** is wired. Read this before any live Clockify call.
+6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
+   — exact continuation packet for Claude Code after PR #51 merged.
 
 If a contributor maintains a workstation-private `CLAUDE.md` at the
 repo root, it is gitignored and machine-specific; treat it as
 optional context, not as a source of binding rules. The binding
 rules live in this file and the docs above.
 
-## Latest pushed state
+## Launch-state baseline
 
-- **HEAD:** `f33b113 chore(launch): close groups 2/3/4, wire
-  schema-diff, harden forward_auth` (pushed to `origin/main` on
-  2026-05-02).
+- **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
+  (`docs(launch): record bench comparison evidence`), the
+  launch-state baseline after PR #51 merged on 2026-05-02. If this
+  file is read from a later local continuation commit, the Git HEAD
+  may be newer; `adce316...` remains the baseline to cite for the
+  PR #51 merge.
 - **Closed launch-candidate groups:**
   - **Group 2 — Shared-service Postgres E2E.** Lives at
     `internal/controlplane/postgres/e2e_shared_service_test.go`
@@ -70,6 +75,10 @@ rules live in this file and the docs above.
     [`docs/clients.md`](docs/clients.md) names tested
     transport/auth combos; [`docs/support-matrix.md`](docs/support-matrix.md)
     pins Go / OS / FIPS / kernel posture.
+  - **Local bench baseline readiness.** The committed linux/amd64
+    benchmark baseline was refreshed from Actions artifact
+    `bench-current-25255062599` and passed normal comparison in
+    Bench workflow run 25255216987.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)
   is wired into the read-only step of
   `.github/workflows/live-contract.yml`. It needs scheduled-cron
@@ -88,10 +97,11 @@ Listed in priority order; full detail in
    runs are green; cron is calendar-bound.
 2. **Group 6 — security walk-through on the candidate tag.**
    Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
-   semgrep on the final candidate tag and file any findings in
-   `SECURITY.md`. The same suite was last green on 2026-05-02 on
-   the launch-review tree.
-3. **Group 7 — bench / release readiness on the candidate tag.**
+   semgrep on the final candidate tag and file findings or
+   "no findings" evidence in `SECURITY.md`. The same suite was
+   last green as local preflight on 2026-05-02, but candidate-tag
+   evidence is still required.
+3. **Group 7 — release/sigstore/SLSA evidence on the candidate tag.**
    Cut `vX.Y.Z-rc.N`, watch `release-smoke.yml`, verify
    sigstore + SLSA artefact attestation, and archive the
    `doctor --strict` output alongside the release notes.
@@ -103,7 +113,8 @@ convenience.
 
 1. **Do not declare launch-ready until live-contract +
    shared-service Postgres E2E + CI on `main` are simultaneously
-   green** on the candidate SHA. Local `release-check` is
+   green** on the candidate SHA **and** candidate-tag security plus
+   release/sigstore/SLSA evidence exists. Local `release-check` is
    necessary, not sufficient.
 2. **Do not weaken security or profile defaults to make tests
    pass.** No relaxing `time_tracking_safe`. No flipping
