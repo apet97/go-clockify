@@ -21,7 +21,6 @@ func init() {
 			"clockify_create_assignment",
 			"clockify_update_assignment",
 			"clockify_delete_assignment",
-			"clockify_list_schedules",
 			"clockify_get_schedule",
 			"clockify_create_schedule",
 			"clockify_get_project_schedule_totals",
@@ -113,20 +112,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.deleteAssignment(ctx, args)
 			},
 		},
-		// 6. clockify_list_schedules (RO)
-		{
-			Tool: toolRO("clockify_list_schedules",
-				"List scheduling schedules for the workspace",
-				map[string]any{"type": "object", "properties": map[string]any{
-					"page":      map[string]any{"type": "integer"},
-					"page_size": map[string]any{"type": "integer"},
-				}}),
-			ReadOnlyHint: true, IdempotentHint: true,
-			Handler: func(ctx context.Context, args map[string]any) (any, error) {
-				return s.listSchedules(ctx, args)
-			},
-		},
-		// 7. clockify_get_schedule (RO)
+		// 6. clockify_get_schedule (RO)
 		{
 			Tool: toolRO("clockify_get_schedule",
 				"Get a schedule by ID",
@@ -175,12 +161,18 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 10. clockify_filter_schedule_capacity (RO)
 		{
 			Tool: toolRO("clockify_filter_schedule_capacity",
-				"Get scheduling capacity data for a date range",
-				map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{
-					"start":   map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-					"end":     map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-					"user_id": map[string]any{"type": "string", "description": "Filter by user ID"},
-				}}),
+				"Get a user's scheduling capacity totals for a date range",
+				map[string]any{
+					"type":     "object",
+					"required": []string{"user_id", "start", "end"},
+					"properties": map[string]any{
+						"user_id":   map[string]any{"type": "string", "description": "User ID, name, or email"},
+						"start":     map[string]any{"type": "string", "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"end":       map[string]any{"type": "string", "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+						"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
+						"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+					},
+				}),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.filterScheduleCapacity(ctx, args)
@@ -420,34 +412,6 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) listSchedules(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
-	}
-
-	var schedules []map[string]any
-	path, err := paths.Workspace(wsID, "scheduling")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Get(ctx, path, query, &schedules); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	return ok("clockify_list_schedules", schedules, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(schedules),
-	}), nil
-}
-
 func (s *Service) getSchedule(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	sID := stringArg(args, "schedule_id")
 	if err := resolve.ValidateID(sID, "schedule_id"); err != nil {
@@ -555,22 +519,34 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 		return ResultEnvelope{}, err
 	}
 
+	userRef := stringArg(args, "user_id")
+	if userRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+	}
+	userID, err := resolve.ResolveUserID(ctx, s.Client, wsID, userRef)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
 	if startRaw == "" || endRaw == "" {
 		return ResultEnvelope{}, fmt.Errorf("start and end are required")
 	}
 
+	page := intArg(args, "page", 1)
+	pageSize := intArg(args, "page_size", 50)
 	query := map[string]string{
 		"start": startRaw,
 		"end":   endRaw,
-	}
-	if uid := stringArg(args, "user_id"); uid != "" {
-		query["userId"] = uid
+		"page":  fmt.Sprintf("%d", page),
+		// Hyphenated per probe-lab; the camelCase variant is silently
+		// dropped on the assignments surface.
+		"page-size": fmt.Sprintf("%d", pageSize),
 	}
 
 	var capacity map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "capacity")
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "users", userID, "totals")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -580,7 +556,11 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 
 	return ok("clockify_filter_schedule_capacity", capacity, map[string]any{
 		"workspaceId": wsID,
+		"userId":      userID,
 		"start":       startRaw,
 		"end":         endRaw,
+		// capacityPerDay is reported in seconds upstream (probe-lab
+		// fixture: 3600 = 1 hr/day, 25200 = 7 hr/day default).
+		"capacityUnit": "seconds",
 	}), nil
 }

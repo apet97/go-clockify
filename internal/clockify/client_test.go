@@ -14,6 +14,28 @@ import (
 	"time"
 )
 
+func TestClientGetEmpty200LeavesOutZero(t *testing.T) {
+	// Some Clockify endpoints (notably scheduling per-user totals)
+	// answer 200 with a zero-byte body when the query matches no
+	// rows. Earlier client behaviour bubbled "unexpected end of JSON
+	// input" up to callers; this asserts the new tolerance contract:
+	// no error, out left at its zero value.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var out map[string]any
+	if err := c.Get(context.Background(), "/empty", nil, &out); err != nil {
+		t.Fatalf("expected nil error on empty 200, got %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected out to remain nil, got %#v", out)
+	}
+}
+
 func TestClientGetSuccess(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != "test-key" {

@@ -40,6 +40,13 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		"start": start.Format("2006-01-02T15:04:05Z"),
 		"end":   end.Format("2006-01-02T15:04:05Z"),
 	}
+	// filter_schedule_capacity hits the per-user totals endpoint and
+	// requires a user_id; reuse the campaign-resolved owner identity.
+	capacityArgs := map[string]any{
+		"start":   scheduleArgs["start"],
+		"end":     scheduleArgs["end"],
+		"user_id": c.OwnerUserID,
+	}
 
 	type call struct {
 		tool string
@@ -69,13 +76,13 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		}},
 		{"scheduling", []call{
 			{"clockify_list_assignments", scheduleArgs, ""},
-			// /scheduling (list_schedules) and /scheduling/capacity
-			// (filter_schedule_capacity) still return 404. They were
-			// not in the safe-batch scope (probe didn't surface the
-			// correct paths); their pins stay as regression alarms.
-			{"clockify_list_schedules", nil, "No static resource"},
 			{"clockify_get_project_schedule_totals", scheduleArgs, ""},
-			{"clockify_filter_schedule_capacity", scheduleArgs, "No static resource"},
+			// filter_schedule_capacity hits /scheduling/assignments/
+			// users/{userId}/totals (probe-lab fixture user-totals.json,
+			// 200). list_schedules used to live here pinned with
+			// "No static resource"; the tool was removed because the
+			// upstream has no schedules surface at any host or version.
+			{"clockify_filter_schedule_capacity", capacityArgs, ""},
 		}},
 		{"time_off", []call{
 			{"clockify_list_time_off_requests", nil, ""},

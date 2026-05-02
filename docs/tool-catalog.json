@@ -6714,7 +6714,7 @@
     },
     {
       "name": "clockify_filter_schedule_capacity",
-      "description": "Get scheduling capacity data for a date range",
+      "description": "Get a user's scheduling capacity totals for a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6727,19 +6727,31 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "user_id": {
-            "description": "Filter by user ID",
+            "description": "User ID, name, or email",
             "type": "string"
           }
         },
         "required": [
+          "user_id",
           "start",
           "end"
         ],
@@ -6996,56 +7008,6 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "title": "List Assignments"
-      }
-    },
-    {
-      "name": "clockify_list_schedules",
-      "description": "List scheduling schedules for the workspace",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": true,
-      "destructive": false,
-      "idempotent": true,
-      "risk_class": [
-        "read"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_list_schedules",
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true,
-        "readOnlyHint": true,
-        "title": "List Schedules"
       }
     },
     {

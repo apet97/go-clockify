@@ -105,20 +105,19 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 	})
 
-	// Schedules collection — list + create.
+	// Schedules collection — POST (create) only. The phantom GET-list
+	// surface (clockify_list_schedules) was removed once the probe
+	// lab confirmed Clockify has no schedules endpoint at any host.
 	mux.HandleFunc("/workspaces/test-workspace/scheduling", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch r.Method {
-		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"s-1","name":"Q2"}]`))
-		case http.MethodPost:
-			body := map[string]any{}
-			_ = json.NewDecoder(r.Body).Decode(&body)
-			body["id"] = "s-new"
-			_ = json.NewEncoder(w).Encode(body)
-		default:
+		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		body["id"] = "s-new"
+		_ = json.NewEncoder(w).Encode(body)
 	})
 
 	// Per-schedule endpoint — get only (no update/delete tools registered).
@@ -127,10 +126,22 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`{"id":"s-1","name":"Q2"}`))
 	})
 
-	// Capacity endpoint.
-	mux.HandleFunc("/workspaces/test-workspace/scheduling/capacity", func(w http.ResponseWriter, r *http.Request) {
+	// Per-user capacity endpoint. The probe lab proved the live shape
+	// at /scheduling/assignments/users/{userId}/totals (flat object,
+	// capacityPerDay in seconds, workingDays + totalHoursPerDay arrays).
+	// The mux 400s when start/end are missing so the handler's required
+	// range params are exercised.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/users/aaaaaaaaaaaaaaaaaaaaaaa1/totals", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.URL.Query().Get("start") == "" || r.URL.Query().Get("end") == "" {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"totalHours":160,"users":[]}`))
+		_, _ = w.Write([]byte(`{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","userName":"Alice","capacityPerDay":25200.0,"workingDays":["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"],"totalHoursPerDay":[{"date":"2026-04-01T00:00:00Z","totalHours":7.0}]}`))
 	})
 
 	return testharness.NewFakeClockify(t, mux)
@@ -256,23 +267,10 @@ func TestTier2Dispatch_Scheduling_DeleteAssignmentDryRunAndLive(t *testing.T) {
 	}
 }
 
-func TestTier2Dispatch_Scheduling_SchedulesListGetCreate(t *testing.T) {
+func TestTier2Dispatch_Scheduling_GetAndCreateSchedule(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
 	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:    "scheduling",
-		Tool:     "clockify_list_schedules",
-		Args:     map[string]any{},
-		Upstream: upstream,
-	})
-	if res.Outcome != testharness.OutcomeSuccess {
-		t.Fatalf("list_schedules outcome=%q err=%q", res.Outcome, res.ErrorMessage)
-	}
-	if !strings.Contains(res.ResultText, "s-1") {
-		t.Fatalf("list_schedules result missing id: %q", res.ResultText)
-	}
-
-	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_get_schedule",
 		Args:     map[string]any{"schedule_id": "s-1"},
@@ -341,8 +339,17 @@ func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T)
 	if res.Outcome != testharness.OutcomeSuccess {
 		t.Fatalf("capacity outcome=%q err=%q", res.Outcome, res.ErrorMessage)
 	}
-	if !strings.Contains(res.ResultText, "totalHours") {
-		t.Fatalf("capacity result missing field: %q", res.ResultText)
+	// Pin the per-user-totals shape: handler must hit
+	// /scheduling/assignments/users/{userId}/totals and decode the flat
+	// object the probe lab fixtures show. A regression to the old
+	// /scheduling/capacity path will 404 against the mux above.
+	for _, want := range []string{"capacityPerDay", "workingDays", "totalHoursPerDay"} {
+		if !strings.Contains(res.ResultText, want) {
+			t.Fatalf("capacity result missing %q: %q", want, res.ResultText)
+		}
+	}
+	if !strings.Contains(res.ResultText, `"userId":"aaaaaaaaaaaaaaaaaaaaaaa1"`) {
+		t.Fatalf("capacity result must echo resolved userId: %q", res.ResultText)
 	}
 }
 
