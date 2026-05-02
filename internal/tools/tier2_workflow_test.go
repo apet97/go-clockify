@@ -105,7 +105,10 @@ func TestListApprovalRequests(t *testing.T) {
 	}
 }
 
-// TestCreateSharedReport verifies the mock POST for creating a shared report.
+// TestCreateSharedReport verifies the mock POST for creating a shared
+// report. Pins the rev-4 body conventions (lab probe 2026-05-03):
+// canonical body keys are "type" (NOT "reportType") and "filter" (NOT
+// "filters"); filter must include exportType, dateRangeStart, dateRangeEnd.
 func TestCreateSharedReport(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -117,13 +120,26 @@ func TestCreateSharedReport(t *testing.T) {
 			if body["name"] != "Weekly Team Report" {
 				t.Fatalf("expected name 'Weekly Team Report', got %v", body["name"])
 			}
-			if body["reportType"] != "SUMMARY" {
-				t.Fatalf("expected reportType 'SUMMARY', got %v", body["reportType"])
+			if _, has := body["reportType"]; has {
+				t.Fatalf("stale body key 'reportType' present (must be 'type'): %v", body)
+			}
+			if body["type"] != "SUMMARY" {
+				t.Fatalf("expected type 'SUMMARY', got %v", body["type"])
+			}
+			if _, has := body["filters"]; has {
+				t.Fatalf("stale body key 'filters' present (must be 'filter'): %v", body)
+			}
+			filter, ok := body["filter"].(map[string]any)
+			if !ok {
+				t.Fatalf("'filter' missing or not an object: %v", body)
+			}
+			if filter["exportType"] != "JSON_V1" {
+				t.Fatalf("expected filter.exportType=JSON_V1, got %v", filter["exportType"])
 			}
 			respondJSON(t, w, map[string]any{
-				"id":         "sr1",
-				"name":       "Weekly Team Report",
-				"reportType": "SUMMARY",
+				"id":   "sr1",
+				"name": "Weekly Team Report",
+				"type": "SUMMARY",
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -135,6 +151,11 @@ func TestCreateSharedReport(t *testing.T) {
 	result, err := svc.createSharedReport(context.Background(), map[string]any{
 		"name":        "Weekly Team Report",
 		"report_type": "SUMMARY",
+		"filter": map[string]any{
+			"exportType":     "JSON_V1",
+			"dateRangeStart": "2026-04-01T00:00:00Z",
+			"dateRangeEnd":   "2026-04-30T23:59:59Z",
+		},
 	})
 	if err != nil {
 		t.Fatalf("create shared report failed: %v", err)
@@ -151,16 +172,22 @@ func TestCreateSharedReport(t *testing.T) {
 	}
 }
 
-// TestDeleteSharedReportDryRun verifies that dry_run=true does NOT call DELETE.
+// TestDeleteSharedReportDryRun verifies that dry_run=true does NOT
+// call DELETE. The dry-run preview GET hits the bare-id path
+// (/shared-reports/{id} with ?exportType=JSON_V1) — workspace-prefixed
+// GET on per-id is 405 live; see findings/shared-reports.md OQ #5.
 func TestDeleteSharedReportDryRun(t *testing.T) {
 	var deleteCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/shared-reports/sr1" && r.Method == http.MethodGet:
+		case r.URL.Path == "/shared-reports/sr1" && r.Method == http.MethodGet:
+			if r.URL.Query().Get("exportType") != "JSON_V1" {
+				t.Fatalf("dry-run preview must send ?exportType=JSON_V1, got %q", r.URL.RawQuery)
+			}
 			respondJSON(t, w, map[string]any{
-				"id":         "sr1",
-				"name":       "Weekly Team Report",
-				"reportType": "SUMMARY",
+				"id":   "sr1",
+				"name": "Weekly Team Report",
+				"type": "SUMMARY",
 			})
 		case r.URL.Path == "/workspaces/ws1/shared-reports/sr1" && r.Method == http.MethodDelete:
 			deleteCalled = true
