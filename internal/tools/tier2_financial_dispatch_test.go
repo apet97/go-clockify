@@ -38,7 +38,7 @@ func newFinancialUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"inv-1","status":"DRAFT","amount":100}]`))
+			_, _ = w.Write([]byte(`{"total":1,"invoices":[{"id":"inv-1","status":"DRAFT","amount":100}]}`))
 		case http.MethodPost:
 			_, _ = w.Write([]byte(`{"id":"inv-new","status":"DRAFT","amount":250}`))
 		default:
@@ -64,7 +64,7 @@ func newFinancialUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"exp-1","amount":50,"date":"2026-04-01"}]`))
+			_, _ = w.Write([]byte(`{"expenses":{"expenses":[{"id":"exp-1","amount":50,"date":"2026-04-01"}],"count":1}}`))
 		case http.MethodPost:
 			body := map[string]any{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
