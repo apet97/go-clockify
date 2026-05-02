@@ -109,6 +109,10 @@ repo-hygiene:
 #     not implement. Two-layer gate (source greps + binary --help
 #     parity); the test exercises both layers via PATH-stubbed `go`
 #     plus a controlled help-text fixture.
+#   - check-launch-evidence-gate.sh — fails when docs/launch-candidate-
+#     checklist.md has a checked box in Groups 1/6/7 without an
+#     evidence URL, workflow_run_id, or _Closed_ annotation. Wired
+#     into make launch-checklist-parity and make doc-parity.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
@@ -118,6 +122,7 @@ script-tests:
 	bash scripts/test-check-governance-parity.sh
 	bash scripts/test-check-release-assets.sh
 	bash scripts/test-check-launch-checklist-parity.sh
+	bash scripts/test-check-launch-evidence-gate.sh
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u
