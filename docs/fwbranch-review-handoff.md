@@ -111,12 +111,29 @@ The 6th commit (`60350da`) adds two new docs for reviewer handoff:
 
 ## API coverage caveats
 
-- `docs/api-coverage.md` was created in this session — it maps all 124
-  tools to Clockify endpoints, classification, and test coverage
+- `docs/api-coverage.md` maps all 124 tools to Clockify endpoints,
+  classification, and test coverage. Counts cross-verified against
+  `docs/tool-catalog.json` on 2026-05-02.
 - Only 9 of 124 tools (7%) have live-contract test coverage (all Tier 1)
 - 0 of 91 Tier 2 tools have live coverage
 - Schema-drift detection covers read-side (GET) endpoints only
-- Dry-run is exhaustively tested for 1 of 14 destructive tools
+- Dry-run: 6/14 destructive tools have `dry_run` wired; 1/14 live-tested
+- Policy modes: 2/5 live-tested (standard, time_tracking_safe)
+- Classification counts: 55 read-only, 55 mutating, 14 destructive,
+  8 billing, 7 admin (counts verified against tool-catalog.json;
+  previously stale at 58/46/14/6/4)
+
+## Wave 1 quality fix (2026-05-02)
+
+After the initial handoff (bed943b), four documentation issues were found
+and fixed on fwbranch before review:
+
+1. Handoff doc was stale at bed943b, missing the api-coverage commit
+2. `clockify_weekly_summary` (Tier 1, read-only) was missing from the
+   coverage matrix
+3. Tier 2 classification counts were stale (read-only 39→35, mutating
+   34→43, billing 6→8, admin 4→7)
+4. Dry-run and policy-mode coverage lacked per-tool/per-mode breakdowns
 
 ## Files requiring careful review
 
@@ -127,6 +144,7 @@ The 6th commit (`60350da`) adds two new docs for reviewer handoff:
 | `scripts/test-check-launch-evidence-gate.sh` | Regression test for the evidence gate — review that test fixtures accurately model real checklist state. |
 | `Makefile` (live-contract-local target) | New target — review the evidence warning text and env-var passthrough. |
 | `AGENTS.md` | Updated with evidence hierarchy — review for consistency with CLAUDE.md agent rules. |
+| `docs/api-coverage.md` | Full 124-tool coverage matrix with endpoint mappings, classifications, dry-run/policy breakdown, and gaps. Classification counts cross-verified against tool-catalog.json. |
 
 ## Claude review prompt
 
