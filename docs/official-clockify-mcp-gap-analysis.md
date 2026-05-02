@@ -70,6 +70,20 @@ What earned the tier:
 - `sessionAffinity: ClientIP` band-aid on the Helm/k8s Service
   templates with a 24h timeout, addressing the most common
   multi-replica session-loss case.
+- Shared-service end-to-end coverage:
+  `internal/controlplane/postgres/e2e_shared_service_test.go`
+  (`make shared-service-e2e`, also wired as the
+  `Shared-service Postgres E2E` job in
+  `.github/workflows/ci.yml`) boots `mcp.ServeStreamableHTTP`
+  in-process against the Postgres-backed control plane with two
+  distinct `forward_auth` principals (one operator persona on
+  `policy_mode=standard`, one AI-facing persona on
+  `policy_mode=time_tracking_safe`) and asserts tenant
+  isolation in `audit_events` + `sessions`, the cross-tenant
+  negative (zero rows for `tenant_id=A AND session_id=B`), and
+  per-tenant policy-mode enforcement. Closed Group 2 of the
+  launch-candidate checklist (commits 42502cf + 79f0769;
+  first CI green: ci.yml run 25240007056 on 2026-05-02).
 
 Caveats that the tier carries today:
 
@@ -77,12 +91,6 @@ Caveats that the tier carries today:
   not implemented. The band-aid covers the common case but not
   shared-NAT egress, pod eviction, rolling upgrade, or cross-AZ
   failover.
-- The shared-service profile is documented but only fragmentally
-  exercised end-to-end (Postgres store unit + integration via
-  Testcontainers, plus the live audit-phase test). There is no
-  test that boots the Postgres-tagged binary, drives multi-tenant
-  traffic over the streamable-HTTP transport, and asserts tenant
-  isolation through the full stack.
 - Live-contract is fail-soft on missing secrets: a fresh fork
   reports green nightlies because the test steps gate on `if:`. A
   green nightly badge does not by itself prove the live tests
@@ -102,10 +110,12 @@ What is missing for tier 3 is intentionally narrow:
    open.** Every promotion to launch candidate must start from
    two consecutive green nightly runs with the mutating + audit
    tiers enabled. Today the loop is short of that bar.
-2. **Shared-service Postgres E2E does not exist as a single
-   green-or-red test.** The pieces are there but no CI gate fails
-   when the integration of those pieces breaks. This is the
-   biggest single gap on the launch-candidate checklist.
+2. ~~**Shared-service Postgres E2E does not exist as a single
+   green-or-red test.**~~ **Closed 2026-05-02** by commits
+   42502cf + 79f0769. The
+   `Shared-service Postgres E2E` job in `.github/workflows/ci.yml`
+   went green on its first run (ci.yml run 25240007056) and
+   gates per-PR.
 3. **ADR 0017 is unresolved.** Either we ship the rehydration fix
    and gate it with a multi-replica integration test, or we
    formally document the single-replica posture and pin
@@ -174,14 +184,9 @@ unblocks the next.
    triaged and the failure mode is either fixed or quarantined
    with a known-cause note, the candidate clock has not started.
 
-2. **Shared-service Postgres E2E.**
-   *Where:* missing entirely as a CI-gated test. Pieces exist in
-   `internal/controlplane/postgres/` and
-   `tests/e2e_live_mcp_test.go::TestLiveCreateUpdateDeleteEntryAuditPhases`.
-   *Why blocking:* the shared-service profile is the headline
-   deployment shape for an official product. Without an E2E
-   test, every regression in the wiring (config → store →
-   transport → audit) is shipped silently.
+2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
+   (commits 42502cf + 79f0769). See Tier 2 "What earned the
+   tier" for the test name, Make target, and CI job name.
 
 3. **ADR 0017 resolution.**
    *Where:* `docs/adr/0017-streamable-http-session-rehydration.md`.
@@ -229,7 +234,7 @@ work happens, not how. The agent slash commands
 | Blocker | First file an agent should open | Smallest verifiable green |
 |---|---|---|
 | 1. Live contract | `.github/workflows/live-contract.yml`, the rolling `live-test-failure` issue, `tests/e2e_live_test.go`, `tests/e2e_live_mcp_test.go` | One green nightly run with mutating tier on. |
-| 2. Shared-service Postgres E2E | `tests/e2e_live_mcp_test.go`, `internal/controlplane/postgres/`, `docs/deploy/production-profile-shared-service.md` | A new test in `tests/` that boots `clockify-mcp-postgres` + Postgres and exercises ≥2 tenants. |
+| 2. ~~Shared-service Postgres E2E~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_shared_service_test.go`, `make shared-service-e2e`, `Shared-service Postgres E2E` job in `ci.yml` | Done. |
 | 3. ADR 0017 | `docs/adr/0017-streamable-http-session-rehydration.md`, `internal/mcp/transport_streamable_http.go`, Helm chart `replicaCount` | Either a multi-replica E2E or a doc PR that pins `replicaCount: 1` and documents the limit. |
 | 4. Auth-model docs | `docs/production-readiness.md`, `internal/authn/`, `internal/mcp/transport_http_authmatrix_test.go` | A one-page auth-model summary linked from `README.md`. |
 | 5. Launch docs | `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | `make doc-parity` green and a manual review pass. |

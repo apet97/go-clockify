@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Shared-service Postgres end-to-end test closes the largest
+  remaining launch-candidate gap (Group 2 of
+  `docs/launch-candidate-checklist.md`).** New
+  `internal/controlplane/postgres/e2e_shared_service_test.go`
+  (build tag `postgres`, runnable via `make shared-service-e2e`)
+  boots `mcp.ServeStreamableHTTP` in-process against a
+  Postgres-backed control plane, drives 5 calls across two
+  distinct `forward_auth` principals (one operator persona on
+  `policy_mode=standard`, one AI-facing persona on
+  `policy_mode=time_tracking_safe`), and asserts four
+  invariants: per-tenant `audit_events` row counts and
+  `(tool, phase, outcome)` tuples; cross-tenant negative (zero
+  rows for `tenant_id=A AND session_id=B` and the mirror);
+  per-tenant `sessions.tenant_id` matches the
+  principal-supplied `X-Forwarded-Tenant`; read-only tools emit
+  zero audit rows; the `time_tracking_safe` policy gate emits
+  exactly one `phase="" outcome=policy_denied` row for blocked
+  attempts. The test stands up an `httptest` fake Clockify
+  locally so it needs no live secrets and runs per-PR. Wired as
+  the `Shared-service Postgres E2E` job in
+  `.github/workflows/ci.yml` against a `postgres:16-alpine`
+  service container, mirroring the existing `doctor-postgres`
+  shape. First CI green: ci.yml run 25240007056 on 2026-05-02
+  (commits 42502cf + 79f0769). Per-tenant runtime construction
+  in the test mirrors `internal/runtime/service.go::tenantRuntime`;
+  drift between the two is documented inline at
+  `sharedSvcFactory`. Tier 2 caveat about fragmentary
+  shared-service coverage in
+  `docs/official-clockify-mcp-gap-analysis.md` moved into
+  Tier 2 "What earned the tier".
+
 ### Security
 
 - **`forward_auth` rejects control bytes / non-printable Unicode in
