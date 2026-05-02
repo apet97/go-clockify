@@ -6603,65 +6603,6 @@
       }
     },
     {
-      "name": "clockify_create_schedule",
-      "description": "Create a new schedule in the workspace",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": false,
-      "destructive": false,
-      "idempotent": false,
-      "risk_class": [
-        "write"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
-            "type": "string"
-          },
-          "hours_per_day": {
-            "type": "number"
-          },
-          "name": {
-            "description": "Schedule name",
-            "type": "string"
-          },
-          "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_create_schedule",
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": true,
-        "readOnlyHint": false,
-        "title": "Create Schedule"
-      }
-    },
-    {
       "name": "clockify_delete_assignment",
       "description": "Delete a scheduling assignment by ID (supports dry_run preview)",
       "group": "scheduling",
@@ -6889,53 +6830,6 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "title": "Get Project Schedule Totals"
-      }
-    },
-    {
-      "name": "clockify_get_schedule",
-      "description": "Get a schedule by ID",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": true,
-      "destructive": false,
-      "idempotent": true,
-      "risk_class": [
-        "read"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "schedule_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "schedule_id"
-        ],
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_get_schedule",
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true,
-        "readOnlyHint": true,
-        "title": "Get Schedule"
       }
     },
     {

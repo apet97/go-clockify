@@ -1,11 +1,16 @@
 package tools_test
 
 // Dispatcher-level coverage for the Tier 2 scheduling group: assignment
-// CRUD (with delete dry_run), schedule CRUD-lite, and the project / capacity
-// read endpoints. Each handler is exercised through the real MCP dispatch
-// pipeline via dispatchTier2 (no direct svc.* calls).
+// CRUD (with delete dry_run) and the project / capacity read endpoints.
+// Each handler is exercised through the real MCP dispatch pipeline via
+// dispatchTier2 (no direct svc.* calls).
 //
-// The fake upstream serves the assignment, schedule, capacity, and totals
+// The phantom clockify_get_schedule and clockify_create_schedule tools
+// were removed alongside clockify_list_schedules once the probe lab
+// confirmed the live API has no /scheduling/{id} or POST /scheduling
+// surface (only /scheduling/assignments/... paths exist).
+//
+// The fake upstream serves the assignment, capacity, and totals
 // endpoints, plus the workspace-level users + projects collections that
 // resolve.ResolveUserID / resolve.ResolveProjectID hit when the create path
 // runs. Without those resolution endpoints the create handler errors before
@@ -103,27 +108,6 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
-
-	// Schedules collection — POST (create) only. The phantom GET-list
-	// surface (clockify_list_schedules) was removed once the probe
-	// lab confirmed Clockify has no schedules endpoint at any host.
-	mux.HandleFunc("/workspaces/test-workspace/scheduling", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		body := map[string]any{}
-		_ = json.NewDecoder(r.Body).Decode(&body)
-		body["id"] = "s-new"
-		_ = json.NewEncoder(w).Encode(body)
-	})
-
-	// Per-schedule endpoint — get only (no update/delete tools registered).
-	mux.HandleFunc("/workspaces/test-workspace/scheduling/s-1", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"s-1","name":"Q2"}`))
 	})
 
 	// Per-user capacity endpoint. The probe lab proved the live shape
@@ -267,38 +251,6 @@ func TestTier2Dispatch_Scheduling_DeleteAssignmentDryRunAndLive(t *testing.T) {
 	}
 }
 
-func TestTier2Dispatch_Scheduling_GetAndCreateSchedule(t *testing.T) {
-	upstream := newSchedulingUpstream(t)
-
-	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:    "scheduling",
-		Tool:     "clockify_get_schedule",
-		Args:     map[string]any{"schedule_id": "s-1"},
-		Upstream: upstream,
-	})
-	if res.Outcome != testharness.OutcomeSuccess {
-		t.Fatalf("get_schedule outcome=%q err=%q", res.Outcome, res.ErrorMessage)
-	}
-
-	res = dispatchTier2(t, tier2InvokeOpts{
-		Group: "scheduling",
-		Tool:  "clockify_create_schedule",
-		Args: map[string]any{
-			"name":          "Q3 plan",
-			"start":         "2026-07-01T00:00:00Z",
-			"end":           "2026-09-30T23:59:59Z",
-			"hours_per_day": 8.0,
-		},
-		Upstream: upstream,
-	})
-	if res.Outcome != testharness.OutcomeSuccess {
-		t.Fatalf("create_schedule outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
-	}
-	if !strings.Contains(res.ResultText, "s-new") {
-		t.Fatalf("create_schedule result missing new id: %q", res.ResultText)
-	}
-}
-
 func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
@@ -356,10 +308,10 @@ func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T)
 func TestTier2Dispatch_Scheduling_SchemaValidation(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
-	// Missing required schedule_id.
+	// Missing required assignment_id.
 	res := dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
-		Tool:     "clockify_get_schedule",
+		Tool:     "clockify_get_assignment",
 		Args:     map[string]any{},
 		Upstream: upstream,
 	})

@@ -82,8 +82,6 @@ func TestLiveT2BlockedGroups(t *testing.T) {
 			}},
 			{"clockify_update_assignment", map[string]any{"assignment_id": bogusID}},
 			{"clockify_delete_assignment", map[string]any{"assignment_id": bogusID}},
-			{"clockify_get_schedule", map[string]any{"schedule_id": bogusID}},
-			{"clockify_create_schedule", map[string]any{"name": c.LivePrefix("sched", 0)}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.tool, func(t *testing.T) {
