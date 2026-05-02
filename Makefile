@@ -53,9 +53,11 @@ verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdi
 doc-parity:
 	bash scripts/check-doc-parity.sh
 	bash scripts/check-launch-checklist-parity.sh
+	bash scripts/check-launch-evidence-gate.sh
 
 launch-checklist-parity:
 	bash scripts/check-launch-checklist-parity.sh
+	bash scripts/check-launch-evidence-gate.sh
 
 # config-doc-parity re-renders cmd/clockify-mcp/help_generated.go and the
 # CONFIG-TABLE block in README.md from internal/config/AllSpecs() and
