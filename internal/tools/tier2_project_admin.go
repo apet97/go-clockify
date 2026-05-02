@@ -289,11 +289,19 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 		return ResultEnvelope{}, err
 	}
 	var out map[string]any
-	if err := s.Client.Put(ctx, path, body, &out); err != nil {
+	if err := s.Client.Patch(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
-	return ok("clockify_set_project_memberships", out, map[string]any{
+
+	// Upstream returns the full project object after PATCH; surface the
+	// updated memberships array as the tool's primary payload while the
+	// resource event above keeps the canonical project state.
+	data := any(out)
+	if m, ok := out["memberships"]; ok {
+		data = m
+	}
+	return ok("clockify_set_project_memberships", data, map[string]any{
 		"workspaceId": wsID,
 		"memberCount": len(memberships),
 	}), nil

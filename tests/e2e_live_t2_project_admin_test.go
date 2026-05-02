@@ -4,7 +4,6 @@ package e2e_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 )
@@ -106,27 +105,43 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("set_project_memberships_blocked_by_handler_method_bug", func(t *testing.T) {
+	t.Run("set_project_memberships_replaces_member_list", func(t *testing.T) {
 		if projectID == "" {
 			t.Skip("seed project missing")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// The handler uses PUT on /projects/{id}/memberships but the
-		// upstream returns 405 "Request method 'PUT' is not
-		// supported". The Clockify v1 reference suggests memberships
-		// are set via PATCH on the project resource itself or via a
-		// different sub-route. Likely fix in
-		// internal/tools/tier2_project_admin.go SetProjectMemberships:
-		// switch to PATCH /projects/{id} with `{memberships: [...]}`
-		// in the body, or use the membership-specific subroute the
-		// API exposes today.
-		errMsg := h.callExpectError(ctx, "clockify_set_project_memberships", map[string]any{
+		// SUMMARY rev 3 #6: PATCH /projects/{id}/memberships with the
+		// full desired list. REPLACE semantics — sending only the
+		// owner here leaves only the owner. Owner-only is safe on the
+		// seeded project (no other members were added in this test).
+		result := h.callOK(ctx, "clockify_set_project_memberships", map[string]any{
 			"project_id": projectID,
 			"user_ids":   []any{c.OwnerUserID},
 		})
-		if !strings.Contains(errMsg, "method 'PUT' is not supported") {
-			t.Fatalf("expected upstream 405 on PUT memberships, got: %q", errMsg)
+		sc, ok := result["structuredContent"].(map[string]any)
+		if !ok {
+			t.Fatalf("set_project_memberships missing structuredContent: %#v", result)
+		}
+		if okFlag, _ := sc["ok"].(bool); !okFlag {
+			t.Fatalf("set_project_memberships carried ok=false: %#v", sc)
+		}
+		// The handler returns the memberships array as Data.
+		members, ok := sc["data"].([]any)
+		if !ok {
+			t.Fatalf("expected memberships slice as data, got %T (%#v)", sc["data"], sc["data"])
+		}
+		if len(members) == 0 {
+			t.Fatalf("memberships data unexpectedly empty: %#v", sc["data"])
+		}
+		first, ok := members[0].(map[string]any)
+		if !ok {
+			t.Fatalf("first membership is not an object: %T", members[0])
+		}
+		gotUser, _ := first["userId"].(string)
+		if gotUser != c.OwnerUserID {
+			t.Fatalf("expected first membership userId %q, got %q (REPLACE didn't apply?)",
+				c.OwnerUserID, gotUser)
 		}
 	})
 
