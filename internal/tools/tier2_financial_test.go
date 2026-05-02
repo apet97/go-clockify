@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,20 +127,25 @@ func TestListInvoices(t *testing.T) {
 }
 
 func TestCreateExpense(t *testing.T) {
-	var gotBody map[string]any
+	var gotForm map[string][]string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/workspaces/ws1/expenses" && r.Method == http.MethodPost:
-			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
-				t.Fatalf("decode body: %v", err)
+			ct := r.Header.Get("Content-Type")
+			if !strings.HasPrefix(ct, "multipart/form-data") {
+				t.Fatalf("expected multipart/form-data, got %q", ct)
 			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotForm = r.MultipartForm.Value
 			respondJSON(t, w, map[string]any{
-				"id":          "exp1",
-				"amount":      gotBody["amount"],
-				"date":        gotBody["date"],
-				"categoryId":  gotBody["categoryId"],
-				"projectId":   gotBody["projectId"],
-				"description": gotBody["description"],
+				"id":         "exp1",
+				"amount":     gotForm["amount"][0],
+				"date":       gotForm["date"][0],
+				"categoryId": gotForm["categoryId"][0],
+				"projectId":  gotForm["projectId"][0],
+				"notes":      gotForm["notes"][0],
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -148,12 +154,15 @@ func TestCreateExpense(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	// user_id is supplied explicitly so the handler doesn't try to
+	// resolve the calling user via GET /user.
 	result, err := svc.createExpense(context.Background(), map[string]any{
+		"user_id":     "u1",
 		"amount":      42.50,
-		"date":        "2026-04-01",
+		"date":        "2026-04-01T00:00:00Z",
 		"category_id": "cat1",
 		"project_id":  "p1",
-		"description": "Office supplies",
+		"notes":       "Office supplies",
 	})
 	if err != nil {
 		t.Fatalf("create expense failed: %v", err)
@@ -165,24 +174,27 @@ func TestCreateExpense(t *testing.T) {
 		t.Fatalf("expected action clockify_create_expense, got %s", result.Action)
 	}
 
-	// Verify the POST payload
-	if gotBody == nil {
-		t.Fatal("expected POST body")
+	// Verify the multipart form payload (each value lands as []string).
+	if gotForm == nil {
+		t.Fatal("expected multipart form values")
 	}
-	if gotBody["amount"] != 42.50 {
-		t.Fatalf("expected amount 42.50, got %v", gotBody["amount"])
+	if v := gotForm["userId"]; len(v) == 0 || v[0] != "u1" {
+		t.Fatalf("expected userId=u1, got %v", v)
 	}
-	if gotBody["date"] != "2026-04-01" {
-		t.Fatalf("expected date 2026-04-01, got %v", gotBody["date"])
+	if v := gotForm["amount"]; len(v) == 0 || v[0] != "42.5" {
+		t.Fatalf("expected amount=42.5, got %v", v)
 	}
-	if gotBody["categoryId"] != "cat1" {
-		t.Fatalf("expected categoryId cat1, got %v", gotBody["categoryId"])
+	if v := gotForm["date"]; len(v) == 0 || v[0] != "2026-04-01T00:00:00Z" {
+		t.Fatalf("expected date=2026-04-01T00:00:00Z, got %v", v)
 	}
-	if gotBody["projectId"] != "p1" {
-		t.Fatalf("expected projectId p1, got %v", gotBody["projectId"])
+	if v := gotForm["categoryId"]; len(v) == 0 || v[0] != "cat1" {
+		t.Fatalf("expected categoryId=cat1, got %v", v)
 	}
-	if gotBody["description"] != "Office supplies" {
-		t.Fatalf("expected description 'Office supplies', got %v", gotBody["description"])
+	if v := gotForm["projectId"]; len(v) == 0 || v[0] != "p1" {
+		t.Fatalf("expected projectId=p1, got %v", v)
+	}
+	if v := gotForm["notes"]; len(v) == 0 || v[0] != "Office supplies" {
+		t.Fatalf("expected notes='Office supplies', got %v", v)
 	}
 }
 

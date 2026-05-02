@@ -205,12 +205,16 @@ func TestTier2Dispatch_Expenses_List(t *testing.T) {
 func TestTier2Dispatch_Expenses_Create(t *testing.T) {
 	upstream := newFinancialUpstream(t)
 
+	// user_id is supplied explicitly so the handler doesn't try to
+	// resolve the calling user via GET /user (the financial upstream
+	// stub only mounts the workspace endpoints).
 	res := dispatchTier2(t, tier2InvokeOpts{
 		Group: "expenses",
 		Tool:  "clockify_create_expense",
 		Args: map[string]any{
+			"user_id":     "u-1",
 			"amount":      42.5,
-			"date":        "2026-04-01",
+			"date":        "2026-04-01T00:00:00Z",
 			"category_id": "cat-1",
 		},
 		Upstream: upstream,
@@ -232,9 +236,14 @@ func TestTier2Dispatch_Expenses_PolicyReadOnlyBlocksCreate(t *testing.T) {
 	// ReadOnly policy must reject the write tool at the policy gate,
 	// BEFORE the handler runs — UpstreamHit false, outcome policy_denied.
 	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:      "expenses",
-		Tool:       "clockify_create_expense",
-		Args:       map[string]any{"amount": 10.0, "date": "2026-04-01", "category_id": "cat-1"},
+		Group: "expenses",
+		Tool:  "clockify_create_expense",
+		Args: map[string]any{
+			"user_id":     "u-1",
+			"amount":      10.0,
+			"date":        "2026-04-01T00:00:00Z",
+			"category_id": "cat-1",
+		},
 		PolicyMode: policy.ReadOnly,
 		Upstream:   upstream,
 	})
