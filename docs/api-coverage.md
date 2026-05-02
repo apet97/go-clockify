@@ -287,13 +287,43 @@ between those descriptors and the live Clockify API's current accepted fields.
 |----------|--------|
 | `TestLiveDryRunDoesNotMutate` | Active — confirms `dry_run:true` on `clockify_delete_entry` previews instead of deleting |
 | `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | Active — confirms `time_tracking_safe` policy blocks `clockify_create_project` |
-| Dry-run on destructive tools | Covered where `supports dry_run` is noted in tool catalog |
 | Policy modes | `read_only`, `safe_core`, `standard`, `full` — tested via `internal/enforcement/` unit tests |
 
-**Gap:** Dry-run paths are tested for representative tools but not exhaustively
-across all 14 destructive tools. Policy-mode rejection is unit-tested at the
-enforcement layer but not live-tested against a real Clockify workspace in all
-four modes.
+### Dry-run support per destructive tool (14 total)
+
+| Tool | Tier | dry_run in schema | Live-tested | Notes |
+|------|------|-------------------|-------------|-------|
+| `clockify_delete_entry` | 1 | via enforcement pipeline | yes (`TestLiveDryRunDoesNotMutate`) | Only Tier 1 destructive tool |
+| `clockify_delete_custom_field` | 2 | yes | no | Described as "supports dry_run preview" |
+| `clockify_delete_expense` | 2 | no | no | |
+| `clockify_delete_expense_category` | 2 | no | no | |
+| `clockify_delete_holiday` | 2 | yes | no | "supports dry_run preview" |
+| `clockify_delete_user_group_admin` | 2 | yes | no | "supports dry_run preview" |
+| `clockify_delete_invoice` | 2 | no | no | Billing |
+| `clockify_delete_invoice_item` | 2 | no | no | Billing |
+| `clockify_delete_shared_report` | 2 | no | no | |
+| `clockify_delete_assignment` | 2 | yes | no | "supports dry_run preview" |
+| `clockify_delete_time_off_request` | 2 | yes | no | "supports dry_run preview" |
+| `clockify_delete_webhook` | 2 | no | no | external_side_effect |
+| `clockify_remove_user_from_group` | 2 | no | no | Admin (destructive user op) |
+| `clockify_deactivate_user` | 2 | no | no | Admin (classified mutating, not destructive) |
+
+**Dry-run support: 6 of 14** (43%) destructive tools have dry_run wired.
+**Dry-run live-tested: 1 of 14** (7%). The 5 Tier 2 tools with `dry_run`
+in schema have never been exercised against a live Clockify workspace.
+
+### Policy-mode live test coverage
+
+| Mode | Unit-tested | Live-tested | Test |
+|------|-------------|-------------|------|
+| `read_only` | yes | no | enforcement unit tests only |
+| `safe_core` | yes | no | enforcement unit tests only |
+| `standard` | yes | implicitly (`TestE2EMutating` runs under standard) | enforcement + live mutating |
+| `time_tracking_safe` | yes | yes | `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` |
+| `full` | yes | no | enforcement unit tests only |
+
+**Policy modes live-tested: 2 of 5** (40%). `read_only`, `safe_core`, and
+`full` modes have never been live-verified against a real Clockify workspace.
 
 ---
 
@@ -320,10 +350,12 @@ four modes.
 2. **Schema-drift for mutating endpoints:** Only read-side schemas are
    drift-checked. Request payload schemas (tool JSON Schema descriptors)
    are not automatically compared against the live API's accepted fields.
-3. **Dry-run exhaustiveness:** Not all destructive tools are live-tested
-   with `dry_run:true`.
-4. **Policy exhaustiveness:** Only `time_tracking_safe` is live-tested;
-   `read_only` and `safe_core` modes are unit-tested but not live-tested.
+3. **Dry-run exhaustiveness:** 6 of 14 destructive tools have `dry_run` wired;
+   only 1 (`clockify_delete_entry`) is live-tested. See Dry-run/policy section
+   above for the full per-tool breakdown.
+4. **Policy exhaustiveness:** 2 of 5 policy modes are live-tested
+   (`standard` implicitly via `TestE2EMutating`, `time_tracking_safe`
+   explicitly). See Policy-mode table above for per-mode status.
 5. **Rate-limit behaviour:** No automated tests exercise Clockify's rate
    limiter or the MCP server's retry/backoff behaviour under live load.
 6. **Pagination consistency:** `clockify_list_entries`, `clockify_list_projects`,
