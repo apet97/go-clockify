@@ -65,6 +65,10 @@ The nightly **Live contract** workflow
 mutating + audit tiers enabled, no open `live-test-failure` issue,
 and no upstream schema field that the client silently discards.
 
+See also: [`docs/api-coverage.md`](api-coverage.md) for the full
+124-tool coverage matrix, per-tool dry-run/policy breakdown, and
+evidence hierarchy.
+
 ---
 
 ## 2. Shared-service / Postgres E2E
