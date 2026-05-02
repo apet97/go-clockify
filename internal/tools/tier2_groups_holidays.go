@@ -118,14 +118,17 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		// 7. Create holiday
 		{
 			Tool: toolRW("clockify_create_holiday",
-				"Create a new holiday in the workspace",
+				"Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
 				map[string]any{
 					"type":     "object",
-					"required": []string{"name", "date"},
+					"required": []string{"name", "start_date"},
 					"properties": map[string]any{
-						"name":      map[string]any{"type": "string", "description": "Holiday name"},
-						"date":      map[string]any{"type": "string", "description": "Date in YYYY-MM-DD format"},
-						"recurring": map[string]any{"type": "boolean", "description": "Whether the holiday recurs annually"},
+						"name":            map[string]any{"type": "string", "description": "Holiday name (2–100 chars)"},
+						"start_date":      map[string]any{"type": "string", "description": "Range start in yyyy-MM-dd format"},
+						"end_date":        map[string]any{"type": "string", "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays"},
+						"occurs_annually": map[string]any{"type": "boolean", "description": "Whether the holiday recurs annually"},
+						"user_ids":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)"},
+						"user_group_ids":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User-group IDs the holiday applies to"},
 					},
 				}),
 			ReadOnlyHint: false,
@@ -315,9 +318,20 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 	if name == "" {
 		return ResultEnvelope{}, fmt.Errorf("name is required")
 	}
-	date := strings.TrimSpace(stringArg(args, "date"))
-	if date == "" {
-		return ResultEnvelope{}, fmt.Errorf("date is required")
+	startDate := strings.TrimSpace(stringArg(args, "start_date"))
+	if startDate == "" {
+		return ResultEnvelope{}, fmt.Errorf("start_date is required")
+	}
+	endDate := strings.TrimSpace(stringArg(args, "end_date"))
+	if endDate == "" {
+		// Single-day holidays use the same value for both bounds.
+		endDate = startDate
+	}
+
+	userIDs := stringSliceArg(args, "user_ids")
+	groupIDs := stringSliceArg(args, "user_group_ids")
+	if len(userIDs) == 0 && len(groupIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("at least one of user_ids or user_group_ids is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -327,10 +341,27 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 
 	body := map[string]any{
 		"name": name,
-		"date": date,
+		"datePeriod": map[string]any{
+			"startDate": startDate,
+			"endDate":   endDate,
+		},
 	}
-	if recurring, ok := args["recurring"].(bool); ok {
-		body["recurring"] = recurring
+	if occurs, ok := args["occurs_annually"].(bool); ok {
+		body["occursAnnually"] = occurs
+	}
+	if len(userIDs) > 0 {
+		body["users"] = map[string]any{
+			"contains": "CONTAINS",
+			"ids":      userIDs,
+			"status":   "ACTIVE",
+		}
+	}
+	if len(groupIDs) > 0 {
+		body["userGroups"] = map[string]any{
+			"contains": "CONTAINS",
+			"ids":      groupIDs,
+			"status":   "ALL",
+		}
 	}
 
 	path, err := paths.Workspace(wsID, "holidays")

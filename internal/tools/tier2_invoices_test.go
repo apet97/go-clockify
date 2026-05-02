@@ -26,9 +26,20 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		}{r.Method, r.URL.Path})
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices":
-			respondJSON(t, w, []map[string]any{{"id": "inv1", "status": "DRAFT"}, {"id": "inv2", "status": "PAID"}})
+			respondJSON(t, w, map[string]any{
+				"total": 2,
+				"invoices": []map[string]any{
+					{"id": "inv1", "status": "DRAFT"},
+					{"id": "inv2", "status": "PAID"},
+				},
+			})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
-			respondJSON(t, w, map[string]any{"id": "inv1", "status": "DRAFT", "currency": "USD"})
+			respondJSON(t, w, map[string]any{
+				"id":       "inv1",
+				"status":   "DRAFT",
+				"currency": "USD",
+				"items":    []map[string]any{{"id": "item1", "description": "Hour"}},
+			})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices":
 			respondJSON(t, w, map[string]any{"id": "inv-new", "clientId": "c1", "status": "DRAFT"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
@@ -39,8 +50,6 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices/inv1/send":
 			respondJSON(t, w, map[string]any{"status": "SENT"})
-		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices/inv1/items":
-			respondJSON(t, w, []map[string]any{{"id": "item1", "description": "Hour"}})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices/inv1/items":
 			respondJSON(t, w, map[string]any{"id": "item-new", "description": "New item"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/invoices/inv1/items/item1":
@@ -145,9 +154,16 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// 8. listInvoiceItems
+	// 8. listInvoiceItems — reads embedded items from getInvoice
 	res, err = svc.listInvoiceItems(ctx, map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_list_invoice_items")
+	items, ok := res.Data.([]map[string]any)
+	if !ok {
+		t.Fatalf("listInvoiceItems data: expected []map[string]any, got %T", res.Data)
+	}
+	if len(items) != 1 || items[0]["id"] != "item1" {
+		t.Fatalf("listInvoiceItems items: expected [{id:item1}], got %#v", items)
+	}
 
 	// 8b. listInvoiceItems validation
 	if _, err := svc.listInvoiceItems(ctx, map[string]any{"invoice_id": ""}); err == nil {

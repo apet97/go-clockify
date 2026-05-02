@@ -3,6 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -54,31 +57,38 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Create expense
-		{Tool: toolRW("clockify_create_expense", "Create a new expense", map[string]any{
+		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.", map[string]any{
 			"type":     "object",
-			"required": []string{"amount", "date"},
+			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{
-				"amount":      map[string]any{"type": "number", "description": "Expense amount"},
-				"date":        map[string]any{"type": "string", "description": "Expense date (YYYY-MM-DD)"},
-				"category_id": map[string]any{"type": "string", "description": "Expense category ID"},
-				"project_id":  map[string]any{"type": "string", "description": "Project ID"},
-				"description": map[string]any{"type": "string", "description": "Expense description"},
+				"amount":      map[string]any{"type": "number", "description": "Expense amount (major currency units)"},
+				"date":        map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"category_id": map[string]any{"type": "string", "description": "Expense category ID (required)"},
+				"user_id":     map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
+				"project_id":  map[string]any{"type": "string", "description": "Project ID (optional)"},
+				"task_id":     map[string]any{"type": "string", "description": "Task ID (optional)"},
+				"notes":       map[string]any{"type": "string", "description": "Free-form notes"},
+				"billable":    map[string]any{"type": "boolean", "description": "Whether the expense is billable"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createExpense(ctx, args)
 		}},
 
 		// 4. Update expense
-		{Tool: toolRW("clockify_update_expense", "Update an existing expense", map[string]any{
+		{Tool: toolRW("clockify_update_expense", "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent.", map[string]any{
 			"type":     "object",
-			"required": []string{"expense_id"},
+			"required": []string{"expense_id", "change_fields"},
 			"properties": map[string]any{
-				"expense_id":  map[string]any{"type": "string"},
-				"amount":      map[string]any{"type": "number"},
-				"date":        map[string]any{"type": "string"},
-				"category_id": map[string]any{"type": "string"},
-				"project_id":  map[string]any{"type": "string"},
-				"description": map[string]any{"type": "string"},
+				"expense_id":    map[string]any{"type": "string"},
+				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE", "FILE"}}, "description": "Field tokens to update; one or more of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE"},
+				"amount":        map[string]any{"type": "number"},
+				"date":          map[string]any{"type": "string", "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ"},
+				"category_id":   map[string]any{"type": "string"},
+				"project_id":    map[string]any{"type": "string"},
+				"task_id":       map[string]any{"type": "string"},
+				"user_id":       map[string]any{"type": "string", "description": "Reassign the expense to this user"},
+				"notes":         map[string]any{"type": "string"},
+				"billable":      map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateExpense(ctx, args)
@@ -169,16 +179,25 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
+	// Upstream wraps the list in a doubly-nested envelope:
+	// {expenses: {expenses: [...], count: N}, dailyTotals: [...], weeklyTotals: [...]}.
+	// Verified live 2026-05-02 via clockify-api-probe-lab.
+	var envelope struct {
+		Expenses struct {
+			Expenses []map[string]any `json:"expenses"`
+			Count    int              `json:"count"`
+		} `json:"expenses"`
+	}
 	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &items); err != nil {
+	}, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	items := envelope.Expenses.Expenses
 	return ok("clockify_list_expenses", items, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       envelope.Expenses.Count,
 		"page":        page,
 	}), nil
 }
@@ -210,25 +229,46 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{}
-	if v, ok := args["amount"]; ok {
-		body["amount"] = v
-	} else {
+	// Required: amount, date (RFC3339), category_id. user_id defaults
+	// to the calling user via /user — the upstream rejects multipart
+	// POSTs that omit userId with a 400.
+	amount, hasAmount := args["amount"].(float64)
+	if !hasAmount {
 		return ResultEnvelope{}, fmt.Errorf("amount is required")
 	}
-	if v := stringArg(args, "date"); v != "" {
-		body["date"] = v
-	} else {
+	date := stringArg(args, "date")
+	if date == "" {
 		return ResultEnvelope{}, fmt.Errorf("date is required")
 	}
-	if v := stringArg(args, "category_id"); v != "" {
-		body["categoryId"] = v
+	categoryID := stringArg(args, "category_id")
+	if categoryID == "" {
+		return ResultEnvelope{}, fmt.Errorf("category_id is required")
 	}
+	userID := stringArg(args, "user_id")
+	if userID == "" {
+		current, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+		}
+		userID = current.ID
+	}
+
+	form := url.Values{}
+	form.Set("userId", userID)
+	form.Set("amount", strconv.FormatFloat(amount, 'f', -1, 64))
+	form.Set("date", date)
+	form.Set("categoryId", categoryID)
 	if v := stringArg(args, "project_id"); v != "" {
-		body["projectId"] = v
+		form.Set("projectId", v)
 	}
-	if v := stringArg(args, "description"); v != "" {
-		body["description"] = v
+	if v := stringArg(args, "task_id"); v != "" {
+		form.Set("taskId", v)
+	}
+	if v := stringArg(args, "notes"); v != "" {
+		form.Set("notes", v)
+	}
+	if v, ok := args["billable"].(bool); ok {
+		form.Set("billable", strconv.FormatBool(v))
 	}
 
 	path, err := paths.Workspace(wsID, "expenses")
@@ -236,10 +276,25 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, path, body, &created); err != nil {
+	if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_expense", created, map[string]any{"workspaceId": wsID}), nil
+}
+
+// validUpdateExpenseChangeFields lists the upstream-accepted tokens for
+// the multipart `changeFields` field on PUT /expenses/{id}. Anything
+// outside this set is rejected by the upstream with code 3000.
+var validUpdateExpenseChangeFields = map[string]bool{
+	"USER":     true,
+	"DATE":     true,
+	"PROJECT":  true,
+	"TASK":     true,
+	"CATEGORY": true,
+	"NOTES":    true,
+	"AMOUNT":   true,
+	"BILLABLE": true,
+	"FILE":     true,
 }
 
 func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -252,21 +307,48 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{}
-	if v, ok := args["amount"]; ok {
-		body["amount"] = v
+	// changeFields is mandatory and case-sensitive — without it the
+	// upstream silently ignores every other field per probe finding
+	// (SUMMARY rev 3 #13).
+	rawChange, hasChange := args["change_fields"].([]any)
+	if !hasChange || len(rawChange) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
+	}
+	form := url.Values{}
+	for _, raw := range rawChange {
+		token, isStr := raw.(string)
+		if !isStr {
+			return ResultEnvelope{}, fmt.Errorf("change_fields must be strings; got %T", raw)
+		}
+		token = strings.ToUpper(strings.TrimSpace(token))
+		if !validUpdateExpenseChangeFields[token] {
+			return ResultEnvelope{}, fmt.Errorf("change_fields contains unsupported token %q", token)
+		}
+		form.Add("changeFields", token)
+	}
+	if v, ok := args["amount"].(float64); ok {
+		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
 	}
 	if v := stringArg(args, "date"); v != "" {
-		body["date"] = v
+		form.Set("date", v)
 	}
 	if v := stringArg(args, "category_id"); v != "" {
-		body["categoryId"] = v
+		form.Set("categoryId", v)
 	}
 	if v := stringArg(args, "project_id"); v != "" {
-		body["projectId"] = v
+		form.Set("projectId", v)
 	}
-	if v := stringArg(args, "description"); v != "" {
-		body["description"] = v
+	if v := stringArg(args, "task_id"); v != "" {
+		form.Set("taskId", v)
+	}
+	if v := stringArg(args, "user_id"); v != "" {
+		form.Set("userId", v)
+	}
+	if v := stringArg(args, "notes"); v != "" {
+		form.Set("notes", v)
+	}
+	if v, ok := args["billable"].(bool); ok {
+		form.Set("billable", strconv.FormatBool(v))
 	}
 
 	path, err := paths.Workspace(wsID, "expenses", expenseID)
@@ -274,7 +356,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
+	if err := s.Client.PutMultipart(ctx, path, form, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_expense", updated, map[string]any{"workspaceId": wsID}), nil
@@ -326,13 +408,18 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
+	// Upstream returns {count: N, categories: [...]}. Probe evidence:
+	// clockify-api-probe-lab/findings/expenses.md (rev 2 2026-05-02).
+	var envelope struct {
+		Count      int              `json:"count"`
+		Categories []map[string]any `json:"categories"`
+	}
+	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_expense_categories", items, map[string]any{
+	return ok("clockify_list_expense_categories", envelope.Categories, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       envelope.Count,
 	}), nil
 }
 
@@ -444,10 +531,18 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var expenses []map[string]any
-	if err := s.Client.Get(ctx, path, query, &expenses); err != nil {
+	// Same envelope as listExpenses — the report aggregator hits the
+	// same /expenses endpoint, just with date-range filters.
+	var envelope struct {
+		Expenses struct {
+			Expenses []map[string]any `json:"expenses"`
+			Count    int              `json:"count"`
+		} `json:"expenses"`
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	expenses := envelope.Expenses.Expenses
 
 	// Aggregate by category.
 	var totalAmount float64
@@ -469,7 +564,7 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 		"byCategory":  byCategory,
 	}, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(expenses),
+		"count":       envelope.Expenses.Count,
 		"page":        page,
 	}), nil
 }

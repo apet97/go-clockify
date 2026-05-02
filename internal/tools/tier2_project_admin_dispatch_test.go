@@ -53,13 +53,28 @@ func newProjectAdminUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 	})
 
-	// Memberships endpoint.
+	// Memberships endpoint. PATCH-only to pin SUMMARY rev 3 #6: the
+	// upstream returns the full project object (not a bare membership
+	// array), and PUT is rejected with 405.
 	mux.HandleFunc("/workspaces/test-workspace/projects/p-1/memberships", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPatch {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		body := map[string]any{}
 		_ = json.NewDecoder(r.Body).Decode(&body)
-		body["id"] = "p-1"
-		_ = json.NewEncoder(w).Encode(body)
+		w.Header().Set("Content-Type", "application/json")
+		// Echo the requested members back in the membershipType-shaped
+		// schema the live API returns. The handler under test should
+		// hand back this inner array, not the wrapping project object.
+		ms, _ := body["memberships"].([]any)
+		out := map[string]any{
+			"id":          "p-1",
+			"name":        "Active project",
+			"workspaceId": "test-workspace",
+			"memberships": ms,
+		}
+		_ = json.NewEncoder(w).Encode(out)
 	})
 
 	// Second project — used by the archive bulk happy path so the test can
@@ -175,6 +190,16 @@ func TestTier2Dispatch_ProjectAdmin_SetProjectMemberships(t *testing.T) {
 	}
 	if !res.UpstreamHit {
 		t.Fatalf("memberships did not reach upstream")
+	}
+	// SUMMARY rev 3 #6 (b): the handler must return the inner
+	// memberships array, not the full project object. Both userIds we
+	// requested should appear; the wrapping project's "id":"p-1" must
+	// not be at the top level of Data.
+	if !strings.Contains(res.ResultText, `"userId":"u-1"`) {
+		t.Fatalf("set memberships did not surface u-1 in payload: %q", res.ResultText)
+	}
+	if !strings.Contains(res.ResultText, `"userId":"u-2"`) {
+		t.Fatalf("set memberships did not surface u-2 in payload: %q", res.ResultText)
 	}
 }
 

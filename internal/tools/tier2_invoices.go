@@ -204,16 +204,22 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
+	// Upstream returns {total: int, invoices: [...]} — discovered via
+	// clockify-api-probe-lab against the live workspace 2026-05-02.
+	var envelope struct {
+		Total    int              `json:"total"`
+		Invoices []map[string]any `json:"invoices"`
+	}
 	if err := s.Client.Get(ctx, path, map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &items); err != nil {
+	}, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_invoices", items, map[string]any{
+	return ok("clockify_list_invoices", envelope.Invoices, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       len(envelope.Invoices),
+		"total":       envelope.Total,
 		"page":        page,
 	}), nil
 }
@@ -430,13 +436,22 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
+	// Upstream rejects GET /invoices/{id}/items with 405. Items are
+	// embedded in the single-invoice response; delegate to getInvoice
+	// and extract the items array. Probe evidence: clockify-api-probe-
+	// lab/findings/invoices.md (rev 2 2026-05-02).
+	inv, err := s.getInvoice(ctx, args)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &items); err != nil {
-		return ResultEnvelope{}, err
+	invoice, _ := inv.Data.(map[string]any)
+	items := []map[string]any{}
+	if raw, ok := invoice["items"].([]any); ok {
+		for _, r := range raw {
+			if item, ok := r.(map[string]any); ok {
+				items = append(items, item)
+			}
+		}
 	}
 	return ok("clockify_list_invoice_items", items, map[string]any{
 		"workspaceId": wsID,
@@ -568,27 +583,34 @@ func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (Resul
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
-	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
+	// Reporting/filter endpoint is POST /workspaces/{ws}/invoices/info
+	// (not GET /invoices, which is the paginated list). Body accepts
+	// statuses (array), pagination, plus dateRangeType/dateRange/clientIds.
+	// Verified live 2026-05-02 via clockify-api-probe-lab.
+	body := map[string]any{
+		"page":     page,
+		"pageSize": pageSize,
 	}
 	if v := stringArg(args, "status"); v != "" {
-		query["status"] = v
+		body["statuses"] = []string{v}
 	}
 
-	path, err := paths.Workspace(wsID, "invoices")
+	path, err := paths.Workspace(wsID, "invoices", "info")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var invoices []map[string]any
-	if err := s.Client.Get(ctx, path, query, &invoices); err != nil {
+	var envelope struct {
+		Total    int              `json:"total"`
+		Invoices []map[string]any `json:"invoices"`
+	}
+	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 
 	// Aggregate totals from returned invoices.
 	var totalAmount float64
 	statusCounts := map[string]int{}
-	for _, inv := range invoices {
+	for _, inv := range envelope.Invoices {
 		if amt, ok := inv["amount"].(float64); ok {
 			totalAmount += amt
 		}
@@ -598,12 +620,13 @@ func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (Resul
 	}
 
 	return ok("clockify_invoice_report", map[string]any{
-		"invoices":     invoices,
+		"invoices":     envelope.Invoices,
 		"totalAmount":  totalAmount,
 		"statusCounts": statusCounts,
 	}, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(invoices),
+		"count":       len(envelope.Invoices),
+		"total":       envelope.Total,
 		"page":        page,
 	}), nil
 }

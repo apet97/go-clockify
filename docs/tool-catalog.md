@@ -61,7 +61,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_custom_field` | no | no | no | `write` | Create a new custom field (TEXT, NUMBER, DROPDOWN, CHECKBOX, or LINK) |
+| `clockify_create_custom_field` | no | no | no | `write` | Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE. |
 | `clockify_delete_custom_field` | no | yes | no | `destructive` | Delete a custom field by ID (supports dry_run preview) |
 | `clockify_get_custom_field` | yes | no | yes | `read` | Get a custom field by ID |
 | `clockify_list_custom_fields` | yes | no | yes | `read` | List custom fields in the workspace with optional pagination |
@@ -72,7 +72,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_expense` | no | no | no | `write` | Create a new expense |
+| `clockify_create_expense` | no | no | no | `write` | Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user. |
 | `clockify_create_expense_category` | no | no | no | `write` | Create a new expense category |
 | `clockify_delete_expense` | no | yes | no | `destructive` | Delete an expense by ID |
 | `clockify_delete_expense_category` | no | yes | no | `destructive` | Delete an expense category |
@@ -80,14 +80,14 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_get_expense` | yes | no | yes | `read` | Get a single expense by ID |
 | `clockify_list_expense_categories` | yes | no | yes | `read` | List expense categories in the workspace |
 | `clockify_list_expenses` | yes | no | yes | `read` | List expenses in the workspace with pagination |
-| `clockify_update_expense` | no | no | no | `write` | Update an existing expense |
+| `clockify_update_expense` | no | no | no | `write` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent. |
 | `clockify_update_expense_category` | no | no | no | `write` | Update an expense category |
 
 ### `groups_holidays`
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_holiday` | no | no | no | `write` | Create a new holiday in the workspace |
+| `clockify_create_holiday` | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_create_user_group_admin` | no | no | no | `write` | Create a new user group with optional member user IDs |
 | `clockify_delete_holiday` | no | yes | no | `destructive` | Delete a holiday by ID (supports dry_run preview) |
 | `clockify_delete_user_group_admin` | no | yes | no | `destructive` | Delete a user group by ID (supports dry_run preview) |
@@ -133,9 +133,9 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_delete_assignment` | no | yes | no | `destructive` | Delete a scheduling assignment by ID (supports dry_run preview) |
 | `clockify_filter_schedule_capacity` | yes | no | yes | `read` | Get scheduling capacity data for a date range |
 | `clockify_get_assignment` | yes | no | yes | `read` | Get a scheduling assignment by ID |
-| `clockify_get_project_schedule_totals` | yes | no | yes | `read` | Get project scheduling assignment totals |
+| `clockify_get_project_schedule_totals` | yes | no | yes | `read` | Get scheduling totals per project across a date range |
 | `clockify_get_schedule` | yes | no | yes | `read` | Get a schedule by ID |
-| `clockify_list_assignments` | yes | no | yes | `read` | List scheduling assignments with optional user_id and project_id filters |
+| `clockify_list_assignments` | yes | no | yes | `read` | List scheduling assignments within a date range |
 | `clockify_list_schedules` | yes | no | yes | `read` | List scheduling schedules for the workspace |
 | `clockify_update_assignment` | no | no | no | `write` | Update a scheduling assignment by ID |
 
