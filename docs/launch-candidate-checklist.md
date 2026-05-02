@@ -23,10 +23,10 @@ checkout. "Worked once" is not green.
 The nightly **Live contract** workflow
 (`.github/workflows/live-contract.yml`) drives this section.
 
-- [ ] `CLOCKIFY_LIVE_API_KEY` and `CLOCKIFY_LIVE_WORKSPACE_ID`
+- [x] `CLOCKIFY_LIVE_API_KEY` and `CLOCKIFY_LIVE_WORKSPACE_ID`
       configured against the **sacrificial** workspace named in
       [`live-tests.md`](live-tests.md).
-- [ ] `CLOCKIFY_LIVE_WRITE_ENABLED=true` (repo variable) — mutating
+- [x] `CLOCKIFY_LIVE_WRITE_ENABLED=true` (repo variable) — mutating
       tests run, not just read-only.
 - [ ] Latest scheduled run of `live-contract.yml` is green with
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
@@ -62,10 +62,10 @@ asserts the tenant + audit invariants.
 
 - [ ] `make test-postgres` runs green from a clean checkout
       (Testcontainers, `INTEGRATION_REQUIRED=1`).
-- [ ] `MCP_LIVE_CONTROL_PLANE_DSN` configured against a sacrificial
+- [x] `MCP_LIVE_CONTROL_PLANE_DSN` configured against a sacrificial
       Postgres database; `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` set as
       a repo variable.
-- [ ] `TestLiveCreateUpdateDeleteEntryAuditPhases` is green on the
+- [x] `TestLiveCreateUpdateDeleteEntryAuditPhases` is green on the
       latest `live-contract.yml` run (intent + outcome rows for
       every non-read tool call).
 - [ ] **New** shared-service E2E in `tests/` that:
