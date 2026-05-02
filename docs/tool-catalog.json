@@ -4202,7 +4202,7 @@
     },
     {
       "name": "clockify_create_custom_field",
-      "description": "Create a new custom field (TEXT, NUMBER, DROPDOWN, CHECKBOX, or LINK)",
+      "description": "Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
       "group": "custom_fields",
       "tier": 2,
       "read_only": false,
@@ -4215,14 +4215,22 @@
         "additionalProperties": false,
         "properties": {
           "allowed_values": {
-            "description": "Allowed values for DROPDOWN type",
+            "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "field_type": {
-            "description": "One of: TEXT, NUMBER, DROPDOWN, CHECKBOX, LINK",
+            "description": "Upstream-accepted custom-field type",
+            "enum": [
+              "TXT",
+              "NUMBER",
+              "DROPDOWN_SINGLE",
+              "DROPDOWN_MULTIPLE",
+              "CHECKBOX",
+              "LINK"
+            ],
             "type": "string"
           },
           "name": {

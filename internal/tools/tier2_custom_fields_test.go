@@ -57,6 +57,20 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 	if _, err := svc.CreateCustomField(ctx, map[string]any{"name": "x"}); err == nil {
 		t.Fatal("expected error for missing field_type")
 	}
+	// SUMMARY rev 3 #19: the historical TEXT / DROPDOWN aliases are
+	// rejected by the upstream — fail locally with the corrected
+	// enum list rather than round-tripping the 400.
+	if _, err := svc.CreateCustomField(ctx, map[string]any{"name": "x", "field_type": "TEXT"}); err == nil {
+		t.Fatal("expected enum-validation error for legacy TEXT alias")
+	}
+	if _, err := svc.CreateCustomField(ctx, map[string]any{"name": "x", "field_type": "DROPDOWN"}); err == nil {
+		t.Fatal("expected enum-validation error for legacy DROPDOWN alias")
+	}
+	// allowed_values is implicitly required for both DROPDOWN variants
+	// — every live dropdown carries a non-empty list per probe data.
+	if _, err := svc.CreateCustomField(ctx, map[string]any{"name": "x", "field_type": "DROPDOWN_SINGLE"}); err == nil {
+		t.Fatal("expected error: DROPDOWN_SINGLE without allowed_values")
+	}
 
 	// Update + validation
 	res, err = svc.UpdateCustomField(ctx, map[string]any{

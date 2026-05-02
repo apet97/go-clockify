@@ -61,7 +61,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_custom_field` | no | no | no | `write` | Create a new custom field (TEXT, NUMBER, DROPDOWN, CHECKBOX, or LINK) |
+| `clockify_create_custom_field` | no | no | no | `write` | Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE. |
 | `clockify_delete_custom_field` | no | yes | no | `destructive` | Delete a custom field by ID (supports dry_run preview) |
 | `clockify_get_custom_field` | yes | no | yes | `read` | Get a custom field by ID |
 | `clockify_list_custom_fields` | yes | no | yes | `read` | List custom fields in the workspace with optional pagination |

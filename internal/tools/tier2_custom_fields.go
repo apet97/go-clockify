@@ -60,14 +60,18 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. Create custom field
 		{
 			Tool: toolRW("clockify_create_custom_field",
-				"Create a new custom field (TEXT, NUMBER, DROPDOWN, CHECKBOX, or LINK)",
+				"Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"name", "field_type"},
 					"properties": map[string]any{
-						"name":           map[string]any{"type": "string", "description": "Field name"},
-						"field_type":     map[string]any{"type": "string", "description": "One of: TEXT, NUMBER, DROPDOWN, CHECKBOX, LINK"},
-						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values for DROPDOWN type"},
+						"name": map[string]any{"type": "string", "description": "Field name"},
+						"field_type": map[string]any{
+							"type":        "string",
+							"description": "Upstream-accepted custom-field type",
+							"enum":        []string{"TXT", "NUMBER", "DROPDOWN_SINGLE", "DROPDOWN_MULTIPLE", "CHECKBOX", "LINK"},
+						},
+						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE"},
 						"required":       map[string]any{"type": "boolean", "description": "Whether the field is required"},
 					},
 				}),
@@ -190,6 +194,20 @@ func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (Resu
 	return ok("clockify_get_custom_field", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// validCustomFieldTypes lists the upstream-accepted enum for the
+// custom-field `type` body field. The historical TEXT/DROPDOWN aliases
+// are rejected by Clockify with code 3002 listing the accepted values
+// — fail locally with a clearer message instead of round-tripping the
+// 400.
+var validCustomFieldTypes = map[string]bool{
+	"TXT":               true,
+	"NUMBER":            true,
+	"DROPDOWN_SINGLE":   true,
+	"DROPDOWN_MULTIPLE": true,
+	"CHECKBOX":          true,
+	"LINK":              true,
+}
+
 func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -198,6 +216,13 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 	fieldType := strings.ToUpper(strings.TrimSpace(stringArg(args, "field_type")))
 	if fieldType == "" {
 		return ResultEnvelope{}, fmt.Errorf("field_type is required")
+	}
+	if !validCustomFieldTypes[fieldType] {
+		return ResultEnvelope{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
+	}
+	allowedVals, _ := args["allowed_values"].([]any)
+	if (fieldType == "DROPDOWN_SINGLE" || fieldType == "DROPDOWN_MULTIPLE") && len(allowedVals) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("allowed_values is required for %s", fieldType)
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -209,8 +234,8 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 		"name": name,
 		"type": fieldType,
 	}
-	if vals, ok := args["allowed_values"].([]any); ok && len(vals) > 0 {
-		body["allowedValues"] = vals
+	if len(allowedVals) > 0 {
+		body["allowedValues"] = allowedVals
 	}
 	if req, ok := args["required"].(bool); ok {
 		body["required"] = req
