@@ -25,6 +25,8 @@ func setupTestEnv(t *testing.T) *tools.Service {
 	}
 	t.Setenv("CLOCKIFY_DRY_RUN", "off") // Allow real mutations for this test only
 
+	MarkLiveTestRan()
+
 	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
