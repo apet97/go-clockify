@@ -123,12 +123,12 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 					"type":     "object",
 					"required": []string{"name", "start_date"},
 					"properties": map[string]any{
-						"name":             map[string]any{"type": "string", "description": "Holiday name (2–100 chars)"},
-						"start_date":       map[string]any{"type": "string", "description": "Range start in yyyy-MM-dd format"},
-						"end_date":         map[string]any{"type": "string", "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays"},
-						"occurs_annually":  map[string]any{"type": "boolean", "description": "Whether the holiday recurs annually"},
-						"user_ids":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)"},
-						"user_group_ids":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User-group IDs the holiday applies to"},
+						"name":            map[string]any{"type": "string", "description": "Holiday name (2–100 chars)"},
+						"start_date":      map[string]any{"type": "string", "description": "Range start in yyyy-MM-dd format"},
+						"end_date":        map[string]any{"type": "string", "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays"},
+						"occurs_annually": map[string]any{"type": "boolean", "description": "Whether the holiday recurs annually"},
+						"user_ids":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)"},
+						"user_group_ids":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User-group IDs the holiday applies to"},
 					},
 				}),
 			ReadOnlyHint: false,
@@ -374,7 +374,6 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 	}
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
 }
-
 
 func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	holidayID := stringArg(args, "holiday_id")
