@@ -193,6 +193,18 @@ func (c *liveCampaignContext) rawDeletePath(ctx context.Context, path string) er
 	return c.h.Service.Client.Delete(ctx, "/workspaces/"+c.WorkspaceID+path)
 }
 
+// rawArchiveAndDeleteClient is the cleanup primitive for clients.
+// Like projects, Clockify rejects DELETE on active clients; the
+// resource must first be archived via PUT {archived:true}. Idempotent.
+func (c *liveCampaignContext) rawArchiveAndDeleteClient(ctx context.Context, clientID string) error {
+	path := "/workspaces/" + c.WorkspaceID + "/clients/" + clientID
+	var ignored map[string]any
+	if err := c.h.Service.Client.Put(ctx, path, map[string]any{"archived": true}, &ignored); err != nil {
+		c.t.Logf("archive-before-delete client %s returned %v (continuing)", clientID, err)
+	}
+	return c.h.Service.Client.Delete(ctx, path)
+}
+
 // rawArchiveAndDeleteProject is the cleanup primitive for projects.
 // Clockify rejects DELETE on active projects ("Cannot delete an
 // active project") — the project must first be archived via PUT
