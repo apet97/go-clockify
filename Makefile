@@ -3,7 +3,7 @@
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench bench-baseline-check \
-        build-postgres test-postgres build-grpc build-grpc-postgres \
+        build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
         repo-hygiene script-tests actionlint shellcheck release-check
@@ -375,3 +375,22 @@ test-postgres:
 	# Docker is unreachable, masking regressions in the postgres
 	# control-plane backend. See store_test.go::dsn for the gate.
 	cd internal/controlplane/postgres && INTEGRATION_REQUIRED=1 go test -tags=postgres,integration -count=1 -timeout 180s ./...
+
+# shared-service-e2e drives the streamable HTTP transport in-process
+# against a Postgres-backed control plane with two distinct forward_auth
+# principals, then asserts tenant isolation in audit_events + sessions.
+# Closes Group 2 of docs/launch-candidate-checklist.md.
+#
+# Requires MCP_LIVE_CONTROL_PLANE_DSN against a sacrificial Postgres.
+# Soft-skips when the DSN is unset so laptop runs do not require a DB;
+# CI provides one via the postgres:16-alpine service container.
+# The Clockify upstream is mocked locally (httptest), so this target
+# does NOT need CLOCKIFY_LIVE_API_KEY or any live secret.
+shared-service-e2e:
+	@if [ -z "$$MCP_LIVE_CONTROL_PLANE_DSN" ]; then \
+	  echo "shared-service-e2e: MCP_LIVE_CONTROL_PLANE_DSN not set; skipping" >&2; \
+	  exit 0; \
+	fi; \
+	cd internal/controlplane/postgres && \
+	go test -tags=postgres -count=1 -timeout 5m -run '^TestSharedServicePostgresE2E$$' ./... && \
+	echo "shared-service-e2e: OK"
