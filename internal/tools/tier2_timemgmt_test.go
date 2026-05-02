@@ -13,8 +13,8 @@ import (
 func TestSchedulingHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := schedulingHandlers(svc)
-	if len(descs) != 10 {
-		t.Fatalf("expected 10 scheduling tools, got %d", len(descs))
+	if len(descs) != 9 {
+		t.Fatalf("expected 9 scheduling tools, got %d", len(descs))
 	}
 
 	names := make(map[string]bool, len(descs))
@@ -28,7 +28,6 @@ func TestSchedulingHandlersCount(t *testing.T) {
 		"clockify_create_assignment",
 		"clockify_update_assignment",
 		"clockify_delete_assignment",
-		"clockify_list_schedules",
 		"clockify_get_schedule",
 		"clockify_create_schedule",
 		"clockify_get_project_schedule_totals",

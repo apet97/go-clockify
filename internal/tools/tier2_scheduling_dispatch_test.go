@@ -105,20 +105,19 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 	})
 
-	// Schedules collection — list + create.
+	// Schedules collection — POST (create) only. The phantom GET-list
+	// surface (clockify_list_schedules) was removed once the probe
+	// lab confirmed Clockify has no schedules endpoint at any host.
 	mux.HandleFunc("/workspaces/test-workspace/scheduling", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch r.Method {
-		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"s-1","name":"Q2"}]`))
-		case http.MethodPost:
-			body := map[string]any{}
-			_ = json.NewDecoder(r.Body).Decode(&body)
-			body["id"] = "s-new"
-			_ = json.NewEncoder(w).Encode(body)
-		default:
+		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		body["id"] = "s-new"
+		_ = json.NewEncoder(w).Encode(body)
 	})
 
 	// Per-schedule endpoint — get only (no update/delete tools registered).
@@ -268,23 +267,10 @@ func TestTier2Dispatch_Scheduling_DeleteAssignmentDryRunAndLive(t *testing.T) {
 	}
 }
 
-func TestTier2Dispatch_Scheduling_SchedulesListGetCreate(t *testing.T) {
+func TestTier2Dispatch_Scheduling_GetAndCreateSchedule(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
 	res := dispatchTier2(t, tier2InvokeOpts{
-		Group:    "scheduling",
-		Tool:     "clockify_list_schedules",
-		Args:     map[string]any{},
-		Upstream: upstream,
-	})
-	if res.Outcome != testharness.OutcomeSuccess {
-		t.Fatalf("list_schedules outcome=%q err=%q", res.Outcome, res.ErrorMessage)
-	}
-	if !strings.Contains(res.ResultText, "s-1") {
-		t.Fatalf("list_schedules result missing id: %q", res.ResultText)
-	}
-
-	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_get_schedule",
 		Args:     map[string]any{"schedule_id": "s-1"},

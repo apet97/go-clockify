@@ -76,16 +76,12 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		}},
 		{"scheduling", []call{
 			{"clockify_list_assignments", scheduleArgs, ""},
-			// list_schedules has no live surface (probe lab proved
-			// /scheduling, /scheduling/scheduling, scheduling.api.../
-			// schedules, and /api/v2/.../scheduling all 404); the tool
-			// is being removed in a follow-up commit. Pin stays here
-			// only until that commit lands.
-			{"clockify_list_schedules", nil, "No static resource"},
 			{"clockify_get_project_schedule_totals", scheduleArgs, ""},
-			// filter_schedule_capacity now hits /scheduling/assignments/
+			// filter_schedule_capacity hits /scheduling/assignments/
 			// users/{userId}/totals (probe-lab fixture user-totals.json,
-			// 200). Pin removed in this commit.
+			// 200). list_schedules used to live here pinned with
+			// "No static resource"; the tool was removed because the
+			// upstream has no schedules surface at any host or version.
 			{"clockify_filter_schedule_capacity", capacityArgs, ""},
 		}},
 		{"time_off", []call{

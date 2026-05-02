@@ -21,7 +21,6 @@ func init() {
 			"clockify_create_assignment",
 			"clockify_update_assignment",
 			"clockify_delete_assignment",
-			"clockify_list_schedules",
 			"clockify_get_schedule",
 			"clockify_create_schedule",
 			"clockify_get_project_schedule_totals",
@@ -113,20 +112,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.deleteAssignment(ctx, args)
 			},
 		},
-		// 6. clockify_list_schedules (RO)
-		{
-			Tool: toolRO("clockify_list_schedules",
-				"List scheduling schedules for the workspace",
-				map[string]any{"type": "object", "properties": map[string]any{
-					"page":      map[string]any{"type": "integer"},
-					"page_size": map[string]any{"type": "integer"},
-				}}),
-			ReadOnlyHint: true, IdempotentHint: true,
-			Handler: func(ctx context.Context, args map[string]any) (any, error) {
-				return s.listSchedules(ctx, args)
-			},
-		},
-		// 7. clockify_get_schedule (RO)
+		// 6. clockify_get_schedule (RO)
 		{
 			Tool: toolRO("clockify_get_schedule",
 				"Get a schedule by ID",
@@ -424,34 +410,6 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		"deleted":      true,
 		"assignmentId": aID,
 	}, map[string]any{"workspaceId": wsID}), nil
-}
-
-func (s *Service) listSchedules(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
-	}
-
-	var schedules []map[string]any
-	path, err := paths.Workspace(wsID, "scheduling")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Get(ctx, path, query, &schedules); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	return ok("clockify_list_schedules", schedules, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(schedules),
-	}), nil
 }
 
 func (s *Service) getSchedule(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
