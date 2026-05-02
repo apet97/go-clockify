@@ -190,3 +190,11 @@ launch-candidate evidence. Only two consecutive scheduled (cron)
 green runs of `.github/workflows/live-contract.yml` on the
 candidate SHA count. Use `make live-contract-local` for pre-flight
 debugging — it prints this warning automatically.
+
+`make launch-checklist-parity` runs the evidence gate
+(`scripts/check-launch-evidence-gate.sh`) which fails when a
+launch-candidate-checklist box in Groups 1, 6, or 7 is checked
+without an evidence URL, `workflow_run_id:`, or `_Closed_`
+annotation. The gate's regression test
+(`scripts/test-check-launch-evidence-gate.sh`) exercises the
+fail-closed paths and runs as part of `make script-tests`.
