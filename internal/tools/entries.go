@@ -18,8 +18,7 @@ import (
 // ListEntries returns recent time entries with optional filtering by date range,
 // project, and pagination.
 func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	page := intArg(args, "page", 1)
-	pageSize := min(intArg(args, "page_size", 50), 200)
+	page, pageSize := paginationFromArgs(args)
 
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
@@ -95,8 +94,7 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 
 // TodayEntries returns time entries for the current day.
 func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
+	page, pageSize := paginationFromArgs(args)
 
 	loc := time.Now().Location()
 	startOfDay, err := timeparse.ParseDatetime("today", loc)

@@ -3861,10 +3861,12 @@
         "additionalProperties": false,
         "properties": {
           "page": {
+            "description": "Page number (default 1)",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page (default 50, max 200)",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"

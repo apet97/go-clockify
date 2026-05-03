@@ -33,22 +33,19 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTasks(ctx, args)
 		}},
-		{Tool: toolRO("clockify_list_entries", "List recent time entries for the current user with optional date range, project filter, and pagination", map[string]any{"type": "object", "properties": map[string]any{
-			"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
-			"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50, max 200)"},
-			"start":     map[string]any{"type": "string", "description": "Start time (RFC3339 or natural language)"},
-			"end":       map[string]any{"type": "string", "description": "End time (RFC3339 or natural language)"},
-			"project":   map[string]any{"type": "string", "description": "Filter by project name or ID"},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_list_entries", "List recent time entries for the current user with optional date range, project filter, and pagination", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"start":   map[string]any{"type": "string", "description": "Start time (RFC3339 or natural language)"},
+				"end":     map[string]any{"type": "string", "description": "End time (RFC3339 or natural language)"},
+				"project": map[string]any{"type": "string", "description": "Filter by project name or ID"},
+			},
+		})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListEntries(ctx, args)
 		}},
 		{Tool: toolRO("clockify_get_entry", "Get a single time entry by ID", requiredSchema("entry_id")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.GetEntry(ctx, args)
 		}},
-		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", map[string]any{"type": "object", "properties": map[string]any{
-			"page":      map[string]any{"type": "integer"},
-			"page_size": map[string]any{"type": "integer"},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TodayEntries(ctx, args)
 		}},
 		{Tool: toolRO("clockify_summary_report", "Summarize entries for a date/time range by project using the current user's time entries", map[string]any{"type": "object", "properties": map[string]any{

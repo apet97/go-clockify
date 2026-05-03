@@ -16,9 +16,11 @@ import (
 
 // aggregateOptions controls the streaming aggregator used by report tools.
 type aggregateOptions struct {
-	PageSize       int  // clamped to [50, 200]; default 200
-	IncludeEntries bool // retain raw entries on the result (memory grows with range)
-	MaxEntries     int  // hard cap when IncludeEntries is true; 0 = unlimited
+	PageSize              int  // clamped to [50, 200]; default 200
+	IncludeEntries        bool // retain raw entries on the result (memory grows with range)
+	MaxEntries            int  // hard cap when IncludeEntries is true; 0 = unlimited
+	SampleEntries         int  // retain at most this many sample entries independent of IncludeEntries
+	CollectRunningEntries bool // retain running entries independent of IncludeEntries
 }
 
 // projectBucket accumulates seconds and entry count for a single project
@@ -40,6 +42,8 @@ type dayBucket struct {
 // aggregateResult carries the streaming totals produced by aggregateEntriesRange.
 type aggregateResult struct {
 	Entries        []clockify.TimeEntry // populated only if IncludeEntries
+	EntriesSample  []clockify.TimeEntry // bounded by SampleEntries
+	RunningList    []clockify.TimeEntry // populated only if CollectRunningEntries
 	TotalSeconds   int64
 	RunningEntries int
 	ByProject      map[string]*projectBucket // project id (or "" for unassigned) -> bucket
@@ -117,6 +121,9 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 			result.TotalSeconds += secs
 			if entry.IsRunning() {
 				result.RunningEntries++
+				if opts.CollectRunningEntries {
+					result.RunningList = append(result.RunningList, entry)
+				}
 			}
 
 			projectKey := entry.ProjectID
@@ -147,6 +154,9 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 
 			if opts.IncludeEntries {
 				result.Entries = append(result.Entries, entry)
+			}
+			if opts.SampleEntries > 0 && len(result.EntriesSample) < opts.SampleEntries {
+				result.EntriesSample = append(result.EntriesSample, entry)
 			}
 		}
 
@@ -291,13 +301,14 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	}
 	end := time.Now().UTC()
 	start := end.AddDate(0, 0, -days)
-	// QuickReport always needs entries: it samples them and surfaces running
-	// entries. The cap still applies when the caller asks for full results.
+	includeEntries := boolArg(args, "include_entries")
 	effectiveMax := s.effectiveReportCap(args)
 	agg, wsID, userID, err := s.aggregateEntriesRange(ctx, start, end, time.UTC, aggregateOptions{
-		PageSize:       reportPageSize,
-		IncludeEntries: true,
-		MaxEntries:     effectiveMax,
+		PageSize:              reportPageSize,
+		IncludeEntries:        includeEntries,
+		MaxEntries:            effectiveMax,
+		SampleEntries:         5,
+		CollectRunningEntries: true,
 	})
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -306,18 +317,16 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	data := QuickReportData{
 		Range:               DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
 		Totals:              totalsFromAgg(agg),
-		RunningEntries:      runningEntries(agg.Entries),
+		RunningEntries:      agg.RunningList,
 		ProjectsRepresented: len(projects),
 	}
 	if len(projects) > 0 {
 		data.TopProject = &projects[0]
 	}
-	if boolArg(args, "include_entries") {
+	if includeEntries {
 		data.EntriesSample = agg.Entries
-	} else if len(agg.Entries) > 5 {
-		data.EntriesSample = agg.Entries[:5]
 	} else {
-		data.EntriesSample = agg.Entries
+		data.EntriesSample = agg.EntriesSample
 	}
 	meta := mergeMeta(map[string]any{
 		"workspaceId": wsID,
@@ -469,14 +478,4 @@ func weekBounds(weekStart string, loc *time.Location) (time.Time, time.Time, err
 	startLocal := time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -(weekday - 1))
 	endLocal := startLocal.AddDate(0, 0, 7)
 	return startLocal.UTC(), endLocal.UTC(), nil
-}
-
-func runningEntries(entries []clockify.TimeEntry) []clockify.TimeEntry {
-	out := make([]clockify.TimeEntry, 0)
-	for _, entry := range entries {
-		if entry.IsRunning() {
-			out = append(out, entry)
-		}
-	}
-	return out
 }

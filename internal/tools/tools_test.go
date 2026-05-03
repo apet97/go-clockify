@@ -261,6 +261,62 @@ func TestTodayEntries(t *testing.T) {
 	}
 }
 
+func TestTodayEntriesPaginationSanitizesBounds(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         map[string]any
+		wantPage     string
+		wantPageSize string
+		wantMetaPage int
+		wantMetaSize int
+	}{
+		{
+			name:         "floors invalid values",
+			args:         map[string]any{"page": 0, "page_size": 0},
+			wantPage:     "1",
+			wantPageSize: "50",
+			wantMetaPage: 1,
+			wantMetaSize: 50,
+		},
+		{
+			name:         "caps page size",
+			args:         map[string]any{"page": 3, "page_size": 9999},
+			wantPage:     "3",
+			wantPageSize: "200",
+			wantMetaPage: 3,
+			wantMetaSize: 200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/user":
+					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+				case "/workspaces/ws1/user/u1/time-entries":
+					q := r.URL.Query()
+					if q.Get("page") != tt.wantPage || q.Get("page-size") != tt.wantPageSize {
+						t.Fatalf("expected page=%s page-size=%s, got %s", tt.wantPage, tt.wantPageSize, r.URL.RawQuery)
+					}
+					respondJSON(t, w, []clockify.TimeEntry{})
+				default:
+					t.Fatalf("unexpected path: %s", r.URL.Path)
+				}
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			result, err := svc.TodayEntries(context.Background(), tt.args)
+			if err != nil {
+				t.Fatalf("today entries failed: %v", err)
+			}
+			if result.Meta["page"] != tt.wantMetaPage || result.Meta["pageSize"] != tt.wantMetaSize {
+				t.Fatalf("unexpected pagination meta: %+v", result.Meta)
+			}
+		})
+	}
+}
+
 func TestAddEntry(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -905,6 +961,62 @@ func TestListEntries(t *testing.T) {
 	}
 	if result.Action != "clockify_list_entries" {
 		t.Fatalf("unexpected action: %s", result.Action)
+	}
+}
+
+func TestListEntriesPaginationSanitizesBounds(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         map[string]any
+		wantPage     string
+		wantPageSize string
+		wantMetaPage int
+		wantMetaSize int
+	}{
+		{
+			name:         "floors invalid values",
+			args:         map[string]any{"page": -4, "page_size": -1},
+			wantPage:     "1",
+			wantPageSize: "50",
+			wantMetaPage: 1,
+			wantMetaSize: 50,
+		},
+		{
+			name:         "caps page size",
+			args:         map[string]any{"page": 2, "page_size": 9999},
+			wantPage:     "2",
+			wantPageSize: "200",
+			wantMetaPage: 2,
+			wantMetaSize: 200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/user":
+					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+				case "/workspaces/ws1/user/u1/time-entries":
+					q := r.URL.Query()
+					if q.Get("page") != tt.wantPage || q.Get("page-size") != tt.wantPageSize {
+						t.Fatalf("expected page=%s page-size=%s, got %s", tt.wantPage, tt.wantPageSize, r.URL.RawQuery)
+					}
+					respondJSON(t, w, []clockify.TimeEntry{})
+				default:
+					t.Fatalf("unexpected path: %s", r.URL.Path)
+				}
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			result, err := svc.ListEntries(context.Background(), tt.args)
+			if err != nil {
+				t.Fatalf("list entries failed: %v", err)
+			}
+			if result.Meta["page"] != tt.wantMetaPage || result.Meta["pageSize"] != tt.wantMetaSize {
+				t.Fatalf("unexpected pagination meta: %+v", result.Meta)
+			}
+		})
 	}
 }
 

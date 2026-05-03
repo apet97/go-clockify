@@ -219,6 +219,39 @@ func TestQuickReport(t *testing.T) {
 	}
 }
 
+func TestQuickReportLargeRangeStreamsBoundedSample(t *testing.T) {
+	entries := seedEntries(time.Now().UTC().AddDate(0, 0, -1), 250, 60)
+	client, cleanup := newTestClient(t, newPaginatedHandler(t, chunkEntries(entries, 200)))
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.ReportMaxEntries = 100
+
+	result, err := svc.QuickReport(context.Background(), map[string]any{"days": 2})
+	if err != nil {
+		t.Fatalf("quick report failed: %v", err)
+	}
+	data := result.Data.(QuickReportData)
+	if data.Totals.Entries != 250 {
+		t.Fatalf("expected 250 total entries, got %d", data.Totals.Entries)
+	}
+	if len(data.EntriesSample) != 5 {
+		t.Fatalf("expected bounded sample of 5 entries, got %d", len(data.EntriesSample))
+	}
+	pagination := result.Meta["pagination"].(map[string]any)
+	if pagination["pages_fetched"] != 2 || pagination["entries_total"] != 250 {
+		t.Fatalf("unexpected pagination meta: %+v", pagination)
+	}
+
+	_, err = svc.QuickReport(context.Background(), map[string]any{
+		"days":            2,
+		"include_entries": true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "entry cap of 100 exceeded") {
+		t.Fatalf("expected cap error for include_entries=true, got %v", err)
+	}
+}
+
 // TestDetailedReport covers project filtering, the default include_entries=true
 // behavior, and the truncation warning when count equals the page size (100).
 func TestDetailedReport(t *testing.T) {
