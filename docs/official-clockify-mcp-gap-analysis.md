@@ -2,7 +2,8 @@
 
 A snapshot of where `clockify-mcp` sits on the path from
 "community-grade MCP server" to "officially-supported Clockify
-product." Written 2026-05-02, intended to be updated as gaps close.
+product." Written 2026-05-02; last updated 2026-05-03 after
+PR #59's exhaustive manual live-probe follow-up.
 
 This document is **not** a roadmap and **not** a checklist. It is a
 narrative reading of the current state. The bound checklist lives
@@ -249,13 +250,18 @@ What is missing for tier 3 is intentionally narrow:
 - **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
   maps all 121 MCP tools to their Clockify API endpoints, classifies
   each tool by read-only/mutating/destructive/billing/admin risk, and
-  lists the current unit/integration/live-test coverage per tool.
-  Gaps are explicit — dry-run coverage (6/14 destructive tools wired,
-  1/14 live-tested), policy-mode live coverage (2/5 modes),
-  schema-drift scope (read-side only), and Tier 2 live coverage
-  (success-path: 0/88 tools cron-pinned). The evidence hierarchy (scheduled workflow >
-  manual dispatch > local with env vars > local without env vars as
-  non-evidence) is documented there.
+  lists the current unit/integration/live-test coverage per tool. PR
+  #59 extended the manual sacrificial-workspace suite so every catalog
+  tool name is live-probed through the MCP path. The matrix separates
+  full success paths from explicit upstream constraints such as
+  unsupported 405 routes, permission/plan gates, and workspace-state
+  caps. Remaining gaps are also explicit: mutating request-schema drift
+  is not automated, the exhaustive probes are not cron launch evidence,
+  and some destructive tools can only assert a minimal dry-run envelope
+  or upstream 4xx because Clockify exposes no safe preview route. The
+  evidence hierarchy (scheduled workflow > manual dispatch > local
+  with env vars > local without env vars as non-evidence) is documented
+  there.
 - **Benchmark baseline is current for the candidate shape.** The
   committed `internal/benchdata/baseline.txt` was refreshed from the
   `Bench` workflow bootstrap artifact `bench-current-25255062599`
@@ -273,10 +279,10 @@ What is missing for tier 3 is intentionally narrow:
 In priority order — closing the lower-numbered ones first
 unblocks the next.
 
-Only external evidence blockers remain after PR #51 merged to `main` at
-`adce316d60644fe51365086aba186227c9ae3977`: scheduled live-contract
-cron greens, candidate-tag security walk-through evidence, and
-release/sigstore/SLSA evidence.
+Only external evidence blockers remain after PR #59 merged to `main`
+at `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`: scheduled
+live-contract cron greens, candidate-tag security walk-through
+evidence, and release/sigstore/SLSA evidence.
 
 1. **Live contract failures (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
