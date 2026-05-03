@@ -107,8 +107,10 @@ Supply-chain verification, release process, and the smoke cadence.
 What this project promises, and how the one-of-one maintainer
 population is reflected across policy surfaces.
 
+- [agent-handoff.md](agent-handoff.md) — current autonomous-agent
+  launch-state entry point.
 - [claude-code-continuation.md](claude-code-continuation.md) —
-  exact Claude Code continuation packet for the post-PR #51
+  historical Claude Code continuation packet for the post-PR #51
   launch-candidate evidence pass.
 - [../GOVERNANCE.md](../GOVERNANCE.md) — merge gate, sensitive-area
   self-review expectations, security disclosure process.
