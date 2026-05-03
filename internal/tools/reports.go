@@ -66,6 +66,10 @@ const aggregatePageSafetyStop = 1000
 // When IncludeEntries is false the cap is not enforced — memory is bounded by
 // design.
 func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Time, loc *time.Location, opts aggregateOptions) (*aggregateResult, string, string, error) {
+	return s.aggregateEntriesRangeForWorkspace(ctx, "", start, end, loc, opts)
+}
+
+func (s *Service) aggregateEntriesRangeForWorkspace(ctx context.Context, workspaceID string, start, end time.Time, loc *time.Location, opts aggregateOptions) (*aggregateResult, string, string, error) {
 	pageSize := opts.PageSize
 	if pageSize <= 0 {
 		pageSize = 200
@@ -80,9 +84,13 @@ func (s *Service) aggregateEntriesRange(ctx context.Context, start, end time.Tim
 		loc = time.UTC
 	}
 
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return nil, "", "", err
+	wsID := workspaceID
+	if wsID == "" {
+		var err error
+		wsID, err = s.ResolveWorkspaceID(ctx)
+		if err != nil {
+			return nil, "", "", err
+		}
 	}
 	user, err := s.getCurrentUser(ctx)
 	if err != nil {
@@ -257,6 +265,10 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (Resul
 }
 
 func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	return s.weeklySummary(ctx, args, "")
+}
+
+func (s *Service) weeklySummary(ctx context.Context, args map[string]any, workspaceID string) (ResultEnvelope, error) {
 	loc, err := loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -267,7 +279,7 @@ func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (Resul
 	}
 	include := boolArg(args, "include_entries")
 	effectiveMax := s.effectiveReportCap(args)
-	agg, wsID, userID, err := s.aggregateEntriesRange(ctx, start, end, loc, aggregateOptions{
+	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, workspaceID, start, end, loc, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: include,
 		MaxEntries:     effectiveMax,

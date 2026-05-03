@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
@@ -138,6 +140,41 @@ func TestResourcesReadGroupDispatch(t *testing.T) {
 	}
 	if !strings.Contains(contents[0].Text, `"id":"g1"`) {
 		t.Fatalf("body: %q", contents[0].Text)
+	}
+}
+
+func TestResourcesReadWeeklyReportDoesNotMutateServiceWorkspace(t *testing.T) {
+	const configuredWorkspace = "configured-ws"
+	const resourceWorkspace = "resource-ws"
+	observedWorkspace := make(chan string, 1)
+
+	var svc *Service
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice"})
+		case "/workspaces/" + resourceWorkspace + "/user/u1/time-entries":
+			observedWorkspace <- svc.WorkspaceID
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected path: %q", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc = &Service{Client: client, WorkspaceID: configuredWorkspace}
+	contents, err := svc.ReadResource(context.Background(), "clockify://workspace/"+resourceWorkspace+"/report/weekly/2026-04-06")
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if len(contents) != 1 {
+		t.Fatalf("contents: %+v", contents)
+	}
+	if got := <-observedWorkspace; got != configuredWorkspace {
+		t.Fatalf("weekly resource read mutated service workspace during upstream call: got %q, want %q", got, configuredWorkspace)
+	}
+	if svc.WorkspaceID != configuredWorkspace {
+		t.Fatalf("service workspace after read: got %q, want %q", svc.WorkspaceID, configuredWorkspace)
 	}
 }
 
