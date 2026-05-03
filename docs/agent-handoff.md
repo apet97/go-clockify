@@ -14,6 +14,10 @@ work and commit it.
 
 ## Launch-state baseline
 
+- **Current post-PR #59 main tip:** `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`
+  (`test(livee2e): cover exhaustive Clockify tool surface`). This
+  is the latest pushed launch-state baseline for the 121-tool
+  manual live-probe coverage.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`) — the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -26,8 +30,11 @@ work and commit it.
   `forward_auth` cardinality/size guard), 5 (per-profile "How to
   verify this deployment" sections, client matrix, support matrix),
   false-green live-contract prevention, launch-evidence parity gate,
-  and benchmark baseline refresh (`bench-current-25255062599` +
-  comparison run 25255216987).
+  benchmark baseline refresh (`bench-current-25255062599` +
+  comparison run 25255216987), and PR #59's exhaustive manual
+  sacrificial-workspace probe across all 121 generated catalog
+  tools. The PR #59 probes are coverage evidence only and do not
+  tick any external launch-evidence box.
 - **Open external evidence only:**
   - **Scheduled live-contract cron greens** — two consecutive
     *scheduled* runs of `live-contract.yml` on the candidate SHA,
@@ -79,8 +86,8 @@ wraps the test run with evidence warnings.
    — the deployment shape that the launch candidate is built
    around.
 7. [`claude-code-continuation.md`](claude-code-continuation.md) —
-   exact Claude Code continuation packet with prompts, branch
-   rules, and verification sequence.
+   historical Claude Code continuation packet with prompts, branch
+   rules, and verification sequence from the post-PR #51 state.
 
 ## Current known blockers
 

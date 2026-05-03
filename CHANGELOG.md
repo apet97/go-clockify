@@ -22,11 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   surfaced by the same probe lab pass (invoice `unitPrice`, expense
   `amount`/`total`, expense `projectId` optional-vs-required,
   shared-reports non-`SUMMARY` filter requirements) are now
-  documented in `docs/api-coverage.md` under "Known unresolved
-  API contract questions" rather than carried as open inventory
-  items.
+  documented in `docs/api-coverage.md` under "Known API contract
+  notes" rather than carried as open inventory items.
 
 ### Changed
+
+- **Exhaustive manual live-probe coverage now spans the full tool
+  catalog.** PR #59 added sacrificial-workspace MCP-path probes so
+  all 121 generated catalog tools are named in `tests/e2e_live*.go`,
+  while keeping the nightly `live-contract.yml` regex narrow for
+  blast-radius control. The docs now separate full success paths
+  from unsupported, permission-gated, plan-gated, or workspace-state
+  limited outcomes; the manual probes do not close Group 1, Group 6,
+  or Group 7 launch-candidate evidence.
 
 - **Live read-side schema drift is now a first-class contract.**
   Added `tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`,

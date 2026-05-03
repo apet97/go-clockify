@@ -2,6 +2,11 @@
 
 Prepared 2026-05-02 after PR #51 merged into `main`.
 
+> Historical note: this packet records the handoff state immediately
+> after PR #51. The current autonomous-agent entry point is
+> [`docs/agent-handoff.md`](agent-handoff.md), which includes the
+> post-PR #59 exhaustive manual live-probe coverage.
+
 ## Current State
 
 - **Branch to start from:** `main`

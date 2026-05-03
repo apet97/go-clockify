@@ -33,7 +33,9 @@ Clockify launch candidate** promotion.
    live-contract nightly works and how the **sacrificial
    workspace** is wired. Read this before any live Clockify call.
 6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
-   — exact continuation packet for Claude Code after PR #51 merged.
+   — historical continuation packet for Claude Code after PR #51
+   merged. Use `docs/agent-handoff.md` for the current post-PR #59
+   state.
 
 If a contributor maintains a workstation-private `CLAUDE.md` at the
 repo root, it is gitignored and machine-specific; treat it as
@@ -42,6 +44,10 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
+- **Current post-PR #59 main tip:** `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`
+  (`test(livee2e): cover exhaustive Clockify tool surface`). This
+  is the latest pushed launch-state baseline for the 121-tool
+  manual live-probe coverage.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`), the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -79,6 +85,12 @@ rules live in this file and the docs above.
     benchmark baseline was refreshed from Actions artifact
     `bench-current-25255062599` and passed normal comparison in
     Bench workflow run 25255216987.
+  - **Manual API coverage expansion.** PR #59 live-probed all 121
+    generated catalog tools through the MCP path against the
+    sacrificial workspace and documented the success-vs-unsupported
+    outcome split in [`docs/api-coverage.md`](docs/api-coverage.md).
+    This is coverage evidence only; it does **not** close Group 1,
+    Group 6, or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)
   is wired into the read-only step of
   `.github/workflows/live-contract.yml`. It needs scheduled-cron

@@ -343,9 +343,11 @@ For a single-page operator overview that links the threat model, transports, aut
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Autonomous agents should start with [AGENTS.md](AGENTS.md). For the
-current launch-candidate continuation state after PR #51, use
-[docs/claude-code-continuation.md](docs/claude-code-continuation.md).
+Autonomous agents should start with [AGENTS.md](AGENTS.md) and the
+current launch-state handoff in
+[docs/agent-handoff.md](docs/agent-handoff.md). The
+[Claude Code continuation packet](docs/claude-code-continuation.md)
+is retained as the historical post-PR #51 handoff.
 
 ## Support
 

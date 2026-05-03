@@ -39,13 +39,18 @@ The blessed production profile for shared services is documented in [Production 
 ## Launch-candidate status
 
 `main` is locally prepared for the official Clockify launch-candidate
-evidence pass as of PR #51 (`adce316d60644fe51365086aba186227c9ae3977`).
-The remaining blockers are external evidence only: two consecutive
-scheduled live-contract cron greens, candidate-tag security
-walk-through evidence, and release/sigstore/SLSA evidence. Local
-`release-check` and PR CI greens are necessary but not sufficient for
-an official launch-ready claim. Agent continuation details live in
-[`docs/claude-code-continuation.md`](claude-code-continuation.md).
+evidence pass as of PR #59
+(`b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`). That includes the
+post-PR #51 local readiness gates plus manual sacrificial-workspace
+MCP-path probes for all 121 generated catalog tools. The remaining
+blockers are external evidence only: two consecutive scheduled
+live-contract cron greens, candidate-tag security walk-through
+evidence, and release/sigstore/SLSA evidence. Local `release-check`,
+PR CI greens, and manual exhaustive live probes are necessary context
+but not sufficient for an official launch-ready claim. Agent
+continuation details live in [`docs/agent-handoff.md`](agent-handoff.md);
+[`docs/claude-code-continuation.md`](claude-code-continuation.md) is
+the historical PR #51 packet.
 
 ## Pick an auth mode (HTTP / gRPC transports only)
 

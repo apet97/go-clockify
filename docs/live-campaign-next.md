@@ -1,9 +1,9 @@
 # Live-Validation Campaign — Continuation Handoff
 
 Date: 2026-05-02 (status note added 2026-05-03)
-Branch: `test/full-live-workspace-validation` (12 commits ahead of `main`,
-pushed to `origin`)
-Draft PR: https://github.com/apet97/go-clockify/pull/53
+Historical branch: `test/full-live-workspace-validation` (12 commits,
+superseded by merged PRs #53-#59)
+Historical draft PR: https://github.com/apet97/go-clockify/pull/53
 
 This doc tells the next agent (or maintainer) exactly what state the
 live-validation campaign is in, what tests pass, what bugs were
