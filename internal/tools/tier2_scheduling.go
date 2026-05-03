@@ -54,9 +54,12 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 2. clockify_get_assignment (RO)
 		{
 			Tool: toolRO("clockify_get_assignment",
-				"Get a scheduling assignment by ID",
-				map[string]any{"type": "object", "required": []string{"assignment_id"}, "properties": map[string]any{
+				"Get a scheduling assignment by ID by scanning the supported date-range list endpoint",
+				map[string]any{"type": "object", "required": []string{"assignment_id", "start", "end"}, "properties": map[string]any{
 					"assignment_id": map[string]any{"type": "string"},
+					"start":         map[string]any{"type": "string", "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment"},
+					"end":           map[string]any{"type": "string", "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment"},
+					"page_size":     map[string]any{"type": "integer", "description": "Items to scan (default 200)"},
 				}}),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -66,14 +69,20 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. clockify_create_assignment (RW)
 		{
 			Tool: toolRW("clockify_create_assignment",
-				"Create a scheduling assignment for a user on a project",
-				map[string]any{"type": "object", "required": []string{"user_id", "project_id", "start", "end"}, "properties": map[string]any{
-					"user_id":       map[string]any{"type": "string", "description": "User ID or name/email"},
-					"project_id":    map[string]any{"type": "string", "description": "Project ID or name"},
-					"start":         map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-					"end":           map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-					"hours_per_day": map[string]any{"type": "number", "description": "Hours per day (default 8)"},
-					"note":          map[string]any{"type": "string"},
+				"Create a recurring scheduling assignment for a user on a project",
+				map[string]any{"type": "object", "required": []string{"user_id", "project_id", "start", "end", "hours_per_day"}, "properties": map[string]any{
+					"user_id":                  map[string]any{"type": "string", "description": "User ID or name/email"},
+					"project_id":               map[string]any{"type": "string", "description": "Project ID or name"},
+					"start":                    map[string]any{"type": "string", "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+					"end":                      map[string]any{"type": "string", "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+					"hours_per_day":            map[string]any{"type": "number", "description": "Hours per day"},
+					"billable":                 map[string]any{"type": "boolean"},
+					"include_non_working_days": map[string]any{"type": "boolean"},
+					"start_time":               map[string]any{"type": "string", "description": "Optional hh:mm:ss start time"},
+					"task_id":                  map[string]any{"type": "string"},
+					"note":                     map[string]any{"type": "string"},
+					"repeat":                   map[string]any{"type": "boolean", "description": "Whether to repeat the assignment"},
+					"weeks":                    map[string]any{"type": "integer", "description": "Repeat interval in weeks when repeat is true (1-99)"},
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -83,13 +92,18 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 4. clockify_update_assignment (RW)
 		{
 			Tool: toolRW("clockify_update_assignment",
-				"Update a scheduling assignment by ID",
-				map[string]any{"type": "object", "required": []string{"assignment_id"}, "properties": map[string]any{
-					"assignment_id": map[string]any{"type": "string"},
-					"start":         map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-					"end":           map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-					"hours_per_day": map[string]any{"type": "number"},
-					"note":          map[string]any{"type": "string"},
+				"Update a recurring scheduling assignment by ID",
+				map[string]any{"type": "object", "required": []string{"assignment_id", "start", "end"}, "properties": map[string]any{
+					"assignment_id":            map[string]any{"type": "string"},
+					"start":                    map[string]any{"type": "string", "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+					"end":                      map[string]any{"type": "string", "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+					"hours_per_day":            map[string]any{"type": "number"},
+					"billable":                 map[string]any{"type": "boolean"},
+					"include_non_working_days": map[string]any{"type": "boolean"},
+					"start_time":               map[string]any{"type": "string", "description": "Optional hh:mm:ss start time"},
+					"task_id":                  map[string]any{"type": "string"},
+					"note":                     map[string]any{"type": "string"},
+					"series_update_option":     map[string]any{"type": "string", "enum": []string{"THIS_ONE", "THIS_AND_FOLLOWING", "ALL"}, "description": "Recurring series update scope"},
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -99,10 +113,11 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 5. clockify_delete_assignment (destructive)
 		{
 			Tool: toolDestructive("clockify_delete_assignment",
-				"Delete a scheduling assignment by ID (supports dry_run preview)",
+				"Delete a recurring scheduling assignment by ID (supports dry_run preview)",
 				map[string]any{"type": "object", "required": []string{"assignment_id"}, "properties": map[string]any{
-					"assignment_id": map[string]any{"type": "string"},
-					"dry_run":       map[string]any{"type": "boolean", "description": "Preview deletion without making changes"},
+					"assignment_id":        map[string]any{"type": "string"},
+					"series_update_option": map[string]any{"type": "string", "enum": []string{"THIS_ONE", "THIS_AND_FOLLOWING", "ALL"}, "description": "Recurring series delete scope"},
+					"dry_run":              map[string]any{"type": "boolean", "description": "Preview deletion without making changes"},
 				}}),
 			ReadOnlyHint:    false,
 			DestructiveHint: true,
@@ -162,10 +177,24 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
+	assignments, page, pageSize, err := s.listAssignmentsRaw(ctx, wsID, args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	return ok("clockify_list_assignments", assignments, map[string]any{
+		"workspaceId": wsID,
+		"count":       len(assignments),
+		"page":        page,
+		"pageSize":    pageSize,
+	}), nil
+}
+
+func (s *Service) listAssignmentsRaw(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, int, int, error) {
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
 	if startRaw == "" || endRaw == "" {
-		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+		return nil, 0, 0, fmt.Errorf("start and end are required")
 	}
 
 	query := map[string]string{
@@ -175,14 +204,14 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 	if uid := stringArg(args, "user_id"); uid != "" {
 		resolved, err := resolve.ResolveUserID(ctx, s.Client, wsID, uid)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return nil, 0, 0, err
 		}
 		query["userId"] = resolved
 	}
 	if pid := stringArg(args, "project_id"); pid != "" {
 		resolved, err := resolve.ResolveProjectID(ctx, s.Client, wsID, pid)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return nil, 0, 0, err
 		}
 		query["projectId"] = resolved
 	}
@@ -197,18 +226,13 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 	var assignments []map[string]any
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "all")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return nil, 0, 0, err
 	}
 	if err := s.Client.Get(ctx, path, query, &assignments); err != nil {
-		return ResultEnvelope{}, err
+		return nil, 0, 0, err
 	}
 
-	return ok("clockify_list_assignments", assignments, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(assignments),
-		"page":        page,
-		"pageSize":    pageSize,
-	}), nil
+	return assignments, page, pageSize, nil
 }
 
 func (s *Service) getAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -222,16 +246,24 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	var assignment map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	scanArgs := make(map[string]any, len(args)+1)
+	for k, v := range args {
+		scanArgs[k] = v
+	}
+	if _, ok := scanArgs["page_size"]; !ok {
+		scanArgs["page_size"] = 200
+	}
+	assignments, _, _, err := s.listAssignmentsRaw(ctx, wsID, scanArgs)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, nil, &assignment); err != nil {
-		return ResultEnvelope{}, err
+	for _, assignment := range assignments {
+		if id, _ := assignment["id"].(string); id == aID {
+			return ok("clockify_get_assignment", assignment, map[string]any{"workspaceId": wsID}), nil
+		}
 	}
 
-	return ok("clockify_get_assignment", assignment, map[string]any{"workspaceId": wsID}), nil
+	return ResultEnvelope{}, fmt.Errorf("assignment %s not found in supplied start/end range", aID)
 }
 
 func (s *Service) createAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -263,23 +295,27 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	if startRaw == "" || endRaw == "" {
 		return ResultEnvelope{}, fmt.Errorf("start and end are required")
 	}
+	hoursPerDay, hasHoursPerDay := args["hours_per_day"]
+	if !hasHoursPerDay {
+		return ResultEnvelope{}, fmt.Errorf("hours_per_day is required")
+	}
 
 	payload := map[string]any{
-		"userId":    userID,
-		"projectId": projectID,
-		"start":     startRaw,
-		"end":       endRaw,
+		"userId":      userID,
+		"projectId":   projectID,
+		"start":       startRaw,
+		"end":         endRaw,
+		"hoursPerDay": hoursPerDay,
 	}
 
-	if hpd, ok := args["hours_per_day"]; ok {
-		payload["hoursPerDay"] = hpd
-	}
+	addSchedulingOptionalFields(payload, args)
+	addRecurringAssignment(payload, args)
 	if note := stringArg(args, "note"); note != "" {
 		payload["note"] = note
 	}
 
-	var result map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "assignments")
+	var result []map[string]any
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -305,36 +341,37 @@ func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	// Fetch existing assignment for merge
-	var existing map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	startRaw := stringArg(args, "start")
+	endRaw := stringArg(args, "end")
+	if startRaw == "" || endRaw == "" {
+		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+	}
+
+	body := map[string]any{
+		"start": startRaw,
+		"end":   endRaw,
+	}
+	changed := []string{"start", "end"}
+	if hpd, ok := args["hours_per_day"]; ok {
+		body["hoursPerDay"] = hpd
+		changed = append(changed, "hoursPerDay")
+	}
+	addSchedulingOptionalFields(body, args)
+	if v := stringArg(args, "note"); v != "" {
+		body["note"] = v
+		changed = append(changed, "note")
+	}
+	if v := stringArg(args, "series_update_option"); v != "" {
+		body["seriesUpdateOption"] = v
+		changed = append(changed, "seriesUpdateOption")
+	}
+
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring", aID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	changed := make([]string, 0, 4)
-	if v := stringArg(args, "start"); v != "" {
-		existing["start"] = v
-		changed = append(changed, "start")
-	}
-	if v := stringArg(args, "end"); v != "" {
-		existing["end"] = v
-		changed = append(changed, "end")
-	}
-	if hpd, ok := args["hours_per_day"]; ok {
-		existing["hoursPerDay"] = hpd
-		changed = append(changed, "hoursPerDay")
-	}
-	if v := stringArg(args, "note"); v != "" {
-		existing["note"] = v
-		changed = append(changed, "note")
-	}
-
-	var result map[string]any
-	if err := s.Client.Put(ctx, path, existing, &result); err != nil {
+	var result []map[string]any
+	if err := s.Client.Patch(ctx, path, body, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -355,25 +392,28 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "scheduling", "assignments", aID)
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring", aID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		var assignment map[string]any
-		if err := s.Client.Get(ctx, path, nil, &assignment); err != nil {
-			return ResultEnvelope{}, err
-		}
 		return ResultEnvelope{
 			OK:     true,
 			Action: "clockify_delete_assignment",
-			Data:   dryrun.WrapResult(assignment, "clockify_delete_assignment"),
-			Meta:   map[string]any{"workspaceId": wsID},
+			Data: dryrun.MinimalResult("clockify_delete_assignment", map[string]any{
+				"assignment_id":        aID,
+				"series_update_option": stringArg(args, "series_update_option"),
+			}),
+			Meta: map[string]any{"workspaceId": wsID},
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, path); err != nil {
+	query := map[string]string{}
+	if v := stringArg(args, "series_update_option"); v != "" {
+		query["seriesUpdateOption"] = v
+	}
+	if err := s.Client.DeleteWithQuery(ctx, path, query); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -381,6 +421,37 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		"deleted":      true,
 		"assignmentId": aID,
 	}, map[string]any{"workspaceId": wsID}), nil
+}
+
+func addSchedulingOptionalFields(payload map[string]any, args map[string]any) {
+	if billable, ok := args["billable"].(bool); ok {
+		payload["billable"] = billable
+	}
+	if include, ok := args["include_non_working_days"].(bool); ok {
+		payload["includeNonWorkingDays"] = include
+	}
+	if startTime := stringArg(args, "start_time"); startTime != "" {
+		payload["startTime"] = startTime
+	}
+	if taskID := stringArg(args, "task_id"); taskID != "" {
+		payload["taskId"] = taskID
+	}
+}
+
+func addRecurringAssignment(payload map[string]any, args map[string]any) {
+	_, hasRepeat := args["repeat"]
+	weeks := intArg(args, "weeks", 0)
+	if !hasRepeat && weeks == 0 {
+		return
+	}
+	recurring := map[string]any{}
+	if repeat, ok := args["repeat"].(bool); ok {
+		recurring["repeat"] = repeat
+	}
+	if weeks > 0 {
+		recurring["weeks"] = weeks
+	}
+	payload["recurringAssignment"] = recurring
 }
 
 func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -452,9 +523,9 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 		"start": startRaw,
 		"end":   endRaw,
 		"page":  fmt.Sprintf("%d", page),
-		// Hyphenated per probe-lab; the camelCase variant is silently
-		// dropped on the assignments surface.
-		"page-size": fmt.Sprintf("%d", pageSize),
+		// The per-user totals endpoint uses camelCase pageSize; the
+		// assignments/all endpoint above uses hyphenated page-size.
+		"pageSize": fmt.Sprintf("%d", pageSize),
 	}
 
 	var capacity map[string]any

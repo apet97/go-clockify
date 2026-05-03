@@ -1,7 +1,7 @@
 package tools_test
 
-// Dispatcher-level coverage for the Tier 2 scheduling group: assignment
-// CRUD (with delete dry_run) and the project / capacity read endpoints.
+// Dispatcher-level coverage for the Tier 2 scheduling group: recurring
+// assignment CRUD (with delete dry_run) and the project / capacity read endpoints.
 // Each handler is exercised through the real MCP dispatch pipeline via
 // dispatchTier2 (no direct svc.* calls).
 //
@@ -43,18 +43,24 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`[{"id":"bbbbbbbbbbbbbbbbbbbbbbb1","name":"Active project","archived":false}]`))
 	})
 
-	// Assignments collection — POST (create) only on the bare path.
-	// The list path moved to /assignments/all per SUMMARY rev 3 #4
-	// (the bare path returns 404 in production); a regression there
-	// must surface in this test.
+	// The bare assignments path is not a CRUD endpoint in production.
 	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "wrong assignment CRUD path", http.StatusNotFound)
+	})
+
+	// Recurring assignment create lives at /assignments/recurring per
+	// SCHEDULINGDOC.md. The endpoint returns an array of assignment rows.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/recurring", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodPost:
 			body := map[string]any{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["hoursPerDay"] == nil {
+				t.Fatalf("create recurring assignment missing hoursPerDay: %#v", body)
+			}
 			body["id"] = "a-new"
-			_ = json.NewEncoder(w).Encode(body)
+			_ = json.NewEncoder(w).Encode([]map[string]any{body})
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -92,19 +98,20 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`[{"projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","projectName":"Active project","totalHours":36.0,"assignments":[]}]`))
 	})
 
-	// Per-assignment endpoint — get / put (update merge) / delete (live + dry-run preview).
-	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/a-1", func(w http.ResponseWriter, r *http.Request) {
+	// Recurring per-assignment endpoint — PATCH update / DELETE.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/recurring/a-1", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
-		case http.MethodGet:
-			_, _ = w.Write([]byte(`{"id":"a-1","userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","start":"2026-04-01","end":"2026-04-07"}`))
-		case http.MethodPut:
+		case http.MethodPatch:
 			body := map[string]any{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			body["id"] = "a-1"
-			_ = json.NewEncoder(w).Encode(body)
+			_ = json.NewEncoder(w).Encode([]map[string]any{body})
 		case http.MethodDelete:
-			w.WriteHeader(http.StatusNoContent)
+			if got := r.URL.Query().Get("seriesUpdateOption"); got != "ALL" {
+				t.Fatalf("delete missing seriesUpdateOption=ALL, got %q", got)
+			}
+			_, _ = w.Write([]byte(`[{"id":"a-1","deleted":true}]`))
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -161,7 +168,7 @@ func TestTier2Dispatch_Scheduling_AssignmentsListAndGet(t *testing.T) {
 	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_get_assignment",
-		Args:     map[string]any{"assignment_id": "a-1"},
+		Args:     map[string]any{"assignment_id": "a-1", "start": "2026-04-01T00:00:00Z", "end": "2026-04-07T23:59:59Z"},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {
@@ -181,6 +188,8 @@ func TestTier2Dispatch_Scheduling_CreateAssignment(t *testing.T) {
 			"start":         "2026-04-01T00:00:00Z",
 			"end":           "2026-04-07T23:59:59Z",
 			"hours_per_day": 8.0,
+			"repeat":        true,
+			"weeks":         1,
 			"note":          "Sprint 14 capacity",
 		},
 		Upstream: upstream,
@@ -203,11 +212,12 @@ func TestTier2Dispatch_Scheduling_UpdateAssignment(t *testing.T) {
 		Group: "scheduling",
 		Tool:  "clockify_update_assignment",
 		Args: map[string]any{
-			"assignment_id": "a-1",
-			"start":         "2026-04-02T00:00:00Z",
-			"end":           "2026-04-08T23:59:59Z",
-			"hours_per_day": 6.0,
-			"note":          "Reduced capacity",
+			"assignment_id":        "a-1",
+			"start":                "2026-04-02T00:00:00Z",
+			"end":                  "2026-04-08T23:59:59Z",
+			"hours_per_day":        6.0,
+			"note":                 "Reduced capacity",
+			"series_update_option": "ALL",
 		},
 		Upstream: upstream,
 	})
@@ -222,7 +232,8 @@ func TestTier2Dispatch_Scheduling_UpdateAssignment(t *testing.T) {
 func TestTier2Dispatch_Scheduling_DeleteAssignmentDryRunAndLive(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 
-	// Dry-run path: handler does a GET then returns a preview, no DELETE.
+	// Dry-run path: no single-assignment GET exists, so the handler
+	// returns a minimal preview without reaching upstream.
 	res := dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_delete_assignment",
@@ -232,15 +243,18 @@ func TestTier2Dispatch_Scheduling_DeleteAssignmentDryRunAndLive(t *testing.T) {
 	if res.Outcome != testharness.OutcomeSuccess {
 		t.Fatalf("delete(dry_run) outcome=%q err=%q", res.Outcome, res.ErrorMessage)
 	}
-	if !strings.Contains(res.ResultText, "a-1") {
-		t.Fatalf("delete(dry_run) result missing id: %q", res.ResultText)
+	if res.UpstreamHit {
+		t.Fatalf("delete(dry_run) reached upstream")
+	}
+	if !strings.Contains(res.ResultText, "dry_run") {
+		t.Fatalf("delete(dry_run) result missing dry_run marker: %q", res.ResultText)
 	}
 
 	// Live path: handler DELETEs and returns {deleted:true,...}.
 	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_delete_assignment",
-		Args:     map[string]any{"assignment_id": "a-1"},
+		Args:     map[string]any{"assignment_id": "a-1", "series_update_option": "ALL"},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {

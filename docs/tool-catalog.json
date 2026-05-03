@@ -6534,7 +6534,7 @@
     },
     {
       "name": "clockify_create_assignment",
-      "description": "Create a scheduling assignment for a user on a project",
+      "description": "Create a recurring scheduling assignment for a user on a project",
       "group": "scheduling",
       "tier": 2,
       "read_only": false,
@@ -6546,13 +6546,19 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "billable": {
+            "type": "boolean"
+          },
           "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "hours_per_day": {
-            "description": "Hours per day (default 8)",
+            "description": "Hours per day",
             "type": "number"
+          },
+          "include_non_working_days": {
+            "type": "boolean"
           },
           "note": {
             "type": "string"
@@ -6561,20 +6567,36 @@
             "description": "Project ID or name",
             "type": "string"
           },
+          "repeat": {
+            "description": "Whether to repeat the assignment",
+            "type": "boolean"
+          },
           "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Optional hh:mm:ss start time",
+            "type": "string"
+          },
+          "task_id": {
             "type": "string"
           },
           "user_id": {
             "description": "User ID or name/email",
             "type": "string"
+          },
+          "weeks": {
+            "description": "Repeat interval in weeks when repeat is true (1-99)",
+            "type": "integer"
           }
         },
         "required": [
           "user_id",
           "project_id",
           "start",
-          "end"
+          "end",
+          "hours_per_day"
         ],
         "type": "object"
       },
@@ -6604,7 +6626,7 @@
     },
     {
       "name": "clockify_delete_assignment",
-      "description": "Delete a scheduling assignment by ID (supports dry_run preview)",
+      "description": "Delete a recurring scheduling assignment by ID (supports dry_run preview)",
       "group": "scheduling",
       "tier": 2,
       "read_only": false,
@@ -6622,6 +6644,15 @@
           "dry_run": {
             "description": "Preview deletion without making changes",
             "type": "boolean"
+          },
+          "series_update_option": {
+            "description": "Recurring series delete scope",
+            "enum": [
+              "THIS_ONE",
+              "THIS_AND_FOLLOWING",
+              "ALL"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -6724,7 +6755,7 @@
     },
     {
       "name": "clockify_get_assignment",
-      "description": "Get a scheduling assignment by ID",
+      "description": "Get a scheduling assignment by ID by scanning the supported date-range list endpoint",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6738,10 +6769,26 @@
         "properties": {
           "assignment_id": {
             "type": "string"
+          },
+          "end": {
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Items to scan (default 200)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "start": {
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment",
+            "type": "string"
           }
         },
         "required": [
-          "assignment_id"
+          "assignment_id",
+          "start",
+          "end"
         ],
         "type": "object"
       },
@@ -6906,7 +6953,7 @@
     },
     {
       "name": "clockify_update_assignment",
-      "description": "Update a scheduling assignment by ID",
+      "description": "Update a recurring scheduling assignment by ID",
       "group": "scheduling",
       "tier": 2,
       "read_only": false,
@@ -6921,23 +6968,47 @@
           "assignment_id": {
             "type": "string"
           },
+          "billable": {
+            "type": "boolean"
+          },
           "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "hours_per_day": {
             "type": "number"
           },
+          "include_non_working_days": {
+            "type": "boolean"
+          },
           "note": {
             "type": "string"
           },
+          "series_update_option": {
+            "description": "Recurring series update scope",
+            "enum": [
+              "THIS_ONE",
+              "THIS_AND_FOLLOWING",
+              "ALL"
+            ],
+            "type": "string"
+          },
           "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Optional hh:mm:ss start time",
+            "type": "string"
+          },
+          "task_id": {
             "type": "string"
           }
         },
         "required": [
-          "assignment_id"
+          "assignment_id",
+          "start",
+          "end"
         ],
         "type": "object"
       },

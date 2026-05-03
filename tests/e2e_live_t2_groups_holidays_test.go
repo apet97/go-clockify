@@ -47,24 +47,20 @@ func TestLiveT2GroupsHolidaysCRUD(t *testing.T) {
 		})
 	})
 
-	t.Run("get_user_group_blocked_by_upstream_405", func(t *testing.T) {
+	t.Run("get_user_group_scans_list_endpoint", func(t *testing.T) {
 		if groupID == "" {
 			t.Skip("group not created")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// /workspaces/{id}/user-groups/{groupId} is GET-supported in
-		// the public Clockify reference but the live API returns
-		// 405 "Request method 'GET' is not supported" — the per-id
-		// resource only exposes mutating verbs. Likely fix on the
-		// handler side: return the matching entry from the LIST
-		// endpoint rather than calling GET on the per-id route, or
-		// document the upstream limitation in the descriptor.
-		errMsg := h.callExpectError(ctx, "clockify_get_user_group", map[string]any{
+		// The live per-id GET route returns 405, so the handler uses
+		// the supported LIST endpoint and returns the matching group.
+		result := h.callOK(ctx, "clockify_get_user_group", map[string]any{
 			"group_id": groupID,
 		})
-		if !strings.Contains(errMsg, "method 'GET' is not supported") {
-			t.Fatalf("expected upstream 405 on per-id GET, got: %q", errMsg)
+		data := extractDataMap(t, result)
+		if got, _ := data["id"].(string); got != groupID {
+			t.Fatalf("get_user_group id mismatch: got %q want %q; data=%#v", got, groupID, data)
 		}
 	})
 

@@ -135,6 +135,10 @@ func (c *Client) Delete(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, nil, nil)
 }
 
+func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[string]string) error {
+	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
+}
+
 // ReportsBaseURL returns the base URL for endpoints that live on
 // Clockify's reports host (reports.api.clockify.me/v1). The reports
 // API is a separate host from api.clockify.me — hitting the reports

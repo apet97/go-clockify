@@ -78,7 +78,6 @@ var previewMap = map[string]string{
 	"clockify_delete_invoice":          "clockify_get_invoice",
 	"clockify_delete_expense":          "clockify_get_expense",
 	"clockify_delete_custom_field":     "clockify_get_custom_field",
-	"clockify_delete_assignment":       "clockify_get_assignment",
 	"clockify_delete_shared_report":    "clockify_get_shared_report",
 	"clockify_delete_time_off_request": "clockify_get_time_off_request",
 	"clockify_delete_webhook":          "clockify_get_webhook",
@@ -108,6 +107,7 @@ var confirmTools = map[string]bool{}
 var minimalTools = map[string]bool{
 	"clockify_delete_invoice_item":     true,
 	"clockify_delete_expense_category": true,
+	"clockify_delete_assignment":       true,
 	"clockify_delete_user_group":       true,
 	"clockify_delete_user_group_admin": true,
 	"clockify_delete_holiday":          true,

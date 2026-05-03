@@ -128,13 +128,13 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 | Tool | Read-only | Destructive | Idempotent | Risk | Description |
 |------|-----------|-------------|------------|------|-------------|
-| `clockify_create_assignment` | no | no | no | `write` | Create a scheduling assignment for a user on a project |
-| `clockify_delete_assignment` | no | yes | no | `destructive` | Delete a scheduling assignment by ID (supports dry_run preview) |
+| `clockify_create_assignment` | no | no | no | `write` | Create a recurring scheduling assignment for a user on a project |
+| `clockify_delete_assignment` | no | yes | no | `destructive` | Delete a recurring scheduling assignment by ID (supports dry_run preview) |
 | `clockify_filter_schedule_capacity` | yes | no | yes | `read` | Get a user's scheduling capacity totals for a date range |
-| `clockify_get_assignment` | yes | no | yes | `read` | Get a scheduling assignment by ID |
+| `clockify_get_assignment` | yes | no | yes | `read` | Get a scheduling assignment by ID by scanning the supported date-range list endpoint |
 | `clockify_get_project_schedule_totals` | yes | no | yes | `read` | Get scheduling totals per project across a date range |
 | `clockify_list_assignments` | yes | no | yes | `read` | List scheduling assignments within a date range |
-| `clockify_update_assignment` | no | no | no | `write` | Update a scheduling assignment by ID |
+| `clockify_update_assignment` | no | no | no | `write` | Update a recurring scheduling assignment by ID |
 
 ### `shared_reports`
 

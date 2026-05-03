@@ -191,15 +191,20 @@ func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "user-groups", groupID)
+	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var out map[string]any
-	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
+	var groups []map[string]any
+	if err := s.Client.Get(ctx, path, nil, &groups); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_user_group", out, map[string]any{"workspaceId": wsID}), nil
+	for _, out := range groups {
+		if id, _ := out["id"].(string); id == groupID {
+			return ok("clockify_get_user_group", out, map[string]any{"workspaceId": wsID}), nil
+		}
+	}
+	return ResultEnvelope{}, fmt.Errorf("user group %s not found", groupID)
 }
 
 func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

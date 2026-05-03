@@ -170,23 +170,8 @@ func TestCreateTimeOffRequest(t *testing.T) {
 }
 
 func TestDeleteAssignmentDryRun(t *testing.T) {
-	var deleteCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/workspaces/ws1/scheduling/assignments/abc123def456789012345678" && r.Method == http.MethodGet:
-			respondJSON(t, w, map[string]any{
-				"id":        "abc123def456789012345678",
-				"userId":    "u1",
-				"projectId": "p1",
-				"start":     "2026-04-01",
-				"end":       "2026-04-15",
-			})
-		case r.URL.Path == "/workspaces/ws1/scheduling/assignments/abc123def456789012345678" && r.Method == http.MethodDelete:
-			deleteCalled = true
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
+		t.Fatalf("dry-run delete assignment should not reach upstream, got %s %s", r.Method, r.URL.Path)
 	})
 	defer cleanup()
 
@@ -201,9 +186,6 @@ func TestDeleteAssignmentDryRun(t *testing.T) {
 	if result.Action != "clockify_delete_assignment" {
 		t.Fatalf("expected action clockify_delete_assignment, got %s", result.Action)
 	}
-	if deleteCalled {
-		t.Fatal("DELETE should NOT be called during dry run")
-	}
 	dataMap, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map data for dry run, got %T", result.Data)
@@ -211,8 +193,8 @@ func TestDeleteAssignmentDryRun(t *testing.T) {
 	if dataMap["dry_run"] != true {
 		t.Fatal("expected dry_run=true in result data")
 	}
-	if dataMap["note"] == nil {
-		t.Fatal("expected note in dry run result")
+	if dataMap["resource"] != nil {
+		t.Fatalf("expected minimal dry-run resource nil, got %#v", dataMap["resource"])
 	}
 }
 
