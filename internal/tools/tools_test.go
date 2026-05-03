@@ -818,6 +818,181 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 	}
 }
 
+func TestFindAndUpdateEntryFindsMatchBeyondFirstPage(t *testing.T) {
+	firstPage := make([]clockify.TimeEntry, 200)
+	for i := range firstPage {
+		firstPage[i] = clockify.TimeEntry{
+			ID:          "filler",
+			Description: "ordinary work",
+			TimeInterval: clockify.TimeInterval{
+				Start: "2026-04-01T09:00:00Z",
+				End:   "2026-04-01T09:05:00Z",
+			},
+		}
+	}
+	match := clockify.TimeEntry{
+		ID:          "target",
+		Description: "large workspace target",
+		ProjectID:   "p1",
+		ProjectName: "Project",
+		TimeInterval: clockify.TimeInterval{
+			Start: "2026-04-02T09:00:00Z",
+			End:   "2026-04-02T10:00:00Z",
+		},
+	}
+	var putCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			if got := r.URL.Query().Get("page-size"); got != "200" {
+				t.Fatalf("expected page-size=200, got %q", got)
+			}
+			switch r.URL.Query().Get("page") {
+			case "1":
+				respondJSON(t, w, firstPage)
+			case "2":
+				respondJSON(t, w, []clockify.TimeEntry{match})
+			default:
+				respondJSON(t, w, []clockify.TimeEntry{})
+			}
+		case r.URL.Path == "/workspaces/ws1/time-entries/target" && r.Method == http.MethodPut:
+			putCalled = true
+			updated := match
+			updated.Description = "updated target"
+			respondJSON(t, w, updated)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
+		"exact_description": "large workspace target",
+		"new_description":   "updated target",
+	})
+	if err != nil {
+		t.Fatalf("find and update failed: %v", err)
+	}
+	if !putCalled {
+		t.Fatal("expected PUT to be called")
+	}
+	env := result.(ResultEnvelope)
+	data := env.Data.(FindAndUpdateEntryData)
+	if data.MatchedBy["pagesFetched"] != 2 || data.MatchedBy["entriesScanned"] != 201 {
+		t.Fatalf("unexpected paginated match metadata: %+v", data.MatchedBy)
+	}
+}
+
+func TestFindAndUpdateEntryDetectsAmbiguousMatchAcrossPages(t *testing.T) {
+	firstPage := make([]clockify.TimeEntry, 200)
+	firstPage[0] = clockify.TimeEntry{
+		ID:          "match-1",
+		Description: "duplicate target",
+		TimeInterval: clockify.TimeInterval{
+			Start: "2026-04-01T09:00:00Z",
+			End:   "2026-04-01T09:30:00Z",
+		},
+	}
+	for i := 1; i < len(firstPage); i++ {
+		firstPage[i] = clockify.TimeEntry{
+			ID:          "filler",
+			Description: "ordinary work",
+			TimeInterval: clockify.TimeInterval{
+				Start: "2026-04-01T10:00:00Z",
+				End:   "2026-04-01T10:05:00Z",
+			},
+		}
+	}
+	secondMatch := clockify.TimeEntry{
+		ID:          "match-2",
+		Description: "duplicate target",
+		TimeInterval: clockify.TimeInterval{
+			Start: "2026-04-02T09:00:00Z",
+			End:   "2026-04-02T09:30:00Z",
+		},
+	}
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			switch r.URL.Query().Get("page") {
+			case "1":
+				respondJSON(t, w, firstPage)
+			case "2":
+				respondJSON(t, w, []clockify.TimeEntry{secondMatch})
+			default:
+				respondJSON(t, w, []clockify.TimeEntry{})
+			}
+		case strings.HasPrefix(r.URL.Path, "/workspaces/ws1/time-entries/") && r.Method == http.MethodPut:
+			t.Fatalf("PUT should not run for ambiguous matches")
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
+		"exact_description": "duplicate target",
+		"new_description":   "updated",
+	})
+	if err == nil || !strings.Contains(err.Error(), "multiple entries matched") {
+		t.Fatalf("expected ambiguous match error, got %v", err)
+	}
+}
+
+func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
+	entryID := "abc123def456789012345678"
+	entry := clockify.TimeEntry{
+		ID:          entryID,
+		Description: "direct target",
+		ProjectID:   "p1",
+		TimeInterval: clockify.TimeInterval{
+			Start: "2026-04-01T09:00:00Z",
+			End:   "2026-04-01T10:00:00Z",
+		},
+	}
+	var gotDirectGet, gotPut bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+entryID && r.Method == http.MethodGet:
+			gotDirectGet = true
+			respondJSON(t, w, entry)
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+entryID && r.Method == http.MethodPut:
+			gotPut = true
+			updated := entry
+			updated.Description = "direct update"
+			respondJSON(t, w, updated)
+		case r.URL.Path == "/user" || strings.Contains(r.URL.Path, "/user/"):
+			t.Fatalf("entry_id lookup should not scan current-user pages: %s", r.URL.Path)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
+		"entry_id":        entryID,
+		"new_description": "direct update",
+	})
+	if err != nil {
+		t.Fatalf("find and update by entry_id failed: %v", err)
+	}
+	if !gotDirectGet || !gotPut {
+		t.Fatalf("expected direct GET and PUT, got get=%v put=%v", gotDirectGet, gotPut)
+	}
+	env := result.(ResultEnvelope)
+	data := env.Data.(FindAndUpdateEntryData)
+	if data.MatchedBy["entryId"] != entryID {
+		t.Fatalf("expected matched entryId, got %+v", data.MatchedBy)
+	}
+}
+
 // TestListClientsPagination verifies that page and page_size args are forwarded
 // to the Clockify API as query parameters.
 func TestListClientsPagination(t *testing.T) {

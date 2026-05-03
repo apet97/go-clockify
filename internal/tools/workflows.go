@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -201,36 +202,92 @@ func parseFindAndUpdateArgs(args map[string]any) (findAndUpdateArgs, error) {
 }
 
 func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (clockify.TimeEntry, map[string]any, error) {
-	query := map[string]string{"page-size": "100"}
+	if args.EntryID != "" {
+		return s.findEntryByID(ctx, args)
+	}
+
+	const pageSize = 200
+	baseQuery := map[string]string{"page-size": strconv.Itoa(pageSize)}
 	if args.StartAfter != "" {
-		query["start"] = args.StartAfter
+		baseQuery["start"] = args.StartAfter
 	}
 	if args.StartBefore != "" {
-		query["end"] = args.StartBefore
+		baseQuery["end"] = args.StartBefore
 	}
-	entries, _, _, err := s.listEntriesWithQuery(ctx, query)
+
+	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return clockify.TimeEntry{}, nil, err
 	}
-	matches := make([]clockify.TimeEntry, 0)
-	for _, entry := range entries {
-		if args.EntryID != "" && entry.ID != args.EntryID {
-			continue
-		}
-		if args.ExactDescription != "" && !strings.EqualFold(strings.TrimSpace(entry.Description), strings.TrimSpace(args.ExactDescription)) {
-			continue
-		}
-		if args.DescriptionContains != "" && !strings.Contains(strings.ToLower(entry.Description), strings.ToLower(args.DescriptionContains)) {
-			continue
-		}
-		matches = append(matches, entry)
+	user, err := s.getCurrentUser(ctx)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
 	}
-	if len(matches) == 0 {
+	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+
+	matches := make([]clockify.TimeEntry, 0)
+	entriesScanned := 0
+	pagesFetched := 0
+	for page := 1; page <= aggregatePageSafetyStop; page++ {
+		query := make(map[string]string, len(baseQuery)+1)
+		for k, v := range baseQuery {
+			query[k] = v
+		}
+		query["page"] = strconv.Itoa(page)
+
+		var entries []clockify.TimeEntry
+		if err := s.Client.Get(ctx, path, query, &entries); err != nil {
+			return clockify.TimeEntry{}, nil, err
+		}
+		pagesFetched++
+		entriesScanned += len(entries)
+		for _, entry := range entries {
+			if entryMatchesFindArgs(entry, args) {
+				matches = append(matches, entry)
+				if len(matches) > 1 {
+					return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters")
+				}
+			}
+		}
+		if len(entries) < pageSize {
+			if len(matches) == 0 {
+				return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found")
+			}
+			matchedBy := matchedByForFindArgs(args)
+			matchedBy["pagesFetched"] = pagesFetched
+			matchedBy["entriesScanned"] = entriesScanned
+			return matches[0], matchedBy, nil
+		}
+	}
+	return clockify.TimeEntry{}, nil, fmt.Errorf("entry search pagination safety stop reached at %d pages; narrow the filters", aggregatePageSafetyStop)
+}
+
+func (s *Service) findEntryByID(ctx context.Context, args findAndUpdateArgs) (clockify.TimeEntry, map[string]any, error) {
+	if err := resolve.ValidateID(args.EntryID, "entry_id"); err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	path, err := paths.Workspace(wsID, "time-entries", args.EntryID)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	var entry clockify.TimeEntry
+	if err := s.Client.Get(ctx, path, nil, &entry); err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	if !entryMatchesFindArgs(entry, args) {
 		return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found")
 	}
-	if len(matches) > 1 {
-		return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters")
-	}
+	return entry, matchedByForFindArgs(args), nil
+}
+
+func matchedByForFindArgs(args findAndUpdateArgs) map[string]any {
 	matchedBy := map[string]any{}
 	if args.EntryID != "" {
 		matchedBy["entryId"] = args.EntryID
@@ -247,5 +304,36 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 	if args.StartBefore != "" {
 		matchedBy["startBefore"] = args.StartBefore
 	}
-	return matches[0], matchedBy, nil
+	return matchedBy
+}
+
+func entryMatchesFindArgs(entry clockify.TimeEntry, args findAndUpdateArgs) bool {
+	if args.EntryID != "" && entry.ID != args.EntryID {
+		return false
+	}
+	if args.ExactDescription != "" && !strings.EqualFold(strings.TrimSpace(entry.Description), strings.TrimSpace(args.ExactDescription)) {
+		return false
+	}
+	if args.DescriptionContains != "" && !strings.Contains(strings.ToLower(entry.Description), strings.ToLower(args.DescriptionContains)) {
+		return false
+	}
+	if args.StartAfter != "" || args.StartBefore != "" {
+		start, err := entry.StartTime()
+		if err != nil {
+			return false
+		}
+		if args.StartAfter != "" {
+			after, err := time.Parse(time.RFC3339, args.StartAfter)
+			if err != nil || start.Before(after) {
+				return false
+			}
+		}
+		if args.StartBefore != "" {
+			before, err := time.Parse(time.RFC3339, args.StartBefore)
+			if err != nil || !start.Before(before) {
+				return false
+			}
+		}
+	}
+	return true
 }
