@@ -79,6 +79,9 @@ emits — no prose-only guesses.
   — how to pin and rotate the container image digest.
 - [runbooks/release-asset-count.md](runbooks/release-asset-count.md)
   — release-asset sanity check.
+- [runbooks/release-candidate-evidence.md](runbooks/release-candidate-evidence.md)
+  — post-Group-1 evidence sequence for launch checklist Groups 6
+  and 7.
 - [runbooks/production-incident-drill.md](runbooks/production-incident-drill.md)
   — end-to-end incident simulation.
 
@@ -91,6 +94,8 @@ Supply-chain verification, release process, and the smoke cadence.
 - [verify-release.md](verify-release.md) — release-smoke reasoning.
 - [release-policy.md](release-policy.md) — SemVer contract,
   deprecation windows, support timeline.
+- [runbooks/release-candidate-evidence.md](runbooks/release-candidate-evidence.md)
+  — candidate-tag security and release-evidence automation.
 - [release/deploy-readiness-checklist.md](release/deploy-readiness-checklist.md)
   — pre-production checklist.
 - [release/public-hosted-launch-checklist.md](release/public-hosted-launch-checklist.md)

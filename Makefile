@@ -7,7 +7,7 @@
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
         repo-hygiene script-tests actionlint shellcheck live-contract-local \
-        release-check
+        release-check rc-evidence rc-evidence-plan
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -113,6 +113,8 @@ repo-hygiene:
 #     checklist.md has a checked box in Groups 1/6/7 without an
 #     evidence URL, workflow_run_id, or _Closed_ annotation. Wired
 #     into make launch-checklist-parity and make doc-parity.
+#   - prepare-rc-evidence.sh — prints and runs the post-Group-1
+#     candidate-tag evidence sequence for launch checklist Groups 6/7.
 script-tests:
 	bash scripts/test-filter-bench-output.sh
 	bash scripts/test-check-bench-baseline.sh
@@ -123,6 +125,21 @@ script-tests:
 	bash scripts/test-check-release-assets.sh
 	bash scripts/test-check-launch-checklist-parity.sh
 	bash scripts/test-check-launch-evidence-gate.sh
+	bash scripts/test-prepare-rc-evidence.sh
+
+rc-evidence-plan:
+	@if [ -z "$(TAG)" ]; then \
+		echo "usage: make rc-evidence-plan TAG=vX.Y.Z-rc.N"; \
+		exit 2; \
+	fi
+	bash scripts/prepare-rc-evidence.sh --plan "$(TAG)"
+
+rc-evidence:
+	@if [ -z "$(TAG)" ]; then \
+		echo "usage: make rc-evidence TAG=vX.Y.Z-rc.N"; \
+		exit 2; \
+	fi
+	bash scripts/prepare-rc-evidence.sh "$(TAG)"
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u

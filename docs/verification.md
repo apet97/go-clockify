@@ -33,6 +33,11 @@ The three supply-chain checks below assume you are working with the binary
 pipeline was healthy. Replace the filename or `TAG` value to verify a
 different platform or release.
 
+For launch-candidate Group 7 evidence, use the same commands with
+the candidate tag and any required variant filename not sampled by
+`release-smoke.yml`, including the FIPS artifact named in the
+launch checklist.
+
 ## 1. SLSA build provenance attestation
 
 The `release.yml` workflow stages all 15 binaries (5 default
@@ -224,6 +229,9 @@ the open issue is the exclusive failure signal.
   window, and the contract operators rely on.
 - [`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md)
   — deploy-time digest pinning policy for the prod overlay.
+- [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+  — launch-candidate Group 6/7 evidence sequence after Group 1
+  cron evidence closes.
 - [`docs/release/deploy-readiness-checklist.md`](release/deploy-readiness-checklist.md)
   — manual checklist to run before promoting a release.
 - [`docs/support-matrix.md`](support-matrix.md)

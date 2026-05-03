@@ -155,10 +155,19 @@ from local gates alone. The candidate tag must have:
 
 - `release-smoke.yml` green on `vX.Y.Z-rc.N`.
 - Sigstore bundle, SLSA attestation, SBOM, and Docker image signature
-  verification linked from `docs/launch-candidate-checklist.md`.
+  verification linked from `docs/launch-candidate-checklist.md`,
+  including manual evidence for any required build variant not
+  sampled by `release-smoke.yml`.
 - Reference `clockify-mcp doctor --strict` and
   `clockify-mcp-postgres doctor --strict --check-backends` outputs
   archived alongside the release notes.
+
+Use
+[`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+and `make rc-evidence-plan TAG=vX.Y.Z-rc.N` to rehearse the Group 6
+and Group 7 evidence sequence before the candidate tag is cut. The
+runbook starts only after Group 1 scheduled-cron evidence is linked
+from the launch checklist.
 
 ## How to check what version is supported
 

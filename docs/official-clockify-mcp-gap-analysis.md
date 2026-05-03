@@ -280,9 +280,10 @@ In priority order — closing the lower-numbered ones first
 unblocks the next.
 
 Only external evidence blockers remain after PR #59 merged to `main`
-at `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`: scheduled
-live-contract cron greens, candidate-tag security walk-through
-evidence, and release/sigstore/SLSA evidence.
+and PR #60 stabilized the post-merge launch docs at
+`4e69c7a1db8011055187cf9892426ed48fc8e572`: scheduled live-contract
+cron greens, candidate-tag security walk-through evidence, and
+release/sigstore/SLSA evidence.
 
 1. **Live contract failures (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling

@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Release-candidate evidence runbook and automation prepare Groups
+  6 and 7 without closing them.** Added
+  `docs/runbooks/release-candidate-evidence.md`,
+  `scripts/prepare-rc-evidence.sh`, and `make rc-evidence-plan
+  TAG=vX.Y.Z-rc.N` so the candidate-tag security and release
+  evidence sequence can be rehearsed before Group 1 cron evidence
+  closes. The runbook and script keep the checklist boxes open until
+  candidate-tag evidence URLs or `workflow_run_id:` values exist.
+
 - **Exhaustive manual live-probe coverage now spans the full tool
   catalog.** PR #59 added sacrificial-workspace MCP-path probes so
   all 121 generated catalog tools are named in `tests/e2e_live*.go`,

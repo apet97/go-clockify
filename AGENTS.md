@@ -34,8 +34,8 @@ Clockify launch candidate** promotion.
    workspace** is wired. Read this before any live Clockify call.
 6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
    — historical continuation packet for Claude Code after PR #51
-   merged. Use `docs/agent-handoff.md` for the current post-PR #59
-   state.
+   merged. Use `docs/agent-handoff.md` for the current post-PR #60
+   launch state.
 
 If a contributor maintains a workstation-private `CLAUDE.md` at the
 repo root, it is gitignored and machine-specific; treat it as
@@ -44,10 +44,12 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Current post-PR #59 main tip:** `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`
-  (`test(livee2e): cover exhaustive Clockify tool surface`). This
-  is the latest pushed launch-state baseline for the 121-tool
-  manual live-probe coverage.
+- **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
+  (`docs(handoff): update post-PR59 launch state`). This records
+  the post-PR #59 121-tool manual live-probe coverage plus the
+  follow-up docs stabilization. If this file is read from a later
+  local continuation commit, Git HEAD may be newer; `4e69c7a...`
+  remains the baseline to cite for the PR #60 merge.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`), the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -189,6 +191,7 @@ convenience.
 | Vuln scan | `make verify-vuln` |
 | FIPS verify | `make verify-fips` |
 | Bench baseline | `make verify-bench` then `make bench-baseline-check` |
+| Candidate-tag evidence rehearsal | `make rc-evidence-plan TAG=vX.Y.Z-rc.N` |
 
 ## When you are uncertain
 

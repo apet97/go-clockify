@@ -39,10 +39,11 @@ The blessed production profile for shared services is documented in [Production 
 ## Launch-candidate status
 
 `main` is locally prepared for the official Clockify launch-candidate
-evidence pass as of PR #59
-(`b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`). That includes the
-post-PR #51 local readiness gates plus manual sacrificial-workspace
-MCP-path probes for all 121 generated catalog tools. The remaining
+evidence pass as of PR #60
+(`4e69c7a1db8011055187cf9892426ed48fc8e572`). That includes the
+post-PR #51 local readiness gates, PR #59's manual
+sacrificial-workspace MCP-path probes for all 121 generated catalog
+tools, and the post-merge docs stabilization. The remaining
 blockers are external evidence only: two consecutive scheduled
 live-contract cron greens, candidate-tag security walk-through
 evidence, and release/sigstore/SLSA evidence. Local `release-check`,
