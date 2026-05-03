@@ -263,6 +263,15 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/users/*`, `/workspaces
 | `clockify_update_user_group` | mutating | `admin` | unit |
 | `clockify_update_user_role` | mutating | `admin`, `permission_change` | unit |
 
+**Invite-user route note:** Clockify documents
+`POST /workspaces/{workspaceId}/users?send-email=...` for adding a
+user to a workspace, but this MCP does not expose a
+dedicated invite-user catalog tool. The manual live campaign pins the
+route as a raw validation probe in `TestLiveT2UserInviteValidationProbe`
+with `send-email=false` and an empty email. That exercises the current
+route/plan/permission surface without sending mail or creating a
+pending workspace member.
+
 ### `webhooks` (7 tools)
 
 Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/webhooks/*`
@@ -385,6 +394,7 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2InvoicesCRUD` | all 12 invoice tools: invoice create/list/get/update/delete, invoice report, item add/list/delete, send dry-run, mark-paid dry-run + real; update-item route asserted as unsupported on this Clockify version | success path + documented unsupported `PUT /items/{order}` 405 |
 | `TestLiveT2SharedReportsCRUDAndExports` | all 6 shared-report tools: SUMMARY create/get/update/export JSON/PDF/delete; DETAILED/WEEKLY JSON export when workspace fixtures exist | success path / conditional export breadth |
 | `TestLiveT2UserAdminCRUDAndOwnerSafety` | all 8 user-admin tools: user-group create/update/add/remove/delete, remove dry-run, deactivate owner dry-run, update-role unsupported route probe | success path + documented unsupported role route 405 |
+| `TestLiveT2UserInviteValidationProbe` | raw Clockify invite-user route `POST /workspaces/{workspaceId}/users?send-email=false`; no catalog tool exposed | validation / plan / permission / unsupported-method refusal, with no email sent |
 | `TestLiveT2WebhooksCRUD` | all 7 webhook tools: create/get/update/list-events/test dry-run/delete dry-run/delete using live `webhookEvent` + trigger-source body shape | success path |
 | `TestLiveT2TimeOffRemainingTools` | all 12 time-off tool names: policy/request list/get/create/update/delete/status/balance paths; request create reaches live body contract and unsupported/permission routes are asserted where Clockify rejects the operation | success path + plan/permission/unsupported-route probes |
 | `TestLiveT2ApprovalsRemainingTools` | all 6 approvals tool names: list, submit period/periodStart, get, approve/reject dry-run, withdraw | success path + documented approval period / GET-route 4xx probes |

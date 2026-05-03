@@ -4,10 +4,12 @@ package e2e_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/policy"
 )
 
@@ -81,6 +83,44 @@ func TestLiveT2UserAdminCRUDAndOwnerSafety(t *testing.T) {
 	})
 	_ = h.callOK(ctx, "clockify_delete_user_group", map[string]any{"group_id": groupID})
 	groupDeleted = true
+}
+
+func TestLiveT2UserInviteValidationProbe(t *testing.T) {
+	requireCategory(t, "CLOCKIFY_LIVE_ADMIN_ENABLED")
+
+	h := setupLiveMCPHarness(t, liveMCPOptions{PolicyMode: policy.Full})
+	c := setupLiveCampaign(t, h)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	var out map[string]any
+	err := h.Service.Client.Post(
+		ctx,
+		"/workspaces/"+c.WorkspaceID+"/users?send-email=false",
+		map[string]any{"email": ""},
+		&out,
+	)
+	if err == nil {
+		t.Fatalf("invite validation probe unexpectedly succeeded; refusing to risk creating an invited user: %#v", out)
+	}
+
+	var apiErr *clockify.APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("invite validation probe returned non-API error: %T %v", err, err)
+	}
+	switch apiErr.StatusCode {
+	case 400, 402, 403, 405:
+		// Expected safe outcomes: request validation, plan/permission
+		// gating, or an unsupported method. The probe uses
+		// send-email=false and an empty email so none of these send
+		// mail or create a pending member.
+	default:
+		t.Fatalf("invite validation probe returned unexpected status %d: %s", apiErr.StatusCode, apiErr.Body)
+	}
+	if !containsErrorText(apiErr.Body, "email", "user", "subscription", "paid", "permission", "not supported", "method", "invalid", "required", "blank", "400", "403", "405") {
+		t.Fatalf("invite validation probe body did not identify validation/permission/plan/method refusal: %q", apiErr.Body)
+	}
 }
 
 func containsErrorText(s string, needles ...string) bool {

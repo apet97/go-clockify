@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Sacrificial live campaign now includes the invite-user route
+  safely.** Added `TestLiveT2UserInviteValidationProbe`, which
+  probes Clockify's documented add-user endpoint with
+  `send-email=false` and an empty email so the route/validation
+  surface is covered without sending mail or creating a pending
+  workspace member. Removed stale risk overrides for non-catalog
+  user-admin tool names and added a regression guard so future risk
+  overrides must target registered descriptors.
+
 - **Release-candidate evidence runbook and automation prepare Groups
   6 and 7 without closing them.** Added
   `docs/runbooks/release-candidate-evidence.md`,

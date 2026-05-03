@@ -60,18 +60,6 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"user_id"},
 	},
-	"clockify_activate_user": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin,
-		auditKeys: []string{"user_id"},
-	},
-	"clockify_invite_user": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"email", "role"},
-	},
-	"clockify_remove_user_from_workspace": {
-		class:     mcp.RiskDestructive | mcp.RiskAdmin,
-		auditKeys: []string{"user_id"},
-	},
 
 	// Admin — user groups.
 	"clockify_create_user_group": {

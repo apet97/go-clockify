@@ -89,6 +89,35 @@ func TestRiskOverridesMatchTaxonomy(t *testing.T) {
 	}
 }
 
+// TestRiskOverridesTargetRegisteredTools catches ghost risk metadata for
+// tools that are not exposed in the generated catalog. User-invite style
+// endpoints are particularly easy to leave behind as planned names; keeping
+// the override map descriptor-backed prevents docs and audit review from
+// implying unsupported tools exist.
+func TestRiskOverridesTargetRegisteredTools(t *testing.T) {
+	s := &Service{}
+
+	known := map[string]bool{}
+	for _, d := range s.Registry() {
+		known[d.Tool.Name] = true
+	}
+	for groupName := range Tier2Groups {
+		ds, ok := s.Tier2Handlers(groupName)
+		if !ok {
+			t.Fatalf("Tier2Handlers(%q) returned ok=false", groupName)
+		}
+		for _, d := range ds {
+			known[d.Tool.Name] = true
+		}
+	}
+
+	for name := range riskOverrides {
+		if !known[name] {
+			t.Errorf("risk override %q has no registered tool descriptor", name)
+		}
+	}
+}
+
 // TestDefaultRiskClassFromBooleans verifies the boolean→RiskClass fallback
 // for tools that have no explicit override. A read-only tool must default
 // to RiskRead, a destructive tool to RiskDestructive, otherwise RiskWrite.
