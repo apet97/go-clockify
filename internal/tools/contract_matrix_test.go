@@ -24,8 +24,8 @@ func TestToolContractMatrix(t *testing.T) {
 			all[d.Tool.Name] = mcpToolContract{readOnly: d.ReadOnlyHint, destructive: d.DestructiveHint, idempotent: d.IdempotentHint, annotations: d.Tool.Annotations}
 		}
 	}
-	if len(all) != 123 {
-		t.Fatalf("expected 123 tools, got %d", len(all))
+	if len(all) != 121 {
+		t.Fatalf("expected 121 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}

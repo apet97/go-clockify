@@ -21,8 +21,6 @@ func init() {
 			"clockify_create_assignment",
 			"clockify_update_assignment",
 			"clockify_delete_assignment",
-			"clockify_get_schedule",
-			"clockify_create_schedule",
 			"clockify_get_project_schedule_totals",
 			"clockify_filter_schedule_capacity",
 		},
@@ -112,34 +110,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.deleteAssignment(ctx, args)
 			},
 		},
-		// 6. clockify_get_schedule (RO)
-		{
-			Tool: toolRO("clockify_get_schedule",
-				"Get a schedule by ID",
-				map[string]any{"type": "object", "required": []string{"schedule_id"}, "properties": map[string]any{
-					"schedule_id": map[string]any{"type": "string"},
-				}}),
-			ReadOnlyHint: true, IdempotentHint: true,
-			Handler: func(ctx context.Context, args map[string]any) (any, error) {
-				return s.getSchedule(ctx, args)
-			},
-		},
-		// 8. clockify_create_schedule (RW)
-		{
-			Tool: toolRW("clockify_create_schedule",
-				"Create a new schedule in the workspace",
-				map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-					"name":          map[string]any{"type": "string", "description": "Schedule name"},
-					"start":         map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-					"end":           map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-					"hours_per_day": map[string]any{"type": "number"},
-				}}),
-			ReadOnlyHint: false,
-			Handler: func(ctx context.Context, args map[string]any) (any, error) {
-				return s.createSchedule(ctx, args)
-			},
-		},
-		// 9. clockify_get_project_schedule_totals (RO)
+		// 6. clockify_get_project_schedule_totals (RO)
 		{
 			Tool: toolRO("clockify_get_project_schedule_totals",
 				"Get scheduling totals per project across a date range",
@@ -158,7 +129,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.getProjectScheduleTotals(ctx, args)
 			},
 		},
-		// 10. clockify_filter_schedule_capacity (RO)
+		// 7. clockify_filter_schedule_capacity (RO)
 		{
 			Tool: toolRO("clockify_filter_schedule_capacity",
 				"Get a user's scheduling capacity totals for a date range",
@@ -410,65 +381,6 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		"deleted":      true,
 		"assignmentId": aID,
 	}, map[string]any{"workspaceId": wsID}), nil
-}
-
-func (s *Service) getSchedule(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	sID := stringArg(args, "schedule_id")
-	if err := resolve.ValidateID(sID, "schedule_id"); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	var schedule map[string]any
-	path, err := paths.Workspace(wsID, "scheduling", sID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Get(ctx, path, nil, &schedule); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	return ok("clockify_get_schedule", schedule, map[string]any{"workspaceId": wsID}), nil
-}
-
-func (s *Service) createSchedule(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	name := stringArg(args, "name")
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	payload := map[string]any{
-		"name": name,
-	}
-	if v := stringArg(args, "start"); v != "" {
-		payload["start"] = v
-	}
-	if v := stringArg(args, "end"); v != "" {
-		payload["end"] = v
-	}
-	if hpd, ok := args["hours_per_day"]; ok {
-		payload["hoursPerDay"] = hpd
-	}
-
-	var result map[string]any
-	path, err := paths.Workspace(wsID, "scheduling")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	return ok("clockify_create_schedule", result, map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
