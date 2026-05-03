@@ -14,12 +14,21 @@ work and commit it.
 
 ## Launch-state baseline
 
+- **Post-PR #62 launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+  (`test(livee2e): pin user invite validation`). This records the
+  current manual sacrificial-workspace campaign state: all 121
+  generated catalog tools remain live-probed through the MCP path,
+  the documented invite-user route is pinned by a no-email validation
+  probe, stale non-catalog user-invite risk overrides are removed,
+  and risk overrides now fail if they target ghost descriptor names.
+  This is manual campaign coverage only and does not tick any
+  external launch-evidence box.
 - **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
   (`docs(handoff): update post-PR59 launch state`). This records
   the post-PR #59 121-tool manual live-probe coverage plus the
   follow-up docs stabilization. If this handoff is read from a
   later runbook/docs commit, Git HEAD may be newer; `4e69c7a...`
-  remains the baseline to cite for the PR #60 merge.
+  remains the baseline to cite for the PR #60 docs stabilization.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`) — the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -35,8 +44,9 @@ work and commit it.
   benchmark baseline refresh (`bench-current-25255062599` +
   comparison run 25255216987), and PR #59's exhaustive manual
   sacrificial-workspace probe across all 121 generated catalog
-  tools. The PR #59 probes are coverage evidence only and do not
-  tick any external launch-evidence box.
+  tools plus PR #62's invite-user route validation probe. These
+  manual probes are coverage evidence only and do not tick any
+  external launch-evidence box.
 - **Open external evidence only:**
   - **Scheduled live-contract cron greens** — two consecutive
     *scheduled* runs of `live-contract.yml` on the candidate SHA,

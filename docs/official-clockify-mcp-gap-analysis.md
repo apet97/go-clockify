@@ -261,7 +261,12 @@ What is missing for tier 3 is intentionally narrow:
   or upstream 4xx because Clockify exposes no safe preview route. The
   evidence hierarchy (scheduled workflow > manual dispatch > local
   with env vars > local without env vars as non-evidence) is documented
-  there.
+  there. PR #62 also pins Clockify's documented invite-user route
+  even though no dedicated catalog tool is exposed: the probe uses
+  `send-email=false` plus an empty email and asserts validation,
+  permission, plan, or unsupported-method refusal without creating a
+  pending user or sending mail. The risk override table now has a
+  descriptor-backed guard so stale planned tool names cannot linger.
 - **Benchmark baseline is current for the candidate shape.** The
   committed `internal/benchdata/baseline.txt` was refreshed from the
   `Bench` workflow bootstrap artifact `bench-current-25255062599`
@@ -279,19 +284,19 @@ What is missing for tier 3 is intentionally narrow:
 In priority order — closing the lower-numbered ones first
 unblocks the next.
 
-Only external evidence blockers remain after PR #59 merged to `main`
-and PR #60 stabilized the post-merge launch docs at
-`4e69c7a1db8011055187cf9892426ed48fc8e572`: scheduled live-contract
-cron greens, candidate-tag security walk-through evidence, and
-release/sigstore/SLSA evidence.
+Only external evidence blockers remain after PR #62 merged to `main`
+at `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: scheduled
+live-contract cron greens, candidate-tag security walk-through
+evidence, and release/sigstore/SLSA evidence. The PR #59 through
+PR #62 manual live-probe work is coverage evidence only.
 
-1. **Live contract failures (current).**
+1. **Scheduled live-contract cron evidence (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
    `live-test-failure` issue.
    *Why blocking:* the launch-candidate definition starts with two
-   consecutive green nightlies. Until the rolling issue is
-   triaged and the failure mode is either fixed or quarantined
-   with a known-cause note, the candidate clock has not started.
+   consecutive scheduled green nightlies on the candidate SHA. The
+   rolling issue is currently closed and manual dispatches are green,
+   but manual runs do not start or close the candidate cron clock.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
    (commits 42502cf + 79f0769 plus the local `make test-postgres`

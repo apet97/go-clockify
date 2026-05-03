@@ -34,7 +34,7 @@ Clockify launch candidate** promotion.
    workspace** is wired. Read this before any live Clockify call.
 6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
    — historical continuation packet for Claude Code after PR #51
-   merged. Use `docs/agent-handoff.md` for the current post-PR #60
+   merged. Use `docs/agent-handoff.md` for the current post-PR #62
    launch state.
 
 If a contributor maintains a workstation-private `CLAUDE.md` at the
@@ -44,12 +44,20 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
+- **Post-PR #62 launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+  (`test(livee2e): pin user invite validation`). This records the
+  full sacrificial-workspace live API campaign refresh: the documented
+  invite-user route is pinned by a no-email validation probe, stale
+  non-catalog user-invite risk overrides are removed, and risk
+  overrides now fail if they target ghost descriptor names. This is
+  manual campaign coverage only; it does **not** close Group 1,
+  Group 6, or Group 7 launch blockers.
 - **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
   (`docs(handoff): update post-PR59 launch state`). This records
   the post-PR #59 121-tool manual live-probe coverage plus the
   follow-up docs stabilization. If this file is read from a later
   local continuation commit, Git HEAD may be newer; `4e69c7a...`
-  remains the baseline to cite for the PR #60 merge.
+  remains the baseline to cite for the PR #60 docs stabilization.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`), the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -91,6 +99,8 @@ rules live in this file and the docs above.
     generated catalog tools through the MCP path against the
     sacrificial workspace and documented the success-vs-unsupported
     outcome split in [`docs/api-coverage.md`](docs/api-coverage.md).
+    PR #62 adds the documented invite-user route as a no-email raw
+    route validation probe because no dedicated catalog tool exists.
     This is coverage evidence only; it does **not** close Group 1,
     Group 6, or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)
