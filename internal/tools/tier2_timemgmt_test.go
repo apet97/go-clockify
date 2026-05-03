@@ -126,8 +126,7 @@ func TestCreateTimeOffRequest(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"id":       "req1",
 				"policyId": "pol1",
-				"start":    gotBody["start"],
-				"end":      gotBody["end"],
+				"period":   gotBody["timeOffPeriod"],
 				"status":   "PENDING",
 				"note":     gotBody["note"],
 			})
@@ -161,8 +160,13 @@ func TestCreateTimeOffRequest(t *testing.T) {
 		t.Fatalf("expected status PENDING, got %v", data["status"])
 	}
 	// Verify POST body
-	if gotBody["start"] != "2026-05-01" {
-		t.Fatalf("expected start 2026-05-01 in body, got %v", gotBody["start"])
+	periodEnvelope, _ := gotBody["timeOffPeriod"].(map[string]any)
+	period, _ := periodEnvelope["period"].(map[string]any)
+	if period["start"] != "2026-05-01" {
+		t.Fatalf("expected nested period.start 2026-05-01 in body, got %#v", gotBody)
+	}
+	if period["days"] != float64(5) {
+		t.Fatalf("expected nested period.days 5 in body, got %#v", gotBody)
 	}
 	if gotBody["note"] != "Family vacation" {
 		t.Fatalf("expected note in body, got %v", gotBody["note"])

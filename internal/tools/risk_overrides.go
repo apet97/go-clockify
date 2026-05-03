@@ -28,7 +28,7 @@ var riskOverrides = map[string]riskOverride{
 	},
 	"clockify_create_invoice": {
 		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"client_id", "currency", "due_date"},
+		auditKeys: []string{"client_id", "number", "issued_date", "currency", "due_date"},
 	},
 	"clockify_update_invoice": {
 		class:     mcp.RiskWrite | mcp.RiskBilling,
@@ -40,11 +40,11 @@ var riskOverrides = map[string]riskOverride{
 	},
 	"clockify_add_invoice_item": {
 		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "description", "quantity", "unit_price"},
+		auditKeys: []string{"invoice_id", "item_type", "description", "quantity", "unit_price"},
 	},
 	"clockify_update_invoice_item": {
 		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_id", "description", "quantity", "unit_price"},
+		auditKeys: []string{"invoice_id", "item_id", "item_type", "description", "quantity", "unit_price"},
 	},
 	"clockify_delete_invoice_item": {
 		class:     mcp.RiskDestructive | mcp.RiskBilling,
@@ -98,11 +98,11 @@ var riskOverrides = map[string]riskOverride{
 	// Webhooks — external side effects.
 	"clockify_create_webhook": {
 		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"url", "events"},
+		auditKeys: []string{"name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
 	},
 	"clockify_update_webhook": {
 		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"webhook_id", "url", "events"},
+		auditKeys: []string{"webhook_id", "name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
 	},
 	"clockify_delete_webhook": {
 		class:     mcp.RiskDestructive | mcp.RiskExternalSideEffect,

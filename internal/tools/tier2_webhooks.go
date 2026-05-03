@@ -67,15 +67,24 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		{
 			Tool: toolRW("clockify_create_webhook", "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses.", map[string]any{
 				"type":     "object",
-				"required": []string{"url", "events"},
+				"required": []string{"name", "url", "webhook_event"},
 				"properties": map[string]any{
 					"url": map[string]any{"type": "string", "description": "HTTPS callback URL for webhook delivery"},
-					"events": map[string]any{
+					"webhook_event": map[string]any{
+						"type":        "string",
+						"description": "Single Clockify webhook event type, e.g. NEW_TIME_ENTRY",
+					},
+					"trigger_source_type": map[string]any{
+						"type":        "string",
+						"description": "Trigger source type (default WORKSPACE_ID)",
+						"enum":        []string{"PROJECT_ID", "USER_ID", "TAG_ID", "TASK_ID", "WORKSPACE_ID", "ASSIGNMENT_ID", "EXPENSE_ID"},
+					},
+					"trigger_source": map[string]any{
 						"type":        "array",
 						"items":       map[string]any{"type": "string"},
-						"description": "List of event types to subscribe to",
+						"description": "Trigger source IDs (default: current workspace ID)",
 					},
-					"name": map[string]any{"type": "string", "description": "Optional name for the webhook"},
+					"name": map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -91,10 +100,19 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 				"properties": map[string]any{
 					"webhook_id": map[string]any{"type": "string", "description": "Webhook ID"},
 					"url":        map[string]any{"type": "string", "description": "New HTTPS callback URL"},
-					"events": map[string]any{
+					"webhook_event": map[string]any{
+						"type":        "string",
+						"description": "Single Clockify webhook event type",
+					},
+					"trigger_source_type": map[string]any{
+						"type":        "string",
+						"description": "Trigger source type",
+						"enum":        []string{"PROJECT_ID", "USER_ID", "TAG_ID", "TASK_ID", "WORKSPACE_ID", "ASSIGNMENT_ID", "EXPENSE_ID"},
+					},
+					"trigger_source": map[string]any{
 						"type":        "array",
 						"items":       map[string]any{"type": "string"},
-						"description": "New list of event types",
+						"description": "Trigger source IDs",
 					},
 					"name": map[string]any{"type": "string", "description": "New name for the webhook"},
 				},
@@ -340,6 +358,32 @@ func stringSliceArg(args map[string]any, key string) []string {
 	}
 }
 
+func webhookEventArg(args map[string]any) string {
+	if event := stringArg(args, "webhook_event"); event != "" {
+		return event
+	}
+	// Backwards-compatible handler path for callers that bypass the MCP
+	// schema and still pass the pre-live-test `events` array. The live API
+	// accepts one webhookEvent string per webhook.
+	events := stringSliceArg(args, "events")
+	if len(events) > 0 {
+		return events[0]
+	}
+	return ""
+}
+
+func webhookTriggerSourceArgs(args map[string]any, workspaceID string) (string, []string) {
+	sourceType := stringArg(args, "trigger_source_type")
+	if sourceType == "" {
+		sourceType = "WORKSPACE_ID"
+	}
+	source := stringSliceArg(args, "trigger_source")
+	if len(source) == 0 {
+		source = []string{workspaceID}
+	}
+	return sourceType, source
+}
+
 // ListWebhooks returns webhooks for the workspace.
 func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -412,23 +456,28 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 	if err := s.validateWebhookURLForService(ctx, url); err != nil {
 		return ResultEnvelope{}, err
 	}
+	name := stringArg(args, "name")
+	if name == "" {
+		return ResultEnvelope{}, fmt.Errorf("name is required")
+	}
 
-	events := stringSliceArg(args, "events")
-	if len(events) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("events is required and must contain at least one event type")
+	webhookEvent := webhookEventArg(args)
+	if webhookEvent == "" {
+		return ResultEnvelope{}, fmt.Errorf("webhook_event is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	triggerSourceType, triggerSource := webhookTriggerSourceArgs(args, wsID)
 
 	payload := map[string]any{
-		"url":    url,
-		"events": events,
-	}
-	if name := stringArg(args, "name"); name != "" {
-		payload["name"] = name
+		"url":               url,
+		"webhookEvent":      webhookEvent,
+		"triggerSourceType": triggerSourceType,
+		"triggerSource":     triggerSource,
+		"name":              name,
 	}
 
 	path, err := paths.Workspace(wsID, "webhooks")
@@ -455,27 +504,49 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
+	path, err := paths.Workspace(wsID, "webhooks", webhookID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	var existing map[string]any
+	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	payload := map[string]any{}
+	for _, key := range []string{"name", "url", "webhookEvent", "triggerSourceType", "triggerSource"} {
+		if v, ok := existing[key]; ok {
+			payload[key] = v
+		}
+	}
+	changed := false
 	if url := stringArg(args, "url"); url != "" {
 		if err := s.validateWebhookURLForService(ctx, url); err != nil {
 			return ResultEnvelope{}, err
 		}
 		payload["url"] = url
+		changed = true
 	}
-	if events := stringSliceArg(args, "events"); len(events) > 0 {
-		payload["events"] = events
+	if event := webhookEventArg(args); event != "" {
+		payload["webhookEvent"] = event
+		changed = true
+	}
+	if sourceType := stringArg(args, "trigger_source_type"); sourceType != "" {
+		payload["triggerSourceType"] = sourceType
+		changed = true
+	}
+	if source := stringSliceArg(args, "trigger_source"); len(source) > 0 {
+		payload["triggerSource"] = source
+		changed = true
 	}
 	if name := stringArg(args, "name"); name != "" {
 		payload["name"] = name
+		changed = true
 	}
 
-	if len(payload) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("at least one field (url, events, name) must be provided for update")
-	}
-
-	path, err := paths.Workspace(wsID, "webhooks", webhookID)
-	if err != nil {
-		return ResultEnvelope{}, err
+	if !changed {
+		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name) must be provided for update")
 	}
 	var result map[string]any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {

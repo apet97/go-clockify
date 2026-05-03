@@ -4102,7 +4102,7 @@
     },
     {
       "name": "clockify_submit_for_approval",
-      "description": "Submit a timesheet for approval with a date range",
+      "description": "Submit a timesheet for approval for a configured approval period",
       "group": "approvals",
       "tier": 2,
       "read_only": false,
@@ -4114,18 +4114,24 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+          "period": {
+            "description": "Approval period; must match workspace approval settings",
+            "enum": [
+              "WEEKLY",
+              "SEMI_MONTHLY",
+              "MONTHLY"
+            ],
             "type": "string"
           },
-          "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+          "period_start": {
+            "description": "Period start in RFC3339/millisecond form, e.g. 2026-05-01T00:00:00.000Z",
+            "format": "date-time",
             "type": "string"
           }
         },
         "required": [
-          "start",
-          "end"
+          "period",
+          "period_start"
         ],
         "type": "object"
       },
@@ -4556,7 +4562,7 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
-            "description": "Expense amount (major currency units)",
+            "description": "Raw upstream expense amount value; no client-side currency scaling is applied",
             "type": "number"
           },
           "billable": {
@@ -5535,6 +5541,7 @@
       ],
       "audit_keys": [
         "invoice_id",
+        "item_type",
         "description",
         "quantity",
         "unit_price"
@@ -5542,21 +5549,37 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "apply_taxes": {
+            "description": "Tax application enum; defaults to NONE",
+            "enum": [
+              "TAX1",
+              "TAX2",
+              "TAX1TAX2",
+              "NONE"
+            ],
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
           "invoice_id": {
             "type": "string"
           },
+          "item_type": {
+            "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)",
+            "type": "string"
+          },
           "quantity": {
             "type": "number"
           },
           "unit_price": {
+            "description": "Raw upstream unit price value; live API uses minor units/cents",
             "type": "number"
           }
         },
         "required": [
-          "invoice_id"
+          "invoice_id",
+          "item_type"
         ],
         "type": "object"
       },
@@ -5598,6 +5621,8 @@
       ],
       "audit_keys": [
         "client_id",
+        "number",
+        "issued_date",
         "currency",
         "due_date"
       ],
@@ -5613,16 +5638,27 @@
             "type": "string"
           },
           "due_date": {
-            "description": "Due date (YYYY-MM-DD)",
+            "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "issued_date": {
+            "description": "Issued date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "note": {
             "description": "Invoice note",
             "type": "string"
+          },
+          "number": {
+            "description": "Invoice number (required by live API)",
+            "type": "string"
           }
         },
         "required": [
-          "client_id"
+          "client_id",
+          "number",
+          "issued_date",
+          "due_date"
         ],
         "type": "object"
       },
@@ -5730,6 +5766,7 @@
             "type": "string"
           },
           "item_id": {
+            "description": "Invoice line order (live API path parameter), not a Mongo-style id",
             "type": "string"
           }
         },
@@ -6106,12 +6143,20 @@
             "type": "string"
           },
           "due_date": {
+            "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "invoice_id": {
             "type": "string"
           },
+          "issued_date": {
+            "description": "Issued date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
           "note": {
+            "type": "string"
+          },
+          "number": {
             "type": "string"
           },
           "status": {
@@ -6163,6 +6208,7 @@
       "audit_keys": [
         "invoice_id",
         "item_id",
+        "item_type",
         "description",
         "quantity",
         "unit_price"
@@ -6170,6 +6216,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "apply_taxes": {
+            "description": "Tax application enum; defaults to NONE",
+            "enum": [
+              "TAX1",
+              "TAX2",
+              "TAX1TAX2",
+              "NONE"
+            ],
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -6177,18 +6233,25 @@
             "type": "string"
           },
           "item_id": {
+            "description": "Invoice line order (live API path parameter), not a Mongo-style id",
+            "type": "string"
+          },
+          "item_type": {
+            "description": "Workspace invoice item type name (required by live API)",
             "type": "string"
           },
           "quantity": {
             "type": "number"
           },
           "unit_price": {
+            "description": "Raw upstream unit price value; live API uses minor units/cents",
             "type": "number"
           }
         },
         "required": [
           "invoice_id",
-          "item_id"
+          "item_id",
+          "item_type"
         ],
         "type": "object"
       },
@@ -7574,7 +7637,7 @@
             "type": "boolean"
           },
           "note": {
-            "description": "Optional note/reason",
+            "description": "Required note/reason",
             "type": "string"
           },
           "policy_id": {
@@ -7588,7 +7651,8 @@
         "required": [
           "policy_id",
           "start",
-          "end"
+          "end",
+          "note"
         ],
         "type": "object"
       },
@@ -8066,12 +8130,6 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "end": {
-            "type": "string"
-          },
-          "half_day": {
-            "type": "boolean"
-          },
           "note": {
             "type": "string"
           },
@@ -8081,7 +8139,12 @@
           "request_id": {
             "type": "string"
           },
-          "start": {
+          "status": {
+            "description": "Status to set via Clockify's PATCH route",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
             "type": "string"
           }
         },
@@ -8587,31 +8650,52 @@
         "external_side_effect"
       ],
       "audit_keys": [
+        "name",
         "url",
-        "events"
+        "webhook_event",
+        "trigger_source_type",
+        "trigger_source"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "events": {
-            "description": "List of event types to subscribe to",
+          "name": {
+            "description": "Webhook name (required by live API)",
+            "type": "string"
+          },
+          "trigger_source": {
+            "description": "Trigger source IDs (default: current workspace ID)",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
-          "name": {
-            "description": "Optional name for the webhook",
+          "trigger_source_type": {
+            "description": "Trigger source type (default WORKSPACE_ID)",
+            "enum": [
+              "PROJECT_ID",
+              "USER_ID",
+              "TAG_ID",
+              "TASK_ID",
+              "WORKSPACE_ID",
+              "ASSIGNMENT_ID",
+              "EXPENSE_ID"
+            ],
             "type": "string"
           },
           "url": {
             "description": "HTTPS callback URL for webhook delivery",
             "type": "string"
+          },
+          "webhook_event": {
+            "description": "Single Clockify webhook event type, e.g. NEW_TIME_ENTRY",
+            "type": "string"
           }
         },
         "required": [
+          "name",
           "url",
-          "events"
+          "webhook_event"
         ],
         "type": "object"
       },
@@ -8904,25 +8988,45 @@
       ],
       "audit_keys": [
         "webhook_id",
+        "name",
         "url",
-        "events"
+        "webhook_event",
+        "trigger_source_type",
+        "trigger_source"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "events": {
-            "description": "New list of event types",
+          "name": {
+            "description": "New name for the webhook",
+            "type": "string"
+          },
+          "trigger_source": {
+            "description": "Trigger source IDs",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
-          "name": {
-            "description": "New name for the webhook",
+          "trigger_source_type": {
+            "description": "Trigger source type",
+            "enum": [
+              "PROJECT_ID",
+              "USER_ID",
+              "TAG_ID",
+              "TASK_ID",
+              "WORKSPACE_ID",
+              "ASSIGNMENT_ID",
+              "EXPENSE_ID"
+            ],
             "type": "string"
           },
           "url": {
             "description": "New HTTPS callback URL",
+            "type": "string"
+          },
+          "webhook_event": {
+            "description": "Single Clockify webhook event type",
             "type": "string"
           },
           "webhook_id": {

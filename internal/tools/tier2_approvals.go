@@ -51,12 +51,16 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Submit for approval (RW)
-		{Tool: toolRW("clockify_submit_for_approval", "Submit a timesheet for approval with a date range", map[string]any{
+		{Tool: toolRW("clockify_submit_for_approval", "Submit a timesheet for approval for a configured approval period", map[string]any{
 			"type":     "object",
-			"required": []string{"start", "end"},
+			"required": []string{"period", "period_start"},
 			"properties": map[string]any{
-				"start": map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-				"end":   map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
+				"period": map[string]any{
+					"type":        "string",
+					"description": "Approval period; must match workspace approval settings",
+					"enum":        []string{"WEEKLY", "SEMI_MONTHLY", "MONTHLY"},
+				},
+				"period_start": map[string]any{"type": "string", "description": "Period start in RFC3339/millisecond form, e.g. 2026-05-01T00:00:00.000Z"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.submitForApproval(ctx, args)
@@ -157,10 +161,18 @@ func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (
 }
 
 func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	startDate := stringArg(args, "start")
-	endDate := stringArg(args, "end")
-	if startDate == "" || endDate == "" {
-		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+	period := stringArg(args, "period")
+	periodStart := stringArg(args, "period_start")
+	if period == "" || periodStart == "" {
+		// Backwards-compatible direct-handler fallback for pre-live-test
+		// callers. The live API accepts period/periodStart, not start/end.
+		if legacyStart := stringArg(args, "start"); legacyStart != "" {
+			period = "WEEKLY"
+			periodStart = legacyStart
+		}
+	}
+	if period == "" || periodStart == "" {
+		return ResultEnvelope{}, fmt.Errorf("period and period_start are required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -168,15 +180,15 @@ func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (R
 	}
 
 	body := map[string]any{
-		"start": startDate,
-		"end":   endDate,
+		"period":      period,
+		"periodStart": periodStart,
 	}
 
 	path, err := paths.Workspace(wsID, "approval-requests")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var created map[string]any
+	var created any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}

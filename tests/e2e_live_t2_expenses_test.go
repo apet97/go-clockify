@@ -23,6 +23,8 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 
 	categoryName := c.LivePrefix("exp-cat", 0)
 	var categoryID string
+	var expenseID string
+	var expenseDeleted bool
 
 	t.Run("create_expense_category", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -127,9 +129,53 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		if id == "" {
 			t.Fatalf("create_expense returned no id: %#v", data)
 		}
+		expenseID = id
 		c.RegisterCleanup("expense", id, func(ctx context.Context) error {
+			if expenseDeleted {
+				return nil
+			}
 			return c.rawDeletePath(ctx, "/expenses/"+id)
 		})
+	})
+
+	t.Run("get_update_delete_expense_cycle", func(t *testing.T) {
+		if expenseID == "" || categoryID == "" {
+			t.Skip("create_expense did not produce required ids")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+
+		got := h.callOK(ctx, "clockify_get_expense", map[string]any{
+			"expense_id": expenseID,
+		})
+		if gotID, _ := extractDataMap(t, got)["id"].(string); gotID != expenseID {
+			t.Fatalf("get_expense id mismatch: got %q want %q", gotID, expenseID)
+		}
+
+		updated := h.callOK(ctx, "clockify_update_expense", map[string]any{
+			"expense_id":    expenseID,
+			"change_fields": []any{"NOTES", "AMOUNT"},
+			"notes":         c.LivePrefix("exp-updated", 0),
+			"amount":        2.0,
+		})
+		if updatedID, _ := extractDataMap(t, updated)["id"].(string); updatedID != expenseID {
+			t.Fatalf("update_expense id mismatch: got %q want %q", updatedID, expenseID)
+		}
+
+		dry := h.callOK(ctx, "clockify_delete_expense", map[string]any{
+			"expense_id": expenseID,
+			"dry_run":    true,
+		})
+		sc, _ := dry["structuredContent"].(map[string]any)
+		data, _ := sc["data"].(map[string]any)
+		if dryRun, _ := data["dry_run"].(bool); !dryRun {
+			t.Fatalf("delete_expense dry_run did not return dry_run:true envelope: %#v", sc)
+		}
+
+		_ = h.callOK(ctx, "clockify_delete_expense", map[string]any{
+			"expense_id": expenseID,
+		})
+		expenseDeleted = true
 	})
 
 	t.Run("get_expense_rejects_nonexistent_id", func(t *testing.T) {

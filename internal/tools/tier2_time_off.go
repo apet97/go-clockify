@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -67,11 +68,11 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		{
 			Tool: toolRW("clockify_create_time_off_request",
 				"Create a time off request under a policy",
-				map[string]any{"type": "object", "required": []string{"policy_id", "start", "end"}, "properties": map[string]any{
+				map[string]any{"type": "object", "required": []string{"policy_id", "start", "end", "note"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 					"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
 					"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-					"note":      map[string]any{"type": "string", "description": "Optional note/reason"},
+					"note":      map[string]any{"type": "string", "description": "Required note/reason"},
 					"half_day":  map[string]any{"type": "boolean", "description": "Request half day"},
 				}}),
 			ReadOnlyHint: false,
@@ -86,10 +87,12 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
-					"start":      map[string]any{"type": "string"},
-					"end":        map[string]any{"type": "string"},
 					"note":       map[string]any{"type": "string"},
-					"half_day":   map[string]any{"type": "boolean"},
+					"status": map[string]any{
+						"type":        "string",
+						"description": "Status to set via Clockify's PATCH route",
+						"enum":        []string{"APPROVED", "REJECTED"},
+					},
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -310,21 +313,33 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	if startRaw == "" || endRaw == "" {
 		return ResultEnvelope{}, fmt.Errorf("start and end are required")
 	}
+	note := stringArg(args, "note")
+	if note == "" {
+		return ResultEnvelope{}, fmt.Errorf("note is required")
+	}
+	days, err := timeOffRequestDays(startRaw, endRaw)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
+	halfDay, _ := args["half_day"].(bool)
 	payload := map[string]any{
-		"start": startRaw,
-		"end":   endRaw,
-	}
-	if note := stringArg(args, "note"); note != "" {
-		payload["note"] = note
-	}
-	if halfDay, ok := args["half_day"].(bool); ok {
-		payload["halfDay"] = halfDay
+		"note": note,
+		"timeOffPeriod": map[string]any{
+			"period": map[string]any{
+				"start": startRaw,
+				"end":   endRaw,
+				"days":  days,
+			},
+			"isHalfDay":            halfDay,
+			"halfDayPeriod":        "NOT_DEFINED",
+			"timeOffHalfDayPeriod": "NOT_DEFINED",
+		},
 	}
 
 	var result map[string]any
@@ -342,6 +357,23 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	}), nil
 }
 
+func timeOffRequestDays(startRaw, endRaw string) (int, error) {
+	start, err := parseFlexibleDateTime(startRaw, time.UTC)
+	if err != nil {
+		return 0, fmt.Errorf("start: %w", err)
+	}
+	end, err := parseFlexibleDateTime(endRaw, time.UTC)
+	if err != nil {
+		return 0, fmt.Errorf("end: %w", err)
+	}
+	startDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
+	endDay := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, time.UTC)
+	if endDay.Before(startDay) {
+		return 0, fmt.Errorf("end must be on or after start")
+	}
+	return int(endDay.Sub(startDay).Hours()/24) + 1, nil
+}
+
 func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	policyID := stringArg(args, "policy_id")
 	requestID := stringArg(args, "request_id")
@@ -357,36 +389,30 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	// Fetch existing for merge
-	var existing map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
-	}
 
-	changed := make([]string, 0, 4)
-	if v := stringArg(args, "start"); v != "" {
-		existing["start"] = v
-		changed = append(changed, "start")
-	}
-	if v := stringArg(args, "end"); v != "" {
-		existing["end"] = v
-		changed = append(changed, "end")
-	}
+	body := map[string]any{}
+	changed := make([]string, 0, 2)
 	if v := stringArg(args, "note"); v != "" {
-		existing["note"] = v
+		body["note"] = v
 		changed = append(changed, "note")
 	}
-	if halfDay, ok := args["half_day"].(bool); ok {
-		existing["halfDay"] = halfDay
-		changed = append(changed, "halfDay")
+	if status := stringArg(args, "status"); status != "" {
+		if status != "APPROVED" && status != "REJECTED" {
+			return ResultEnvelope{}, fmt.Errorf("status must be APPROVED or REJECTED; got %q", status)
+		}
+		body["status"] = status
+		changed = append(changed, "status")
+	}
+	if len(body) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("at least one field (note, status) must be provided for update")
 	}
 
 	var result map[string]any
-	if err := s.Client.Put(ctx, path, existing, &result); err != nil {
+	if err := s.Client.Patch(ctx, path, body, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -464,11 +490,11 @@ func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (Resu
 	}
 
 	var result map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID, "approve")
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
+	if err := s.Client.Patch(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -495,18 +521,18 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	payload := map[string]any{
-		"status": "DENIED",
+		"status": "REJECTED",
 	}
 	if note := stringArg(args, "note"); note != "" {
 		payload["note"] = note
 	}
 
 	var result map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID, "deny")
+	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
+	if err := s.Client.Patch(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 

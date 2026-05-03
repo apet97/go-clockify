@@ -36,10 +36,14 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 			})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			respondJSON(t, w, map[string]any{
-				"id":       "inv1",
-				"status":   "DRAFT",
-				"currency": "USD",
-				"items":    []map[string]any{{"id": "item1", "description": "Hour"}},
+				"id":         "inv1",
+				"clientId":   "c1",
+				"number":     "INV-1",
+				"issuedDate": "2026-04-01T00:00:00Z",
+				"dueDate":    "2026-05-01T00:00:00Z",
+				"status":     "DRAFT",
+				"currency":   "USD",
+				"items":      []map[string]any{{"id": "item1", "description": "Hour"}},
 			})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices":
 			respondJSON(t, w, map[string]any{"id": "inv-new", "clientId": "c1", "status": "DRAFT"})
@@ -82,10 +86,12 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 
 	// 3. createInvoice — happy
 	res, err = svc.createInvoice(ctx, map[string]any{
-		"client_id": "c1",
-		"currency":  "USD",
-		"due_date":  "2026-05-01",
-		"note":      "Q2 invoice",
+		"client_id":   "c1",
+		"number":      "INV-NEW",
+		"issued_date": "2026-04-01T00:00:00Z",
+		"currency":    "USD",
+		"due_date":    "2026-05-01T00:00:00Z",
+		"note":        "Q2 invoice",
 	})
 	mustOK(t, res, err, "clockify_create_invoice")
 
@@ -96,12 +102,14 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 
 	// 4. updateInvoice — happy
 	res, err = svc.updateInvoice(ctx, map[string]any{
-		"invoice_id": "inv1",
-		"client_id":  "c1",
-		"currency":   "EUR",
-		"due_date":   "2026-06-01",
-		"note":       "updated",
-		"status":     "SENT",
+		"invoice_id":  "inv1",
+		"client_id":   "c1",
+		"number":      "INV-1A",
+		"issued_date": "2026-04-02T00:00:00Z",
+		"currency":    "EUR",
+		"due_date":    "2026-06-01T00:00:00Z",
+		"note":        "updated",
+		"status":      "SENT",
 	})
 	mustOK(t, res, err, "clockify_update_invoice")
 
@@ -177,6 +185,7 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		"description": "Consulting",
 		"quantity":    8,
 		"unit_price":  150,
+		"item_type":   "NEW DEFAULT",
 	})
 	mustOK(t, res, err, "clockify_add_invoice_item")
 
@@ -192,6 +201,7 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		"description": "Updated description",
 		"quantity":    10,
 		"unit_price":  175,
+		"item_type":   "NEW DEFAULT",
 	})
 	mustOK(t, res, err, "clockify_update_invoice_item")
 

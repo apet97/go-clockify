@@ -61,7 +61,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":     "object",
 			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{
-				"amount":      map[string]any{"type": "number", "description": "Expense amount (major currency units)"},
+				"amount":      map[string]any{"type": "number", "description": "Raw upstream expense amount value; no client-side currency scaling is applied"},
 				"date":        map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"category_id": map[string]any{"type": "string", "description": "Expense category ID (required)"},
 				"user_id":     map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
@@ -306,6 +306,15 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	path, err := paths.Workspace(wsID, "expenses", expenseID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	var existing map[string]any
+	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	// changeFields is mandatory and case-sensitive — without it the
 	// upstream silently ignores every other field per probe finding
@@ -328,11 +337,17 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	}
 	if v, ok := args["amount"].(float64); ok {
 		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
+	} else if v, ok := existing["amount"].(float64); ok {
+		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
 	}
 	if v := stringArg(args, "date"); v != "" {
 		form.Set("date", v)
+	} else if v, _ := existing["date"].(string); v != "" {
+		form.Set("date", v)
 	}
 	if v := stringArg(args, "category_id"); v != "" {
+		form.Set("categoryId", v)
+	} else if v, _ := existing["categoryId"].(string); v != "" {
 		form.Set("categoryId", v)
 	}
 	if v := stringArg(args, "project_id"); v != "" {
@@ -341,20 +356,26 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if v := stringArg(args, "task_id"); v != "" {
 		form.Set("taskId", v)
 	}
-	if v := stringArg(args, "user_id"); v != "" {
-		form.Set("userId", v)
+	userID := stringArg(args, "user_id")
+	if userID == "" {
+		current, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+		}
+		userID = current.ID
+	}
+	if userID != "" {
+		form.Set("userId", userID)
 	}
 	if v := stringArg(args, "notes"); v != "" {
 		form.Set("notes", v)
 	}
 	if v, ok := args["billable"].(bool); ok {
 		form.Set("billable", strconv.FormatBool(v))
+	} else if v, ok := existing["billable"].(bool); ok {
+		form.Set("billable", strconv.FormatBool(v))
 	}
 
-	path, err := paths.Workspace(wsID, "expenses", expenseID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
 	var updated map[string]any
 	if err := s.Client.PutMultipart(ctx, path, form, &updated); err != nil {
 		return ResultEnvelope{}, err

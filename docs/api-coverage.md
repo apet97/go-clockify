@@ -33,11 +33,17 @@ safety classification, and test coverage. Generated from
 | **mocked integration** | `go test` with httptest mocks | Client→API path, error mapping, retry behaviour |
 | **live read-only** | `-tags=livee2e` read-only tier | Schema drift, auth flow, rate-limit behaviour |
 | **sacrificial mutating** | `-tags=livee2e` with `CLOCKIFY_LIVE_WRITE_ENABLED=true` | Full CRUD, audit phases |
+| **live-probed unsupported** | `-tags=livee2e` tool call reaches Clockify and asserts a concrete 4xx / workspace-state response | Upstream gaps, plan gates, permission gates, unsupported routes |
 | **scheduled workflow** | `.github/workflows/live-contract.yml` cron | Authoritative evidence for launch gates |
 
 ---
 
 ## Tier 1 — Core tools (33)
+
+The per-tool tables below list the stable local test coverage that
+ships with normal CI. The manual sacrificial-workspace section later
+in this document records the exhaustive live-probe layer added on top
+of these unit/mocked tests.
 
 Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 `/workspaces/{ws}/projects`, `/workspaces/{ws}/clients`,
@@ -301,23 +307,25 @@ between those descriptors and the live Clockify API's current accepted fields.
 | Tool | Tier | dry_run in schema | Live-tested | Notes |
 |------|------|-------------------|-------------|-------|
 | `clockify_delete_entry` | 1 | via enforcement pipeline | yes (`TestLiveDryRunDoesNotMutate`) | Only Tier 1 destructive tool |
-| `clockify_delete_custom_field` | 2 | yes | no | Described as "supports dry_run preview" |
-| `clockify_delete_expense` | 2 | no | no | |
-| `clockify_delete_expense_category` | 2 | no | no | |
-| `clockify_delete_holiday` | 2 | yes | no | "supports dry_run preview" |
-| `clockify_delete_user_group_admin` | 2 | yes | no | "supports dry_run preview" |
-| `clockify_delete_invoice` | 2 | no | no | Billing |
-| `clockify_delete_invoice_item` | 2 | no | no | Billing |
-| `clockify_delete_shared_report` | 2 | no | no | |
-| `clockify_delete_assignment` | 2 | yes | no | Minimal dry-run only; Clockify has no single-assignment GET preview route |
-| `clockify_delete_time_off_request` | 2 | yes | no | "supports dry_run preview" |
-| `clockify_delete_webhook` | 2 | no | no | external_side_effect |
-| `clockify_remove_user_from_group` | 2 | no | no | Admin (destructive user op) |
-| `clockify_deactivate_user` | 2 | no | no | Admin (classified mutating, not destructive) |
+| `clockify_delete_custom_field` | 2 | yes | conditional | Live test exercises this when the workspace is below the 50 custom-field cap; cap-skip is documented |
+| `clockify_delete_expense` | 2 | yes | yes | Expense dry-run + real delete in `TestLiveT2ExpensesCRUD` |
+| `clockify_delete_expense_category` | 2 | no | yes (4xx) | Live-probed archive-before-delete constraint; API exposes no archive route |
+| `clockify_delete_holiday` | 2 | yes | yes (4xx) | Bogus-id/not-found path pinned; real created holiday cleanup uses raw client |
+| `clockify_delete_user_group_admin` | 2 | yes | yes | Dry-run + real delete in `TestLiveT2GroupsHolidaysCRUD` |
+| `clockify_delete_invoice` | 2 | yes | yes | Billing dry-run + real delete in `TestLiveT2InvoicesCRUD` |
+| `clockify_delete_invoice_item` | 2 | yes | yes | Billing line-order delete in `TestLiveT2InvoicesCRUD` |
+| `clockify_delete_shared_report` | 2 | yes | yes | Dry-run + real delete in `TestLiveT2SharedReportsCRUDAndExports` |
+| `clockify_delete_assignment` | 2 | yes | yes | Minimal dry-run; real delete on recurring-assignment route |
+| `clockify_delete_time_off_request` | 2 | yes | yes / 4xx | Real request delete when permitted; otherwise permission/route response pinned |
+| `clockify_delete_webhook` | 2 | yes | yes | Dry-run + real delete in `TestLiveT2WebhooksCRUD` |
+| `clockify_remove_user_from_group` | 2 | yes | yes | Dry-run + real remove in `TestLiveT2UserAdminCRUDAndOwnerSafety` |
+| `clockify_deactivate_user` | 2 | yes | yes (dry-run only) | Owner deactivation is never executed; dry-run envelope is pinned |
 
-**Dry-run support: 6 of 14** (43%) destructive tools have dry_run wired.
-**Dry-run live-tested: 1 of 14** (7%). The 5 Tier 2 tools with `dry_run`
-in schema have never been exercised against a live Clockify workspace.
+**Dry-run support:** destructive/admin/billing handlers now expose
+dry-run previews where the descriptor supports them. The exhaustive
+manual suite live-probes every destructive tool name; some assertions
+intentionally capture upstream 4xx constraints rather than a successful
+preview/delete pair.
 
 ### Policy-mode live test coverage
 
@@ -373,12 +381,23 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2ProjectAdminCRUD` | `seed_project`, `create_project_template`, `get_project_template`, `update_project_estimate`, `set_project_memberships`, `archive_projects` | success path |
 | `TestLivePolicyModes` | `clockify_create_client` parametrised over all 5 policy modes (`read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full`) | gate behaviour pinned |
 | `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope; `clockify_create_tag` (Tier 1) seeded × 11 | success path |
+| `TestLiveTier1RemainingCRUD` | remaining Tier-1 tool names not covered by the first campaign: `get_project`, `list_clients`, `list_entries`, `create_task`, `log_time`, `update_entry`, `find_and_update_entry`, `switch_project`, `stop_timer`, `search_tools` | success path |
+| `TestLiveT2InvoicesCRUD` | all 12 invoice tools: invoice create/list/get/update/delete, invoice report, item add/list/delete, send dry-run, mark-paid dry-run + real; update-item route asserted as unsupported on this Clockify version | success path + documented unsupported `PUT /items/{order}` 405 |
+| `TestLiveT2SharedReportsCRUDAndExports` | all 6 shared-report tools: SUMMARY create/get/update/export JSON/PDF/delete; DETAILED/WEEKLY JSON export when workspace fixtures exist | success path / conditional export breadth |
+| `TestLiveT2UserAdminCRUDAndOwnerSafety` | all 8 user-admin tools: user-group create/update/add/remove/delete, remove dry-run, deactivate owner dry-run, update-role unsupported route probe | success path + documented unsupported role route 405 |
+| `TestLiveT2WebhooksCRUD` | all 7 webhook tools: create/get/update/list-events/test dry-run/delete dry-run/delete using live `webhookEvent` + trigger-source body shape | success path |
+| `TestLiveT2TimeOffRemainingTools` | all 12 time-off tool names: policy/request list/get/create/update/delete/status/balance paths; request create reaches live body contract and unsupported/permission routes are asserted where Clockify rejects the operation | success path + plan/permission/unsupported-route probes |
+| `TestLiveT2ApprovalsRemainingTools` | all 6 approvals tool names: list, submit period/periodStart, get, approve/reject dry-run, withdraw | success path + documented approval period / GET-route 4xx probes |
 
-**Live-tested tools (campaign expansion):** ~25 of 33 Tier 1 tools
-(76%) and ~40 of 88 Tier 2 tools (45%) are now exercised through the
-MCP path against the sacrificial workspace. Remaining pinned coverage
-is limited to documented upstream constraints such as expense-category
-archive-before-delete and workspace-state caps.
+**Live-probed tool coverage (manual campaign expansion):** all 121
+catalog tools (33 Tier 1 + 88 Tier 2) are now named in `tests/e2e_live*.go`
+and exercised through the MCP path against the sacrificial workspace.
+That does **not** mean every tool has a live success path: the tests
+distinguish successful CRUD from concrete upstream constraints such as
+expense-category archive-before-delete, custom-field workspace caps,
+invoice-item update 405, user-role update 405, time-off permission /
+unsupported routes, and approval-period or approval GET-route 4xx
+responses.
 
 ### API contract fixes closed by the campaign (May 2026)
 
@@ -405,6 +424,27 @@ upstream limitation:
 9. Project memberships use PATCH replace semantics and return the
    updated memberships from the full project object.
 10. Custom-field descriptors advertise the live enum values.
+11. Invoice create/update carry live-required `number` and RFC3339
+    `issuedDate`; mark-paid carries forward the required invoice
+    fields before setting `status=PAID`; invoice items use
+    workspace item type names, `applyTaxes`, and line-order path
+    parameters. `update_invoice_item` is live-pinned as unsupported
+    (`PUT /items/{order}` returns 405 on this Clockify version).
+12. Expense update now fetches and carries forward live-required
+    multipart fields (`userId`, `date`, `amount`, `categoryId`,
+    `billable`) before applying the requested `change_fields`.
+13. Webhook create/update use the live `webhookEvent`,
+    `triggerSourceType`, and `triggerSource` body shape rather than
+    the old plural `events` array. Webhook names are constrained to
+    2-30 characters.
+14. Time-off request create uses nested `timeOffPeriod.period` with
+    `start`, `end`, and computed inclusive `days`; request status
+    changes use `PATCH /time-off/policies/{policyId}/requests/{id}`
+    with `status=APPROVED|REJECTED`.
+15. Approval submit uses the documented `period` + `periodStart`
+    body. The sacrificial workspace currently returns
+    "Approval period has changed..." for the probed weekly submit,
+    and per-id approval GET is pinned as 405 unsupported.
 
 ### Workspace-state findings
 
@@ -422,19 +462,22 @@ upstream limitation:
 
 ## Gaps
 
-1. **Tier 2 live coverage (success path):** ~40 of 88 Tier 2 tools
-   are now exercised through the MCP path. Remaining gaps are mostly
-   surfaces with external side effects, workspace-state caps, or
-   premium/admin semantics that need separate blast-radius review.
+1. **Full-success live coverage:** all 121 catalog tools are
+   live-probed through MCP, but some remain asserted as upstream
+   unsupported, permission-gated, plan-gated, or workspace-state
+   limited rather than full success paths.
 2. **Schema-drift for mutating endpoints:** Only read-side schemas are
    drift-checked. Request payload schemas (tool JSON Schema descriptors)
    are not automatically compared against the live API's accepted fields.
-3. **Dry-run exhaustiveness:** 6 of 14 destructive tools have `dry_run` wired;
-   only 1 (`clockify_delete_entry`) is live-tested. See Dry-run/policy section
-   above for the full per-tool breakdown.
-4. **Policy exhaustiveness:** 2 of 5 policy modes are live-tested
-   (`standard` implicitly via `TestE2EMutating`, `time_tracking_safe`
-   explicitly). See Policy-mode table above for per-mode status.
+3. **Scheduled evidence breadth:** the exhaustive tool probes are
+   manual/local artefacts. The scheduled cron intentionally keeps a
+   narrower `-run` regex until the maintainer separately approves
+   nightly blast radius for admin/billing/webhook/time-off/approval
+   side effects.
+4. **Dry-run semantics:** destructive dry-run is broader than before,
+   but not every destructive tool exposes a dry-run preview route.
+   Several tools rely on minimal dry-run envelopes or upstream 4xx
+   constraints because Clockify lacks a safe preview endpoint.
 5. **Rate-limit behaviour:** No automated tests exercise Clockify's rate
    limiter or the MCP server's retry/backoff behaviour under live load.
 6. **Pagination consistency:** `clockify_list_entries`, `clockify_list_projects`,
@@ -443,23 +486,23 @@ upstream limitation:
 
 ## Recommended next tests (safe, in priority order)
 
-1. Read-only live tests for the remaining 16 Tier 1 read-only tools
-   (4 of 20 are covered by `TestE2EReadOnly`)
-2. Read-only live tests for high-value Tier 2 read-only tools
-   (e.g., `clockify_list_custom_fields`, `clockify_list_webhooks`)
-3. Schema-drift test extension to mutating endpoint request schemas
-4. Dry-run exhaustiveness sweep across all 14 destructive tools
+1. Promote only the low-blast-radius portions of the exhaustive manual
+   suite into `live-contract.yml` after separate cron review.
+2. Schema-drift test extension to mutating endpoint request schemas.
+3. Dedicated pagination boundary tests for the list endpoints whose
+   page/page-size behaviour is still only unit-covered.
+4. Optional rate-limit / retry-behaviour probe against a disposable
+   workspace with explicit operator approval.
 
-## Known unresolved API contract questions
+## Known API contract notes
 
 Probe-lab evidence (`clockify-api-probe-lab/findings/`) raised a small
-number of numeric / shape questions that were not resolved before the
-PRs in the recent contract-fix wave (#53–#56) merged. The handlers
-currently pass through whatever the upstream returns; these notes
-record what would have to be probed before any conversion or
-auto-validation could be added safely.
+number of numeric / shape questions during the live campaign. The
+handlers intentionally pass through upstream money values as raw API
+numbers; no cents-to-decimal or decimal-to-cents conversion is applied
+inside go-clockify.
 
-### invoice line-item amounts (unresolved)
+### invoice line-item amounts (raw minor units)
 
 - **Source:** `clockify-api-probe-lab/findings/invoices.md` lines
   77–95 and the open-questions section.
@@ -470,18 +513,14 @@ auto-validation could be added safely.
   integer minor units (cents). The list-invoice envelope's top-level
   `amount`, `paid`, `balance` fields use the same `<integer cents>`
   notation in the probe write-up.
-- **Status in go-clockify:** `clockify_get_invoice` and
-  `clockify_list_invoices` (and `clockify_list_invoice_items`, which
-  PR #53 repointed to the embedded array) all surface the upstream
-  numbers verbatim. No conversion is performed and no schema
-  documentation in the descriptors states a unit.
-- **Open question (low priority):** is `unitPrice` always integer
-  minor units, or is the unit currency-dependent? Until that is
-  proved against multiple workspace currencies, the tool output
-  must be treated by callers as raw upstream values, not as a
-  pre-converted decimal amount.
+- **Status in go-clockify:** `clockify_get_invoice`,
+  `clockify_list_invoices`, `clockify_list_invoice_items`,
+  `clockify_add_invoice_item`, and `clockify_update_invoice_item`
+  surface/send these numbers verbatim. The descriptors now call this
+  out as a raw upstream value; the live API uses minor units/cents for
+  invoice item `unitPrice`.
 
-### expense `amount` vs `total` scaling (unresolved)
+### expense `amount` vs `total` scaling (raw pass-through)
 
 - **Source:** `clockify-api-probe-lab/findings/expenses.md`
   lines 155–161 and open-question #1.
@@ -492,14 +531,13 @@ auto-validation could be added safely.
   units (×100 scaling); (b) `amount` is a multiplier against a
   workspace default rate. The probe could not distinguish these
   without more workspaces.
-- **Status in go-clockify:** `clockify_create_expense` (fixed in
-  PR #53 to use multipart) accepts whatever the caller passes for
-  `amount`; `clockify_list_expenses` and `clockify_get_expense`
-  return the upstream `total` verbatim.
-- **Open question (low priority):** confirm direction and rate
-  before exposing either number as a "decimal amount" in the tool
-  schema. Until then, the descriptor must keep `amount` documented
-  as "the value the API expects, no client-side scaling".
+- **Status in go-clockify:** `clockify_create_expense` accepts
+  whatever the caller passes for `amount`; `clockify_update_expense`
+  carries the existing required amount forward unless the caller
+  explicitly changes it; `clockify_list_expenses` and
+  `clockify_get_expense` return upstream totals verbatim. The
+  descriptor now describes `amount` as a raw upstream value with no
+  client-side scaling.
 
 ### expense `projectId` optional-vs-required (unresolved)
 
@@ -575,4 +613,4 @@ committed into go-clockify.
 
 ---
 
-*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-02. Re-run verification after `make gen-tool-catalog`.*
+*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-03. Re-run verification after `make gen-tool-catalog`.*
