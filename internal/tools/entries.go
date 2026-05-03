@@ -20,10 +20,7 @@ import (
 func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	page, pageSize := paginationFromArgs(args)
 
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
-	}
+	baseQuery := map[string]string{}
 
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
@@ -32,33 +29,47 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
 		}
-		query["start"] = timeparse.FormatISO(t)
+		baseQuery["start"] = timeparse.FormatISO(t)
 	}
 	if endRaw != "" {
 		t, err := timeparse.ParseDatetime(endRaw, time.UTC)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
 		}
-		query["end"] = timeparse.FormatISO(t)
+		baseQuery["end"] = timeparse.FormatISO(t)
 	}
+
+	projectFilter := strings.TrimSpace(stringArg(args, "project"))
+	if projectFilter != "" {
+		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, err := s.listEntriesWithProjectFilter(ctx, baseQuery, projectFilter, page, pageSize)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+
+		meta := map[string]any{
+			"workspaceId":    wsID,
+			"userId":         userID,
+			"count":          len(entries),
+			"page":           page,
+			"pageSize":       pageSize,
+			"projectFilter":  projectFilter,
+			"filteredCount":  filteredCount,
+			"pagesFetched":   pagesFetched,
+			"entriesScanned": entriesScanned,
+		}
+		return ok("clockify_list_entries", entries, meta), nil
+	}
+
+	query := make(map[string]string, len(baseQuery)+2)
+	for k, v := range baseQuery {
+		query[k] = v
+	}
+	query["page"] = strconv.Itoa(page)
+	query["page-size"] = strconv.Itoa(pageSize)
 
 	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, query)
 	if err != nil {
 		return ResultEnvelope{}, err
-	}
-
-	// Optional client-side project filter
-	projectFilter := stringArg(args, "project")
-	if projectFilter != "" {
-		lower := strings.ToLower(projectFilter)
-		filtered := make([]clockify.TimeEntry, 0, len(entries))
-		for _, e := range entries {
-			if strings.EqualFold(e.ProjectID, projectFilter) ||
-				strings.Contains(strings.ToLower(e.ProjectName), lower) {
-				filtered = append(filtered, e)
-			}
-		}
-		entries = filtered
 	}
 
 	meta := map[string]any{
@@ -374,11 +385,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 
 // listEntriesWithQuery is the shared helper for fetching time entries with query parameters.
 func (s *Service) listEntriesWithQuery(ctx context.Context, query map[string]string) ([]clockify.TimeEntry, string, string, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return nil, "", "", err
-	}
-	user, err := s.getCurrentUser(ctx)
+	wsID, userID, path, err := s.currentUserEntriesPath(ctx)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -388,13 +395,82 @@ func (s *Service) listEntriesWithQuery(ctx context.Context, query map[string]str
 	if _, ok := query["page-size"]; !ok {
 		query["page-size"] = "100"
 	}
-	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
-	if err != nil {
-		return nil, "", "", err
-	}
 	var entries []clockify.TimeEntry
 	if err := s.Client.Get(ctx, path, query, &entries); err != nil {
 		return nil, "", "", err
 	}
-	return entries, wsID, user.ID, nil
+	return entries, wsID, userID, nil
+}
+
+func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery map[string]string, projectFilter string, page, pageSize int) ([]clockify.TimeEntry, string, string, int, int, int, error) {
+	const upstreamPageSize = 200
+
+	wsID, userID, path, err := s.currentUserEntriesPath(ctx)
+	if err != nil {
+		return nil, "", "", 0, 0, 0, err
+	}
+
+	selected := make([]clockify.TimeEntry, 0, pageSize)
+	filteredCount := 0
+	entriesScanned := 0
+	pagesFetched := 0
+	startOffset := (page - 1) * pageSize
+	endOffset := startOffset + pageSize
+
+	for upstreamPage := 1; upstreamPage <= aggregatePageSafetyStop; upstreamPage++ {
+		query := make(map[string]string, len(baseQuery)+2)
+		for k, v := range baseQuery {
+			query[k] = v
+		}
+		query["page"] = strconv.Itoa(upstreamPage)
+		query["page-size"] = strconv.Itoa(upstreamPageSize)
+
+		var batch []clockify.TimeEntry
+		if err := s.Client.Get(ctx, path, query, &batch); err != nil {
+			return nil, "", "", 0, 0, 0, err
+		}
+		pagesFetched++
+		entriesScanned += len(batch)
+
+		for _, entry := range batch {
+			if !entryMatchesProjectFilter(entry, projectFilter) {
+				continue
+			}
+			if filteredCount >= startOffset && filteredCount < endOffset {
+				selected = append(selected, entry)
+			}
+			filteredCount++
+		}
+
+		if len(batch) < upstreamPageSize {
+			return selected, wsID, userID, filteredCount, pagesFetched, entriesScanned, nil
+		}
+	}
+
+	return nil, "", "", 0, 0, 0, fmt.Errorf("list entries project filter pagination safety stop reached at %d pages; narrow the date range", aggregatePageSafetyStop)
+}
+
+func entryMatchesProjectFilter(entry clockify.TimeEntry, projectFilter string) bool {
+	projectFilter = strings.TrimSpace(projectFilter)
+	if projectFilter == "" {
+		return true
+	}
+	return strings.EqualFold(entry.ProjectID, projectFilter) ||
+		strings.Contains(strings.ToLower(entry.ProjectName), strings.ToLower(projectFilter))
+}
+
+func (s *Service) currentUserEntriesPath(ctx context.Context) (string, string, string, error) {
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return "", "", "", err
+	}
+	user, err := s.getCurrentUser(ctx)
+	if err != nil {
+		return "", "", "", err
+	}
+	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
+	if err != nil {
+		return "", "", "", err
+	}
+	return wsID, user.ID, path, nil
 }

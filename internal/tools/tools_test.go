@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1192,6 +1193,90 @@ func TestListEntriesPaginationSanitizesBounds(t *testing.T) {
 				t.Fatalf("unexpected pagination meta: %+v", result.Meta)
 			}
 		})
+	}
+}
+
+func TestListEntriesProjectFilterScansBeyondFirstPage(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			q := r.URL.Query()
+			if q.Get("page-size") != "200" {
+				t.Fatalf("expected upstream page-size=200 for filtered scan, got %s", r.URL.RawQuery)
+			}
+			switch q.Get("page") {
+			case "1":
+				entries := make([]clockify.TimeEntry, 200)
+				for i := range entries {
+					entries[i] = clockify.TimeEntry{ID: fmt.Sprintf("other-%03d", i), ProjectID: "other", ProjectName: "Other"}
+				}
+				respondJSON(t, w, entries)
+			case "2":
+				respondJSON(t, w, []clockify.TimeEntry{{ID: "target", ProjectID: "p-alpha", ProjectName: "Alpha"}})
+			default:
+				t.Fatalf("unexpected page for filtered scan: %s", r.URL.RawQuery)
+			}
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListEntries(context.Background(), map[string]any{"project": "Alpha"})
+	if err != nil {
+		t.Fatalf("list entries failed: %v", err)
+	}
+	entries, ok := result.Data.([]clockify.TimeEntry)
+	if !ok {
+		t.Fatalf("expected []clockify.TimeEntry, got %T", result.Data)
+	}
+	if len(entries) != 1 || entries[0].ID != "target" {
+		t.Fatalf("expected target entry from page 2, got %+v", entries)
+	}
+	if result.Meta["filteredCount"] != 1 || result.Meta["pagesFetched"] != 2 || result.Meta["entriesScanned"] != 201 {
+		t.Fatalf("unexpected filter metadata: %+v", result.Meta)
+	}
+}
+
+func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			if r.URL.Query().Get("page") != "1" {
+				t.Fatalf("unexpected extra page for short filtered result: %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{
+				{ID: "e1", ProjectID: "p-alpha", ProjectName: "Alpha"},
+				{ID: "e2", ProjectID: "p-alpha", ProjectName: "Alpha"},
+				{ID: "e3", ProjectID: "p-alpha", ProjectName: "Alpha"},
+				{ID: "e4", ProjectID: "p-alpha", ProjectName: "Alpha"},
+				{ID: "e5", ProjectID: "p-alpha", ProjectName: "Alpha"},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ListEntries(context.Background(), map[string]any{"project": "p-alpha", "page": 2, "page_size": 2})
+	if err != nil {
+		t.Fatalf("list entries failed: %v", err)
+	}
+	entries, ok := result.Data.([]clockify.TimeEntry)
+	if !ok {
+		t.Fatalf("expected []clockify.TimeEntry, got %T", result.Data)
+	}
+	if len(entries) != 2 || entries[0].ID != "e3" || entries[1].ID != "e4" {
+		t.Fatalf("expected second page of filtered entries, got %+v", entries)
+	}
+	if result.Meta["count"] != 2 || result.Meta["filteredCount"] != 5 || result.Meta["page"] != 2 || result.Meta["pageSize"] != 2 {
+		t.Fatalf("unexpected pagination metadata: %+v", result.Meta)
 	}
 }
 
