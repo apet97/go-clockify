@@ -91,6 +91,15 @@ func TestCheckDryRunMinimal(t *testing.T) {
 	if action != MinimalFallback {
 		t.Fatalf("expected MinimalFallback, got %d", action)
 	}
+
+	args = map[string]any{"dry_run": true}
+	action, active = CheckDryRun("clockify_delete_assignment", args, true)
+	if !active {
+		t.Fatal("expected active=true")
+	}
+	if action != MinimalFallback {
+		t.Fatalf("expected MinimalFallback for assignment delete, got %d", action)
+	}
 }
 
 func TestCheckDryRunDefaultDestructive(t *testing.T) {
@@ -128,7 +137,6 @@ func TestPreviewToolFor(t *testing.T) {
 		"clockify_delete_invoice":          "clockify_get_invoice",
 		"clockify_delete_expense":          "clockify_get_expense",
 		"clockify_delete_custom_field":     "clockify_get_custom_field",
-		"clockify_delete_assignment":       "clockify_get_assignment",
 		"clockify_delete_shared_report":    "clockify_get_shared_report",
 		"clockify_delete_time_off_request": "clockify_get_time_off_request",
 		"clockify_delete_webhook":          "clockify_get_webhook",

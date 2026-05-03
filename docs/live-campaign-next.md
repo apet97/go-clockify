@@ -25,21 +25,20 @@ schedule tools. The status, item-by-item against the numbered list:
   (host moved to `reports.api.clockify.me`; write/export tools
   rewired to `type`/`filter` body keys, ws-prefixed PUT/DELETE,
   bare-id GET, and binary-aware export envelope).
-- **#7 — scheduling 10 tools "wrong host"**: **partially fixed.**
+- **#7 — scheduling 10 tools "wrong host"**: **fixed.**
   PR #53 fixed `list_assignments` (`/all` suffix + `start`/`end`).
   PR #55 repointed `filter_schedule_capacity` to per-user totals
   and removed the phantom `list_schedules` tool. The 2026-05-03
   cleanup removed the matching phantom `get_` and `create_`
   schedule tools (no `/scheduling/{id}` or `POST /scheduling`
-  surface exists). The four assignment-CRUD tools (get / create /
-  update / delete on `/assignments/{id}`) still hit a path that
-  was 404 in the probe lab matrix and remain pinned in
-  `TestLiveT2BlockedGroups` — they're a candidate for a future
-  probe + re-route batch but are not in scope for the PR #53–#56
-  wave.
+  surface exists). The four assignment-CRUD tools now use the
+  documented recurring-assignment routes under
+  `/scheduling/assignments/recurring`; `clockify_get_assignment`
+  scans the supported `/assignments/all` date-range endpoint because
+  Clockify exposes no single-assignment GET route.
 - **#8 — `list_time_off_requests` GET→POST**: **fixed in PR #53.**
-- **#9 — `get_user_group` 405**: **fixed in PR #53** (handler scans
-  the LIST response).
+- **#9 — `get_user_group` 405**: **fixed** (handler scans the LIST
+  response).
 - **#10 — `set_project_memberships` PUT→PATCH + envelope**: **fixed
   in PR #53** (PATCH semantics; full project response; REPLACE
   semantics pinned in tests).
@@ -69,10 +68,13 @@ task list is in `docs/launch-candidate-checklist.md` and
 
 ## Branch state
 
-- Branch tip: see `git log -1 --oneline` on `test/full-live-workspace-validation`
-- Status: pushed to `origin/test/full-live-workspace-validation`
-- PR: open, **draft** — do not merge until the bug inventory is
-  triaged. The PR description is the canonical change summary.
+- Historical branch tip: see `git log -1 --oneline` on
+  `test/full-live-workspace-validation`.
+- Status: superseded by merged PRs #53-#57 and the follow-up fixes
+  recorded in `docs/api-coverage.md`.
+- Current task list: use `docs/api-coverage.md` and
+  `docs/launch-candidate-checklist.md`, not the historical
+  "Remaining work" section below.
 
 ## Commits (oldest → newest)
 
@@ -104,92 +106,85 @@ All gated by `//go:build livee2e` and live in `tests/`:
 | `tests/live_helpers_test.go` | (helpers) | – | `setupLiveCampaign`, prefix, cleanup registry, `activateTier2`, raw client primitives, archive-then-delete for projects + clients |
 | `tests/e2e_live_tier1_readonly_test.go` | `TestLiveTier1ReadOnly` | 13 | All 13 previously-uncovered Tier-1 read-only tools |
 | `tests/e2e_live_t2_readonly_test.go` | `TestLiveTier2ReadOnlySweep` | 22 | Read-only sweep across all 11 Tier-2 groups |
-| `tests/e2e_live_t2_blocked_groups_test.go` | `TestLiveT2BlockedGroups` | 11 | shared_reports + scheduling pinned-error contracts |
-| `tests/e2e_live_t2_expenses_test.go` | `TestLiveT2ExpensesCRUD` | 5 | category CRUD + 3 pinned errors |
+| `tests/e2e_live_t2_scheduling_test.go` | `TestLiveT2SchedulingRecurringCRUD` | 1 flow | recurring assignment create/get/update/delete on the live routes |
+| `tests/e2e_live_t2_expenses_test.go` | `TestLiveT2ExpensesCRUD` | 5 | category CRUD + expense create; category delete archive constraint remains pinned |
 | `tests/e2e_live_t2_custom_fields_test.go` | `TestLiveT2CustomFieldsCRUD` | 7 | seeds project; cap-skips field tests when workspace full |
-| `tests/e2e_live_t2_groups_holidays_test.go` | `TestLiveT2GroupsHolidaysCRUD` | 7 | user-group CRUD; pinned-errors for `get_user_group` and `create_holiday` |
-| `tests/e2e_live_t2_project_admin_test.go` | `TestLiveT2ProjectAdminCRUD` | 6 | template / estimate / archive; pinned-error for `set_project_memberships` |
+| `tests/e2e_live_t2_groups_holidays_test.go` | `TestLiveT2GroupsHolidaysCRUD` | 7 | user-group CRUD + holiday create/delete path |
+| `tests/e2e_live_t2_project_admin_test.go` | `TestLiveT2ProjectAdminCRUD` | 6 | template / estimate / memberships / archive |
 | `tests/e2e_live_policy_modes_test.go` | `TestLivePolicyModes` | 5 | parametric `create_client` per policy mode |
 | `tests/e2e_live_pagination_test.go` | `TestLivePaginationOnTags` | 3 | seed 11 tags + pagination meta + walk |
 
-## Bug inventory (13 findings, each pinned as an inverted assertion)
+## Historical bug inventory (13 findings, now closed or documented)
 
-A pinned-error assertion fails the moment its target is fixed,
-forcing the fixer to delete the annotation. Each entry below names
-the surfaced symptom and the most likely fix; full diagnostic context
-is in `docs/api-coverage.md` "Bug inventory surfaced by the
-campaign" and in the pinning subtest's inline comment.
+The original campaign pinned these findings as inverted assertions.
+Those annotations have since been replaced by success-path coverage or
+by explicit upstream/workspace-state limitations. Keep this section as
+provenance for the fixes; use `docs/api-coverage.md` for current
+coverage status.
 
 ### List-shape mismatches (handler reads `[]map[string]any` but upstream wraps)
 
 1. **`clockify_list_invoices`, `clockify_invoice_report`** —
-   upstream returns `{total, invoices:[…]}`. Pinned in
-   `TestLiveTier2ReadOnlySweep`. Likely fix:
-   `internal/tools/tier2_invoices.go` deserialise wrapping struct.
+   upstream returns `{total, invoices:[…]}`. Closed by envelope
+   handling in `internal/tools/tier2_invoices.go`.
 2. **`clockify_list_expenses`, `clockify_expense_report`** —
    upstream returns `{expenses:{expenses:[…]}}` (double-nested).
-   Pinned in `TestLiveTier2ReadOnlySweep` and
-   `TestLiveT2ExpensesCRUD`. Likely fix:
-   `internal/tools/tier2_expenses.go`.
+   Closed by nested-envelope handling in `internal/tools/tier2_expenses.go`.
 3. **`clockify_list_expense_categories`** — upstream returns
-   `{count, categories:[…]}`. Pinned in
-   `TestLiveTier2ReadOnlySweep`.
+   `{count, categories:[…]}`. Closed by category envelope handling.
 4. **`clockify_list_webhooks`** — upstream returns
-   `{workspaceWebhookCount, webhooks:[…]}`. Pinned in
-   `TestLiveTier2ReadOnlySweep`. Likely fix:
-   `internal/tools/tier2_webhooks.go`.
+   `{workspaceWebhookCount, webhooks:[…]}`. Closed by webhook
+   envelope handling.
 
 ### Wrong-endpoint / wrong-host (handler routes wrong)
 
 5. **`clockify_list_webhook_events`** — handler hits
    `/workspaces/{id}/webhooks/events` but the events route is
    per-webhook (`/webhooks/{webhookId}/events`); response is 400
-   "Webhook doesn't belong to Workspace". Pinned in
-   `TestLiveTier2ReadOnlySweep`.
+   "Webhook doesn't belong to Workspace". Closed by returning the
+   static workspace event enum.
 6. **All 6 `shared_reports` tools** — handler routes via
    `api.clockify.me/.../shared-reports*`; Clockify exposes shared
-   reports on `reports.api.clockify.me`. Pinned in
-   `TestLiveT2BlockedGroups` and `TestLiveTier2ReadOnlySweep`.
-   Likely fix: thread reports base URL through
-   `internal/clockify/client.go`.
-7. **All 10 `scheduling` tools** — same root-cause class:
-   scheduling lives on a separate Clockify scheduling host. Pinned
-   in `TestLiveT2BlockedGroups` and `TestLiveTier2ReadOnlySweep`.
+   reports on `reports.api.clockify.me`. Closed by the reports-host
+   client path and live request-shape fixes.
+7. **Scheduling assignment tools** — original handlers targeted
+   unsupported assignment paths and phantom schedule routes. Closed
+   by using live `/assignments/all` list/totals routes, removing
+   phantom schedule tools, and routing assignment CRUD through
+   recurring-assignment endpoints.
 
 ### Method / verb mismatches
 
 8. **`clockify_list_time_off_requests`** — handler GETs
    `/time-off/requests` but upstream returns 405 "Request method
    'GET' is not supported"; the endpoint requires a POST search
-   body. Pinned in `TestLiveTier2ReadOnlySweep`.
+   body. Closed by POST search handling.
 9. **`clockify_get_user_group`** — upstream returns 405 on the
-   per-id GET; only mutating verbs are supported. Pinned in
-   `TestLiveT2GroupsHolidaysCRUD`. Likely fix: scan LIST response.
+   per-id GET; only mutating verbs are supported. Closed by scanning
+   the supported list response.
 10. **`clockify_set_project_memberships`** — handler PUTs to
     `/projects/{id}/memberships` but upstream returns 405; v1 API
-    uses PATCH or a different subroute. Pinned in
-    `TestLiveT2ProjectAdminCRUD`.
+    uses PATCH replace semantics. Closed by switching to PATCH and
+    reading memberships from the full project response.
 
 ### Content-type / body-shape mismatches
 
 11. **`clockify_create_expense`** — handler POSTs
     `application/json` but upstream rejects with 415; expenses
-    require `multipart/form-data` (verified by direct curl probe).
-    Pinned in `TestLiveT2ExpensesCRUD`. Likely fix: thread a
-    multipart body through `internal/clockify/client.go`.
+    require `multipart/form-data` (verified by direct probe).
+    Closed by threading multipart body support through the client.
 12. **`clockify_create_holiday`** — handler sends `{name, date,
     recurring?}` flat; upstream wants nested
     `datePeriod:{startDate, endDate}` plus `userIds`/`userGroupIds`.
-    Pinned in `TestLiveT2GroupsHolidaysCRUD`.
+    Closed by using `datePeriod`, `occursAnnually`, and required
+    assignment envelopes.
 
 ### Descriptor drift
 
 13. **`clockify_create_custom_field`** — descriptor advertises
     "TEXT, NUMBER, DROPDOWN, CHECKBOX, LINK"; upstream enum is
     `{TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX,
-    LINK}`. Detected during `TestLiveT2CustomFieldsCRUD` work; the
-    test sends `TXT` to work around. Likely fix: descriptor
-    docstring update or handler-side translation.
+    LINK}`. Closed by advertising the live enum values.
 
 ## Tests that currently pass (success path, against the sacrificial workspace)
 
@@ -203,12 +198,12 @@ Run: `go test -tags=livee2e -count=1 -timeout 10m ./tests/...`
 - `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` (existing)
 - `TestLiveReadSideSchemaDiff` (existing)
 - `TestLiveTier1ReadOnly` (NEW — all 13 subtests)
-- `TestLiveTier2ReadOnlySweep` (NEW — 22 subtests, mixed success/pinned)
-- `TestLiveT2BlockedGroups` (NEW — 11 pinned-error subtests)
+- `TestLiveTier2ReadOnlySweep` (NEW — 22 subtests)
+- `TestLiveT2SchedulingRecurringCRUD` (NEW — recurring assignment CRUD)
 - `TestLiveT2ExpensesCRUD` (NEW — 5 subtests, mixed)
 - `TestLiveT2CustomFieldsCRUD` (NEW — 7 subtests; cap-skips on this workspace until pruned)
-- `TestLiveT2GroupsHolidaysCRUD` (NEW — 7 subtests, mixed)
-- `TestLiveT2ProjectAdminCRUD` (NEW — 6 subtests, mixed)
+- `TestLiveT2GroupsHolidaysCRUD` (NEW — 7 subtests)
+- `TestLiveT2ProjectAdminCRUD` (NEW — 6 subtests)
 - `TestLivePolicyModes` (NEW — all 5 mode sub-cases)
 - `TestLivePaginationOnTags` (NEW — 3 subtests)
 - `TestLiveContractSkipSentinel` (existing — no-skip guarantee)
@@ -223,43 +218,16 @@ After the post-campaign sweep:
 | Projects (active + archived) | 0 | `rawArchiveAndDeleteProject` works |
 | Tags | 0 | DELETE accepted directly |
 | User groups | 0 | DELETE accepted directly |
-| Holidays | 0 | (no holidays got created — `create_holiday` is broken) |
+| Holidays | 0 | Create/delete path live-tested; cleanup uses direct DELETE |
 | Expense categories | **7** | Upstream requires archival before delete; archive flag is not writable via API on this Clockify version. Documented in `docs/api-coverage.md` as a known workspace-state limitation. Names: `mcp-live-*-exp-cat-0[-renamed]`, plus `mcp-live-probe-cat-archived`. Maintainer must clean these via the Clockify UI. |
 
-## Remaining work
+## Historical remaining work (superseded)
 
-### Convert pinned-error tests into success-path tests
+### Closed handler work
 
-Each bug listed above keeps a pinned-error assertion. When a fix
-lands, the assertion will fire (because the error string disappears)
-and the fixer must delete the annotation. The work, in priority order:
-
-1. **Fix the 4 list-shape mismatches** (#1–#4 above). Each is a
-   surgical handler change in `internal/tools/tier2_*.go`. After the
-   fix, replace the `expectErr` annotation in
-   `TestLiveTier2ReadOnlySweep` with a real shape assertion (e.g.,
-   "data is a slice of N elements"). Recommend grouping all 4 fixes
-   into one PR since they're the same shape problem.
-2. **Fix `clockify_list_webhook_events`** (#5). Reroute handler URL
-   to `/webhooks/{webhookId}/events`; the descriptor will need a
-   `webhook_id` argument since the resource is per-webhook now.
-3. **Decide architecture for shared_reports + scheduling** (#6, #7).
-   These are wider changes — they need a second base URL threaded
-   through `internal/clockify.Client`. Do this in its own design
-   discussion + ADR.
-4. **Fix the 3 method-mismatch handlers** (#8, #9, #10). Each is a
-   surgical handler change. After fix, swap the pinned-error
-   contract for a success-path assertion in the matching test.
-5. **Fix `clockify_create_expense`** (#11). Multipart body builder
-   in `internal/clockify/client.go`; non-trivial. After fix, the
-   downstream `TestLiveT2ExpensesCRUD` tests can be extended to a
-   full create → get → update → delete cycle (the test is currently
-   blocked by this bug).
-6. **Fix `clockify_create_holiday`** (#12). Reshape body to wrap
-   datePeriod and provide sensible defaults.
-7. **Fix `clockify_create_custom_field` descriptor** (#13). Update
-   descriptor enum docstring or add handler translation; remove the
-   TXT-vs-TEXT comment in `TestLiveT2CustomFieldsCRUD` once done.
+The numbered handler bugs above are no longer pending. Current live
+coverage gaps, unresolved numeric-unit questions, and upstream
+workspace-state limitations are tracked in `docs/api-coverage.md`.
 
 ### Workspace state work (no code change required)
 
@@ -372,14 +340,13 @@ git diff --check
   local-only / manual-dispatch-only by design (cron blast radius).
 - It does NOT relax any policy or dry-run default. AGENTS.md:119-124
   is binding.
-- It does NOT fix the bugs it pinned. Each fix is a separate change
-  per the priority list above.
+- The historical pinned bugs are now tracked as closed or as explicit
+  upstream/workspace-state limitations in `docs/api-coverage.md`.
 
 ## Files to read first if you're picking this up
 
 1. `docs/api-coverage.md` — campaign findings and bug inventory
 2. `tests/live_helpers_test.go` — campaign harness (~250 lines)
-3. `tests/e2e_live_t2_readonly_test.go` — 22-tool sweep (good
-   starting point for understanding the pinned-error pattern)
+3. `tests/e2e_live_t2_readonly_test.go` — 22-tool sweep
 4. The PR description on https://github.com/apet97/go-clockify/pull/53
 5. AGENTS.md — binding rules that this work respected
