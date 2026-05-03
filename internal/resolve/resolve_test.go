@@ -138,6 +138,51 @@ func TestResolveUserByNameMultiField(t *testing.T) {
 	}
 }
 
+func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
+	pageOne := make([]map[string]any, 50)
+	for i := range pageOne {
+		pageOne[i] = map[string]any{"id": "filler", "name": "Filler User", "email": "filler@example.com"}
+	}
+	target := map[string]any{"id": "ccc333ddd444eee555fff666", "name": "Dana Scully", "email": "dana@example.com"}
+
+	var pagesSeen []string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws123/users" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		q := r.URL.Query()
+		if got := q.Get("name"); got != "Dana Scully" {
+			t.Fatalf("expected filtered user lookup, got query %q", r.URL.RawQuery)
+		}
+		if got := q.Get("page-size"); got != "50" {
+			t.Fatalf("expected page-size=50, got %q", got)
+		}
+		pagesSeen = append(pagesSeen, q.Get("page"))
+
+		w.Header().Set("Content-Type", "application/json")
+		switch q.Get("page") {
+		case "1":
+			json.NewEncoder(w).Encode(pageOne)
+		case "2":
+			json.NewEncoder(w).Encode([]map[string]any{target})
+		default:
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	})
+	defer cleanup()
+
+	id, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "ccc333ddd444eee555fff666" {
+		t.Fatalf("expected paginated user ID, got %s", id)
+	}
+	if strings.Join(pagesSeen, ",") != "1,2" {
+		t.Fatalf("expected pages 1 and 2, saw %v", pagesSeen)
+	}
+}
+
 func TestImprovedErrorNotFound(t *testing.T) {
 	// Test user not found (uses ResolveUserID path)
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

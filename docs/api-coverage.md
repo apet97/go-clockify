@@ -403,11 +403,12 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** all 123
 catalog tools (35 Tier 1 + 88 Tier 2) are now named in
-`tests/e2e_live*.go`. PR #59/PR #62 manually exercised the
-then-current 121 generated catalog tools through the MCP path against
-the sacrificial workspace; the two later timesheet workflow helpers
-are covered by unit tests and live-test hooks, but have not by
-themselves been promoted into launch evidence.
+`tests/e2e_live*.go`. PR #59 manually exercised the then-current
+121 generated catalog tools through the MCP path against the
+sacrificial workspace; PR #62 added the invite-user raw-route
+validation probe. The two later timesheet workflow helpers are covered
+by unit tests and live-test hooks, but have not by themselves been
+promoted into launch evidence.
 That does **not** mean every tool has a live success path: the tests
 distinguish successful CRUD from concrete upstream constraints such as
 expense-category archive-before-delete, custom-field workspace caps,

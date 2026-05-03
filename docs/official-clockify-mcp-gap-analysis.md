@@ -3,7 +3,8 @@
 A snapshot of where `clockify-mcp` sits on the path from
 "community-grade MCP server" to "officially-supported Clockify
 product." Written 2026-05-02; last updated 2026-05-03 after
-PR #59's exhaustive manual live-probe follow-up.
+PR #62's invite-user route probe and the current 123-tool catalog
+cleanup.
 
 This document is **not** a roadmap and **not** a checklist. It is a
 narrative reading of the current state. The bound checklist lives

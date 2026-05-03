@@ -474,8 +474,10 @@ func boolArg(args map[string]any, key string) bool {
 	return v
 }
 
-// paginationFromArgs extracts page/page_size from a tool args map, applying
-// the standard defaults (page=1, page_size=50) and a hard cap of 200.
+// paginationFromArgs extracts page/page_size from a tool args map. Public list
+// tools share a conservative 200-item cap because they cover Clockify endpoint
+// families with different pagination ceilings; bulk workflow/report scans use
+// dedicated paginated helpers instead of this generic user-facing knob.
 func paginationFromArgs(args map[string]any) (page, pageSize int) {
 	page = max(intArg(args, "page", 1), 1)
 	pageSize = intArg(args, "page_size", 50)

@@ -190,6 +190,21 @@ make verify-bench BENCH_BASELINE=.bench/baseline.txt
 `.bench/` remains gitignored for these experiments; never refresh the
 committed baseline from `.bench/` or from non-CI hardware.
 
+## Large Workspace Pagination
+
+Public list tools use `page=1`, `page_size=50` by default and cap
+caller-supplied `page_size` at 200. The cap is intentionally
+conservative because the shared pagination schema spans multiple
+Clockify endpoint families with different server limits. Bulk
+report/workflow paths that need to scan more than one public page use
+dedicated paginated helpers instead of relying on the generic
+user-facing knob.
+
+Name/email user resolution also uses filtered, paginated lookup. This
+matters for scheduling, time-off, and other tools that accept a user ID,
+name, or email: large workspaces should not silently fail just because
+the matching member is beyond the first `/workspaces/{id}/users` page.
+
 ## Throughput envelope (load harness)
 
 `tests/load/main.go` drives the three-layer rate limiter (global

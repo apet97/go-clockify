@@ -89,13 +89,19 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 		return "", err
 	}
 
-	var users []map[string]any
-	if err := client.Get(ctx, "/workspaces/"+workspaceID+"/users", map[string]string{"page-size": "200"}, &users); err != nil {
+	isEmail := looksLikeEmail(ref)
+	query := map[string]string{"page-size": "50"}
+	if isEmail {
+		query["email"] = ref
+	} else {
+		query["name"] = ref
+	}
+	users, err := clockify.ListAll[map[string]any](ctx, client, "/workspaces/"+workspaceID+"/users", query)
+	if err != nil {
 		return "", err
 	}
 
 	var matches []map[string]any
-	isEmail := looksLikeEmail(ref)
 	for _, user := range users {
 		name, _ := user["name"].(string)
 		email, _ := user["email"].(string)
