@@ -8,13 +8,13 @@ changes break customer integrations without anyone noticing.
 
 ## Current launch-candidate evidence status
 
-As of 2026-05-03 after PR #59 merged to `main` at
-`b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`, local live-contract
-false-green prevention is in place and all 121 generated catalog
-tools have manual sacrificial-workspace MCP-path probes. Group 1 is
-still open: two manual-dispatch runs are green (read-only
-25238997088, full-tier 25239216412), but only two consecutive
-scheduled cron greens on the candidate SHA count as
+As of 2026-05-03 after PR #60 stabilized the post-PR #59 launch
+docs at `4e69c7a1db8011055187cf9892426ed48fc8e572`, local
+live-contract false-green prevention is in place and all 121
+generated catalog tools have manual sacrificial-workspace MCP-path
+probes. Group 1 is still open: two manual-dispatch runs are green
+(read-only 25238997088, full-tier 25239216412), but only two
+consecutive scheduled cron greens on the candidate SHA count as
 launch-candidate evidence. The exhaustive PR #59 probes are
 manual/local coverage artifacts and are intentionally not part of
 the nightly `live-contract.yml` regex.

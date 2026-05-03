@@ -322,6 +322,11 @@ deploy, and verify success without reading source code.
 
 ## 6. Security and policy review
 
+Runbook and automation:
+[`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+and `make rc-evidence-plan TAG=vX.Y.Z-rc.N`. Use them only after
+Group 1 scheduled-cron evidence closes.
+
 - [ ] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
       _Local preflight 2026-05-02 on the launch-doc/security-review
@@ -388,6 +393,13 @@ accident.
 
 ## 7. CI / release readiness
 
+Runbook and automation:
+[`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+and `scripts/prepare-rc-evidence.sh vX.Y.Z-rc.N`. The script gathers
+local logs and GitHub workflow metadata, but the boxes below still
+require the specific candidate-tag evidence links before they can be
+checked.
+
 - [ ] `make release-check` green from a clean checkout on at
       least one Linux x64 and one macOS arm64 host.
 - [ ] All required workflows on `main` green: `ci.yml`,
@@ -404,8 +416,11 @@ accident.
       then passed linux/amd64 comparison in
       https://github.com/apet97/go-clockify/actions/runs/25255216987._
 - [ ] Release artefacts: signed binaries (cosign + SLSA), SBOMs,
-      Docker images, FIPS variant. Verified by
-      `release-smoke.yml` on the candidate tag.
+      Docker images, FIPS variant. Verified by `release-smoke.yml`
+      on the candidate tag for its sampled default/Postgres
+      linux-x64 artifacts, plus manual `docs/verification.md`
+      evidence for any required variant not sampled by
+      `release-smoke.yml`.
 - [ ] `clockify-mcp doctor --strict` and
       `clockify-mcp-postgres doctor --strict --check-backends`
       both exit 0 against the candidate's reference deployment.

@@ -8,18 +8,18 @@ Accepted — Tier 1 / Tier 2 split has been stable since v0.6.0; the
 
 ## Context
 
-The Clockify API is large: 124 MCP tools cover the full surface
+The Clockify API is large: 121 MCP tools currently cover the full surface
 (timer, entries, projects, reports, invoices, expenses, scheduling,
-approvals, custom fields, admin, …). Exposing all 124 in `tools/list`
-on every connection produces three failure modes:
+approvals, custom fields, admin, …). Exposing every catalog tool in
+`tools/list` on every connection produces three failure modes:
 
-1. **Discoverability collapse.** LLMs given 124 tools to pick from
-   pick the wrong one — the model spends tokens reasoning about
+1. **Discoverability collapse.** LLMs given the full catalog to pick
+   from pick the wrong one — the model spends tokens reasoning about
    tools it will never need on a typical "what did I work on this
    week" query.
-2. **Token cost.** A full `tools/list` response with 124 schemas is
-   ~30 KB and is sent on every reconnect. For multi-tenant
-   streamable HTTP this multiplies by the session count.
+2. **Token cost.** A full `tools/list` response with every schema is
+   sent on every reconnect. For multi-tenant streamable HTTP this
+   multiplies by the session count.
 3. **Surface area.** Operators auditing the running server want to
    see the smallest tool surface that still covers the dominant
    workflows. "All 124 by default" makes the audit harder.
@@ -115,8 +115,8 @@ both gates allow it.
 
 ## Alternatives considered
 
-- **Always expose all 124 tools** — rejected on discoverability and
-  token-cost grounds (see Context).
+- **Always expose the full catalog** — rejected on discoverability
+  and token-cost grounds (see Context).
 - **Static tiers, no on-demand activation** — rejected because
   operators would need to set `CLOCKIFY_BOOTSTRAP_TOOLS` for every
   workflow that touches a Tier 2 group, and the per-workflow list

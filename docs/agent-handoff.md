@@ -14,10 +14,12 @@ work and commit it.
 
 ## Launch-state baseline
 
-- **Current post-PR #59 main tip:** `b31fd8a9af794bad7a80c50dc272ea1b74bfcc41`
-  (`test(livee2e): cover exhaustive Clockify tool surface`). This
-  is the latest pushed launch-state baseline for the 121-tool
-  manual live-probe coverage.
+- **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
+  (`docs(handoff): update post-PR59 launch state`). This records
+  the post-PR #59 121-tool manual live-probe coverage plus the
+  follow-up docs stabilization. If this handoff is read from a
+  later runbook/docs commit, Git HEAD may be newer; `4e69c7a...`
+  remains the baseline to cite for the PR #60 merge.
 - **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
   (`docs(launch): record bench comparison evidence`) — the
   launch-state baseline after PR #51 merged on 2026-05-02. If this
@@ -264,14 +266,19 @@ the external evidence gates can be verified.
    scheduled runs are green on the candidate SHA and the run logs
    show schema-diff, mutating, and audit-phase tests executed,
    update the launch checklist with the exact run URLs.
-2. **Perform candidate-tag security walk-through.** On the final
-   candidate tag, re-run `make verify-vuln`, `make verify-fips`,
-   gitleaks, and Semgrep. Record findings or "no findings" in
-   `SECURITY.md` and link the evidence from the checklist.
+2. **Perform candidate-tag security walk-through.** Start with
+   `docs/runbooks/release-candidate-evidence.md` and rehearse with
+   `make rc-evidence-plan TAG=vX.Y.Z-rc.N`. On the final candidate
+   tag, re-run `make verify-vuln`, `make verify-fips`,
+   `make secret-scan`, and Semgrep. Record findings or "no
+   findings" in `SECURITY.md` and link the evidence from the
+   checklist.
 3. **Cut the release candidate and verify artefacts.** After live
-   contract and security evidence exist, cut `vX.Y.Z-rc.N`, watch
-   `release-smoke.yml`, verify sigstore/SLSA/SBOM evidence, and
-   archive reference `doctor --strict` outputs.
+   contract and security evidence exist, cut `vX.Y.Z-rc.N`, run
+   `scripts/prepare-rc-evidence.sh vX.Y.Z-rc.N` from a clean tag
+   checkout on the required hosts, watch `release-smoke.yml`, verify
+   sigstore/SLSA/SBOM evidence, and archive reference
+   `doctor --strict` outputs.
 4. **Open the launch-candidate tracking issue.** Link every green
    workflow run and archived output. Only after all links exist may
    any agent or human report "launch candidate ready."
