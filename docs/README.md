@@ -117,6 +117,9 @@ population is reflected across policy surfaces.
 - [claude-code-continuation.md](claude-code-continuation.md) —
   historical Claude Code continuation packet for the post-PR #51
   launch-candidate evidence pass.
+- [runbooks/claude-code-campaign.md](runbooks/claude-code-campaign.md)
+  — local multi-agent Claude Code campaign harness using isolated
+  git worktrees and iTerm-launched Opus lanes.
 - [../GOVERNANCE.md](../GOVERNANCE.md) — merge gate, sensitive-area
   self-review expectations, security disclosure process.
 - [../SUPPORT.md](../SUPPORT.md) — where to ask questions,

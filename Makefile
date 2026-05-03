@@ -7,7 +7,8 @@
         gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
         grpc-release-parity \
         repo-hygiene script-tests actionlint shellcheck live-contract-local \
-        release-check rc-evidence rc-evidence-plan
+        release-check rc-evidence rc-evidence-plan \
+        claude-campaign claude-campaign-plan
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -126,6 +127,13 @@ script-tests:
 	bash scripts/test-check-launch-checklist-parity.sh
 	bash scripts/test-check-launch-evidence-gate.sh
 	bash scripts/test-prepare-rc-evidence.sh
+	bash scripts/test-claude-campaign.sh
+
+claude-campaign-plan:
+	bash scripts/claude-campaign.sh --dry-run
+
+claude-campaign:
+	bash scripts/claude-campaign.sh
 
 rc-evidence-plan:
 	@if [ -z "$(TAG)" ]; then \

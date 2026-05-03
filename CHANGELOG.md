@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Claude Code multi-agent campaign harness.** Added
+  `scripts/claude-campaign.sh`, `make claude-campaign-plan`, and
+  `make claude-campaign` to spawn five Opus lanes in isolated git
+  worktrees for code quality, performance, stability, observability,
+  and AI-agent UX passes. The harness writes lane prompts, launches
+  each lane in iTerm, and keeps campaign artefacts ignored and
+  local-only.
+
 - **Agent-facing timesheet workflow tools.** Added
   `clockify_timesheet_review`, a read-only day/week/range reviewer
   that turns time-entry coverage into issues and suggested next tool
