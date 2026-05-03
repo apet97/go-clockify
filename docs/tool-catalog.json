@@ -4202,7 +4202,7 @@
     },
     {
       "name": "clockify_create_custom_field",
-      "description": "Create a new custom field (TEXT, NUMBER, DROPDOWN, CHECKBOX, or LINK)",
+      "description": "Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
       "group": "custom_fields",
       "tier": 2,
       "read_only": false,
@@ -4215,14 +4215,22 @@
         "additionalProperties": false,
         "properties": {
           "allowed_values": {
-            "description": "Allowed values for DROPDOWN type",
+            "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "field_type": {
-            "description": "One of: TEXT, NUMBER, DROPDOWN, CHECKBOX, LINK",
+            "description": "Upstream-accepted custom-field type",
+            "enum": [
+              "TXT",
+              "NUMBER",
+              "DROPDOWN_SINGLE",
+              "DROPDOWN_MULTIPLE",
+              "CHECKBOX",
+              "LINK"
+            ],
             "type": "string"
           },
           "name": {
@@ -4535,7 +4543,7 @@
     },
     {
       "name": "clockify_create_expense",
-      "description": "Create a new expense",
+      "description": "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
@@ -4548,29 +4556,42 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
-            "description": "Expense amount",
+            "description": "Expense amount (major currency units)",
             "type": "number"
           },
+          "billable": {
+            "description": "Whether the expense is billable",
+            "type": "boolean"
+          },
           "category_id": {
-            "description": "Expense category ID",
+            "description": "Expense category ID (required)",
             "type": "string"
           },
           "date": {
-            "description": "Expense date (YYYY-MM-DD)",
+            "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
-          "description": {
-            "description": "Expense description",
+          "notes": {
+            "description": "Free-form notes",
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID",
+            "description": "Project ID (optional)",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Task ID (optional)",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "User the expense is logged against; defaults to the calling user",
             "type": "string"
           }
         },
         "required": [
           "amount",
-          "date"
+          "date",
+          "category_id"
         ],
         "type": "object"
       },
@@ -4946,7 +4967,7 @@
     },
     {
       "name": "clockify_update_expense",
-      "description": "Update an existing expense",
+      "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
@@ -4961,24 +4982,54 @@
           "amount": {
             "type": "number"
           },
+          "billable": {
+            "type": "boolean"
+          },
           "category_id": {
             "type": "string"
           },
-          "date": {
-            "type": "string"
+          "change_fields": {
+            "description": "Field tokens to update; one or more of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE",
+            "items": {
+              "enum": [
+                "USER",
+                "DATE",
+                "PROJECT",
+                "TASK",
+                "CATEGORY",
+                "NOTES",
+                "AMOUNT",
+                "BILLABLE",
+                "FILE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
           },
-          "description": {
+          "date": {
+            "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ",
             "type": "string"
           },
           "expense_id": {
             "type": "string"
           },
+          "notes": {
+            "type": "string"
+          },
           "project_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Reassign the expense to this user",
             "type": "string"
           }
         },
         "required": [
-          "expense_id"
+          "expense_id",
+          "change_fields"
         ],
         "type": "object"
       },
@@ -5058,7 +5109,7 @@
     },
     {
       "name": "clockify_create_holiday",
-      "description": "Create a new holiday in the workspace",
+      "description": "Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
       "group": "groups_holidays",
       "tier": 2,
       "read_only": false,
@@ -5070,22 +5121,40 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "date": {
-            "description": "Date in YYYY-MM-DD format",
+          "end_date": {
+            "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays",
             "type": "string"
           },
           "name": {
-            "description": "Holiday name",
+            "description": "Holiday name (2–100 chars)",
             "type": "string"
           },
-          "recurring": {
+          "occurs_annually": {
             "description": "Whether the holiday recurs annually",
             "type": "boolean"
+          },
+          "start_date": {
+            "description": "Range start in yyyy-MM-dd format",
+            "type": "string"
+          },
+          "user_group_ids": {
+            "description": "User-group IDs the holiday applies to",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_ids": {
+            "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
           "name",
-          "date"
+          "start_date"
         ],
         "type": "object"
       },
@@ -5868,6 +5937,10 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "status": {
+            "description": "Filter by status (e.g. PAID, SENT, DRAFT)",
+            "type": "string"
           }
         },
         "type": "object"
@@ -6530,65 +6603,6 @@
       }
     },
     {
-      "name": "clockify_create_schedule",
-      "description": "Create a new schedule in the workspace",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": false,
-      "destructive": false,
-      "idempotent": false,
-      "risk_class": [
-        "write"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
-            "type": "string"
-          },
-          "hours_per_day": {
-            "type": "number"
-          },
-          "name": {
-            "description": "Schedule name",
-            "type": "string"
-          },
-          "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_create_schedule",
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": true,
-        "readOnlyHint": false,
-        "title": "Create Schedule"
-      }
-    },
-    {
       "name": "clockify_delete_assignment",
       "description": "Delete a scheduling assignment by ID (supports dry_run preview)",
       "group": "scheduling",
@@ -6641,7 +6655,7 @@
     },
     {
       "name": "clockify_filter_schedule_capacity",
-      "description": "Get scheduling capacity data for a date range",
+      "description": "Get a user's scheduling capacity totals for a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6654,19 +6668,31 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
           "user_id": {
-            "description": "Filter by user ID",
+            "description": "User ID, name, or email",
             "type": "string"
           }
         },
         "required": [
+          "user_id",
           "start",
           "end"
         ],
@@ -6745,7 +6771,7 @@
     },
     {
       "name": "clockify_get_project_schedule_totals",
-      "description": "Get project scheduling assignment totals",
+      "description": "Get scheduling totals per project across a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6757,11 +6783,29 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "end": {
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Items per page (default 50)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "project_id": {
             "description": "Filter by project ID or name",
             "type": "string"
+          },
+          "start": {
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
           }
         },
+        "required": [
+          "start",
+          "end"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -6789,8 +6833,8 @@
       }
     },
     {
-      "name": "clockify_get_schedule",
-      "description": "Get a schedule by ID",
+      "name": "clockify_list_assignments",
+      "description": "List scheduling assignments within a date range",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -6802,53 +6846,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "schedule_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "schedule_id"
-        ],
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_get_schedule",
+          "end": {
+            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
             "type": "string"
           },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true,
-        "readOnlyHint": true,
-        "title": "Get Schedule"
-      }
-    },
-    {
-      "name": "clockify_list_assignments",
-      "description": "List scheduling assignments with optional user_id and project_id filters",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": true,
-      "destructive": false,
-      "idempotent": true,
-      "risk_class": [
-        "read"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -6864,11 +6865,19 @@
             "description": "Filter by project ID or name",
             "type": "string"
           },
+          "start": {
+            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
           "user_id": {
             "description": "Filter by user ID or name/email",
             "type": "string"
           }
         },
+        "required": [
+          "start",
+          "end"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -6893,56 +6902,6 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "title": "List Assignments"
-      }
-    },
-    {
-      "name": "clockify_list_schedules",
-      "description": "List scheduling schedules for the workspace",
-      "group": "scheduling",
-      "tier": 2,
-      "read_only": true,
-      "destructive": false,
-      "idempotent": true,
-      "risk_class": [
-        "read"
-      ],
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "output_schema": {
-        "properties": {
-          "action": {
-            "const": "clockify_list_schedules",
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "action"
-        ],
-        "type": "object"
-      },
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true,
-        "readOnlyHint": true,
-        "title": "List Schedules"
       }
     },
     {
@@ -7020,9 +6979,33 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "filters": {
-            "additionalProperties": false,
-            "description": "Optional filter object (project IDs, user IDs, date range, etc.)",
+          "filter": {
+            "additionalProperties": true,
+            "description": "Required filter object. Live-required: exportType (JSON_V1|PDF|CSV|XLSX), dateRangeStart (ISO 8601), dateRangeEnd (ISO 8601). Optional: summaryFilter / detailedFilter / weeklyFilter / projects / users / etc.",
+            "properties": {
+              "dateRangeEnd": {
+                "description": "ISO 8601 timestamp",
+                "type": "string"
+              },
+              "dateRangeStart": {
+                "description": "ISO 8601 timestamp",
+                "type": "string"
+              },
+              "exportType": {
+                "enum": [
+                  "JSON_V1",
+                  "PDF",
+                  "CSV",
+                  "XLSX"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "exportType",
+              "dateRangeStart",
+              "dateRangeEnd"
+            ],
             "type": "object"
           },
           "name": {
@@ -7030,13 +7013,35 @@
             "type": "string"
           },
           "report_type": {
-            "description": "Report type (e.g. SUMMARY, DETAILED, WEEKLY)",
+            "description": "Report type — common: SUMMARY, DETAILED, WEEKLY. Full upstream enum below.",
+            "enum": [
+              "DETAILED",
+              "WEEKLY",
+              "SUMMARY",
+              "SCHEDULED",
+              "EXPENSE_DETAILED",
+              "EXPENSE_RECEIPT",
+              "PTO_REQUESTS",
+              "PTO_BALANCE",
+              "ATTENDANCE",
+              "INVOICE_EXPENSE",
+              "INVOICE_TIME",
+              "PROJECT",
+              "TEAM_FULL",
+              "TEAM_LIMITED",
+              "TEAM_GROUPS",
+              "INVOICES",
+              "KIOSK_PIN_LIST",
+              "KIOSK_ASSIGNEES",
+              "USER_DATA_EXPORT"
+            ],
             "type": "string"
           }
         },
         "required": [
           "name",
-          "report_type"
+          "report_type",
+          "filter"
         ],
         "type": "object"
       },
@@ -7117,7 +7122,7 @@
     },
     {
       "name": "clockify_export_shared_report",
-      "description": "Export a shared report in a specified format",
+      "description": "Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return a binary-aware envelope with base64-encoded body.",
       "group": "shared_reports",
       "tier": 2,
       "read_only": true,
@@ -7130,7 +7135,14 @@
         "additionalProperties": false,
         "properties": {
           "format": {
-            "description": "Export format: csv, json, pdf, or excel (default json)",
+            "description": "Export format. Accepts: json (default, returns decoded JSON_V1), pdf, csv, xlsx (alias: excel).",
+            "enum": [
+              "json",
+              "pdf",
+              "csv",
+              "xlsx",
+              "excel"
+            ],
             "type": "string"
           },
           "report_id": {
@@ -7267,7 +7279,7 @@
     },
     {
       "name": "clockify_update_shared_report",
-      "description": "Update an existing shared report",
+      "description": "Update an existing shared report (PUT semantics is merge — partial body preserves the existing filter)",
       "group": "shared_reports",
       "tier": 2,
       "read_only": false,
@@ -7279,8 +7291,9 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "filters": {
-            "additionalProperties": false,
+          "filter": {
+            "additionalProperties": true,
+            "description": "Optional filter object — same shape as create. Send only the keys you want to change.",
             "type": "object"
           },
           "name": {
@@ -7290,6 +7303,27 @@
             "type": "string"
           },
           "report_type": {
+            "enum": [
+              "DETAILED",
+              "WEEKLY",
+              "SUMMARY",
+              "SCHEDULED",
+              "EXPENSE_DETAILED",
+              "EXPENSE_RECEIPT",
+              "PTO_REQUESTS",
+              "PTO_BALANCE",
+              "ATTENDANCE",
+              "INVOICE_EXPENSE",
+              "INVOICE_TIME",
+              "PROJECT",
+              "TEAM_FULL",
+              "TEAM_LIMITED",
+              "TEAM_GROUPS",
+              "INVOICES",
+              "KIOSK_PIN_LIST",
+              "KIOSK_ASSIGNEES",
+              "USER_DATA_EXPORT"
+            ],
             "type": "string"
           }
         },

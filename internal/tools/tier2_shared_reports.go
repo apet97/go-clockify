@@ -2,13 +2,51 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
+
+// sharedReportTypes is the live-confirmed enum the upstream accepts
+// for the create/update body's "type" field (lab probe 2026-05-03,
+// fixtures/shared-reports/create-2-with-filter.json error message).
+// Documented in the JSON Schema descriptor so the AI client knows
+// the full surface; the previous handler advertised only the
+// SUMMARY/DETAILED/WEEKLY subset.
+var sharedReportTypes = []string{
+	"DETAILED", "WEEKLY", "SUMMARY", "SCHEDULED",
+	"EXPENSE_DETAILED", "EXPENSE_RECEIPT",
+	"PTO_REQUESTS", "PTO_BALANCE",
+	"ATTENDANCE", "INVOICE_EXPENSE", "INVOICE_TIME",
+	"PROJECT", "TEAM_FULL", "TEAM_LIMITED", "TEAM_GROUPS",
+	"INVOICES", "KIOSK_PIN_LIST", "KIOSK_ASSIGNEES",
+	"USER_DATA_EXPORT",
+}
+
+// sharedReportFilterSchema is the JSON Schema fragment for the
+// upstream "filter" body field (singular — the Java DTO is
+// ReportFilterV1). exportType / dateRangeStart / dateRangeEnd are
+// required by the live API; everything else is optional and accepted
+// as additional properties.
+func sharedReportFilterSchema() map[string]any {
+	return map[string]any{
+		"type":        "object",
+		"description": "Required filter object. Live-required: exportType (JSON_V1|PDF|CSV|XLSX), dateRangeStart (ISO 8601), dateRangeEnd (ISO 8601). Optional: summaryFilter / detailedFilter / weeklyFilter / projects / users / etc.",
+		"required":    []string{"exportType", "dateRangeStart", "dateRangeEnd"},
+		"properties": map[string]any{
+			"exportType":     map[string]any{"type": "string", "enum": []string{"JSON_V1", "PDF", "CSV", "XLSX"}},
+			"dateRangeStart": map[string]any{"type": "string", "description": "ISO 8601 timestamp"},
+			"dateRangeEnd":   map[string]any{"type": "string", "description": "ISO 8601 timestamp"},
+		},
+		"additionalProperties": true,
+	}
+}
 
 func init() {
 	registerTier2Group(Tier2Group{
@@ -52,25 +90,25 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. Create shared report (RW)
 		{Tool: toolRW("clockify_create_shared_report", "Create a new shared report", map[string]any{
 			"type":     "object",
-			"required": []string{"name", "report_type"},
+			"required": []string{"name", "report_type", "filter"},
 			"properties": map[string]any{
 				"name":        map[string]any{"type": "string", "description": "Report name"},
-				"report_type": map[string]any{"type": "string", "description": "Report type (e.g. SUMMARY, DETAILED, WEEKLY)"},
-				"filters":     map[string]any{"type": "object", "description": "Optional filter object (project IDs, user IDs, date range, etc.)"},
+				"report_type": map[string]any{"type": "string", "description": "Report type — common: SUMMARY, DETAILED, WEEKLY. Full upstream enum below.", "enum": sharedReportTypes},
+				"filter":      sharedReportFilterSchema(),
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createSharedReport(ctx, args)
 		}},
 
 		// 4. Update shared report (RW)
-		{Tool: toolRW("clockify_update_shared_report", "Update an existing shared report", map[string]any{
+		{Tool: toolRW("clockify_update_shared_report", "Update an existing shared report (PUT semantics is merge — partial body preserves the existing filter)", map[string]any{
 			"type":     "object",
 			"required": []string{"report_id"},
 			"properties": map[string]any{
 				"report_id":   map[string]any{"type": "string"},
 				"name":        map[string]any{"type": "string"},
-				"report_type": map[string]any{"type": "string"},
-				"filters":     map[string]any{"type": "object"},
+				"report_type": map[string]any{"type": "string", "enum": sharedReportTypes},
+				"filter":      map[string]any{"type": "object", "description": "Optional filter object — same shape as create. Send only the keys you want to change.", "additionalProperties": true},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateSharedReport(ctx, args)
@@ -88,13 +126,20 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 			return s.deleteSharedReport(ctx, args)
 		}},
 
-		// 6. Export shared report (RO)
-		{Tool: toolRO("clockify_export_shared_report", "Export a shared report in a specified format", map[string]any{
+		// 6. Export shared report (RO).
+		// Lab probe (2026-05-03) confirmed the export path is the
+		// bare /shared-reports/{id} (no workspace) plus
+		// ?exportType=PDF|CSV|XLSX|JSON_V1; the previously assumed
+		// /export segment returns 404. Non-JSON formats return binary
+		// (PDF/XLSX) or text (CSV) — the handler returns a binary-aware
+		// envelope {contentType, filename, bytes, body(base64)} for
+		// those, and a decoded JSON object for JSON_V1.
+		{Tool: toolRO("clockify_export_shared_report", "Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return a binary-aware envelope with base64-encoded body.", map[string]any{
 			"type":     "object",
 			"required": []string{"report_id"},
 			"properties": map[string]any{
 				"report_id": map[string]any{"type": "string"},
-				"format":    map[string]any{"type": "string", "description": "Export format: csv, json, pdf, or excel (default json)"},
+				"format":    map[string]any{"type": "string", "description": "Export format. Accepts: json (default, returns decoded JSON_V1), pdf, csv, xlsx (alias: excel).", "enum": []string{"json", "pdf", "csv", "xlsx", "excel"}},
 			},
 		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.exportSharedReport(ctx, args)
@@ -114,22 +159,28 @@ func (s *Service) listSharedReports(ctx context.Context, args map[string]any) (R
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
+	// pageSize is camelCase here; the reports API silently ignores
+	// page-size (hyphenated) and returns the default 50.
 	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
+		"page":     fmt.Sprintf("%d", page),
+		"pageSize": fmt.Sprintf("%d", pageSize),
 	}
 
 	path, err := paths.Workspace(wsID, "shared-reports")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var items []map[string]any
-	if err := s.Client.Get(ctx, path, query, &items); err != nil {
+	var envelope struct {
+		Reports []map[string]any `json:"reports"`
+		Count   int              `json:"count"`
+	}
+	if err := s.Client.GetReports(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_shared_reports", items, map[string]any{
+	return ok("clockify_list_shared_reports", envelope.Reports, map[string]any{
 		"workspaceId": wsID,
-		"count":       len(items),
+		"count":       len(envelope.Reports),
+		"total":       envelope.Count,
 		"page":        page,
 	}), nil
 }
@@ -144,12 +195,17 @@ func (s *Service) getSharedReport(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "shared-reports", reportID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
+	// Single-get path has no workspace segment. The workspace-prefixed
+	// per-id path (/v1/workspaces/{ws}/shared-reports/{id}) DOES exist
+	// — PUT and DELETE land there — but it returns 405 for GET. The
+	// bare-id path is the only GET-compatible route. Confirmed live
+	// 2026-05-03; see findings/shared-reports.md. exportType=JSON_V1
+	// forces a JSON body; other values return PDF/CSV/XLSX (handled
+	// in exportSharedReport, not here).
+	path := "/shared-reports/" + reportID
+	query := map[string]string{"exportType": "JSON_V1"}
 	var report map[string]any
-	if err := s.Client.Get(ctx, path, nil, &report); err != nil {
+	if err := s.Client.GetReports(ctx, path, query, &report); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_get_shared_report", report, map[string]any{"workspaceId": wsID}), nil
@@ -161,17 +217,23 @@ func (s *Service) createSharedReport(ctx context.Context, args map[string]any) (
 	if name == "" || reportType == "" {
 		return ResultEnvelope{}, fmt.Errorf("name and report_type are required")
 	}
+	filter, hasFilter := args["filter"].(map[string]any)
+	if !hasFilter || filter == nil {
+		return ResultEnvelope{}, fmt.Errorf("filter is required (must include exportType, dateRangeStart, dateRangeEnd)")
+	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
+	// Body keys match the upstream Java DTOs: "type" (not
+	// reportType — server rejects reportType with 400) and "filter"
+	// (singular, ReportFilterV1). See findings/shared-reports.md
+	// changes #24-#27.
 	body := map[string]any{
-		"name":       name,
-		"reportType": reportType,
-	}
-	if filters, ok := args["filters"].(map[string]any); ok {
-		body["filters"] = filters
+		"name":   name,
+		"type":   reportType,
+		"filter": filter,
 	}
 
 	path, err := paths.Workspace(wsID, "shared-reports")
@@ -179,7 +241,7 @@ func (s *Service) createSharedReport(ctx context.Context, args map[string]any) (
 		return ResultEnvelope{}, err
 	}
 	var created map[string]any
-	if err := s.Client.Post(ctx, path, body, &created); err != nil {
+	if err := s.Client.PostReports(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_shared_report", created, map[string]any{"workspaceId": wsID}), nil
@@ -195,15 +257,18 @@ func (s *Service) updateSharedReport(ctx context.Context, args map[string]any) (
 		return ResultEnvelope{}, err
 	}
 
+	// PUT semantics is merge — partial body preserves the existing
+	// filter (live-confirmed 2026-05-03). Send only the fields the
+	// caller passed; mirror the create-side body keys (type / filter).
 	body := map[string]any{}
 	if v := stringArg(args, "name"); v != "" {
 		body["name"] = v
 	}
 	if v := stringArg(args, "report_type"); v != "" {
-		body["reportType"] = v
+		body["type"] = v
 	}
-	if filters, ok := args["filters"].(map[string]any); ok {
-		body["filters"] = filters
+	if filter, hasFilter := args["filter"].(map[string]any); hasFilter {
+		body["filter"] = filter
 	}
 
 	path, err := paths.Workspace(wsID, "shared-reports", reportID)
@@ -211,7 +276,7 @@ func (s *Service) updateSharedReport(ctx context.Context, args map[string]any) (
 		return ResultEnvelope{}, err
 	}
 	var updated map[string]any
-	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
+	if err := s.Client.PutReports(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_shared_report", updated, map[string]any{"workspaceId": wsID}), nil
@@ -226,15 +291,17 @@ func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	reportPath, err := paths.Workspace(wsID, "shared-reports", reportID)
+	deletePath, err := paths.Workspace(wsID, "shared-reports", reportID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	// Dry-run: fetch the report for preview, don't delete.
+	// Dry-run preview: fetch via the bare-id GET (the only GET-
+	// compatible per-id route — workspace-prefixed GET is 405). Don't
+	// delete.
 	if dryrun.Enabled(args) {
 		var report map[string]any
-		if err := s.Client.Get(ctx, reportPath, nil, &report); err != nil {
+		if err := s.Client.GetReports(ctx, "/shared-reports/"+reportID, map[string]string{"exportType": "JSON_V1"}, &report); err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -245,13 +312,57 @@ func (s *Service) deleteSharedReport(ctx context.Context, args map[string]any) (
 		}, nil
 	}
 
-	if err := s.Client.Delete(ctx, reportPath); err != nil {
+	if err := s.Client.DeleteReports(ctx, deletePath); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_delete_shared_report", map[string]any{
 		"deleted":  true,
 		"reportId": reportID,
 	}, map[string]any{"workspaceId": wsID}), nil
+}
+
+// sharedReportExportTypeFor maps the user-facing format token to the
+// upstream exportType enum value. The upstream enum is the one
+// observed live (2026-05-03) on /v1/shared-reports/{id}?exportType=…
+// The "excel" alias preserves the historical user-facing token.
+func sharedReportExportTypeFor(format string) (exportType string, isJSON bool) {
+	switch strings.ToLower(strings.TrimSpace(format)) {
+	case "", "json", "json_v1":
+		return "JSON_V1", true
+	case "pdf":
+		return "PDF", false
+	case "csv":
+		return "CSV", false
+	case "xlsx", "excel":
+		return "XLSX", false
+	default:
+		// Unknown format — pass through verbatim and let the upstream
+		// reject. Treated as binary (non-JSON) so the handler doesn't
+		// silently base64-wrap a JSON response or vice versa.
+		return strings.ToUpper(format), false
+	}
+}
+
+// parseExportFilename extracts the filename from a Content-Disposition
+// header like "filename=Clockify_Time_Report_Summary_11%2F15%2F2023-12%2F07%2F2023.pdf".
+// Returns empty string if absent. Slashes arrive percent-encoded; we
+// URL-decode them so callers see a sensible filename.
+func parseExportFilename(cd string) string {
+	if cd == "" {
+		return ""
+	}
+	_, fn, found := strings.Cut(cd, "filename=")
+	if !found {
+		return ""
+	}
+	if before, _, hasSemi := strings.Cut(fn, ";"); hasSemi {
+		fn = before
+	}
+	fn = strings.Trim(fn, `"`)
+	if decoded, err := url.QueryUnescape(fn); err == nil {
+		return decoded
+	}
+	return fn
 }
 
 func (s *Service) exportSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -265,23 +376,45 @@ func (s *Service) exportSharedReport(ctx context.Context, args map[string]any) (
 	}
 
 	format := stringArg(args, "format")
-	if format == "" {
-		format = "json"
+	exportType, isJSON := sharedReportExportTypeFor(format)
+
+	// Bare-id path (no workspace segment). The previously assumed
+	// /workspaces/{ws}/shared-reports/{id}/export route returns 404
+	// — there is no /export segment. Live-confirmed 2026-05-03; see
+	// fixtures/shared-reports/discover_ws-prefixed-export.json
+	// (404) and export-{pdf,csv,xlsx}.{headers.txt,binary-summary.json}.
+	path := "/shared-reports/" + reportID
+	query := map[string]string{"exportType": exportType}
+
+	if isJSON {
+		var export map[string]any
+		if err := s.Client.GetReports(ctx, path, query, &export); err != nil {
+			return ResultEnvelope{}, err
+		}
+		return ok("clockify_export_shared_report", export, map[string]any{
+			"workspaceId": wsID,
+			"reportId":    reportID,
+			"format":      "json",
+			"exportType":  exportType,
+		}), nil
 	}
 
-	query := map[string]string{"format": format}
-
-	path, err := paths.Workspace(wsID, "shared-reports", reportID, "export")
+	raw, err := s.Client.GetReportsRaw(ctx, path, query)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var export map[string]any
-	if err := s.Client.Get(ctx, path, query, &export); err != nil {
-		return ResultEnvelope{}, err
+	contentType := raw.Header.Get("Content-Type")
+	filename := parseExportFilename(raw.Header.Get("Content-Disposition"))
+	envelope := map[string]any{
+		"contentType": contentType,
+		"filename":    filename,
+		"bytes":       len(raw.Body),
+		"body":        base64.StdEncoding.EncodeToString(raw.Body),
 	}
-	return ok("clockify_export_shared_report", export, map[string]any{
+	return ok("clockify_export_shared_report", envelope, map[string]any{
 		"workspaceId": wsID,
 		"reportId":    reportID,
-		"format":      format,
+		"format":      strings.ToLower(format),
+		"exportType":  exportType,
 	}), nil
 }

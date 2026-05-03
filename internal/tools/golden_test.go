@@ -142,8 +142,8 @@ func TestTier2TotalToolCount(t *testing.T) {
 		total += len(handlers)
 		t.Logf("group %s: %d tools", name, len(handlers))
 	}
-	if total != 91 {
-		t.Fatalf("expected 91 Tier 2 tools, got %d", total)
+	if total != 88 {
+		t.Fatalf("expected 88 Tier 2 tools, got %d", total)
 	}
 }
 
@@ -154,7 +154,7 @@ func TestTier2PerGroupToolCounts(t *testing.T) {
 		"approvals":       6,
 		"expenses":        10,
 		"custom_fields":   6,
-		"scheduling":      10,
+		"scheduling":      7,
 		"user_admin":      8,
 		"webhooks":        7,
 		"shared_reports":  6,
@@ -433,7 +433,7 @@ func TestTier1CatalogGoldenCount(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 10. Total tool count (Tier 1 + Tier 2 = 124)
+// 10. Total tool count (Tier 1 + Tier 2 = 123)
 // ---------------------------------------------------------------------------
 
 func TestTotalToolCount(t *testing.T) {
@@ -444,7 +444,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 124 {
-		t.Fatalf("expected 124 total tools (33 Tier1 + 91 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 121 {
+		t.Fatalf("expected 121 total tools (33 Tier1 + 88 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }

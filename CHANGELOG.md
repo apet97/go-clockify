@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Phantom Tier-2 schedule tools removed.** PR #55 already
+  removed the phantom `list_schedules` tool after the probe lab
+  proved no list-schedules surface exists on Clockify (only
+  `/scheduling/assignments/...` paths). The same evidence applies
+  to the matching `get_` and `create_` schedule variants — there
+  is no `/scheduling/{id}` or `POST /scheduling` endpoint at any
+  Clockify host. The catalog drops from 90 → 88 Tier 2 tools
+  (123 → 121 total). The blocked-groups live test no longer pins
+  these two tools, and the scheduling group's tool count in
+  `docs/api-coverage.md` is now 7. Numeric / unit questions
+  surfaced by the same probe lab pass (invoice `unitPrice`, expense
+  `amount`/`total`, expense `projectId` optional-vs-required,
+  shared-reports non-`SUMMARY` filter requirements) are now
+  documented in `docs/api-coverage.md` under "Known unresolved
+  API contract questions" rather than carried as open inventory
+  items.
+
 ### Changed
 
 - **Live read-side schema drift is now a first-class contract.**
@@ -59,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `make doc-parity`, `make config-doc-parity`, `make
   catalog-drift`, and `make launch-checklist-parity`.
 
-- **Security-review cleanup closes Group 6 of
+- **Security-review cleanup completed local preflight for Group 6 of
   `docs/launch-candidate-checklist.md`.** The Clockify upstream
   retry jitter now uses `crypto/rand` instead of `math/rand/v2`;
   the OAuth protected-resource metadata endpoint writes through
@@ -73,7 +92,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`,
   `make secret-scan`, `semgrep scan --config p/default
   --metrics=off --error --exclude .git --exclude .bench --exclude
-  clockify-mcp .`, `make verify-fips`, and `make check`.
+  clockify-mcp .`, `make verify-fips`, and `make check`. The same
+  security walk-through still has to be repeated on the final
+  candidate tag before Group 6 can close.
 
 - **`Shared-service Postgres E2E` is now a required-status check
   for `main` branch protection.** Promoted on 2026-05-02 after
@@ -92,6 +113,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   snapshot but are not actually in the live required-checks list;
   promoting them is out of scope for this change and tracked
   separately.
+
+- **Benchmark baseline refreshed on the Actions linux/amd64 runner.**
+  Refreshed `internal/benchdata/baseline.txt` from the `Bench`
+  workflow bootstrap artifact `bench-current-25255062599` on
+  the PR #51 branch, covering the post-perf-wave tools/list cache, Tier 2
+  descriptor cache, and schema compaction shape. The downloaded
+  artifact was validated with `bash scripts/check-bench-baseline.sh
+  /tmp/go-clockify-bench-25255062599/bench-current.txt`, and the
+  committed file is validated by `make bench-baseline-check`.
+  Follow-up `Bench` workflow run 25255216987 compared fresh
+  linux/amd64 samples against the refreshed baseline and passed.
+
+- **Post-PR #51 continuation docs now point Claude Code at external
+  evidence only.** Added `docs/claude-code-continuation.md` and
+  refreshed the agent handoff surfaces so the next pass starts from
+  the PR #51 merge baseline
+  `adce316d60644fe51365086aba186227c9ae3977`, not the historical
+  branch-review state. The only remaining blockers
+  documented there are scheduled live-contract cron greens,
+  candidate-tag security evidence, and release/sigstore/SLSA
+  evidence.
 
 ### Added
 

@@ -6,18 +6,64 @@ picking up the work to bring `github.com/apet97/go-clockify` from
 Clockify launch candidate**.
 
 This document is your entry point. Read it before doing anything,
-then read the three referenced docs, then do the smallest piece
-of useful work and commit it.
+then read the referenced docs, then do the smallest piece of useful
+work and commit it.
 
 > If you ignore the safety constraints in this document the
 > maintainer will revert your work. They are not negotiable.
 
+## Launch-state baseline
+
+- **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
+  (`docs(launch): record bench comparison evidence`) — the
+  launch-state baseline after PR #51 merged on 2026-05-02. If this
+  file is read from a later local continuation commit, Git HEAD may
+  be newer; `adce316...` remains the baseline to cite for the
+  PR #51 merge.
+- **Closed locally:** Groups 2 (shared-service Postgres E2E,
+  required-gated on `main`), 3 (ADR 0017 Path A — streamable-HTTP
+  cross-instance session rehydration), 4 (auth-model docs +
+  `forward_auth` cardinality/size guard), 5 (per-profile "How to
+  verify this deployment" sections, client matrix, support matrix),
+  false-green live-contract prevention, launch-evidence parity gate,
+  and benchmark baseline refresh (`bench-current-25255062599` +
+  comparison run 25255216987).
+- **Open external evidence only:**
+  - **Scheduled live-contract cron greens** — two consecutive
+    *scheduled* runs of `live-contract.yml` on the candidate SHA,
+    with `TestLiveReadSideSchemaDiff`, mutating tests, and the
+    audit-phase tier captured. The rolling `live-test-failure`
+    issue is closed; two manual-dispatch runs are green; cron is
+    calendar-bound.
+  - **Candidate-tag security walk-through** — re-run
+    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
+    on the final candidate tag. Local preflight was green on
+    2026-05-02, but candidate-tag evidence is still required.
+  - **Release/sigstore/SLSA evidence** — cut `vX.Y.Z-rc.N`, run
+    `release-smoke.yml`, verify sigstore + SLSA artefact
+    attestations, and archive the reference `doctor --strict`
+    outputs.
+
+If a local-shell run of the live-contract suite reports `ok`
+suspiciously fast (≤ ~0.5s), the env-var gate
+(`CLOCKIFY_RUN_LIVE_E2E=1` + `CLOCKIFY_API_KEY` +
+`CLOCKIFY_WORKSPACE_ID`) was not visible to the test process and
+it took the silent skip path — `live-contract.yml` is the
+authoritative evidence path.
+
+`TestLiveContractSkipSentinel` (under `-tags=livee2e`) now fails
+explicitly when every live test skipped, so `go test -tags=livee2e
+./tests/...` without env vars reports FAIL instead of a misleading
+`ok`. Use `make live-contract-local` for pre-flight debugging — it
+wraps the test run with evidence warnings.
+
 ## Read first (in this order)
 
-1. The workstation-private `CLAUDE.md` at the repo root
-   (gitignored — fetch from your local clone or the maintainer)
-   — project conventions, "Strict agent rules", and the
-   canonical "Launch Candidate Goal" statement.
+1. [`../AGENTS.md`](../AGENTS.md) — standard agent-spec
+   entrypoint at the repo root with the binding safety
+   constraints and tight-loop commands. **Always tracked.** If a
+   workstation `CLAUDE.md` also exists it is gitignored
+   per-workstation context, not a source of binding rules.
 2. [`launch-candidate-checklist.md`](launch-candidate-checklist.md)
    — the bound list of what must be true to declare launch
    candidate.
@@ -25,81 +71,43 @@ of useful work and commit it.
    — the narrative of where the project is, what is strong, and
    what blocks tier 3 readiness.
 4. [`adr/0017-streamable-http-session-rehydration.md`](adr/0017-streamable-http-session-rehydration.md)
-   — the open architectural decision; its resolution is on the
-   critical path.
+   — Accepted; Path A landed. Read this before touching session
+   state.
 5. [`live-tests.md`](live-tests.md) — how the live-contract
    nightly works and how the sacrificial workspace is wired.
 6. [`deploy/production-profile-shared-service.md`](deploy/production-profile-shared-service.md)
    — the deployment shape that the launch candidate is built
    around.
+7. [`claude-code-continuation.md`](claude-code-continuation.md) —
+   exact Claude Code continuation packet with prompts, branch
+   rules, and verification sequence.
 
 ## Current known blockers
 
-In priority order. Each blocker has a Claude-Code slash command
-that scopes the investigation; the slash-command files live
-under the workstation-private `.claude/commands/` directory
-(gitignored). If you are running outside Claude Code, treat the
-prose below as the checklist.
+There are no remaining local code/docs/test features known at this
+handoff. The remaining blockers are external evidence gates:
 
-1. **Live contract — calendar-bound scheduled-cron evidence on the
-   candidate SHA.** The rolling `live-test-failure` issue is closed
-   (auto-closed by manual run 25238997088). Two manual-dispatch
-   runs are green (read-only 25238997088, full-tier 25239216412).
+1. **Scheduled live-contract cron evidence on the candidate SHA.**
+   The rolling `live-test-failure` issue is closed (auto-closed by
+   manual run 25238997088). Two manual-dispatch runs are green
+   (read-only 25238997088, full-tier 25239216412).
    `TestLiveReadSideSchemaDiff` is wired into the read-only step of
-   `.github/workflows/live-contract.yml` and locally green.
-   What is still open: two consecutive **scheduled** (cron) green
-   runs of `live-contract.yml` on the candidate SHA, with the
-   schema-diff evidence captured. Slash command:
-   `/fix-live-contract` if a future cron firing reds.
-2. ~~**No shared-service Postgres E2E**~~ **Closed 2026-05-02** by
-   commits eb5351c → abad73b. The shared-service E2E lives at
-   `internal/controlplane/postgres/e2e_shared_service_test.go`
-   (`make shared-service-e2e`) and runs per-PR as the
-   `Shared-service Postgres E2E` job in `.github/workflows/ci.yml`.
-   **Promoted to required-status check on `main`** as commit
-   `50aa87f` after three consecutive green runs (25240007056,
-   25240085916, 25240163213); the snapshot in
-   [`branch-protection.md`](branch-protection.md) is the audit
-   trail.
-3. ~~**ADR 0017 unresolved**~~ **Closed 2026-05-02** by Path A.
-   `streamSessionManager.get` consults the shared
-   `controlplane.Store` on a local miss, strict-validates the
-   freshly-authenticated principal against the persisted
-   Subject/TenantID, and rebuilds the per-tenant runtime via the
-   existing principal-aware Factory. Pinned by
-   `TestStreamableHTTPCrossInstanceRehydration` in
-   `internal/controlplane/postgres/e2e_session_rehydration_test.go`,
-   which boots two listeners against the same Postgres store and
-   asserts the cross-instance happy path, cross-tenant 403, and
-   expired-session 404 + row removal. Runs in the existing
-   `Shared-service Postgres E2E` CI job. The `sessionAffinity:
-   ClientIP` band-aid stays as defence-in-depth + perf
-   optimisation. ADR 0017 is **Accepted** with explicit Q1-Q4
-   decisions (commits eb5351c + 8353934 + fcfd7f0 + 5e566e8).
-4. ~~**Auth-model docs scattered**~~ **Closed 2026-05-02** by
-   commits 0bcd30b (new `docs/auth-model.md`: 4-mode table,
-   Principal mapping, tenant resolution, failure modes, test
-   pins, 5-question reviewer self-quiz) + 8a627d6 (operator-doc
-   cross-links from `docs/production-readiness.md` "Pick an
-   auth mode" and `docs/runbooks/auth-failures.md`) +
-   222c206 (Group 4 checklist terminology fix) + the current
-   forward-auth hardening pass (duplicate-value and 1024-byte
-   principal-header caps pinned by
-   `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders`).
-5. ~~**Launch docs not verified end-to-end**~~ **Closed
-   2026-05-02.** `docs/clients.md` names exact tested
-   transport/auth combinations and flags untested combos,
-   `docs/support-matrix.md` names Go / OS / FIPS / kernel posture,
-   and every deployment profile ends with a "How to verify this
-   deployment" section naming the doctor command and smoke target.
-6. **Bench baseline pre-dates the perf wave** — `.bench/` baseline
-   needs refreshing after the cached tools/list, tier-2 cache,
-   and schema compaction commits.
-7. ~~**Security review walk-through**~~ **Closed 2026-05-02.**
-   `make verify-vuln` (with `govulncheck` on PATH),
-   `make verify-fips`, gitleaks, Semgrep, and `make check` are
-   green on the launch-review tree. Re-run the same commands on
-   the final candidate tag.
+   `.github/workflows/live-contract.yml`. What is still open: two
+   consecutive **scheduled** (cron) green runs of
+   `live-contract.yml` on the candidate SHA, with schema-diff,
+   mutating, and audit-phase evidence captured. Use
+   `/fix-live-contract` only if a future cron firing reds.
+2. **Candidate-tag security walk-through.** Local launch-review
+   preflight was green on 2026-05-02, but the final candidate tag
+   still needs `make verify-vuln`, `make verify-fips`, gitleaks,
+   and Semgrep evidence. File findings or explicit "no findings"
+   evidence in `SECURITY.md`.
+3. **Release/sigstore/SLSA evidence.** The candidate tag still
+   needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
+   archived `doctor --strict` outputs for the reference deployment.
+
+For paste-ready Claude Code prompts and branch rules, use
+[`claude-code-continuation.md`](claude-code-continuation.md).
 
 For the full audit framing run `/launch-candidate` from a Claude
 Code session inside this repo (the slash command is gitignored
@@ -180,7 +188,8 @@ exist, propose it as a Makefile target before using it.
 | gRPC build / parity | `make build-grpc`, `make grpc-release-parity`, `make grpc-auth-smoke` |
 | Postgres build | `make build-postgres` |
 | Postgres integration tests | `make test-postgres` (requires Docker; uses Testcontainers + `INTEGRATION_REQUIRED=1`) |
-| Live-contract tests (read-only) | `CLOCKIFY_LIVE_API_KEY=... CLOCKIFY_LIVE_WORKSPACE_ID=... go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/` |
+| Live-contract local pre-flight | `make live-contract-local` (prints evidence warnings; **local green is not Group 1 evidence**) |
+| Live-contract tests (read-only, raw) | `go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/...` with `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID` set against a sacrificial workspace |
 | Live-contract tests (mutating, sacrificial only) | append `-run '^TestE2EMutating$\|^TestLiveDryRunDoesNotMutate$\|^TestLivePolicyTimeTrackingSafeBlocksProjectCreate$'` and only against the workspace named in `docs/live-tests.md` |
 | Doctor (config-strict) | `clockify-mcp doctor --profile=<profile> --strict` |
 | Doctor (backends) | `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` |
@@ -192,13 +201,14 @@ exist, propose it as a Makefile target before using it.
 
 ## Non-negotiable safety constraints
 
-These are restated from `CLAUDE.md` "Strict agent rules". If a
-constraint conflicts with a task, the task is wrong, not the
+These are restated from `AGENTS.md` and the launch checklist. If
+a constraint conflicts with a task, the task is wrong, not the
 constraint.
 
 1. **Do not declare launch-ready until live-contract + shared-service
-   Postgres E2E + CI on `main` are simultaneously green.** Local
-   `release-check` is necessary, not sufficient.
+   Postgres E2E + CI on `main` are simultaneously green and
+   candidate-tag security plus release/sigstore/SLSA evidence exists.**
+   Local `release-check` is necessary, not sufficient.
 2. **Do not weaken security or profile defaults to make tests
    pass.** No relaxing `time_tracking_safe`. No flipping
    `MCP_AUDIT_DURABILITY` away from `fail_closed` under
@@ -228,56 +238,36 @@ constraint.
    landing a multi-commit wave, push only when the whole group is
    green locally.
 8. **Do not modify generator-owned files by hand.** Listed in
-   `CLAUDE.md` "Generator-owned files".
+   `CONTRIBUTING.md` and `AGENTS.md`.
 9. **Do not invent commands.** If a command is not in `Makefile`,
    `.github/workflows/`, or the docs, propose it as a Makefile
    target first.
-10. **`CLAUDE.md` and this file are gitignored.** Do not try to
-    commit them; they are per-workstation context.
+10. **Only workstation-private context is gitignored.** `CLAUDE.md`
+    and `.claude/commands/` may exist locally; do not commit them.
+    `AGENTS.md` and this handoff are tracked.
 
-## Suggested implementation order
+## Suggested continuation order
 
-The order minimises rework: every step makes the next step
-verifiable.
+The local implementation queue is empty. Continue only when one of
+the external evidence gates can be verified.
 
-1. **Audit** (`/launch-candidate`). Confirm the gap analysis is
-   still accurate. If the doc lags reality, fix the doc first;
-   accurate docs are themselves a launch-candidate gate.
-2. **Stabilise the live-contract loop** (`/fix-live-contract`).
-   Until the nightly is reliably green, every other gate is
-   relative to a moving baseline. Investigate, classify each
-   failure (real / flake / upstream), fix or quarantine, and aim
-   for two consecutive green nightly runs.
-3. **Build the shared-service Postgres E2E** (`/postgres-e2e`).
-   This is the largest single net-new test. Use the existing
-   `make test-postgres` Testcontainers infrastructure for the
-   Postgres bring-up; reuse `tests/harness/streamable.go` for the
-   transport. Assert tenant isolation and audit invariants.
-4. **Resolve ADR 0017** (`/session-rehydration`). Pick path A
-   (implement) or path B (document). If path A, the multi-replica
-   integration test from step 3's harness is the natural pin. If
-   path B, update `docs/production-readiness.md`, the relevant
-   profile docs, and the Helm chart's `replicaCount` default.
-5. **Consolidate auth-model docs.** One page that maps every
-   Clockify auth requirement to an MCP config knob. Cross-link
-   from `README.md`.
-6. **Verify launch docs.** Closed 2026-05-02; re-run
-   `make doc-parity` after any future change to `README.md`,
-   `docs/clients.md`, `docs/support-matrix.md`, or
-   `docs/deploy/profile-*.md`.
-7. **Refresh bench baseline.** Run `make verify-bench` on the
-   candidate shape, commit the new `.bench/` baseline file with
-   a `Why:` line that names the perf wave it reflects.
-8. **Security review walk-through.** Closed 2026-05-02; re-run
-   `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
-   on the final candidate tag. File any new findings in
-   `SECURITY.md`.
-9. **Cut a release candidate** (`vX.Y.Z-rc.N`), watch
-   `release-smoke.yml`, archive the green run.
-10. **Open the launch-candidate tracking issue.** Link to the
-    green workflow runs and the archived `doctor --strict`
-    output. Only at this point does any agent or human declare
-    "launch candidate ready."
+1. **Audit scheduled live-contract evidence.** Use
+   `gh run list --workflow=live-contract.yml --branch=main --limit 10`
+   and the rolling `live-test-failure` issue. If two consecutive
+   scheduled runs are green on the candidate SHA and the run logs
+   show schema-diff, mutating, and audit-phase tests executed,
+   update the launch checklist with the exact run URLs.
+2. **Perform candidate-tag security walk-through.** On the final
+   candidate tag, re-run `make verify-vuln`, `make verify-fips`,
+   gitleaks, and Semgrep. Record findings or "no findings" in
+   `SECURITY.md` and link the evidence from the checklist.
+3. **Cut the release candidate and verify artefacts.** After live
+   contract and security evidence exist, cut `vX.Y.Z-rc.N`, watch
+   `release-smoke.yml`, verify sigstore/SLSA/SBOM evidence, and
+   archive reference `doctor --strict` outputs.
+4. **Open the launch-candidate tracking issue.** Link every green
+   workflow run and archived output. Only after all links exist may
+   any agent or human report "launch candidate ready."
 
 ## When you are uncertain
 

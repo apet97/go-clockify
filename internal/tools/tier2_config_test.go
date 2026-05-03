@@ -88,17 +88,18 @@ func TestCreateHoliday(t *testing.T) {
 			if body["name"] != "New Year" {
 				t.Fatalf("expected name 'New Year', got %v", body["name"])
 			}
-			if body["date"] != "2026-01-01" {
-				t.Fatalf("expected date '2026-01-01', got %v", body["date"])
+			dp, ok := body["datePeriod"].(map[string]any)
+			if !ok || dp["startDate"] != "2026-01-01" || dp["endDate"] != "2026-01-01" {
+				t.Fatalf("expected datePeriod={startDate:2026-01-01, endDate:2026-01-01}, got %v", body["datePeriod"])
 			}
-			if body["recurring"] != true {
-				t.Fatalf("expected recurring=true, got %v", body["recurring"])
+			if body["occursAnnually"] != true {
+				t.Fatalf("expected occursAnnually=true, got %v", body["occursAnnually"])
 			}
 			respondJSON(t, w, map[string]any{
-				"id":        "h1",
-				"name":      "New Year",
-				"date":      "2026-01-01",
-				"recurring": true,
+				"id":             "h1",
+				"name":           "New Year",
+				"datePeriod":     dp,
+				"occursAnnually": true,
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -108,9 +109,10 @@ func TestCreateHoliday(t *testing.T) {
 
 	svc := New(client, "ws1")
 	result, err := svc.CreateHoliday(context.Background(), map[string]any{
-		"name":      "New Year",
-		"date":      "2026-01-01",
-		"recurring": true,
+		"name":            "New Year",
+		"start_date":      "2026-01-01",
+		"occurs_annually": true,
+		"user_ids":        []any{"u1"},
 	})
 	if err != nil {
 		t.Fatalf("create holiday failed: %v", err)

@@ -359,16 +359,23 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var webhooks []map[string]any
-	if err := s.Client.Get(ctx, path, query, &webhooks); err != nil {
+	// Upstream returns {workspaceWebhookCount: N, webhooks: [...]}.
+	// Probe evidence: clockify-api-probe-lab/findings/webhooks.md
+	// (rev 2 2026-05-02).
+	var envelope struct {
+		WorkspaceWebhookCount int              `json:"workspaceWebhookCount"`
+		Webhooks              []map[string]any `json:"webhooks"`
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_webhooks", webhooks, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(webhooks),
-		"page":        page,
-		"pageSize":    pageSize,
+	return ok("clockify_list_webhooks", envelope.Webhooks, map[string]any{
+		"workspaceId":           wsID,
+		"count":                 len(envelope.Webhooks),
+		"workspaceWebhookCount": envelope.WorkspaceWebhookCount,
+		"page":                  page,
+		"pageSize":              pageSize,
 	}), nil
 }
 
@@ -514,22 +521,76 @@ func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (Resul
 	return ok("clockify_delete_webhook", map[string]any{"deleted": true, "webhookId": webhookID}, map[string]any{"workspaceId": wsID}), nil
 }
 
-// ListWebhookEvents returns the available webhook event types.
+// webhookEventEnum is the static list of webhook event types Clockify
+// supports today. Clockify exposes no dynamic events-listing endpoint
+// (probed: /workspaces/{ws}/webhooks/events 400s, the per-webhook
+// /webhooks/{id}/events 404s), so go-clockify's tool surfaces the
+// authoritative enum from WEBHOOKDOC.md instead. Values are the
+// case-sensitive enum that subscribe-create accepts as `webhookEvent`.
+var webhookEventEnum = []string{
+	"APPROVAL_REQUEST_STATUS_UPDATED",
+	"ASSIGNMENT_CREATED",
+	"ASSIGNMENT_DELETED",
+	"ASSIGNMENT_PUBLISHED",
+	"ASSIGNMENT_UPDATED",
+	"BALANCE_UPDATED",
+	"BILLABLE_RATE_UPDATED",
+	"CLIENT_DELETED",
+	"CLIENT_UPDATED",
+	"COST_RATE_UPDATED",
+	"EXPENSE_CREATED",
+	"EXPENSE_DELETED",
+	"EXPENSE_RESTORED",
+	"EXPENSE_UPDATED",
+	"INVOICE_UPDATED",
+	"LIMITED_USERS_ADDED_TO_WORKSPACE",
+	"NEW_APPROVAL_REQUEST",
+	"NEW_CLIENT",
+	"NEW_INVOICE",
+	"NEW_PROJECT",
+	"NEW_TAG",
+	"NEW_TASK",
+	"NEW_TIME_ENTRY",
+	"NEW_TIMER_STARTED",
+	"PROJECT_DELETED",
+	"PROJECT_UPDATED",
+	"TAG_DELETED",
+	"TAG_UPDATED",
+	"TASK_DELETED",
+	"TASK_UPDATED",
+	"TIME_ENTRY_DELETED",
+	"TIME_ENTRY_RESTORED",
+	"TIME_ENTRY_SPLIT",
+	"TIME_ENTRY_UPDATED",
+	"TIME_OFF_REQUEST_APPROVED",
+	"TIME_OFF_REQUEST_REJECTED",
+	"TIME_OFF_REQUEST_STARTED",
+	"TIME_OFF_REQUEST_UPDATED",
+	"TIME_OFF_REQUEST_WITHDRAWN",
+	"TIME_OFF_REQUESTED",
+	"TIMER_STOPPED",
+	"USER_ACTIVATED_ON_WORKSPACE",
+	"USER_DEACTIVATED_ON_WORKSPACE",
+	"USER_DELETED_FROM_WORKSPACE",
+	"USER_EMAIL_CHANGED",
+	"USER_GROUP_CREATED",
+	"USER_GROUP_DELETED",
+	"USER_GROUP_UPDATED",
+	"USER_JOINED_WORKSPACE",
+	"USER_UPDATED",
+	"USERS_INVITED_TO_WORKSPACE",
+}
+
+// ListWebhookEvents returns the static enum of webhook event types
+// the Clockify webhooks API accepts. The upstream exposes no
+// listing endpoint — see findings/webhooks.md (#15).
 func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-
-	path, err := paths.Workspace(wsID, "webhooks", "events")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var events []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &events); err != nil {
-		return ResultEnvelope{}, err
-	}
-
+	// Return a fresh copy so callers can't mutate the package-level slice.
+	events := append([]string(nil), webhookEventEnum...)
 	return ok("clockify_list_webhook_events", events, map[string]any{
 		"workspaceId": wsID,
 		"count":       len(events),
