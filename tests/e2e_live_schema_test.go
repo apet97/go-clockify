@@ -143,6 +143,7 @@ func setupLiveSchemaConfig(t *testing.T) config.Config {
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
+	MarkLiveTestRan()
 	return cfg
 }
 

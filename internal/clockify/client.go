@@ -10,6 +10,7 @@ import (
 	"maps"
 	"math"
 	"math/big"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -115,23 +116,131 @@ func (c *Client) SetUserAgent(ua string) {
 }
 
 func (c *Client) Get(ctx context.Context, path string, query map[string]string, out any) error {
-	return c.doJSON(ctx, http.MethodGet, path, query, nil, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
 }
 
 func (c *Client) Post(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPost, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, nil, body, out)
 }
 
 func (c *Client) Put(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPut, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, nil, body, out)
 }
 
 func (c *Client) Patch(ctx context.Context, path string, body any, out any) error {
-	return c.doJSON(ctx, http.MethodPatch, path, nil, body, out)
+	return c.doJSON(ctx, c.baseURL, http.MethodPatch, path, nil, body, out)
 }
 
 func (c *Client) Delete(ctx context.Context, path string) error {
-	return c.doJSON(ctx, http.MethodDelete, path, nil, nil, nil)
+	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, nil, nil)
+}
+
+// ReportsBaseURL returns the base URL for endpoints that live on
+// Clockify's reports host (reports.api.clockify.me/v1). The reports
+// API is a separate host from api.clockify.me — hitting the reports
+// paths on the primary host returns 404 ("No static resource"), and
+// hitting them on the reports host with the /api/v1 prefix is also
+// 404. See findings/shared-reports.md.
+//
+// Derivation: when the primary base URL matches the canonical
+// production host, swap to reports.api.clockify.me and drop the /api
+// segment. Otherwise (test stubs, custom proxies, on-prem mirrors),
+// return the primary base URL unchanged so existing fixtures continue
+// to work without per-test wiring.
+func (c *Client) ReportsBaseURL() string {
+	const canonical = "https://api.clockify.me/api/v1"
+	const reports = "https://reports.api.clockify.me/v1"
+	if c.baseURL == canonical {
+		return reports
+	}
+	return c.baseURL
+}
+
+// GetReports performs a GET against the reports host. Use this for
+// shared-report endpoints; everything else should stay on Get.
+func (c *Client) GetReports(ctx context.Context, path string, query map[string]string, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, nil, out)
+}
+
+// PostReports performs a POST against the reports host.
+func (c *Client) PostReports(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPost, path, nil, body, out)
+}
+
+// PutReports performs a PUT against the reports host.
+func (c *Client) PutReports(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPut, path, nil, body, out)
+}
+
+// DeleteReports performs a DELETE against the reports host.
+func (c *Client) DeleteReports(ctx context.Context, path string) error {
+	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
+}
+
+// RawResponse is the binary-aware envelope returned by GetReportsRaw —
+// the raw response bytes plus enough header context for callers to
+// recover Content-Type and Content-Disposition (filename). Used by the
+// shared-reports export endpoint where the upstream returns binary
+// (PDF/XLSX) or non-JSON text (CSV).
+type RawResponse struct {
+	Header http.Header
+	Body   []byte
+}
+
+// GetReportsRaw is the binary-aware sibling of GetReports. It runs the
+// same retry/tracing/metrics pipeline but skips the JSON unmarshal,
+// exposing the raw body bytes and response headers so callers can
+// inspect Content-Type and Content-Disposition. Use for export
+// endpoints; use GetReports for JSON-shaped reads.
+func (c *Client) GetReportsRaw(ctx context.Context, path string, query map[string]string) (*RawResponse, error) {
+	raw := &RawResponse{}
+	if err := c.doRequest(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, "", nil, raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+// PostMultipart performs a POST with a multipart/form-data body. Each
+// form key maps to one or more values; multi-value keys are written as
+// repeated form fields under the same name (the encoding the Clockify
+// expense endpoints use for fields like changeFields). No file upload
+// support — the expense endpoints accept absent file fields with an
+// empty fileId, so callers don't currently need it.
+func (c *Client) PostMultipart(ctx context.Context, path string, form url.Values, out any) error {
+	payload, contentType, err := encodeMultipart(form)
+	if err != nil {
+		return err
+	}
+	return c.doRequest(ctx, c.baseURL, http.MethodPost, path, nil, contentType, payload, out)
+}
+
+// PutMultipart performs a PUT with a multipart/form-data body. Same
+// encoding rules as PostMultipart.
+func (c *Client) PutMultipart(ctx context.Context, path string, form url.Values, out any) error {
+	payload, contentType, err := encodeMultipart(form)
+	if err != nil {
+		return err
+	}
+	return c.doRequest(ctx, c.baseURL, http.MethodPut, path, nil, contentType, payload, out)
+}
+
+// encodeMultipart turns a url.Values map into a multipart/form-data
+// payload. The boundary is generated by mime/multipart; the returned
+// content-type string carries it.
+func encodeMultipart(form url.Values) ([]byte, string, error) {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	for k, vs := range form {
+		for _, v := range vs {
+			if err := w.WriteField(k, v); err != nil {
+				return nil, "", err
+			}
+		}
+	}
+	if err := w.Close(); err != nil {
+		return nil, "", err
+	}
+	return buf.Bytes(), w.FormDataContentType(), nil
 }
 
 func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string) ([]T, error) {
@@ -161,8 +270,9 @@ func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[s
 	return all, nil
 }
 
-func (c *Client) doJSON(ctx context.Context, method, path string, query map[string]string, body any, out any) error {
+func (c *Client) doJSON(ctx context.Context, baseURL, method, path string, query map[string]string, body any, out any) error {
 	var payload []byte
+	var contentType string
 	if body != nil {
 		buf := getBodyBuf()
 		defer putBodyBuf(buf)
@@ -178,8 +288,15 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 		if n := len(payload); n > 0 && payload[n-1] == '\n' {
 			payload = payload[:n-1]
 		}
+		contentType = "application/json"
 	}
+	return c.doRequest(ctx, baseURL, method, path, query, contentType, payload, out)
+}
 
+// doRequest is the transport-level entry point used by both JSON and
+// multipart callers. Retry, metrics, and tracing all live here so the
+// content-type variants share a single hot path.
+func (c *Client) doRequest(ctx context.Context, baseURL, method, path string, query map[string]string, contentType string, payload []byte, out any) error {
 	endpoint := normalizeEndpoint(path)
 
 	var lastErr error
@@ -211,7 +328,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
-		err := c.doOnce(ctx, method, path, endpoint, query, payload, out)
+		err := c.doOnce(ctx, baseURL, method, path, endpoint, query, contentType, payload, out)
 		if err == nil {
 			return nil
 		}
@@ -230,7 +347,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query map[stri
 	return fmt.Errorf("request failed without specific error")
 }
 
-func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, query map[string]string, payload []byte, out any) error {
+func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint string, query map[string]string, contentType string, payload []byte, out any) error {
 	ctx, span := tracing.Default.Start(ctx, "clockify.http")
 	span.SetAttribute("upstream.endpoint", endpoint)
 	span.SetAttribute("http.method", method)
@@ -247,7 +364,7 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	if path != "" && path[0] != '/' {
 		path = "/" + path
 	}
-	u, err := url.Parse(c.baseURL + path)
+	u, err := url.Parse(baseURL + path)
 	if err != nil {
 		return err
 	}
@@ -271,8 +388,8 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 	req.Header.Set("X-Api-Key", c.apiKey)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.userAgent)
-	if payload != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	tracing.Default.InjectHTTPHeaders(ctx, req.Header)
 
@@ -319,6 +436,28 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 		return nil
 	}
+	// Binary-aware path: when the caller wants the raw bytes (e.g.
+	// shared-reports PDF/CSV/XLSX export), read into a fresh buffer
+	// and stash headers — no JSON unmarshal. Same size cap as the
+	// JSON path so an oversize binary still surfaces a clear error.
+	if raw, ok := out.(*RawResponse); ok {
+		respBuf := getBodyBuf()
+		defer putBodyBuf(respBuf)
+		n, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody+1))
+		if err != nil {
+			return err
+		}
+		if n > maxResponseBody {
+			metrics.ClockifyResponsesOversizeTotal.Inc(method)
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
+			return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
+		}
+		body := make([]byte, n)
+		copy(body, respBuf.Bytes())
+		raw.Header = resp.Header.Clone()
+		raw.Body = body
+		return nil
+	}
 	// Read the body into a pooled buffer, then unmarshal. Using
 	// json.NewDecoder here would allocate fresh internal scan state
 	// on every call; io.Copy into a reused buffer is cheaper for the
@@ -346,6 +485,14 @@ func (c *Client) doOnce(ctx context.Context, method, path, endpoint string, quer
 		// away.
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
+	}
+	if n == 0 {
+		// Some Clockify endpoints (notably the scheduling per-user
+		// totals path) reply 200 with a zero-byte body when the query
+		// matches no rows. Treat that as a successful empty response
+		// rather than letting json.Unmarshal surface "unexpected end
+		// of JSON input" as a tool error.
+		return nil
 	}
 	return json.Unmarshal(respBuf.Bytes(), out)
 }

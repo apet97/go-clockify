@@ -14,8 +14,9 @@ checkout. "Worked once" is not green.
 > **Strict agent rule.** Do not declare "launch candidate" until
 > every group below is ticked **and** the group-level definition of
 > done is satisfied. The binding constraints live in the
-> workstation-private `CLAUDE.md` at the repo root (gitignored;
-> see "Strict agent rules" there).
+> tracked [`AGENTS.md`](../AGENTS.md) at the repo root. A local
+> workstation `CLAUDE.md` may exist, but it is gitignored context,
+> not the binding source of truth.
 
 ---
 
@@ -64,6 +65,10 @@ The nightly **Live contract** workflow
 **Definition of done.** Two clean nightly runs in a row with
 mutating + audit tiers enabled, no open `live-test-failure` issue,
 and no upstream schema field that the client silently discards.
+
+See also: [`docs/api-coverage.md`](api-coverage.md) for the full
+121-tool coverage matrix, per-tool dry-run/policy breakdown, and
+evidence hierarchy.
 
 ---
 
@@ -261,11 +266,15 @@ will read.
       `docs/tool-catalog.md` count, the `internal/config/spec.go`
       surface, and the deployment profile docs. Run
       `make doc-parity` to verify.
-      _Verified 2026-05-02: `docs/tool-catalog.json` has
-      33 Tier 1 tools + 91 Tier 2 tools = 124 total, matching
-      README. `make doc-parity`, `make config-doc-parity`,
-      `make catalog-drift`, and `make launch-checklist-parity`
-      all green after the launch-doc pass._
+      _Verified 2026-05-03: `docs/tool-catalog.json` has
+      33 Tier 1 tools + 88 Tier 2 tools = 121 total, matching
+      README. Tier 2 dropped from 91 → 88 over PR #55 (phantom
+      `list_schedules` removed) and the matching cleanup branch
+      removing the equivalent phantom `get_` and `create_` schedule
+      tools (no `/scheduling/{id}` surface exists upstream).
+      `make doc-parity`, `make config-doc-parity`,
+      `make catalog-drift`, and `make launch-checklist-parity` all
+      green after the regeneration._
 - [x] `CHANGELOG.md` Unreleased section has a clear,
       user-facing summary of every behavioural change since
       v1.2.0; no "internal only" hand-waving for changes that
@@ -313,32 +322,36 @@ deploy, and verify success without reading source code.
 
 ## 6. Security and policy review
 
-- [x] `make verify-vuln` green for the candidate tag (govulncheck
+- [ ] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
-      _Verified 2026-05-02 on the launch-doc/security-review
+      _Local preflight 2026-05-02 on the launch-doc/security-review
       working tree: installed `govulncheck` and ran
       `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`;
-      result: `No vulnerabilities found.` Re-run unchanged on the
-      final candidate tag before promotion._
-- [x] `gitleaks` scan green (config in `.gitleaks.toml`).
-      _Verified 2026-05-02: `make secret-scan` ran
+      result: `No vulnerabilities found.` Do not tick this box until
+      the same command is re-run on the final candidate tag._
+- [ ] `gitleaks` scan green (config in `.gitleaks.toml`).
+      _Local preflight 2026-05-02: `make secret-scan` ran
       `gitleaks detect --no-git --source . --redact --config
-      .gitleaks.toml`; no leaks found._
-- [x] `semgrep` review green; any `// nosemgrep` directive has a
+      .gitleaks.toml`; no leaks found. Do not tick this box until
+      the scan is re-run on the final candidate tag._
+- [ ] `semgrep` review green; any `// nosemgrep` directive has a
       justification comment within five lines and is referenced
       from the relevant ADR or runbook.
-      _Verified 2026-05-02: `semgrep scan --config p/default
+      _Local preflight 2026-05-02: `semgrep scan --config p/default
       --metrics=off --error --exclude .git --exclude .bench
       --exclude clockify-mcp .` scanned 1094 tracked files and
       returned 0 findings. The SSE `text/event-stream` suppressions
       in `internal/mcp/transport_streamable_http.go` have inline
-      justification comments and are recorded in ADR 0017._
-- [x] `make verify-fips` green when the FIPS-aware tooling is
+      justification comments and are recorded in ADR 0017. Do not
+      tick this box until the scan is re-run on the final candidate
+      tag._
+- [ ] `make verify-fips` green when the FIPS-aware tooling is
       installed (auto-skips otherwise — record the run on a host
       that has it).
-      _Verified 2026-05-02 on macOS arm64 with a FIPS-capable Go
+      _Local preflight 2026-05-02 on macOS arm64 with a FIPS-capable Go
       toolchain: `make verify-fips` built and tested `-tags=fips`
-      plus the `-tags=fips,grpc` build combination._
+      plus the `-tags=fips,grpc` build combination. Do not tick this
+      box until the same gate is re-run on the final candidate tag._
 - [x] No public AI-facing deployment can boot with a policy
       weaker than `time_tracking_safe`; the load-time guard
       remains in place.
@@ -382,9 +395,14 @@ accident.
       run), `release-smoke.yml` (latest tag), `link-check.yml`,
       `chaos.yml`, `mutation.yml`, `reproducibility.yml`,
       `bench.yml`. No skipped-but-required steps.
-- [ ] `make verify-bench` and `make bench-baseline-check` green;
+- [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.
+      _Closed 2026-05-02 by PR #51 on `main`: refreshed
+      `internal/benchdata/baseline.txt` from `Bench` workflow run
+      25255062599, validated locally with `make bench-baseline-check`,
+      then passed linux/amd64 comparison in
+      https://github.com/apet97/go-clockify/actions/runs/25255216987._
 - [ ] Release artefacts: signed binaries (cosign + SLSA), SBOMs,
       Docker images, FIPS variant. Verified by
       `release-smoke.yml` on the candidate tag.

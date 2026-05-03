@@ -155,10 +155,13 @@ tenant's data, or an unrecoverable session loss is a P0.
 
 What is missing for tier 3 is intentionally narrow:
 
-1. **Live contract is intermittently red and the rolling issue is
-   open.** Every promotion to launch candidate must start from
-   two consecutive green nightly runs with the mutating + audit
-   tiers enabled. Today the loop is short of that bar.
+1. **Scheduled live-contract evidence is still missing.** Every
+   promotion to launch candidate must start from two consecutive
+   green scheduled runs with the mutating + audit tiers enabled
+   and `TestLiveReadSideSchemaDiff` captured. The rolling
+   `live-test-failure` issue is closed and manual dispatches are
+   green, but scheduled cron evidence on the candidate SHA has not
+   arrived yet.
 2. ~~**Shared-service Postgres E2E does not exist as a single
    green-or-red test.**~~ **Closed 2026-05-02** by commits
    42502cf + 79f0769. The
@@ -186,11 +189,14 @@ What is missing for tier 3 is intentionally narrow:
    posture, every deployment profile ends with an explicit
    verification section, and the docs parity gates are the recorded
    local proof.
-6. **Bench baseline check has not been re-run on the candidate
-   shape.** Recent perf wave (cached tools/list, tier-2
-   descriptor cache, schema compaction) needs the baseline
-   refreshed and the regression threshold reaffirmed before any
-   tag claims launch quality.
+6. ~~**Bench baseline check has not been re-run on the candidate
+   shape.**~~ **Closed 2026-05-02 on main by PR #51.** The committed
+   linux/amd64 baseline was refreshed from `Bench` workflow run
+   25255062599 (`bench-current-25255062599`) after the cached
+   tools/list, Tier 2 descriptor cache, and schema compaction
+   wave. `make bench-baseline-check` validates the committed
+   artifact shape, and follow-up `Bench` workflow run 25255216987
+   passed the linux/amd64 regression comparison.
 
 ---
 
@@ -232,13 +238,33 @@ What is missing for tier 3 is intentionally narrow:
   doc. Non-hosted profiles explicitly say that `doctor --strict` is
   a negative hosted-posture check, so operators do not mistake exit
   3 for a broken local or small-team install.
-- **Security-review walk-through is clean on the current tree.**
+- **Security-review local preflight is clean on the current tree.**
   `govulncheck`, gitleaks, Semgrep (`p/default`, metrics off), and
   the local FIPS build-tag check are green. The only Semgrep
   suppressions are scoped to streamable-HTTP SSE frame writes and
   are justified both in code and ADR 0017. The production
   `MCP_ALLOW_DEV_BACKEND=1` rejection now has a dedicated regression
-  test.
+  test. This is not candidate-tag evidence; the same walk-through
+  must be repeated after `vX.Y.Z-rc.N` is cut.
+- **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
+  maps all 121 MCP tools to their Clockify API endpoints, classifies
+  each tool by read-only/mutating/destructive/billing/admin risk, and
+  lists the current unit/integration/live-test coverage per tool.
+  Gaps are explicit — dry-run coverage (6/14 destructive tools wired,
+  1/14 live-tested), policy-mode live coverage (2/5 modes),
+  schema-drift scope (read-side only), and Tier 2 live coverage
+  (success-path: 0/88 tools cron-pinned). The evidence hierarchy (scheduled workflow >
+  manual dispatch > local with env vars > local without env vars as
+  non-evidence) is documented there.
+- **Benchmark baseline is current for the candidate shape.** The
+  committed `internal/benchdata/baseline.txt` was refreshed from the
+  `Bench` workflow bootstrap artifact `bench-current-25255062599`
+  on 2026-05-02 after the cached tools/list, Tier 2 descriptor cache,
+  and schema compaction wave. `make bench-baseline-check` validates
+  that the baseline remains linux/amd64, covers every workflow
+  package, and has the configured 10-sample floor. Follow-up
+  `Bench` workflow run 25255216987 passed the linux/amd64 regression
+  comparison against the refreshed baseline.
 
 ---
 
@@ -246,6 +272,11 @@ What is missing for tier 3 is intentionally narrow:
 
 In priority order — closing the lower-numbered ones first
 unblocks the next.
+
+Only external evidence blockers remain after PR #51 merged to `main` at
+`adce316d60644fe51365086aba186227c9ae3977`: scheduled live-contract
+cron greens, candidate-tag security walk-through evidence, and
+release/sigstore/SLSA evidence.
 
 1. **Live contract failures (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
@@ -278,27 +309,35 @@ unblocks the next.
    names Go/OS/FIPS/kernel posture, and every deployment profile
    ends with a verification section.
 
-6. **Bench baseline refresh.**
-   *Where:* `make bench-baseline-check` against the candidate
-   shape post-perf wave.
-   *Why blocking:* a launch claim that includes "low overhead"
-   needs a baseline that reflects the current code. Today the
-   baseline is from before the perf wave.
+6. ~~**Bench baseline refresh.**~~ **Closed 2026-05-02 on main by
+   PR #51.** `internal/benchdata/baseline.txt` now comes from
+   `Bench` workflow run 25255062599 (`bench-current-25255062599`)
+   and `make bench-baseline-check` is green locally; follow-up
+   `Bench` workflow run 25255216987 passed the linux/amd64 regression
+   comparison. The default `make verify-bench` comparison is
+   intentionally platform-guarded on macOS/arm64 workstations.
 
-7. ~~**Security review walk-through.**~~ **Closed 2026-05-02.**
-   `make verify-vuln` (with `govulncheck` on PATH), gitleaks,
-   Semgrep, `make verify-fips`, and `make check` are green on the
-   current launch-review tree. Re-run these unchanged after a
-   candidate tag is cut.
+7. **Candidate-tag security walk-through.** `make verify-vuln`
+   (with `govulncheck` on PATH), gitleaks, Semgrep,
+   `make verify-fips`, and `make check` were green on the
+   2026-05-02 launch-review tree. The blocker closes only when the
+   same walk-through is repeated on the final candidate tag and any
+   findings are filed in `SECURITY.md`.
+
+8. **Release/sigstore/SLSA evidence.** Cut `vX.Y.Z-rc.N`, run
+   `release-smoke.yml`, verify sigstore bundles, SLSA attestations,
+   SBOMs, Docker image signature, and archive reference
+   `doctor --strict` outputs.
 
 ---
 
 ## What "fixing" each blocker looks like
 
 This section is intentionally short — it points at where the
-work happens, not how. The agent slash commands
-(`/fix-live-contract`, `/postgres-e2e`, `/session-rehydration`,
-`/launch-candidate`) drive the actual sequencing.
+work happens, not how. The active agent prompts live in
+[`claude-code-continuation.md`](claude-code-continuation.md). The
+historical `/postgres-e2e` and `/session-rehydration` local commands
+are retained only for regressions in those closed areas.
 
 | Blocker | First file an agent should open | Smallest verifiable green |
 |---|---|---|
@@ -307,8 +346,9 @@ work happens, not how. The agent slash commands
 | 3. ~~ADR 0017~~ | _closed 2026-05-02_ — `internal/controlplane/postgres/e2e_session_rehydration_test.go`, `streamSessionManager.get` + `Server.MarkInitialized` in `internal/mcp/`, ADR doc moved to Accepted | Done (Path A). |
 | 4. ~~Auth-model docs~~ | _closed 2026-05-02_ — `docs/auth-model.md` (new), `docs/production-readiness.md` "Pick an auth mode" + `docs/runbooks/auth-failures.md` cross-links | Done. |
 | 5. ~~Launch docs~~ | _closed 2026-05-02_ — `README.md`, `docs/clients.md`, `docs/support-matrix.md`, `docs/deploy/profile-*.md` | Done; `make doc-parity` plus manual review of client/profile/support docs. |
-| 6. Bench baseline | `.bench/`, `bench.yml` workflow, `Makefile` `verify-bench` target | Updated baseline file committed; `make bench-baseline-check` green. |
-| 7. ~~Security review~~ | _closed 2026-05-02_ — `make verify-vuln`, gitleaks, Semgrep, `make verify-fips`, production dev-backend regression test | Done on the launch-review tree; re-run on the candidate tag. |
+| 6. ~~Bench baseline~~ | _closed 2026-05-02 on main by PR #51_ — `internal/benchdata/baseline.txt`, `bench.yml` workflow runs 25255062599 + 25255216987, `make bench-baseline-check` | Done. |
+| 7. Candidate-tag security | `SECURITY.md`, `make verify-vuln`, gitleaks, Semgrep, `make verify-fips` | Same suite green on `vX.Y.Z-rc.N`, with findings or "no findings" recorded. |
+| 8. Release/sigstore/SLSA | `docs/release-policy.md`, `docs/verification.md`, `.github/workflows/release-smoke.yml` | Candidate-tag `release-smoke.yml` green; sigstore/SLSA/SBOM and reference-doctor evidence archived. |
 
 ---
 

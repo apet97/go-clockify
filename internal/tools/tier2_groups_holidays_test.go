@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 )
@@ -25,7 +26,24 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/holidays":
 			respondJSON(t, w, []map[string]any{{"id": "h1", "name": "New Year"}})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/holidays":
-			respondJSON(t, w, map[string]any{"id": "h-new", "name": "Memorial Day"})
+			// Pin SUMMARY rev 3 #8: body must carry a nested
+			// datePeriod and at least one of users/userGroups.
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("create_holiday parse body: %v", err)
+			}
+			dp, ok := body["datePeriod"].(map[string]any)
+			if !ok || dp["startDate"] == nil || dp["endDate"] == nil {
+				t.Fatalf("create_holiday missing datePeriod.start/end: %#v", body)
+			}
+			if body["users"] == nil && body["userGroups"] == nil {
+				t.Fatalf("create_holiday must include users or userGroups: %#v", body)
+			}
+			respondJSON(t, w, map[string]any{
+				"id":         "h-new",
+				"name":       body["name"],
+				"datePeriod": dp,
+			})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/holidays/h1":
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -81,16 +99,21 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_list_holidays")
 
 	res, err = svc.CreateHoliday(ctx, map[string]any{
-		"name":      "Memorial Day",
-		"date":      "2026-05-25",
-		"recurring": true,
+		"name":            "Memorial Day",
+		"start_date":      "2026-05-25",
+		"end_date":        "2026-05-25",
+		"occurs_annually": true,
+		"user_ids":        []any{"u1"},
 	})
 	mustOK(t, res, err, "clockify_create_holiday")
-	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "", "date": "2026-05-25"}); err == nil {
+	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "", "start_date": "2026-05-25", "user_ids": []any{"u1"}}); err == nil {
 		t.Fatal("expected validation error for missing name")
 	}
-	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "x", "date": ""}); err == nil {
-		t.Fatal("expected validation error for missing date")
+	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "x", "start_date": "", "user_ids": []any{"u1"}}); err == nil {
+		t.Fatal("expected validation error for missing start_date")
+	}
+	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "x", "start_date": "2026-05-25"}); err == nil {
+		t.Fatal("expected validation error when both user_ids and user_group_ids are missing")
 	}
 
 	// Delete holiday: dry-run + executed + validation

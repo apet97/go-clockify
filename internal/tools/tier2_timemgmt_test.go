@@ -13,8 +13,8 @@ import (
 func TestSchedulingHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := schedulingHandlers(svc)
-	if len(descs) != 10 {
-		t.Fatalf("expected 10 scheduling tools, got %d", len(descs))
+	if len(descs) != 7 {
+		t.Fatalf("expected 7 scheduling tools, got %d", len(descs))
 	}
 
 	names := make(map[string]bool, len(descs))
@@ -28,9 +28,6 @@ func TestSchedulingHandlersCount(t *testing.T) {
 		"clockify_create_assignment",
 		"clockify_update_assignment",
 		"clockify_delete_assignment",
-		"clockify_list_schedules",
-		"clockify_get_schedule",
-		"clockify_create_schedule",
 		"clockify_get_project_schedule_totals",
 		"clockify_filter_schedule_capacity",
 	}
@@ -77,7 +74,13 @@ func TestTimeOffHandlersCount(t *testing.T) {
 func TestListAssignments(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/scheduling/assignments" && r.Method == http.MethodGet:
+		case r.URL.Path == "/workspaces/ws1/scheduling/assignments/all" && r.Method == http.MethodGet:
+			if got := r.URL.Query().Get("start"); got == "" {
+				t.Fatalf("expected start query param, got empty")
+			}
+			if got := r.URL.Query().Get("end"); got == "" {
+				t.Fatalf("expected end query param, got empty")
+			}
 			respondJSON(t, w, []map[string]any{
 				{"id": "a1", "userId": "u1", "projectId": "p1", "start": "2026-04-01", "end": "2026-04-15"},
 				{"id": "a2", "userId": "u2", "projectId": "p1", "start": "2026-04-01", "end": "2026-04-30"},
@@ -89,7 +92,10 @@ func TestListAssignments(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.listAssignments(context.Background(), map[string]any{})
+	result, err := svc.listAssignments(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-30T23:59:59Z",
+	})
 	if err != nil {
 		t.Fatalf("list assignments failed: %v", err)
 	}

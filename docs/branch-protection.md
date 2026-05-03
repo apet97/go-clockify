@@ -12,7 +12,8 @@ repository.
 Last reviewed: 2026-05-02 (Shared-service Postgres E2E promoted
 to required-status check after three consecutive green runs on
 `main`; see Group 2 closure in
-[`launch-candidate-checklist.md`](launch-candidate-checklist.md)).
+[`launch-candidate-checklist.md`](launch-candidate-checklist.md);
+admin bypass logged once for `f3897b2` — see "Bypass log" below).
 
 > ✅ **Applied.** `main` has a classic branch-protection rule applied
 > via `gh api PUT repos/apet97/go-clockify/branches/main/protection`.
@@ -157,7 +158,58 @@ team. The repository administrator can technically override branch
 protection in an emergency (this is a GitHub mechanism the project
 does not use); when invoked, the override must be documented in a PR
 or issue with the reason and the change must be reviewed in a
-follow-up PR. To date this has not been used.
+follow-up PR.
+
+The administrator bypass mechanism has been invoked one time as of
+2026-05-02. Each invocation is recorded below with commit, reason,
+risk, mitigation, and an explicit non-claim that the bypass does not
+substitute for any launch-candidate evidence gate.
+
+### Bypass log
+
+| Date (UTC) | Commit | Branch event | Bypass | Reason |
+|---|---|---|---|---|
+| 2026-05-02 | `f3897b2563e03ba8b924a383bdfcbb75214ac88e` | direct push to `main` (single docs commit, fast-forward over `adce316`) | PR-required gate + 19 expected required-status-check pre-merge contexts | docs-only handoff continuation commit after PR #51, intended to publish a workstation-private continuation packet to `origin/main` so the next agent picks up from the same state |
+
+**Risk for `f3897b2`.** The push bypassed two pre-merge mechanisms:
+the "require pull request before merging" rule and the "expect all 19
+required status checks" merge-time gate. No CI run was *prevented*
+by the bypass — every workflow file with an `on: push` trigger fired
+and reported back. What was bypassed is the procedural enforcement
+that those checks must finish *before* the merge happens (the merge
+in this case being a direct fast-forward push).
+
+**Mitigation.**
+
+- The commit body contained a `Verified:` line documenting the local
+  pre-push gates: `make check; make doc-parity; make
+  config-doc-parity; make catalog-drift; make bench-baseline-check;
+  git diff --check; bash scripts/test-check-launch-evidence-gate.sh`.
+- All 19 PR-required checks plus 9 additional non-required checks
+  (28 total) executed on the push and reported `success`. List
+  re-derived from
+  `gh api repos/apet97/go-clockify/commits/<sha>/check-runs`:
+  `Actionlint`, `Build`, `Build -tags=fips`, `Build -tags=fips,grpc`,
+  `Build -tags=grpc`, `Build -tags=grpc,otel`, `Build -tags=otel`,
+  `Build -tags=pprof`, `Build, scan, sign`, `Config doc parity`,
+  `Coverage`, `Deploy render (k8s + helm)`, `Doctor Postgres
+  backend`, `Doctor strict smoke`, `Format`, `Fuzz`, `gRPC auth
+  smoke`, `Lint`, `Lychee`, `Repo hygiene`, `Secret scan (gitleaks)`,
+  `Shared-service Postgres E2E`, `Shellcheck`, `Test`, `Test (gRPC
+  tag)`, `Test (HTTP smoke)`, `Vet`, `Vulncheck`.
+- This follow-up PR documents the bypass and lets the same checks
+  run again under the PR-required protocol on the documentation
+  reconciliation commit, restoring the audit trail.
+
+**Non-claim.** Logging this bypass does **not** count as
+launch-candidate evidence and does **not** close any group of
+[`launch-candidate-checklist.md`](launch-candidate-checklist.md).
+Group 1 still requires two consecutive scheduled-cron greens of
+`live-contract.yml` on the candidate SHA. Group 6 still requires
+the candidate-tag security walk-through. Group 7 still requires
+release/sigstore/SLSA evidence on the candidate tag. The bypass
+log is a governance audit artefact; it is not a substitute for
+any of those gates.
 
 ## How to audit
 
