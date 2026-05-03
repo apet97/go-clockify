@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 )
@@ -100,5 +101,102 @@ func TestListWebhooks(t *testing.T) {
 	}
 	if result.Meta["workspaceWebhookCount"] != 2 {
 		t.Fatalf("expected meta workspaceWebhookCount=2, got %v", result.Meta["workspaceWebhookCount"])
+	}
+}
+
+func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"id":                "wh1",
+				"name":              gotBody["name"],
+				"url":               gotBody["url"],
+				"webhookEvent":      gotBody["webhookEvent"],
+				"triggerSourceType": gotBody["triggerSourceType"],
+				"triggerSource":     gotBody["triggerSource"],
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":                "live webhook",
+		"url":                 "https://example.com/hook",
+		"webhook_event":       "NEW_TIME_ENTRY",
+		"trigger_source_type": "WORKSPACE_ID",
+		"trigger_source":      []any{"ws1"},
+	})
+	if err != nil {
+		t.Fatalf("CreateWebhook failed: %v", err)
+	}
+	if result.Action != "clockify_create_webhook" {
+		t.Fatalf("expected create action, got %q", result.Action)
+	}
+	if gotBody["webhookEvent"] != "NEW_TIME_ENTRY" {
+		t.Fatalf("expected singular webhookEvent, got body %#v", gotBody)
+	}
+	if _, ok := gotBody["events"]; ok {
+		t.Fatalf("body must not use legacy events array: %#v", gotBody)
+	}
+}
+
+func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":                "wh1",
+				"name":              "old",
+				"url":               "https://example.com/old",
+				"webhookEvent":      "NEW_TIME_ENTRY",
+				"triggerSourceType": "WORKSPACE_ID",
+				"triggerSource":     []string{"ws1"},
+			})
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"id":                "wh1",
+				"name":              gotBody["name"],
+				"url":               gotBody["url"],
+				"webhookEvent":      gotBody["webhookEvent"],
+				"triggerSourceType": gotBody["triggerSourceType"],
+				"triggerSource":     gotBody["triggerSource"],
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateWebhook(context.Background(), map[string]any{
+		"webhook_id":    "wh1",
+		"name":          "new",
+		"webhook_event": "TIMER_STOPPED",
+	})
+	if err != nil {
+		t.Fatalf("UpdateWebhook failed: %v", err)
+	}
+	if result.Action != "clockify_update_webhook" {
+		t.Fatalf("expected update action, got %q", result.Action)
+	}
+	for _, key := range []string{"name", "url", "webhookEvent", "triggerSourceType", "triggerSource"} {
+		if gotBody[key] == nil {
+			t.Fatalf("update body missing required live field %q: %#v", key, gotBody)
+		}
+	}
+	if gotBody["webhookEvent"] != "TIMER_STOPPED" {
+		t.Fatalf("expected updated event, got body %#v", gotBody)
 	}
 }

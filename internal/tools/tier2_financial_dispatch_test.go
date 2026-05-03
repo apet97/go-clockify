@@ -118,9 +118,11 @@ func TestTier2Dispatch_Invoices_Create(t *testing.T) {
 		Group: "invoices",
 		Tool:  "clockify_create_invoice",
 		Args: map[string]any{
-			"client_id": "client-1",
-			"currency":  "USD",
-			"due_date":  "2026-05-01",
+			"client_id":   "client-1",
+			"number":      "INV-DISPATCH",
+			"issued_date": "2026-04-01T00:00:00Z",
+			"currency":    "USD",
+			"due_date":    "2026-05-01T00:00:00Z",
 		},
 		Upstream: upstream,
 	})

@@ -9,7 +9,7 @@ This doc tells the next agent (or maintainer) exactly what state the
 live-validation campaign is in, what tests pass, what bugs were
 surfaced, what's left to do, and how to re-run everything locally.
 
-## Status update — 2026-05-03 (post-PR #53–#56)
+## Status update — 2026-05-03 (post-PR #53–#58 and exhaustive follow-up)
 
 The bulk of the bug inventory below was closed across four merged
 PRs (#53–#56) and one cleanup branch removing the matching phantom
@@ -54,17 +54,30 @@ schedule tools. The status, item-by-item against the numbered list:
 Not changed: the binding rules in this doc (manual livee2e is **not**
 launch evidence; live-contract.yml stays untouched; nothing here
 ticks Group 1/6/7 boxes on the launch-candidate checklist). Unresolved
-**numeric / unit questions** (invoice `unitPrice` cents, expense
-`amount`/`total` scaling, expense `projectId` optional-vs-required,
-shared-reports non-`SUMMARY` filter requirements) are now documented
-in `docs/api-coverage.md` under "Known unresolved API contract
-questions" rather than tracked here.
+**numeric / unit questions** (invoice `unitPrice` raw minor units,
+expense raw amount/total pass-through, expense `projectId`
+optional-vs-required, shared-reports non-`SUMMARY` filter
+requirements) are now documented in `docs/api-coverage.md` under
+"Known API contract notes" rather than tracked here.
 
 The "Bug inventory" and "Remaining work" sections below are
 preserved verbatim as the historical campaign artifact. Treat them
 as a record of what got found, not as a current task list — the
 task list is in `docs/launch-candidate-checklist.md` and
 `docs/api-coverage.md`.
+
+Follow-up branch `test/exhaustive-live-coverage-followup` extends the
+manual sacrificial-workspace suite so every one of the 121 generated
+catalog tools is named in `tests/e2e_live*.go` and exercised through
+the MCP path. New coverage includes the remaining Tier-1 CRUD/logging
+tools, full invoice CRUD/report/item probes, shared-report
+create/update/export/delete, user-admin group operations with owner
+safety dry-runs, webhook CRUD using the live `webhookEvent` body
+shape, time-off request/policy/balance probes, and approvals
+period-submit/get/status probes. Some of these are deliberately
+asserted as upstream 4xx / permission / unsupported-route outcomes
+rather than success paths; see `docs/api-coverage.md` for the current
+evidence table.
 
 ## Branch state
 
@@ -113,6 +126,12 @@ All gated by `//go:build livee2e` and live in `tests/`:
 | `tests/e2e_live_t2_project_admin_test.go` | `TestLiveT2ProjectAdminCRUD` | 6 | template / estimate / memberships / archive |
 | `tests/e2e_live_policy_modes_test.go` | `TestLivePolicyModes` | 5 | parametric `create_client` per policy mode |
 | `tests/e2e_live_pagination_test.go` | `TestLivePaginationOnTags` | 3 | seed 11 tags + pagination meta + walk |
+| `tests/e2e_live_tier1_remaining_crud_test.go` | `TestLiveTier1RemainingCRUD` | 1 flow | remaining Tier-1 CRUD/log/search coverage |
+| `tests/e2e_live_t2_invoices_test.go` | `TestLiveT2InvoicesCRUD` | 1 flow | all invoice tools; update item pinned as unsupported 405 |
+| `tests/e2e_live_t2_shared_reports_test.go` | `TestLiveT2SharedReportsCRUDAndExports` | 1 flow | SUMMARY CRUD/export plus conditional DETAILED/WEEKLY export |
+| `tests/e2e_live_t2_user_admin_test.go` | `TestLiveT2UserAdminCRUDAndOwnerSafety` | 1 flow | user-admin group CRUD, membership add/remove, owner dry-run safety |
+| `tests/e2e_live_t2_webhooks_test.go` | `TestLiveT2WebhooksCRUD` | 1 flow | webhook CRUD using live singular-event contract |
+| `tests/e2e_live_t2_time_off_approvals_test.go` | `TestLiveT2TimeOffRemainingTools`, `TestLiveT2ApprovalsRemainingTools` | 2 | time-off and approvals probes with success and concrete 4xx outcomes |
 
 ## Historical bug inventory (13 findings, now closed or documented)
 
@@ -226,7 +245,7 @@ After the post-campaign sweep:
 ### Closed handler work
 
 The numbered handler bugs above are no longer pending. Current live
-coverage gaps, unresolved numeric-unit questions, and upstream
+coverage gaps, raw numeric-unit notes, and upstream
 workspace-state limitations are tracked in `docs/api-coverage.md`.
 
 ### Workspace state work (no code change required)
@@ -238,24 +257,27 @@ workspace-state limitations are tracked in `docs/api-coverage.md`.
    Clockify UI (archive in UI → DELETE accepted). Names are listed
    above.
 
-### Future test additions (not blockers, just gaps)
+### Exhaustive follow-up coverage (landed after the historical campaign)
 
-10. Live tests for the 8 remaining Tier-1 tools that still lack
-    coverage: `clockify_log_time`, `clockify_update_entry`,
-    `clockify_find_and_update_entry`, `clockify_switch_project`,
-    `clockify_create_task`, plus the rest. Each is a small
-    additive test mirroring the existing patterns.
-11. Approvals CRUD test (Phase 11 was skipped). Requires a
-    timesheet to operate on. Sends external email even on the
-    sacrificial workspace; should gate behind a future
-    external-side-effects env var (see reserved gate names below).
-12. Webhook CRUD (Phase 13 was skipped). Even though
-    `list_webhooks` is broken, `create_webhook` against
-    `https://example.com/...` may work if URL validation passes.
-    The campaign safety rule prefers to skip this since we don't
-    control the destination.
-13. Time-off policy + request CRUD (Phase 10 was skipped). Same
-    email-side-effect reasoning.
+10. Remaining Tier-1 CRUD/logging/search tools are covered by
+    `TestLiveTier1RemainingCRUD`.
+11. Invoice CRUD, invoice items, send dry-run, mark-paid dry-run and
+    real mark-paid, and invoice reports are covered by
+    `TestLiveT2InvoicesCRUD`.
+12. Shared-report SUMMARY create/update/export/delete and conditional
+    DETAILED/WEEKLY export probes are covered by
+    `TestLiveT2SharedReportsCRUDAndExports`.
+13. User-admin user-group CRUD, membership add/remove, owner
+    deactivate dry-run, and update-role unsupported-route evidence
+    are covered by `TestLiveT2UserAdminCRUDAndOwnerSafety`.
+14. Webhook CRUD is covered by `TestLiveT2WebhooksCRUD`; the handler
+    now uses `webhookEvent`, `triggerSourceType`, and `triggerSource`
+    instead of the old plural `events` array.
+15. Time-off policy/request/balance/status tools and approvals tools
+    are covered by `TestLiveT2TimeOffRemainingTools` and
+    `TestLiveT2ApprovalsRemainingTools`, with permission and
+    unsupported-route responses pinned where the sacrificial
+    workspace rejects the operation.
 
 ### Workflow integration (separate review)
 
@@ -292,13 +314,11 @@ CLOCKIFY_LIVE_BILLING_ENABLED=true
 CLOCKIFY_LIVE_SETTINGS_ENABLED=true
 ```
 
-Reserved gate names for deferred phases (defined in the original
-campaign plan, present in the env file, but not yet read by any test
-because their phases were intentionally skipped — see "Future test
-additions" above): a webhook-registration gate (Phase 13 — webhooks)
-and an external-side-effects gate (Phases 10/11 — time_off and
-approvals which trigger email). When those phases land, the tests
-will start gating on them and they should be added to this list.
+The original campaign reserved separate webhook-registration and
+external-side-effect gate names for deferred phases. The exhaustive
+follow-up instead uses the existing explicit full-surface/admin/billing
+gates plus `CLOCKIFY_LIVE_WORKSPACE_CONFIRM`; keep any future cron
+promotion behind a separate blast-radius review.
 
 The `CLOCKIFY_LIVE_WORKSPACE_CONFIRM` second-factor check is a
 deliberate defense against a misconfigured shell mutating a wrong

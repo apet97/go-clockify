@@ -54,7 +54,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 | `clockify_get_approval_request` | yes | no | yes | `read` | Get a single approval request by ID |
 | `clockify_list_approval_requests` | yes | no | yes | `read` | List approval requests with optional status filter and pagination |
 | `clockify_reject_timesheet` | no | no | no | `write` | Reject a pending timesheet approval request |
-| `clockify_submit_for_approval` | no | no | no | `write` | Submit a timesheet for approval with a date range |
+| `clockify_submit_for_approval` | no | no | no | `write` | Submit a timesheet for approval for a configured approval period |
 | `clockify_withdraw_approval` | no | no | no | `write` | Withdraw a previously submitted approval request |
 
 ### `custom_fields`
@@ -199,11 +199,11 @@ default `*_id` capture in audit events. See
 
 | Tool | Tier | Audit Keys |
 |------|------|------------|
-| `clockify_add_invoice_item` | 2 | `invoice_id`, `description`, `quantity`, `unit_price` |
+| `clockify_add_invoice_item` | 2 | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_add_user_to_group` | 2 | `group_id`, `user_id` |
-| `clockify_create_invoice` | 2 | `client_id`, `currency`, `due_date` |
+| `clockify_create_invoice` | 2 | `client_id`, `number`, `issued_date`, `currency`, `due_date` |
 | `clockify_create_user_group` | 2 | `name` |
-| `clockify_create_webhook` | 2 | `url`, `events` |
+| `clockify_create_webhook` | 2 | `name`, `url`, `webhook_event`, `trigger_source_type`, `trigger_source` |
 | `clockify_deactivate_user` | 2 | `user_id` |
 | `clockify_delete_invoice` | 2 | `invoice_id` |
 | `clockify_delete_invoice_item` | 2 | `invoice_id`, `item_id` |
@@ -214,7 +214,7 @@ default `*_id` capture in audit events. See
 | `clockify_send_invoice` | 2 | `invoice_id` |
 | `clockify_test_webhook` | 2 | `webhook_id` |
 | `clockify_update_invoice` | 2 | `invoice_id`, `status`, `client_id` |
-| `clockify_update_invoice_item` | 2 | `invoice_id`, `item_id`, `description`, `quantity`, `unit_price` |
+| `clockify_update_invoice_item` | 2 | `invoice_id`, `item_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_update_user_group` | 2 | `group_id`, `name` |
 | `clockify_update_user_role` | 2 | `user_id`, `role` |
-| `clockify_update_webhook` | 2 | `webhook_id`, `url`, `events` |
+| `clockify_update_webhook` | 2 | `webhook_id`, `name`, `url`, `webhook_event`, `trigger_source_type`, `trigger_source` |

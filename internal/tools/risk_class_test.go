@@ -53,7 +53,7 @@ func TestRiskOverridesMatchTaxonomy(t *testing.T) {
 		"clockify_send_invoice":      {"invoice_id"},
 		"clockify_mark_invoice_paid": {"invoice_id"},
 		"clockify_update_user_role":  {"user_id", "role"},
-		"clockify_add_invoice_item":  {"invoice_id", "description", "quantity", "unit_price"},
+		"clockify_add_invoice_item":  {"invoice_id", "item_type", "description", "quantity", "unit_price"},
 		"clockify_test_webhook":      {"webhook_id"},
 	}
 

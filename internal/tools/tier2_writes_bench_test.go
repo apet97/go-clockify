@@ -130,10 +130,12 @@ func BenchmarkClockifyCreateExpense(b *testing.B) {
 func BenchmarkClockifyCreateInvoice(b *testing.B) {
 	invokeTier2WriteBench(b, "clockify_create_invoice", []string{"invoices"}, func() map[string]any {
 		return map[string]any{
-			"client_id": "c-bench",
-			"currency":  "USD",
-			"due_date":  "2026-02-01",
-			"note":      "bench",
+			"client_id":   "c-bench",
+			"number":      "INV-BENCH",
+			"issued_date": "2026-01-01T00:00:00Z",
+			"currency":    "USD",
+			"due_date":    "2026-02-01T00:00:00Z",
+			"note":        "bench",
 		}
 	})
 }
@@ -157,8 +159,8 @@ func BenchmarkClockifyCreateCustomField(b *testing.B) {
 func BenchmarkClockifySubmitForApproval(b *testing.B) {
 	invokeTier2WriteBench(b, "clockify_submit_for_approval", []string{"approvals"}, func() map[string]any {
 		return map[string]any{
-			"start": "2026-01-01T00:00:00Z",
-			"end":   "2026-01-07T23:59:59Z",
+			"period":       "WEEKLY",
+			"period_start": "2026-01-01T00:00:00.000Z",
 		}
 	})
 }

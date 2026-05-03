@@ -118,8 +118,8 @@ func TestTier2Dispatch_Approvals_SubmitForApproval(t *testing.T) {
 		Group: "approvals",
 		Tool:  "clockify_submit_for_approval",
 		Args: map[string]any{
-			"start": "2026-04-01T00:00:00Z",
-			"end":   "2026-04-07T23:59:59Z",
+			"period":       "WEEKLY",
+			"period_start": "2026-04-01T00:00:00.000Z",
 		},
 		Upstream: upstream,
 	})

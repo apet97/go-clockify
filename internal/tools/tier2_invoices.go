@@ -59,12 +59,14 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. Create invoice
 		{Tool: toolRW("clockify_create_invoice", "Create a new invoice for a client", map[string]any{
 			"type":     "object",
-			"required": []string{"client_id"},
+			"required": []string{"client_id", "number", "issued_date", "due_date"},
 			"properties": map[string]any{
-				"client_id": map[string]any{"type": "string", "description": "Client ID (required)"},
-				"currency":  map[string]any{"type": "string", "description": "Currency code (e.g. USD, EUR)"},
-				"due_date":  map[string]any{"type": "string", "description": "Due date (YYYY-MM-DD)"},
-				"note":      map[string]any{"type": "string", "description": "Invoice note"},
+				"client_id":   map[string]any{"type": "string", "description": "Client ID (required)"},
+				"number":      map[string]any{"type": "string", "description": "Invoice number (required by live API)"},
+				"issued_date": map[string]any{"type": "string", "description": "Issued date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"currency":    map[string]any{"type": "string", "description": "Currency code (e.g. USD, EUR)"},
+				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"note":        map[string]any{"type": "string", "description": "Invoice note"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createInvoice(ctx, args)
@@ -75,12 +77,14 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
-				"invoice_id": map[string]any{"type": "string"},
-				"client_id":  map[string]any{"type": "string"},
-				"currency":   map[string]any{"type": "string"},
-				"due_date":   map[string]any{"type": "string"},
-				"note":       map[string]any{"type": "string"},
-				"status":     map[string]any{"type": "string", "description": "Invoice status"},
+				"invoice_id":  map[string]any{"type": "string"},
+				"client_id":   map[string]any{"type": "string"},
+				"number":      map[string]any{"type": "string"},
+				"issued_date": map[string]any{"type": "string", "description": "Issued date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"currency":    map[string]any{"type": "string"},
+				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"note":        map[string]any{"type": "string"},
+				"status":      map[string]any{"type": "string", "description": "Invoice status"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoice(ctx, args)
@@ -136,12 +140,14 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		// 9. Add invoice item
 		{Tool: toolRW("clockify_add_invoice_item", "Add an item to an invoice", map[string]any{
 			"type":     "object",
-			"required": []string{"invoice_id"},
+			"required": []string{"invoice_id", "item_type"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string"},
 				"description": map[string]any{"type": "string"},
 				"quantity":    map[string]any{"type": "number"},
-				"unit_price":  map[string]any{"type": "number"},
+				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
+				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
+				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.addInvoiceItem(ctx, args)
@@ -150,13 +156,15 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		// 10. Update invoice item
 		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item", map[string]any{
 			"type":     "object",
-			"required": []string{"invoice_id", "item_id"},
+			"required": []string{"invoice_id", "item_id", "item_type"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string"},
-				"item_id":     map[string]any{"type": "string"},
+				"item_id":     map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id"},
 				"description": map[string]any{"type": "string"},
 				"quantity":    map[string]any{"type": "number"},
-				"unit_price":  map[string]any{"type": "number"},
+				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
+				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
+				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API)"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoiceItem(ctx, args)
@@ -168,7 +176,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 			"required": []string{"invoice_id", "item_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string"},
-				"item_id":    map[string]any{"type": "string"},
+				"item_id":    map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id"},
 				"dry_run":    map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, DestructiveHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -263,6 +271,12 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 	}
 
 	body := map[string]any{"clientId": clientID}
+	if v := stringArg(args, "number"); v != "" {
+		body["number"] = v
+	}
+	if v := stringArg(args, "issued_date"); v != "" {
+		body["issuedDate"] = v
+	}
 	if v := stringArg(args, "currency"); v != "" {
 		body["currency"] = v
 	}
@@ -297,6 +311,12 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 	body := map[string]any{}
 	if v := stringArg(args, "client_id"); v != "" {
 		body["clientId"] = v
+	}
+	if v := stringArg(args, "number"); v != "" {
+		body["number"] = v
+	}
+	if v := stringArg(args, "issued_date"); v != "" {
+		body["issuedDate"] = v
 	}
 	if v := stringArg(args, "currency"); v != "" {
 		body["currency"] = v
@@ -425,7 +445,16 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 		}, nil
 	}
 
+	var invoice map[string]any
+	if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
+		return ResultEnvelope{}, err
+	}
 	body := map[string]any{"status": "PAID"}
+	for _, key := range []string{"clientId", "number", "issuedDate", "dueDate", "currency", "note"} {
+		if v, ok := invoice[key]; ok {
+			body[key] = v
+		}
+	}
 	var updated map[string]any
 	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err
@@ -487,6 +516,16 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	if v, ok := args["unit_price"]; ok {
 		body["unitPrice"] = v
 	}
+	if v := stringArg(args, "apply_taxes"); v != "" {
+		body["applyTaxes"] = v
+	} else {
+		body["applyTaxes"] = "NONE"
+	}
+	itemType := stringArg(args, "item_type")
+	if itemType == "" {
+		return ResultEnvelope{}, fmt.Errorf("item_type is required")
+	}
+	body["itemType"] = itemType
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
 	if err != nil {
@@ -508,8 +547,8 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 	itemID := stringArg(args, "item_id")
-	if err := resolve.ValidateID(itemID, "item_id"); err != nil {
-		return ResultEnvelope{}, err
+	if itemID == "" {
+		return ResultEnvelope{}, fmt.Errorf("item_id is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -526,6 +565,16 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 	if v, ok := args["unit_price"]; ok {
 		body["unitPrice"] = v
 	}
+	if v := stringArg(args, "apply_taxes"); v != "" {
+		body["applyTaxes"] = v
+	} else {
+		body["applyTaxes"] = "NONE"
+	}
+	itemType := stringArg(args, "item_type")
+	if itemType == "" {
+		return ResultEnvelope{}, fmt.Errorf("item_type is required")
+	}
+	body["itemType"] = itemType
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemID)
 	if err != nil {
@@ -548,8 +597,8 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 	itemID := stringArg(args, "item_id")
-	if err := resolve.ValidateID(itemID, "item_id"); err != nil {
-		return ResultEnvelope{}, err
+	if itemID == "" {
+		return ResultEnvelope{}, fmt.Errorf("item_id is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
