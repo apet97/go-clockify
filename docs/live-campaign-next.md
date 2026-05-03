@@ -66,7 +66,7 @@ as a record of what got found, not as a current task list — the
 task list is in `docs/launch-candidate-checklist.md` and
 `docs/api-coverage.md`.
 
-Follow-up branch `test/exhaustive-live-coverage-followup` extends the
+Merged PR #59 (`test/exhaustive-live-coverage-followup`) extends the
 manual sacrificial-workspace suite so every one of the 121 generated
 catalog tools is named in `tests/e2e_live*.go` and exercised through
 the MCP path. New coverage includes the remaining Tier-1 CRUD/logging
@@ -205,7 +205,11 @@ coverage status.
     `{TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX,
     LINK}`. Closed by advertising the live enum values.
 
-## Tests that currently pass (success path, against the sacrificial workspace)
+## Tests that currently pass or pin expected live outcomes
+
+The list below includes both full success paths and mixed probes that
+pass by asserting a concrete upstream constraint. Do not read it as a
+claim that every tool has a successful CRUD path.
 
 Run: `go test -tags=livee2e -count=1 -timeout 10m ./tests/...`
 (with the env file sourced — see below). Wall-clock 18.4 s.
