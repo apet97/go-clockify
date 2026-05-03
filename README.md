@@ -68,6 +68,23 @@ Get a Clockify API key from [Profile → Advanced](https://app.clockify.me/user/
 export CLOCKIFY_API_KEY=your-key
 ```
 
+For personal testing against one real workspace, pin the local stdio
+profile and workspace before connecting an AI client:
+
+```sh
+export MCP_PROFILE=local-stdio
+export CLOCKIFY_WORKSPACE_ID=your-workspace-id
+export CLOCKIFY_POLICY=time_tracking_safe
+```
+
+Use `time_tracking_safe` for exploratory AI-facing testing because it
+allows timer and time-entry workflows without project/client/tag/task
+creation. Switch to `safe_core` only when you intentionally want that
+workspace-shaping surface. For large workspaces, keep
+`CLOCKIFY_REPORT_MAX_ENTRIES` at its fail-closed default unless you have
+a specific reason to materialize more than 10,000 raw entries in one
+tool call.
+
 ## Connect to an MCP client
 
 The examples below are the local stdio path: your MCP client launches `clockify-mcp` as a subprocess and forwards `CLOCKIFY_API_KEY` in its environment.
@@ -78,7 +95,10 @@ The examples below are the local stdio path: your MCP client launches `clockify-
 claude mcp add clockify -- clockify-mcp
 ```
 
-Then set `CLOCKIFY_API_KEY` in your shell, or inline it: `claude mcp add clockify -e CLOCKIFY_API_KEY=your-key -- clockify-mcp`.
+Then set the personal tester env vars above in your shell before
+starting Claude Code. If you inline env with `claude mcp add -e`,
+include `MCP_PROFILE`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID`, and
+`CLOCKIFY_POLICY`.
 
 ### Claude Desktop
 
@@ -89,7 +109,12 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "clockify": {
       "command": "clockify-mcp",
-      "env": { "CLOCKIFY_API_KEY": "your-key" }
+      "env": {
+        "MCP_PROFILE": "local-stdio",
+        "CLOCKIFY_API_KEY": "your-key",
+        "CLOCKIFY_WORKSPACE_ID": "your-workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
+      }
     }
   }
 }
@@ -104,7 +129,12 @@ Add to `.cursor/mcp.json` in your workspace:
   "mcpServers": {
     "clockify": {
       "command": "clockify-mcp",
-      "env": { "CLOCKIFY_API_KEY": "your-key" }
+      "env": {
+        "MCP_PROFILE": "local-stdio",
+        "CLOCKIFY_API_KEY": "your-key",
+        "CLOCKIFY_WORKSPACE_ID": "your-workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
+      }
     }
   }
 }
@@ -119,7 +149,12 @@ Add to your Codex MCP config:
   "mcpServers": {
     "clockify": {
       "command": "clockify-mcp",
-      "env": { "CLOCKIFY_API_KEY": "your-key" }
+      "env": {
+        "MCP_PROFILE": "local-stdio",
+        "CLOCKIFY_API_KEY": "your-key",
+        "CLOCKIFY_WORKSPACE_ID": "your-workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
+      }
     }
   }
 }
@@ -257,6 +292,21 @@ Execute after preview:
 → clockify_delete_entry { "entry_id": "abc123", "dry_run": false }
 ← { "ok": true, "action": "clockify_delete_entry", "data": { "deleted": true, "entryId": "abc123" } }
 ```
+
+Large workspace report hygiene:
+
+- Pin `CLOCKIFY_WORKSPACE_ID` for personal API-key testing even when
+  auto-detection works today. It keeps the target stable if the key later
+  gains access to another workspace.
+- Prefer short date ranges and `include_entries=false` for summary,
+  weekly, detailed, and quick reports when you need totals rather than
+  raw rows.
+- Use `page` and `page_size` on list tools. The default is
+  `page=1`, `page_size=50`, and the maximum page size is 200.
+- Report responses expose `meta.pagination` and `meta.limits`.
+  `CLOCKIFY_REPORT_MAX_ENTRIES` applies when a call materializes raw
+  entries with `include_entries=true`; cap errors are intentional
+  fail-closed behavior.
 
 ## Architecture
 

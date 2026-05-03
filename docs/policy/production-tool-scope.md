@@ -74,6 +74,13 @@ projects or clients to log time against (e.g. a sales-ops bot
 ingesting CRM accounts). It still blocks all delete operations
 and Tier 2 admin surface.
 
+For a single owner using one API key against one pinned workspace,
+start with `read_only` for dashboard-only checks,
+`time_tracking_safe` for AI-facing time-tracking workflows, and
+`safe_core` only when the local agent is trusted to create project
+structure. Avoid `standard` and `full` for exploratory testing on a
+real workspace with valuable data.
+
 ## Policy Enforcement
 
 Set the policy using the `CLOCKIFY_POLICY` environment variable.

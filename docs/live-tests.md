@@ -191,6 +191,23 @@ create a client, a project, a time entry, and then clean them up — if
 anything crashes mid-run, the workspace will be left with orphan
 entities named `AG_TEST_<timestamp>_*`.
 
+### Personal workspace smoke tests are not launch evidence
+
+For a real single-owner workspace with valuable data, do not run the
+live-contract suite or the full mutating campaign. Use the
+`local-stdio` profile with `CLOCKIFY_WORKSPACE_ID` pinned, then smoke
+only read-only or narrow calls first:
+
+- `clockify_whoami`
+- `clockify_policy_info`
+- small `clockify_list_*` pages with explicit `page` / `page_size`
+- short-range reports with `include_entries=false`
+
+Those personal checks can prove your local client wiring, but they are
+not Group 1 launch-candidate evidence. Only two consecutive scheduled
+cron runs of `.github/workflows/live-contract.yml` on the candidate SHA
+count for launch.
+
 ## Required live coverage before paid hosted launch
 
 The launch-blocking MCP-path safety contracts are now implemented

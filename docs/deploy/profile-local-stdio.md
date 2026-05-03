@@ -18,12 +18,13 @@ the host, or when you need a durable audit trail.
 
 ## Canonical configuration
 
-Minimum viable environment:
+Recommended personal tester environment:
 
 ```env
 CLOCKIFY_API_KEY=<your-personal-clockify-api-key>
+CLOCKIFY_WORKSPACE_ID=<your-clockify-workspace-id>
 MCP_TRANSPORT=stdio
-CLOCKIFY_POLICY=safe_core
+CLOCKIFY_POLICY=time_tracking_safe
 ```
 
 `local-stdio` intentionally defaults to `safe_core` because the MCP
@@ -31,6 +32,13 @@ client runs as the local user's subprocess with that user's Clockify
 API key. This profile is for trusted local automation. Use
 `CLOCKIFY_POLICY=time_tracking_safe` if the local client or prompt
 source is not fully trusted.
+
+For exploratory AI-facing testing against a real personal workspace,
+prefer the explicit `time_tracking_safe` override above. Keep
+`safe_core` for trusted local automation that should create projects,
+clients, tags, or tasks. Set `CLOCKIFY_WORKSPACE_ID` even if
+auto-detection works today; `auto` is convenient only while the API key
+can see exactly one workspace.
 
 Defaults that apply automatically and don't need to be set:
 
@@ -54,7 +62,9 @@ Add to `~/.claude/mcp.json`:
       "command": "clockify-mcp",
       "env": {
         "MCP_PROFILE": "local-stdio",
-        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
+        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX",
+        "CLOCKIFY_WORKSPACE_ID": "workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
       }
     }
   }
@@ -73,7 +83,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`
       "command": "/usr/local/bin/clockify-mcp",
       "env": {
         "MCP_PROFILE": "local-stdio",
-        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
+        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX",
+        "CLOCKIFY_WORKSPACE_ID": "workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
       }
     }
   }
@@ -91,17 +103,20 @@ Add to `.cursor/mcp.json` in your workspace root:
       "command": "clockify-mcp",
       "env": {
         "MCP_PROFILE": "local-stdio",
-        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX"
+        "CLOCKIFY_API_KEY": "pk_XXXXXXXXXXXXXXXXXXXXXX",
+        "CLOCKIFY_WORKSPACE_ID": "workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
       }
     }
   }
 }
 ```
 
-`MCP_PROFILE=local-stdio` is required for the `safe_core` policy default
-above to take effect. Without it the server falls back to
+`MCP_PROFILE=local-stdio` is still required when you set an explicit
+policy override. If you omit `CLOCKIFY_POLICY`, the profile default is
+`safe_core`; without the profile the server falls back to
 `CLOCKIFY_POLICY=standard`, which exposes more destructive tools than the
-profile intends.
+local profile intends.
 
 ## Security model
 
@@ -136,6 +151,15 @@ The expected response is your name + workspace. If you see
 `CLOCKIFY_API_KEY not set`, the client did not forward the env
 var — check the client's config file for typos.
 
+For large workspaces, start with read-only or narrow calls:
+`clockify_whoami`, `clockify_policy_info`, small `clockify_list_*`
+pages, and short-range reports with `include_entries=false`. Use
+`page` and `page_size` for list tools; keep `CLOCKIFY_REPORT_MAX_ENTRIES`
+at the default unless you intentionally want to materialize a larger raw
+entry set. Local personal smoke tests are useful preflight only; they do
+not close the launch live-contract evidence tracked in
+[`docs/api-coverage.md`](../api-coverage.md).
+
 ## Upgrade path
 
 When you outgrow stdio (another user joins the team, or you need
@@ -150,13 +174,16 @@ Run the profile audit first:
 
 ```bash
 CLOCKIFY_API_KEY=pk_xxx \
+  CLOCKIFY_WORKSPACE_ID=workspace-id \
+  CLOCKIFY_POLICY=time_tracking_safe \
   clockify-mcp doctor --profile=local-stdio
 ```
 
 Expected result: `Load() result: OK`, `transport=stdio`, no inbound
-auth mode, and `CLOCKIFY_POLICY=safe_core` from the profile. The
-doctor command does not contact Clockify; `pk_xxx` can be a dummy
-value for this local config check.
+auth mode, and `CLOCKIFY_POLICY=time_tracking_safe` from explicit env.
+The doctor command does not contact Clockify; `pk_xxx` can be a dummy
+value for this local config check. Omit the explicit policy override
+only when you want to verify the profile default of `safe_core`.
 
 `doctor --strict` is a hosted-service posture gate, not the success
 criterion for local stdio. Run it only as a negative check when you
