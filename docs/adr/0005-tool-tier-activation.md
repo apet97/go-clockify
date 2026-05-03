@@ -8,7 +8,7 @@ Accepted — Tier 1 / Tier 2 split has been stable since v0.6.0; the
 
 ## Context
 
-The Clockify API is large: 121 MCP tools currently cover the full surface
+The Clockify API is large: 123 MCP tools currently cover the full surface
 (timer, entries, projects, reports, invoices, expenses, scheduling,
 approvals, custom fields, admin, …). Exposing every catalog tool in
 `tools/list` on every connection produces three failure modes:
@@ -22,7 +22,7 @@ approvals, custom fields, admin, …). Exposing every catalog tool in
    multiplies by the session count.
 3. **Surface area.** Operators auditing the running server want to
    see the smallest tool surface that still covers the dominant
-   workflows. "All 124 by default" makes the audit harder.
+   workflows. "All tools by default" makes the audit harder.
 
 We need a way to expose a small, well-curated default surface and
 let the LLM (or the operator) widen it on demand.
@@ -31,12 +31,12 @@ let the LLM (or the operator) widen it on demand.
 
 Tools split into two tiers:
 
-- **Tier 1 (33 tools, always loaded).** Registered at startup and
+- **Tier 1 (35 tools, always loaded).** Registered at startup and
   visible in `tools/list` immediately. Covers the dominant
   workflows: timer, entries, projects, clients, tags, tasks, users,
   workspaces, reports, workflows, search, context. Catalog lives in
   `internal/bootstrap/bootstrap.go:71` (`Tier1Catalog`).
-- **Tier 2 (91 tools, 11 groups, on demand).** Not visible in
+- **Tier 2 (88 tools, 11 groups, on demand).** Not visible in
   `tools/list` until activated. Covers invoices, expenses,
   scheduling, time off, approvals, shared reports, user admin,
   webhooks, custom fields, groups/holidays, project admin.
@@ -58,7 +58,7 @@ deliver server-initiated notifications.
 
 `CLOCKIFY_BOOTSTRAP_MODE` controls the Tier 1 surface itself:
 
-- `full_tier1` (default) — all 33 Tier 1 tools visible.
+- `full_tier1` (default) — all 35 Tier 1 tools visible.
 - `minimal` — only 11 core tools (`MinimalSet` in
   `bootstrap.go:56`). The rest of Tier 1 is hidden until activated.
 - `custom` — operator-supplied list via `CLOCKIFY_BOOTSTRAP_TOOLS`.
@@ -71,14 +71,14 @@ both gates allow it.
 
 ### Positive
 
-- LLMs see a small, focused tool surface on first connection (33
+- LLMs see a small, focused tool surface on first connection (35
   tools, ~10 KB schema). Discoverability and token cost are both
   bounded.
-- The 91 Tier 2 tools are still reachable: any LLM that calls
+- The 88 Tier 2 tools are still reachable: any LLM that calls
   `clockify_search_tools { "query": "invoice" }` discovers the
   invoice group and can activate it in one round trip.
 - Operators auditing the running server with `clockify_policy_info`
-  see the active surface, not the full 124. The surface is
+  see the active surface, not the full catalog. The surface is
   observable, not just configurable.
 - Tier 2 activation is reversible per session — the activation lives
   in the `bootstrap.Config` clone owned by the session runtime, not

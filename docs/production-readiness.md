@@ -42,8 +42,9 @@ The blessed production profile for shared services is documented in [Production 
 evidence pass as of PR #60
 (`4e69c7a1db8011055187cf9892426ed48fc8e572`). That includes the
 post-PR #51 local readiness gates, PR #59's manual
-sacrificial-workspace MCP-path probes for all 121 generated catalog
-tools, and the post-merge docs stabilization. The remaining
+sacrificial-workspace MCP-path probes plus later live-test hooks for
+the current 123-tool catalog, and the post-merge docs stabilization.
+The remaining
 blockers are external evidence only: two consecutive scheduled
 live-contract cron greens, candidate-tag security walk-through
 evidence, and release/sigstore/SLSA evidence. Local `release-check`,

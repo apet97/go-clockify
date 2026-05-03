@@ -11,7 +11,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Highlights
 
-- **121 tools** — 33 always-on (timer, entries, projects, reports, …) plus 88 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
+- **123 tools** — 35 always-on (timer, entries, projects, reports, agent workflows, …) plus 88 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
@@ -138,7 +138,7 @@ If you installed via `npm`/`npx`, swap the command for:
 
 ## Tool tiers
 
-**Tier 1 (33 tools, always loaded):** timer, entries, projects, clients, tags, tasks, users, workspaces, reports, workflows, search, context.
+**Tier 1 (35 tools, always loaded):** timer, entries, projects, clients, tags, tasks, users, workspaces, reports, workflows, search, context.
 
 **Tier 2 (88 tools, 11 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin.
 
@@ -212,6 +212,15 @@ Log time retroactively:
 
 ```
 → clockify_log_time { "project": "Project Alpha", "start": "today 9:00", "end": "today 11:00", "description": "Code review" }
+```
+
+Review and close a timesheet gap:
+
+```
+→ clockify_timesheet_review { "date": "2026-05-03", "timezone": "UTC" }
+← { "ok": true, "action": "clockify_timesheet_review", "data": { "issues": [], "suggestedActions": [] } }
+
+→ clockify_timesheet_fill_gap { "project": "Project Alpha", "start": "2026-05-03T09:00:00Z", "end": "2026-05-03T10:00:00Z", "description": "Planning", "dry_run": true }
 ```
 
 Discover a Tier 2 domain or tool:

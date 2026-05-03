@@ -67,7 +67,7 @@ mutating + audit tiers enabled, no open `live-test-failure` issue,
 and no upstream schema field that the client silently discards.
 
 See also: [`docs/api-coverage.md`](api-coverage.md) for the full
-121-tool coverage matrix, per-tool dry-run/policy breakdown, and
+123-tool coverage matrix, per-tool dry-run/policy breakdown, and
 evidence hierarchy.
 
 ---
@@ -267,11 +267,13 @@ will read.
       surface, and the deployment profile docs. Run
       `make doc-parity` to verify.
       _Verified 2026-05-03: `docs/tool-catalog.json` has
-      33 Tier 1 tools + 88 Tier 2 tools = 121 total, matching
+      35 Tier 1 tools + 88 Tier 2 tools = 123 total, matching
       README. Tier 2 dropped from 91 → 88 over PR #55 (phantom
       `list_schedules` removed) and the matching cleanup branch
       removing the equivalent phantom `get_` and `create_` schedule
-      tools (no `/scheduling/{id}` surface exists upstream).
+      tools (no `/scheduling/{id}` surface exists upstream); the
+      current Tier 1 count includes two high-level timesheet workflow
+      helpers.
       `make doc-parity`, `make config-doc-parity`,
       `make catalog-drift`, and `make launch-checklist-parity` all
       green after the regeneration._

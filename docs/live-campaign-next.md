@@ -66,11 +66,14 @@ as a record of what got found, not as a current task list — the
 task list is in `docs/launch-candidate-checklist.md` and
 `docs/api-coverage.md`.
 
-Merged PR #59 (`test/exhaustive-live-coverage-followup`) extends the
-manual sacrificial-workspace suite so every one of the 121 generated
-catalog tools is named in `tests/e2e_live*.go` and exercised through
-the MCP path. New coverage includes the remaining Tier-1 CRUD/logging
-tools, full invoice CRUD/report/item probes, shared-report
+Merged PR #59 (`test/exhaustive-live-coverage-followup`) extended the
+manual sacrificial-workspace suite so every then-current generated
+catalog tool was named in `tests/e2e_live*.go` and exercised through
+the MCP path. The current catalog is 123 tools after the later Tier 1
+timesheet workflow helpers, which are covered by unit tests and
+live-test hooks but not by the original manual campaign evidence. New
+coverage includes the remaining Tier-1 CRUD/logging tools, full
+invoice CRUD/report/item probes, shared-report
 create/update/export/delete, user-admin group operations with owner
 safety dry-runs, webhook CRUD using the live `webhookEvent` body
 shape, time-off request/policy/balance probes, and approvals
@@ -117,7 +120,7 @@ All gated by `//go:build livee2e` and live in `tests/`:
 | Test file | Test func | Subtests | Notes |
 |---|---|---|---|
 | `tests/live_helpers_test.go` | (helpers) | – | `setupLiveCampaign`, prefix, cleanup registry, `activateTier2`, raw client primitives, archive-then-delete for projects + clients |
-| `tests/e2e_live_tier1_readonly_test.go` | `TestLiveTier1ReadOnly` | 13 | All 13 previously-uncovered Tier-1 read-only tools |
+| `tests/e2e_live_tier1_readonly_test.go` | `TestLiveTier1ReadOnly` | 14 | Previously-uncovered Tier-1 read-only tools plus `timesheet_review` |
 | `tests/e2e_live_t2_readonly_test.go` | `TestLiveTier2ReadOnlySweep` | 22 | Read-only sweep across all 11 Tier-2 groups |
 | `tests/e2e_live_t2_scheduling_test.go` | `TestLiveT2SchedulingRecurringCRUD` | 1 flow | recurring assignment create/get/update/delete on the live routes |
 | `tests/e2e_live_t2_expenses_test.go` | `TestLiveT2ExpensesCRUD` | 5 | category CRUD + expense create; category delete archive constraint remains pinned |
@@ -126,7 +129,7 @@ All gated by `//go:build livee2e` and live in `tests/`:
 | `tests/e2e_live_t2_project_admin_test.go` | `TestLiveT2ProjectAdminCRUD` | 6 | template / estimate / memberships / archive |
 | `tests/e2e_live_policy_modes_test.go` | `TestLivePolicyModes` | 5 | parametric `create_client` per policy mode |
 | `tests/e2e_live_pagination_test.go` | `TestLivePaginationOnTags` | 3 | seed 11 tags + pagination meta + walk |
-| `tests/e2e_live_tier1_remaining_crud_test.go` | `TestLiveTier1RemainingCRUD` | 1 flow | remaining Tier-1 CRUD/log/search coverage |
+| `tests/e2e_live_tier1_remaining_crud_test.go` | `TestLiveTier1RemainingCRUD` | 1 flow | remaining Tier-1 CRUD/log/search coverage plus `timesheet_fill_gap` |
 | `tests/e2e_live_t2_invoices_test.go` | `TestLiveT2InvoicesCRUD` | 1 flow | all invoice tools; update item pinned as unsupported 405 |
 | `tests/e2e_live_t2_shared_reports_test.go` | `TestLiveT2SharedReportsCRUDAndExports` | 1 flow | SUMMARY CRUD/export plus conditional DETAILED/WEEKLY export |
 | `tests/e2e_live_t2_user_admin_test.go` | `TestLiveT2UserAdminCRUDAndOwnerSafety`, `TestLiveT2UserInviteValidationProbe` | 2 flows | user-admin group CRUD, membership add/remove, owner dry-run safety; raw invite-user route validation with `send-email=false` |
@@ -220,7 +223,7 @@ Run: `go test -tags=livee2e -count=1 -timeout 10m ./tests/...`
 - `TestLiveDryRunDoesNotMutate` (existing)
 - `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` (existing)
 - `TestLiveReadSideSchemaDiff` (existing)
-- `TestLiveTier1ReadOnly` (NEW — all 13 subtests)
+- `TestLiveTier1ReadOnly` (NEW — all 14 subtests)
 - `TestLiveTier2ReadOnlySweep` (NEW — 22 subtests)
 - `TestLiveT2SchedulingRecurringCRUD` (NEW — recurring assignment CRUD)
 - `TestLiveT2ExpensesCRUD` (NEW — 5 subtests, mixed)

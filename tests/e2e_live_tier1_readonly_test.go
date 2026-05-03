@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// TestLiveTier1ReadOnly exercises the 13 Tier-1 read-only tools that had
-// no live coverage in the baseline (docs/api-coverage.md ~9-of-124
+// TestLiveTier1ReadOnly exercises the Tier-1 read-only tools that had
+// no live coverage in the original baseline (docs/api-coverage.md only
 // counted only the 3 read-only and a handful of mutating Tier-1 tools
 // covered by the original e2e_live_test.go suite).
 //
@@ -142,6 +142,23 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		data := extractDataMap(t, result)
 		if _, ok := data["totals"]; !ok {
 			t.Fatalf("quick_report response missing totals field: %#v", data)
+		}
+	})
+
+	t.Run("timesheet_review", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		result := h.callOK(ctx, "clockify_timesheet_review", map[string]any{
+			"date":            time.Now().UTC().Format("2006-01-02"),
+			"timezone":        "UTC",
+			"min_gap_minutes": 0,
+		})
+		data := extractDataMap(t, result)
+		if _, ok := data["issues"]; !ok {
+			t.Fatalf("timesheet_review response missing issues field: %#v", data)
+		}
+		if _, ok := data["suggestedActions"]; !ok {
+			t.Fatalf("timesheet_review response missing suggestedActions field: %#v", data)
 		}
 	})
 

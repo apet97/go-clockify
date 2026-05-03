@@ -74,6 +74,21 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.QuickReport(ctx, args)
 		}},
+		{Tool: toolRO("clockify_timesheet_review", "Review a day, week, or date range and return timesheet issues plus ready next-tool suggestions for an AI agent.", map[string]any{"type": "object", "properties": map[string]any{
+			"date":            map[string]any{"type": "string", "description": "YYYY-MM-DD date to review; defaults to today in timezone."},
+			"week_start":      map[string]any{"type": "string", "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Reviews the ISO week containing this date."},
+			"start":           map[string]any{"type": "string", "description": "RFC3339 timestamp or YYYY-MM-DD range start. Must be paired with end."},
+			"end":             map[string]any{"type": "string", "description": "RFC3339 timestamp or YYYY-MM-DD range end. Must be paired with start."},
+			"timezone":        map[string]any{"type": "string", "description": "Optional IANA timezone, defaults to local/server timezone."},
+			"workday_start":   map[string]any{"type": "string", "description": "HH:MM local workday start for gap detection; default 09:00."},
+			"workday_end":     map[string]any{"type": "string", "description": "HH:MM local workday end for gap detection; default 17:00."},
+			"min_gap_minutes": map[string]any{"type": "integer", "minimum": 0, "description": "Minimum untracked gap to report. Default 30. Set 0 to disable gap suggestions."},
+			"max_suggestions": map[string]any{"type": "integer", "minimum": 0, "maximum": 50, "description": "Maximum suggested tool calls to return. Default 10."},
+			"include_entries": map[string]any{"type": "boolean"},
+			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
+		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.TimesheetReview(ctx, args)
+		}},
 		{Tool: toolRW("clockify_start_timer", "Start a new timer", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.StartTimer(ctx, stringArg(args, "project_id"), stringArg(args, "project"), stringArg(args, "description"))
 		}},
@@ -82,6 +97,18 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}},
 		{Tool: toolRW("clockify_log_time", "Create a finished time entry for a project. Safe workflow helper for logging time without starting a live timer.", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": "RFC3339 timestamp"}, "end": map[string]any{"type": "string", "description": "RFC3339 timestamp"}, "billable": map[string]any{"type": "boolean"}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.LogTime(ctx, args)
+		}},
+		{Tool: toolRW("clockify_timesheet_fill_gap", "Create one finished time entry for a reviewed gap after validating that the requested interval does not overlap existing entries. Supports dry_run:true.", map[string]any{"type": "object", "required": []string{"start", "end", "description"}, "properties": map[string]any{
+			"start":         map[string]any{"type": "string", "description": "RFC3339 timestamp"},
+			"end":           map[string]any{"type": "string", "description": "RFC3339 timestamp"},
+			"project":       map[string]any{"type": "string", "description": "Project name or ID"},
+			"project_id":    map[string]any{"type": "string"},
+			"description":   map[string]any{"type": "string"},
+			"billable":      map[string]any{"type": "boolean"},
+			"allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."},
+			"dry_run":       map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.TimesheetFillGap(ctx, args)
 		}},
 		{Tool: toolRW("clockify_add_entry", "Create a new time entry with flexible start/end parsing", map[string]any{"type": "object", "required": []string{"start"}, "properties": map[string]any{
 			"start":       map[string]any{"type": "string", "description": "Start time (RFC3339, or natural language: 'now', 'today 9:00')"},

@@ -101,6 +101,10 @@ rules live in this file and the docs above.
     outcome split in [`docs/api-coverage.md`](docs/api-coverage.md).
     PR #62 adds the documented invite-user route as a no-email raw
     route validation probe because no dedicated catalog tool exists.
+    The current catalog has 123 tools after two agent-facing
+    timesheet workflow helpers were added on top of the raw API
+    coverage surface; those helpers are covered by unit tests and
+    live-test hooks.
     This is coverage evidence only; it does **not** close Group 1,
     Group 6, or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)

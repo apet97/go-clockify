@@ -68,7 +68,7 @@ var MinimalSet = map[string]bool{
 	"clockify_log_time":      true,
 }
 
-// Tier1Catalog contains all 33 Tier 1 tools with searchable metadata.
+// Tier1Catalog contains all 35 Tier 1 tools with searchable metadata.
 var Tier1Catalog = []CatalogEntry{
 	{Name: "clockify_whoami", Description: "Get current user and workspace context", Domain: "context", Keywords: []string{"identity", "user", "workspace", "session"}},
 	{Name: "clockify_search_tools", Description: "Search and discover available tools", Domain: "context", Keywords: []string{"find", "discover", "activate", "tools"}},
@@ -100,7 +100,9 @@ var Tier1Catalog = []CatalogEntry{
 	{Name: "clockify_detailed_report", Description: "Detailed time entry report with filtering", Domain: "reports", Keywords: []string{"report", "detailed", "entries", "export"}},
 	{Name: "clockify_weekly_summary", Description: "Weekly summary grouped by day and project", Domain: "reports", Keywords: []string{"report", "weekly", "week", "summary"}},
 	{Name: "clockify_quick_report", Description: "Quick high-signal summary for recent period", Domain: "reports", Keywords: []string{"report", "quick", "overview", "recent"}},
+	{Name: "clockify_timesheet_review", Description: "Review timesheets for gaps, overlaps, and suggested fixes", Domain: "workflows", Keywords: []string{"timesheet", "review", "gaps", "overlaps", "suggestions"}},
 	{Name: "clockify_log_time", Description: "Create a finished time entry", Domain: "workflows", Keywords: []string{"log", "time", "entry", "create", "finished"}},
+	{Name: "clockify_timesheet_fill_gap", Description: "Fill a validated timesheet gap with a finished entry", Domain: "workflows", Keywords: []string{"timesheet", "gap", "fill", "entry", "create"}},
 	{Name: "clockify_switch_project", Description: "Stop timer and start on different project", Domain: "workflows", Keywords: []string{"switch", "project", "timer", "change"}},
 	{Name: "clockify_find_and_update_entry", Description: "Find and update a time entry by filters", Domain: "workflows", Keywords: []string{"find", "update", "search", "entry", "modify"}},
 }

@@ -24,8 +24,8 @@ func TestToolContractMatrix(t *testing.T) {
 			all[d.Tool.Name] = mcpToolContract{readOnly: d.ReadOnlyHint, destructive: d.DestructiveHint, idempotent: d.IdempotentHint, annotations: d.Tool.Annotations}
 		}
 	}
-	if len(all) != 121 {
-		t.Fatalf("expected 121 tools, got %d", len(all))
+	if len(all) != 123 {
+		t.Fatalf("expected 123 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
@@ -38,12 +38,12 @@ func TestToolContractMatrix(t *testing.T) {
 	timeTrackingSafeWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
 		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
-		"clockify_find_and_update_entry": true,
+		"clockify_find_and_update_entry": true, "clockify_timesheet_fill_gap": true,
 	}
 	safeCoreWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
 		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
-		"clockify_find_and_update_entry": true, "clockify_create_project": true, "clockify_create_client": true,
+		"clockify_find_and_update_entry": true, "clockify_timesheet_fill_gap": true, "clockify_create_project": true, "clockify_create_client": true,
 		"clockify_create_tag": true, "clockify_create_task": true,
 	}
 	// D1: drift guard for the contract-matrix policy lists. Every name

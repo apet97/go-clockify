@@ -20,7 +20,7 @@ fed PR #51. It is no longer an active branch-review checklist.
 - Live-contract false-green prevention:
   `make live-contract-local`, `TestLiveContractSkipSentinel`, and
   `scripts/check-launch-evidence-gate.sh`.
-- `docs/api-coverage.md`, mapping all 124 MCP tools to Clockify API
+- `docs/api-coverage.md`, mapping the then-current full MCP catalog to Clockify API
   endpoints, risk classes, dry-run state, policy coverage, and live
   evidence caveats.
 - Launch docs cross-links that make scheduled live-contract evidence

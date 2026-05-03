@@ -16,13 +16,15 @@ work and commit it.
 
 - **Post-PR #62 launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
-  current manual sacrificial-workspace campaign state: all 121
-  generated catalog tools remain live-probed through the MCP path,
-  the documented invite-user route is pinned by a no-email validation
-  probe, stale non-catalog user-invite risk overrides are removed,
-  and risk overrides now fail if they target ghost descriptor names.
-  This is manual campaign coverage only and does not tick any
-  external launch-evidence box.
+  manual sacrificial-workspace campaign state after PR #62: the
+  then-current 121 generated catalog tools were live-probed through
+  the MCP path, the documented invite-user route is pinned by a
+  no-email validation probe, stale non-catalog user-invite risk
+  overrides are removed, and risk overrides now fail if they target
+  ghost descriptor names. The current catalog is 123 tools after two
+  Tier 1 timesheet workflow helpers were added on top of that raw API
+  coverage surface. This is manual campaign coverage only and does
+  not tick any external launch-evidence box.
 - **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
   (`docs(handoff): update post-PR59 launch state`). This records
   the post-PR #59 121-tool manual live-probe coverage plus the
@@ -43,10 +45,11 @@ work and commit it.
   false-green live-contract prevention, launch-evidence parity gate,
   benchmark baseline refresh (`bench-current-25255062599` +
   comparison run 25255216987), and PR #59's exhaustive manual
-  sacrificial-workspace probe across all 121 generated catalog
-  tools plus PR #62's invite-user route validation probe. These
-  manual probes are coverage evidence only and do not tick any
-  external launch-evidence box.
+  sacrificial-workspace probe across the then-current generated
+  catalog, PR #62's invite-user route validation probe, and later
+  timesheet workflow helper unit/live-hook coverage. These manual
+  probes are coverage evidence only and do not tick any external
+  launch-evidence box.
 - **Open external evidence only:**
   - **Scheduled live-contract cron greens** — two consecutive
     *scheduled* runs of `live-contract.yml` on the candidate SHA,

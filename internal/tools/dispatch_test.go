@@ -36,6 +36,7 @@ var validDestructiveArgs = map[string]map[string]any{
 	"clockify_start_timer":           {"description": "harness-test"},
 	"clockify_stop_timer":            {},
 	"clockify_log_time":              {"start": "2026-01-01T09:00:00Z", "end": "2026-01-01T10:00:00Z"},
+	"clockify_timesheet_fill_gap":    {"start": "2026-01-01T09:00:00Z", "end": "2026-01-01T10:00:00Z", "project_id": "p-123", "description": "harness-test"},
 	"clockify_add_entry":             {"start": "2026-01-01T09:00:00Z"},
 	"clockify_update_entry":          {"entry_id": "e-123"},
 	"clockify_delete_entry":          {"entry_id": "e-123"},

@@ -43,6 +43,7 @@ func TestTimeTrackingSafePolicy(t *testing.T) {
 		"clockify_log_time",
 		"clockify_find_and_update_entry",
 		"clockify_switch_project",
+		"clockify_timesheet_fill_gap",
 	} {
 		if !p.IsAllowed(tool, false) {
 			t.Errorf("%s should be allowed in time_tracking_safe", tool)
@@ -197,8 +198,8 @@ func TestDescribe(t *testing.T) {
 	}
 
 	scWrites := desc["safe_core_writes"].([]string)
-	if len(scWrites) != 11 {
-		t.Fatalf("expected 11 safe_core_writes, got %d", len(scWrites))
+	if len(scWrites) != 12 {
+		t.Fatalf("expected 12 safe_core_writes, got %d", len(scWrites))
 	}
 
 	// Describe with nil AllowedGroups
@@ -220,6 +221,7 @@ func TestSafeCoreExpandedAllowlist(t *testing.T) {
 		"clockify_add_entry", "clockify_update_entry",
 		"clockify_log_time", "clockify_switch_project",
 		"clockify_find_and_update_entry",
+		"clockify_timesheet_fill_gap",
 		"clockify_create_project", "clockify_create_client",
 		"clockify_create_tag", "clockify_create_task",
 	}
@@ -228,8 +230,8 @@ func TestSafeCoreExpandedAllowlist(t *testing.T) {
 			t.Fatalf("safe core write tool %q should be allowed in safe_core mode", name)
 		}
 	}
-	if len(safeCoreTools) != 11 {
-		t.Fatalf("expected 11 safe core write tools, got %d", len(safeCoreTools))
+	if len(safeCoreTools) != 12 {
+		t.Fatalf("expected 12 safe core write tools, got %d", len(safeCoreTools))
 	}
 }
 

@@ -7,9 +7,9 @@ This document defines the scope of tools supported for production deployment and
 Tools are categorized based on their impact on data and their required privilege level.
 
 ### 1. Agent-Safe Tools (Safe for general use)
-*   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_timer_status`.
+*   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_timer_status`, `clockify_timesheet_review`, `clockify_timesheet_fill_gap`.
 *   **Contextual Information:** `clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`, `clockify_get_workspace`.
-*   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`.
+*   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`, `clockify_timesheet_review`.
 *   **Discovery:** `clockify_list_projects`, `clockify_list_tasks`, `clockify_list_clients`.
 
 ### 2. Admin-Only / Sensitive Tools

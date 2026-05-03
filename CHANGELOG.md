@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Agent-facing timesheet workflow tools.** Added
+  `clockify_timesheet_review`, a read-only day/week/range reviewer
+  that turns time-entry coverage into issues and suggested next tool
+  calls, and `clockify_timesheet_fill_gap`, a time-tracking-safe
+  write helper that validates overlap before creating one finished
+  entry. The current catalog is now 35 Tier 1 tools + 88 Tier 2
+  tools = 123 total.
+
 ### Removed
 
 - **Phantom Tier-2 schedule tools removed.** PR #55 already
@@ -15,8 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/scheduling/assignments/...` paths). The same evidence applies
   to the matching `get_` and `create_` schedule variants — there
   is no `/scheduling/{id}` or `POST /scheduling` endpoint at any
-  Clockify host. The catalog drops from 90 → 88 Tier 2 tools
-  (123 → 121 total). The blocked-groups live test no longer pins
+  Clockify host. That cleanup dropped the endpoint-wrapper catalog
+  from 90 → 88 Tier 2 tools and 123 → 121 total before the later
+  high-level workflow-tool addition brought the current total back
+  to 123. The blocked-groups live test no longer pins
   these two tools, and the scheduling group's tool count in
   `docs/api-coverage.md` is now 7. Numeric / unit questions
   surfaced by the same probe lab pass (invoice `unitPrice`, expense
@@ -45,14 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   closes. The runbook and script keep the checklist boxes open until
   candidate-tag evidence URLs or `workflow_run_id:` values exist.
 
-- **Exhaustive manual live-probe coverage now spans the full tool
+- **Exhaustive manual live-probe coverage now spans the PR #59 tool
   catalog.** PR #59 added sacrificial-workspace MCP-path probes so
-  all 121 generated catalog tools are named in `tests/e2e_live*.go`,
-  while keeping the nightly `live-contract.yml` regex narrow for
-  blast-radius control. The docs now separate full success paths
-  from unsupported, permission-gated, plan-gated, or workspace-state
-  limited outcomes; the manual probes do not close Group 1, Group 6,
-  or Group 7 launch-candidate evidence.
+  the then-current generated catalog tools were named in
+  `tests/e2e_live*.go`, while keeping the nightly `live-contract.yml`
+  regex narrow for blast-radius control. Later workflow helpers add
+  unit coverage and live-test hooks, not launch evidence. The docs now
+  separate full success paths from unsupported, permission-gated,
+  plan-gated, or workspace-state limited outcomes; the manual probes
+  do not close Group 1, Group 6, or Group 7 launch-candidate
+  evidence.
 
 - **Live read-side schema drift is now a first-class contract.**
   Added `tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`,

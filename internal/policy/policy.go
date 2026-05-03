@@ -204,6 +204,7 @@ func safeCoreWriteList() []string {
 		"clockify_start_timer",
 		"clockify_stop_timer",
 		"clockify_switch_project",
+		"clockify_timesheet_fill_gap",
 		"clockify_update_entry",
 	}
 }
@@ -221,6 +222,7 @@ func timeTrackingSafeWriteList() []string {
 		"clockify_start_timer",
 		"clockify_stop_timer",
 		"clockify_switch_project",
+		"clockify_timesheet_fill_gap",
 		"clockify_update_entry",
 	}
 }
@@ -248,7 +250,7 @@ func isSafeCoreWrite(name string) bool {
 	case "clockify_start_timer", "clockify_stop_timer",
 		"clockify_add_entry", "clockify_update_entry",
 		"clockify_log_time", "clockify_switch_project",
-		"clockify_find_and_update_entry",
+		"clockify_find_and_update_entry", "clockify_timesheet_fill_gap",
 		"clockify_create_project", "clockify_create_client",
 		"clockify_create_tag", "clockify_create_task":
 		return true
@@ -265,7 +267,7 @@ func isTimeTrackingSafeWrite(name string) bool {
 	case "clockify_start_timer", "clockify_stop_timer",
 		"clockify_add_entry", "clockify_update_entry",
 		"clockify_log_time", "clockify_switch_project",
-		"clockify_find_and_update_entry":
+		"clockify_find_and_update_entry", "clockify_timesheet_fill_gap":
 		return true
 	}
 	return false

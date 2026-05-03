@@ -248,11 +248,14 @@ What is missing for tier 3 is intentionally narrow:
   test. This is not candidate-tag evidence; the same walk-through
   must be repeated after `vX.Y.Z-rc.N` is cut.
 - **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
-  maps all 121 MCP tools to their Clockify API endpoints, classifies
+  maps all 123 MCP tools to their Clockify API endpoints or workflow
+  composition paths, classifies
   each tool by read-only/mutating/destructive/billing/admin risk, and
   lists the current unit/integration/live-test coverage per tool. PR
-  #59 extended the manual sacrificial-workspace suite so every catalog
-  tool name is live-probed through the MCP path. The matrix separates
+  #59 extended the manual sacrificial-workspace suite so every
+  then-current catalog tool name was live-probed through the MCP path.
+  The two later timesheet workflow helpers are covered by unit tests
+  and live-test hooks, not by launch evidence. The matrix separates
   full success paths from explicit upstream constraints such as
   unsupported 405 routes, permission/plan gates, and workspace-state
   caps. Remaining gaps are also explicit: mutating request-schema drift
@@ -267,6 +270,9 @@ What is missing for tier 3 is intentionally narrow:
   permission, plan, or unsupported-method refusal without creating a
   pending user or sending mail. The risk override table now has a
   descriptor-backed guard so stale planned tool names cannot linger.
+  The two agent-facing timesheet workflow helpers added after PR #62
+  turn that raw coverage into end-user actions: review a timesheet and
+  safely fill one validated gap.
 - **Benchmark baseline is current for the candidate shape.** The
   committed `internal/benchdata/baseline.txt` was refreshed from the
   `Bench` workflow bootstrap artifact `bench-current-25255062599`

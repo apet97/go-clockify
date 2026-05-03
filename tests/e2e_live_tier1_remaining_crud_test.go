@@ -89,6 +89,25 @@ func TestLiveTier1RemainingCRUD(t *testing.T) {
 		}
 	})
 
+	t.Run("timesheet_fill_gap", func(t *testing.T) {
+		gapStart := start.Add(90 * time.Minute).Format(time.RFC3339)
+		gapEnd := start.Add(120 * time.Minute).Format(time.RFC3339)
+		result := h.callOK(ctx, "clockify_timesheet_fill_gap", map[string]any{
+			"project_id":  projectID,
+			"description": c.LivePrefix("fill-gap", 0),
+			"start":       gapStart,
+			"end":         gapEnd,
+			"billable":    false,
+		})
+		entryID := liveNestedEntryID(t, result, "entry")
+		if entryID == "" {
+			t.Fatalf("clockify_timesheet_fill_gap returned no created entry id: %#v", result)
+		}
+		c.RegisterCleanup("entry", entryID, func(ctx context.Context) error {
+			return h.deleteEntryRaw(ctx, entryID)
+		})
+	})
+
 	t.Run("switch_project_starts_timer_then_stop_cleanup", func(t *testing.T) {
 		result := h.callOK(ctx, "clockify_switch_project", map[string]any{
 			"project":     projectID,

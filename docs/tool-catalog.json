@@ -3270,6 +3270,583 @@
       }
     },
     {
+      "name": "clockify_timesheet_fill_gap",
+      "description": "Create one finished time entry for a reviewed gap after validating that the requested interval does not overlap existing entries. Supports dry_run:true.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_overlap": {
+            "description": "Default false. Set true only after manually confirming the overlap is intentional.",
+            "type": "boolean"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "end": {
+            "description": "RFC3339 timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "start": {
+            "description": "RFC3339 timestamp",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "description"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_timesheet_fill_gap",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "dryRun": {
+                "type": "boolean"
+              },
+              "entry": {
+                "additionalProperties": false,
+                "properties": {
+                  "billable": {
+                    "type": "boolean"
+                  },
+                  "costRate": {},
+                  "customFieldValues": {},
+                  "description": {
+                    "type": "string"
+                  },
+                  "hourlyRate": {},
+                  "id": {
+                    "type": "string"
+                  },
+                  "isLocked": {
+                    "type": "boolean"
+                  },
+                  "kioskId": {
+                    "type": "string"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "tagIds": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "taskId": {
+                    "type": "string"
+                  },
+                  "timeInterval": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "duration": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "start"
+                    ],
+                    "type": "object"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "description",
+                  "projectId",
+                  "timeInterval"
+                ],
+                "type": "object"
+              },
+              "overlaps": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "proposed": {
+                "additionalProperties": false,
+                "properties": {
+                  "billable": {
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  },
+                  "project": {
+                    "type": "string"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end",
+                  "description"
+                ],
+                "type": "object"
+              },
+              "validated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "dryRun",
+              "proposed",
+              "validated"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "title": "Timesheet Fill Gap"
+      }
+    },
+    {
+      "name": "clockify_timesheet_review",
+      "description": "Review a day, week, or date range and return timesheet issues plus ready next-tool suggestions for an AI agent.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "YYYY-MM-DD date to review; defaults to today in timezone.",
+            "type": "string"
+          },
+          "end": {
+            "description": "RFC3339 timestamp or YYYY-MM-DD range end. Must be paired with start.",
+            "type": "string"
+          },
+          "include_entries": {
+            "type": "boolean"
+          },
+          "max_entries": {
+            "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_suggestions": {
+            "description": "Maximum suggested tool calls to return. Default 10.",
+            "maximum": 50,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_gap_minutes": {
+            "description": "Minimum untracked gap to report. Default 30. Set 0 to disable gap suggestions.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start": {
+            "description": "RFC3339 timestamp or YYYY-MM-DD range start. Must be paired with end.",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone, defaults to local/server timezone.",
+            "type": "string"
+          },
+          "week_start": {
+            "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Reviews the ISO week containing this date.",
+            "type": "string"
+          },
+          "workday_end": {
+            "description": "HH:MM local workday end for gap detection; default 17:00.",
+            "type": "string"
+          },
+          "workday_start": {
+            "description": "HH:MM local workday start for gap detection; default 09:00.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_timesheet_review",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "byDay": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "entries": {
+                      "type": "integer"
+                    },
+                    "totalHours": {
+                      "type": "number"
+                    },
+                    "totalSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "entries",
+                    "totalSeconds",
+                    "totalHours"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "byProject": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "entries": {
+                      "type": "integer"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "totalHours": {
+                      "type": "number"
+                    },
+                    "totalSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "projectName",
+                    "entries",
+                    "totalSeconds",
+                    "totalHours"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "entries": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "billable": {
+                      "type": "boolean"
+                    },
+                    "costRate": {},
+                    "customFieldValues": {},
+                    "description": {
+                      "type": "string"
+                    },
+                    "hourlyRate": {},
+                    "id": {
+                      "type": "string"
+                    },
+                    "isLocked": {
+                      "type": "boolean"
+                    },
+                    "kioskId": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "tagIds": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "timeInterval": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "duration": {
+                          "type": "string"
+                        },
+                        "end": {
+                          "type": "string"
+                        },
+                        "start": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "start"
+                      ],
+                      "type": "object"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "workspaceId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "description",
+                    "projectId",
+                    "timeInterval"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "issues": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "end": {
+                      "type": "string"
+                    },
+                    "entryId": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "relatedEntryIds": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "severity": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "severity",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "range": {
+                "additionalProperties": false,
+                "properties": {
+                  "end": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "type": "object"
+              },
+              "suggestedActions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arguments": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "missingArgs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "tool": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "reason"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "totals": {
+                "additionalProperties": false,
+                "properties": {
+                  "entries": {
+                    "type": "integer"
+                  },
+                  "runningEntries": {
+                    "type": "integer"
+                  },
+                  "totalHours": {
+                    "type": "number"
+                  },
+                  "totalSeconds": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "entries",
+                  "runningEntries",
+                  "totalSeconds",
+                  "totalHours"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "range",
+              "totals",
+              "byDay",
+              "byProject",
+              "issues",
+              "suggestedActions"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "title": "Timesheet Review"
+      }
+    },
+    {
       "name": "clockify_today_entries",
       "description": "List time entries for the current day",
       "group": "tier1",
