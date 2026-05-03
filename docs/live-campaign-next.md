@@ -129,7 +129,7 @@ All gated by `//go:build livee2e` and live in `tests/`:
 | `tests/e2e_live_tier1_remaining_crud_test.go` | `TestLiveTier1RemainingCRUD` | 1 flow | remaining Tier-1 CRUD/log/search coverage |
 | `tests/e2e_live_t2_invoices_test.go` | `TestLiveT2InvoicesCRUD` | 1 flow | all invoice tools; update item pinned as unsupported 405 |
 | `tests/e2e_live_t2_shared_reports_test.go` | `TestLiveT2SharedReportsCRUDAndExports` | 1 flow | SUMMARY CRUD/export plus conditional DETAILED/WEEKLY export |
-| `tests/e2e_live_t2_user_admin_test.go` | `TestLiveT2UserAdminCRUDAndOwnerSafety` | 1 flow | user-admin group CRUD, membership add/remove, owner dry-run safety |
+| `tests/e2e_live_t2_user_admin_test.go` | `TestLiveT2UserAdminCRUDAndOwnerSafety`, `TestLiveT2UserInviteValidationProbe` | 2 flows | user-admin group CRUD, membership add/remove, owner dry-run safety; raw invite-user route validation with `send-email=false` |
 | `tests/e2e_live_t2_webhooks_test.go` | `TestLiveT2WebhooksCRUD` | 1 flow | webhook CRUD using live singular-event contract |
 | `tests/e2e_live_t2_time_off_approvals_test.go` | `TestLiveT2TimeOffRemainingTools`, `TestLiveT2ApprovalsRemainingTools` | 2 | time-off and approvals probes with success and concrete 4xx outcomes |
 
@@ -273,7 +273,11 @@ workspace-state limitations are tracked in `docs/api-coverage.md`.
     `TestLiveT2SharedReportsCRUDAndExports`.
 13. User-admin user-group CRUD, membership add/remove, owner
     deactivate dry-run, and update-role unsupported-route evidence
-    are covered by `TestLiveT2UserAdminCRUDAndOwnerSafety`.
+    are covered by `TestLiveT2UserAdminCRUDAndOwnerSafety`. The
+    documented invite-user route is pinned by
+    `TestLiveT2UserInviteValidationProbe` as a raw validation probe
+    with `send-email=false`, so the campaign covers the route without
+    sending email or creating a pending user.
 14. Webhook CRUD is covered by `TestLiveT2WebhooksCRUD`; the handler
     now uses `webhookEvent`, `triggerSourceType`, and `triggerSource`
     instead of the old plural `events` array.
