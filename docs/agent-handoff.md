@@ -14,7 +14,13 @@ work and commit it.
 
 ## Launch-state baseline
 
-- **Current launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+- **Current main baseline:** `0960bfa03db143778deb59f9b9522012116c9c9b`
+  (`chore(review): harden MCP server readiness`). This records the
+  post-PR #63 local/CI remediation wave for review-found performance,
+  security, tests, stale-context, generated catalog/schema, and
+  operator/agent documentation gaps. It did not run live Clockify
+  probes and does not tick any external launch-evidence box.
+- **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   manual sacrificial-workspace campaign state after PR #62: the
   PR #59 catalog snapshot (then 121 generated tools) was live-probed

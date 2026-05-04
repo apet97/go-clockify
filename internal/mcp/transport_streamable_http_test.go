@@ -207,12 +207,42 @@ func newTestStreamableStack(t *testing.T) (*streamSessionManager, StreamableHTTP
 
 type writeDeadlineRecorder struct {
 	*httptest.ResponseRecorder
+	mu        sync.Mutex
 	deadlines []time.Time
 }
 
 func (r *writeDeadlineRecorder) SetWriteDeadline(t time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.deadlines = append(r.deadlines, t)
 	return nil
+}
+
+func (r *writeDeadlineRecorder) deadlineCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.deadlines)
+}
+
+func (r *writeDeadlineRecorder) deadlineAt(i int) time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.deadlines[i]
+}
+
+type blockingAuthenticator struct {
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (a blockingAuthenticator) Authenticate(ctx context.Context, _ *http.Request) (authn.Principal, error) {
+	close(a.entered)
+	select {
+	case <-a.release:
+		return authn.Principal{Subject: "blocked-user", TenantID: "tenant-a"}, nil
+	case <-ctx.Done():
+		return authn.Principal{}, ctx.Err()
+	}
 }
 
 func TestStreamableRPCHandlerAppliesPOSTWriteDeadline(t *testing.T) {
@@ -225,17 +255,52 @@ func TestStreamableRPCHandlerAppliesPOSTWriteDeadline(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	handler.ServeHTTP(rec, req)
 
-	if len(rec.deadlines) != 2 {
-		t.Fatalf("deadline calls=%d, want set+clear", len(rec.deadlines))
+	if rec.deadlineCount() != 2 {
+		t.Fatalf("deadline calls=%d, want set+clear", rec.deadlineCount())
 	}
-	if rec.deadlines[0].IsZero() {
+	if rec.deadlineAt(0).IsZero() {
 		t.Fatal("first deadline should set a non-zero write deadline")
 	}
-	if got := time.Until(rec.deadlines[0]); got < time.Second || got > 2*time.Second {
+	if got := time.Until(rec.deadlineAt(0)); got < time.Second || got > 2*time.Second {
 		t.Fatalf("deadline delta=%s, want around 1.25s", got)
 	}
-	if !rec.deadlines[1].IsZero() {
-		t.Fatalf("second deadline should clear the deadline, got %s", rec.deadlines[1])
+	if !rec.deadlineAt(1).IsZero() {
+		t.Fatalf("second deadline should clear the deadline, got %s", rec.deadlineAt(1))
+	}
+}
+
+func TestStreamableRPCHandlerPOSTWriteDeadlineStartsAtFirstWrite(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	opts.Authenticator = blockingAuthenticator{entered: entered, release: release}
+	opts.POSTWriteTimeout = 1250 * time.Millisecond
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := &writeDeadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{`))
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		handler.ServeHTTP(rec, req)
+	}()
+
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("authenticator was not called")
+	}
+	if got := rec.deadlineCount(); got != 0 {
+		t.Fatalf("deadline should not be set before authentication returns, got %d calls", got)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("handler did not finish")
+	}
+	if rec.deadlineCount() != 2 {
+		t.Fatalf("deadline calls=%d, want set+clear", rec.deadlineCount())
 	}
 }
 
