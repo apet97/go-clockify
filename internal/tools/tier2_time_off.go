@@ -38,14 +38,14 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. clockify_list_time_off_requests (RO)
 		{
-			Tool: toolRO("clockify_list_time_off_requests",
+			Tool: withOutputSchema(toolRO("clockify_list_time_off_requests",
 				"List time off requests with optional status filter",
 				map[string]any{"type": "object", "properties": map[string]any{
 					"status":    map[string]any{"type": "string", "description": "Filter by status: PENDING, APPROVED, DENIED, ALL (default ALL)"},
 					"user_id":   map[string]any{"type": "string", "description": "Filter by user ID or name/email"},
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
-				}}),
+				}}), envelopeOpenMapSlice("clockify_list_time_off_requests")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffRequests(ctx, args)
@@ -53,12 +53,12 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 2. clockify_get_time_off_request (RO)
 		{
-			Tool: toolRO("clockify_get_time_off_request",
+			Tool: withOutputSchema(toolRO("clockify_get_time_off_request",
 				"Get a time off request by policy ID and request ID",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
-				}}),
+				}}), envelopeOpenMap("clockify_get_time_off_request")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffRequest(ctx, args)
@@ -144,12 +144,12 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 8. clockify_list_time_off_policies (RO)
 		{
-			Tool: toolRO("clockify_list_time_off_policies",
+			Tool: withOutputSchema(toolRO("clockify_list_time_off_policies",
 				"List time off policies for the workspace",
 				map[string]any{"type": "object", "properties": map[string]any{
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
-				}}),
+				}}), envelopeOpenMapSlice("clockify_list_time_off_policies")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffPolicies(ctx, args)
@@ -157,11 +157,11 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 9. clockify_get_time_off_policy (RO)
 		{
-			Tool: toolRO("clockify_get_time_off_policy",
+			Tool: withOutputSchema(toolRO("clockify_get_time_off_policy",
 				"Get a time off policy by ID",
 				map[string]any{"type": "object", "required": []string{"policy_id"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
-				}}),
+				}}), envelopeOpenMap("clockify_get_time_off_policy")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffPolicy(ctx, args)
@@ -206,12 +206,12 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 12. clockify_time_off_balance (RO)
 		{
-			Tool: toolRO("clockify_time_off_balance",
+			Tool: withOutputSchema(toolRO("clockify_time_off_balance",
 				"Get time off balance for a user under a specific policy",
 				map[string]any{"type": "object", "required": []string{"policy_id", "user_id"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email"},
-				}}),
+				}}), envelopeOpenMap("clockify_time_off_balance")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.timeOffBalance(ctx, args)
@@ -244,7 +244,7 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		body["statuses"] = []string{status}
 	}
 	if uid := stringArg(args, "user_id"); uid != "" {
-		resolved, err := resolve.ResolveUserID(ctx, s.Client, wsID, uid)
+		resolved, err := s.resolveUserID(ctx, wsID, uid)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
@@ -721,7 +721,7 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	userID, err := resolve.ResolveUserID(ctx, s.Client, wsID, userRef)
+	userID, err := s.resolveUserID(ctx, wsID, userRef)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}

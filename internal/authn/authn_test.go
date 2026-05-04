@@ -651,6 +651,20 @@ func TestValidateClaims(t *testing.T) {
 			t.Fatal("expected issuer error")
 		}
 	})
+	t.Run("wrong_issuer_sanitizes_error", func(t *testing.T) {
+		c := jwtClaims{Issuer: "https://other.example.com\r\nlevel=info tenant=acme"}
+		err := validateClaims(c, cfg)
+		if err == nil {
+			t.Fatal("expected issuer error")
+		}
+		msg := err.Error()
+		if strings.ContainsAny(msg, "\r\n") || strings.Contains(msg, "tenant=acme") {
+			t.Fatalf("issuer error echoed attacker-controlled claim text: %q", msg)
+		}
+		if !strings.Contains(msg, "<invalid>") {
+			t.Fatalf("issuer error should mark invalid claim, got %q", msg)
+		}
+	})
 	t.Run("wrong_audience", func(t *testing.T) {
 		c := jwtClaims{Issuer: cfg.OIDCIssuer, Audience: claimAudience{"different-aud"}}
 		if err := validateClaims(c, cfg); err == nil {

@@ -193,8 +193,8 @@ func TestDescribe(t *testing.T) {
 	}
 
 	introTools := desc["introspection_tools"].([]string)
-	if len(introTools) != 6 {
-		t.Fatalf("expected 6 introspection tools, got %d", len(introTools))
+	if len(introTools) != 11 {
+		t.Fatalf("expected 11 introspection tools, got %d", len(introTools))
 	}
 
 	scWrites := desc["safe_core_writes"].([]string)
@@ -239,15 +239,15 @@ func TestIntrospectionAlwaysAllowed(t *testing.T) {
 	p := &Policy{Mode: ReadOnly, DeniedTools: map[string]bool{}}
 	introTools := []string{
 		"clockify_whoami", "clockify_current_user", "clockify_list_workspaces",
-		"clockify_search_tools", "clockify_policy_info", "clockify_resolve_debug",
+		"clockify_search_tools", "clockify_policy_info", "clockify_resolve_name", "clockify_resolve_debug",
 	}
 	for _, name := range introTools {
 		if !p.IsAllowed(name, false) {
 			t.Fatalf("introspection tool %q should be allowed in read_only mode", name)
 		}
 	}
-	if len(introTools) != 6 {
-		t.Fatalf("expected 6 introspection tools, got %d", len(introTools))
+	if len(introTools) != 7 {
+		t.Fatalf("expected 7 introspection tools, got %d", len(introTools))
 	}
 }
 

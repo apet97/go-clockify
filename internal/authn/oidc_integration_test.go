@@ -50,15 +50,16 @@ func TestOIDCAuthenticator_JWKSIntegration(t *testing.T) {
 	defer ts.Close()
 
 	cfg := Config{
-		Mode:            ModeOIDC,
-		OIDCIssuer:      issuer,
-		OIDCAudience:    audience,
-		OIDCJWKSURL:     ts.URL + "/jwks.json",
-		OIDCResourceURI: resourceURI,
-		TenantClaim:     "tenant_id",
-		SubjectClaim:    "sub",
-		DefaultTenantID: "default",
-		HTTPClient:      ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL + "/jwks.json",
+		OIDCJWKSAllowPrivate: true,
+		OIDCResourceURI:      resourceURI,
+		TenantClaim:          "tenant_id",
+		SubjectClaim:         "sub",
+		DefaultTenantID:      "default",
+		HTTPClient:           ts.Client(),
 	}
 	auth, err := New(cfg)
 	if err != nil {
@@ -191,11 +192,12 @@ func TestOIDCAuthenticator_NoResourceURI(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:         ModeOIDC,
-		OIDCIssuer:   issuer,
-		OIDCAudience: audience,
-		OIDCJWKSURL:  ts.URL,
-		HTTPClient:   ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 		// OIDCResourceURI deliberately omitted
 	})
 	if err != nil {
@@ -250,13 +252,14 @@ func TestOIDCAuthenticator_RequireTenantClaim(t *testing.T) {
 
 	t.Run("default_falls_back_when_flag_off", func(t *testing.T) {
 		auth, err := New(Config{
-			Mode:            ModeOIDC,
-			OIDCIssuer:      issuer,
-			OIDCAudience:    audience,
-			OIDCJWKSURL:     ts.URL,
-			TenantClaim:     "tenant_id",
-			DefaultTenantID: "fallback-tenant",
-			HTTPClient:      ts.Client(),
+			Mode:                 ModeOIDC,
+			OIDCIssuer:           issuer,
+			OIDCAudience:         audience,
+			OIDCJWKSURL:          ts.URL,
+			OIDCJWKSAllowPrivate: true,
+			TenantClaim:          "tenant_id",
+			DefaultTenantID:      "fallback-tenant",
+			HTTPClient:           ts.Client(),
 		})
 		if err != nil {
 			t.Fatalf("New: %v", err)
@@ -272,14 +275,15 @@ func TestOIDCAuthenticator_RequireTenantClaim(t *testing.T) {
 
 	t.Run("strict_rejects_missing_tenant", func(t *testing.T) {
 		auth, err := New(Config{
-			Mode:               ModeOIDC,
-			OIDCIssuer:         issuer,
-			OIDCAudience:       audience,
-			OIDCJWKSURL:        ts.URL,
-			TenantClaim:        "tenant_id",
-			DefaultTenantID:    "fallback-tenant",
-			RequireTenantClaim: true,
-			HTTPClient:         ts.Client(),
+			Mode:                 ModeOIDC,
+			OIDCIssuer:           issuer,
+			OIDCAudience:         audience,
+			OIDCJWKSURL:          ts.URL,
+			OIDCJWKSAllowPrivate: true,
+			TenantClaim:          "tenant_id",
+			DefaultTenantID:      "fallback-tenant",
+			RequireTenantClaim:   true,
+			HTTPClient:           ts.Client(),
 		})
 		if err != nil {
 			t.Fatalf("New: %v", err)
@@ -293,14 +297,15 @@ func TestOIDCAuthenticator_RequireTenantClaim(t *testing.T) {
 
 	t.Run("strict_accepts_present_tenant", func(t *testing.T) {
 		auth, err := New(Config{
-			Mode:               ModeOIDC,
-			OIDCIssuer:         issuer,
-			OIDCAudience:       audience,
-			OIDCJWKSURL:        ts.URL,
-			TenantClaim:        "tenant_id",
-			DefaultTenantID:    "fallback-tenant",
-			RequireTenantClaim: true,
-			HTTPClient:         ts.Client(),
+			Mode:                 ModeOIDC,
+			OIDCIssuer:           issuer,
+			OIDCAudience:         audience,
+			OIDCJWKSURL:          ts.URL,
+			OIDCJWKSAllowPrivate: true,
+			TenantClaim:          "tenant_id",
+			DefaultTenantID:      "fallback-tenant",
+			RequireTenantClaim:   true,
+			HTTPClient:           ts.Client(),
 		})
 		if err != nil {
 			t.Fatalf("New: %v", err)
@@ -313,6 +318,78 @@ func TestOIDCAuthenticator_RequireTenantClaim(t *testing.T) {
 			t.Errorf("expected tenant from claim, got %q", princ.TenantID)
 		}
 	})
+}
+
+func TestOIDCAuthenticatorRejectsControlBytesInPrincipalClaims(t *testing.T) {
+	const (
+		issuer   = "https://issuer.example.test"
+		audience = "clockify-mcp"
+		kid      = "test-key-1"
+	)
+	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	jwks := buildJWKS(t, kid, &privKey.PublicKey)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	auth, err := New(Config{
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		TenantClaim:          "tenant_id",
+		HTTPClient:           ts.Client(),
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	now := time.Now().Unix()
+	cases := []struct {
+		name   string
+		claims map[string]any
+		want   string
+	}{
+		{
+			name: "subject_control_byte",
+			claims: map[string]any{
+				"sub":       "alice\nforged=1",
+				"tenant_id": "tenant-7",
+			},
+			want: "oidc: subject contains disallowed byte",
+		},
+		{
+			name: "tenant_control_byte",
+			claims: map[string]any{
+				"sub":       "alice",
+				"tenant_id": "tenant-7\nforged=1",
+			},
+			want: "oidc: tenant contains disallowed byte",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			claims := map[string]any{
+				"iss": issuer,
+				"aud": []string{audience},
+				"exp": now + 300,
+			}
+			for k, v := range tc.claims {
+				claims[k] = v
+			}
+			token := signJWT(t, privKey, kid, claims)
+			_, err := authenticate(t, auth, token)
+			if err == nil {
+				t.Fatal("expected principal sanitization error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q should contain %q", err, tc.want)
+			}
+		})
+	}
 }
 
 // TestProtectedResourceHandler covers the metadata document endpoint.

@@ -252,6 +252,33 @@ func TestCreateUserGroup(t *testing.T) {
 	}
 }
 
+func TestCreateUserGroupDryRun(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CreateUserGroup(context.Background(), map[string]any{
+		"name":    "Backend Team",
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("create user group dry run failed: %v", err)
+	}
+	if result.Action != "clockify_create_user_group" {
+		t.Fatalf("expected action clockify_create_user_group, got %s", result.Action)
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok || dataMap["dry_run"] != true {
+		t.Fatalf("expected dry-run data map, got %#v", result.Data)
+	}
+	payload, ok := dataMap["payload"].(map[string]any)
+	if !ok || payload["name"] != "Backend Team" {
+		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
+	}
+}
+
 // TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA exercises
 // audit finding 10: with WebhookValidateDNS=true (set automatically
 // by hosted profiles), a hostname that resolves to a private or
@@ -455,5 +482,33 @@ func TestDeactivateUserDryRun(t *testing.T) {
 	}
 	if dataMap["dry_run"] != true {
 		t.Fatal("expected dry_run=true in result data")
+	}
+}
+
+func TestUpdateUserRoleDryRun(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateUserRole(context.Background(), map[string]any{
+		"user_id": "u1",
+		"role":    "WORKSPACE_ADMIN",
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("update user role dry run failed: %v", err)
+	}
+	if result.Action != "clockify_update_user_role" {
+		t.Fatalf("expected action clockify_update_user_role, got %s", result.Action)
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok || dataMap["dry_run"] != true {
+		t.Fatalf("expected dry-run data map, got %#v", result.Data)
+	}
+	payload, ok := dataMap["payload"].(map[string]any)
+	if !ok || payload["role"] != "WORKSPACE_ADMIN" {
+		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
 	}
 }

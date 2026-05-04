@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/metrics"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -169,6 +171,72 @@ func TestExchangeInvalidJSON(t *testing.T) {
 	}
 	if code, _ := errObj["code"].(float64); int(code) != -32700 {
 		t.Fatalf("expected code -32700, got %v", errObj["code"])
+	}
+}
+
+type panicSendStream struct {
+	grpc.ServerStream
+	ctx     context.Context
+	recv    chan []byte
+	panicAt int
+	sends   int
+}
+
+func (s *panicSendStream) SetHeader(metadata.MD) error  { return nil }
+func (s *panicSendStream) SendHeader(metadata.MD) error { return nil }
+func (s *panicSendStream) SetTrailer(metadata.MD)       {}
+func (s *panicSendStream) Context() context.Context     { return s.ctx }
+
+func (s *panicSendStream) SendMsg(any) error {
+	s.sends++
+	if s.sends == s.panicAt {
+		panic("send pump boom")
+	}
+	return nil
+}
+
+func (s *panicSendStream) RecvMsg(m any) error {
+	frame, ok := <-s.recv
+	if !ok {
+		return io.EOF
+	}
+	dst, ok := m.(*[]byte)
+	if !ok {
+		return nil
+	}
+	*dst = append((*dst)[:0], frame...)
+	return nil
+}
+
+func TestExchangeSendPumpPanicDoesNotDeadlock(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stream := &panicSendStream{
+		ctx:     ctx,
+		recv:    make(chan []byte, 1),
+		panicAt: 1,
+	}
+	stream.recv <- []byte(`{not json`)
+	close(stream.recv)
+
+	srv := newTestServer(t)
+	baseMetric := metrics.GRPCSendPumpPanicsTotal.Get()
+	done := make(chan error, 1)
+	go func() {
+		done <- (&exchangeServer{srv: srv}).Exchange(stream)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Exchange returned error: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Exchange deadlocked after send-pump panic")
+	}
+	if got := metrics.GRPCSendPumpPanicsTotal.Get() - baseMetric; got != 1 {
+		t.Fatalf("send-pump panic metric delta=%d, want 1", got)
 	}
 }
 

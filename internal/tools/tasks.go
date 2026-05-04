@@ -8,7 +8,6 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/paths"
-	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -20,7 +19,7 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	projectID, err := resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -37,13 +36,14 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_tasks", out, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"projectId":   projectID,
 		"count":       len(out),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_tasks", out, meta), nil
 }
 
 func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -59,7 +59,7 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	projectID, err := resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}

@@ -44,7 +44,7 @@ log retains everything.
 | Profile | Default | Override |
 |---|---|---|
 | `local-stdio` | verbose (full body on wire) | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` to opt in |
-| `single-tenant-http` | verbose | same |
+| `single-tenant-http` | sanitised | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0` to opt out on a non-production replica |
 | `private-network-grpc` | verbose | same |
 | `shared-service` | sanitised | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0` to opt out |
 | `prod-postgres` | sanitised | same |

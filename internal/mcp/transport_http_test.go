@@ -58,8 +58,8 @@ func TestHealthEndpoint(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("expected status ok, got %q", body["status"])
 	}
-	if body["version"] != "test" {
-		t.Fatalf("expected version test, got %q", body["version"])
+	if _, ok := body["version"]; ok {
+		t.Fatalf("health response must not expose version: %+v", body)
 	}
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("expected Cache-Control no-store, got %q", got)
@@ -110,8 +110,9 @@ func TestReadyInitialized(t *testing.T) {
 func TestReadyUpstreamUnhealthy(t *testing.T) {
 	s := newTestServer()
 	s.initialized.Store(true)
+	const leaked = "dial tcp 10.0.1.5:5432: connect: connection refused"
 	s.ReadyChecker = func(ctx context.Context) error {
-		return fmt.Errorf("clockify API unreachable")
+		return fmt.Errorf("%s", leaked)
 	}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
@@ -126,6 +127,12 @@ func TestReadyUpstreamUnhealthy(t *testing.T) {
 	}
 	if body["status"] != "not_ready" {
 		t.Fatalf("expected status not_ready, got %q", body["status"])
+	}
+	if body["reason"] != publicReadyFailureReason {
+		t.Fatalf("expected generic ready reason, got %q", body["reason"])
+	}
+	if strings.Contains(rec.Body.String(), "10.0.1.5") || strings.Contains(rec.Body.String(), leaked) {
+		t.Fatalf("ready response leaked upstream error: %s", rec.Body.String())
 	}
 }
 

@@ -158,8 +158,6 @@ fi
 # ---------------------------------------------------------------------------
 
 banned_strings=(
-  "clockify_activate_group"
-  "clockify_activate_tool"
   "@anycli/clockify-mcp-go"
   "defaulting to a preview if the \`dry_run\` parameter is omitted"
   "Destructive tools run through a dry-run interceptor by default"

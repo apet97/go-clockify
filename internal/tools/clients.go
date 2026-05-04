@@ -28,12 +28,13 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_clients", out, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_clients", out, meta), nil
 }
 
 func (s *Service) CreateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

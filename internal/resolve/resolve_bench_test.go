@@ -1,8 +1,17 @@
 package resolve
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 // BenchmarkValidateID exercises the path-injection guard that runs
@@ -34,5 +43,74 @@ func BenchmarkValidateID(b *testing.B) {
 	for b.Loop() {
 		_ = ValidateID(corpus[i%len(corpus)], "id")
 		i++
+	}
+}
+
+// BenchmarkResolveProjectIDCold500Names exercises the resolver path that has
+// historically regressed in owner workspaces: strict-name-search still returns
+// enough candidates to require pagination, and the exact match is late.
+func BenchmarkResolveProjectIDCold500Names(b *testing.B) {
+	const (
+		workspaceID = "ws-bench"
+		targetName  = "Target Project"
+	)
+	projects := make([]map[string]any, 500)
+	for i := range projects {
+		projects[i] = map[string]any{
+			"id":   fmt.Sprintf("p-%03d", i),
+			"name": fmt.Sprintf("Project %03d", i),
+		}
+	}
+	projects[len(projects)-1] = map[string]any{"id": "p-target", "name": targetName}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/"+workspaceID+"/projects" {
+			http.NotFound(w, r)
+			return
+		}
+		if got := r.URL.Query().Get("strict-name-search"); got != "true" {
+			b.Fatalf("strict-name-search=%q, want true", got)
+		}
+		if got := r.URL.Query().Get("name"); got != targetName {
+			b.Fatalf("name=%q, want %q", got, targetName)
+		}
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page-size"))
+		if page < 1 {
+			page = 1
+		}
+		if pageSize <= 0 {
+			pageSize = 200
+		}
+		start := (page - 1) * pageSize
+		if start >= len(projects) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		end := start + pageSize
+		if end > len(projects) {
+			end = len(projects)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(projects[start:end]); err != nil {
+			b.Fatalf("encode projects: %v", err)
+		}
+	}))
+	defer ts.Close()
+
+	client := clockify.NewClient("bench-key", ts.URL, 5*time.Second, 0)
+	defer client.Close()
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	for b.Loop() {
+		id, err := ResolveProjectID(ctx, client, workspaceID, targetName)
+		if err != nil {
+			b.Fatalf("ResolveProjectID: %v", err)
+		}
+		if id != "p-target" {
+			b.Fatalf("ResolveProjectID=%q, want p-target", id)
+		}
 	}
 }

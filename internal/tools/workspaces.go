@@ -20,13 +20,13 @@ func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	if s.WorkspaceID != "" {
 		return s.WorkspaceID, nil
 	}
-	s.mu.Lock()
+	s.mu.RLock()
 	if s.cachedWSID != "" {
 		wsID := s.cachedWSID
-		s.mu.Unlock()
+		s.mu.RUnlock()
 		return wsID, nil
 	}
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	var workspaces []clockify.Workspace
 	if err := s.Client.Get(ctx, "/workspaces", nil, &workspaces); err != nil {
 		return "", err

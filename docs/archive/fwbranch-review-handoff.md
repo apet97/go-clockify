@@ -47,10 +47,10 @@ PR #51 checks were green before merge.
 
 Do not use this file as the active Claude/Codex prompt. Use:
 
-- [`AGENTS.md`](../AGENTS.md)
-- [`docs/agent-handoff.md`](agent-handoff.md)
-- [`docs/claude-code-continuation.md`](claude-code-continuation.md)
-- [`docs/launch-candidate-checklist.md`](launch-candidate-checklist.md)
+- [`AGENTS.md`](../../AGENTS.md)
+- [`docs/agent-handoff.md`](../agent-handoff.md)
+- [`docs/claude-code-continuation.md`](../claude-code-continuation.md)
+- [`docs/launch-candidate-checklist.md`](../launch-candidate-checklist.md)
 
 ## Remaining External Blockers
 

@@ -134,6 +134,40 @@ func synthesizeHappyArgs(schema map[string]any) (map[string]any, bool) {
 		}
 		out[name] = val
 	}
+	if options, ok := schema["anyOf"].([]any); ok && len(options) > 0 {
+		for _, option := range options {
+			sub, ok := option.(map[string]any)
+			if !ok {
+				continue
+			}
+			candidate := cloneArgs(out)
+			req, ok := toStringSliceAny(sub["required"])
+			if !ok {
+				continue
+			}
+			skipOption := false
+			for _, name := range req {
+				if _, present := candidate[name]; present {
+					continue
+				}
+				raw, ok := props[name].(map[string]any)
+				if !ok {
+					skipOption = true
+					break
+				}
+				val, skip := synthesizeValue(raw)
+				if skip {
+					skipOption = true
+					break
+				}
+				candidate[name] = val
+			}
+			if !skipOption {
+				return candidate, false
+			}
+		}
+		return nil, true
+	}
 	return out, false
 }
 
@@ -177,7 +211,29 @@ func synthesizeValue(prop map[string]any) (any, bool) {
 	case "boolean":
 		return true, false
 	case "array":
-		return []any{}, false
+		minItems := 0
+		if raw, ok := prop["minItems"]; ok {
+			if n, ok := asInt(raw); ok {
+				minItems = n
+			}
+		}
+		if minItems <= 0 {
+			return []any{}, false
+		}
+		itemSchema, _ := prop["items"].(map[string]any)
+		item := any("x")
+		if itemSchema != nil {
+			val, skip := synthesizeValue(itemSchema)
+			if skip {
+				return nil, true
+			}
+			item = val
+		}
+		out := make([]any, minItems)
+		for i := range out {
+			out[i] = item
+		}
+		return out, false
 	case "object":
 		// Nested required object — recurse.
 		sub, skip := synthesizeHappyArgs(prop)
@@ -188,6 +244,14 @@ func synthesizeValue(prop map[string]any) (any, bool) {
 	default:
 		return "x", false
 	}
+}
+
+func cloneArgs(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func toStringSliceAny(v any) ([]string, bool) {

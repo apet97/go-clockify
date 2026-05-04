@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -58,10 +59,71 @@ func TestBootstrapLists_NoDrift(t *testing.T) {
 	check("bootstrap.Tier1Catalog", catalogNames)
 }
 
+func TestPolicyInfoReportsBootstrapVisibility(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	cfg := bootstrap.Config{Mode: bootstrap.Minimal}
+	tier1 := tier1NamesForService(svc)
+	cfg.SetTier1Tools(tier1)
+	svc.Bootstrap = &cfg
+	svc.PolicyDescribe = func() map[string]any {
+		return map[string]any{"mode": "standard"}
+	}
+
+	result, err := svc.PolicyInfo(context.Background())
+	if err != nil {
+		t.Fatalf("policy info failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	if data["bootstrap_mode"] != "minimal" {
+		t.Fatalf("bootstrap_mode = %v, want minimal", data["bootstrap_mode"])
+	}
+	visible := cfg.VisibleCount()
+	if data["tier1_visible_count"] != visible {
+		t.Fatalf("tier1_visible_count = %v, want %d", data["tier1_visible_count"], visible)
+	}
+	if data["tier1_hidden_count"] != len(tier1)-visible {
+		t.Fatalf("tier1_hidden_count = %v, want %d", data["tier1_hidden_count"], len(tier1)-visible)
+	}
+	if data["mode"] != "standard" {
+		t.Fatalf("policy data was not preserved: %+v", data)
+	}
+}
+
+func TestSearchToolsMarksBootstrapHiddenTier1(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	cfg := bootstrap.Config{Mode: bootstrap.Minimal}
+	cfg.SetTier1Tools(tier1NamesForService(svc))
+	svc.Bootstrap = &cfg
+
+	result, err := svc.SearchTools(context.Background(), map[string]any{"query": "workspace"})
+	if err != nil {
+		t.Fatalf("search tools failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	allResults := data["all_results"].([]map[string]any)
+	for _, entry := range allResults {
+		if entry["name"] == "clockify_list_workspaces" {
+			if entry["availability"] != "tier1_hidden_by_bootstrap" {
+				t.Fatalf("availability = %v, want tier1_hidden_by_bootstrap in %+v", entry["availability"], entry)
+			}
+			return
+		}
+	}
+	t.Fatal("expected clockify_list_workspaces in workspace search results")
+}
+
 func keysOf(m map[string]bool) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
+	}
+	return out
+}
+
+func tier1NamesForService(svc *Service) map[string]bool {
+	out := map[string]bool{}
+	for _, d := range svc.Registry() {
+		out[d.Tool.Name] = true
 	}
 	return out
 }

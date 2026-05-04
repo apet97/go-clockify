@@ -14,6 +14,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/metrics"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -85,12 +86,16 @@ func Serve(ctx context.Context, opts Options) error {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(opts.TLSConfig)))
 	}
 	if opts.Authenticator != nil {
-		serverOpts = append(serverOpts, grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator, authInterceptorConfig{
+		authCfg := authInterceptorConfig{
 			reauthInterval:       opts.ReauthInterval,
 			forwardTenantHeader:  opts.ForwardTenantHeader,
 			forwardSubjectHeader: opts.ForwardSubjectHeader,
 			mtls:                 opts.TLSConfig != nil && opts.TLSConfig.ClientAuth == tls.RequireAndVerifyClientCert,
-		})))
+		}
+		serverOpts = append(serverOpts,
+			grpc.StreamInterceptor(authStreamInterceptor(opts.Authenticator, authCfg)),
+			grpc.UnaryInterceptor(authUnaryInterceptor(opts.Authenticator, authCfg)),
+		)
 	}
 	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)
@@ -166,13 +171,20 @@ func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 	// flows through here.
 	go func() {
 		defer close(sendDone)
+		defer func() {
+			if rec := recover(); rec != nil {
+				metrics.GRPCSendPumpPanicsTotal.Inc()
+				slog.Error("grpc_send_pump_panic_recovered", "panic", fmt.Sprintf("%v", rec))
+			}
+			// Drain any remaining queued frames on every exit path. On
+			// SendMsg error or panic, dispatch goroutines may still be
+			// trying to enqueue replies while Exchange unwinds.
+			for range sends {
+			}
+		}()
 		for frame := range sends {
 			if err := stream.SendMsg(&frame); err != nil {
 				sendDone <- err
-				// Drain any remaining queued frames so senders don't
-				// block forever after the stream has failed.
-				for range sends {
-				}
 				return
 			}
 		}

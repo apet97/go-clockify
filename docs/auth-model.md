@@ -75,9 +75,9 @@ the first four.
 | Mode | Subject source | TenantID source | When can either be empty? |
 |---|---|---|---|
 | `static_bearer` | hardcoded `"static-bearer"` (a stand-in identifier — every caller bearing the same token has the same Subject by design) | `MCP_DEFAULT_TENANT_ID` (default `"default"`) | Neither is empty. |
-| `oidc` | JWT `MCP_SUBJECT_CLAIM` (default `sub`) | JWT `MCP_TENANT_CLAIM` (default `tenant_id`); falls back to `MCP_DEFAULT_TENANT_ID` unless `MCP_REQUIRE_TENANT_CLAIM=1` | **Subject:** `oidc token missing subject claim` if absent. **TenantID:** `oidc token missing tenant claim` iff strict required. |
-| `forward_auth` | `MCP_FORWARD_SUBJECT_HEADER` (default `X-Forwarded-User`), sanitized | `MCP_FORWARD_TENANT_HEADER` (default `X-Forwarded-Tenant`), sanitized; falls back to default | **Subject:** `missing <header>` if header absent or sanitization rejects. **TenantID:** empty header → fallback (never the rejection path). |
-| `mtls` | client cert `Subject.CommonName`, fallback to full `Subject.String()` | per `MCP_MTLS_TENANT_SOURCE` (`cert` default → URI SAN `clockify-mcp://tenant/<id>` or `spiffe://*/tenant/<id>`, fallback `Subject.Organization[0]`); `header` and `header_or_cert` are migration variants | **Subject:** never empty (cert CN fallback). **TenantID:** `mtls client has no tenant identity (source=<src>)` iff `MCP_REQUIRE_MTLS_TENANT=1`. |
+| `oidc` | JWT `MCP_SUBJECT_CLAIM` (default `sub`), sanitized | JWT `MCP_TENANT_CLAIM` (default `tenant_id`), sanitized; falls back to `MCP_DEFAULT_TENANT_ID` unless `MCP_REQUIRE_TENANT_CLAIM=1` | **Subject:** `oidc token missing subject claim` if absent. **TenantID:** `oidc token missing tenant claim` iff strict required. Either value rejects non-printable/control bytes. |
+| `forward_auth` | `MCP_FORWARD_SUBJECT_HEADER` (default `X-Forwarded-User`), sanitized | `MCP_FORWARD_TENANT_HEADER` (default `X-Forwarded-Tenant`), sanitized; falls back to default unless `MCP_REQUIRE_FORWARD_TENANT_CLAIM=1` | **Subject:** `missing <header>` if header absent or sanitization rejects. **TenantID:** empty header → fallback unless required, then `forward_auth request missing tenant header <header>`. |
+| `mtls` | client cert `Subject.CommonName`, fallback to full `Subject.String()`, sanitized | per `MCP_MTLS_TENANT_SOURCE` (`cert` default → URI SAN `clockify-mcp://tenant/<id>` or `spiffe://*/tenant/<id>`, fallback `Subject.Organization[0]`); `header` and `header_or_cert` are migration variants; final value is sanitized | **Subject:** never empty (cert CN fallback). **TenantID:** `mtls client has no tenant identity (source=<src>)` iff `MCP_REQUIRE_MTLS_TENANT=1`. Either value rejects non-printable/control bytes. |
 
 `Claims` is a small `map[string]string` carrying mode-specific
 metadata (e.g. OIDC `issuer` + `audience`, mTLS `cert_subject` +
@@ -132,12 +132,15 @@ returned over the wire by
 | OIDC audience / resource mismatch | 401 | `Unauthenticated` | `unexpected audience`, `token aud does not contain resource URI` | `audience_mismatch` |
 | OIDC strict mode rejects token without `exp` | 401 | `Unauthenticated` | `token missing exp claim (strict mode)` | `token_verification` |
 | OIDC tenant claim missing under `MCP_REQUIRE_TENANT_CLAIM=1` | 401 | `Unauthenticated` | `oidc token missing tenant claim` | `tenant_claim` |
+| OIDC subject/tenant carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `oidc: <subject\|tenant> contains disallowed byte 0x<hex>` | `claim_validation` / `tenant_claim` |
 | `forward_auth` source not in CIDR allow-list | 401 | `Unauthenticated` | `forward_auth: source X.X.X.X not in MCP_FORWARD_AUTH_TRUSTED_PROXIES allow-list` | `invalid_token` |
 | `forward_auth` header carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `forward_auth: <subject\|tenant> contains disallowed byte 0x<hex>` | `claim_validation` / `tenant_claim` |
 | `forward_auth` header is duplicated or larger than 1024 bytes | 401 | `Unauthenticated` | `forward_auth: <subject\|tenant> header <name> has duplicated values`, `forward_auth: <subject\|tenant> header <name> is too large` | `claim_validation` / `tenant_claim` |
 | `forward_auth` subject header empty/missing | 401 | `Unauthenticated` | `missing <header>` | `missing_credentials` |
+| `forward_auth` tenant header missing under `MCP_REQUIRE_FORWARD_TENANT_CLAIM=1` | 401 | `Unauthenticated` | `forward_auth request missing tenant header <header>` | `tenant_claim` |
 | `mtls` client did not present a verified cert | 401 | `Unauthenticated` | `verified mTLS client certificate required`, `missing client certificate` | `client_certificate` |
 | `mtls` tenant required but unresolvable | 401 | `Unauthenticated` | `mtls client has no tenant identity (source=<src>)` | `tenant_claim` |
+| `mtls` subject/tenant carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `mtls: <subject\|tenant> contains disallowed byte 0x<hex>` | `claim_validation` / `tenant_claim` |
 | Cross-pod replay with mismatched Subject/TenantID (streamable-HTTP only) | 403 | n/a | `session principal mismatch` | n/a (sentinel `errSessionPrincipalMismatch`) |
 
 HTTP responses also set `WWW-Authenticate: Bearer realm="clockify-mcp", error=<errCode>, error_description=<sanitized>`
@@ -158,7 +161,9 @@ lines 20-36).
 | `forward_auth` control-byte / non-printable rejection | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsControlBytesInHeaders` |
 | `forward_auth` duplicate-value and oversized-header rejection | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders` |
 | `forward_auth` trusted-proxy CIDR gate | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RejectsUntrustedSource`, `TestForwardAuth_AcceptsTrustedCIDR`, `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour` |
-| OIDC strict mode rejects HTTP issuer / JWKS | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestNewOIDCAuth_StrictRejectsHTTPIssuer`, `TestNewOIDCAuth_StrictRejectsHTTPJWKS` |
+| `forward_auth` required tenant header gate | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestForwardAuth_RequireTenantClaim` |
+| OIDC and mTLS principal sanitization | [`internal/authn/oidc_integration_test.go`](../internal/authn/oidc_integration_test.go) — `TestOIDCAuthenticatorRejectsControlBytesInPrincipalClaims`; [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestMTLSRejectsControlBytesInSubjectAndTenant` |
+| OIDC rejects remote HTTP issuer / JWKS, and private/loopback JWKS URLs require explicit opt-in | [`internal/authn/auth_hardening_test.go`](../internal/authn/auth_hardening_test.go) — `TestNewOIDCAuth_StrictRejectsHTTPIssuer`, `TestNewOIDCAuth_StrictRejectsHTTPJWKS`, `TestNewOIDCAuth_NonStrictRejectsRemoteHTTPIssuer`, `TestNewOIDCAuth_NonStrictRejectsRemoteHTTPJWKS`, `TestNewOIDCAuth_NonStrictRejectsLoopbackHTTPJWKSWithoutPrivateOptIn`, `TestNewOIDCAuth_NonStrictAllowsLoopbackHTTPJWKSWithPrivateOptIn`, `TestNewOIDCAuth_RejectsPrivateHTTPSJWKSWithoutPrivateOptIn` |
 | OIDC verify-cache TTL clamp | [`internal/authn/oidc_verify_cache_test.go`](../internal/authn/oidc_verify_cache_test.go) |
 | JWT alg-confusion (HS256 / `none`) rejection | [`internal/authn/jwt_alg_confusion_test.go`](../internal/authn/jwt_alg_confusion_test.go) |
 | JWKS document parsing (RSA modulus floor, EC curve validation) | [`internal/authn/jwks_document_test.go`](../internal/authn/jwks_document_test.go) |
@@ -170,10 +175,12 @@ lines 20-36).
 ## Edge cases worth knowing
 
 - **`forward_auth` empty allow-list** preserves the legacy
-  "trust every source" posture for self-hosted single-tenant
-  deployments. Hosted profiles plus `clockify-mcp doctor --strict`
-  refuse to start with `forward_auth` + empty allow-list. Pin:
-  `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour`.
+  authenticator-level "trust every source" posture for self-hosted
+  single-tenant deployments. `config.Load` refuses non-loopback
+  `forward_auth` binds without `MCP_FORWARD_AUTH_TRUSTED_PROXIES`;
+  `doctor --strict` also rejects that posture. Pin:
+  `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour` and
+  `TestLoad_ForwardAuthRequiresTrustedProxiesOnNonLoopback`.
 - **`forward_auth` sanitization** rejects `utf8.RuneError`,
   control bytes, and any rune that fails `unicode.IsPrint()`.
   ASCII space passes (legitimate in display names / org names).

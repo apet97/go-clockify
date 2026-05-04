@@ -52,7 +52,7 @@ Profiles:
 
 | Name | Shape | Key pins |
 |------|-------|----------|
-| `local-stdio` | single-user stdio subprocess | stdio transport, safe_core policy, no control plane, no auth |
+| `local-stdio` | single-user stdio subprocess | stdio transport, time_tracking_safe policy, no control plane, no auth |
 | `single-tenant-http` | one-process HTTP + file store | streamable_http, static_bearer, file:// DSN, MCP_ALLOW_DEV_BACKEND=1, legacy HTTP deny |
 | `shared-service` | multi-tenant streamable HTTP + Postgres | streamable_http, oidc, audit fail_closed, legacy HTTP deny — operator supplies the postgres DSN |
 | `private-network-grpc` | gRPC + mTLS behind a private perimeter | grpc, mtls, audit fail_closed — requires `-tags=grpc` build |

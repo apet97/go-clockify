@@ -55,6 +55,8 @@ const (
 	LegacyMCPSessionIDHeader = "X-MCP-Session-ID"
 )
 
+const defaultStreamablePOSTWriteTimeout = 55 * time.Second
+
 type StreamableHTTPOptions struct {
 	Version string
 	Bind    string
@@ -92,6 +94,12 @@ type StreamableHTTPOptions struct {
 	// for the streamable transport. Used by -tags=pprof to attach
 	// /debug/pprof/* alongside /mcp. nil = no extras, default path.
 	ExtraHandlers []ExtraHandler
+	// POSTWriteTimeout bounds writes for request/response POST /mcp calls.
+	// The http.Server keeps WriteTimeout=0 so long-lived SSE streams are not
+	// severed; this per-request deadline keeps stalled POST clients from
+	// pinning a handler indefinitely. Zero uses
+	// defaultStreamablePOSTWriteTimeout.
+	POSTWriteTimeout time.Duration
 	// IdleGraceAfterDisconnect is the maximum time a session with zero
 	// active SSE subscribers may sit before the reaper evicts it early.
 	// Guards against orphaned-subscriber leaks where a client drops TCP
@@ -162,7 +170,7 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	mux.HandleFunc("GET /health", observeHTTP("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "version": opts.Version})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}))
 	mux.HandleFunc("GET /ready", observeHTTP("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -171,8 +179,9 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 			checkCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
 			if err := opts.ReadyChecker(checkCtx); err != nil {
+				slog.Warn("ready_check_failed", "error", err.Error(), "transport", "streamable_http")
 				w.WriteHeader(http.StatusServiceUnavailable)
-				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": err.Error()})
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": publicReadyFailureReason})
 				return
 			}
 		}
@@ -282,6 +291,8 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
+		clearWriteDeadline := applyStreamablePOSTWriteDeadline(w, opts.POSTWriteTimeout)
+		defer clearWriteDeadline()
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
 			logHTTPAuthFailure("streamable_http", r, err)
@@ -378,6 +389,22 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 	})
+}
+
+func applyStreamablePOSTWriteDeadline(w http.ResponseWriter, timeout time.Duration) func() {
+	if timeout == 0 {
+		timeout = defaultStreamablePOSTWriteTimeout
+	}
+	if timeout < 0 {
+		return func() {}
+	}
+	rc := http.NewResponseController(w)
+	if err := rc.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
+		return func() {}
+	}
+	return func() {
+		_ = rc.SetWriteDeadline(time.Time{})
+	}
 }
 
 func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
@@ -928,7 +955,6 @@ func (h *sessionEventHub) Notify(method string, params any) error {
 			close(ch)
 			delete(h.subscribers, id)
 		}
-		break
 	}
 	return nil
 }

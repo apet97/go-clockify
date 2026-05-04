@@ -3,12 +3,14 @@
 ## Status
 
 Accepted — Tier 1 / Tier 2 split has been stable since v0.6.0; the
-`clockify_search_tools` activation surface is exercised by
+split activation surface (`clockify_list_tools`,
+`clockify_activate_group`, `clockify_activate_tool`,
+`clockify_deactivate_group`) is exercised by
 `internal/mcp/activation_integration_test.go`.
 
 ## Context
 
-The Clockify API is large: 123 MCP tools currently cover the full surface
+The Clockify API is large: 128 MCP tools currently cover the full surface
 (timer, entries, projects, reports, invoices, expenses, scheduling,
 approvals, custom fields, admin, …). Exposing every catalog tool in
 `tools/list` on every connection produces three failure modes:
@@ -31,7 +33,7 @@ let the LLM (or the operator) widen it on demand.
 
 Tools split into two tiers:
 
-- **Tier 1 (35 tools, always loaded).** Registered at startup and
+- **Tier 1 (40 tools, always loaded).** Registered at startup and
   visible in `tools/list` immediately. Covers the dominant
   workflows: timer, entries, projects, clients, tags, tasks, users,
   workspaces, reports, workflows, search, context. Catalog lives in
@@ -41,14 +43,22 @@ Tools split into two tiers:
   scheduling, time off, approvals, shared reports, user admin,
   webhooks, custom fields, groups/holidays, project admin.
 
-Activation happens through `clockify_search_tools`, an introspection
-tool that is always visible regardless of policy or bootstrap mode.
-Two activation paths:
+Discovery and activation happen through dedicated introspection tools
+that are always visible regardless of policy or bootstrap mode:
 
-1. `activate_group: "<group>"` — activates every tool in a Tier 2
-   group at once. Wired in `internal/tools/context.go` (search for `activateGroup := stringArg(args, "activate_group")`).
-2. `activate_tool: "<name>"` — activates a single Tier 2 tool by
-   name. Wired in the same handler.
+1. `clockify_list_tools { "query": "<keyword>" }` — lists matching
+   Tier 1 tools and Tier 2 groups.
+2. `clockify_activate_group { "name": "<group>" }` — activates every
+   tool in a Tier 2 group at once.
+3. `clockify_activate_tool { "name": "<tool>" }` — activates a hidden
+   Tier 1 tool by name, or activates the full Tier 2 group containing
+   the named Tier 2 tool.
+4. `clockify_deactivate_group { "name": "<group>" }` — removes a
+   previously activated Tier 2 group from the current session.
+
+`clockify_search_tools` remains as a deprecated compatibility shim for
+older clients using the old `query`, `activate_group`, or
+`activate_tool` arguments.
 
 After activation, the server emits `notifications/tools/list_changed`
 on transports that support server-initiated notifications (stdio,
@@ -58,7 +68,7 @@ deliver server-initiated notifications.
 
 `CLOCKIFY_BOOTSTRAP_MODE` controls the Tier 1 surface itself:
 
-- `full_tier1` (default) — all 35 Tier 1 tools visible.
+- `full_tier1` (default) — all 40 Tier 1 tools visible.
 - `minimal` — only 11 core tools (`MinimalSet` in
   `bootstrap.go:56`). The rest of Tier 1 is hidden until activated.
 - `custom` — operator-supplied list via `CLOCKIFY_BOOTSTRAP_TOOLS`.
@@ -71,11 +81,11 @@ both gates allow it.
 
 ### Positive
 
-- LLMs see a small, focused tool surface on first connection (35
+- LLMs see a small, focused tool surface on first connection (40
   tools, ~10 KB schema). Discoverability and token cost are both
   bounded.
 - The 88 Tier 2 tools are still reachable: any LLM that calls
-  `clockify_search_tools { "query": "invoice" }` discovers the
+  `clockify_list_tools { "query": "invoice" }` discovers the
   invoice group and can activate it in one round trip.
 - Operators auditing the running server with `clockify_policy_info`
   see the active surface, not the full catalog. The surface is
@@ -88,9 +98,9 @@ both gates allow it.
 ### Negative
 
 - A user who knows exactly which Tier 2 tool they need still has to
-  call `clockify_search_tools` first. We accept the round trip
-  because the alternative (always-on full surface) costs more on the
-  dominant case.
+  call `clockify_activate_tool` before using it. We accept the round
+  trip because the alternative (always-on full surface) costs more on
+  the dominant case.
 - `notifications/tools/list_changed` is the canonical signal but the
   legacy `http` transport (ADR 0002) cannot deliver it. Operators
   on legacy `http` who activate Tier 2 tools must re-fetch
@@ -98,7 +108,7 @@ both gates allow it.
   `README.md` "Troubleshooting".
 - Adding a new Tier 2 group requires touching the registration
   files, the `bootstrap.Config` activation lookup, and the
-  `clockify_search_tools` catalog metadata. There is no single
+  `clockify_list_tools` catalog metadata. There is no single
   source of truth — the catalog is hand-curated to keep keyword
   search good.
 
@@ -108,10 +118,11 @@ both gates allow it.
   11 tools are "core". Operators who disagree can switch to
   `bootstrap.full_tier1` or supply their own list via
   `bootstrap.custom`.
-- `clockify_search_tools` lives in Tier 1 and bypasses the policy
-  gate via the introspection allowlist. Removing it would break
-  Tier 2 discoverability entirely, so any future refactor of the
-  introspection allowlist must keep it.
+- `clockify_list_tools`, the activate/deactivate tools, and the
+  deprecated `clockify_search_tools` shim live in Tier 1 and bypass
+  the policy gate via the introspection allowlist. Removing them would
+  break Tier 2 discoverability entirely, so any future refactor of the
+  introspection allowlist must keep a discovery/activation path.
 
 ## Alternatives considered
 
@@ -122,7 +133,7 @@ both gates allow it.
   workflow that touches a Tier 2 group, and the per-workflow list
   would drift from the catalog.
 - **A single "tools by capability" RPC like `tools/search`** —
-  partially adopted (`clockify_search_tools` plays this role) but
+  partially adopted (`clockify_list_tools` plays this role) but
   layered on top of MCP's existing `tools/list` so spec-strict
   clients still see a working `tools/list` surface on connect.
 
@@ -130,8 +141,9 @@ both gates allow it.
 
 - Tier 1 catalog: `internal/bootstrap/bootstrap.go:71`
   (`Tier1Catalog`).
-- Activation handler: `internal/tools/context.go` (search for `activateGroup := stringArg(args, "activate_group")`)
-  (`activate_group` and `activate_tool` arguments).
+- Activation handlers: `internal/tools/context.go` (`ListTools`,
+  `ActivateToolGroup`, `ActivateNamedTool`, `DeactivateToolGroup`)
+  plus the deprecated `SearchTools` shim.
 - Bootstrap modes: `internal/bootstrap/bootstrap.go` `Mode` enum
   (search for `type Mode int`) and the `AlwaysVisible` / `MinimalSet`
   maps (search for `var AlwaysVisible`).

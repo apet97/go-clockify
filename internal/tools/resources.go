@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -141,13 +142,211 @@ func weeklyReportURIsForEntry(workspaceID, startRaw, endRaw string, loc *time.Lo
 // share the same typed model.
 func (s *Service) emitEntryAndWeeklyWithState(ctx context.Context, wsID string, entry clockify.TimeEntry) {
 	s.emitResourceUpdateWithState(entryResourceURI(wsID, entry.ID), entry)
+	s.emitWeeklyReportsForEntryChange(ctx, wsID, nil, &entry)
+}
+
+func (s *Service) emitWeeklyReportsForEntryChange(ctx context.Context, wsID string, before, after *clockify.TimeEntry) {
 	loc := s.DefaultTimezone
 	if loc == nil {
 		loc = time.UTC
 	}
-	for _, uri := range weeklyReportURIsForEntry(wsID, entry.TimeInterval.Start, entry.TimeInterval.End, loc) {
+	uriSet := map[string]struct{}{}
+	if before != nil {
+		for _, uri := range weeklyReportURIsForEntry(wsID, before.TimeInterval.Start, before.TimeInterval.End, loc) {
+			uriSet[uri] = struct{}{}
+		}
+	}
+	if after != nil {
+		for _, uri := range weeklyReportURIsForEntry(wsID, after.TimeInterval.Start, after.TimeInterval.End, loc) {
+			uriSet[uri] = struct{}{}
+		}
+	}
+	uris := make([]string, 0, len(uriSet))
+	for uri := range uriSet {
+		uris = append(uris, uri)
+	}
+	sort.Strings(uris)
+	for _, uri := range uris {
+		if s.emitWeeklyReportDeltaFromCache(uri, before, after, loc) {
+			continue
+		}
 		s.emitResourceUpdate(ctx, uri)
 	}
+}
+
+func (s *Service) emitWeeklyReportDeltaFromCache(uri string, before, after *clockify.TimeEntry, loc *time.Location) bool {
+	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
+		return true
+	}
+	if !weeklyReportDeltaEligible(uri, before, after, loc) {
+		return false
+	}
+	prevState, ok := s.resourceCache.get(uri)
+	if !ok {
+		return false
+	}
+	var data WeeklySummaryData
+	if err := json.Unmarshal(prevState, &data); err != nil {
+		return false
+	}
+	if before != nil {
+		if !applyCachedWeeklyEntryDelta(&data, *before, -1, loc) {
+			return false
+		}
+	}
+	if after != nil {
+		if !applyCachedWeeklyEntryDelta(&data, *after, 1, loc) {
+			return false
+		}
+	}
+	start, err := time.Parse(time.RFC3339, data.Range.Start)
+	if err != nil {
+		return false
+	}
+	end, err := time.Parse(time.RFC3339, data.Range.End)
+	if err != nil {
+		return false
+	}
+	data.SuggestedActions = reportSuggestedActions(data.ByProject, data.Totals, start, end)
+	s.emitResourceUpdateWithState(uri, data)
+	return true
+}
+
+func weeklyReportDeltaEligible(uri string, before, after *clockify.TimeEntry, loc *time.Location) bool {
+	weekStart, ok := weeklyReportWeekStartFromURI(uri)
+	if !ok {
+		return false
+	}
+	if before != nil && !entryDeltaBelongsOnlyToWeek(*before, weekStart, loc) {
+		return false
+	}
+	if after != nil && !entryDeltaBelongsOnlyToWeek(*after, weekStart, loc) {
+		return false
+	}
+	return before != nil || after != nil
+}
+
+func weeklyReportWeekStartFromURI(uri string) (string, bool) {
+	rest, ok := strings.CutPrefix(uri, clockifyResourceScheme)
+	if !ok {
+		return "", false
+	}
+	segments := strings.Split(rest, "/")
+	if len(segments) != 5 || segments[0] != "workspace" || segments[2] != "report" || segments[3] != "weekly" || segments[4] == "" {
+		return "", false
+	}
+	return segments[4], true
+}
+
+func entryDeltaBelongsOnlyToWeek(entry clockify.TimeEntry, weekStart string, loc *time.Location) bool {
+	start, err := entry.StartTime()
+	if err != nil {
+		return false
+	}
+	end, err := entry.EndTime()
+	if err != nil || end.IsZero() {
+		return false
+	}
+	if end.Before(start) {
+		return false
+	}
+	startWeek := isoWeekStart(start, loc).Format("2006-01-02")
+	endWeek := isoWeekStart(end, loc).Format("2006-01-02")
+	return startWeek == weekStart && endWeek == weekStart
+}
+
+func applyCachedWeeklyEntryDelta(data *WeeklySummaryData, entry clockify.TimeEntry, direction int, loc *time.Location) bool {
+	if direction != -1 && direction != 1 {
+		return false
+	}
+	start, err := entry.StartTime()
+	if err != nil {
+		return false
+	}
+	end, err := entry.EndTime()
+	if err != nil || end.IsZero() || end.Before(start) {
+		return false
+	}
+	seconds := int64(direction) * int64(end.Sub(start).Seconds())
+	data.Totals.Entries += direction
+	data.Totals.TotalSeconds += seconds
+	if data.Totals.Entries < 0 || data.Totals.TotalSeconds < 0 {
+		return false
+	}
+	data.Totals.TotalHours = hours(data.Totals.TotalSeconds)
+	data.ByProject, err = applyProjectSummaryDelta(data.ByProject, entry, seconds, direction)
+	if err != nil {
+		return false
+	}
+	dayKey := start.In(loc).Format("2006-01-02")
+	data.ByDay, err = applyDaySummaryDelta(data.ByDay, dayKey, seconds, direction)
+	return err == nil
+}
+
+func applyProjectSummaryDelta(projects []ProjectSummary, entry clockify.TimeEntry, seconds int64, direction int) ([]ProjectSummary, error) {
+	projectID := entry.ProjectID
+	projectName := strings.TrimSpace(entry.ProjectName)
+	if projectName == "" {
+		projectName = "(no project)"
+	}
+	idx := -1
+	for i := range projects {
+		if projects[i].ProjectID == projectID {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		if direction < 0 {
+			return nil, fmt.Errorf("cached weekly project bucket %q not found", projectID)
+		}
+		projects = append(projects, ProjectSummary{ProjectID: projectID, ProjectName: projectName})
+		idx = len(projects) - 1
+	}
+	projects[idx].Entries += direction
+	projects[idx].TotalSeconds += seconds
+	if projects[idx].Entries < 0 || projects[idx].TotalSeconds < 0 {
+		return nil, fmt.Errorf("cached weekly project bucket %q underflowed", projectID)
+	}
+	if projects[idx].ProjectName == "" || projects[idx].ProjectName == "(no project)" {
+		projects[idx].ProjectName = projectName
+	}
+	if projects[idx].Entries == 0 {
+		projects = append(projects[:idx], projects[idx+1:]...)
+	} else {
+		projects[idx].TotalHours = hours(projects[idx].TotalSeconds)
+	}
+	sortProjectSummaries(projects)
+	return projects, nil
+}
+
+func applyDaySummaryDelta(days []DaySummary, dayKey string, seconds int64, direction int) ([]DaySummary, error) {
+	idx := -1
+	for i := range days {
+		if days[i].Date == dayKey {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		if direction < 0 {
+			return nil, fmt.Errorf("cached weekly day bucket %q not found", dayKey)
+		}
+		days = append(days, DaySummary{Date: dayKey})
+		idx = len(days) - 1
+	}
+	days[idx].Entries += direction
+	days[idx].TotalSeconds += seconds
+	if days[idx].Entries < 0 || days[idx].TotalSeconds < 0 {
+		return nil, fmt.Errorf("cached weekly day bucket %q underflowed", dayKey)
+	}
+	if days[idx].Entries == 0 {
+		days = append(days[:idx], days[idx+1:]...)
+	} else {
+		days[idx].TotalHours = hours(days[idx].TotalSeconds)
+	}
+	sortDaySummaries(days)
+	return days, nil
 }
 
 // emitResourceUpdateWithState publishes a resources/updated delta

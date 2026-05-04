@@ -197,6 +197,50 @@ func TestValidateArrayItemsPointer(t *testing.T) {
 	}
 }
 
+func TestValidateArrayMinItems(t *testing.T) {
+	schema := map[string]any{"type": "array", "minItems": 1}
+	if err := Validate(schema, []any{"ok"}); err != nil {
+		t.Fatalf("want pass, got %v", err)
+	}
+	if err := Validate(schema, []any{}); err == nil {
+		t.Fatal("want minItems error")
+	}
+}
+
+func TestValidateAnyOf(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"user_ids":       map[string]any{"type": "array", "minItems": 1},
+			"user_group_ids": map[string]any{"type": "array", "minItems": 1},
+		},
+		"anyOf": []any{
+			map[string]any{"required": []string{"user_ids"}},
+			map[string]any{"required": []string{"user_group_ids"}},
+		},
+	}
+	if err := Validate(schema, map[string]any{"user_ids": []any{"u1"}}); err != nil {
+		t.Fatalf("want user_ids pass, got %v", err)
+	}
+	if err := Validate(schema, map[string]any{"user_group_ids": []any{"g1"}}); err != nil {
+		t.Fatalf("want user_group_ids pass, got %v", err)
+	}
+	err := Validate(schema, map[string]any{})
+	if err == nil {
+		t.Fatal("want anyOf error")
+	}
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("want *ValidationError, got %T", err)
+	}
+	if !strings.Contains(ve.Message, "any allowed schema") {
+		t.Fatalf("message = %q, want anyOf failure", ve.Message)
+	}
+	if err := Validate(schema, map[string]any{"user_ids": []any{}}); err == nil {
+		t.Fatal("want minItems error for empty user_ids")
+	}
+}
+
 func TestValidateNumericBounds(t *testing.T) {
 	schema := map[string]any{
 		"type":    "integer",

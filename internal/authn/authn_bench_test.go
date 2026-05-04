@@ -78,13 +78,14 @@ func BenchmarkOIDCVerifyCached(b *testing.B) {
 	defer ts.Close()
 
 	cfg := Config{
-		Mode:            ModeOIDC,
-		OIDCIssuer:      issuer,
-		OIDCAudience:    audience,
-		OIDCJWKSURL:     ts.URL + "/jwks.json",
-		OIDCResourceURI: resourceURI,
-		DefaultTenantID: "default",
-		HTTPClient:      ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL + "/jwks.json",
+		OIDCJWKSAllowPrivate: true,
+		OIDCResourceURI:      resourceURI,
+		DefaultTenantID:      "default",
+		HTTPClient:           ts.Client(),
 	}
 	auth, err := New(cfg)
 	if err != nil {

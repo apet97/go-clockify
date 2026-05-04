@@ -162,6 +162,8 @@ type Activator interface {
 	IsGroupAllowed(group string) bool
 	// OnActivate is called when tools are dynamically registered.
 	OnActivate(names []string)
+	// OnDeactivate is called when dynamically registered tools are removed.
+	OnDeactivate(names []string)
 }
 
 // Enforcement handles the tool-call enforcement pipeline.

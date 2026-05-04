@@ -80,16 +80,17 @@ func TestDoctorStrictSyntheticConfigPasses(t *testing.T) {
 
 func TestDoctorStrictAllowBroadPolicyFlag(t *testing.T) {
 	env := map[string]string{
-		"MCP_TRANSPORT":              "streamable_http",
-		"MCP_AUTH_MODE":              "oidc",
-		"MCP_OIDC_ISSUER":            "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":          "clockify-mcp-prod",
-		"MCP_OIDC_STRICT":            "1",
-		"MCP_REQUIRE_TENANT_CLAIM":   "1",
-		"MCP_DISABLE_INLINE_SECRETS": "1",
-		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":       "fail_closed",
-		"CLOCKIFY_POLICY":            "safe_core",
+		"MCP_TRANSPORT":                    "streamable_http",
+		"MCP_AUTH_MODE":                    "oidc",
+		"MCP_OIDC_ISSUER":                  "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":                "clockify-mcp-prod",
+		"MCP_OIDC_STRICT":                  "1",
+		"MCP_REQUIRE_TENANT_CLAIM":         "1",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
+		"MCP_DISABLE_INLINE_SECRETS":       "1",
+		"MCP_CONTROL_PLANE_DSN":            "postgres://db/mcp",
+		"MCP_AUDIT_DURABILITY":             "fail_closed",
+		"CLOCKIFY_POLICY":                  "safe_core",
 	}
 	code, out := runDoctorForTest(t, []string{"--strict"}, env)
 	if code != 3 || !strings.Contains(out, "CLOCKIFY_POLICY") {
@@ -199,6 +200,25 @@ func TestDoctorStrictRequiresForwardAuthTrustedProxies(t *testing.T) {
 	}
 }
 
+func TestDoctorStrictRequiresForwardAuthTenantClaim(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
+		"MCP_AUTH_MODE":                    "forward_auth",
+		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "0",
+		"MCP_OIDC_STRICT":                  "0",
+		"MCP_OIDC_AUDIENCE":                "",
+		"MCP_RESOURCE_URI":                 "",
+		"MCP_REQUIRE_TENANT_CLAIM":         "0",
+		"MCP_OIDC_ISSUER":                  "",
+	}))
+	if code == 0 {
+		t.Fatalf("expected non-zero exit; output:\n%s", out)
+	}
+	if !strings.Contains(out, "MCP_REQUIRE_FORWARD_TENANT_CLAIM") {
+		t.Fatalf("expected output to mention MCP_REQUIRE_FORWARD_TENANT_CLAIM; output:\n%s", out)
+	}
+}
+
 // TestDoctorStrictAcceptsForwardAuthWithTrustedProxies is the
 // symmetric pass case: with the allow-list set, the gate passes.
 func TestDoctorStrictAcceptsForwardAuthWithTrustedProxies(t *testing.T) {
@@ -209,6 +229,7 @@ func TestDoctorStrictAcceptsForwardAuthWithTrustedProxies(t *testing.T) {
 		"MCP_OIDC_AUDIENCE":                "",
 		"MCP_RESOURCE_URI":                 "",
 		"MCP_REQUIRE_TENANT_CLAIM":         "0",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
 		"MCP_OIDC_ISSUER":                  "",
 	}))
 	if code != 0 {
@@ -238,6 +259,67 @@ func TestDoctorStrictForbidsLegacyHTTP(t *testing.T) {
 	})
 	if code != 3 || !strings.Contains(out, "MCP_TRANSPORT") {
 		t.Fatalf("strict legacy-http exit/output mismatch: code=%d output:\n%s", code, out)
+	}
+}
+
+func TestDoctorStrictForbidsAllowAnyOrigin(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
+		"MCP_ALLOW_ANY_ORIGIN": "1",
+	}))
+	if code != 3 || !strings.Contains(out, "MCP_ALLOW_ANY_ORIGIN") {
+		t.Fatalf("strict allow-any-origin exit/output mismatch: code=%d output:\n%s", code, out)
+	}
+}
+
+func TestDoctorRedactsSensitiveValues(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":                     "correcthorsebatterystaple",
+		"MCP_TRANSPORT":                        "streamable_http",
+		"MCP_AUTH_MODE":                        "static_bearer",
+		"MCP_BEARER_TOKEN":                     "super-secret-token-at-least-sixteen",
+		"MCP_METRICS_BEARER_TOKEN":             "metrics-secret-token-at-least-sixteen",
+		"MCP_HTTP_INLINE_METRICS_BEARER_TOKEN": "inline-secret-token-at-least-sixteen",
+		"MCP_CONTROL_PLANE_DSN":                "postgres://user:dbpassword@db.example:5432/mcp?sslmode=require",
+		"MCP_GRPC_TLS_CERT":                    "/etc/clockify/public-grpc.crt",
+		"MCP_GRPC_TLS_KEY":                     "/etc/clockify/secret-grpc.key",
+		"MCP_HTTP_TLS_CERT":                    "/etc/clockify/public-http.crt",
+		"MCP_HTTP_TLS_KEY":                     "/etc/clockify/secret-http.key",
+		"MCP_OIDC_JWKS_PATH":                   "/etc/clockify/private-jwks.json",
+	}
+	code, out := runDoctorForTest(t, nil, env)
+	if code != 0 {
+		t.Fatalf("doctor exit = %d, want 0; output:\n%s", code, out)
+	}
+	for _, key := range []string{
+		"CLOCKIFY_API_KEY",
+		"MCP_BEARER_TOKEN",
+		"MCP_METRICS_BEARER_TOKEN",
+		"MCP_HTTP_INLINE_METRICS_BEARER_TOKEN",
+		"MCP_CONTROL_PLANE_DSN",
+		"MCP_GRPC_TLS_KEY",
+		"MCP_HTTP_TLS_KEY",
+		"MCP_OIDC_JWKS_PATH",
+	} {
+		if !strings.Contains(out, key) {
+			t.Fatalf("doctor output missing sensitive key %s:\n%s", key, out)
+		}
+	}
+	for _, leaked := range []string{
+		"correcthorsebatterystaple",
+		"super-secret-token-at-least-sixteen",
+		"metrics-secret-token-at-least-sixteen",
+		"inline-secret-token-at-least-sixteen",
+		"dbpassword",
+		"secret-grpc.key",
+		"secret-http.key",
+		"private-jwks.json",
+	} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("doctor output leaked %q:\n%s", leaked, out)
+		}
+	}
+	if !strings.Contains(out, "set (redacted)") {
+		t.Fatalf("doctor output did not show redacted marker:\n%s", out)
 	}
 }
 
@@ -368,16 +450,17 @@ func runDoctorForTest(t *testing.T, args []string, env map[string]string) (int, 
 
 func strictCleanDoctorEnv(overrides map[string]string) map[string]string {
 	env := map[string]string{
-		"MCP_TRANSPORT":              "streamable_http",
-		"MCP_AUTH_MODE":              "oidc",
-		"MCP_OIDC_ISSUER":            "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":          "clockify-mcp-prod",
-		"MCP_OIDC_STRICT":            "1",
-		"MCP_REQUIRE_TENANT_CLAIM":   "1",
-		"MCP_DISABLE_INLINE_SECRETS": "1",
-		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":       "fail_closed",
-		"CLOCKIFY_POLICY":            "time_tracking_safe",
+		"MCP_TRANSPORT":                    "streamable_http",
+		"MCP_AUTH_MODE":                    "oidc",
+		"MCP_OIDC_ISSUER":                  "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":                "clockify-mcp-prod",
+		"MCP_OIDC_STRICT":                  "1",
+		"MCP_REQUIRE_TENANT_CLAIM":         "1",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
+		"MCP_DISABLE_INLINE_SECRETS":       "1",
+		"MCP_CONTROL_PLANE_DSN":            "postgres://db/mcp",
+		"MCP_AUDIT_DURABILITY":             "fail_closed",
+		"CLOCKIFY_POLICY":                  "time_tracking_safe",
 	}
 	maps.Copy(env, overrides)
 	return env

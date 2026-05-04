@@ -45,6 +45,25 @@ func (s *Server) listTools() []Tool {
 	return cloneToolList(s.toolListCache)
 }
 
+// VisibleToolCount reports the current tools/list count after enforcement
+// filtering. Activators use it after a successful activation so responses can
+// distinguish a group-local tool count from the session-visible total.
+func (s *Server) VisibleToolCount() int {
+	return len(s.listTools())
+}
+
+// VisibleToolNames reports the current tools/list names after enforcement
+// filtering. Activation responses use it to avoid promising tools that the
+// client still cannot call because bootstrap or policy filtering hides them.
+func (s *Server) VisibleToolNames() map[string]bool {
+	tools := s.listTools()
+	out := make(map[string]bool, len(tools))
+	for _, tool := range tools {
+		out[tool.Name] = true
+	}
+	return out
+}
+
 type toolsListResult struct {
 	Tools []Tool `json:"tools"`
 }
@@ -314,6 +333,7 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 		s.tools[d.Tool.Name] = d
 		activatedNames = append(activatedNames, d.Tool.Name)
 	}
+	s.activeGroups[groupName] = append([]string(nil), activatedNames...)
 	s.invalidateToolListCacheLocked()
 	s.mu.Unlock()
 	if s.Activator != nil {
@@ -325,6 +345,34 @@ func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) e
 	s.notifyToolsChanged()
 	slog.Info("group_activated", "group", groupName, "tools_added", len(descriptors))
 	return nil
+}
+
+// DeactivateGroup removes descriptors that were previously registered by
+// ActivateGroup and sends a tools/list_changed notification. The operation is
+// idempotent: deactivating a group that is not active is a no-op.
+func (s *Server) DeactivateGroup(groupName string) []string {
+	s.mu.Lock()
+	deactivatedNames := append([]string(nil), s.activeGroups[groupName]...)
+	for _, name := range deactivatedNames {
+		delete(s.tools, name)
+	}
+	delete(s.activeGroups, groupName)
+	if len(deactivatedNames) > 0 {
+		s.invalidateToolListCacheLocked()
+	}
+	s.mu.Unlock()
+	if len(deactivatedNames) == 0 {
+		return deactivatedNames
+	}
+	if s.Activator != nil {
+		s.Activator.OnDeactivate(deactivatedNames)
+		s.mu.Lock()
+		s.invalidateToolListCacheLocked()
+		s.mu.Unlock()
+	}
+	s.notifyToolsChanged()
+	slog.Info("group_deactivated", "group", groupName, "tools_removed", len(deactivatedNames))
+	return deactivatedNames
 }
 
 // ActivateTier1Tool marks a single registered tool as visible.

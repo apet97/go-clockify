@@ -2,10 +2,16 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // TestCacheWriteThrough_AddEntry_SkipsReadResource is the W4-04d
@@ -53,10 +59,11 @@ func TestCacheWriteThrough_AddEntry_SkipsReadResource(t *testing.T) {
 	svc.SubscriptionGate = func(_ string) bool { return true }
 
 	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":       "2026-04-11T10:00:00Z",
-		"end":         "2026-04-11T11:00:00Z",
-		"description": "fresh",
-		"dry_run":     false,
+		"start":         "2026-04-11T10:00:00Z",
+		"end":           "2026-04-11T11:00:00Z",
+		"description":   "fresh",
+		"dry_run":       false,
+		"allow_overlap": true,
 	})
 	if err != nil {
 		t.Fatalf("AddEntry: %v", err)
@@ -156,11 +163,12 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	// Step 1: create the entry. Write-through primes the cache with
 	// billable=false, emits format=none (no prior state).
 	if _, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":       "2026-04-11T10:00:00Z",
-		"end":         "2026-04-11T11:00:00Z",
-		"description": "initial",
-		"billable":    false,
-		"dry_run":     false,
+		"start":         "2026-04-11T10:00:00Z",
+		"end":           "2026-04-11T11:00:00Z",
+		"description":   "initial",
+		"billable":      false,
+		"dry_run":       false,
+		"allow_overlap": true,
 	}); err != nil {
 		t.Fatalf("AddEntry: %v", err)
 	}
@@ -197,4 +205,218 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	if patch["billable"] != true {
 		t.Fatalf("merge patch missing billable=true: %+v", patch)
 	}
+}
+
+func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
+	const wsID = "w1"
+	weeklyURI := weeklyReportResourceURI(wsID, "2026-04-06")
+	initialEntry := weeklyDeltaEntry("e1", "p1", "Alpha", "2026-04-06T09:00:00Z", "2026-04-06T10:00:00Z")
+
+	tests := []struct {
+		name              string
+		before            *clockify.TimeEntry
+		after             *clockify.TimeEntry
+		wantEntries       int
+		wantSeconds       int64
+		wantProjectID     string
+		wantProjectCount  int
+		wantDay           string
+		wantDayCount      int
+		wantSuggestedTool string
+	}{
+		{
+			name:              "add",
+			after:             ptrTimeEntry(weeklyDeltaEntry("e2", "p2", "Beta", "2026-04-07T11:00:00Z", "2026-04-07T13:00:00Z")),
+			wantEntries:       2,
+			wantSeconds:       3 * 3600,
+			wantProjectID:     "p2",
+			wantProjectCount:  2,
+			wantDay:           "2026-04-07",
+			wantDayCount:      2,
+			wantSuggestedTool: "clockify_list_entries",
+		},
+		{
+			name:              "update",
+			before:            ptrTimeEntry(initialEntry),
+			after:             ptrTimeEntry(weeklyDeltaEntry("e1", "p2", "Beta", "2026-04-07T11:00:00Z", "2026-04-07T13:00:00Z")),
+			wantEntries:       1,
+			wantSeconds:       2 * 3600,
+			wantProjectID:     "p2",
+			wantProjectCount:  1,
+			wantDay:           "2026-04-07",
+			wantDayCount:      1,
+			wantSuggestedTool: "clockify_list_entries",
+		},
+		{
+			name:              "delete",
+			before:            ptrTimeEntry(initialEntry),
+			wantEntries:       0,
+			wantSeconds:       0,
+			wantProjectCount:  0,
+			wantDayCount:      0,
+			wantSuggestedTool: "clockify_log_time",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := New(nil, wsID)
+			emit := &recordingEmit{}
+			svc.EmitResourceUpdate = emit.hook()
+			svc.SubscriptionGate = func(_ string) bool { return true }
+			svc.resourceCache.put(weeklyURI, mustMarshalWeeklyData(t, cachedWeeklyReportFixture()))
+
+			svc.emitWeeklyReportsForEntryChange(context.Background(), wsID, tt.before, tt.after)
+
+			calls := emit.snapshot()
+			if len(calls) != 1 || calls[0].URI != weeklyURI {
+				t.Fatalf("expected one weekly emit for %s, got %+v", weeklyURI, calls)
+			}
+			data := mustCachedWeeklyData(t, svc, weeklyURI)
+			if data.Totals.Entries != tt.wantEntries || data.Totals.TotalSeconds != tt.wantSeconds {
+				t.Fatalf("totals = %+v, want entries=%d seconds=%d", data.Totals, tt.wantEntries, tt.wantSeconds)
+			}
+			if len(data.ByProject) != tt.wantProjectCount {
+				t.Fatalf("ByProject = %+v, want count %d", data.ByProject, tt.wantProjectCount)
+			}
+			if tt.wantProjectID != "" && data.ByProject[0].ProjectID != tt.wantProjectID {
+				t.Fatalf("top project = %+v, want %s", data.ByProject[0], tt.wantProjectID)
+			}
+			if len(data.ByDay) != tt.wantDayCount {
+				t.Fatalf("ByDay = %+v, want count %d", data.ByDay, tt.wantDayCount)
+			}
+			if tt.wantDay != "" && data.ByDay[len(data.ByDay)-1].Date != tt.wantDay {
+				t.Fatalf("last day = %+v, want %s", data.ByDay, tt.wantDay)
+			}
+			assertSuggestionTool(t, data.SuggestedActions, tt.wantSuggestedTool)
+		})
+	}
+}
+
+func BenchmarkEntryMutationWeeklyEmit_CachedDelta500Entries(b *testing.B) {
+	const wsID = "w1"
+	weeklyURI := weeklyReportResourceURI(wsID, "2026-04-06")
+	weeklyState := cachedWeeklyReportFixtureN(500)
+	raw, err := json.Marshal(weeklyState)
+	if err != nil {
+		b.Fatalf("marshal weekly fixture: %v", err)
+	}
+	after := weeklyDeltaEntry("new-entry", "p-extra", "Extra", "2026-04-10T09:00:00Z", "2026-04-10T10:00:00Z")
+
+	svc := New(nil, wsID)
+	svc.EmitResourceUpdate = func(string, mcp.ResourceUpdateDelta) {}
+	svc.SubscriptionGate = func(_ string) bool { return true }
+
+	b.ReportAllocs()
+	for b.Loop() {
+		svc.resourceCache.put(weeklyURI, raw)
+		svc.emitWeeklyReportsForEntryChange(context.Background(), wsID, nil, &after)
+	}
+}
+
+func cachedWeeklyReportFixture() WeeklySummaryData {
+	return WeeklySummaryData{
+		Range:  DateRange{Start: "2026-04-06T00:00:00Z", End: "2026-04-13T00:00:00Z"},
+		Totals: SummaryTotals{Entries: 1, TotalSeconds: 3600, TotalHours: 1},
+		ByDay: []DaySummary{
+			{Date: "2026-04-06", Entries: 1, TotalSeconds: 3600, TotalHours: 1},
+		},
+		ByProject: []ProjectSummary{
+			{ProjectID: "p1", ProjectName: "Alpha", Entries: 1, TotalSeconds: 3600, TotalHours: 1},
+		},
+		UnassignedKey: "(no project)",
+	}
+}
+
+func cachedWeeklyReportFixtureN(entries int) WeeklySummaryData {
+	if entries <= 0 {
+		return WeeklySummaryData{
+			Range:         DateRange{Start: "2026-04-06T00:00:00Z", End: "2026-04-13T00:00:00Z"},
+			UnassignedKey: "(no project)",
+		}
+	}
+	data := WeeklySummaryData{
+		Range:         DateRange{Start: "2026-04-06T00:00:00Z", End: "2026-04-13T00:00:00Z"},
+		UnassignedKey: "(no project)",
+	}
+	projectTotals := map[string]*ProjectSummary{}
+	dayTotals := map[string]*DaySummary{}
+	for i := 0; i < entries; i++ {
+		projectID := "p-alpha"
+		projectName := "Alpha"
+		switch i % 3 {
+		case 1:
+			projectID = "p-beta"
+			projectName = "Beta"
+		case 2:
+			projectID = "p-gamma"
+			projectName = "Gamma"
+		}
+		day := fmt.Sprintf("2026-04-%02d", 6+(i%5))
+		if _, ok := projectTotals[projectID]; !ok {
+			projectTotals[projectID] = &ProjectSummary{ProjectID: projectID, ProjectName: projectName}
+		}
+		projectTotals[projectID].Entries++
+		projectTotals[projectID].TotalSeconds += 3600
+		if _, ok := dayTotals[day]; !ok {
+			dayTotals[day] = &DaySummary{Date: day}
+		}
+		dayTotals[day].Entries++
+		dayTotals[day].TotalSeconds += 3600
+		data.Totals.Entries++
+		data.Totals.TotalSeconds += 3600
+	}
+	data.Totals.TotalHours = hours(data.Totals.TotalSeconds)
+	for _, project := range projectTotals {
+		project.TotalHours = hours(project.TotalSeconds)
+		data.ByProject = append(data.ByProject, *project)
+	}
+	for _, day := range dayTotals {
+		day.TotalHours = hours(day.TotalSeconds)
+		data.ByDay = append(data.ByDay, *day)
+	}
+	sortProjectSummaries(data.ByProject)
+	sortDaySummaries(data.ByDay)
+	start := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC)
+	data.SuggestedActions = reportSuggestedActions(data.ByProject, data.Totals, start, end)
+	return data
+}
+
+func weeklyDeltaEntry(id, projectID, projectName, start, end string) clockify.TimeEntry {
+	return clockify.TimeEntry{
+		ID:          id,
+		Description: "cached delta",
+		ProjectID:   projectID,
+		ProjectName: projectName,
+		TimeInterval: clockify.TimeInterval{
+			Start: start,
+			End:   end,
+		},
+	}
+}
+
+func ptrTimeEntry(entry clockify.TimeEntry) *clockify.TimeEntry {
+	return &entry
+}
+
+func mustMarshalWeeklyData(t *testing.T, data WeeklySummaryData) []byte {
+	t.Helper()
+	out, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("marshal weekly fixture: %v", err)
+	}
+	return out
+}
+
+func mustCachedWeeklyData(t *testing.T, svc *Service, uri string) WeeklySummaryData {
+	t.Helper()
+	raw, ok := svc.resourceCache.get(uri)
+	if !ok {
+		t.Fatalf("missing cached weekly state for %s", uri)
+	}
+	var data WeeklySummaryData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("decode cached weekly state: %v", err)
+	}
+	return data
 }

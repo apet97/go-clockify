@@ -24,12 +24,15 @@ func TestGoldenTier1ToolList(t *testing.T) {
 	sort.Strings(names)
 
 	expected := []string{
+		"clockify_activate_group",
+		"clockify_activate_tool",
 		"clockify_add_entry",
 		"clockify_create_client",
 		"clockify_create_project",
 		"clockify_create_tag",
 		"clockify_create_task",
 		"clockify_current_user",
+		"clockify_deactivate_group",
 		"clockify_delete_entry",
 		"clockify_detailed_report",
 		"clockify_find_and_update_entry",
@@ -41,12 +44,14 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_list_projects",
 		"clockify_list_tags",
 		"clockify_list_tasks",
+		"clockify_list_tools",
 		"clockify_list_users",
 		"clockify_list_workspaces",
 		"clockify_log_time",
 		"clockify_policy_info",
 		"clockify_quick_report",
 		"clockify_resolve_debug",
+		"clockify_resolve_name",
 		"clockify_search_tools",
 		"clockify_start_timer",
 		"clockify_stop_timer",
@@ -112,6 +117,63 @@ func TestTier2OutputSchemasPresent(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestTier2ReadOutputSchemaCoverage(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	wantTyped := map[string]struct{}{
+		"clockify_list_invoices":               {},
+		"clockify_get_invoice":                 {},
+		"clockify_list_expenses":               {},
+		"clockify_get_expense":                 {},
+		"clockify_list_expense_categories":     {},
+		"clockify_expense_report":              {},
+		"clockify_list_assignments":            {},
+		"clockify_get_assignment":              {},
+		"clockify_get_project_schedule_totals": {},
+		"clockify_filter_schedule_capacity":    {},
+		"clockify_list_time_off_requests":      {},
+		"clockify_get_time_off_request":        {},
+		"clockify_list_time_off_policies":      {},
+		"clockify_get_time_off_policy":         {},
+		"clockify_time_off_balance":            {},
+	}
+	readOnlyTotal := 0
+	typedRead := 0
+	for groupName := range Tier2Groups {
+		descs, ok := svc.Tier2Handlers(groupName)
+		if !ok {
+			t.Fatalf("Tier2Handlers(%q) returned !ok", groupName)
+		}
+		for _, d := range descs {
+			if !d.ReadOnlyHint {
+				continue
+			}
+			readOnlyTotal++
+			if !isOpaqueOutputSchema(d.Tool.OutputSchema, d.Tool.Name) {
+				typedRead++
+				delete(wantTyped, d.Tool.Name)
+			}
+		}
+	}
+	if readOnlyTotal == 0 {
+		t.Fatal("no Tier 2 read tools found")
+	}
+	if len(wantTyped) > 0 {
+		t.Fatalf("expected typed Tier 2 read output schemas missing for: %v", sortedMapKeys(wantTyped))
+	}
+	if typedRead*100 < readOnlyTotal*20 {
+		t.Fatalf("typed Tier 2 read output schema coverage = %d/%d, want at least 20%%", typedRead, readOnlyTotal)
+	}
+}
+
+func sortedMapKeys[T any](in map[string]T) []string {
+	out := make([]string, 0, len(in))
+	for key := range in {
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // ---------------------------------------------------------------------------
@@ -429,13 +491,13 @@ func TestTier2GroupsHaveMetadata(t *testing.T) {
 func TestTier1CatalogGoldenCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	reg := svc.Registry()
-	if len(reg) != 35 {
-		t.Fatalf("expected 35 Tier 1 tools, got %d", len(reg))
+	if len(reg) != 40 {
+		t.Fatalf("expected 40 Tier 1 tools, got %d", len(reg))
 	}
 }
 
 // ---------------------------------------------------------------------------
-// 10. Total tool count (Tier 1 + Tier 2 = 123)
+// 10. Total tool count (Tier 1 + Tier 2 = 128)
 // ---------------------------------------------------------------------------
 
 func TestTotalToolCount(t *testing.T) {
@@ -446,7 +508,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 123 {
-		t.Fatalf("expected 123 total tools (35 Tier1 + 88 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 128 {
+		t.Fatalf("expected 128 total tools (40 Tier1 + 88 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }

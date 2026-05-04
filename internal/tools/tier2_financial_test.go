@@ -324,9 +324,19 @@ func TestInvoiceReport(t *testing.T) {
 	if data["totalAmount"] != 650.0 {
 		t.Fatalf("expected totalAmount=650, got %v", data["totalAmount"])
 	}
+	if data["pageTotalAmount"] != 650.0 {
+		t.Fatalf("expected pageTotalAmount=650, got %v", data["pageTotalAmount"])
+	}
+	if data["aggregationScope"] != "page" {
+		t.Fatalf("expected aggregationScope=page, got %v", data["aggregationScope"])
+	}
 	statusCounts, ok := data["statusCounts"].(map[string]int)
 	if !ok {
 		t.Fatalf("expected statusCounts map, got %T", data["statusCounts"])
+	}
+	pageStatusCounts, ok := data["pageStatusCounts"].(map[string]int)
+	if !ok {
+		t.Fatalf("expected pageStatusCounts map, got %T", data["pageStatusCounts"])
 	}
 	if statusCounts["PAID"] != 2 {
 		t.Fatalf("expected 2 PAID, got %d", statusCounts["PAID"])
@@ -334,8 +344,17 @@ func TestInvoiceReport(t *testing.T) {
 	if statusCounts["DRAFT"] != 1 {
 		t.Fatalf("expected 1 DRAFT, got %d", statusCounts["DRAFT"])
 	}
+	if pageStatusCounts["PAID"] != 2 || pageStatusCounts["DRAFT"] != 1 {
+		t.Fatalf("expected pageStatusCounts PAID=2 DRAFT=1, got %v", pageStatusCounts)
+	}
 	if result.Meta["total"] != 3 {
 		t.Fatalf("expected meta total=3, got %v", result.Meta["total"])
+	}
+	if result.Meta["pageSize"] != 50 {
+		t.Fatalf("expected meta pageSize=50, got %v", result.Meta["pageSize"])
+	}
+	if result.Meta["aggregationScope"] != "page" {
+		t.Fatalf("expected meta aggregationScope=page, got %v", result.Meta["aggregationScope"])
 	}
 }
 
@@ -374,12 +393,31 @@ func TestExpenseReport(t *testing.T) {
 	if data["totalAmount"] != 245.0 {
 		t.Fatalf("expected totalAmount=245, got %v", data["totalAmount"])
 	}
+	if data["pageTotalAmount"] != 245.0 {
+		t.Fatalf("expected pageTotalAmount=245, got %v", data["pageTotalAmount"])
+	}
+	if data["aggregationScope"] != "page" {
+		t.Fatalf("expected aggregationScope=page, got %v", data["aggregationScope"])
+	}
 	byCategory, ok := data["byCategory"].(map[string]float64)
 	if !ok {
 		t.Fatalf("expected byCategory map, got %T", data["byCategory"])
 	}
+	pageByCategory, ok := data["pageByCategory"].(map[string]float64)
+	if !ok {
+		t.Fatalf("expected pageByCategory map, got %T", data["pageByCategory"])
+	}
 	if byCategory["cat1"] != 125.0 {
 		t.Fatalf("expected cat1=125, got %v", byCategory["cat1"])
+	}
+	if pageByCategory["cat1"] != 125.0 {
+		t.Fatalf("expected page cat1=125, got %v", pageByCategory["cat1"])
+	}
+	if result.Meta["pageSize"] != 50 {
+		t.Fatalf("expected meta pageSize=50, got %v", result.Meta["pageSize"])
+	}
+	if result.Meta["aggregationScope"] != "page" {
+		t.Fatalf("expected meta aggregationScope=page, got %v", result.Meta["aggregationScope"])
 	}
 }
 

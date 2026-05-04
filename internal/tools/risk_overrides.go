@@ -44,11 +44,11 @@ var riskOverrides = map[string]riskOverride{
 	},
 	"clockify_update_invoice_item": {
 		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_id", "item_type", "description", "quantity", "unit_price"},
+		auditKeys: []string{"invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"},
 	},
 	"clockify_delete_invoice_item": {
 		class:     mcp.RiskDestructive | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_id"},
+		auditKeys: []string{"invoice_id", "item_index", "item_id"},
 	},
 
 	// Admin / permission changes — user_admin.

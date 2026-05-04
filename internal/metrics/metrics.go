@@ -568,10 +568,18 @@ var (
 	UpstreamRequestDuration *Histogram
 	// UpstreamRetriesTotal counts retry attempts by endpoint and reason.
 	UpstreamRetriesTotal *Counter
+	// UpstreamRetryAfterUnparseableTotal counts non-empty Retry-After
+	// headers that could not be parsed. Labelled by normalized endpoint so
+	// operator dashboards can distinguish an upstream format regression from
+	// a missing header.
+	UpstreamRetryAfterUnparseableTotal *Counter
 	// ProtocolErrorsTotal counts JSON-RPC protocol-level errors by code.
 	ProtocolErrorsTotal *Counter
 	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
 	PanicsRecoveredTotal *Counter
+	// GRPCSendPumpPanicsTotal counts panics recovered from the gRPC
+	// Exchange send-pump goroutine.
+	GRPCSendPumpPanicsTotal *Counter
 	// ClockifyResponsesOversizeTotal counts upstream Clockify responses
 	// rejected because the body exceeded the client's hard cap. Lets
 	// operators detect adversarial / misconfigured upstreams that
@@ -609,6 +617,9 @@ var (
 	// control-plane audit retention reaper. Driven by the B2 reaper
 	// that honours MCP_CONTROL_PLANE_AUDIT_RETENTION.
 	AuditEventsRetainedTotal *Counter
+	// TruncationSkippedTotal counts fail-open truncation paths by reason.
+	// Reason vocabulary: "marshal_failed" and "unmarshal_failed".
+	TruncationSkippedTotal *Counter
 )
 
 func init() {
@@ -673,6 +684,11 @@ func init() {
 		"Outbound Clockify API retry attempts by endpoint template and reason.",
 		"endpoint", "reason",
 	)
+	UpstreamRetryAfterUnparseableTotal = Default.NewCounter(
+		"clockify_upstream_retry_after_unparseable_total",
+		"Non-empty Retry-After headers that could not be parsed by endpoint template.",
+		"endpoint",
+	)
 	ProtocolErrorsTotal = Default.NewCounter(
 		"clockify_mcp_protocol_errors_total",
 		"JSON-RPC protocol-level error responses by error code.",
@@ -682,6 +698,10 @@ func init() {
 		"clockify_mcp_panics_recovered_total",
 		"Panics recovered from tool handlers or HTTP handlers by site.",
 		"site",
+	)
+	GRPCSendPumpPanicsTotal = Default.NewCounter(
+		"clockify_grpc_send_pump_panics_total",
+		"Panics recovered from the gRPC Exchange send-pump goroutine.",
 	)
 	ClockifyResponsesOversizeTotal = Default.NewCounter(
 		"clockify_mcp_responses_oversize_total",
@@ -725,6 +745,11 @@ func init() {
 		"clockify_mcp_audit_events_retained_total",
 		"Audit events removed (outcome=deleted) or errored (outcome=error) by the retention reaper.",
 		"outcome",
+	)
+	TruncationSkippedTotal = Default.NewCounter(
+		"clockify_mcp_truncation_skipped_total",
+		"Fail-open response truncation skips by reason.",
+		"reason",
 	)
 	registerRuntimeMetrics(Default)
 }

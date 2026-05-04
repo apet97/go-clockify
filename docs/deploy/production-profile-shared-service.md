@@ -68,6 +68,7 @@ finding it was added to fix.
 |---|---|---|
 | `MCP_OIDC_STRICT=1` | Reject tokens without `aud` matching `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI`; reject tokens missing `exp`. | Any-audience tokens minted by the same issuer for a different relying party are accepted. |
 | `MCP_REQUIRE_TENANT_CLAIM=1` | Reject tokens whose tenant claim is empty. | Tokens omitting the claim collapse into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across every misconfigured caller. |
+| `MCP_REQUIRE_FORWARD_TENANT_CLAIM=1` | If this profile is explicitly switched to `forward_auth`, reject requests missing `X-Forwarded-Tenant` (or the configured tenant header). | Proxy header drift collapses requests into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across affected callers. |
 | `MCP_DISABLE_INLINE_SECRETS=1` | Reject credential refs with `backend=inline`. | Inline credentials sit in the control-plane DB and survive operator forgetfulness; vault-backed refs rotate on revoke. |
 | `CLOCKIFY_POLICY=time_tracking_safe` | Permit time-entry CRUD + tags; deny workspace-level project / client / task create writes. | The default `standard` policy lets an AI agent create projects in the operator's workspace without explicit consent. |
 | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` (profile default) | Tool-error responses to MCP clients omit upstream Clockify response bodies; full bodies still flow into server-side slog. | A 4xx body from Clockify can carry per-tenant identifiers; without sanitisation those leak across tenant boundaries via the MCP wire. |

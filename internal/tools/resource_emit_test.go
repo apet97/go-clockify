@@ -81,10 +81,11 @@ func TestAddEntryEmitsFirstNotificationAsFormatNone(t *testing.T) {
 	svc.EmitResourceUpdate = emit.hook()
 
 	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":       "2026-04-11T10:00:00Z",
-		"end":         "2026-04-11T11:00:00Z",
-		"description": "first",
-		"dry_run":     false,
+		"start":         "2026-04-11T10:00:00Z",
+		"end":           "2026-04-11T11:00:00Z",
+		"description":   "first",
+		"dry_run":       false,
+		"allow_overlap": true,
 	})
 	if err != nil {
 		t.Fatalf("AddEntry: %v", err)

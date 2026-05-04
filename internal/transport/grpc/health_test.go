@@ -6,21 +6,38 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/mcp"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 )
 
 func newHealthTestHarness(t *testing.T, srv *mcp.Server) (*grpc.ClientConn, func()) {
+	t.Helper()
+	return newHealthTestHarnessWithAuth(t, srv, nil)
+}
+
+func newHealthTestHarnessWithAuth(t *testing.T, srv *mcp.Server, auth authn.Authenticator) (*grpc.ClientConn, func()) {
 	t.Helper()
 	lis := bufconn.Listen(1024 * 1024)
 	handler := &exchangeServer{srv: srv}
 	desc := buildServiceDesc()
 	healthDesc := buildHealthServiceDesc()
 	hs := &healthServer{srv: srv}
-	grpcSrv := grpc.NewServer(grpc.ForceServerCodec(bytesCodec{}))
+	serverOpts := []grpc.ServerOption{grpc.ForceServerCodec(bytesCodec{})}
+	if auth != nil {
+		authCfg := authInterceptorConfig{}
+		serverOpts = append(serverOpts,
+			grpc.StreamInterceptor(authStreamInterceptor(auth, authCfg)),
+			grpc.UnaryInterceptor(authUnaryInterceptor(auth, authCfg)),
+		)
+	}
+	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)
 	grpcSrv.RegisterService(&healthDesc, hs)
 	go func() { _ = grpcSrv.Serve(lis) }()
@@ -48,13 +65,18 @@ func callHealthCheck(t *testing.T, conn *grpc.ClientConn, service string) int32 
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	reqBytes := encodeHealthCheckRequestForTest(service)
-	var respBytes []byte
-	err := conn.Invoke(ctx, "/"+healthServiceName+"/"+healthCheckMethod, &reqBytes, &respBytes)
+	respBytes, err := invokeHealthCheck(ctx, conn, service)
 	if err != nil {
 		t.Fatalf("health check: %v", err)
 	}
 	return decodeHealthCheckResponseForTest(respBytes)
+}
+
+func invokeHealthCheck(ctx context.Context, conn *grpc.ClientConn, service string) ([]byte, error) {
+	reqBytes := encodeHealthCheckRequestForTest(service)
+	var respBytes []byte
+	err := conn.Invoke(ctx, "/"+healthServiceName+"/"+healthCheckMethod, &reqBytes, &respBytes)
+	return respBytes, err
 }
 
 func encodeHealthCheckRequestForTest(service string) []byte {
@@ -139,5 +161,50 @@ func TestHealthCheckReadyFlip(t *testing.T) {
 	status = callHealthCheck(t, conn, "")
 	if status != statusServing {
 		t.Fatalf("after MarkReady: expected SERVING, got %d", status)
+	}
+}
+
+func TestHealthCheckRequiresAuth(t *testing.T) {
+	srv := newTestServer(t)
+	srv.SetReadyCached(true)
+	conn, cleanup := newHealthTestHarnessWithAuth(t, srv, fakeAuthenticator{
+		wantToken: "correct",
+		principal: authn.Principal{
+			Subject:  "subject-a",
+			TenantID: "tenant-a",
+		},
+	})
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err := invokeHealthCheck(ctx, conn, ""); err == nil {
+		t.Fatal("expected unauthenticated health check to fail")
+	} else if st, ok := status.FromError(err); !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated, got %v", err)
+	}
+}
+
+func TestHealthCheckAcceptsAuthorizedMetadata(t *testing.T) {
+	srv := newTestServer(t)
+	srv.SetReadyCached(true)
+	conn, cleanup := newHealthTestHarnessWithAuth(t, srv, fakeAuthenticator{
+		wantToken: "correct",
+		principal: authn.Principal{
+			Subject:  "subject-a",
+			TenantID: "tenant-a",
+		},
+	})
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer correct")
+	respBytes, err := invokeHealthCheck(ctx, conn, "")
+	if err != nil {
+		t.Fatalf("authorized health check: %v", err)
+	}
+	if status := decodeHealthCheckResponseForTest(respBytes); status != statusServing {
+		t.Fatalf("expected SERVING (%d), got %d", statusServing, status)
 	}
 }

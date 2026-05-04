@@ -60,11 +60,12 @@ func TestJWKSCache_RejectsDuplicateKid(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:         ModeOIDC,
-		OIDCIssuer:   issuer,
-		OIDCAudience: audience,
-		OIDCJWKSURL:  ts.URL,
-		HTTPClient:   ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -120,10 +121,11 @@ func TestJWKSCache_RejectsDuplicateEmptyKid(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:        ModeOIDC,
-		OIDCIssuer:  issuer,
-		OIDCJWKSURL: ts.URL,
-		HTTPClient:  ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -193,10 +195,11 @@ func TestJWKSCache_RefreshesOnKidMissAfterRotation(t *testing.T) {
 	defer setKidMissRefreshInterval(0)()
 
 	auth, err := New(Config{
-		Mode:        ModeOIDC,
-		OIDCIssuer:  issuer,
-		OIDCJWKSURL: ts.URL,
-		HTTPClient:  ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -265,10 +268,11 @@ func TestJWKSCache_KidMissRateLimited(t *testing.T) {
 	defer setKidMissRefreshInterval(window)()
 
 	auth, err := New(Config{
-		Mode:        ModeOIDC,
-		OIDCIssuer:  issuer,
-		OIDCJWKSURL: ts.URL,
-		HTTPClient:  ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -486,11 +490,12 @@ func TestJWKSCache_ConfigurableTTL(t *testing.T) {
 
 	const ttl = 100 * time.Millisecond
 	auth, err := New(Config{
-		Mode:             ModeOIDC,
-		OIDCIssuer:       issuer,
-		OIDCJWKSURL:      ts.URL,
-		OIDCJWKSCacheTTL: ttl,
-		HTTPClient:       ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		OIDCJWKSCacheTTL:     ttl,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -574,11 +579,12 @@ func TestJWKSCache_StaleServesDuringRefresh(t *testing.T) {
 	jwksCacheMinTTL = time.Millisecond
 
 	auth, err := New(Config{
-		Mode:             ModeOIDC,
-		OIDCIssuer:       issuer,
-		OIDCJWKSURL:      ts.URL,
-		OIDCJWKSCacheTTL: 50 * time.Millisecond,
-		HTTPClient:       ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		OIDCJWKSCacheTTL:     50 * time.Millisecond,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -654,10 +660,11 @@ func TestJWKSCache_SingleFlightCoalescesConcurrentReloads(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:        ModeOIDC,
-		OIDCIssuer:  issuer,
-		OIDCJWKSURL: ts.URL,
-		HTTPClient:  ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

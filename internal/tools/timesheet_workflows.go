@@ -10,7 +10,6 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
-	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 type TimesheetReviewData struct {
@@ -101,7 +100,8 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		maxSuggestions = 50
 	}
 
-	effectiveMax := s.effectiveReportCap(args)
+	limits := s.reportLimitsForArgs(args)
+	effectiveMax := limits.AppliedMaxEntries
 	agg, wsID, userID, err := s.aggregateEntriesRange(ctx, start, end, loc, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: true,
@@ -131,7 +131,7 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		"source":       "time-entries-workflow-review",
 		"workdayStart": workdayStart,
 		"workdayEnd":   workdayEnd,
-	}, paginationMeta(agg, reportPageSize, effectiveMax))
+	}, paginationMeta(agg, reportPageSize, limits))
 	return ok("clockify_timesheet_review", data, meta), nil
 }
 
@@ -154,7 +154,7 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 	if projectID == "" {
-		projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
@@ -213,6 +213,20 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 		Overlaps:  overlaps,
 		Validated: true,
 	}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+}
+
+func (s *Service) rejectEntryOverlap(ctx context.Context, start, end time.Time, args map[string]any) error {
+	if boolArg(args, "allow_overlap") {
+		return nil
+	}
+	overlaps, _, err := s.findEntryOverlaps(ctx, start, end)
+	if err != nil {
+		return err
+	}
+	if len(overlaps) == 0 {
+		return nil
+	}
+	return fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 }
 
 func timesheetReviewRange(args map[string]any, loc *time.Location) (time.Time, time.Time, string, error) {

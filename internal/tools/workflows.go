@@ -12,6 +12,7 @@ import (
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
+	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
 func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error) {
@@ -29,7 +30,7 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	projectID := stringArg(args, "project_id")
 	projectRef := stringArg(args, "project")
 	if projectID == "" && projectRef != "" {
-		projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
 			return nil, err
 		}
@@ -44,6 +45,9 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
+	}
+	if err := s.rejectEntryOverlap(ctx, start, end, args); err != nil {
+		return nil, err
 	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -77,7 +81,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	if parsed.ProjectID != "" || parsed.Project != "" {
 		projectID := parsed.ProjectID
 		if projectID == "" {
-			projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, parsed.Project)
+			projectID, err = s.resolveProjectID(ctx, wsID, parsed.Project)
 			if err != nil {
 				return nil, err
 			}
@@ -88,18 +92,12 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		}
 	}
 	if parsed.Start != "" {
-		if _, err := time.Parse(time.RFC3339, parsed.Start); err != nil {
-			return nil, fmt.Errorf("start must be RFC3339: %w", err)
-		}
 		if entry.TimeInterval.Start != parsed.Start {
 			entry.TimeInterval.Start = parsed.Start
 			updatedFields = append(updatedFields, "start")
 		}
 	}
 	if parsed.End != "" {
-		if _, err := time.Parse(time.RFC3339, parsed.End); err != nil {
-			return nil, fmt.Errorf("end must be RFC3339: %w", err)
-		}
 		if entry.TimeInterval.End != parsed.End {
 			entry.TimeInterval.End = parsed.End
 			updatedFields = append(updatedFields, "end")
@@ -144,11 +142,13 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 
 	// Stop the current timer; ignore "no running timer" errors.
 	var stoppedEntry any
+	stopOutcome := "stopped"
 	stopResult, stopErr := s.StopTimer(ctx, map[string]any{})
 	if stopErr != nil {
 		var apiErr *clockify.APIError
 		if errors.As(stopErr, &apiErr) && (apiErr.StatusCode == 404 || apiErr.StatusCode == 400) {
 			// No timer was running — proceed with start.
+			stopOutcome = "no_running_timer"
 		} else {
 			return ResultEnvelope{}, fmt.Errorf("stop timer: %w", stopErr)
 		}
@@ -163,8 +163,9 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	}
 
 	return ok("clockify_switch_project", map[string]any{
-		"stopped": stoppedEntry,
-		"started": startResult.Data,
+		"stop_outcome": stopOutcome,
+		"stopped":      stoppedEntry,
+		"started":      startResult.Data,
 	}, startResult.Meta), nil
 }
 
@@ -191,14 +192,34 @@ func parseFindAndUpdateArgs(args map[string]any) (findAndUpdateArgs, error) {
 	if out.NewDescription == "" && out.ProjectID == "" && out.Project == "" && out.Start == "" && out.End == "" && out.Billable == nil {
 		return out, fmt.Errorf("provide at least one update field")
 	}
-	for _, pair := range []struct{ label, value string }{{"start_after", out.StartAfter}, {"start_before", out.StartBefore}} {
-		if pair.value != "" {
-			if _, err := time.Parse(time.RFC3339, pair.value); err != nil {
-				return out, fmt.Errorf("%s must be RFC3339: %w", pair.label, err)
-			}
+	for _, pair := range []struct {
+		label string
+		dst   *string
+	}{
+		{"start_after", &out.StartAfter},
+		{"start_before", &out.StartBefore},
+		{"start", &out.Start},
+		{"end", &out.End},
+	} {
+		normalized, err := normalizeFindAndUpdateDatetime(pair.label, *pair.dst)
+		if err != nil {
+			return out, err
 		}
+		*pair.dst = normalized
 	}
 	return out, nil
+}
+
+func normalizeFindAndUpdateDatetime(label, value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	parsed, err := timeparse.ParseDatetime(value, time.UTC)
+	if err != nil {
+		return "", fmt.Errorf("invalid %s: %w", label, err)
+	}
+	return timeparse.FormatISO(parsed), nil
 }
 
 func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (clockify.TimeEntry, map[string]any, error) {
@@ -213,6 +234,11 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 	}
 	if args.StartBefore != "" {
 		baseQuery["end"] = args.StartBefore
+	}
+	if desc := strings.TrimSpace(args.ExactDescription); desc != "" {
+		baseQuery["description"] = desc
+	} else if desc := strings.TrimSpace(args.DescriptionContains); desc != "" {
+		baseQuery["description"] = desc
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -231,11 +257,11 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 	matches := make([]clockify.TimeEntry, 0)
 	entriesScanned := 0
 	pagesFetched := 0
+	query := make(map[string]string, len(baseQuery)+1)
+	for k, v := range baseQuery {
+		query[k] = v
+	}
 	for page := 1; page <= aggregatePageSafetyStop; page++ {
-		query := make(map[string]string, len(baseQuery)+1)
-		for k, v := range baseQuery {
-			query[k] = v
-		}
 		query["page"] = strconv.Itoa(page)
 
 		var entries []clockify.TimeEntry
@@ -248,13 +274,13 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 			if entryMatchesFindArgs(entry, args) {
 				matches = append(matches, entry)
 				if len(matches) > 1 {
-					return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters")
+					return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters, or use clockify_resolve_name before retrying if a project/user/client name is ambiguous")
 				}
 			}
 		}
 		if len(entries) < pageSize {
 			if len(matches) == 0 {
-				return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found")
+				return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found; re-check exact IDs or use clockify_resolve_name before retrying if a project/user/client name is ambiguous")
 			}
 			matchedBy := matchedByForFindArgs(args)
 			matchedBy["pagesFetched"] = pagesFetched

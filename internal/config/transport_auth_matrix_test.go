@@ -41,7 +41,7 @@ func TestTransportAuthMatrix(t *testing.T) {
 		// --- legacy http --------------------------------------------
 		{"http", "static_bearer", map[string]string{"MCP_BEARER_TOKEN": bearer}, "ok"},
 		{"http", "oidc", nil, "ok"}, // OIDC issuer is only required for streamable_http in Load
-		{"http", "forward_auth", nil, "ok"},
+		{"http", "forward_auth", map[string]string{"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8"}, "ok"},
 		{"http", "mtls", nil, "MCP_AUTH_MODE=mtls is not supported with MCP_TRANSPORT=http"},
 		{"http", "invalid", nil, "invalid MCP_AUTH_MODE"},
 		// legacy http + static_bearer without token is rejected.
@@ -68,8 +68,9 @@ func TestTransportAuthMatrix(t *testing.T) {
 			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "MCP_OIDC_ISSUER is required"},
 		{"streamable_http", "forward_auth", map[string]string{
-			"MCP_CONTROL_PLANE_DSN": "memory",
-			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_CONTROL_PLANE_DSN":            "memory",
+			"MCP_ALLOW_DEV_BACKEND":            "1",
+			"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 		}, "ok"},
 		// streamable_http + mtls now requires the full TLS cert material.
 		// The mtls authenticator reads r.TLS.VerifiedChains, which only
@@ -129,8 +130,9 @@ func TestTransportAuthMatrix(t *testing.T) {
 			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"grpc", "forward_auth", map[string]string{
-			"MCP_CONTROL_PLANE_DSN": "memory",
-			"MCP_ALLOW_DEV_BACKEND": "1",
+			"MCP_CONTROL_PLANE_DSN":            "memory",
+			"MCP_ALLOW_DEV_BACKEND":            "1",
+			"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 		}, "ok"},
 		// gRPC + mtls also requires cert material now (matching the
 		// streamable_http rule). The previous "ok" cell let operators
@@ -202,9 +204,11 @@ func TestTransportAuthMatrix(t *testing.T) {
 			for _, k := range []string{
 				"MCP_BEARER_TOKEN", "MCP_CONTROL_PLANE_DSN", "MCP_OIDC_ISSUER",
 				"MCP_OIDC_AUDIENCE", "MCP_OIDC_JWKS_URL", "MCP_OIDC_JWKS_PATH",
-				"MCP_RESOURCE_URI", "MCP_OIDC_VERIFY_CACHE_TTL",
+				"MCP_OIDC_JWKS_ALLOW_PRIVATE", "MCP_RESOURCE_URI", "MCP_OIDC_VERIFY_CACHE_TTL",
 				"MCP_OIDC_JWKS_CACHE_TTL",
 				"MCP_ALLOW_DEV_BACKEND",
+				"MCP_FORWARD_AUTH_TRUSTED_PROXIES",
+				"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 				"MCP_HTTP_TLS_CERT", "MCP_HTTP_TLS_KEY",
 				"MCP_GRPC_TLS_CERT", "MCP_GRPC_TLS_KEY",
 				"MCP_MTLS_CA_CERT_PATH",

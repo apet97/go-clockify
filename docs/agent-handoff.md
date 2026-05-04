@@ -14,29 +14,27 @@ work and commit it.
 
 ## Launch-state baseline
 
-- **Post-PR #62 launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+- **Current launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   manual sacrificial-workspace campaign state after PR #62: the
-  then-current 121 generated catalog tools were live-probed through
-  the MCP path, the documented invite-user route is pinned by a
-  no-email validation probe, stale non-catalog user-invite risk
+  PR #59 catalog snapshot (then 121 generated tools) was live-probed
+  through the MCP path, the documented invite-user route is pinned by
+  a no-email validation probe, stale non-catalog user-invite risk
   overrides are removed, and risk overrides now fail if they target
-  ghost descriptor names. The current catalog is 123 tools after two
-  Tier 1 timesheet workflow helpers were added on top of that raw API
-  coverage surface. This is manual campaign coverage only and does
-  not tick any external launch-evidence box.
-- **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
-  (`docs(handoff): update post-PR59 launch state`). This records
-  the post-PR #59 121-tool manual live-probe coverage plus the
-  follow-up docs stabilization. If this handoff is read from a
-  later runbook/docs commit, Git HEAD may be newer; `4e69c7a...`
-  remains the baseline to cite for the PR #60 docs stabilization.
-- **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
-  (`docs(launch): record bench comparison evidence`) — the
-  launch-state baseline after PR #51 merged on 2026-05-02. If this
-  file is read from a later local continuation commit, Git HEAD may
-  be newer; `adce316...` remains the baseline to cite for the
-  PR #51 merge.
+  ghost descriptor names. The current catalog is 128 tools after two
+  Tier 1 timesheet workflow helpers plus five local discovery,
+  activation, and name-resolution helpers were added on top of that
+  raw API coverage surface. The local helpers are unit tested; the
+  timesheet workflow helpers also have live-test hooks.
+  This is manual campaign coverage only and does not tick any
+  external launch-evidence box.
+- **Historical baselines, not current candidate SHAs:** PR #60 docs
+  stabilization `4e69c7a1db8011055187cf9892426ed48fc8e572`
+  (`docs(handoff): update post-PR59 launch state`) and PR #51 merge
+  tip `adce316d60644fe51365086aba186227c9ae3977`
+  (`docs(launch): record bench comparison evidence`) are retained for
+  audit continuity only. Do not cite either as the current
+  launch-state baseline.
 - **Closed locally:** Groups 2 (shared-service Postgres E2E,
   required-gated on `main`), 3 (ADR 0017 Path A — streamable-HTTP
   cross-instance session rehydration), 4 (auth-model docs +
@@ -101,8 +99,8 @@ wraps the test run with evidence warnings.
    — the deployment shape that the launch candidate is built
    around.
 7. [`claude-code-continuation.md`](claude-code-continuation.md) —
-   historical Claude Code continuation packet with prompts, branch
-   rules, and verification sequence from the post-PR #51 state.
+   historical Claude Code continuation packet from the post-PR #51
+   state. Do not run its prompt blocks as written.
 
 ## Current known blockers
 
@@ -128,8 +126,10 @@ handoff. The remaining blockers are external evidence gates:
    needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
    archived `doctor --strict` outputs for the reference deployment.
 
-For paste-ready Claude Code prompts and branch rules, use
-[`claude-code-continuation.md`](claude-code-continuation.md).
+For Claude Code work, start from this handoff and substitute the
+actual candidate SHA you are evaluating (`git rev-parse HEAD` or the
+release-candidate tag target). Do **not** use the historical PR #51
+SHA in [`claude-code-continuation.md`](claude-code-continuation.md).
 
 For the full audit framing run `/launch-candidate` from a Claude
 Code session inside this repo (the slash command is gitignored

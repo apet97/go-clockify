@@ -120,7 +120,7 @@ func builtinPrompts() []Prompt {
 				{Name: "calendar_uri", Description: "Where the upstream calendar data lives (ICS URL, Google Calendar id, etc.).", Required: true},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Walk the calendar at {{calendar_uri}} for the week starting {{week_start}}. For each event that should be tracked in Clockify, draft a `clockify_log_time` call that resolves the project by name. Ask me for clarification if the project name is ambiguous. Do not execute any write tool without my confirmation."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Walk the calendar at {{calendar_uri}} for the week starting {{week_start}}. For each finished event that should be tracked in Clockify, draft a `clockify_log_time` call with project/project_id when known, start/end from the calendar, and the event description. Ask me for clarification if the project name is ambiguous. Do not execute any write tool without my confirmation. If Clockify reports an overlap, inspect the affected entries and use `allow_overlap:true` only after explicit confirmation."}},
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func builtinPrompts() []Prompt {
 				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the Monday of the week to review.", Required: true},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_weekly_summary` for week_start={{week_start}}. Report: total hours logged, top 3 projects by hours, any day with more than 10 hours logged, any entry missing a project, and any gap of more than 2 working hours between entries on weekdays."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for week_start={{week_start}} first. Report total hours, issues, and suggestedActions from that structured review. If you need top project totals or entry rows, call `clockify_weekly_summary` with the same week_start and include_entries as needed."}},
 			},
 		},
 		{
@@ -151,7 +151,7 @@ func builtinPrompts() []Prompt {
 				{Name: "lookback_days", Description: "How many days of history to scan. Default 14.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Pull the last {{lookback_days}} days of my time entries via `clockify_list_entries` and report any pair with overlapping start/end ranges on the same project. Describe each suspected duplicate pair — do not delete anything."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for the last {{lookback_days}} days, defaulting to 14 if that argument is absent. Inspect overlap issues and relatedEntryIds, then describe each suspected duplicate pair. Do not delete anything."}},
 			},
 		},
 		{
@@ -162,7 +162,7 @@ func builtinPrompts() []Prompt {
 				{Name: "format", Description: "One of `pdf`, `csv`, `md`.", Required: true},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` for the totals and render rows for every day of the week including zero-hour days."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` for totals and rows, then use `clockify_timesheet_review` to flag gaps or overlaps before rendering every day of the week including zero-hour days."}},
 			},
 		},
 	}

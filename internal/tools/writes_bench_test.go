@@ -147,9 +147,10 @@ func invokeWriteBench(b *testing.B, tool string, argsFn func() map[string]any) {
 func BenchmarkClockifyLogTime(b *testing.B) {
 	invokeWriteBench(b, "clockify_log_time", func() map[string]any {
 		return map[string]any{
-			"start":       "2026-01-01T09:00:00Z",
-			"end":         "2026-01-01T10:00:00Z",
-			"description": "bench",
+			"start":         "2026-01-01T09:00:00Z",
+			"end":           "2026-01-01T10:00:00Z",
+			"description":   "bench",
+			"allow_overlap": true,
 		}
 	})
 }
@@ -181,9 +182,10 @@ func BenchmarkClockifyStopTimer(b *testing.B) {
 func BenchmarkClockifyAddEntry(b *testing.B) {
 	invokeWriteBench(b, "clockify_add_entry", func() map[string]any {
 		return map[string]any{
-			"start":       "2026-01-01T09:00:00Z",
-			"end":         "2026-01-01T10:00:00Z",
-			"description": "bench",
+			"start":         "2026-01-01T09:00:00Z",
+			"end":           "2026-01-01T10:00:00Z",
+			"description":   "bench",
+			"allow_overlap": true,
 		}
 	})
 }

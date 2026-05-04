@@ -130,6 +130,10 @@ spec:
             - name: MCP_OIDC_JWKS_URL
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.auth.oidcJwksAllowPrivate }}
+            - name: MCP_OIDC_JWKS_ALLOW_PRIVATE
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.auth.oidcJwksPath }}
             - name: MCP_OIDC_JWKS_PATH
               value: {{ . | quote }}
@@ -160,6 +164,14 @@ spec:
             {{- end }}
             {{- with .Values.auth.forwardSubjectHeader }}
             - name: MCP_FORWARD_SUBJECT_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.requireForwardTenantClaim }}
+            - name: MCP_REQUIRE_FORWARD_TENANT_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.forwardAuthTrustedProxies }}
+            - name: MCP_FORWARD_AUTH_TRUSTED_PROXIES
               value: {{ . | quote }}
             {{- end }}
             {{- with .Values.auth.mtlsTenantHeader }}

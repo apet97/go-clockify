@@ -42,11 +42,12 @@ func TestOIDCAuthenticator_RejectsHS256Token(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:         ModeOIDC,
-		OIDCIssuer:   issuer,
-		OIDCAudience: audience,
-		OIDCJWKSURL:  ts.URL,
-		HTTPClient:   ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -103,11 +104,12 @@ func TestOIDCAuthenticator_RejectsAlgNone(t *testing.T) {
 	defer ts.Close()
 
 	auth, err := New(Config{
-		Mode:         ModeOIDC,
-		OIDCIssuer:   issuer,
-		OIDCAudience: audience,
-		OIDCJWKSURL:  ts.URL,
-		HTTPClient:   ts.Client(),
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

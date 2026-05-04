@@ -10,9 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
 type Service struct {
@@ -21,8 +23,11 @@ type Service struct {
 	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil falls back to UTC at the direct-consumer call sites (entries.go, resources.go, reports.go aggregate path). The exception: tool args that go through loadLocation (WeeklySummary's `timezone` arg) ultimately fall through to `time.Now().Location()` when both the arg and DefaultTimezone are unset — see loadLocation in this file.
 	DedupeConfig    *dedupe.Config        // optional, set during wiring
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
+	Bootstrap       *bootstrap.Config     // set during wiring; describes current bootstrap visibility
 	ActivateGroup   func(context.Context, string) (ActivationResult, error)
 	ActivateTool    func(context.Context, string) (ActivationResult, error)
+	DeactivateGroup func(context.Context, string) (DeactivationResult, error)
+	GroupActivation func(string) (allowed bool, reason string)
 	// WebhookValidateDNS, when true, makes CreateWebhook/UpdateWebhook
 	// resolve the webhook host via the system resolver and reject any
 	// reply that contains a private/reserved IP. Default false matches
@@ -69,10 +74,12 @@ type Service struct {
 	ReportMaxEntries int
 	// DeltaFormat selects the diff algorithm for resource notifications.
 	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
-	DeltaFormat string
-	mu          sync.Mutex
-	cachedUser  *clockify.User
-	cachedWSID  string
+	DeltaFormat  string
+	mu           sync.RWMutex
+	cachedUser   *clockify.User
+	cachedWSID   string
+	resolveMu    sync.RWMutex
+	resolveCache map[resolveKey]resolveEntry
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache
@@ -117,6 +124,30 @@ type ActivationResult struct {
 	// it just gained alongside the requested one. Empty for Tier-1
 	// single-tool activation by design.
 	ActivatedTools []string `json:"activatedTools,omitempty"`
+	// TotalVisibleTools is the post-activation tools/list count after
+	// bootstrap and policy filtering. Zero means the activator could not
+	// compute the session total and activationPayload omits it.
+	TotalVisibleTools int `json:"totalVisibleTools,omitempty"`
+	// VisibleActivatedTools is ActivatedTools filtered through the same
+	// post-activation tools/list visibility gate. nil preserves legacy
+	// activation callbacks; non-nil means activationPayload should expose
+	// this filtered set as activated_tools.
+	VisibleActivatedTools []string `json:"visibleActivatedTools,omitempty"`
+	// ActivatedToolsHiddenByBootstrap names activated tools that remained
+	// hidden because the active bootstrap config did not expose them.
+	ActivatedToolsHiddenByBootstrap []string `json:"activatedToolsHiddenByBootstrap,omitempty"`
+	// ActivatedToolsBlockedByPolicy names activated tools that remained
+	// hidden because policy enforcement filtered them from tools/list.
+	ActivatedToolsBlockedByPolicy []string `json:"activatedToolsBlockedByPolicy,omitempty"`
+}
+
+type DeactivationResult struct {
+	Kind              string   `json:"kind"`
+	Name              string   `json:"name"`
+	Group             string   `json:"group,omitempty"`
+	ToolCount         int      `json:"toolCount"`
+	DeactivatedTools  []string `json:"deactivatedTools,omitempty"`
+	TotalVisibleTools int      `json:"totalVisibleTools,omitempty"`
 }
 
 type ResultEnvelope struct {
@@ -136,19 +167,21 @@ type IdentityData struct {
 }
 
 type WeeklySummaryData struct {
-	Range         DateRange            `json:"range"`
-	Totals        SummaryTotals        `json:"totals"`
-	ByDay         []DaySummary         `json:"byDay"`
-	ByProject     []ProjectSummary     `json:"byProject"`
-	Entries       []clockify.TimeEntry `json:"entries,omitempty"`
-	UnassignedKey string               `json:"unassignedKey,omitempty"`
+	Range            DateRange            `json:"range"`
+	Totals           SummaryTotals        `json:"totals"`
+	ByDay            []DaySummary         `json:"byDay"`
+	ByProject        []ProjectSummary     `json:"byProject"`
+	SuggestedActions []ToolSuggestion     `json:"suggestedActions"`
+	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
+	UnassignedKey    string               `json:"unassignedKey,omitempty"`
 }
 
 type SummaryData struct {
-	Range     DateRange            `json:"range"`
-	Totals    SummaryTotals        `json:"totals"`
-	ByProject []ProjectSummary     `json:"byProject"`
-	Entries   []clockify.TimeEntry `json:"entries,omitempty"`
+	Range            DateRange            `json:"range"`
+	Totals           SummaryTotals        `json:"totals"`
+	ByProject        []ProjectSummary     `json:"byProject"`
+	SuggestedActions []ToolSuggestion     `json:"suggestedActions"`
+	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
 }
 
 type QuickReportData struct {
@@ -158,6 +191,7 @@ type QuickReportData struct {
 	RunningEntries      []clockify.TimeEntry `json:"runningEntries,omitempty"`
 	EntriesSample       []clockify.TimeEntry `json:"entriesSample,omitempty"`
 	ProjectsRepresented int                  `json:"projectsRepresented"`
+	SuggestedActions    []ToolSuggestion     `json:"suggestedActions"`
 }
 
 type LogTimeData struct {
@@ -334,6 +368,60 @@ func applyRiskMetadata(d *mcp.ToolDescriptor) {
 			d.AuditKeys = append([]string(nil), override.auditKeys...)
 		}
 	}
+	if d.Tool.Annotations == nil {
+		d.Tool.Annotations = map[string]any{}
+	}
+	if names := riskClassAnnotationNames(d.RiskClass); len(names) > 0 {
+		d.Tool.Annotations["riskClass"] = names
+	}
+	d.Tool.Annotations["dryRun"] = schemaHasDryRun(d.Tool.InputSchema)
+}
+
+func riskClassAnnotationNames(rc mcp.RiskClass) []string {
+	if rc == 0 {
+		return nil
+	}
+	type entry struct {
+		bit  mcp.RiskClass
+		name string
+	}
+	all := []entry{
+		{mcp.RiskRead, "read"},
+		{mcp.RiskWrite, "write"},
+		{mcp.RiskBilling, "billing"},
+		{mcp.RiskAdmin, "admin"},
+		{mcp.RiskPermissionChange, "permission_change"},
+		{mcp.RiskExternalSideEffect, "external_side_effect"},
+		{mcp.RiskDestructive, "destructive"},
+	}
+	out := make([]string, 0, 2)
+	for _, e := range all {
+		if rc.Has(e.bit) {
+			out = append(out, e.name)
+		}
+	}
+	return out
+}
+
+func schemaHasDryRun(schema map[string]any) bool {
+	if schema == nil {
+		return false
+	}
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+	_, ok = props["dry_run"]
+	return ok
+}
+
+func dryrunPreviewPayload(tool string, payload map[string]any) map[string]any {
+	return map[string]any{
+		"dry_run": true,
+		"tool":    tool,
+		"payload": maps.Clone(payload),
+		"note":    "No changes were made.",
+	}
 }
 
 // tightenInputSchema mutates a JSON schema tree in place to meet the MCP
@@ -349,7 +437,8 @@ func applyRiskMetadata(d *mcp.ToolDescriptor) {
 //     before the handler ever runs.
 //   - `color` properties whose description mentions Hex gain the 6-hex pattern
 //
-// The walker handles nested objects and arrays (via `items`). It never
+// The walker handles nested objects, arrays (via `items`), and anyOf
+// subschemas. It never
 // overwrites an explicit value — callers can opt out of any single rule
 // by setting it themselves.
 func tightenInputSchema(schema map[string]any) {
@@ -373,6 +462,13 @@ func tightenInputSchema(schema map[string]any) {
 	}
 	if items, ok := schema["items"].(map[string]any); ok {
 		tightenInputSchema(items)
+	}
+	if options, ok := schema["anyOf"].([]any); ok {
+		for _, option := range options {
+			if sub, ok := option.(map[string]any); ok {
+				tightenInputSchema(sub)
+			}
+		}
 	}
 }
 
@@ -490,6 +586,26 @@ func paginationFromArgs(args map[string]any) (page, pageSize int) {
 	return page, pageSize
 }
 
+func addPaginationMeta(meta map[string]any, args map[string]any, page, pageSize int) map[string]any {
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	pagination := map[string]any{
+		"page":              page,
+		"page_size":         pageSize,
+		"applied_page_size": pageSize,
+	}
+	if _, ok := args["page_size"]; ok {
+		requestedPageSize := intArg(args, "page_size", 50)
+		pagination["requested_page_size"] = requestedPageSize
+		if requestedPageSize != pageSize {
+			pagination["clamped"] = true
+		}
+	}
+	meta["pagination"] = pagination
+	return meta
+}
+
 func intArg(args map[string]any, key string, fallback int) int {
 	v, ok := args[key]
 	if !ok {
@@ -550,13 +666,13 @@ func parseRange(args map[string]any) (time.Time, time.Time, error) {
 	if startRaw == "" || endRaw == "" {
 		return time.Time{}, time.Time{}, fmt.Errorf("start and end are required")
 	}
-	start, err := time.Parse(time.RFC3339, startRaw)
+	start, err := timeparse.ParseDatetime(startRaw, time.UTC)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("start must be RFC3339: %w", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid start: %w", err)
 	}
-	end, err := time.Parse(time.RFC3339, endRaw)
+	end, err := timeparse.ParseDatetime(endRaw, time.UTC)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("end must be RFC3339: %w", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid end: %w", err)
 	}
 	if !end.After(start) {
 		return time.Time{}, time.Time{}, fmt.Errorf("end must be after start")

@@ -2,19 +2,130 @@
   "generator": "scripts/gen-tool-catalog — DO NOT EDIT BY HAND; run `make gen-tool-catalog` to refresh",
   "tier1": [
     {
-      "name": "clockify_add_entry",
-      "description": "Create a new time entry with flexible start/end parsing",
+      "name": "clockify_activate_group",
+      "description": "Activate every tool in the named Tier-2 group. The response puts only currently visible/callable names in activated_tools and reports unavailable names under activated_tools_hidden_by_bootstrap or activated_tools_blocked_by_policy.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
       "destructive": false,
-      "idempotent": false,
+      "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "name": {
+            "description": "Tier-2 group name to activate, e.g. invoices",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_activate_group",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Activate Group"
+      }
+    },
+    {
+      "name": "clockify_activate_tool",
+      "description": "Activate a hidden Tier-1 tool by name, or activate the full Tier-2 group that contains the named Tier-2 tool. The side effect can bring sibling tools online; inspect activated_tools after the call.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Tool name to activate, e.g. clockify_send_invoice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_activate_tool",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Activate Tool"
+      }
+    },
+    {
+      "name": "clockify_add_entry",
+      "description": "Lower-level helper for creating a time entry with flexible start/end parsing. Prefer clockify_log_time for finished past work; when end is present this validates overlaps unless allow_overlap:true is passed.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_overlap": {
+            "description": "Default false for finished entries with end set. Set true only after manually confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -25,7 +136,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "End time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "project": {
@@ -36,7 +147,7 @@
             "type": "string"
           },
           "start": {
-            "description": "Start time (RFC3339, or natural language: 'now', 'today 9:00')",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "task_id": {
@@ -144,9 +255,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Add Entry"
       }
     },
@@ -158,6 +273,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -235,9 +351,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Client"
       }
     },
@@ -249,6 +369,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -357,9 +478,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Project"
       }
     },
@@ -371,6 +496,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -432,9 +558,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Tag"
       }
     },
@@ -446,6 +576,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -545,9 +676,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Task"
       }
     },
@@ -559,6 +694,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -625,10 +761,67 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Current User"
+      }
+    },
+    {
+      "name": "clockify_deactivate_group",
+      "description": "Deactivate a previously activated Tier-2 group and remove its tools from tools/list for this session. Idempotent: deactivating an inactive group removes zero tools.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Tier-2 group name to deactivate, e.g. invoices",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_deactivate_group",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Deactivate Group"
       }
     },
     {
@@ -639,6 +832,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -675,9 +869,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Entry"
       }
     },
@@ -689,6 +887,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -696,8 +895,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "include_entries": {
@@ -712,8 +910,7 @@
             "type": "string"
           },
           "start": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -854,6 +1051,35 @@
                 ],
                 "type": "object"
               },
+              "suggestedActions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arguments": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "missingArgs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "tool": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "reason"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "totals": {
                 "additionalProperties": false,
                 "properties": {
@@ -882,7 +1108,8 @@
             "required": [
               "range",
               "totals",
-              "byProject"
+              "byProject",
+              "suggestedActions"
             ],
             "type": "object"
           },
@@ -903,9 +1130,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Detailed Report"
       }
     },
@@ -917,6 +1148,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -933,8 +1165,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "entry_id": {
@@ -953,18 +1184,15 @@
             "type": "string"
           },
           "start": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start_after": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start_before": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -1087,9 +1315,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Find And Update Entry"
       }
     },
@@ -1101,6 +1333,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1212,9 +1445,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Entry"
       }
     },
@@ -1226,6 +1463,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1319,9 +1557,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Project"
       }
     },
@@ -1333,6 +1575,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1358,9 +1601,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Workspace"
       }
     },
@@ -1372,6 +1619,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1457,9 +1705,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Clients"
       }
     },
@@ -1471,6 +1723,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1478,7 +1731,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "End time (RFC3339 or natural language)",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "page": {
@@ -1497,7 +1750,7 @@
             "type": "string"
           },
           "start": {
-            "description": "Start time (RFC3339 or natural language)",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -1602,9 +1855,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Entries"
       }
     },
@@ -1616,6 +1873,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1717,9 +1975,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Projects"
       }
     },
@@ -1731,6 +1993,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1800,9 +2063,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Tags"
       }
     },
@@ -1814,6 +2081,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -1920,10 +2188,64 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Tasks"
+      }
+    },
+    {
+      "name": "clockify_list_tools",
+      "description": "Search/list the tool catalog by keyword. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "description": "Search query for tools or groups",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_list_tools",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "List Tools"
       }
     },
     {
@@ -1934,6 +2256,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2016,9 +2339,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Users"
       }
     },
@@ -2030,6 +2357,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2101,26 +2429,35 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Workspaces"
       }
     },
     {
       "name": "clockify_log_time",
-      "description": "Create a finished time entry for a project. Safe workflow helper for logging time without starting a live timer.",
+      "description": "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "allow_overlap": {
+            "description": "Default false. Set true only after manually confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -2131,8 +2468,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "project": {
@@ -2142,8 +2478,7 @@
             "type": "string"
           },
           "start": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -2261,9 +2596,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Log Time"
       }
     },
@@ -2275,6 +2614,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2300,9 +2640,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Policy Info"
       }
     },
@@ -2314,6 +2658,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2321,7 +2666,7 @@
         "additionalProperties": false,
         "properties": {
           "days": {
-            "maximum": 31,
+            "maximum": 365,
             "minimum": 1,
             "type": "integer"
           },
@@ -2332,6 +2677,10 @@
             "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
             "minimum": 0,
             "type": "integer"
+          },
+          "project": {
+            "description": "Optional project name or ID to push down as an upstream filter",
+            "type": "string"
           }
         },
         "type": "object"
@@ -2515,6 +2864,35 @@
                 },
                 "type": "array"
               },
+              "suggestedActions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arguments": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "missingArgs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "tool": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "reason"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "topProject": {
                 "additionalProperties": false,
                 "properties": {
@@ -2570,7 +2948,8 @@
             "required": [
               "range",
               "totals",
-              "projectsRepresented"
+              "projectsRepresented",
+              "suggestedActions"
             ],
             "type": "object"
           },
@@ -2591,20 +2970,25 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Quick Report"
       }
     },
     {
       "name": "clockify_resolve_debug",
-      "description": "Debug name-to-ID resolution for projects, clients, tags, or users",
+      "description": "Deprecated compatibility alias for clockify_resolve_name.",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2643,20 +3027,82 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Resolve Debug"
       }
     },
     {
+      "name": "clockify_resolve_name",
+      "description": "Resolve a project, client, tag, or user name/email to a Clockify ID. Prefer this before write tools when a user gives a name.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_type": {
+            "description": "project, client, tag, or user",
+            "type": "string"
+          },
+          "name_or_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "name_or_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_resolve_name",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Resolve Name"
+      }
+    },
+    {
       "name": "clockify_search_tools",
-      "description": "Search the tool catalog by keyword, or activate a Tier-2 tool. Each Tier-2 group is the unit of activation: passing a tool name via activate_tool brings the entire containing group online, and the response enumerates every newly-available tool name.",
+      "description": "Deprecated compatibility shim. Prefer clockify_list_tools, clockify_activate_group, clockify_activate_tool, or clockify_deactivate_group for single-purpose planning. In minimal/custom bootstrap modes, search results mark hidden Tier-1 tools with availability=tier1_hidden_by_bootstrap. Tier-2 groups remain the unit of activation.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -2668,7 +3114,7 @@
             "type": "string"
           },
           "activate_tool": {
-            "description": "Activate the Tier-2 group that contains the named tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group). For a single Tier-1 tool name, only that tool is activated.",
+            "description": "Activate a hidden Tier-1 tool, or activate the Tier-2 group that contains the named Tier-2 tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group).",
             "type": "string"
           },
           "query": {
@@ -2696,9 +3142,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Search Tools"
       }
     },
@@ -2710,6 +3160,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -2824,9 +3275,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Start Timer"
       }
     },
@@ -2838,6 +3293,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -2868,9 +3324,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Stop Timer"
       }
     },
@@ -2882,6 +3342,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -2889,8 +3350,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "include_entries": {
@@ -2901,9 +3361,12 @@
             "minimum": 0,
             "type": "integer"
           },
+          "project": {
+            "description": "Optional project name or ID to push down as an upstream filter",
+            "type": "string"
+          },
           "start": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -3040,6 +3503,35 @@
                 ],
                 "type": "object"
               },
+              "suggestedActions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arguments": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "missingArgs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "tool": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "reason"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "totals": {
                 "additionalProperties": false,
                 "properties": {
@@ -3068,7 +3560,8 @@
             "required": [
               "range",
               "totals",
-              "byProject"
+              "byProject",
+              "suggestedActions"
             ],
             "type": "object"
           },
@@ -3089,20 +3582,25 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Summary Report"
       }
     },
     {
       "name": "clockify_switch_project",
-      "description": "Stop the current timer and start a new one on a different project",
+      "description": "Stop the current timer if one is running, then start a new one on a different project. Response includes stop_outcome.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -3129,87 +3627,10 @@
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_switch_project",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": false,
-            "properties": {
-              "billable": {
-                "type": "boolean"
-              },
-              "costRate": {},
-              "customFieldValues": {},
-              "description": {
-                "type": "string"
-              },
-              "hourlyRate": {},
-              "id": {
-                "type": "string"
-              },
-              "isLocked": {
-                "type": "boolean"
-              },
-              "kioskId": {
-                "type": "string"
-              },
-              "projectId": {
-                "type": "string"
-              },
-              "projectName": {
-                "type": "string"
-              },
-              "tagIds": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "taskId": {
-                "type": "string"
-              },
-              "timeInterval": {
-                "additionalProperties": false,
-                "properties": {
-                  "duration": {
-                    "type": "string"
-                  },
-                  "end": {
-                    "type": "string"
-                  },
-                  "start": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "start"
-                ],
-                "type": "object"
-              },
-              "type": {
-                "type": "string"
-              },
-              "userId": {
-                "type": "string"
-              },
-              "workspaceId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "description",
-              "projectId",
-              "timeInterval"
-            ],
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -3217,16 +3638,19 @@
         },
         "required": [
           "ok",
-          "action",
-          "data"
+          "action"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Switch Project"
       }
     },
@@ -3238,6 +3662,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -3263,9 +3688,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Timer Status"
       }
     },
@@ -3277,6 +3706,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -3297,8 +3727,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "project": {
@@ -3309,8 +3738,7 @@
             "type": "string"
           },
           "start": {
-            "description": "RFC3339 timestamp",
-            "format": "date-time",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -3493,9 +3921,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Timesheet Fill Gap"
       }
     },
@@ -3507,6 +3939,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -3518,7 +3951,7 @@
             "type": "string"
           },
           "end": {
-            "description": "RFC3339 timestamp or YYYY-MM-DD range end. Must be paired with start.",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Must be paired with start.",
             "type": "string"
           },
           "include_entries": {
@@ -3541,7 +3974,7 @@
             "type": "integer"
           },
           "start": {
-            "description": "RFC3339 timestamp or YYYY-MM-DD range start. Must be paired with end.",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Must be paired with end.",
             "type": "string"
           },
           "timezone": {
@@ -3840,9 +4273,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Timesheet Review"
       }
     },
@@ -3854,6 +4291,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -3973,9 +4411,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Today Entries"
       }
     },
@@ -3987,6 +4429,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -4003,6 +4446,7 @@
             "type": "boolean"
           },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "entry_id": {
@@ -4015,6 +4459,7 @@
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -4119,9 +4564,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Entry"
       }
     },
@@ -4133,6 +4582,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -4146,6 +4596,10 @@
             "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
             "minimum": 0,
             "type": "integer"
+          },
+          "project": {
+            "description": "Optional project name or ID to push down as an upstream filter",
+            "type": "string"
           },
           "timezone": {
             "description": "Optional IANA timezone, defaults to local/server timezone.",
@@ -4316,6 +4770,35 @@
                 ],
                 "type": "object"
               },
+              "suggestedActions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "arguments": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "missingArgs": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "tool": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "reason"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "totals": {
                 "additionalProperties": false,
                 "properties": {
@@ -4348,7 +4831,8 @@
               "range",
               "totals",
               "byDay",
-              "byProject"
+              "byProject",
+              "suggestedActions"
             ],
             "type": "object"
           },
@@ -4369,9 +4853,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Weekly Summary"
       }
     },
@@ -4383,6 +4871,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -4462,9 +4951,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Whoami"
       }
     }
@@ -4478,6 +4971,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -4515,9 +5009,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Approve Timesheet"
       }
     },
@@ -4529,6 +5027,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -4562,9 +5061,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Approval Request"
       }
     },
@@ -4576,6 +5079,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -4618,9 +5122,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Approval Requests"
       }
     },
@@ -4632,6 +5140,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -4673,9 +5182,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Reject Timesheet"
       }
     },
@@ -4687,6 +5200,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -4732,9 +5246,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Submit For Approval"
       }
     },
@@ -4746,6 +5264,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -4779,9 +5298,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Withdraw Approval"
       }
     },
@@ -4793,6 +5316,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -4851,9 +5375,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Custom Field"
       }
     },
@@ -4865,6 +5393,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -4902,9 +5431,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Custom Field"
       }
     },
@@ -4916,6 +5449,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -4949,9 +5483,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Custom Field"
       }
     },
@@ -4963,6 +5501,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -5001,9 +5540,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Custom Fields"
       }
     },
@@ -5015,6 +5558,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5061,9 +5605,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Set Custom Field Value"
       }
     },
@@ -5075,6 +5623,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5120,9 +5669,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Custom Field"
       }
     },
@@ -5134,6 +5687,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5198,9 +5752,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Expense"
       }
     },
@@ -5212,6 +5770,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5246,9 +5805,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Expense Category"
       }
     },
@@ -5260,6 +5823,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -5296,9 +5860,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Expense"
       }
     },
@@ -5310,6 +5878,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -5346,20 +5915,25 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Expense Category"
       }
     },
     {
       "name": "clockify_expense_report",
-      "description": "Get expenses filtered by date range with aggregation by category",
+      "description": "Get expenses filtered by date range with page-scoped category totals",
       "group": "expenses",
       "tier": 2,
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -5389,10 +5963,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_expense_report",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5400,15 +5983,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Expense Report"
       }
     },
@@ -5420,6 +6008,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -5436,10 +6025,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_expense",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5447,15 +6045,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Expense"
       }
     },
@@ -5467,6 +6070,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -5475,10 +6079,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_expense_categories",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5486,32 +6102,42 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Expense Categories"
       }
     },
     {
       "name": "clockify_list_expenses",
-      "description": "List expenses in the workspace with pagination",
+      "description": "List expenses in the workspace with pagination and optional date range",
       "group": "expenses",
       "tier": 2,
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "end": {
+            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -5522,15 +6148,31 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "start": {
+            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "type": "string"
           }
         },
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_expenses",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -5538,26 +6180,32 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Expenses"
       }
     },
     {
       "name": "clockify_update_expense",
-      "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent.",
+      "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5574,7 +6222,7 @@
             "type": "string"
           },
           "change_fields": {
-            "description": "Field tokens to update; one or more of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE",
+            "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. FILE is not supported.",
             "items": {
               "enum": [
                 "USER",
@@ -5636,9 +6284,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Expense"
       }
     },
@@ -5650,6 +6302,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5686,9 +6339,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Expense Category"
       }
     },
@@ -5700,11 +6357,24 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "user_ids"
+            ]
+          },
+          {
+            "required": [
+              "user_group_ids"
+            ]
+          }
+        ],
         "properties": {
           "end_date": {
             "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays",
@@ -5727,6 +6397,7 @@
             "items": {
               "type": "string"
             },
+            "minItems": 1,
             "type": "array"
           },
           "user_ids": {
@@ -5734,6 +6405,7 @@
             "items": {
               "type": "string"
             },
+            "minItems": 1,
             "type": "array"
           }
         },
@@ -5761,9 +6433,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Holiday"
       }
     },
@@ -5775,6 +6451,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -5816,9 +6493,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create User Group Admin"
       }
     },
@@ -5830,6 +6511,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -5867,9 +6549,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Holiday"
       }
     },
@@ -5881,6 +6567,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -5918,9 +6605,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete User Group Admin"
       }
     },
@@ -5932,6 +6623,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -5965,9 +6657,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get User Group"
       }
     },
@@ -5979,6 +6675,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6004,9 +6701,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Holidays"
       }
     },
@@ -6018,6 +6719,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6043,9 +6745,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List User Groups Admin"
       }
     },
@@ -6057,6 +6763,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -6100,9 +6807,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update User Group Admin"
       }
     },
@@ -6114,6 +6825,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write",
         "billing"
@@ -6180,20 +6892,26 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
         "title": "Add Invoice Item"
       }
     },
     {
       "name": "clockify_create_invoice",
-      "description": "Create a new invoice for a client",
+      "description": "Create a new invoice for a client. Supports dry_run:true.",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -6215,6 +6933,10 @@
           "currency": {
             "description": "Currency code (e.g. USD, EUR)",
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the invoice payload without creating it",
+            "type": "boolean"
           },
           "due_date": {
             "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
@@ -6259,9 +6981,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
         "title": "Create Invoice"
       }
     },
@@ -6273,6 +7000,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "billing",
         "destructive"
@@ -6313,26 +7041,33 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "billing",
+          "destructive"
+        ],
         "title": "Delete Invoice"
       }
     },
     {
       "name": "clockify_delete_invoice_item",
-      "description": "Delete an item from an invoice",
+      "description": "Delete an invoice item by line index",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "billing",
         "destructive"
       ],
       "audit_keys": [
         "invoice_id",
+        "item_index",
         "item_id"
       ],
       "input_schema": {
@@ -6345,13 +7080,16 @@
             "type": "string"
           },
           "item_id": {
-            "description": "Invoice line order (live API path parameter), not a Mongo-style id",
+            "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id",
+            "type": "string"
+          },
+          "item_index": {
+            "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items",
             "type": "string"
           }
         },
         "required": [
-          "invoice_id",
-          "item_id"
+          "invoice_id"
         ],
         "type": "object"
       },
@@ -6373,9 +7111,14 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "billing",
+          "destructive"
+        ],
         "title": "Delete Invoice Item"
       }
     },
@@ -6387,6 +7130,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6403,10 +7147,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_invoice",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6414,26 +7167,32 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Invoice"
       }
     },
     {
       "name": "clockify_invoice_report",
-      "description": "Get invoices filtered by status with aggregated totals",
+      "description": "Get invoices filtered by status with page-scoped totals",
       "group": "invoices",
       "tier": 2,
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6476,9 +7235,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Invoice Report"
       }
     },
@@ -6490,6 +7253,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6523,9 +7287,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Invoice Items"
       }
     },
@@ -6537,6 +7305,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -6562,10 +7331,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_invoices",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6573,15 +7354,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Invoices"
       }
     },
@@ -6593,6 +7379,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -6634,9 +7421,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
         "title": "Mark Invoice Paid"
       }
     },
@@ -6648,6 +7440,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing",
@@ -6689,20 +7482,27 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing",
+          "external_side_effect"
+        ],
         "title": "Send Invoice"
       }
     },
     {
       "name": "clockify_update_invoice",
-      "description": "Update an existing invoice",
+      "description": "Update an existing invoice. Supports dry_run:true.",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -6720,6 +7520,10 @@
           },
           "currency": {
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the invoice update payload without applying it",
+            "type": "boolean"
           },
           "due_date": {
             "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
@@ -6766,26 +7570,33 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
         "title": "Update Invoice"
       }
     },
     {
       "name": "clockify_update_invoice_item",
-      "description": "Update an invoice item",
+      "description": "Update an invoice item by line index",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write",
         "billing"
       ],
       "audit_keys": [
         "invoice_id",
+        "item_index",
         "item_id",
         "item_type",
         "description",
@@ -6812,7 +7623,11 @@
             "type": "string"
           },
           "item_id": {
-            "description": "Invoice line order (live API path parameter), not a Mongo-style id",
+            "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id",
+            "type": "string"
+          },
+          "item_index": {
+            "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items",
             "type": "string"
           },
           "item_type": {
@@ -6829,7 +7644,6 @@
         },
         "required": [
           "invoice_id",
-          "item_id",
           "item_type"
         ],
         "type": "object"
@@ -6852,9 +7666,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
         "title": "Update Invoice Item"
       }
     },
@@ -6866,6 +7685,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -6903,9 +7723,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Archive Projects"
       }
     },
@@ -6917,6 +7741,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -6966,9 +7791,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Project Template"
       }
     },
@@ -6980,6 +7809,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7013,9 +7843,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Project Template"
       }
     },
@@ -7027,6 +7861,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7052,9 +7887,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Project Templates"
       }
     },
@@ -7066,6 +7905,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -7111,9 +7951,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Set Project Memberships"
       }
     },
@@ -7125,6 +7969,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -7168,9 +8013,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Project Estimate"
       }
     },
@@ -7182,6 +8031,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -7192,7 +8042,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "End date/time. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "hours_per_day": {
@@ -7214,7 +8064,7 @@
             "type": "boolean"
           },
           "start": {
-            "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Start date/time. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start_time": {
@@ -7260,9 +8110,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Assignment"
       }
     },
@@ -7274,6 +8128,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -7320,9 +8175,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Assignment"
       }
     },
@@ -7334,6 +8193,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7341,7 +8201,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "page": {
@@ -7356,7 +8216,7 @@
             "type": "integer"
           },
           "start": {
-            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "user_id": {
@@ -7372,10 +8232,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_filter_schedule_capacity",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7383,26 +8252,32 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Filter Schedule Capacity"
       }
     },
     {
       "name": "clockify_get_assignment",
-      "description": "Get a scheduling assignment by ID by scanning the supported date-range list endpoint",
+      "description": "Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward.",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7413,32 +8288,39 @@
             "type": "string"
           },
           "end": {
-            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment",
+            "description": "Optional range end used to locate the assignment. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Defaults to now plus 1 year",
             "type": "string"
           },
           "page_size": {
-            "description": "Items to scan (default 200)",
+            "description": "Upstream page size to scan per request (default 200); response meta includes pagesFetched and entriesScanned",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
           },
           "start": {
-            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ) used to locate the assignment",
+            "description": "Optional range start used to locate the assignment. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Defaults to now minus 1 year",
             "type": "string"
           }
         },
         "required": [
-          "assignment_id",
-          "start",
-          "end"
+          "assignment_id"
         ],
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_assignment",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7446,15 +8328,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Assignment"
       }
     },
@@ -7466,6 +8353,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7473,7 +8361,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "page_size": {
@@ -7487,7 +8375,7 @@
             "type": "string"
           },
           "start": {
-            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -7498,10 +8386,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_project_schedule_totals",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7509,15 +8409,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Project Schedule Totals"
       }
     },
@@ -7529,6 +8434,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7536,7 +8442,7 @@
         "additionalProperties": false,
         "properties": {
           "end": {
-            "description": "Range end (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "page": {
@@ -7555,7 +8461,7 @@
             "type": "string"
           },
           "start": {
-            "description": "Range start (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "user_id": {
@@ -7570,10 +8476,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_assignments",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -7581,15 +8499,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Assignments"
       }
     },
@@ -7601,6 +8524,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -7614,7 +8538,7 @@
             "type": "boolean"
           },
           "end": {
-            "description": "End date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "End date/time. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "hours_per_day": {
@@ -7636,7 +8560,7 @@
             "type": "string"
           },
           "start": {
-            "description": "Start date/time (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "description": "Start date/time. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start_time": {
@@ -7672,9 +8596,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Assignment"
       }
     },
@@ -7686,6 +8614,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -7776,9 +8705,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Shared Report"
       }
     },
@@ -7790,6 +8723,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -7827,9 +8761,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Shared Report"
       }
     },
@@ -7841,6 +8779,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7885,9 +8824,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Export Shared Report"
       }
     },
@@ -7899,6 +8842,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7932,9 +8876,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Shared Report"
       }
     },
@@ -7946,6 +8894,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -7984,9 +8933,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Shared Reports"
       }
     },
@@ -7998,6 +8951,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8063,9 +9017,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Shared Report"
       }
     },
@@ -8077,6 +9035,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8118,9 +9077,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Approve Time Off"
       }
     },
@@ -8132,6 +9095,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8187,9 +9151,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Time Off Policy"
       }
     },
@@ -8201,6 +9169,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8253,9 +9222,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Create Time Off Request"
       }
     },
@@ -8267,6 +9240,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
@@ -8308,9 +9282,13 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
         "title": "Delete Time Off Request"
       }
     },
@@ -8322,6 +9300,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8363,9 +9342,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Deny Time Off"
       }
     },
@@ -8377,6 +9360,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -8393,10 +9377,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_time_off_policy",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8404,15 +9397,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Time Off Policy"
       }
     },
@@ -8424,6 +9422,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -8444,10 +9443,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_get_time_off_request",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8455,15 +9463,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Time Off Request"
       }
     },
@@ -8475,6 +9488,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -8494,10 +9508,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_time_off_policies",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8505,15 +9531,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Time Off Policies"
       }
     },
@@ -8525,6 +9556,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -8552,10 +9584,22 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_list_time_off_requests",
             "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8563,15 +9607,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Time Off Requests"
       }
     },
@@ -8583,6 +9632,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -8604,10 +9654,19 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_time_off_balance",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -8615,15 +9674,20 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Time Off Balance"
       }
     },
@@ -8635,6 +9699,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8689,9 +9754,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Time Off Policy"
       }
     },
@@ -8703,6 +9772,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write"
       ],
@@ -8751,9 +9821,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
         "title": "Update Time Off Request"
       }
     },
@@ -8765,6 +9839,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write",
         "admin"
@@ -8809,20 +9884,26 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "admin"
+        ],
         "title": "Add User To Group"
       }
     },
     {
       "name": "clockify_create_user_group",
-      "description": "Create a new user group",
+      "description": "Create a new user group. Supports dry_run:true.",
       "group": "user_admin",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -8833,6 +9914,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the user group payload without creating it",
+            "type": "boolean"
+          },
           "name": {
             "description": "Name for the new user group",
             "type": "string"
@@ -8861,9 +9946,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "admin"
+        ],
         "title": "Create User Group"
       }
     },
@@ -8875,6 +9965,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -8917,9 +10008,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "admin"
+        ],
         "title": "Deactivate User"
       }
     },
@@ -8931,6 +10027,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "admin",
         "destructive"
@@ -8973,9 +10070,14 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "admin",
+          "destructive"
+        ],
         "title": "Delete User Group"
       }
     },
@@ -8987,6 +10089,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -9025,9 +10128,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List User Groups"
       }
     },
@@ -9039,6 +10146,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "admin",
         "destructive"
@@ -9087,9 +10195,14 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "admin",
+          "destructive"
+        ],
         "title": "Remove User From Group"
       }
     },
@@ -9101,6 +10214,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": false,
       "risk_class": [
         "write",
         "admin"
@@ -9145,20 +10259,26 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "admin"
+        ],
         "title": "Update User Group"
       }
     },
     {
       "name": "clockify_update_user_role",
-      "description": "Update a user's workspace role",
+      "description": "Update a user's workspace role. Supports dry_run:true.",
       "group": "user_admin",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin",
@@ -9171,6 +10291,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the role change without applying it",
+            "type": "boolean"
+          },
           "role": {
             "description": "Role to assign: WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, or REGULAR",
             "enum": [
@@ -9210,20 +10334,27 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
         "title": "Update User Role"
       }
     },
     {
       "name": "clockify_create_webhook",
-      "description": "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses.",
+      "description": "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.",
       "group": "webhooks",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "external_side_effect"
@@ -9238,6 +10369,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Validate and preview the webhook payload without creating it",
+            "type": "boolean"
+          },
           "name": {
             "description": "Webhook name (required by live API)",
             "type": "string"
@@ -9296,9 +10431,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "title": "Create Webhook"
       }
     },
@@ -9310,6 +10450,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "external_side_effect",
         "destructive"
@@ -9352,9 +10493,14 @@
       },
       "annotations": {
         "destructiveHint": true,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "external_side_effect",
+          "destructive"
+        ],
         "title": "Delete Webhook"
       }
     },
@@ -9366,6 +10512,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -9400,9 +10547,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "Get Webhook"
       }
     },
@@ -9414,6 +10565,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -9439,9 +10591,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Webhook Events"
       }
     },
@@ -9453,6 +10609,7 @@
       "read_only": true,
       "destructive": false,
       "idempotent": true,
+      "dry_run": false,
       "risk_class": [
         "read"
       ],
@@ -9491,9 +10648,13 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
         "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
         "title": "List Webhooks"
       }
     },
@@ -9505,6 +10666,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "external_side_effect"
@@ -9547,20 +10709,26 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "title": "Test Webhook"
       }
     },
     {
       "name": "clockify_update_webhook",
-      "description": "Update an existing webhook",
+      "description": "Update an existing webhook. Supports dry_run:true.",
       "group": "webhooks",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "external_side_effect"
@@ -9576,6 +10744,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Validate and preview the webhook update without applying it",
+            "type": "boolean"
+          },
           "name": {
             "description": "New name for the webhook",
             "type": "string"
@@ -9636,9 +10808,14 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "title": "Update Webhook"
       }
     }

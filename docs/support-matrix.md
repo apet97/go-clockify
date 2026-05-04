@@ -73,7 +73,7 @@ choice for a given shape of deployment.
 | Small team, shared HTTP endpoint | `streamable_http` | `static_bearer` | `file://` | ✅ Recommended |
 | Small team, shared HTTP endpoint | `http` (legacy) | `static_bearer` | `file://` | ⚠️ Tolerated (no server-initiated notifications) |
 | Multi-tenant shared service | `streamable_http` | `oidc` | `postgres://` | ✅ Recommended |
-| Multi-tenant shared service | `streamable_http` | `forward_auth` | `postgres://` | ⚠️ Tolerated (proxy owns identity; double-check header stripping) |
+| Multi-tenant shared service | `streamable_http` | `forward_auth` | `postgres://` | ⚠️ Tolerated (proxy owns identity; require trusted proxies and tenant header) |
 | Multi-tenant shared service | `http` (legacy) | any | any | ❌ Unsupported (no per-session notifications) |
 | Multi-tenant shared service | any | `static_bearer` | any | ❌ Unsupported (no per-user identity) |
 | Private mesh, low-latency RPC | `grpc` | `oidc` or `mtls` | `postgres://` | ✅ Recommended |

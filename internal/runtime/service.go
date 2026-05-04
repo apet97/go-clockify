@@ -80,6 +80,7 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	}
 	pol.SetTier1Tools(tier1Names)
 	bc.SetTier1Tools(tier1Names)
+	service.Bootstrap = bc
 	pipeline := &enforcement.Pipeline{
 		Policy:     pol,
 		Bootstrap:  bc,
@@ -118,12 +119,19 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 		if err := server.ActivateGroup(group, descriptors); err != nil {
 			return tools.ActivationResult{}, err
 		}
+		activatedTools := toolNames(descriptors)
+		visibleToolNames := server.VisibleToolNames()
+		visibleTools, hiddenByBootstrap, blockedByPolicy := classifyActivatedTools(activatedTools, visibleToolNames, bc)
 		return tools.ActivationResult{
-			Kind:           "group",
-			Name:           group,
-			Group:          group,
-			ToolCount:      len(descriptors),
-			ActivatedTools: toolNames(descriptors),
+			Kind:                            "group",
+			Name:                            group,
+			Group:                           group,
+			ToolCount:                       len(descriptors),
+			ActivatedTools:                  activatedTools,
+			VisibleActivatedTools:           visibleTools,
+			ActivatedToolsHiddenByBootstrap: hiddenByBootstrap,
+			ActivatedToolsBlockedByPolicy:   blockedByPolicy,
+			TotalVisibleTools:               len(visibleToolNames),
 		}, nil
 	}
 
@@ -132,11 +140,18 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 			if err := server.ActivateTier1Tool(name); err != nil {
 				return tools.ActivationResult{}, err
 			}
+			activatedTools := []string{name}
+			visibleToolNames := server.VisibleToolNames()
+			visibleTools, hiddenByBootstrap, blockedByPolicy := classifyActivatedTools(activatedTools, visibleToolNames, bc)
 			return tools.ActivationResult{
-				Kind:           "tool",
-				Name:           name,
-				ToolCount:      1,
-				ActivatedTools: []string{name},
+				Kind:                            "tool",
+				Name:                            name,
+				ToolCount:                       1,
+				ActivatedTools:                  activatedTools,
+				VisibleActivatedTools:           visibleTools,
+				ActivatedToolsHiddenByBootstrap: hiddenByBootstrap,
+				ActivatedToolsBlockedByPolicy:   blockedByPolicy,
+				TotalVisibleTools:               len(visibleToolNames),
 			}, nil
 		}
 		if groupName, ok := tools.Tier2GroupForTool(name); ok {
@@ -147,15 +162,45 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 			if err := server.ActivateGroup(groupName, descriptors); err != nil {
 				return tools.ActivationResult{}, err
 			}
+			activatedTools := toolNames(descriptors)
+			visibleToolNames := server.VisibleToolNames()
+			visibleTools, hiddenByBootstrap, blockedByPolicy := classifyActivatedTools(activatedTools, visibleToolNames, bc)
 			return tools.ActivationResult{
-				Kind:           "tool",
-				Name:           name,
-				Group:          groupName,
-				ToolCount:      len(descriptors),
-				ActivatedTools: toolNames(descriptors),
+				Kind:                            "tool",
+				Name:                            name,
+				Group:                           groupName,
+				ToolCount:                       len(descriptors),
+				ActivatedTools:                  activatedTools,
+				VisibleActivatedTools:           visibleTools,
+				ActivatedToolsHiddenByBootstrap: hiddenByBootstrap,
+				ActivatedToolsBlockedByPolicy:   blockedByPolicy,
+				TotalVisibleTools:               len(visibleToolNames),
 			}, nil
 		}
 		return tools.ActivationResult{}, fmt.Errorf("unknown tool: %s", name)
+	}
+
+	service.DeactivateGroup = func(_ context.Context, group string) (tools.DeactivationResult, error) {
+		if _, ok := tools.Tier2Groups[group]; !ok {
+			return tools.DeactivationResult{}, fmt.Errorf("unknown group: %s", group)
+		}
+		deactivatedTools := server.DeactivateGroup(group)
+		visibleToolNames := server.VisibleToolNames()
+		return tools.DeactivationResult{
+			Kind:              "group",
+			Name:              group,
+			Group:             group,
+			ToolCount:         len(deactivatedTools),
+			DeactivatedTools:  deactivatedTools,
+			TotalVisibleTools: len(visibleToolNames),
+		}, nil
+	}
+
+	service.GroupActivation = func(group string) (bool, string) {
+		if pol == nil || pol.IsGroupAllowed(group) {
+			return true, ""
+		}
+		return false, fmt.Sprintf("group %q is blocked by policy mode %q", group, pol.Mode)
 	}
 
 	return server
@@ -171,6 +216,21 @@ func toolNames(descriptors []mcp.ToolDescriptor) []string {
 		out[i] = d.Tool.Name
 	}
 	return out
+}
+
+func classifyActivatedTools(names []string, visible map[string]bool, bc *bootstrap.Config) (visibleNames, hiddenByBootstrap, blockedByPolicy []string) {
+	for _, name := range names {
+		if visible[name] {
+			visibleNames = append(visibleNames, name)
+			continue
+		}
+		if bc != nil && !bc.IsVisible(name) {
+			hiddenByBootstrap = append(hiddenByBootstrap, name)
+			continue
+		}
+		blockedByPolicy = append(blockedByPolicy, name)
+	}
+	return visibleNames, hiddenByBootstrap, blockedByPolicy
 }
 
 func bootstrapDefaultTenant(store controlplane.Store, cfg config.Config) error {

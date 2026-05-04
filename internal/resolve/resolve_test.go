@@ -139,7 +139,7 @@ func TestResolveUserByNameMultiField(t *testing.T) {
 }
 
 func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
-	pageOne := make([]map[string]any, 50)
+	pageOne := make([]map[string]any, 200)
 	for i := range pageOne {
 		pageOne[i] = map[string]any{"id": "filler", "name": "Filler User", "email": "filler@example.com"}
 	}
@@ -154,8 +154,8 @@ func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
 		if got := q.Get("name"); got != "Dana Scully" {
 			t.Fatalf("expected filtered user lookup, got query %q", r.URL.RawQuery)
 		}
-		if got := q.Get("page-size"); got != "50" {
-			t.Fatalf("expected page-size=50, got %q", got)
+		if got := q.Get("page-size"); got != "200" {
+			t.Fatalf("expected page-size=200, got %q", got)
 		}
 		pagesSeen = append(pagesSeen, q.Get("page"))
 
@@ -180,6 +180,43 @@ func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
 	}
 	if strings.Join(pagesSeen, ",") != "1,2" {
 		t.Fatalf("expected pages 1 and 2, saw %v", pagesSeen)
+	}
+}
+
+func TestResolveUserIDStopsAfterFirstExactMatchPage(t *testing.T) {
+	pageOne := make([]map[string]any, 200)
+	pageOne[0] = map[string]any{"id": "ccc333ddd444eee555fff666", "name": "Dana Scully", "email": "dana@example.com"}
+	for i := 1; i < len(pageOne); i++ {
+		pageOne[i] = map[string]any{"id": "filler", "name": "Dana Prefix", "email": "filler@example.com"}
+	}
+
+	var pagesSeen []string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		pagesSeen = append(pagesSeen, q.Get("page"))
+		if got := q.Get("strict-name-search"); got != "true" {
+			t.Fatalf("expected strict-name-search=true, got %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if q.Get("page") == "1" {
+			json.NewEncoder(w).Encode(pageOne)
+			return
+		}
+		json.NewEncoder(w).Encode([]map[string]any{
+			{"id": "should-not-fetch", "name": "Dana Scully", "email": "duplicate@example.com"},
+		})
+	})
+	defer cleanup()
+
+	id, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "ccc333ddd444eee555fff666" {
+		t.Fatalf("expected first-page user ID, got %s", id)
+	}
+	if strings.Join(pagesSeen, ",") != "1" {
+		t.Fatalf("expected resolver to stop after exact match on page 1, saw pages %v", pagesSeen)
 	}
 }
 

@@ -1,9 +1,11 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -44,6 +46,42 @@ func TestDispatchToolsListSerializedCacheReusesResultAndKeepsRequestID(t *testin
 	}
 	if !reflect.DeepEqual(first.Names, second.Names) {
 		t.Fatalf("cached response changed tool list: first=%v second=%v", first.Names, second.Names)
+	}
+}
+
+func TestRunToolsListUsesSerializedCache(t *testing.T) {
+	var schemaMarshals atomic.Int32
+	server := NewServer("test", []ToolDescriptor{
+		descriptorWithCountingSchema("a_tool", &schemaMarshals),
+	}, nil, nil)
+
+	input := strings.Join([]string{
+		`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`,
+		`{"jsonrpc":"2.0","id":"request-2","method":"tools/list","params":{}}`,
+	}, "\n")
+	var out bytes.Buffer
+	if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := schemaMarshals.Load(); got != 1 {
+		t.Fatalf("stdio tools/list should marshal schema once via serialized cache, got %d", got)
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected initialize + two tools/list responses, got %d lines: %s", len(lines), out.String())
+	}
+	second := decodeSerializedCacheToolsListLine(t, []byte(lines[1]))
+	third := decodeSerializedCacheToolsListLine(t, []byte(lines[2]))
+	if second.ID != float64(1) {
+		t.Fatalf("second response id: got %#v want 1", second.ID)
+	}
+	if third.ID != "request-2" {
+		t.Fatalf("third response id: got %#v want request-2", third.ID)
+	}
+	if !reflect.DeepEqual(second.Names, third.Names) {
+		t.Fatalf("cached stdio tools/list changed names: second=%v third=%v", second.Names, third.Names)
 	}
 }
 
@@ -181,6 +219,26 @@ func dispatchToolsListForSerializedCacheTest(t *testing.T, server *Server, id an
 	if err != nil {
 		t.Fatalf("dispatch tools/list: %v", err)
 	}
+	var resp struct {
+		ID     any             `json:"id"`
+		Result toolsListResult `json:"result"`
+		Error  *RPCError       `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal tools/list response: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("tools/list error: %+v", resp.Error)
+	}
+	names := make([]string, 0, len(resp.Result.Tools))
+	for _, tool := range resp.Result.Tools {
+		names = append(names, tool.Name)
+	}
+	return serializedCacheToolsListResponse{ID: resp.ID, Names: names}
+}
+
+func decodeSerializedCacheToolsListLine(t *testing.T, raw []byte) serializedCacheToolsListResponse {
+	t.Helper()
 	var resp struct {
 		ID     any             `json:"id"`
 		Result toolsListResult `json:"result"`

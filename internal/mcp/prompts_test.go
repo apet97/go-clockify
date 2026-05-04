@@ -59,6 +59,56 @@ func TestPromptsGetSubstitutesArguments(t *testing.T) {
 	}
 }
 
+func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
+	server := newPromptsTestServer()
+	tests := []struct {
+		name        string
+		args        map[string]any
+		want        []string
+		notWant     []string
+		description string
+	}{
+		{
+			name: "log-week-from-calendar",
+			args: map[string]any{
+				"week_start":   "2026-04-06",
+				"calendar_uri": "calendar://work",
+			},
+			want:        []string{"clockify_log_time", "allow_overlap:true"},
+			notWant:     []string{"clockify_add_entry"},
+			description: "calendar prompt should use the canonical finished-entry helper",
+		},
+		{
+			name:        "weekly-review",
+			args:        map[string]any{"week_start": "2026-04-06"},
+			want:        []string{"clockify_timesheet_review", "clockify_weekly_summary"},
+			description: "weekly review should start with the structured review helper",
+		},
+		{
+			name:        "find-duplicate-entries",
+			args:        map[string]any{"lookback_days": 14},
+			want:        []string{"clockify_timesheet_review", "overlap issues"},
+			notWant:     []string{"clockify_list_entries"},
+			description: "duplicate scan should use review issues instead of manual entry loops",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			text := getPromptText(t, server, tt.name, tt.args)
+			for _, want := range tt.want {
+				if !strings.Contains(text, want) {
+					t.Fatalf("%s: missing %q in %q", tt.description, want, text)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(text, notWant) {
+					t.Fatalf("%s: unexpected %q in %q", tt.description, notWant, text)
+				}
+			}
+		})
+	}
+}
+
 func TestPromptsGetMissingRequiredArgument(t *testing.T) {
 	server := newPromptsTestServer()
 	resp := server.handle(context.Background(), Request{
@@ -98,4 +148,24 @@ func TestInitializeAdvertisesPromptsCapability(t *testing.T) {
 	if prompts["listChanged"] != true {
 		t.Fatalf("listChanged flag: %+v", prompts)
 	}
+}
+
+func getPromptText(t *testing.T, server *Server, name string, args map[string]any) string {
+	t.Helper()
+	resp := server.handle(context.Background(), Request{
+		JSONRPC: "2.0", ID: 1, Method: "prompts/get",
+		Params: map[string]any{
+			"name":      name,
+			"arguments": args,
+		},
+	})
+	if resp.Error != nil {
+		t.Fatalf("error: %+v", resp.Error)
+	}
+	result := resp.Result.(map[string]any)
+	messages, _ := result["messages"].([]PromptMessage)
+	if len(messages) != 1 {
+		t.Fatalf("messages: %+v", messages)
+	}
+	return messages[0].Content.Text
 }

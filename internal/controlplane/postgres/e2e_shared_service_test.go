@@ -105,10 +105,19 @@ func newFakeClockify(t *testing.T) *httptest.Server {
 	t.Helper()
 	fc := &fakeClockify{}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/user", fc.serveCurrentUser)
 	mux.HandleFunc("/v1/workspaces/", fc.serveWorkspaceScoped)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+func (fc *fakeClockify) serveCurrentUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, clockify.User{ID: "user-svc-e2e", Name: "Service E2E"})
 }
 
 func (fc *fakeClockify) serveWorkspaceScoped(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +176,12 @@ func (fc *fakeClockify) serveWorkspaceScoped(w http.ResponseWriter, r *http.Requ
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+	case "user":
+		if r.Method == http.MethodGet && len(parts) >= 4 && parts[3] == "time-entries" {
+			writeJSON(w, []clockify.TimeEntry{})
+			return
+		}
+		http.NotFound(w, r)
 	default:
 		http.NotFound(w, r)
 	}

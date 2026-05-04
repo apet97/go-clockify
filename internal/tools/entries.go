@@ -3,12 +3,12 @@ package tools
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
@@ -41,12 +41,12 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 
 	projectFilter := strings.TrimSpace(stringArg(args, "project"))
 	if projectFilter != "" {
-		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, err := s.listEntriesWithProjectFilter(ctx, baseQuery, projectFilter, page, pageSize)
+		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, resolvedProjectID, err := s.listEntriesWithProjectFilter(ctx, baseQuery, projectFilter, page, pageSize)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
 
-		meta := map[string]any{
+		meta := addPaginationMeta(map[string]any{
 			"workspaceId":    wsID,
 			"userId":         userID,
 			"count":          len(entries),
@@ -56,6 +56,9 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 			"filteredCount":  filteredCount,
 			"pagesFetched":   pagesFetched,
 			"entriesScanned": entriesScanned,
+		}, args, page, pageSize)
+		if resolvedProjectID != "" {
+			meta["projectFilterResolvedId"] = resolvedProjectID
 		}
 		return ok("clockify_list_entries", entries, meta), nil
 	}
@@ -72,13 +75,13 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	meta := map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
 		"count":       len(entries),
 		"page":        page,
 		"pageSize":    pageSize,
-	}
+	}, args, page, pageSize)
 	return ok("clockify_list_entries", entries, meta), nil
 }
 
@@ -128,7 +131,7 @@ func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	meta := map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
 		"count":       len(entries),
@@ -136,7 +139,7 @@ func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (Result
 		"pageSize":    pageSize,
 		"rangeStart":  timeparse.FormatISO(startOfDay),
 		"rangeEnd":    timeparse.FormatISO(nowTime),
-	}
+	}, args, page, pageSize)
 	return ok("clockify_today_entries", entries, meta), nil
 }
 
@@ -156,10 +159,14 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	}
 
 	endRaw := stringArg(args, "end")
+	var endTime time.Time
 	if endRaw != "" {
-		endTime, err := timeparse.ParseDatetime(endRaw, time.UTC)
+		endTime, err = timeparse.ParseDatetime(endRaw, time.UTC)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
+		}
+		if !endTime.After(startTime) {
+			return ResultEnvelope{}, fmt.Errorf("end must be after start")
 		}
 		payload["end"] = timeparse.FormatISO(endTime)
 	}
@@ -177,9 +184,9 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	projectID := stringArg(args, "project_id")
 	projectRef := stringArg(args, "project")
 	if projectID == "" && projectRef != "" {
-		projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_resolve_name to disambiguate project names before retrying", err)
 		}
 	}
 	if projectID != "" {
@@ -198,6 +205,16 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: dryrun.Preview("clockify_add_entry", args)}, nil
 	}
+	if !endTime.IsZero() {
+		if err := s.rejectEntryOverlap(ctx, startTime, endTime, args); err != nil {
+			return ResultEnvelope{}, err
+		}
+	}
+
+	dedupeMeta, err := s.addEntryDedupeMeta(ctx, desc, projectID, payload)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -212,8 +229,61 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if projectID != "" {
 		meta["projectId"] = projectID
 	}
+	if len(dedupeMeta) > 0 {
+		meta["dedupe"] = dedupeMeta
+	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
 	return ok("clockify_add_entry", entry, meta), nil
+}
+
+func (s *Service) addEntryDedupeMeta(ctx context.Context, description, projectID string, payload map[string]any) (map[string]any, error) {
+	if s.DedupeConfig == nil || s.DedupeConfig.Mode == dedupe.Off {
+		return nil, nil
+	}
+	cfg := *s.DedupeConfig
+	lookback := cfg.LookbackCount
+	if lookback <= 0 {
+		lookback = 25
+	}
+	if lookback > 200 {
+		lookback = 200
+	}
+	entries, _, _, err := s.listEntriesWithQuery(ctx, map[string]string{
+		"page":      "1",
+		"page-size": strconv.Itoa(lookback),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("dedupe lookback failed: %w", err)
+	}
+
+	meta := map[string]any{}
+	startISO, _ := payload["start"].(string)
+	if dup := dedupe.CheckDuplicate(entries, description, projectID, startISO); dup.IsDuplicate {
+		if cfg.Mode == dedupe.Block {
+			return nil, fmt.Errorf("duplicate time entry blocked: existing entry %s matches description, project, and start minute", dup.ExistingEntryID)
+		}
+		meta["duplicateOf"] = dup.ExistingEntryID
+	}
+
+	if cfg.OverlapCheck {
+		endISO, _ := payload["end"].(string)
+		if endISO != "" {
+			if overlap := dedupe.CheckOverlap(entries, projectID, startISO, endISO); overlap.HasOverlap {
+				if cfg.Mode == dedupe.Block {
+					return nil, fmt.Errorf("overlapping time entry blocked: existing entry %s overlaps the requested range", overlap.OverlapEntryID)
+				}
+				meta["overlapWith"] = overlap.OverlapEntryID
+				if overlap.Description != "" {
+					meta["overlapDescription"] = overlap.Description
+				}
+			}
+		}
+	}
+
+	if len(meta) == 0 {
+		return nil, nil
+	}
+	return meta, nil
 }
 
 // UpdateEntry performs a fetch-then-update of a time entry, merging caller fields
@@ -238,12 +308,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
-
-	loc := s.DefaultTimezone
-	if loc == nil {
-		loc = time.UTC
-	}
-	oldWeeklyURIs := weeklyReportURIsForEntry(wsID, existing.TimeInterval.Start, existing.TimeInterval.End, loc)
+	previous := existing
 
 	// Track changes
 	changedFields := make([]string, 0, 6)
@@ -258,9 +323,9 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	projectID := stringArg(args, "project_id")
 	projectRef := stringArg(args, "project")
 	if projectID == "" && projectRef != "" {
-		projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_resolve_name to disambiguate project names before retrying", err)
 		}
 	}
 	if projectID != "" && projectID != existing.ProjectID {
@@ -328,13 +393,8 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	s.emitEntryAndWeeklyWithState(ctx, wsID, updated)
-	newWeeklyURIs := weeklyReportURIsForEntry(wsID, updated.TimeInterval.Start, updated.TimeInterval.End, loc)
-	for _, oldURI := range oldWeeklyURIs {
-		if !slices.Contains(newWeeklyURIs, oldURI) {
-			s.emitResourceUpdate(ctx, oldURI)
-		}
-	}
+	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
+	s.emitWeeklyReportsForEntryChange(ctx, wsID, &previous, &updated)
 	return ok("clockify_update_entry", updated, meta), nil
 }
 
@@ -373,13 +433,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	s.emitResourceDeleted(entryResourceURI(wsID, entryID))
-	loc := s.DefaultTimezone
-	if loc == nil {
-		loc = time.UTC
-	}
-	for _, uri := range weeklyReportURIsForEntry(wsID, entry.TimeInterval.Start, entry.TimeInterval.End, loc) {
-		s.emitResourceUpdate(ctx, uri)
-	}
+	s.emitWeeklyReportsForEntryChange(ctx, wsID, &entry, nil)
 	return ok("clockify_delete_entry", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
 }
 
@@ -402,12 +456,17 @@ func (s *Service) listEntriesWithQuery(ctx context.Context, query map[string]str
 	return entries, wsID, userID, nil
 }
 
-func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery map[string]string, projectFilter string, page, pageSize int) ([]clockify.TimeEntry, string, string, int, int, int, error) {
+func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery map[string]string, projectFilter string, page, pageSize int) ([]clockify.TimeEntry, string, string, int, int, int, string, error) {
 	const upstreamPageSize = 200
 
 	wsID, userID, path, err := s.currentUserEntriesPath(ctx)
 	if err != nil {
-		return nil, "", "", 0, 0, 0, err
+		return nil, "", "", 0, 0, 0, "", err
+	}
+
+	resolvedProjectID, resolveErr := s.resolveProjectID(ctx, wsID, projectFilter)
+	if resolveErr != nil {
+		resolvedProjectID = ""
 	}
 
 	selected := make([]clockify.TimeEntry, 0, pageSize)
@@ -417,23 +476,26 @@ func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery ma
 	startOffset := (page - 1) * pageSize
 	endOffset := startOffset + pageSize
 
+	query := make(map[string]string, len(baseQuery)+3)
+	for k, v := range baseQuery {
+		query[k] = v
+	}
+	query["page-size"] = strconv.Itoa(upstreamPageSize)
+	if resolvedProjectID != "" {
+		query["project"] = resolvedProjectID
+	}
 	for upstreamPage := 1; upstreamPage <= aggregatePageSafetyStop; upstreamPage++ {
-		query := make(map[string]string, len(baseQuery)+2)
-		for k, v := range baseQuery {
-			query[k] = v
-		}
 		query["page"] = strconv.Itoa(upstreamPage)
-		query["page-size"] = strconv.Itoa(upstreamPageSize)
 
 		var batch []clockify.TimeEntry
 		if err := s.Client.Get(ctx, path, query, &batch); err != nil {
-			return nil, "", "", 0, 0, 0, err
+			return nil, "", "", 0, 0, 0, "", err
 		}
 		pagesFetched++
 		entriesScanned += len(batch)
 
 		for _, entry := range batch {
-			if !entryMatchesProjectFilter(entry, projectFilter) {
+			if resolvedProjectID == "" && !entryMatchesProjectFilter(entry, projectFilter) {
 				continue
 			}
 			if filteredCount >= startOffset && filteredCount < endOffset {
@@ -443,11 +505,11 @@ func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery ma
 		}
 
 		if len(batch) < upstreamPageSize {
-			return selected, wsID, userID, filteredCount, pagesFetched, entriesScanned, nil
+			return selected, wsID, userID, filteredCount, pagesFetched, entriesScanned, resolvedProjectID, nil
 		}
 	}
 
-	return nil, "", "", 0, 0, 0, fmt.Errorf("list entries project filter pagination safety stop reached at %d pages; narrow the date range", aggregatePageSafetyStop)
+	return nil, "", "", 0, 0, 0, "", fmt.Errorf("list entries project filter pagination safety stop reached at %d pages; narrow the date range", aggregatePageSafetyStop)
 }
 
 func entryMatchesProjectFilter(entry clockify.TimeEntry, projectFilter string) bool {

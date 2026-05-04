@@ -137,10 +137,11 @@ func TestAddEntry_CrossWeekSpanEmitsBothWeeklyReports(t *testing.T) {
 	svc.EmitResourceUpdate = emit.hook()
 
 	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":       "2026-04-12T23:00:00Z",
-		"end":         "2026-04-13T01:00:00Z",
-		"description": "boundary",
-		"dry_run":     false,
+		"start":         "2026-04-12T23:00:00Z",
+		"end":           "2026-04-13T01:00:00Z",
+		"description":   "boundary",
+		"dry_run":       false,
+		"allow_overlap": true,
 	})
 	if err != nil {
 		t.Fatalf("AddEntry: %v", err)

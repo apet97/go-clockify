@@ -72,6 +72,12 @@ type Config struct {
 	OIDCAudience               string
 	OIDCJWKSURL                string
 	OIDCJWKSPath               string
+	// OIDCJWKSAllowPrivate permits an explicit MCP_OIDC_JWKS_URL to
+	// target loopback/private/reserved addresses. Default false blocks
+	// local-network and metadata-service SSRF probes caused by
+	// misconfigured JWKS overrides. Wired from
+	// MCP_OIDC_JWKS_ALLOW_PRIVATE=1.
+	OIDCJWKSAllowPrivate bool
 	// OIDCResourceURI is the canonical URI clients use to address this
 	// MCP server. When set, every OIDC token must list this URI in its
 	// audience claim — RFC 8707 / MCP OAuth 2.1 resource indicator
@@ -143,6 +149,12 @@ type Config struct {
 	RequireTenantClaim   bool
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
+	// RequireForwardTenantClaim, when true, makes forward_auth reject
+	// requests missing the forward tenant header instead of falling back
+	// to MCP_DEFAULT_TENANT_ID. Wired from
+	// MCP_REQUIRE_FORWARD_TENANT_CLAIM=1; hosted profiles set it by
+	// default so proxy header drift cannot collapse tenants.
+	RequireForwardTenantClaim bool
 	// ForwardAuthTrustedProxies is the parsed CIDR allow-list for
 	// the forward_auth authenticator. When non-empty, the
 	// authenticator rejects any request whose source address is not
@@ -446,6 +458,7 @@ func Load() (Config, error) {
 	cfg.OIDCAudience = strings.TrimSpace(os.Getenv("MCP_OIDC_AUDIENCE"))
 	cfg.OIDCJWKSURL = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_URL"))
 	cfg.OIDCJWKSPath = strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_PATH"))
+	cfg.OIDCJWKSAllowPrivate = os.Getenv("MCP_OIDC_JWKS_ALLOW_PRIVATE") == "1"
 	cfg.OIDCResourceURI = strings.TrimSpace(os.Getenv("MCP_RESOURCE_URI"))
 	if v := strings.TrimSpace(os.Getenv("MCP_OIDC_VERIFY_CACHE_TTL")); v != "" {
 		d, err := time.ParseDuration(v)
@@ -469,12 +482,16 @@ func Load() (Config, error) {
 	}
 	cfg.ForwardTenantHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_TENANT_HEADER"))
 	cfg.ForwardSubjectHeader = strings.TrimSpace(os.Getenv("MCP_FORWARD_SUBJECT_HEADER"))
+	cfg.RequireForwardTenantClaim = os.Getenv("MCP_REQUIRE_FORWARD_TENANT_CLAIM") == "1"
 	if raw := strings.TrimSpace(os.Getenv("MCP_FORWARD_AUTH_TRUSTED_PROXIES")); raw != "" {
 		nets, err := parseCIDRList(raw)
 		if err != nil {
 			return Config{}, fmt.Errorf("MCP_FORWARD_AUTH_TRUSTED_PROXIES: %w", err)
 		}
 		cfg.ForwardAuthTrustedProxies = nets
+	}
+	if cfg.AuthMode == "forward_auth" && len(cfg.ForwardAuthTrustedProxies) == 0 && !isLoopbackBind(bindForForwardAuth(cfg)) {
+		return Config{}, fmt.Errorf("MCP_AUTH_MODE=forward_auth with %s=%q requires MCP_FORWARD_AUTH_TRUSTED_PROXIES to be set (or bind to loopback)", bindEnvForForwardAuth(cfg), bindForForwardAuth(cfg))
 	}
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
 	cfg.MTLSTenantSource = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_SOURCE"))
@@ -564,6 +581,9 @@ func Load() (Config, error) {
 	}
 
 	cfg.AllowAnyOrigin = os.Getenv("MCP_ALLOW_ANY_ORIGIN") == "1"
+	if cfg.AllowAnyOrigin && isHostedProfile(profileName) {
+		return Config{}, fmt.Errorf("MCP_ALLOW_ANY_ORIGIN=1 is refused under MCP_PROFILE=%s; configure MCP_ALLOWED_ORIGINS instead", profileName)
+	}
 	strictHostCheck, err := optionalBoolEnv("MCP_STRICT_HOST_CHECK")
 	if err != nil {
 		return Config{}, err
@@ -950,6 +970,20 @@ func isLoopbackBind(bind string) bool {
 		return false
 	}
 	return isLoopbackHost(host)
+}
+
+func bindForForwardAuth(cfg Config) string {
+	if cfg.Transport == "grpc" {
+		return cfg.GRPCBind
+	}
+	return cfg.HTTPBind
+}
+
+func bindEnvForForwardAuth(cfg Config) string {
+	if cfg.Transport == "grpc" {
+		return "MCP_GRPC_BIND"
+	}
+	return "MCP_HTTP_BIND"
 }
 
 func optionalBoolEnv(key string) (bool, error) {

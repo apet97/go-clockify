@@ -8,7 +8,7 @@ Tools are categorized based on their impact on data and their required privilege
 
 ### 1. Agent-Safe Tools (Safe for general use)
 *   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_timer_status`, `clockify_timesheet_review`, `clockify_timesheet_fill_gap`.
-*   **Contextual Information:** `clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`, `clockify_get_workspace`.
+*   **Contextual Information:** `clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`, `clockify_activate_group`, `clockify_activate_tool`, `clockify_deactivate_group`, `clockify_search_tools`, `clockify_get_workspace`.
 *   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`, `clockify_timesheet_review`.
 *   **Discovery:** `clockify_list_projects`, `clockify_list_tasks`, `clockify_list_clients`.
 
@@ -39,8 +39,16 @@ The categorisation above is reflected at runtime on every
     permission-change record carries the new role and a billing
     record carries the quantity / unit_price / status that defines
     the action.
+*   `annotations.riskClass` — the client-visible `tools/list` form
+    of the same taxonomy, emitted as lower-case strings (`read`,
+    `write`, `billing`, `admin`, `permission_change`,
+    `external_side_effect`, `destructive`) so agents can plan around
+    billing/admin/external-side-effect risk before making a tool call.
+*   `annotations.dryRun` — whether the tool schema accepts
+    `dry_run:true`, also rendered as the `Dry-run` column in
+    `docs/tool-catalog.md`.
 
-Both fields are matrix-tested
+These fields are matrix-tested
 (`internal/tools/risk_class_test.go`) so a new tool added without
 a class falls the build, and the audit recorder consumes
 `AuditKeys` end-to-end
@@ -95,4 +103,4 @@ CLOCKIFY_POLICY=time_tracking_safe
 CLOCKIFY_POLICY=safe_core
 ```
 
-To further restrict tools, use `CLOCKIFY_BOOTSTRAP_MODE=minimal` and only activate the required tools at runtime using `clockify_search_tools`.
+To further restrict tools, use `CLOCKIFY_BOOTSTRAP_MODE=minimal`, discover tools with `clockify_list_tools`, and activate only the required groups at runtime using `clockify_activate_group` or `clockify_activate_tool`.

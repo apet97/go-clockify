@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"math"
 	"math/big"
@@ -99,6 +100,15 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 		httpClient: &http.Client{
 			Timeout:   timeout,
 			Transport: transport,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				if len(via) > 0 && !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
+					return fmt.Errorf("refusing cross-host redirect from %s to %s", via[0].URL.Host, req.URL.Host)
+				}
+				return nil
+			},
 		},
 		maxRetries: maxRetries,
 		userAgent:  "clockify-mcp-go/dev",
@@ -247,31 +257,114 @@ func encodeMultipart(form url.Values) ([]byte, string, error) {
 	return buf.Bytes(), w.FormDataContentType(), nil
 }
 
+const (
+	defaultListAllPageSize = 200
+	defaultListAllMaxRows  = 5000
+	listAllSafetyStopPages = 1000
+)
+
+type ListAllOptions struct {
+	// MaxRows bounds total decoded rows before ListAll/ListAllFunc fail
+	// closed. 0 uses the default production cap.
+	MaxRows int
+}
+
+// PaginationCapError reports that a paginated scan exceeded its row cap.
+type PaginationCapError struct {
+	Path        string
+	RowsScanned int
+	MaxRows     int
+	Page        int
+	PageSize    int
+}
+
+func (e *PaginationCapError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return fmt.Sprintf(
+		"pagination row cap exceeded: path=%s rows_scanned=%d max_rows=%d page=%d page-size=%d",
+		e.Path,
+		e.RowsScanned,
+		e.MaxRows,
+		e.Page,
+		e.PageSize,
+	)
+}
+
+// ListAll fetches every page into a single slice, bounded by the default
+// pagination row cap.
 func ListAll[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string) ([]T, error) {
-	page := 1
+	return ListAllWithOptions[T](ctx, c, path, baseQuery, ListAllOptions{})
+}
+
+// ListAllWithOptions fetches every page into a single slice using opts.
+func ListAllWithOptions[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string, opts ListAllOptions) ([]T, error) {
 	all := make([]T, 0)
+	if err := ListAllFuncWithOptions(ctx, c, path, baseQuery, opts, func(batch []T) error {
+		all = append(all, batch...)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return all, nil
+}
+
+// ListAllFunc scans pages and invokes onPage for each non-empty page without
+// retaining earlier pages.
+func ListAllFunc[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string, onPage func([]T) error) error {
+	return ListAllFuncWithOptions[T](ctx, c, path, baseQuery, ListAllOptions{}, onPage)
+}
+
+// ListAllFuncWithOptions scans pages using opts and invokes onPage for each
+// non-empty page without retaining earlier pages.
+func ListAllFuncWithOptions[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string, opts ListAllOptions, onPage func([]T) error) error {
+	if onPage == nil {
+		return fmt.Errorf("pagination page callback is nil: path=%s", path)
+	}
+	maxRows := opts.MaxRows
+	if maxRows <= 0 {
+		maxRows = defaultListAllMaxRows
+	}
+	page := 1
+	rowsScanned := 0
 	for {
 		query := cloneQuery(baseQuery)
 		query["page"] = strconv.Itoa(page)
 		if _, ok := query["page-size"]; !ok {
-			query["page-size"] = "50"
+			query["page-size"] = strconv.Itoa(defaultListAllPageSize)
 		}
+		pageSize := atoiDefault(query["page-size"], defaultListAllPageSize)
 
 		var batch []T
 		if err := c.Get(ctx, path, query, &batch); err != nil {
-			return nil, err
+			return err
 		}
-		all = append(all, batch...)
-		if len(batch) == 0 || len(batch) < atoiDefault(query["page-size"], 50) {
+		rowsScanned += len(batch)
+		if rowsScanned > maxRows {
+			return &PaginationCapError{
+				Path:        path,
+				RowsScanned: rowsScanned,
+				MaxRows:     maxRows,
+				Page:        page,
+				PageSize:    pageSize,
+			}
+		}
+		if len(batch) > 0 {
+			if err := onPage(batch); err != nil {
+				return err
+			}
+		}
+		if len(batch) == 0 || len(batch) < pageSize {
 			break
 		}
-		page++
-		if page > 1000 {
-			return nil, fmt.Errorf("pagination safety stop reached")
+		if page >= listAllSafetyStopPages {
+			return fmt.Errorf("pagination safety stop reached: path=%s page-size=%d", path, pageSize)
 		}
+		page++
 	}
 
-	return all, nil
+	return nil
 }
 
 func (c *Client) doJSON(ctx context.Context, baseURL, method, path string, query map[string]string, body any, out any) error {
@@ -419,10 +512,11 @@ func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint str
 
 		var retryAfter time.Duration
 		if ra := resp.Header.Get("Retry-After"); ra != "" {
-			if s, err := strconv.Atoi(ra); err == nil {
-				retryAfter = time.Duration(s) * time.Second
-			} else if d, err := time.Parse(time.RFC1123, ra); err == nil {
-				retryAfter = time.Until(d)
+			if d, ok := parseRetryAfter(ra); ok {
+				retryAfter = d
+			} else {
+				metrics.UpstreamRetryAfterUnparseableTotal.Inc(endpoint)
+				slog.Warn("retry_after_unparseable", "endpoint", endpoint, "raw", truncateRetryAfterForLog(ra))
 			}
 		}
 
@@ -506,6 +600,28 @@ func isRetryableStatus(code int) bool {
 		code == http.StatusBadGateway ||
 		code == http.StatusServiceUnavailable ||
 		code == http.StatusGatewayTimeout
+}
+
+func parseRetryAfter(raw string) (time.Duration, bool) {
+	if raw == "" {
+		return 0, false
+	}
+	if seconds, err := strconv.Atoi(raw); err == nil {
+		return time.Duration(seconds) * time.Second, true
+	}
+	for _, layout := range []string{time.RFC1123, time.RFC1123Z, time.RFC3339} {
+		if at, err := time.Parse(layout, raw); err == nil {
+			return time.Until(at), true
+		}
+	}
+	return 0, false
+}
+
+func truncateRetryAfterForLog(raw string) string {
+	if len(raw) <= 64 {
+		return raw
+	}
+	return raw[:64]
 }
 
 func backoff(attempt int) time.Duration {

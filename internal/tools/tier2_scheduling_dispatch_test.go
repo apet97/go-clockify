@@ -168,7 +168,7 @@ func TestTier2Dispatch_Scheduling_AssignmentsListAndGet(t *testing.T) {
 	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "scheduling",
 		Tool:     "clockify_get_assignment",
-		Args:     map[string]any{"assignment_id": "a-1", "start": "2026-04-01T00:00:00Z", "end": "2026-04-07T23:59:59Z"},
+		Args:     map[string]any{"assignment_id": "a-1"},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {
