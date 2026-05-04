@@ -34,7 +34,7 @@ Clockify launch candidate** promotion.
    workspace** is wired. Read this before any live Clockify call.
 6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
    — historical continuation packet for Claude Code after PR #51
-   merged. Use `docs/agent-handoff.md` for the current post-PR #62
+   merged. Use `docs/agent-handoff.md` for the current post-PR #63
    launch state.
 
 If a contributor maintains a workstation-private `CLAUDE.md` at the
@@ -44,7 +44,14 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Current launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+- **Current main baseline:** `0960bfa03db143778deb59f9b9522012116c9c9b`
+  (`chore(review): harden MCP server readiness`). This records the
+  post-PR #63 local/CI remediation wave for review-found performance,
+  security, tests, stale-context, generated catalog/schema, and
+  operator/agent documentation gaps. It does **not** add live Clockify
+  evidence and does **not** close Group 1, Group 6, or Group 7 launch
+  blockers.
+- **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   full sacrificial-workspace live API campaign refresh: the documented
   invite-user route is pinned by a no-email validation probe, stale

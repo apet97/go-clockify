@@ -100,6 +100,8 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 		query["name"] = ref
 		query["strict-name-search"] = "true"
 	}
+	matches := 0
+	matchedID := ""
 	for page := 1; ; page++ {
 		query["page"] = strconv.Itoa(page)
 		var users []map[string]any
@@ -107,29 +109,31 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 			return "", err
 		}
 
-		var matches []map[string]any
 		for _, user := range users {
 			name, _ := user["name"].(string)
 			email, _ := user["email"].(string)
+			matched := false
 			if isEmail {
 				if strings.EqualFold(email, ref) {
-					matches = append(matches, user)
+					matched = true
 				}
 			} else {
 				if strings.EqualFold(name, ref) || strings.EqualFold(email, ref) {
-					matches = append(matches, user)
+					matched = true
 				}
 			}
-		}
-		if len(matches) > 1 {
-			return "", fmt.Errorf("multiple users match '%s' (%d found). Use the full user ID instead", ref, len(matches))
-		}
-		if len(matches) == 1 {
-			id, _ := matches[0]["id"].(string)
+			if !matched {
+				continue
+			}
+			matches++
+			if matches > 1 {
+				return "", fmt.Errorf("multiple users match '%s' (%d found). Use the full user ID instead", ref, matches)
+			}
+			id, _ := user["id"].(string)
 			if id == "" {
 				return "", fmt.Errorf("user response missing id")
 			}
-			return id, nil
+			matchedID = id
 		}
 		if len(users) == 0 || len(users) < pageSize {
 			break
@@ -137,6 +141,9 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 		if page >= 1000 {
 			return "", fmt.Errorf("pagination safety stop reached: path=%s page-size=%d", path, pageSize)
 		}
+	}
+	if matchedID != "" {
+		return matchedID, nil
 	}
 	return "", fmt.Errorf("user '%s' not found. Use clockify_list_users to see available users", ref)
 }

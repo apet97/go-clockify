@@ -291,8 +291,9 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		clearWriteDeadline := applyStreamablePOSTWriteDeadline(w, opts.POSTWriteTimeout)
-		defer clearWriteDeadline()
+		deadlineWriter := newLazyStreamablePOSTWriteDeadline(w, opts.POSTWriteTimeout)
+		defer deadlineWriter.clear()
+		w = deadlineWriter
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
 		if err != nil {
 			logHTTPAuthFailure("streamable_http", r, err)
@@ -391,19 +392,45 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 	})
 }
 
-func applyStreamablePOSTWriteDeadline(w http.ResponseWriter, timeout time.Duration) func() {
+type lazyStreamablePOSTWriteDeadline struct {
+	http.ResponseWriter
+	timeout time.Duration
+	applied bool
+}
+
+func newLazyStreamablePOSTWriteDeadline(w http.ResponseWriter, timeout time.Duration) *lazyStreamablePOSTWriteDeadline {
 	if timeout == 0 {
 		timeout = defaultStreamablePOSTWriteTimeout
 	}
-	if timeout < 0 {
-		return func() {}
+	return &lazyStreamablePOSTWriteDeadline{ResponseWriter: w, timeout: timeout}
+}
+
+func (w *lazyStreamablePOSTWriteDeadline) WriteHeader(statusCode int) {
+	w.apply()
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *lazyStreamablePOSTWriteDeadline) Write(p []byte) (int, error) {
+	w.apply()
+	return w.ResponseWriter.Write(p)
+}
+
+func (w *lazyStreamablePOSTWriteDeadline) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+func (w *lazyStreamablePOSTWriteDeadline) apply() {
+	if w.applied || w.timeout < 0 {
+		return
 	}
-	rc := http.NewResponseController(w)
-	if err := rc.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
-		return func() {}
+	if err := http.NewResponseController(w.ResponseWriter).SetWriteDeadline(time.Now().Add(w.timeout)); err == nil {
+		w.applied = true
 	}
-	return func() {
-		_ = rc.SetWriteDeadline(time.Time{})
+}
+
+func (w *lazyStreamablePOSTWriteDeadline) clear() {
+	if w.applied {
+		_ = http.NewResponseController(w.ResponseWriter).SetWriteDeadline(time.Time{})
 	}
 }
 

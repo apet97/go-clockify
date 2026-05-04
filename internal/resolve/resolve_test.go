@@ -183,7 +183,7 @@ func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
 	}
 }
 
-func TestResolveUserIDStopsAfterFirstExactMatchPage(t *testing.T) {
+func TestResolveUserIDScansAfterFirstExactMatchForAmbiguity(t *testing.T) {
 	pageOne := make([]map[string]any, 200)
 	pageOne[0] = map[string]any{"id": "ccc333ddd444eee555fff666", "name": "Dana Scully", "email": "dana@example.com"}
 	for i := 1; i < len(pageOne); i++ {
@@ -208,15 +208,15 @@ func TestResolveUserIDStopsAfterFirstExactMatchPage(t *testing.T) {
 	})
 	defer cleanup()
 
-	id, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	_, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
+	if err == nil {
+		t.Fatal("expected ambiguous user error")
 	}
-	if id != "ccc333ddd444eee555fff666" {
-		t.Fatalf("expected first-page user ID, got %s", id)
+	if !strings.Contains(err.Error(), "multiple users match") {
+		t.Fatalf("expected multiple-match error, got %v", err)
 	}
-	if strings.Join(pagesSeen, ",") != "1" {
-		t.Fatalf("expected resolver to stop after exact match on page 1, saw pages %v", pagesSeen)
+	if strings.Join(pagesSeen, ",") != "1,2" {
+		t.Fatalf("expected resolver to scan page 2 after first exact match, saw pages %v", pagesSeen)
 	}
 }
 

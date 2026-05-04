@@ -291,11 +291,13 @@ What is missing for tier 3 is intentionally narrow:
 In priority order — closing the lower-numbered ones first
 unblocks the next.
 
-Only external evidence blockers remain after PR #62 merged to `main`
-at `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: scheduled
+Only external evidence blockers remain after PR #63 merged to `main`
+at `0960bfa03db143778deb59f9b9522012116c9c9b`: scheduled
 live-contract cron greens, candidate-tag security walk-through
 evidence, and release/sigstore/SLSA evidence. The PR #59 through
-PR #62 manual live-probe work is coverage evidence only.
+PR #62 manual live-probe work remains coverage evidence only; PR #63
+was a local/CI review-remediation wave and did not add live Clockify
+evidence.
 
 1. **Scheduled live-contract cron evidence (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
