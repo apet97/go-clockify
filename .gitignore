@@ -29,6 +29,8 @@ desktop.ini
 .planning/
 .claude-campaign/
 .claude-campaign-worktrees/
+# Local duplicate clone sometimes created during agent handoffs.
+/go-clockify/
 # Per-workstation Claude Code context. Contributors may keep their
 # own CLAUDE.md at the repo root; it carries machine-specific
 # preferences and is not part of the shipped project. AGENTS.md, by

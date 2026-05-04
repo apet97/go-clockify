@@ -28,12 +28,13 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_tags", out, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_tags", out, meta), nil
 }
 
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

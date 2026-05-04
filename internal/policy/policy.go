@@ -183,9 +183,14 @@ func sortedKeys(m map[string]bool) []string {
 
 func introspectionList() []string {
 	return []string{
+		"clockify_activate_group",
+		"clockify_activate_tool",
 		"clockify_current_user",
+		"clockify_deactivate_group",
+		"clockify_list_tools",
 		"clockify_list_workspaces",
 		"clockify_policy_info",
+		"clockify_resolve_name",
 		"clockify_resolve_debug",
 		"clockify_search_tools",
 		"clockify_whoami",
@@ -239,7 +244,9 @@ func cloneBoolMap(in map[string]bool) map[string]bool {
 func isIntrospection(name string) bool {
 	switch name {
 	case "clockify_whoami", "clockify_current_user", "clockify_list_workspaces",
-		"clockify_search_tools", "clockify_policy_info", "clockify_resolve_debug":
+		"clockify_list_tools", "clockify_search_tools", "clockify_activate_group",
+		"clockify_activate_tool", "clockify_deactivate_group",
+		"clockify_policy_info", "clockify_resolve_name", "clockify_resolve_debug":
 		return true
 	}
 	return false

@@ -44,7 +44,7 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Post-PR #62 launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
+- **Current launch-state baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   full sacrificial-workspace live API campaign refresh: the documented
   invite-user route is pinned by a no-email validation probe, stale
@@ -52,18 +52,13 @@ rules live in this file and the docs above.
   overrides now fail if they target ghost descriptor names. This is
   manual campaign coverage only; it does **not** close Group 1,
   Group 6, or Group 7 launch blockers.
-- **Post-PR #60 launch-state baseline:** `4e69c7a1db8011055187cf9892426ed48fc8e572`
-  (`docs(handoff): update post-PR59 launch state`). This records
-  the post-PR #59 121-tool manual live-probe coverage plus the
-  follow-up docs stabilization. If this file is read from a later
-  local continuation commit, Git HEAD may be newer; `4e69c7a...`
-  remains the baseline to cite for the PR #60 docs stabilization.
-- **PR #51 merge tip:** `adce316d60644fe51365086aba186227c9ae3977`
-  (`docs(launch): record bench comparison evidence`), the
-  launch-state baseline after PR #51 merged on 2026-05-02. If this
-  file is read from a later local continuation commit, the Git HEAD
-  may be newer; `adce316...` remains the baseline to cite for the
-  PR #51 merge.
+- **Historical baselines, not current candidate SHAs:** PR #60 docs
+  stabilization `4e69c7a1db8011055187cf9892426ed48fc8e572`
+  (`docs(handoff): update post-PR59 launch state`) and PR #51 merge
+  tip `adce316d60644fe51365086aba186227c9ae3977`
+  (`docs(launch): record bench comparison evidence`) are retained for
+  audit continuity only. Do not cite either as the current
+  launch-state baseline.
 - **Closed launch-candidate groups:**
   - **Group 2 — Shared-service Postgres E2E.** Lives at
     `internal/controlplane/postgres/e2e_shared_service_test.go`
@@ -95,16 +90,18 @@ rules live in this file and the docs above.
     benchmark baseline was refreshed from Actions artifact
     `bench-current-25255062599` and passed normal comparison in
     Bench workflow run 25255216987.
-  - **Manual API coverage expansion.** PR #59 live-probed all 121
-    generated catalog tools through the MCP path against the
-    sacrificial workspace and documented the success-vs-unsupported
-    outcome split in [`docs/api-coverage.md`](docs/api-coverage.md).
+  - **Manual API coverage expansion.** PR #59 live-probed every tool
+    in the catalog snapshot that existed at that time (then 121
+    generated tools) through the MCP path against the sacrificial
+    workspace and documented the success-vs-unsupported outcome split
+    in [`docs/api-coverage.md`](docs/api-coverage.md).
     PR #62 adds the documented invite-user route as a no-email raw
     route validation probe because no dedicated catalog tool exists.
-    The current catalog has 123 tools after two agent-facing
-    timesheet workflow helpers were added on top of the raw API
-    coverage surface; those helpers are covered by unit tests and
-    live-test hooks.
+    The current catalog has 128 tools after two agent-facing
+    timesheet workflow helpers plus five local discovery/activation
+    and name-resolution helpers were added on top of the raw API
+    coverage surface; those helpers are covered by unit tests, and
+    the timesheet workflow helpers also have live-test hooks.
     This is coverage evidence only; it does **not** close Group 1,
     Group 6, or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)

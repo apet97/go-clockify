@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -51,17 +51,28 @@ type Principal struct {
 }
 
 type Config struct {
-	Mode                 Mode
-	BearerToken          string
-	DefaultTenantID      string
-	TenantClaim          string
-	SubjectClaim         string
-	OIDCIssuer           string
-	OIDCAudience         string
-	OIDCJWKSURL          string
-	OIDCJWKSPath         string
+	Mode            Mode
+	BearerToken     string
+	DefaultTenantID string
+	TenantClaim     string
+	SubjectClaim    string
+	OIDCIssuer      string
+	OIDCAudience    string
+	OIDCJWKSURL     string
+	OIDCJWKSPath    string
+	// OIDCJWKSAllowPrivate permits an explicit OIDCJWKSURL to target
+	// loopback, private, link-local, or reserved addresses. Default false
+	// rejects those hosts so a misconfigured JWKS URL cannot probe local
+	// or cloud-metadata networks. Enable only for local tests or a trusted
+	// private IdP endpoint.
+	OIDCJWKSAllowPrivate bool
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
+	// RequireForwardTenantClaim rejects forward_auth requests when
+	// ForwardTenantHeader is absent or empty, instead of falling back to
+	// DefaultTenantID. Default false preserves self-hosted single-tenant
+	// behaviour; hosted profiles should enable it.
+	RequireForwardTenantClaim bool
 	// ForwardAuthTrustedProxies, when non-empty, gates the
 	// forward_auth authenticator: a request whose direct source
 	// (r.RemoteAddr) is not inside one of these networks is
@@ -221,6 +232,9 @@ func (a forwardAuthAuthenticator) Authenticate(_ context.Context, r *http.Reques
 		return Principal{}, err
 	}
 	if tenant == "" {
+		if a.cfg.RequireForwardTenantClaim {
+			return Principal{}, fmt.Errorf("forward_auth request missing tenant header %s", a.cfg.ForwardTenantHeader)
+		}
 		tenant = a.cfg.DefaultTenantID
 	}
 	return Principal{
@@ -255,11 +269,10 @@ func forwardAuthHeaderValue(h http.Header, name, label string, required bool) (s
 	return sanitizePrincipalString(raw, label)
 }
 
-// sanitizePrincipalString rejects header bytes that have no business
-// minting an authentication identity. The caller passes the raw
-// header value plus a short label ("subject" / "tenant") for the
-// error message. The function trims surrounding whitespace and
-// then walks the runes:
+// sanitizePrincipalString rejects bytes that have no business minting an
+// authentication identity. The caller passes the raw principal value plus a
+// short label ("subject" / "tenant") for the error message. The function
+// trims surrounding whitespace and then walks the runes:
 //
 //   - utf8.RuneError is refused so a malformed UTF-8 sequence
 //     cannot smuggle a byte the rest of the system mis-decodes.
@@ -273,15 +286,18 @@ func forwardAuthHeaderValue(h http.Header, name, label string, required bool) (s
 //     tenant-scoping keys.
 //
 // ASCII space (0x20) is unicode.IsPrint, so legitimate values
-// like "alice doe" or "my org" still pass. Returns the trimmed
-// value when accepted; an error of the form
-// "forward_auth: <label> contains disallowed byte 0x<hex>"
-// otherwise.
+// like "alice doe" or "my org" still pass. Returns the trimmed value when
+// accepted; an error of the form "<source>: <label> contains disallowed byte
+// 0x<hex>" otherwise.
 func sanitizePrincipalString(s, label string) (string, error) {
+	return sanitizePrincipalStringForSource("forward_auth", s, label)
+}
+
+func sanitizePrincipalStringForSource(source, s, label string) (string, error) {
 	s = strings.TrimSpace(s)
 	for _, r := range s {
 		if r == utf8.RuneError || !unicode.IsPrint(r) {
-			return "", fmt.Errorf("forward_auth: %s contains disallowed byte 0x%x", label, r)
+			return "", fmt.Errorf("%s: %s contains disallowed byte 0x%x", source, label, r)
 		}
 	}
 	return s, nil
@@ -337,6 +353,11 @@ func (a mtlsAuthenticator) Authenticate(_ context.Context, r *http.Request) (Pri
 	if subject == "" {
 		subject = strings.TrimSpace(leaf.Subject.String())
 	}
+	var err error
+	subject, err = sanitizePrincipalStringForSource("mtls", subject, "subject")
+	if err != nil {
+		return Principal{}, err
+	}
 
 	source := a.cfg.MTLSTenantSource
 	if source == "" {
@@ -370,6 +391,10 @@ func (a mtlsAuthenticator) Authenticate(_ context.Context, r *http.Request) (Pri
 			return Principal{}, fmt.Errorf("mtls client has no tenant identity (source=%s)", source)
 		}
 		tenant = a.cfg.DefaultTenantID
+	}
+	tenant, err = sanitizePrincipalStringForSource("mtls", tenant, "tenant")
+	if err != nil {
+		return Principal{}, err
 	}
 	return Principal{
 		Subject:  subject,
@@ -459,14 +484,10 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	if err != nil || u.Scheme == "" {
 		return nil, fmt.Errorf("invalid MCP_OIDC_ISSUER %q (must be absolute URL with scheme)", cfg.OIDCIssuer)
 	}
-	// Hosted-grade posture: an OIDC strict deployment must fetch JWKS
-	// over TLS. Without HTTPS, the JWKS payload (the public keys used
-	// to verify every JWT) is fetched in cleartext and any on-path
-	// adversary can swap it for keys they control. ChatGPT flagged
-	// this as the second go/no-go gate for shared-service.
-	if cfg.OIDCStrict && u.Scheme != "https" {
-		return nil, fmt.Errorf("MCP_OIDC_ISSUER %q must use https in OIDC strict mode", cfg.OIDCIssuer)
+	if err := validateOIDCRemoteURL(u, "MCP_OIDC_ISSUER", cfg.OIDCIssuer, cfg.OIDCStrict); err != nil {
+		return nil, err
 	}
+	explicitJWKSURL := cfg.OIDCJWKSURL != ""
 	if cfg.OIDCJWKSURL == "" && cfg.OIDCJWKSPath == "" {
 		cfg.OIDCJWKSURL = strings.TrimRight(cfg.OIDCIssuer, "/") + "/.well-known/jwks.json"
 	}
@@ -475,8 +496,13 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 		if err != nil || uj.Scheme == "" {
 			return nil, fmt.Errorf("invalid OIDCJWKSURL %q (must be absolute URL with scheme)", cfg.OIDCJWKSURL)
 		}
-		if cfg.OIDCStrict && uj.Scheme != "https" {
-			return nil, fmt.Errorf("OIDCJWKSURL %q must use https in OIDC strict mode", cfg.OIDCJWKSURL)
+		if err := validateOIDCRemoteURL(uj, "OIDCJWKSURL", cfg.OIDCJWKSURL, cfg.OIDCStrict); err != nil {
+			return nil, err
+		}
+		if explicitJWKSURL {
+			if err := validateOIDCJWKSAddress(uj, cfg.OIDCJWKSURL, cfg.OIDCJWKSAllowPrivate); err != nil {
+				return nil, err
+			}
 		}
 	}
 	// Surface the revocation-window tradeoff when operators raise the
@@ -518,6 +544,103 @@ func newOIDCAuthenticator(cfg Config) (Authenticator, error) {
 	}, nil
 }
 
+func validateOIDCRemoteURL(u *url.URL, label, raw string, strict bool) error {
+	if u.Scheme == "https" {
+		return nil
+	}
+	if u.Scheme != "http" {
+		return fmt.Errorf("%s %q must use https", label, raw)
+	}
+	if strict {
+		return fmt.Errorf("%s %q must use https in OIDC strict mode", label, raw)
+	}
+	if isOIDCLoopbackHost(u.Hostname()) {
+		return nil
+	}
+	return fmt.Errorf("%s %q must use https unless the host is loopback", label, raw)
+}
+
+func validateOIDCJWKSAddress(u *url.URL, raw string, allowPrivate bool) error {
+	if allowPrivate {
+		return nil
+	}
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("OIDCJWKSURL %q must include a host", raw)
+	}
+	if strings.EqualFold(host, "localhost") {
+		return fmt.Errorf("OIDCJWKSURL %q targets localhost; set MCP_OIDC_JWKS_ALLOW_PRIVATE=1 only for trusted local/private JWKS endpoints", raw)
+	}
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if !isPublicOIDCRemoteAddr(addr) {
+			return fmt.Errorf("OIDCJWKSURL %q targets private, loopback, link-local, or reserved address %s; set MCP_OIDC_JWKS_ALLOW_PRIVATE=1 only for trusted local/private JWKS endpoints", raw, addr.String())
+		}
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resolved, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return fmt.Errorf("OIDCJWKSURL %q host resolution failed: %w", raw, err)
+	}
+	if len(resolved) == 0 {
+		return fmt.Errorf("OIDCJWKSURL %q host resolved no addresses", raw)
+	}
+	for _, ip := range resolved {
+		addr, ok := netip.AddrFromSlice(ip.IP)
+		if !ok {
+			return fmt.Errorf("OIDCJWKSURL %q host resolved invalid address %q", raw, ip.IP.String())
+		}
+		if !isPublicOIDCRemoteAddr(addr) {
+			return fmt.Errorf("OIDCJWKSURL %q host resolves to private, loopback, link-local, or reserved address %s; set MCP_OIDC_JWKS_ALLOW_PRIVATE=1 only for trusted local/private JWKS endpoints", raw, addr.String())
+		}
+	}
+	return nil
+}
+
+func isPublicOIDCRemoteAddr(addr netip.Addr) bool {
+	addr = addr.Unmap()
+	if !addr.IsValid() || !addr.IsGlobalUnicast() {
+		return false
+	}
+	if addr.IsPrivate() || addr.IsLoopback() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsUnspecified() {
+		return false
+	}
+	blockedPrefixes := []string{
+		"0.0.0.0/8",
+		"100.64.0.0/10",
+		"169.254.0.0/16",
+		"192.0.0.0/24",
+		"192.0.2.0/24",
+		"198.18.0.0/15",
+		"198.51.100.0/24",
+		"203.0.113.0/24",
+		"224.0.0.0/4",
+		"240.0.0.0/4",
+		"::/128",
+		"::1/128",
+		"fe80::/10",
+		"fc00::/7",
+		"ff00::/8",
+		"2001:db8::/32",
+	}
+	for _, prefix := range blockedPrefixes {
+		if netip.MustParsePrefix(prefix).Contains(addr) {
+			return false
+		}
+	}
+	return true
+}
+
+func isOIDCLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	addr, err := netip.ParseAddr(host)
+	return err == nil && addr.IsLoopback()
+}
+
 func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (Principal, error) {
 	token, ok := bearerToken(r)
 	if !ok {
@@ -554,6 +677,10 @@ func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (P
 	if subject == "" {
 		return Principal{}, fmt.Errorf("oidc token missing subject claim %q", a.cfg.SubjectClaim)
 	}
+	subject, err = sanitizePrincipalStringForSource("oidc", subject, "subject")
+	if err != nil {
+		return Principal{}, err
+	}
 	tenant := claimString(claims.Raw, a.cfg.TenantClaim)
 	if tenant == "" {
 		// Hosted-service mode: missing tenant claim is a hard reject.
@@ -564,6 +691,10 @@ func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (P
 			return Principal{}, fmt.Errorf("oidc token missing tenant claim %q", a.cfg.TenantClaim)
 		}
 		tenant = a.cfg.DefaultTenantID
+	}
+	tenant, err = sanitizePrincipalStringForSource("oidc", tenant, "tenant")
+	if err != nil {
+		return Principal{}, err
 	}
 	principal := Principal{
 		Subject:  subject,
@@ -653,10 +784,10 @@ func decodeJWT(token string) (jwtHeader, jwtClaims, string, []byte, error) {
 
 func validateClaims(claims jwtClaims, cfg Config) error {
 	now := time.Now().Unix()
-	if claims.Issuer != cfg.OIDCIssuer {
-		return fmt.Errorf("unexpected issuer %q", claims.Issuer)
+	if !constantTimeStringEqual(claims.Issuer, cfg.OIDCIssuer) {
+		return fmt.Errorf("unexpected issuer %q", safeJWTClaimForError(claims.Issuer))
 	}
-	if cfg.OIDCAudience != "" && !slices.Contains([]string(claims.Audience), cfg.OIDCAudience) {
+	if cfg.OIDCAudience != "" && !constantTimeContainsString([]string(claims.Audience), cfg.OIDCAudience) {
 		return fmt.Errorf("unexpected audience")
 	}
 	// Resource indicator binding (RFC 8707 / MCP OAuth 2.1 profile): if a
@@ -664,7 +795,7 @@ func validateClaims(claims jwtClaims, cfg Config) error {
 	// the audience claim. This is independent of OIDCAudience so an
 	// authorization server may issue tokens with multiple audiences and
 	// the protected resource still validates only those targeted at it.
-	if cfg.OIDCResourceURI != "" && !slices.Contains([]string(claims.Audience), cfg.OIDCResourceURI) {
+	if cfg.OIDCResourceURI != "" && !constantTimeContainsString([]string(claims.Audience), cfg.OIDCResourceURI) {
 		return fmt.Errorf("token aud does not contain resource URI %q", cfg.OIDCResourceURI)
 	}
 	// Strict mode: reject tokens issued without an explicit expiry.
@@ -682,6 +813,27 @@ func validateClaims(claims jwtClaims, cfg Config) error {
 	return nil
 }
 
+func safeJWTClaimForError(value string) string {
+	safe, err := sanitizePrincipalStringForSource("oidc", value, "claim")
+	if err != nil {
+		return "<invalid>"
+	}
+	return safe
+}
+
+func constantTimeContainsString(values []string, want string) bool {
+	for _, value := range values {
+		if constantTimeStringEqual(value, want) {
+			return true
+		}
+	}
+	return false
+}
+
+func constantTimeStringEqual(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
 func claimString(raw map[string]any, key string) string {
 	if v, ok := raw[key].(string); ok {
 		return strings.TrimSpace(v)
@@ -695,6 +847,8 @@ func claimString(raw map[string]any, key string) string {
 // hung issuer cannot stall the auth path past the typical client
 // request budget.
 const jwksFetchTimeout = 5 * time.Second
+
+const maxJWKSBody = 2 << 20
 
 // jwksDefaultHTTPClient is the package-level fallback used by
 // jwksCache.reload when the authenticator was constructed without
@@ -890,7 +1044,12 @@ func (c *jwksCache) reload(ctx context.Context) error {
 	var err error
 	switch {
 	case c.path != "":
-		b, err = os.ReadFile(c.path)
+		f, openErr := os.Open(c.path)
+		if openErr != nil {
+			return openErr
+		}
+		defer func() { _ = f.Close() }()
+		b, err = readJWKSBody(f)
 	case c.url != "":
 		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 		if reqErr != nil {
@@ -913,7 +1072,7 @@ func (c *jwksCache) reload(ctx context.Context) error {
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("jwks fetch failed: %s", resp.Status)
 		}
-		b, err = io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		b, err = readJWKSBody(resp.Body)
 	default:
 		return fmt.Errorf("no JWKS source configured")
 	}
@@ -962,6 +1121,17 @@ func (c *jwksCache) reload(ctx context.Context) error {
 	c.lastReload = now
 	c.mu.Unlock()
 	return nil
+}
+
+func readJWKSBody(r io.Reader) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, maxJWKSBody+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > maxJWKSBody {
+		return nil, fmt.Errorf("jwks response too large: > %d bytes", maxJWKSBody)
+	}
+	return b, nil
 }
 
 // rsaMinModulusBits is the lower bound on RSA modulus length accepted

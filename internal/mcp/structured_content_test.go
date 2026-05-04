@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
@@ -117,6 +118,45 @@ func TestToolsCall_StructuredContent_Object(t *testing.T) {
 	if err := jsonschema.Validate(outputSchema, structured); err != nil {
 		t.Fatalf("structuredContent fails outputSchema validation: %v (value=%+v)", err, structured)
 	}
+}
+
+func TestToolsCall_StructuredContent_ResultMarshaledOnce(t *testing.T) {
+	var marshals atomic.Int32
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "counted",
+			Description: "returns a counted envelope",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			return countedStructuredResult{marshals: &marshals}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+
+	resp := callToolViaRun(t, server, "counted", nil)
+	if resp.Error != nil {
+		t.Fatalf("unexpected rpc error: %+v", resp.Error)
+	}
+	result, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not a map: %T", resp.Result)
+	}
+	if result["structuredContent"] == nil {
+		t.Fatalf("structuredContent missing: %+v", result)
+	}
+	if got := marshals.Load(); got != 1 {
+		t.Fatalf("tool result marshaled %d times, want 1", got)
+	}
+}
+
+type countedStructuredResult struct {
+	marshals *atomic.Int32
+}
+
+func (r countedStructuredResult) MarshalJSON() ([]byte, error) {
+	r.marshals.Add(1)
+	return []byte(`{"ok":true,"action":"counted","data":{"count":1}}`), nil
 }
 
 // TestToolsCall_StructuredContent_NonObject verifies the spec guardrail:

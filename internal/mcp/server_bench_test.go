@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -134,6 +135,34 @@ func BenchmarkDispatchToolsCall(b *testing.B) {
 	}
 }
 
+func BenchmarkDispatchToolsCallLargePayload(b *testing.B) {
+	quietSlogForBenchmark(b)
+
+	payload := largeToolPayload()
+	server := newPayloadBenchServer(b, payload)
+	server.initialized.Store(true)
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params: ToolCallParams{
+			Name:      "bench_tool",
+			Arguments: map[string]any{"include_entries": true},
+		},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
 // newBenchServer builds a minimal Server with `n` no-op tool
 // descriptors. Enforcement and Activator are nil — per the docs on
 // mcp.NewServer that means "no filtering" — so the bench measures
@@ -158,6 +187,42 @@ func newBenchServer(b *testing.B, n int) *Server {
 		})
 	}
 	return NewServer("bench", descriptors, nil, nil)
+}
+
+func newPayloadBenchServer(b *testing.B, payload any) *Server {
+	b.Helper()
+	return NewServer("bench", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "bench_tool",
+			Description: "bench-only large payload",
+		},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			return payload, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+}
+
+func largeToolPayload() map[string]any {
+	entries := make([]map[string]any, 512)
+	description := strings.Repeat("x", 512)
+	for i := range entries {
+		entries[i] = map[string]any{
+			"id":          fmt.Sprintf("entry-%04d", i),
+			"description": description,
+			"project":     "large-workspace",
+			"duration":    3600 + i,
+			"billable":    i%2 == 0,
+		}
+	}
+	return map[string]any{
+		"ok":     true,
+		"action": "bench_large_payload",
+		"data": map[string]any{
+			"entries": entries,
+			"totals":  map[string]any{"entries": len(entries), "seconds": len(entries) * 3600},
+		},
+	}
 }
 
 func mustMarshalRequest(b *testing.B, req Request) []byte {

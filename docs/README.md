@@ -9,6 +9,8 @@ security reviewers probably want [Release Trust](#release-trust).**
 ## Start Here
 
 - [README.md](../README.md) — project landing page, install, connect a client.
+- [agent-cookbook.md](agent-cookbook.md) — intent-keyed recipes for
+  agents calling the Clockify MCP tools.
 - [production-readiness.md](production-readiness.md) — single-page operator overview.
 - [deploy/](deploy/) — the five canonical deployment profiles
   (`local-stdio`, `single-tenant-http`, `shared-service`,
@@ -64,6 +66,9 @@ emits — no prose-only guesses.
 - [runbooks/hosted-error-sanitization.md](runbooks/hosted-error-sanitization.md)
   — when sanitised errors hide upstream signal that the tenant
   needs.
+- [runbooks/credential-leak-response.md](runbooks/credential-leak-response.md)
+  — rotate, audit, and notify after API key, bearer token, OIDC,
+  mTLS, CI, or tenant credential exposure.
 - [runbooks/webhook-dns-validation.md](runbooks/webhook-dns-validation.md)
   — DNS-rebinding guard, allowlist escape hatch, and split-horizon
   triage.
@@ -150,7 +155,9 @@ Design-level reading for contributors and reviewers.
 
 ## Forward Pointers
 
-Capturing shape without committing implementation.
+Capturing shape without committing implementation. See
+[`future/README.md`](future/README.md) for the boundary: these are
+aspirational notes, not committed roadmap items or launch gates.
 
 - [future/observability-correlation.md](future/observability-correlation.md)
   — end-to-end trace correlation across the MCP boundary; stub

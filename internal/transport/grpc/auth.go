@@ -90,6 +90,39 @@ func authStreamInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) 
 	}
 }
 
+func authUnaryInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
+			return nil, status.Error(codes.Unauthenticated, "missing gRPC metadata")
+		}
+		var (
+			synth *http.Request
+			err   error
+		)
+		if cfg.mtls {
+			synth = buildMTLSSynthRequest(ctx, md, cfg.forwardTenantHeader, cfg.forwardSubjectHeader)
+		} else {
+			synth, err = buildSynthRequest(md, cfg.forwardTenantHeader, cfg.forwardSubjectHeader)
+			if err != nil {
+				return nil, err
+			}
+		}
+		principal, err := auth.Authenticate(ctx, synth)
+		if err != nil {
+			metrics.GRPCAuthRejectionsTotal.Inc("auth_failed")
+			slog.Warn("grpc_auth_failed",
+				"error", err.Error(),
+				"category", authn.FailureCategory(err),
+				"method", info.FullMethod,
+			)
+			return nil, status.Error(codes.Unauthenticated, "authentication failed")
+		}
+		return handler(authn.WithPrincipal(ctx, &principal), req)
+	}
+}
+
 // buildSynthRequest is the bearer/OIDC/forward_auth path. It requires the
 // caller to have stamped an "authorization" metadata pair; missing or empty
 // values are rejected before the authenticator runs so we never call into

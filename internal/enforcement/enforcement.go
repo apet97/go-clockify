@@ -147,7 +147,8 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 	}
 	b, err := json.Marshal(result)
 	if err != nil {
-		slog.Debug("truncate_marshal_failed", "error", err.Error())
+		metrics.TruncationSkippedTotal.Inc("marshal_failed")
+		slog.Warn("truncate_marshal_failed", "error", err.Error())
 		return result, nil
 	}
 	if p.Truncation.TokenBudget > 0 && estimatedTokensFromJSONLen(len(b)) <= p.Truncation.TokenBudget {
@@ -155,7 +156,8 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 	}
 	var generic any
 	if err := json.Unmarshal(b, &generic); err != nil {
-		slog.Debug("truncate_unmarshal_failed", "error", err.Error())
+		metrics.TruncationSkippedTotal.Inc("unmarshal_failed")
+		slog.Warn("truncate_unmarshal_failed", "error", err.Error())
 		return result, nil
 	}
 	truncated, wasTruncated := p.Truncation.Truncate(generic)
@@ -230,4 +232,13 @@ func (g *Gate) OnActivate(names []string) {
 		g.Bootstrap.ActivateTools(names)
 	}
 	slog.Debug("tools_activated", "count", len(names))
+}
+
+// OnDeactivate removes runtime visibility markers for dynamically
+// registered tools.
+func (g *Gate) OnDeactivate(names []string) {
+	if g.Bootstrap != nil {
+		g.Bootstrap.DeactivateTools(names)
+	}
+	slog.Debug("tools_deactivated", "count", len(names))
 }

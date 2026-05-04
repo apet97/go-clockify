@@ -11,7 +11,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Highlights
 
-- **123 tools** — 35 always-on (timer, entries, projects, reports, agent workflows, …) plus 88 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
+- **128 tools** — 40 always-on (timer, entries, projects, reports, agent workflows, tool activation, …) plus 88 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
@@ -23,8 +23,8 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Contents
 
-- [Start Here](#start-here) · [Install](#install) · [Connect a client](#connect-to-an-mcp-client) · [Tool tiers](#tool-tiers) · [Policy modes](#policy-modes) · [Configuration](#configuration)
-- [Common workflows](#common-workflows) · [Architecture](#architecture) · [Docker](#docker) · [Build and test](#build-and-test)
+- [Start Here](#start-here) · [Install](#install) · [Connect a client](#connect-to-an-mcp-client) · [Common workflows](#common-workflows) · [Tool tiers](#tool-tiers)
+- [Policy modes](#policy-modes) · [Configuration](#configuration) · [Architecture](#architecture) · [Docker](#docker) · [Build and test](#build-and-test)
 - [Compatibility](#compatibility) · [Troubleshooting](#troubleshooting) · [Deployment](#deployment) · [Contributing](#contributing)
 
 ## Start Here
@@ -87,7 +87,7 @@ tool call.
 
 ## Connect to an MCP client
 
-The examples below are the local stdio path: your MCP client launches `clockify-mcp` as a subprocess and forwards `CLOCKIFY_API_KEY` in its environment.
+The examples below are the local stdio path: your MCP client launches `clockify-mcp` as a subprocess and forwards `CLOCKIFY_API_KEY` in its environment. Copy-ready snippets also live in [`examples/`](examples/).
 
 ### Claude Code (CLI)
 
@@ -171,13 +171,108 @@ If you installed via `npm`/`npx`, swap the command for:
 }
 ```
 
+## Common workflows
+
+For longer intent-keyed examples, see the
+[agent cookbook](docs/agent-cookbook.md).
+
+Built-in prompt templates are available through MCP `prompts/list` and
+`prompts/get`: `log-week-from-calendar`, `weekly-review`,
+`find-unbilled-hours`, `find-duplicate-entries`, and
+`generate-timesheet-report`. They are short planning prompts that point
+clients at the current structured tools, including `clockify_log_time`
+for finished past entries and `clockify_timesheet_review` for gaps,
+overlaps, and suggested next-tool actions.
+
+Start and stop a timer:
+
+```
+→ clockify_start_timer { "project": "My Project" }
+← { "ok": true, "action": "timer_started", "data": { "id": "abc123" } }
+
+→ clockify_stop_timer {}
+← { "ok": true, "action": "timer_stopped" }
+```
+
+Log time retroactively:
+
+```
+→ clockify_log_time { "project": "Project Alpha", "start": "today 9:00", "end": "today 11:00", "description": "Code review", "dry_run": true }
+```
+
+Review and close a timesheet gap:
+
+```
+→ clockify_timesheet_review { "date": "2026-05-03", "timezone": "UTC" }
+← { "ok": true, "action": "clockify_timesheet_review", "data": { "issues": [], "suggestedActions": [] } }
+
+→ clockify_timesheet_fill_gap { "project": "Project Alpha", "start": "2026-05-03T09:00:00Z", "end": "2026-05-03T10:00:00Z", "description": "Planning", "dry_run": true }
+```
+
+Discover a Tier 2 domain or tool:
+
+```
+→ clockify_list_tools { "query": "invoice" }
+← { "count": 6, "all_results": [ { "type": "group", "name": "invoices" }, { "type": "tool", "name": "clockify_send_invoice" } ] }
+```
+
+Activate a Tier 2 domain:
+
+```
+→ clockify_activate_group { "name": "invoices" }
+← { "activated": "invoices", "tool_count": 12, "activated_tools": ["clockify_list_invoices", "..."], "total_visible_tools": 47 }
+```
+
+Optionally activate a single Tier 2 tool:
+
+```
+→ clockify_activate_tool { "name": "clockify_send_invoice" }
+← { "activated": "clockify_send_invoice", "group": "invoices", "tool_count": 12, "activated_tools": ["clockify_list_invoices", "..."], "total_visible_tools": 47 }
+```
+
+Deactivate the domain when the task is done:
+
+```
+→ clockify_deactivate_group { "name": "invoices" }
+← { "deactivated": "invoices", "tool_count": 12, "deactivated_tools": ["clockify_list_invoices", "..."], "total_visible_tools": 35 }
+```
+
+Preview a destructive operation first:
+
+```
+→ clockify_delete_entry { "entry_id": "abc123", "dry_run": true }
+← { "dry_run": true, "preview": { "id": "abc123", "description": "Meeting" }, "note": "No changes were made." }
+```
+
+Execute after preview:
+
+```
+→ clockify_delete_entry { "entry_id": "abc123", "dry_run": false }
+← { "ok": true, "action": "clockify_delete_entry", "data": { "deleted": true, "entryId": "abc123" } }
+```
+
+Large workspace report hygiene:
+
+- Pin `CLOCKIFY_WORKSPACE_ID` for personal API-key testing even when
+  auto-detection works today. It keeps the target stable if the key later
+  gains access to another workspace.
+- Prefer short date ranges and `include_entries=false` for summary,
+  weekly, detailed, and quick reports when you need totals rather than
+  raw rows.
+- Use `page` and `page_size` on list tools. The default is
+  `page=1`, `page_size=50`, and the maximum page size is 200.
+- Report responses expose `meta.pagination` and `meta.limits`.
+  `CLOCKIFY_REPORT_MAX_ENTRIES` applies when a call materializes raw
+  entries with `include_entries=true`; cap errors are intentional
+  fail-closed behavior.
+
 ## Tool tiers
 
-**Tier 1 (35 tools, always loaded):** timer, entries, projects, clients, tags, tasks, users, workspaces, reports, workflows, search, context.
+**Tier 1 (40 tools, always loaded):** timer, entries, projects, clients, tags, tasks, users, workspaces, reports, workflows, search, activation, context.
 
 **Tier 2 (88 tools, 11 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin.
 
-Call `clockify_search_tools` to discover and activate a Tier 2 group or a specific tool. Activation updates `tools/list` at runtime.
+Call `clockify_list_tools` to discover a Tier 2 group or specific tool, `clockify_activate_group` / `clockify_activate_tool` to widen the current session, and `clockify_deactivate_group` to shrink the visible surface after a task. Activation updates `tools/list` at runtime, and `activated_tools` only lists names that are visible after bootstrap and policy filtering. `clockify_search_tools` remains as a deprecated compatibility shim for older clients.
 
 ## Policy modes
 
@@ -191,7 +286,7 @@ Call `clockify_search_tools` to discover and activate a Tier 2 group or a specif
 | `standard` | yes | yes | yes | on demand | Raw no-profile default / trusted operator mode, not a public AI default |
 | `full` | yes | yes | yes | yes | Admin and automation |
 
-Introspection tools (`clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`, `clockify_resolve_debug`) are always available regardless of policy.
+Introspection tools (`clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`, `clockify_activate_group`, `clockify_activate_tool`, `clockify_deactivate_group`, `clockify_search_tools`, `clockify_resolve_name`, `clockify_resolve_debug`) are always available regardless of policy. `clockify_resolve_debug` is a compatibility alias; new clients should call `clockify_resolve_name`.
 
 ## Configuration
 
@@ -230,83 +325,6 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 <!-- CONFIG-TABLE END -->
 
 Run `clockify-mcp --help` for the complete list (75+ variables covering concurrency, timeouts, control plane, metrics, auth, CORS, and webhook DNS validation).
-
-## Common workflows
-
-Start and stop a timer:
-
-```
-→ clockify_start_timer { "project": "My Project" }
-← { "ok": true, "action": "timer_started", "data": { "id": "abc123" } }
-
-→ clockify_stop_timer {}
-← { "ok": true, "action": "timer_stopped" }
-```
-
-Log time retroactively:
-
-```
-→ clockify_log_time { "project": "Project Alpha", "start": "today 9:00", "end": "today 11:00", "description": "Code review" }
-```
-
-Review and close a timesheet gap:
-
-```
-→ clockify_timesheet_review { "date": "2026-05-03", "timezone": "UTC" }
-← { "ok": true, "action": "clockify_timesheet_review", "data": { "issues": [], "suggestedActions": [] } }
-
-→ clockify_timesheet_fill_gap { "project": "Project Alpha", "start": "2026-05-03T09:00:00Z", "end": "2026-05-03T10:00:00Z", "description": "Planning", "dry_run": true }
-```
-
-Discover a Tier 2 domain or tool:
-
-```
-→ clockify_search_tools { "query": "invoice" }
-← { "count": 6, "all_results": [ { "type": "group", "name": "invoices" }, { "type": "tool", "name": "clockify_send_invoice" } ] }
-```
-
-Activate a Tier 2 domain:
-
-```
-→ clockify_search_tools { "activate_group": "invoices" }
-← { "activated": "invoices", "tool_count": 12 }
-```
-
-Optionally activate a single Tier 2 tool:
-
-```
-→ clockify_search_tools { "activate_tool": "clockify_send_invoice" }
-← { "activated": "clockify_send_invoice", "group": "invoices", "tool_count": 12 }
-```
-
-Preview a destructive operation first:
-
-```
-→ clockify_delete_entry { "entry_id": "abc123", "dry_run": true }
-← { "dry_run": true, "preview": { "id": "abc123", "description": "Meeting" }, "note": "No changes were made." }
-```
-
-Execute after preview:
-
-```
-→ clockify_delete_entry { "entry_id": "abc123", "dry_run": false }
-← { "ok": true, "action": "clockify_delete_entry", "data": { "deleted": true, "entryId": "abc123" } }
-```
-
-Large workspace report hygiene:
-
-- Pin `CLOCKIFY_WORKSPACE_ID` for personal API-key testing even when
-  auto-detection works today. It keeps the target stable if the key later
-  gains access to another workspace.
-- Prefer short date ranges and `include_entries=false` for summary,
-  weekly, detailed, and quick reports when you need totals rather than
-  raw rows.
-- Use `page` and `page_size` on list tools. The default is
-  `page=1`, `page_size=50`, and the maximum page size is 200.
-- Report responses expose `meta.pagination` and `meta.limits`.
-  `CLOCKIFY_REPORT_MAX_ENTRIES` applies when a call materializes raw
-  entries with `include_entries=true`; cap errors are intentional
-  fail-closed behavior.
 
 ## Architecture
 
@@ -373,13 +391,13 @@ Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 ## Troubleshooting
 
-**No tools visible** — Check `CLOCKIFY_BOOTSTRAP_MODE`. In `minimal` mode most tools are hidden; use `clockify_search_tools` to discover them.
+**No tools visible** — Check `CLOCKIFY_BOOTSTRAP_MODE`. In `minimal` mode most tools are hidden; use `clockify_list_tools` to discover them.
 
 **401 Unauthorized** — API key is invalid or expired. [Generate a new one](https://app.clockify.me/user/preferences).
 
 **Multiple workspaces** — Set `CLOCKIFY_WORKSPACE_ID` explicitly.
 
-**Tool not found** — It may be a Tier 2 tool. Use `clockify_search_tools` to find and activate its group.
+**Tool not found** — It may be a Tier 2 tool. Use `clockify_list_tools` to find it, then `clockify_activate_group` or `clockify_activate_tool` to activate its group.
 
 **Dry-run not working** — Ensure `CLOCKIFY_DRY_RUN=enabled` (default) and pass `"dry_run": true` in tool call parameters.
 

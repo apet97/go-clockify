@@ -3,7 +3,10 @@
     "clockify": {
       "command": "clockify-mcp",
       "env": {
-        "CLOCKIFY_API_KEY": "your-api-key-here"
+        "MCP_PROFILE": "local-stdio",
+        "CLOCKIFY_API_KEY": "your-key",
+        "CLOCKIFY_WORKSPACE_ID": "your-workspace-id",
+        "CLOCKIFY_POLICY": "time_tracking_safe"
       }
     }
   }

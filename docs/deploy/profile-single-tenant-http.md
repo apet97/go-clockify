@@ -52,6 +52,8 @@ MCP_HTTP_INLINE_METRICS_AUTH_MODE=inherit_main_bearer
 
 # Safety
 CLOCKIFY_POLICY=time_tracking_safe
+CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1
+MCP_DISABLE_INLINE_SECRETS=1
 MCP_STRICT_HOST_CHECK=1
 MCP_ALLOWED_ORIGINS=https://your-client.example.com
 
@@ -120,6 +122,12 @@ server {
   origin. When `MCP_STRICT_HOST_CHECK=1`, the public host
   preserved by your reverse proxy must also be derivable from this
   allowlist; otherwise legitimate requests are rejected before auth.
+- `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` keeps upstream Clockify
+  response bodies in server-side logs instead of returning them to
+  browser or remote MCP clients.
+- `MCP_DISABLE_INLINE_SECRETS=1` rejects inline credential refs in
+  the file-backed control plane. This profile uses `CLOCKIFY_API_KEY`
+  directly, so inline tenant credentials are unnecessary risk.
 - `time_tracking_safe` policy is the recommended AI-facing default:
   the agent can start/stop timers and create or update time entries,
   but cannot create workspace objects such as projects, clients,

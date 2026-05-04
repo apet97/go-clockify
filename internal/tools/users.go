@@ -29,13 +29,13 @@ func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
 }
 
 func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
-	s.mu.Lock()
+	s.mu.RLock()
 	if s.cachedUser != nil {
 		u := *s.cachedUser
-		s.mu.Unlock()
+		s.mu.RUnlock()
 		return u, nil
 	}
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	var user clockify.User
 	if err := s.Client.Get(ctx, "/user", nil, &user); err != nil {
 		return clockify.User{}, err
@@ -64,10 +64,11 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Get(ctx, path, query, &users); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_users", users, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(users),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_users", users, meta), nil
 }

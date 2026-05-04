@@ -65,7 +65,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 3. Create webhook (RW)
 		{
-			Tool: toolRW("clockify_create_webhook", "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses.", map[string]any{
+			Tool: toolRW("clockify_create_webhook", "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"name", "url", "webhook_event"},
 				"properties": map[string]any{
@@ -84,7 +84,8 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs (default: current workspace ID)",
 					},
-					"name": map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
+					"name":    map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
+					"dry_run": map[string]any{"type": "boolean", "description": "Validate and preview the webhook payload without creating it"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -94,7 +95,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 4. Update webhook (RW)
 		{
-			Tool: toolRW("clockify_update_webhook", "Update an existing webhook", map[string]any{
+			Tool: toolRW("clockify_update_webhook", "Update an existing webhook. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{
@@ -114,7 +115,8 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs",
 					},
-					"name": map[string]any{"type": "string", "description": "New name for the webhook"},
+					"name":    map[string]any{"type": "string", "description": "New name for the webhook"},
+					"dry_run": map[string]any{"type": "boolean", "description": "Validate and preview the webhook update without applying it"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -479,6 +481,9 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 		"triggerSource":     triggerSource,
 		"name":              name,
 	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_webhook", dryrunPreviewPayload("clockify_create_webhook", payload), map[string]any{"workspaceId": wsID}), nil
+	}
 
 	path, err := paths.Workspace(wsID, "webhooks")
 	if err != nil {
@@ -547,6 +552,15 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 
 	if !changed {
 		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name) must be provided for update")
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_webhook", map[string]any{
+			"dry_run": true,
+			"tool":    "clockify_update_webhook",
+			"current": existing,
+			"payload": payload,
+			"note":    "No changes were made.",
+		}, map[string]any{"workspaceId": wsID, "webhookId": webhookID}), nil
 	}
 	var result map[string]any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {

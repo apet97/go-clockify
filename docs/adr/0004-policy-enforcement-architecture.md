@@ -68,9 +68,12 @@ The same `Pipeline` also implements `FilterTool`, called from the
 are hidden from the list, not just rejected at call time —
 discoverability matches enforcement.
 
-The six-element introspection allowlist
-(`clockify_whoami`, `clockify_policy_info`, `clockify_search_tools`,
-`clockify_resolve_debug`, plus `clockify_current_user` and
+The eleven-element introspection allowlist
+(`clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`,
+`clockify_activate_group`, `clockify_activate_tool`,
+`clockify_deactivate_group`, `clockify_search_tools`,
+`clockify_resolve_name`, `clockify_resolve_debug`, plus
+`clockify_current_user` and
 `clockify_list_workspaces`; defined in `introspectionList()` in
 `internal/policy/policy.go`) bypasses the policy gate so an
 operator can always introspect the running server's state

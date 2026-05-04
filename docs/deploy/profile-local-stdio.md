@@ -27,15 +27,10 @@ MCP_TRANSPORT=stdio
 CLOCKIFY_POLICY=time_tracking_safe
 ```
 
-`local-stdio` intentionally defaults to `safe_core` because the MCP
-client runs as the local user's subprocess with that user's Clockify
-API key. This profile is for trusted local automation. Use
-`CLOCKIFY_POLICY=time_tracking_safe` if the local client or prompt
-source is not fully trusted.
-
-For exploratory AI-facing testing against a real personal workspace,
-prefer the explicit `time_tracking_safe` override above. Keep
-`safe_core` for trusted local automation that should create projects,
+`local-stdio` defaults to `time_tracking_safe`, matching the recommended
+AI-facing posture for personal testing. Keep that default for exploratory
+prompts and untrusted local clients. Set `CLOCKIFY_POLICY=safe_core`
+explicitly only for trusted local automation that should create projects,
 clients, tags, or tasks. Set `CLOCKIFY_WORKSPACE_ID` even if
 auto-detection works today; `auto` is convenient only while the API key
 can see exactly one workspace.
@@ -114,7 +109,7 @@ Add to `.cursor/mcp.json` in your workspace root:
 
 `MCP_PROFILE=local-stdio` is still required when you set an explicit
 policy override. If you omit `CLOCKIFY_POLICY`, the profile default is
-`safe_core`; without the profile the server falls back to
+`time_tracking_safe`; without the profile the server falls back to
 `CLOCKIFY_POLICY=standard`, which exposes more destructive tools than the
 local profile intends.
 
@@ -183,7 +178,7 @@ Expected result: `Load() result: OK`, `transport=stdio`, no inbound
 auth mode, and `CLOCKIFY_POLICY=time_tracking_safe` from explicit env.
 The doctor command does not contact Clockify; `pk_xxx` can be a dummy
 value for this local config check. Omit the explicit policy override
-only when you want to verify the profile default of `safe_core`.
+when you want to verify the profile default of `time_tracking_safe`.
 
 `doctor --strict` is a hosted-service posture gate, not the success
 criterion for local stdio. Run it only as a negative check when you

@@ -32,7 +32,9 @@ func setProfileEnv(t *testing.T, profile string, overrides map[string]string) {
 		// keeps this list in lockstep with profile.go.
 		"MCP_OIDC_STRICT",
 		"MCP_REQUIRE_TENANT_CLAIM",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 		"MCP_DISABLE_INLINE_SECRETS",
+		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
 	}
 	for _, k := range profileControlled {
 		t.Setenv(k, "")
@@ -106,6 +108,24 @@ func TestProfile_LocalStdioDefaults(t *testing.T) {
 	if cfg.AuditDurabilityMode != "best_effort" {
 		t.Errorf("AuditDurabilityMode = %q, want best_effort", cfg.AuditDurabilityMode)
 	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
+		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe", got)
+	}
+}
+
+// TestProfile_LocalStdioPolicyOverrideWins verifies the safer local-stdio
+// profile default does not clobber an explicit operator policy choice.
+func TestProfile_LocalStdioPolicyOverrideWins(t *testing.T) {
+	setProfileEnv(t, "local-stdio", map[string]string{
+		"CLOCKIFY_API_KEY": "test-key",
+		"CLOCKIFY_POLICY":  "safe_core",
+	})
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := os.Getenv("CLOCKIFY_POLICY"); got != "safe_core" {
+		t.Fatalf("CLOCKIFY_POLICY = %q, want explicit safe_core override", got)
+	}
 }
 
 // TestProfile_SingleTenantHTTPDefaults locks the single-tenant-http
@@ -137,6 +157,12 @@ func TestProfile_SingleTenantHTTPDefaults(t *testing.T) {
 	}
 	if got := os.Getenv("CLOCKIFY_POLICY"); got == "standard" {
 		t.Errorf("CLOCKIFY_POLICY stayed at raw default %q; single-tenant-http must pin the AI-facing policy", got)
+	}
+	if !cfg.SanitizeUpstreamErrors {
+		t.Errorf("SanitizeUpstreamErrors = false, want true for remote single-tenant HTTP clients")
+	}
+	if !cfg.DisableInlineSecrets {
+		t.Errorf("DisableInlineSecrets = false, want true for API-key-backed single-tenant HTTP profile")
 	}
 }
 
@@ -395,9 +421,10 @@ func TestProfile_KeysAreSpecced(t *testing.T) {
 	}
 }
 
-// TestProfile_SharedServiceIsStrict locks the four hosted-service
+// TestProfile_SharedServiceIsStrict locks the hosted-service
 // strict flags (MCP_OIDC_STRICT, MCP_REQUIRE_TENANT_CLAIM,
-// MCP_DISABLE_INLINE_SECRETS, CLOCKIFY_POLICY=time_tracking_safe)
+// MCP_REQUIRE_FORWARD_TENANT_CLAIM, MCP_DISABLE_INLINE_SECRETS,
+// CLOCKIFY_POLICY=time_tracking_safe)
 // onto the shared-service profile. Drift here re-introduces the C1
 // finding from the 2026-04-25 audit: a hosted-service profile that
 // silently accepts any-audience tokens, falls back to a default tenant
@@ -419,6 +446,9 @@ func TestProfile_SharedServiceIsStrict(t *testing.T) {
 	}
 	if !cfg.RequireTenantClaim {
 		t.Errorf("RequireTenantClaim = false, want true (multi-tenant must reject missing claim)")
+	}
+	if !cfg.RequireForwardTenantClaim {
+		t.Errorf("RequireForwardTenantClaim = false, want true (multi-tenant forward_auth must reject missing tenant header)")
 	}
 	if !cfg.DisableInlineSecrets {
 		t.Errorf("DisableInlineSecrets = false, want true (hosted service must reject inline secrets)")
@@ -463,6 +493,9 @@ func TestProfile_ProdPostgresIsStrict(t *testing.T) {
 	if !cfg.RequireTenantClaim {
 		t.Errorf("RequireTenantClaim = false, want true (prod-postgres)")
 	}
+	if !cfg.RequireForwardTenantClaim {
+		t.Errorf("RequireForwardTenantClaim = false, want true (prod-postgres)")
+	}
 	if !cfg.DisableInlineSecrets {
 		t.Errorf("DisableInlineSecrets = false, want true (prod-postgres)")
 	}
@@ -486,8 +519,9 @@ func TestProfile_SharedServiceStrictOverrideHonoured(t *testing.T) {
 		"MCP_OIDC_ISSUER":       "https://issuer.example",
 		"MCP_OIDC_AUDIENCE":     "clockify-mcp-shared",
 		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
-		// Explicit operator override — profile default is "1".
-		"MCP_REQUIRE_TENANT_CLAIM": "0",
+		// Explicit operator override — profile defaults are "1".
+		"MCP_REQUIRE_TENANT_CLAIM":         "0",
+		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "0",
 	})
 	cfg, err := Load()
 	if err != nil {
@@ -495,6 +529,9 @@ func TestProfile_SharedServiceStrictOverrideHonoured(t *testing.T) {
 	}
 	if cfg.RequireTenantClaim {
 		t.Fatalf("RequireTenantClaim = true; explicit override (MCP_REQUIRE_TENANT_CLAIM=0) must beat the profile default")
+	}
+	if cfg.RequireForwardTenantClaim {
+		t.Fatalf("RequireForwardTenantClaim = true; explicit override (MCP_REQUIRE_FORWARD_TENANT_CLAIM=0) must beat the profile default")
 	}
 }
 

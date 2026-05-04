@@ -8,7 +8,6 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
-	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ResultEnvelope, error) {
@@ -17,7 +16,7 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 		return ResultEnvelope{}, err
 	}
 	if projectID == "" && projectRef != "" {
-		projectID, err = resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}

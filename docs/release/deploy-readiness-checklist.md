@@ -29,7 +29,3 @@ This checklist must be satisfied before promoting a release to production.
 ## 6. Support and Monitoring
 - [ ] **Dashboard Check:** Confirm metrics are flowing to the production Prometheus/Grafana instance.
 - [ ] **Alerting:** Ensure the burn-rate alerts for the 99.9% SLO are active.
-
----
-
-**Signature:** ____________________  **Date:** ____________________

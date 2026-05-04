@@ -133,10 +133,7 @@ func runDoctorReport(args []string, out io.Writer) int {
 		for _, s := range specs {
 			effective := strings.TrimSpace(os.Getenv(s.Name))
 			source := attributeSource(s, preLoad[s.Name], profileKeys)
-			display := effective
-			if display == "" {
-				display = "—"
-			}
+			display := doctorDisplayValue(s, effective)
 			pf("%s\t%s\t%s\n", s.Name, display, source)
 		}
 		pln("")
@@ -149,6 +146,16 @@ func runDoctorReport(args []string, out io.Writer) int {
 		return 3
 	}
 	return 0
+}
+
+func doctorDisplayValue(spec config.EnvSpec, effective string) string {
+	if effective == "" {
+		return "—"
+	}
+	if spec.Sensitive {
+		return "set (redacted)"
+	}
+	return effective
 }
 
 type doctorOptions struct {
@@ -215,6 +222,9 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 	if effectiveDoctorBool(cfg.ExposeAuthErrors, cfgErr, "MCP_EXPOSE_AUTH_ERRORS") {
 		add("MCP_EXPOSE_AUTH_ERRORS", "hosted strict posture requires MCP_EXPOSE_AUTH_ERRORS=0 or unset")
 	}
+	if effectiveDoctorBool(cfg.AllowAnyOrigin, cfgErr, "MCP_ALLOW_ANY_ORIGIN") {
+		add("MCP_ALLOW_ANY_ORIGIN", "hosted strict posture requires explicit MCP_ALLOWED_ORIGINS; wildcard CORS is forbidden")
+	}
 
 	controlPlaneDSN := effectiveDoctorString(cfg.ControlPlaneDSN, cfgErr, "MCP_CONTROL_PLANE_DSN", "memory")
 	if !strings.HasPrefix(controlPlaneDSN, "postgres://") && !strings.HasPrefix(controlPlaneDSN, "postgresql://") {
@@ -270,6 +280,9 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 		}
 		if strings.TrimSpace(raw) == "" {
 			add("MCP_FORWARD_AUTH_TRUSTED_PROXIES", "hosted strict forward_auth posture requires MCP_FORWARD_AUTH_TRUSTED_PROXIES (CIDR allow-list of upstream proxies); empty list lets any source spoof X-Forwarded-User / X-Forwarded-Tenant")
+		}
+		if !effectiveDoctorBool(cfg.RequireForwardTenantClaim, cfgErr, "MCP_REQUIRE_FORWARD_TENANT_CLAIM") {
+			add("MCP_REQUIRE_FORWARD_TENANT_CLAIM", "hosted strict forward_auth posture requires MCP_REQUIRE_FORWARD_TENANT_CLAIM=1")
 		}
 	}
 

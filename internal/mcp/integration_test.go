@@ -72,6 +72,34 @@ func (a *testActivator) OnActivate(names []string) {
 	}
 }
 
+func (a *testActivator) OnDeactivate(names []string) {
+	if a.bootstrap != nil {
+		a.bootstrap.DeactivateTools(names)
+	}
+}
+
+func TestVisibleToolCountReflectsBootstrapActivation(t *testing.T) {
+	descriptors := []ToolDescriptor{
+		{Tool: Tool{Name: "clockify_search_tools", InputSchema: map[string]any{"type": "object"}}},
+		{Tool: Tool{Name: "clockify_list_workspaces", InputSchema: map[string]any{"type": "object"}}, ReadOnlyHint: true},
+	}
+	bc := &bootstrap.Config{Mode: bootstrap.Minimal}
+	bc.SetTier1Tools(map[string]bool{
+		"clockify_search_tools":    true,
+		"clockify_list_workspaces": true,
+	})
+	server := NewServer("test", descriptors, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
+	if got := server.VisibleToolCount(); got != 1 {
+		t.Fatalf("VisibleToolCount before activation = %d, want 1", got)
+	}
+	if err := server.ActivateTier1Tool("clockify_list_workspaces"); err != nil {
+		t.Fatalf("activate tier1: %v", err)
+	}
+	if got := server.VisibleToolCount(); got != 2 {
+		t.Fatalf("VisibleToolCount after activation = %d, want 2", got)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // 1. Full MCP handshake: initialize -> tools/list -> tools/call -> ping
 // ---------------------------------------------------------------------------
@@ -745,6 +773,41 @@ func TestActivateGroupAddsTools(t *testing.T) {
 	tools := server.listTools()
 	if len(tools) != 2 {
 		t.Fatalf("expected 2 tools after activation, got %d", len(tools))
+	}
+}
+
+func TestDeactivateGroupRemovesActivatedTools(t *testing.T) {
+	bc := &bootstrap.Config{Mode: bootstrap.Minimal}
+	server := NewServer("test", nil, &testEnforcement{bootstrap: bc}, &testActivator{bootstrap: bc})
+	newTools := []ToolDescriptor{
+		{
+			Tool:         Tool{Name: "new_tool_a", Description: "tool A", InputSchema: map[string]any{"type": "object"}},
+			Handler:      func(ctx context.Context, args map[string]any) (any, error) { return nil, nil },
+			ReadOnlyHint: true,
+		},
+		{
+			Tool:         Tool{Name: "new_tool_b", Description: "tool B", InputSchema: map[string]any{"type": "object"}},
+			Handler:      func(ctx context.Context, args map[string]any) (any, error) { return nil, nil },
+			ReadOnlyHint: true,
+		},
+	}
+
+	if err := server.ActivateGroup("test_group", newTools); err != nil {
+		t.Fatalf("activate group failed: %v", err)
+	}
+	if got := server.VisibleToolNames(); !got["new_tool_a"] || !got["new_tool_b"] {
+		t.Fatalf("expected activated tools visible, got %v", got)
+	}
+
+	removed := server.DeactivateGroup("test_group")
+	if len(removed) != 2 {
+		t.Fatalf("expected 2 removed tools, got %d: %v", len(removed), removed)
+	}
+	if got := server.VisibleToolNames(); got["new_tool_a"] || got["new_tool_b"] {
+		t.Fatalf("deactivated tools should be hidden, got %v", got)
+	}
+	if removed := server.DeactivateGroup("test_group"); len(removed) != 0 {
+		t.Fatalf("second deactivate should be idempotent, got %v", removed)
 	}
 }
 

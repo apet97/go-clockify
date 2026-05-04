@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 21 | 33 | 54 |
-| Mutating (non-destructive) | 13 | 42 | 55 |
+| Read-only | 23 | 33 | 56 |
+| Mutating (non-destructive) | 16 | 42 | 58 |
 | Destructive | 1 | 13 | 14 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **35** | **88** | **123** |
+| **Total tools** | **40** | **88** | **128** |
 
 ## Evidence types
 
@@ -69,7 +69,8 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_list_workspaces` | `GET /workspaces` | unit |
 | `clockify_policy_info` | local (no API call) | unit |
 | `clockify_quick_report` | `GET /workspaces/{ws}/reports/summary` (wrapped) | unit |
-| `clockify_resolve_debug` | local (no API call) | unit |
+| `clockify_resolve_debug` | compatibility alias over name resolution lookup | unit, live-read-only (TestLiveTier1ReadOnly) |
+| `clockify_resolve_name` | name resolution lookup over project/client/tag/user list endpoints | unit |
 | `clockify_summary_report` | `GET /workspaces/{ws}/reports/summary` | unit |
 | `clockify_timer_status` | `GET /workspaces/{ws}/user/{uid}/time-entries?in-progress=true` | unit |
 | `clockify_timesheet_review` | workflow wrapper over `GET /workspaces/{ws}/user/{uid}/time-entries` | unit, live-read-only (TestLiveTier1ReadOnly) |
@@ -86,9 +87,13 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_create_project` | `POST /workspaces/{ws}/projects` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_create_tag` | `POST /workspaces/{ws}/tags` | unit |
 | `clockify_create_task` | `POST /workspaces/{ws}/projects/{id}/tasks` | unit |
+| `clockify_activate_group` | local (tool-surface mutation) | unit |
+| `clockify_activate_tool` | local (tool-surface mutation) | unit |
+| `clockify_deactivate_group` | local (tool-surface mutation) | unit |
 | `clockify_find_and_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
+| `clockify_list_tools` | local (catalog query) | unit |
 | `clockify_log_time` | `POST /workspaces/{ws}/time-entries` | unit |
-| `clockify_search_tools` | local (catalog query) | unit |
+| `clockify_search_tools` | local (deprecated catalog/activation shim) | unit |
 | `clockify_start_timer` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_stop_timer` | `PATCH /workspaces/{ws}/user/{uid}/time-entries/{id}` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_switch_project` | `PATCH` + `POST /workspaces/{ws}/time-entries` | unit |
@@ -401,9 +406,11 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2TimeOffRemainingTools` | all 12 time-off tool names: policy/request list/get/create/update/delete/status/balance paths; request create reaches live body contract and unsupported/permission routes are asserted where Clockify rejects the operation | success path + plan/permission/unsupported-route probes |
 | `TestLiveT2ApprovalsRemainingTools` | all 6 approvals tool names: list, submit period/periodStart, get, approve/reject dry-run, withdraw | success path + documented approval period / GET-route 4xx probes |
 
-**Live-test coverage (manual campaign expansion + hooks):** all 123
-catalog tools (35 Tier 1 + 88 Tier 2) are now named in
-`tests/e2e_live*.go`. PR #59 manually exercised the then-current
+**Live-test coverage (manual campaign expansion + hooks):** the
+API-backed catalog surface is named in `tests/e2e_live*.go`; the
+current 128-tool catalog is 40 Tier 1 tools + 88 Tier 2 tools, with
+five local discovery/activation/name-resolution helpers covered by unit tests instead
+of live Clockify calls. PR #59 manually exercised the then-current
 121 generated catalog tools through the MCP path against the
 sacrificial workspace; PR #62 added the invite-user raw-route
 validation probe. The two later timesheet workflow helpers are covered
@@ -479,14 +486,15 @@ upstream limitation:
 
 ## Gaps
 
-1. **Full-success live coverage:** all 123 catalog tools have a
-   manual probe or live-test hook, but some remain asserted as
-   upstream unsupported, permission-gated, plan-gated, or
-   workspace-state limited rather than full success paths. The
-   original exhaustive manual probe evidence covered the then-current
-   121-tool catalog; the two later workflow helpers still need a
-   future live campaign run if the maintainer wants current-catalog
-   manual evidence.
+1. **Full-success live coverage:** the current 128-tool catalog has a
+   manual probe, live-test hook, or local unit coverage path, but some
+   API-backed tools remain asserted as upstream unsupported,
+   permission-gated, plan-gated, or workspace-state limited rather
+   than full success paths. The original exhaustive manual probe
+   evidence covered the then-current 121-tool catalog; later workflow
+   and local helper additions should be included in a future
+   current-catalog campaign if the maintainer wants refreshed live
+   coverage wording.
 2. **Schema-drift for mutating endpoints:** Only read-side schemas are
    drift-checked. Request payload schemas (tool JSON Schema descriptors)
    are not automatically compared against the live API's accepted fields.

@@ -35,7 +35,7 @@ import (
 var validDestructiveArgs = map[string]map[string]any{
 	"clockify_start_timer":           {"description": "harness-test"},
 	"clockify_stop_timer":            {},
-	"clockify_log_time":              {"start": "2026-01-01T09:00:00Z", "end": "2026-01-01T10:00:00Z"},
+	"clockify_log_time":              {"start": "2026-01-01T09:00:00Z", "end": "2026-01-01T10:00:00Z", "allow_overlap": true},
 	"clockify_timesheet_fill_gap":    {"start": "2026-01-01T09:00:00Z", "end": "2026-01-01T10:00:00Z", "project_id": "p-123", "description": "harness-test"},
 	"clockify_add_entry":             {"start": "2026-01-01T09:00:00Z"},
 	"clockify_update_entry":          {"entry_id": "e-123"},
@@ -46,6 +46,9 @@ var validDestructiveArgs = map[string]map[string]any{
 	"clockify_create_tag":            {"name": "t"},
 	"clockify_create_task":           {"project": "p", "name": "t"},
 	"clockify_switch_project":        {"project": "p"},
+	"clockify_activate_group":        {"name": "invoices"},
+	"clockify_activate_tool":         {"name": "clockify_send_invoice"},
+	"clockify_deactivate_group":      {"name": "invoices"},
 	// clockify_search_tools is technically write-classified (the
 	// activate_group / activate_tool branches mutate the server's
 	// visible tool surface), but the introspection allowlist in
@@ -59,12 +62,16 @@ var validDestructiveArgs = map[string]map[string]any{
 
 // introspectionExempt returns the names of write-classified tools
 // that the policy isIntrospection() allowlist permits even under
-// read_only / time_tracking_safe / safe_core. Currently only
-// clockify_search_tools (write-classified post-ChatGPT-audit, but
-// query path remains read-safe).
+// read_only / time_tracking_safe / safe_core. Activation/deactivation
+// tools are write-classified because they mutate the visible tool
+// surface, but their domain side effects are separately gated by
+// Activator.IsGroupAllowed and never reach Clockify.
 func introspectionExempt() map[string]bool {
 	return map[string]bool{
-		"clockify_search_tools": true,
+		"clockify_search_tools":     true,
+		"clockify_activate_group":   true,
+		"clockify_activate_tool":    true,
+		"clockify_deactivate_group": true,
 	}
 }
 

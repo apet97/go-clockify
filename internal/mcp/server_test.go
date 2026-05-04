@@ -36,14 +36,13 @@ func TestInitializeAndToolsList(t *testing.T) {
 }
 
 func TestServerInstructionsPublicContract(t *testing.T) {
-	if !strings.Contains(ServerInstructions, "clockify_search_tools") {
-		t.Fatalf("ServerInstructions should reference clockify_search_tools: %q", ServerInstructions)
+	for _, name := range []string{"clockify_list_tools", "clockify_activate_group", "clockify_activate_tool", "clockify_deactivate_group"} {
+		if !strings.Contains(ServerInstructions, name) {
+			t.Fatalf("ServerInstructions should reference %s: %q", name, ServerInstructions)
+		}
 	}
-	if !strings.Contains(ServerInstructions, "activate_group") || !strings.Contains(ServerInstructions, "activate_tool") {
-		t.Fatalf("ServerInstructions should mention activate_group and activate_tool: %q", ServerInstructions)
-	}
-	if strings.Contains(ServerInstructions, "clockify_activate_group") || strings.Contains(ServerInstructions, "clockify_activate_tool") {
-		t.Fatalf("ServerInstructions contains stale activation tool names: %q", ServerInstructions)
+	if !strings.Contains(ServerInstructions, "clockify_search_tools") || !strings.Contains(ServerInstructions, "deprecated compatibility shim") {
+		t.Fatalf("ServerInstructions should keep the deprecated search_tools compatibility note: %q", ServerInstructions)
 	}
 	if !strings.Contains(ServerInstructions, "dry_run:true") || !strings.Contains(ServerInstructions, "dry_run:false") {
 		t.Fatalf("ServerInstructions should describe dry_run:true preview and dry_run:false execution: %q", ServerInstructions)

@@ -50,11 +50,15 @@ func TestRiskOverridesMatchTaxonomy(t *testing.T) {
 		"clockify_test_webhook":           mcp.RiskWrite | mcp.RiskExternalSideEffect,
 	}
 	wantAuditKeys := map[string][]string{
-		"clockify_send_invoice":      {"invoice_id"},
-		"clockify_mark_invoice_paid": {"invoice_id"},
-		"clockify_update_user_role":  {"user_id", "role"},
-		"clockify_add_invoice_item":  {"invoice_id", "item_type", "description", "quantity", "unit_price"},
-		"clockify_test_webhook":      {"webhook_id"},
+		"clockify_send_invoice":        {"invoice_id"},
+		"clockify_mark_invoice_paid":   {"invoice_id"},
+		"clockify_create_invoice":      {"client_id", "number", "issued_date", "currency", "due_date"},
+		"clockify_update_user_role":    {"user_id", "role"},
+		"clockify_add_invoice_item":    {"invoice_id", "item_type", "description", "quantity", "unit_price"},
+		"clockify_update_invoice_item": {"invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"},
+		"clockify_create_webhook":      {"name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
+		"clockify_update_webhook":      {"webhook_id", "name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
+		"clockify_test_webhook":        {"webhook_id"},
 	}
 
 	got := map[string]mcp.ToolDescriptor{}

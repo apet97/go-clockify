@@ -292,13 +292,14 @@ func fmtAny(v any) string {
 	}
 }
 
+const publicReadyFailureReason = "upstream check failed"
+
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"status":  "ok",
-		"version": s.Version,
+		"status": "ok",
 	})
 }
 
@@ -308,8 +309,9 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	if s.ReadyChecker != nil {
 		if err := s.checkReady(r.Context()); err != nil {
+			slog.Warn("ready_check_failed", "error", err.Error(), "transport", "http")
 			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": err.Error()})
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": publicReadyFailureReason})
 			return
 		}
 	}

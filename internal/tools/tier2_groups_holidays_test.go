@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/jsonschema"
 )
 
 // TestTier2_GroupsHolidays_FullSweep covers user-group + holiday admin
@@ -123,5 +125,51 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_delete_holiday")
 	if _, err := svc.DeleteHoliday(ctx, map[string]any{"holiday_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty holiday_id")
+	}
+}
+
+func TestCreateHolidayInputSchemaRequiresAssignment(t *testing.T) {
+	svc := New(nil, "ws1")
+	descriptors, ok := svc.Tier2Handlers("groups_holidays")
+	if !ok {
+		t.Fatal("missing groups_holidays handlers")
+	}
+	var schema map[string]any
+	for _, d := range descriptors {
+		if d.Tool.Name == "clockify_create_holiday" {
+			schema = d.Tool.InputSchema
+			break
+		}
+	}
+	if schema == nil {
+		t.Fatal("clockify_create_holiday descriptor not found")
+	}
+
+	if err := jsonschema.Validate(schema, map[string]any{
+		"name":       "Memorial Day",
+		"start_date": "2026-05-25",
+		"user_ids":   []any{"u1"},
+	}); err != nil {
+		t.Fatalf("user_ids assignment should pass schema: %v", err)
+	}
+	if err := jsonschema.Validate(schema, map[string]any{
+		"name":           "Memorial Day",
+		"start_date":     "2026-05-25",
+		"user_group_ids": []any{"g1"},
+	}); err != nil {
+		t.Fatalf("user_group_ids assignment should pass schema: %v", err)
+	}
+	if err := jsonschema.Validate(schema, map[string]any{
+		"name":       "Memorial Day",
+		"start_date": "2026-05-25",
+	}); err == nil {
+		t.Fatal("expected schema to reject holidays without user_ids or user_group_ids")
+	}
+	if err := jsonschema.Validate(schema, map[string]any{
+		"name":       "Memorial Day",
+		"start_date": "2026-05-25",
+		"user_ids":   []any{},
+	}); err == nil {
+		t.Fatal("expected schema to reject empty user_ids")
 	}
 }

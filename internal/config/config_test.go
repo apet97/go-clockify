@@ -105,6 +105,7 @@ func setEnvs(t *testing.T, envs map[string]string) {
 var profileLeakedEnvs = []string{
 	"MCP_OIDC_STRICT",
 	"MCP_REQUIRE_TENANT_CLAIM",
+	"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 	"MCP_DISABLE_INLINE_SECRETS",
 	"MCP_HTTP_LEGACY_POLICY",
 	"MCP_AUDIT_DURABILITY",
@@ -708,10 +709,11 @@ func TestLoadTransportGRPCOIDC(t *testing.T) {
 // accepted on gRPC (W5-05b: metadata passthrough).
 func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 	setEnvs(t, map[string]string{
-		"CLOCKIFY_API_KEY":      "test-key",
-		"MCP_TRANSPORT":         "grpc",
-		"MCP_AUTH_MODE":         "forward_auth",
-		"MCP_ALLOW_DEV_BACKEND": "1",
+		"CLOCKIFY_API_KEY":                 "test-key",
+		"MCP_TRANSPORT":                    "grpc",
+		"MCP_AUTH_MODE":                    "forward_auth",
+		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
+		"MCP_ALLOW_DEV_BACKEND":            "1",
 	})
 	_, err := Load()
 	if err != nil {
@@ -1276,10 +1278,11 @@ func TestHTTPInlineMetrics_InheritBearerRequiresStaticBearer(t *testing.T) {
 	})
 	t.Run("forward_auth_rejected", func(t *testing.T) {
 		setEnvs(t, map[string]string{
-			"CLOCKIFY_API_KEY":                "test-key",
-			"MCP_TRANSPORT":                   "http",
-			"MCP_AUTH_MODE":                   "forward_auth",
-			"MCP_HTTP_INLINE_METRICS_ENABLED": "1",
+			"CLOCKIFY_API_KEY":                 "test-key",
+			"MCP_TRANSPORT":                    "http",
+			"MCP_AUTH_MODE":                    "forward_auth",
+			"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
+			"MCP_HTTP_INLINE_METRICS_ENABLED":  "1",
 		})
 		_, err := Load()
 		if err == nil {
@@ -1413,6 +1416,20 @@ func TestOIDCJWKSCacheTTL_Custom(t *testing.T) {
 	}
 }
 
+func TestOIDCJWKSAllowPrivate(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":            "test-key",
+		"MCP_OIDC_JWKS_ALLOW_PRIVATE": "1",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.OIDCJWKSAllowPrivate {
+		t.Fatal("expected MCP_OIDC_JWKS_ALLOW_PRIVATE=1 to enable private JWKS targets")
+	}
+}
+
 func TestOIDCJWKSCacheTTL_BelowMinRejected(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":        "test-key",
@@ -1504,20 +1521,17 @@ var hostedProfileEnv = map[string]string{
 	"MCP_ALLOW_DEV_BACKEND": "1",
 }
 
-// TestLoad_SanitizeUpstreamErrors_HostedProfileDefault locks in the
-// profile-driven default added in audit finding 9: shared-service
-// silently flips SanitizeUpstreamErrors=true so a 4xx from Clockify
-// cannot leak per-tenant info across tenants. local-stdio keeps
-// verbose errors for fast operator debugging. The other two
-// profiles (prod-postgres, single-tenant-http) have additional
-// production gates that need real postgres / a bearer token to clear,
-// so they're covered indirectly by the isHostedProfile() unit logic.
-func TestLoad_SanitizeUpstreamErrors_HostedProfileDefault(t *testing.T) {
+// TestLoad_SanitizeUpstreamErrors_ProfileDefaults locks in the
+// profile-driven defaults: shared-service and single-tenant-http
+// sanitize MCP-wire tool errors, while local-stdio keeps verbose
+// errors for fast operator debugging.
+func TestLoad_SanitizeUpstreamErrors_ProfileDefaults(t *testing.T) {
 	cases := []struct {
 		profile string
 		want    bool
 	}{
 		{"shared-service", true},
+		{"single-tenant-http", true},
 		{"local-stdio", false},
 	}
 	for _, c := range cases {
@@ -1528,6 +1542,9 @@ func TestLoad_SanitizeUpstreamErrors_HostedProfileDefault(t *testing.T) {
 			}
 			if isHostedProfile(c.profile) {
 				maps.Copy(env, hostedProfileEnv)
+			}
+			if c.profile == "single-tenant-http" {
+				env["MCP_BEARER_TOKEN"] = "super-secret-token-at-least-sixteen"
 			}
 			setEnvs(t, env)
 			cfg, err := Load()
@@ -1689,6 +1706,112 @@ func TestLoad_HostedProfileRefusesInsecure(t *testing.T) {
 			}
 			if !c.want && err != nil && strings.Contains(err.Error(), "CLOCKIFY_INSECURE=1") {
 				t.Fatalf("non-hosted profile %q should not reject INSECURE: %v", c.profile, err)
+			}
+		})
+	}
+}
+
+func TestLoad_HostedProfileRefusesAllowAnyOrigin(t *testing.T) {
+	cases := []struct {
+		profile string
+		want    bool // want error?
+	}{
+		{"shared-service", true},
+		{"prod-postgres", true},
+		{"local-stdio", false},
+		{"single-tenant-http", false},
+	}
+	for _, c := range cases {
+		t.Run(c.profile, func(t *testing.T) {
+			env := map[string]string{
+				"CLOCKIFY_API_KEY":     "test-key",
+				"MCP_ALLOW_ANY_ORIGIN": "1",
+				"MCP_PROFILE":          c.profile,
+			}
+			if c.profile == "shared-service" || c.profile == "prod-postgres" {
+				maps.Copy(env, hostedProfileEnv)
+			}
+			setEnvs(t, env)
+			_, err := Load()
+			if c.want && err == nil {
+				t.Fatalf("expected hosted profile %q to reject MCP_ALLOW_ANY_ORIGIN=1", c.profile)
+			}
+			if c.want && !strings.Contains(err.Error(), "MCP_ALLOW_ANY_ORIGIN=1") {
+				t.Fatalf("error %q should reference MCP_ALLOW_ANY_ORIGIN=1", err)
+			}
+			if !c.want && err != nil && strings.Contains(err.Error(), "MCP_ALLOW_ANY_ORIGIN=1") {
+				t.Fatalf("non-hosted profile %q should not reject allow-any-origin: %v", c.profile, err)
+			}
+		})
+	}
+}
+
+func TestLoad_ForwardAuthRequiresTrustedProxiesOnNonLoopback(t *testing.T) {
+	cases := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{
+			name: "non_loopback_http_bind_refused",
+			env: map[string]string{
+				"MCP_TRANSPORT":         "streamable_http",
+				"MCP_AUTH_MODE":         "forward_auth",
+				"MCP_HTTP_BIND":         ":8080",
+				"MCP_ALLOW_DEV_BACKEND": "1",
+			},
+			want: "requires MCP_FORWARD_AUTH_TRUSTED_PROXIES",
+		},
+		{
+			name: "loopback_http_bind_allowed",
+			env: map[string]string{
+				"MCP_TRANSPORT":         "streamable_http",
+				"MCP_AUTH_MODE":         "forward_auth",
+				"MCP_HTTP_BIND":         "127.0.0.1:8080",
+				"MCP_ALLOW_DEV_BACKEND": "1",
+			},
+		},
+		{
+			name: "trusted_proxy_allowlist_allowed",
+			env: map[string]string{
+				"MCP_TRANSPORT":                    "streamable_http",
+				"MCP_AUTH_MODE":                    "forward_auth",
+				"MCP_HTTP_BIND":                    ":8080",
+				"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
+				"MCP_ALLOW_DEV_BACKEND":            "1",
+			},
+		},
+		{
+			name: "non_loopback_grpc_bind_refused",
+			env: map[string]string{
+				"CLOCKIFY_API_KEY":      "test-key",
+				"MCP_TRANSPORT":         "grpc",
+				"MCP_AUTH_MODE":         "forward_auth",
+				"MCP_GRPC_BIND":         ":9090",
+				"MCP_ALLOW_DEV_BACKEND": "1",
+			},
+			want: "MCP_GRPC_BIND",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			env := map[string]string{
+				"CLOCKIFY_API_KEY": "test-key",
+			}
+			maps.Copy(env, c.env)
+			setEnvs(t, env)
+			_, err := Load()
+			if c.want != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q", c.want)
+				}
+				if !strings.Contains(err.Error(), c.want) {
+					t.Fatalf("error %q should contain %q", err, c.want)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Load: %v", err)
 			}
 		})
 	}

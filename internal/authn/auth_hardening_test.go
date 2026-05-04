@@ -2,6 +2,9 @@ package authn
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -143,9 +146,10 @@ func TestForwardAuth_AcceptsTrustedCIDR(t *testing.T) {
 // TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour documents
 // the deliberate non-default: an empty (or unset)
 // ForwardAuthTrustedProxies skips the source check entirely so
-// existing self-hosted single-tenant operators who own the network
-// boundary do not have to set the env var. doctor --strict refuses
-// this configuration in hosted profiles via a separate gate.
+// existing self-hosted single-tenant operators who own a loopback or
+// otherwise private network boundary do not have to set the env var.
+// config.Load refuses non-loopback forward_auth binds without the
+// allow-list before this authenticator is built.
 func TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour(t *testing.T) {
 	auth, err := New(Config{
 		Mode:                 ModeForwardAuth,
@@ -160,6 +164,35 @@ func TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour(t *testing.T) {
 	req.Header.Set("X-Forwarded-User", "alice")
 	if _, err := auth.Authenticate(context.Background(), req); err != nil {
 		t.Fatalf("legacy unset-allowlist behaviour broke: %v", err)
+	}
+}
+
+func TestForwardAuth_RequireTenantClaim(t *testing.T) {
+	auth, err := New(Config{
+		Mode:                      ModeForwardAuth,
+		ForwardSubjectHeader:      "X-Forwarded-User",
+		ForwardTenantHeader:       "X-Forwarded-Tenant",
+		RequireForwardTenantClaim: true,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-User", "alice")
+	if _, err := auth.Authenticate(context.Background(), req); err == nil {
+		t.Fatal("expected missing tenant header to be rejected")
+	} else if !strings.Contains(err.Error(), "missing tenant header X-Forwarded-Tenant") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	req.Header.Set("X-Forwarded-Tenant", "acme")
+	principal, err := auth.Authenticate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("tenant header should satisfy require gate: %v", err)
+	}
+	if principal.TenantID != "acme" {
+		t.Fatalf("TenantID=%q, want acme", principal.TenantID)
 	}
 }
 
@@ -339,16 +372,102 @@ func TestNewOIDCAuth_StrictRejectsHTTPJWKS(t *testing.T) {
 	}
 }
 
-// TestNewOIDCAuth_NonStrictAllowsHTTPIssuer documents the deliberate
-// asymmetry: non-strict deployments (typical local dev / single-
-// tenant stdio) keep accepting http issuers because they don't bind
-// tokens to a specific aud/resource and the loss is bounded.
-func TestNewOIDCAuth_NonStrictAllowsHTTPIssuer(t *testing.T) {
+func TestNewOIDCAuth_NonStrictRejectsRemoteHTTPIssuer(t *testing.T) {
 	if _, err := New(Config{
 		Mode:       ModeOIDC,
 		OIDCIssuer: "http://idp.example.com",
+	}); err == nil {
+		t.Fatal("expected non-strict mode to reject remote http issuer")
+	}
+}
+
+func TestNewOIDCAuth_NonStrictRejectsRemoteHTTPJWKS(t *testing.T) {
+	if _, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  "https://idp.example.com",
+		OIDCJWKSURL: "http://idp.example.com/keys",
+	}); err == nil {
+		t.Fatal("expected non-strict mode to reject remote http JWKS URL")
+	}
+}
+
+func TestNewOIDCAuth_NonStrictRejectsLoopbackHTTPJWKSWithoutPrivateOptIn(t *testing.T) {
+	if _, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  "https://idp.example.com",
+		OIDCJWKSURL: "http://127.0.0.1:8080/keys",
+	}); err == nil {
+		t.Fatal("expected loopback JWKS URL to require private-address opt-in")
+	}
+}
+
+func TestNewOIDCAuth_NonStrictAllowsLoopbackHTTPJWKSWithPrivateOptIn(t *testing.T) {
+	if _, err := New(Config{
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           "https://idp.example.com",
+		OIDCJWKSURL:          "http://127.0.0.1:8080/keys",
+		OIDCJWKSAllowPrivate: true,
 	}); err != nil {
-		t.Fatalf("expected non-strict http issuer to be accepted, got: %v", err)
+		t.Fatalf("expected private-address opt-in to permit loopback JWKS URL, got: %v", err)
+	}
+}
+
+func TestNewOIDCAuth_RejectsPrivateHTTPSJWKSWithoutPrivateOptIn(t *testing.T) {
+	if _, err := New(Config{
+		Mode:        ModeOIDC,
+		OIDCIssuer:  "https://idp.example.com",
+		OIDCJWKSURL: "https://10.0.0.8/keys",
+	}); err == nil {
+		t.Fatal("expected private HTTPS JWKS URL to require private-address opt-in")
+	}
+}
+
+func TestMTLSRejectsControlBytesInSubjectAndTenant(t *testing.T) {
+	auth, err := New(Config{
+		Mode:             ModeMTLS,
+		DefaultTenantID:  "fallback",
+		MTLSTenantSource: "cert",
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	cases := []struct {
+		name    string
+		subject pkix.Name
+		want    string
+	}{
+		{
+			name: "subject_control_byte",
+			subject: pkix.Name{
+				CommonName:   "alice\nforged=1",
+				Organization: []string{"team-a"},
+			},
+			want: "mtls: subject contains disallowed byte",
+		},
+		{
+			name: "tenant_control_byte",
+			subject: pkix.Name{
+				CommonName:   "alice",
+				Organization: []string{"team-a\nforged=1"},
+			},
+			want: "mtls: tenant contains disallowed byte",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			leaf := &x509.Certificate{Subject: tc.subject}
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.TLS = &tls.ConnectionState{
+				VerifiedChains: [][]*x509.Certificate{{leaf}},
+			}
+			_, err := auth.Authenticate(context.Background(), req)
+			if err == nil {
+				t.Fatal("expected principal sanitization error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q should contain %q", err, tc.want)
+			}
+		})
 	}
 }
 
@@ -392,5 +511,25 @@ func TestJWKSCache_HungServerRespectsDefaultTimeout(t *testing.T) {
 	}
 	if elapsed > 2*time.Second {
 		t.Fatalf("reload should fail fast under timeout; took %s", elapsed)
+	}
+}
+
+func TestJWKSCache_RejectsOversizedRemoteBody(t *testing.T) {
+	large := strings.Repeat(" ", maxJWKSBody+1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(large))
+	}))
+	t.Cleanup(server.Close)
+
+	cache := &jwksCache{
+		url:    server.URL + "/keys",
+		client: server.Client(),
+	}
+	err := cache.reload(context.Background())
+	if err == nil {
+		t.Fatal("expected oversized JWKS response to fail")
+	}
+	if !strings.Contains(err.Error(), "jwks response too large") {
+		t.Fatalf("expected too-large error, got %v", err)
 	}
 }

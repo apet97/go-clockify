@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -72,7 +73,7 @@ func TestToolOutputSchema_ActionConstMatchesName(t *testing.T) {
 func TestToolDescriptors_AnnotationsMatchHints(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 
-	check := func(name string, readOnly, destructive, idempotent bool, annotations map[string]any) {
+	check := func(name string, readOnly, destructive, idempotent bool, riskClass []string, dryRun bool, annotations map[string]any) {
 		t.Helper()
 		if annotations == nil {
 			t.Errorf("%s: annotations map is nil (hints cannot be reflected back to clients)", name)
@@ -81,10 +82,26 @@ func TestToolDescriptors_AnnotationsMatchHints(t *testing.T) {
 		assertBoolAnnotation(t, name, annotations, "readOnlyHint", readOnly)
 		assertBoolAnnotation(t, name, annotations, "destructiveHint", destructive)
 		assertBoolAnnotation(t, name, annotations, "idempotentHint", idempotent)
+		gotRisk, ok := annotations["riskClass"].([]string)
+		if !ok {
+			t.Errorf("%s: annotations.riskClass missing or wrong type: %T", name, annotations["riskClass"])
+			return
+		}
+		if !reflect.DeepEqual(gotRisk, riskClass) {
+			t.Errorf("%s: annotations.riskClass=%v, want %v", name, gotRisk, riskClass)
+		}
+		gotDryRun, ok := annotations["dryRun"].(bool)
+		if !ok {
+			t.Errorf("%s: annotations.dryRun missing or wrong type: %T", name, annotations["dryRun"])
+			return
+		}
+		if gotDryRun != dryRun {
+			t.Errorf("%s: annotations.dryRun=%v, want %v", name, gotDryRun, dryRun)
+		}
 	}
 
 	for _, d := range svc.Registry() {
-		check(d.Tool.Name, d.ReadOnlyHint, d.DestructiveHint, d.IdempotentHint, d.Tool.Annotations)
+		check(d.Tool.Name, d.ReadOnlyHint, d.DestructiveHint, d.IdempotentHint, riskClassAnnotationNames(d.RiskClass), schemaHasDryRun(d.Tool.InputSchema), d.Tool.Annotations)
 	}
 	for group := range Tier2Groups {
 		descriptors, ok := svc.Tier2Handlers(group)
@@ -92,7 +109,7 @@ func TestToolDescriptors_AnnotationsMatchHints(t *testing.T) {
 			t.Fatalf("Tier2Handlers(%q) missing", group)
 		}
 		for _, d := range descriptors {
-			check(d.Tool.Name, d.ReadOnlyHint, d.DestructiveHint, d.IdempotentHint, d.Tool.Annotations)
+			check(d.Tool.Name, d.ReadOnlyHint, d.DestructiveHint, d.IdempotentHint, riskClassAnnotationNames(d.RiskClass), schemaHasDryRun(d.Tool.InputSchema), d.Tool.Annotations)
 		}
 	}
 }

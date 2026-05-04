@@ -3,15 +3,19 @@ package clockify
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 func TestClientGetEmpty200LeavesOutZero(t *testing.T) {
@@ -53,6 +57,33 @@ func TestClientGetSuccess(t *testing.T) {
 	}
 	if out["id"] != "u1" {
 		t.Fatalf("unexpected id: %#v", out)
+	}
+}
+
+func TestClientRefusesCrossHostRedirect(t *testing.T) {
+	var redirected atomic.Bool
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		redirected.Store(true)
+		if got := r.Header.Get("X-Api-Key"); got != "" {
+			t.Fatalf("redirect target received X-Api-Key: %q", got)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer target.Close()
+
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/capture", http.StatusFound)
+	}))
+	defer source.Close()
+
+	c := NewClient("test-key", source.URL, 5*time.Second, 0)
+	var out map[string]any
+	if err := c.Get(context.Background(), "/redirect", nil, &out); err == nil {
+		t.Fatal("expected cross-host redirect to be refused")
+	}
+	if redirected.Load() {
+		t.Fatal("cross-host redirect target should not have been contacted")
 	}
 }
 
@@ -188,6 +219,60 @@ func TestRetryAfterRFC1123(t *testing.T) {
 	}
 	if count.Load() != 2 {
 		t.Fatalf("expected 2 requests, got %d", count.Load())
+	}
+}
+
+func TestParseRetryAfterAdditionalFormats(t *testing.T) {
+	future := time.Now().Add(30 * time.Second).UTC()
+	cases := []struct {
+		name string
+		raw  string
+		ok   bool
+	}{
+		{name: "empty", raw: "", ok: false},
+		{name: "seconds", raw: "30", ok: true},
+		{name: "rfc1123", raw: future.Format(time.RFC1123), ok: true},
+		{name: "rfc1123z", raw: future.Format(time.RFC1123Z), ok: true},
+		{name: "rfc3339", raw: future.Format(time.RFC3339), ok: true},
+		{name: "garbage", raw: "not a retry-after", ok: false},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := parseRetryAfter(tt.raw)
+			if ok != tt.ok {
+				t.Fatalf("parseRetryAfter(%q) ok=%v, want %v", tt.raw, ok, tt.ok)
+			}
+			if ok && got == 0 {
+				t.Fatalf("parseRetryAfter(%q) returned zero duration", tt.raw)
+			}
+		})
+	}
+}
+
+func TestRetryAfterMalformedCountsMetric(t *testing.T) {
+	before := metrics.UpstreamRetryAfterUnparseableTotal.Get("/test")
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "not a retry-after")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"message":"slow down"}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var out map[string]any
+	err := c.Get(context.Background(), "/test", nil, &out)
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.RetryAfter != 0 {
+		t.Fatalf("malformed Retry-After should not set retry duration, got %s", apiErr.RetryAfter)
+	}
+	if got := metrics.UpstreamRetryAfterUnparseableTotal.Get("/test"); got != before+1 {
+		t.Fatalf("retry-after metric = %d, want %d", got, before+1)
 	}
 }
 
@@ -463,7 +548,7 @@ func TestListAllSinglePage(t *testing.T) {
 	defer ts.Close()
 
 	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
-	// page-size=50 (default), only 2 items returned → single page
+	// page-size=200 (default), only 2 items returned -> single page
 	result, err := ListAll[item](context.Background(), c, "/items", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -473,6 +558,141 @@ func TestListAllSinglePage(t *testing.T) {
 	}
 	if result[0].ID != "x" || result[1].ID != "y" {
 		t.Fatalf("unexpected items: %+v", result)
+	}
+}
+
+func TestListAllMaxRowsExceededReturnsTypedError(t *testing.T) {
+	type item struct {
+		ID string `json:"id"`
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page-size"))
+		if pageSize <= 0 {
+			pageSize = 2
+		}
+		items := make([]item, 0, pageSize)
+		for i := 0; i < pageSize; i++ {
+			items = append(items, item{ID: fmt.Sprintf("item-%d", i)})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(items)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	result, err := ListAllWithOptions[item](
+		context.Background(),
+		c,
+		"/items",
+		map[string]string{"page-size": "2"},
+		ListAllOptions{MaxRows: 3},
+	)
+	if err == nil {
+		t.Fatal("expected max-row pagination error")
+	}
+	if result != nil {
+		t.Fatalf("expected no partial result on error, got %+v", result)
+	}
+	var capErr *PaginationCapError
+	if !errors.As(err, &capErr) {
+		t.Fatalf("expected PaginationCapError, got %T: %v", err, err)
+	}
+	if capErr.Path != "/items" || capErr.RowsScanned != 4 || capErr.MaxRows != 3 || capErr.Page != 2 || capErr.PageSize != 2 {
+		t.Fatalf("unexpected cap error fields: %+v", capErr)
+	}
+	for _, want := range []string{"pagination row cap exceeded", "path=/items", "rows_scanned=4", "max_rows=3"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q should contain %q", err, want)
+		}
+	}
+}
+
+func TestListAllFuncStreamsPages(t *testing.T) {
+	type item struct {
+		ID string `json:"id"`
+	}
+
+	allItems := []item{
+		{ID: "1"},
+		{ID: "2"},
+		{ID: "3"},
+		{ID: "4"},
+		{ID: "5"},
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page-size"))
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 2
+		}
+		start := (page - 1) * pageSize
+		end := start + pageSize
+		if start >= len(allItems) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		if end > len(allItems) {
+			end = len(allItems)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(allItems[start:end])
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var pageLengths []int
+	var seen []string
+	err := ListAllFuncWithOptions[item](
+		context.Background(),
+		c,
+		"/items",
+		map[string]string{"page-size": "2"},
+		ListAllOptions{MaxRows: 10},
+		func(batch []item) error {
+			pageLengths = append(pageLengths, len(batch))
+			for _, it := range batch {
+				seen = append(seen, it.ID)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got, want := strings.Join(seen, ","), "1,2,3,4,5"; got != want {
+		t.Fatalf("streamed ids: got %q want %q", got, want)
+	}
+	if got, want := fmt.Sprint(pageLengths), "[2 2 1]"; got != want {
+		t.Fatalf("page lengths: got %s want %s", got, want)
+	}
+}
+
+func TestListAllSafetyStopErrorIncludesPath(t *testing.T) {
+	type item struct {
+		ID string `json:"id"`
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"id":"x"}]`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	_, err := ListAll[item](context.Background(), c, "/items", map[string]string{"page-size": "1"})
+	if err == nil {
+		t.Fatal("expected pagination safety stop error")
+	}
+	for _, want := range []string{"pagination safety stop reached", "path=/items", "page-size=1"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q should contain %q", err, want)
+		}
 	}
 }
 

@@ -48,11 +48,12 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 2. Create user group (RW)
 		{
-			Tool: toolRW("clockify_create_user_group", "Create a new user group", map[string]any{
+			Tool: toolRW("clockify_create_user_group", "Create a new user group. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"name"},
 				"properties": map[string]any{
-					"name": map[string]any{"type": "string", "description": "Name for the new user group"},
+					"name":    map[string]any{"type": "string", "description": "Name for the new user group"},
+					"dry_run": map[string]any{"type": "boolean", "description": "Preview the user group payload without creating it"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -125,7 +126,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 7. Update user role (RW)
 		{
-			Tool: toolRW("clockify_update_user_role", "Update a user's workspace role", map[string]any{
+			Tool: toolRW("clockify_update_user_role", "Update a user's workspace role. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"user_id", "role"},
 				"properties": map[string]any{
@@ -135,6 +136,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 						"description": "Role to assign: WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, or REGULAR",
 						"enum":        []string{"WORKSPACE_ADMIN", "PROJECT_MANAGER", "TEAM_MANAGER", "REGULAR"},
 					},
+					"dry_run": map[string]any{"type": "boolean", "description": "Preview the role change without applying it"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -205,6 +207,9 @@ func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (Res
 	}
 
 	payload := map[string]any{"name": name}
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_user_group", dryrunPreviewPayload("clockify_create_user_group", payload), map[string]any{"workspaceId": wsID}), nil
+	}
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -377,6 +382,13 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	}
 
 	payload := map[string]any{"role": role}
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_user_role", dryrunPreviewPayload("clockify_update_user_role", payload), map[string]any{
+			"workspaceId": wsID,
+			"userId":      userID,
+			"role":        role,
+		}), nil
+	}
 	path, err := paths.Workspace(wsID, "users", userID, "roles")
 	if err != nil {
 		return ResultEnvelope{}, err

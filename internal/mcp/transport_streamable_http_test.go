@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -202,6 +203,140 @@ func newTestStreamableStack(t *testing.T) (*streamSessionManager, StreamableHTTP
 		},
 	}
 	return mgr, opts
+}
+
+type writeDeadlineRecorder struct {
+	*httptest.ResponseRecorder
+	deadlines []time.Time
+}
+
+func (r *writeDeadlineRecorder) SetWriteDeadline(t time.Time) error {
+	r.deadlines = append(r.deadlines, t)
+	return nil
+}
+
+func TestStreamableRPCHandlerAppliesPOSTWriteDeadline(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	opts.POSTWriteTimeout = 1250 * time.Millisecond
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := &writeDeadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+
+	if len(rec.deadlines) != 2 {
+		t.Fatalf("deadline calls=%d, want set+clear", len(rec.deadlines))
+	}
+	if rec.deadlines[0].IsZero() {
+		t.Fatal("first deadline should set a non-zero write deadline")
+	}
+	if got := time.Until(rec.deadlines[0]); got < time.Second || got > 2*time.Second {
+		t.Fatalf("deadline delta=%s, want around 1.25s", got)
+	}
+	if !rec.deadlines[1].IsZero() {
+		t.Fatalf("second deadline should clear the deadline, got %s", rec.deadlines[1])
+	}
+}
+
+func TestStreamableReadyDoesNotLeakReason(t *testing.T) {
+	_, opts := newTestStreamableStack(t)
+	const leaked = "dial tcp 10.0.1.5:5432: connect: connection refused"
+	opts.ReadyChecker = func(context.Context) error {
+		return errors.New(leaked)
+	}
+	ln, addr := newLoopbackListener(t)
+	opts.Listener = ln
+	opts.Bind = addr
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- ServeStreamableHTTP(ctx, opts)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("ServeStreamableHTTP did not return after shutdown")
+		}
+	})
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("http://" + addr + "/ready")
+	if err != nil {
+		t.Fatalf("GET /ready: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read /ready body: %v", err)
+	}
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d body=%s", resp.StatusCode, string(bodyBytes))
+	}
+	var body map[string]string
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		t.Fatalf("decode /ready body: %v", err)
+	}
+	if body["status"] != "not_ready" {
+		t.Fatalf("expected status not_ready, got %q", body["status"])
+	}
+	if body["reason"] != publicReadyFailureReason {
+		t.Fatalf("expected generic ready reason, got %q", body["reason"])
+	}
+	if strings.Contains(string(bodyBytes), "10.0.1.5") || strings.Contains(string(bodyBytes), leaked) {
+		t.Fatalf("ready response leaked upstream error: %s", string(bodyBytes))
+	}
+}
+
+func TestStreamableHealthEndpointOmitsVersion(t *testing.T) {
+	_, opts := newTestStreamableStack(t)
+	ln, addr := newLoopbackListener(t)
+	opts.Listener = ln
+	opts.Bind = addr
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- ServeStreamableHTTP(ctx, opts)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("ServeStreamableHTTP did not return after shutdown")
+		}
+	})
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("http://" + addr + "/health")
+	if err != nil {
+		t.Fatalf("GET /health: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read /health body: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", resp.StatusCode, string(bodyBytes))
+	}
+	var body map[string]string
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		t.Fatalf("decode /health body: %v", err)
+	}
+	if body["status"] != "ok" {
+		t.Fatalf("expected status ok, got %q", body["status"])
+	}
+	if _, ok := body["version"]; ok {
+		t.Fatalf("health response must not expose version: %+v", body)
+	}
+	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
+	}
 }
 
 func TestStreamableSessionHeaderAndStatusCodes(t *testing.T) {
@@ -524,6 +659,30 @@ func TestStreamableEventsBackCompatAlias(t *testing.T) {
 	}
 	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
 		t.Fatalf("content-type: %q", ct)
+	}
+}
+
+func TestSessionEventHubMultipleSubscribersAllReceive(t *testing.T) {
+	hub := newSessionEventHub(0, 1)
+	first := make(chan sessionEvent, 1)
+	second := make(chan sessionEvent, 1)
+	hub.mu.Lock()
+	hub.subscribers[1] = first
+	hub.subscribers[2] = second
+	hub.mu.Unlock()
+
+	if err := hub.Notify("test/event", nil); err != nil {
+		t.Fatalf("Notify: %v", err)
+	}
+	for name, ch := range map[string]chan sessionEvent{"first": first, "second": second} {
+		select {
+		case event := <-ch:
+			if event.method != "test/event" {
+				t.Fatalf("%s subscriber event method=%q, want test/event", name, event.method)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("%s subscriber did not receive event", name)
+		}
 	}
 }
 

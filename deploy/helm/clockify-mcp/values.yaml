@@ -142,6 +142,7 @@ auth:
   oidcIssuer: ""            # MCP_OIDC_ISSUER
   oidcAudience: ""          # MCP_OIDC_AUDIENCE
   oidcJwksUrl: ""           # MCP_OIDC_JWKS_URL
+  oidcJwksAllowPrivate: ""  # MCP_OIDC_JWKS_ALLOW_PRIVATE="1" — permit private/loopback/reserved JWKS URLs only for trusted local/private IdPs
   oidcJwksPath: ""          # MCP_OIDC_JWKS_PATH (file mount)
   oidcStrict: ""            # MCP_OIDC_STRICT="1" — fail config if oidc has no audience/resource; reject tokens without exp
   requireTenantClaim: ""    # MCP_REQUIRE_TENANT_CLAIM="1" — reject oidc tokens missing the tenant claim (no fallback)
@@ -150,6 +151,8 @@ auth:
   resourceUri: ""           # MCP_RESOURCE_URI (OAuth 2.1 RS indicator)
   forwardTenantHeader: ""   # MCP_FORWARD_TENANT_HEADER
   forwardSubjectHeader: ""  # MCP_FORWARD_SUBJECT_HEADER
+  requireForwardTenantClaim: "" # MCP_REQUIRE_FORWARD_TENANT_CLAIM="1" — reject forward_auth requests missing the tenant header
+  forwardAuthTrustedProxies: "" # MCP_FORWARD_AUTH_TRUSTED_PROXIES CIDR allow-list for forward_auth proxy sources
   mtlsTenantHeader: ""      # MCP_MTLS_TENANT_HEADER
   mtlsTenantSource: ""      # MCP_MTLS_TENANT_SOURCE (cert, header, header_or_cert; default: cert)
   requireMtlsTenant: ""     # MCP_REQUIRE_MTLS_TENANT="1" — reject mtls clients without tenant identity

@@ -82,6 +82,7 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 		ProtectedResource:      protectedResource,
 		ExtraHandlers:          r.extraHandlers,
 		TLSConfig:              tlsConfig,
+		POSTWriteTimeout:       r.cfg.ToolTimeout + 10*time.Second,
 		Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 			return tenantRuntime(ctx, principal.TenantID, deps, store)
 		},

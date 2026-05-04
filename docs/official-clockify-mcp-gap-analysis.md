@@ -3,7 +3,7 @@
 A snapshot of where `clockify-mcp` sits on the path from
 "community-grade MCP server" to "officially-supported Clockify
 product." Written 2026-05-02; last updated 2026-05-03 after
-PR #62's invite-user route probe and the current 123-tool catalog
+PR #62's invite-user route probe and the current 128-tool catalog
 cleanup.
 
 This document is **not** a roadmap and **not** a checklist. It is a
@@ -249,7 +249,7 @@ What is missing for tier 3 is intentionally narrow:
   test. This is not candidate-tag evidence; the same walk-through
   must be repeated after `vX.Y.Z-rc.N` is cut.
 - **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
-  maps all 123 MCP tools to their Clockify API endpoints or workflow
+  maps all 128 MCP tools to their Clockify API endpoints or workflow
   composition paths, classifies
   each tool by read-only/mutating/destructive/billing/admin risk, and
   lists the current unit/integration/live-test coverage per tool. PR
@@ -353,8 +353,10 @@ PR #62 manual live-probe work is coverage evidence only.
 ## What "fixing" each blocker looks like
 
 This section is intentionally short — it points at where the
-work happens, not how. The active agent prompts live in
-[`claude-code-continuation.md`](claude-code-continuation.md). The
+work happens, not how. The active agent handoff lives in
+[`agent-handoff.md`](agent-handoff.md); the PR #51
+[`claude-code-continuation.md`](claude-code-continuation.md) packet is
+historical and must not be used as a current prompt source. The
 historical `/postgres-e2e` and `/session-rehydration` local commands
 are retained only for regressions in those closed areas.
 

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -36,28 +37,28 @@ func init() {
 func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List invoices
-		{Tool: toolRO("clockify_list_invoices", "List invoices in the workspace with pagination", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_list_invoices", "List invoices in the workspace with pagination", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 				"status":    map[string]any{"type": "string", "description": "Filter by status (e.g. PAID, SENT, DRAFT)"},
 			},
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMapSlice("clockify_list_invoices")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listInvoices(ctx, args)
 		}},
 
 		// 2. Get invoice
-		{Tool: toolRO("clockify_get_invoice", "Get a single invoice by ID", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_get_invoice", "Get a single invoice by ID", map[string]any{
 			"type":       "object",
 			"required":   []string{"invoice_id"},
 			"properties": map[string]any{"invoice_id": map[string]any{"type": "string"}},
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMap("clockify_get_invoice")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getInvoice(ctx, args)
 		}},
 
 		// 3. Create invoice
-		{Tool: toolRW("clockify_create_invoice", "Create a new invoice for a client", map[string]any{
+		{Tool: toolRW("clockify_create_invoice", "Create a new invoice for a client. Supports dry_run:true.", map[string]any{
 			"type":     "object",
 			"required": []string{"client_id", "number", "issued_date", "due_date"},
 			"properties": map[string]any{
@@ -67,13 +68,14 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"currency":    map[string]any{"type": "string", "description": "Currency code (e.g. USD, EUR)"},
 				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"note":        map[string]any{"type": "string", "description": "Invoice note"},
+				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice payload without creating it"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createInvoice(ctx, args)
 		}},
 
 		// 4. Update invoice
-		{Tool: toolRW("clockify_update_invoice", "Update an existing invoice", map[string]any{
+		{Tool: toolRW("clockify_update_invoice", "Update an existing invoice. Supports dry_run:true.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
@@ -85,6 +87,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"note":        map[string]any{"type": "string"},
 				"status":      map[string]any{"type": "string", "description": "Invoice status"},
+				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice update payload without applying it"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoice(ctx, args)
@@ -154,12 +157,13 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 10. Update invoice item
-		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item", map[string]any{
+		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item by line index", map[string]any{
 			"type":     "object",
-			"required": []string{"invoice_id", "item_id", "item_type"},
+			"required": []string{"invoice_id", "item_type"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string"},
-				"item_id":     map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id"},
+				"item_index":  map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items"},
+				"item_id":     map[string]any{"type": "string", "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id"},
 				"description": map[string]any{"type": "string"},
 				"quantity":    map[string]any{"type": "number"},
 				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
@@ -171,12 +175,13 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 11. Delete invoice item
-		{Tool: toolDestructive("clockify_delete_invoice_item", "Delete an item from an invoice", map[string]any{
+		{Tool: toolDestructive("clockify_delete_invoice_item", "Delete an invoice item by line index", map[string]any{
 			"type":     "object",
-			"required": []string{"invoice_id", "item_id"},
+			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string"},
-				"item_id":    map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id"},
+				"item_index": map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items"},
+				"item_id":    map[string]any{"type": "string", "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id"},
 				"dry_run":    map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, DestructiveHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -184,7 +189,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 12. Invoice report
-		{Tool: toolRO("clockify_invoice_report", "Get invoices filtered by status with aggregated totals", map[string]any{
+		{Tool: toolRO("clockify_invoice_report", "Get invoices filtered by status with page-scoped totals", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"status":    map[string]any{"type": "string", "description": "Filter by status (e.g. PAID, SENT, DRAFT)"},
@@ -286,6 +291,9 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 	if v := stringArg(args, "note"); v != "" {
 		body["note"] = v
 	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_invoice", dryrunPreviewPayload("clockify_create_invoice", body), map[string]any{"workspaceId": wsID}), nil
+	}
 
 	path, err := paths.Workspace(wsID, "invoices")
 	if err != nil {
@@ -329,6 +337,9 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 	}
 	if v := stringArg(args, "status"); v != "" {
 		body["status"] = v
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_invoice", dryrunPreviewPayload("clockify_update_invoice", body), map[string]any{"workspaceId": wsID, "invoiceId": invoiceID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
@@ -541,14 +552,24 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	}), nil
 }
 
+func invoiceItemIndexArg(args map[string]any) (string, error) {
+	if v := strings.TrimSpace(stringArg(args, "item_index")); v != "" {
+		return v, nil
+	}
+	if v := strings.TrimSpace(stringArg(args, "item_id")); v != "" {
+		return v, nil
+	}
+	return "", fmt.Errorf("item_index is required (legacy item_id is also accepted)")
+}
+
 func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
-	itemID := stringArg(args, "item_id")
-	if itemID == "" {
-		return ResultEnvelope{}, fmt.Errorf("item_id is required")
+	itemIndex, err := invoiceItemIndexArg(args)
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -576,7 +597,7 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 	}
 	body["itemType"] = itemType
 
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemID)
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemIndex)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -587,7 +608,8 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 	return ok("clockify_update_invoice_item", updated, map[string]any{
 		"workspaceId": wsID,
 		"invoiceId":   invoiceID,
-		"itemId":      itemID,
+		"itemIndex":   itemIndex,
+		"itemId":      itemIndex,
 	}), nil
 }
 
@@ -596,9 +618,9 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
-	itemID := stringArg(args, "item_id")
-	if itemID == "" {
-		return ResultEnvelope{}, fmt.Errorf("item_id is required")
+	itemIndex, err := invoiceItemIndexArg(args)
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -611,13 +633,14 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 			Action: "clockify_delete_invoice_item",
 			Data: dryrun.MinimalResult("clockify_delete_invoice_item", map[string]any{
 				"invoice_id": invoiceID,
-				"item_id":    itemID,
+				"item_index": itemIndex,
+				"item_id":    itemIndex,
 			}),
 			Meta: map[string]any{"workspaceId": wsID},
 		}, nil
 	}
 
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemID)
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemIndex)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -627,7 +650,8 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 	return ok("clockify_delete_invoice_item", map[string]any{
 		"deleted":   true,
 		"invoiceId": invoiceID,
-		"itemId":    itemID,
+		"itemIndex": itemIndex,
+		"itemId":    itemIndex,
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
@@ -663,26 +687,32 @@ func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	// Aggregate totals from returned invoices.
-	var totalAmount float64
-	statusCounts := map[string]int{}
+	// Aggregates are page-scoped because the upstream endpoint returns a
+	// paginated invoice slice plus the total matching count.
+	var pageTotalAmount float64
+	pageStatusCounts := map[string]int{}
 	for _, inv := range envelope.Invoices {
 		if amt, ok := inv["amount"].(float64); ok {
-			totalAmount += amt
+			pageTotalAmount += amt
 		}
 		if st, ok := inv["status"].(string); ok {
-			statusCounts[st]++
+			pageStatusCounts[st]++
 		}
 	}
 
 	return ok("clockify_invoice_report", map[string]any{
-		"invoices":     envelope.Invoices,
-		"totalAmount":  totalAmount,
-		"statusCounts": statusCounts,
+		"invoices":         envelope.Invoices,
+		"aggregationScope": "page",
+		"pageTotalAmount":  pageTotalAmount,
+		"pageStatusCounts": pageStatusCounts,
+		"totalAmount":      pageTotalAmount,
+		"statusCounts":     pageStatusCounts,
 	}, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(envelope.Invoices),
-		"total":       envelope.Total,
-		"page":        page,
+		"workspaceId":      wsID,
+		"count":            len(envelope.Invoices),
+		"total":            envelope.Total,
+		"page":             page,
+		"pageSize":         pageSize,
+		"aggregationScope": "page",
 	}), nil
 }

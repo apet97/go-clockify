@@ -1,9 +1,11 @@
 package enforcement
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -11,6 +13,7 @@ import (
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/truncate"
@@ -745,6 +748,37 @@ func TestAfterCall_TruncationDisabled(t *testing.T) {
 	}
 }
 
+func TestAfterCall_MarshalFailureEmitsWarnAndMetric(t *testing.T) {
+	type badResult struct {
+		C chan int
+	}
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	p := &Pipeline{Truncation: truncate.Config{Enabled: true, TokenBudget: 1}}
+	input := badResult{C: make(chan int)}
+	before := metrics.TruncationSkippedTotal.Get("marshal_failed")
+	result, err := p.AfterCall(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got, ok := result.(badResult)
+	if !ok {
+		t.Fatalf("expected original result type, got %T", result)
+	}
+	if got.C != input.C {
+		t.Fatal("marshal failure should fail open with the original result")
+	}
+	if gotMetric := metrics.TruncationSkippedTotal.Get("marshal_failed"); gotMetric != before+1 {
+		t.Fatalf("truncate skip metric = %d, want %d", gotMetric, before+1)
+	}
+	if !strings.Contains(logs.String(), "truncate_marshal_failed") {
+		t.Fatalf("expected warn log for marshal failure, got %s", logs.String())
+	}
+}
+
 // TestAfterCall_TruncatesResultEnvelope proves the JSON roundtrip in AfterCall
 // lets truncation reach typed struct results. It constructs a ResultEnvelope-
 // shaped struct (anonymous, to avoid importing the tools package and creating
@@ -937,6 +971,19 @@ func TestGate_OnActivate_EmptyList(t *testing.T) {
 	g := &Gate{Bootstrap: bs}
 	// Should not panic with empty slice.
 	g.OnActivate([]string{})
+}
+
+func TestGate_OnDeactivate_WithBootstrap(t *testing.T) {
+	bs := minimalBootstrap()
+	g := &Gate{Bootstrap: bs}
+	names := []string{"clockify_list_invoices", "clockify_get_invoice"}
+	g.OnActivate(names)
+	g.OnDeactivate(names)
+	for _, name := range names {
+		if bs.IsVisible(name) {
+			t.Fatalf("expected %s to be hidden after OnDeactivate", name)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------

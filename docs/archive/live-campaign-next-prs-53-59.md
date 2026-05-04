@@ -69,9 +69,10 @@ task list is in `docs/launch-candidate-checklist.md` and
 Merged PR #59 (`test/exhaustive-live-coverage-followup`) extended the
 manual sacrificial-workspace suite so every then-current generated
 catalog tool was named in `tests/e2e_live*.go` and exercised through
-the MCP path. The current catalog is 123 tools after the later Tier 1
-timesheet workflow helpers, which are covered by unit tests and
-live-test hooks but not by the original manual campaign evidence. New
+the MCP path. At archival time, the later catalog was 123 tools after
+the Tier 1 timesheet workflow helpers, which were covered by unit
+tests and live-test hooks but not by the original manual campaign
+evidence. New
 coverage includes the remaining Tier-1 CRUD/logging tools, full
 invoice CRUD/report/item probes, shared-report
 create/update/export/delete, user-admin group operations with owner

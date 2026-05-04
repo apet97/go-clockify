@@ -47,33 +47,48 @@ type CatalogEntry struct {
 
 // AlwaysVisible lists introspection tools shown regardless of mode.
 var AlwaysVisible = map[string]bool{
-	"clockify_whoami":        true,
-	"clockify_search_tools":  true,
-	"clockify_policy_info":   true,
-	"clockify_resolve_debug": true,
+	"clockify_whoami":           true,
+	"clockify_list_tools":       true,
+	"clockify_search_tools":     true,
+	"clockify_activate_group":   true,
+	"clockify_activate_tool":    true,
+	"clockify_deactivate_group": true,
+	"clockify_policy_info":      true,
+	"clockify_resolve_name":     true,
+	"clockify_resolve_debug":    true,
 }
 
 // MinimalSet lists the core tools exposed in Minimal mode.
 var MinimalSet = map[string]bool{
-	"clockify_whoami":        true,
-	"clockify_search_tools":  true,
-	"clockify_policy_info":   true,
-	"clockify_resolve_debug": true,
-	"clockify_start_timer":   true,
-	"clockify_stop_timer":    true,
-	"clockify_timer_status":  true,
-	"clockify_list_entries":  true,
-	"clockify_add_entry":     true,
-	"clockify_list_projects": true,
-	"clockify_log_time":      true,
+	"clockify_whoami":           true,
+	"clockify_list_tools":       true,
+	"clockify_search_tools":     true,
+	"clockify_activate_group":   true,
+	"clockify_activate_tool":    true,
+	"clockify_deactivate_group": true,
+	"clockify_policy_info":      true,
+	"clockify_resolve_name":     true,
+	"clockify_resolve_debug":    true,
+	"clockify_start_timer":      true,
+	"clockify_stop_timer":       true,
+	"clockify_timer_status":     true,
+	"clockify_list_entries":     true,
+	"clockify_add_entry":        true,
+	"clockify_list_projects":    true,
+	"clockify_log_time":         true,
 }
 
-// Tier1Catalog contains all 35 Tier 1 tools with searchable metadata.
+// Tier1Catalog contains all Tier 1 tools with searchable metadata.
 var Tier1Catalog = []CatalogEntry{
 	{Name: "clockify_whoami", Description: "Get current user and workspace context", Domain: "context", Keywords: []string{"identity", "user", "workspace", "session"}},
-	{Name: "clockify_search_tools", Description: "Search and discover available tools", Domain: "context", Keywords: []string{"find", "discover", "activate", "tools"}},
+	{Name: "clockify_list_tools", Description: "Search and discover available tools", Domain: "context", Keywords: []string{"find", "discover", "catalog", "tools"}},
+	{Name: "clockify_search_tools", Description: "Deprecated compatibility shim for tool search and activation", Domain: "context", Keywords: []string{"find", "discover", "activate", "tools", "deprecated"}},
+	{Name: "clockify_activate_group", Description: "Activate every tool in a Tier 2 group", Domain: "context", Keywords: []string{"activate", "group", "tools", "tier2"}},
+	{Name: "clockify_activate_tool", Description: "Activate a hidden tool by name", Domain: "context", Keywords: []string{"activate", "tool", "tools", "tier2"}},
+	{Name: "clockify_deactivate_group", Description: "Deactivate a previously activated Tier 2 group", Domain: "context", Keywords: []string{"deactivate", "group", "tools", "tier2"}},
 	{Name: "clockify_policy_info", Description: "Display effective policy configuration", Domain: "context", Keywords: []string{"policy", "mode", "permissions", "safety"}},
-	{Name: "clockify_resolve_debug", Description: "Debug name-to-ID resolution", Domain: "context", Keywords: []string{"resolve", "debug", "lookup", "name", "id"}},
+	{Name: "clockify_resolve_name", Description: "Resolve a Clockify name or email to an ID", Domain: "context", Keywords: []string{"resolve", "lookup", "name", "id", "disambiguate"}},
+	{Name: "clockify_resolve_debug", Description: "Deprecated compatibility alias for name resolution", Domain: "context", Keywords: []string{"resolve", "debug", "lookup", "name", "id", "deprecated"}},
 	{Name: "clockify_list_workspaces", Description: "List available workspaces", Domain: "workspaces", Keywords: []string{"workspace", "list"}},
 	{Name: "clockify_get_workspace", Description: "Get workspace details", Domain: "workspaces", Keywords: []string{"workspace", "details"}},
 	{Name: "clockify_current_user", Description: "Get the current Clockify user", Domain: "users", Keywords: []string{"user", "profile", "me"}},
@@ -184,6 +199,15 @@ func (c *Config) ActivateTool(name string) {
 func (c *Config) ActivateTools(names []string) {
 	for _, name := range names {
 		c.ActivateTool(name)
+	}
+}
+
+// DeactivateTools removes dynamically activated visibility markers.
+// AlwaysVisible, MinimalSet, and CustomTools still take precedence when
+// IsVisible is evaluated, so this only reverses runtime activation.
+func (c *Config) DeactivateTools(names []string) {
+	for _, name := range names {
+		delete(c.ActiveTools, name)
 	}
 }
 

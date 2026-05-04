@@ -15,6 +15,7 @@ type EnvSpec struct {
 	Deprecated   bool
 	Replacement  string
 	EssentialDoc bool
+	Sensitive    bool
 }
 
 // AllSpecs returns the registry in declaration order. Order drives help
@@ -22,12 +23,12 @@ type EnvSpec struct {
 func AllSpecs() []EnvSpec {
 	return []EnvSpec{
 		// --- Core ---
-		{Name: "CLOCKIFY_API_KEY", Group: "Core", Help: "API key (required for stdio/http/grpc and MCP_PROFILE=single-tenant-http; optional for shared-service / prod-postgres streamable_http where tenant credentials come from the control plane)", EssentialDoc: true},
+		{Name: "CLOCKIFY_API_KEY", Group: "Core", Help: "API key (required for stdio/http/grpc and MCP_PROFILE=single-tenant-http; optional for shared-service / prod-postgres streamable_http where tenant credentials come from the control plane)", EssentialDoc: true, Sensitive: true},
 		{Name: "CLOCKIFY_WORKSPACE_ID", Group: "Core", Default: "auto", Help: "Workspace ID (auto-detected if only one)", EssentialDoc: true},
 		{Name: "CLOCKIFY_BASE_URL", Group: "Core", Default: "https://api.clockify.me/api/v1", Help: "API base URL; HTTPS required unless loopback or CLOCKIFY_INSECURE=1"},
 		{Name: "CLOCKIFY_TIMEZONE", Group: "Core", Help: "IANA timezone for time parsing"},
 		{Name: "CLOCKIFY_INSECURE", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "Allow non-HTTPS base URLs"},
-		{Name: "CLOCKIFY_SANITIZE_UPSTREAM_ERRORS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, omit upstream Clockify response bodies from MCP tool-error responses (still logged server-side). Hosted profiles (shared-service, prod-postgres) default to 1."},
+		{Name: "CLOCKIFY_SANITIZE_UPSTREAM_ERRORS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, omit upstream Clockify response bodies from MCP tool-error responses (still logged server-side). HTTP/hosted profiles (single-tenant-http, shared-service, prod-postgres) default to 1."},
 		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, CreateWebhook/UpdateWebhook resolve the webhook host via DNS and reject any reply with a private/reserved IP (SSRF protection). Hosted profiles (shared-service, prod-postgres) default to 1."},
 		{Name: "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", Group: "Core", Help: "Comma-separated escape-hatch list of webhook hostnames that bypass the CLOCKIFY_WEBHOOK_VALIDATE_DNS private-IP check. Each entry matches exact (webhook.example.com) or as a leading-dot suffix (.example.com matches every subdomain but anchors at a full DNS label). Use case: split-horizon DNS where a known-trusted hostname resolves to a private IP only on the control-plane network."},
 
@@ -72,11 +73,12 @@ func AllSpecs() []EnvSpec {
 
 		// --- Auth ---
 		{Name: "MCP_AUTH_MODE", Group: "Auth", Enum: []string{"static_bearer", "oidc", "forward_auth", "mtls"}, Help: "Authentication mode (per-transport support varies; see matrix)", EssentialDoc: true},
-		{Name: "MCP_BEARER_TOKEN", Group: "Auth", Help: "Bearer token (>=16 chars) for static_bearer"},
-		{Name: "MCP_OIDC_ISSUER", Group: "Auth", Help: "OIDC issuer URL (required for streamable_http + oidc)"},
+		{Name: "MCP_BEARER_TOKEN", Group: "Auth", Help: "Bearer token (>=16 chars) for static_bearer", Sensitive: true},
+		{Name: "MCP_OIDC_ISSUER", Group: "Auth", Help: "OIDC issuer URL (required for streamable_http + oidc); HTTPS required except loopback development"},
 		{Name: "MCP_OIDC_AUDIENCE", Group: "Auth", Help: "Optional OIDC audience"},
-		{Name: "MCP_OIDC_JWKS_URL", Group: "Auth", Help: "Optional JWKS URL override"},
-		{Name: "MCP_OIDC_JWKS_PATH", Group: "Auth", Help: "Local JWKS file (tests/dev only)"},
+		{Name: "MCP_OIDC_JWKS_URL", Group: "Auth", Help: "Optional JWKS URL override; HTTPS required except loopback development; private/loopback/reserved addresses require MCP_OIDC_JWKS_ALLOW_PRIVATE=1"},
+		{Name: "MCP_OIDC_JWKS_ALLOW_PRIVATE", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, permit MCP_OIDC_JWKS_URL to target loopback/private/reserved addresses for trusted local or private IdP endpoints"},
+		{Name: "MCP_OIDC_JWKS_PATH", Group: "Auth", Help: "Local JWKS file (tests/dev only)", Sensitive: true},
 		{Name: "MCP_OIDC_VERIFY_CACHE_TTL", Group: "Auth", Default: "60s", Help: "OIDC verify cache TTL [1s,5m]", EssentialDoc: true},
 		{Name: "MCP_OIDC_JWKS_CACHE_TTL", Group: "Auth", Default: "5m", Help: "OIDC JWKS document cache TTL [1m,24h]"},
 		{Name: "MCP_OIDC_STRICT", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, fail config load if oidc selected without MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI; reject tokens missing exp claim"},
@@ -87,15 +89,16 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_DEFAULT_TENANT_ID", Group: "Auth", Default: "default", Help: "Fallback tenant for non-OIDC modes"},
 		{Name: "MCP_FORWARD_TENANT_HEADER", Group: "Auth", Default: "X-Forwarded-Tenant", Help: "forward_auth tenant header"},
 		{Name: "MCP_FORWARD_SUBJECT_HEADER", Group: "Auth", Default: "X-Forwarded-User", Help: "forward_auth subject header"},
-		{Name: "MCP_FORWARD_AUTH_TRUSTED_PROXIES", Group: "Auth", AppliesTo: []string{"streamable_http", "http"}, Help: "Comma-separated CIDR list of source addresses permitted to send X-Forwarded-User / X-Forwarded-Tenant. Empty list trusts every source — only safe behind a reverse proxy that strips client-supplied copies of those headers. Hosted profiles + doctor --strict refuse to start with forward_auth + empty list."},
+		{Name: "MCP_REQUIRE_FORWARD_TENANT_CLAIM", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, forward_auth requests missing the tenant header are rejected (no fallback to MCP_DEFAULT_TENANT_ID). Hosted profiles default to 1."},
+		{Name: "MCP_FORWARD_AUTH_TRUSTED_PROXIES", Group: "Auth", AppliesTo: []string{"streamable_http", "http", "grpc"}, Help: "Comma-separated CIDR list of source addresses permitted to send X-Forwarded-User / X-Forwarded-Tenant. Empty list trusts every source — only safe behind a reverse proxy that strips client-supplied copies of those headers. Non-loopback forward_auth binds refuse empty lists."},
 		{Name: "MCP_BEHIND_HTTPS_PROXY", Group: "Transport", AppliesTo: []string{"streamable_http", "http"}, Enum: []string{"0", "1"}, Default: "0", Help: "When 1, baseline-header middleware emits Strict-Transport-Security on plaintext responses because a trusted upstream proxy is terminating TLS. Default 0 skips HSTS on plain HTTP so honest http:// URLs stay reachable on misconfigured dev installs."},
 		{Name: "MCP_MTLS_TENANT_HEADER", Group: "Auth", Default: "X-Tenant-ID", Help: "mTLS tenant header override (only consulted when MCP_MTLS_TENANT_SOURCE selects header)"},
 		{Name: "MCP_MTLS_TENANT_SOURCE", Group: "Auth", Enum: []string{"cert", "header", "header_or_cert"}, Default: "cert", Help: "Where the mtls authenticator reads the tenant from: cert SAN/Org (default; safe for direct mTLS), header (only behind a trusted proxy), header_or_cert (migration window)"},
 		{Name: "MCP_REQUIRE_MTLS_TENANT", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject mtls clients whose configured tenant source yields no tenant (no fallback to MCP_DEFAULT_TENANT_ID)"},
 		{Name: "MCP_GRPC_TLS_CERT", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server cert path (required for grpc + mtls)"},
-		{Name: "MCP_GRPC_TLS_KEY", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server key path (required for grpc + mtls)"},
+		{Name: "MCP_GRPC_TLS_KEY", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "gRPC TLS server key path (required for grpc + mtls)", Sensitive: true},
 		{Name: "MCP_HTTP_TLS_CERT", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server cert path (required for streamable_http + mtls; enables HTTPS when set)"},
-		{Name: "MCP_HTTP_TLS_KEY", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server key path (required for streamable_http + mtls)"},
+		{Name: "MCP_HTTP_TLS_KEY", Group: "Auth", AppliesTo: []string{"streamable_http"}, Help: "Streamable HTTP TLS server key path (required for streamable_http + mtls)", Sensitive: true},
 		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification (required for grpc + mtls and streamable_http + mtls)"},
 		{Name: "MCP_DISABLE_INLINE_SECRETS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject credential refs with backend=inline (hosted-service hardening; prefer env/file/external vault backends)"},
 		{Name: "MCP_EXPOSE_AUTH_ERRORS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, expose detailed auth failure reasons to clients (development only); default 0 returns 'authentication failed' to clients while logging the underlying reason server-side."},
@@ -104,13 +107,13 @@ func AllSpecs() []EnvSpec {
 		// --- Metrics ---
 		{Name: "MCP_METRICS_BIND", Group: "Metrics", Help: "Dedicated metrics listener (optional; recommended for streamable_http)", EssentialDoc: true},
 		{Name: "MCP_METRICS_AUTH_MODE", Group: "Metrics", Enum: []string{"none", "static_bearer"}, Default: "static_bearer (when MCP_METRICS_BIND set)", Help: "Auth mode for dedicated metrics listener", EssentialDoc: true},
-		{Name: "MCP_METRICS_BEARER_TOKEN", Group: "Metrics", Help: "Bearer token (>=16 chars) for static_bearer metrics", EssentialDoc: true},
+		{Name: "MCP_METRICS_BEARER_TOKEN", Group: "Metrics", Help: "Bearer token (>=16 chars) for static_bearer metrics", EssentialDoc: true, Sensitive: true},
 		{Name: "MCP_HTTP_INLINE_METRICS_ENABLED", Group: "Metrics", Enum: []string{"0", "1"}, Default: "0", Help: "Expose /metrics on the main HTTP listener", EssentialDoc: true},
 		{Name: "MCP_HTTP_INLINE_METRICS_AUTH_MODE", Group: "Metrics", Enum: []string{"inherit_main_bearer", "static_bearer", "none"}, Default: "inherit_main_bearer", Help: "Auth mode for inline /metrics", EssentialDoc: true},
-		{Name: "MCP_HTTP_INLINE_METRICS_BEARER_TOKEN", Group: "Metrics", Help: "Separate bearer for inline /metrics when static_bearer"},
+		{Name: "MCP_HTTP_INLINE_METRICS_BEARER_TOKEN", Group: "Metrics", Help: "Separate bearer for inline /metrics when static_bearer", Sensitive: true},
 
 		// --- Control Plane / Audit ---
-		{Name: "MCP_CONTROL_PLANE_DSN", Group: "ControlPlane", Default: "memory", Help: "Control-plane DSN: memory, file://<path>, postgres://...", EssentialDoc: true},
+		{Name: "MCP_CONTROL_PLANE_DSN", Group: "ControlPlane", Default: "memory", Help: "Control-plane DSN: memory, file://<path>, postgres://...", EssentialDoc: true, Sensitive: true},
 		{Name: "MCP_CONTROL_PLANE_AUDIT_CAP", Group: "ControlPlane", Default: "0", Help: "File/memory audit cap (0=unbounded). Postgres uses retention instead.", EssentialDoc: true},
 		{Name: "MCP_CONTROL_PLANE_AUDIT_RETENTION", Group: "ControlPlane", Default: "720h", Help: "Audit retention [1h,8760h]; 0=off", EssentialDoc: true},
 		{Name: "MCP_SESSION_TTL", Group: "ControlPlane", Default: "30m", AppliesTo: []string{"streamable_http"}, Help: "Session TTL [1m,24h]"},

@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dedupe"
 )
 
 func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
@@ -105,6 +105,7 @@ func TestSummaryReportAggregatesEntries(t *testing.T) {
 	if data.ByProject[0].TotalSeconds != 12600 {
 		t.Fatalf("expected 12600 seconds for Project A, got %d", data.ByProject[0].TotalSeconds)
 	}
+	assertReportSuggestedActions(t, data.SuggestedActions, "p1")
 }
 
 func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {
@@ -131,6 +132,9 @@ func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "multiple entries matched") {
 		t.Fatalf("expected ambiguous match error, got %v", err)
 	}
+	if !strings.Contains(err.Error(), "clockify_resolve_name") {
+		t.Fatalf("expected resolve_name guidance, got %v", err)
+	}
 }
 
 func TestLogTimeCreatesFinishedEntry(t *testing.T) {
@@ -156,11 +160,12 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 
 	svc := New(client, "ws1")
 	result, err := svc.LogTime(context.Background(), map[string]any{
-		"project_id":  "p1",
-		"description": "Focus",
-		"start":       "2026-04-01T09:00:00Z",
-		"end":         "2026-04-01T10:30:00Z",
-		"billable":    true,
+		"project_id":    "p1",
+		"description":   "Focus",
+		"start":         "2026-04-01T09:00:00Z",
+		"end":           "2026-04-01T10:30:00Z",
+		"billable":      true,
+		"allow_overlap": true,
 	})
 	if err != nil {
 		t.Fatalf("log time failed: %v", err)
@@ -175,6 +180,107 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 	}
 	if data.Entry.ID != "e1" {
 		t.Fatalf("unexpected entry: %+v", data.Entry)
+	}
+}
+
+func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
+	var postBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			q := r.URL.Query()
+			if q.Get("start") != "2026-04-01T09:00:00Z" || q.Get("end") != "2026-04-01T10:00:00Z" {
+				t.Fatalf("unexpected overlap scan query: %s", r.URL.RawQuery)
+			}
+			if q.Get("page") != "1" || q.Get("page-size") != "200" {
+				t.Fatalf("unexpected overlap scan pagination: %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&postBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "e1",
+				Description: "Focus",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-01T09:00:00Z",
+					End:   "2026-04-01T10:00:00Z",
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.LogTime(context.Background(), map[string]any{
+		"description": "Focus",
+		"start":       "2026-04-01 09:00",
+		"end":         "2026-04-01 10:00",
+	})
+	if err != nil {
+		t.Fatalf("log time failed: %v", err)
+	}
+	if postBody["start"] != "2026-04-01T09:00:00Z" || postBody["end"] != "2026-04-01T10:00:00Z" {
+		t.Fatalf("unexpected normalized body: %+v", postBody)
+	}
+}
+
+func TestLogTimeRejectsOverlapUnlessAllowed(t *testing.T) {
+	var postCount int
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:          "existing1",
+				Description: "Existing",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-01T09:30:00Z",
+					End:   "2026-04-01T10:30:00Z",
+				},
+			}})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			postCount++
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "new1",
+				Description: "Focus",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-01T09:00:00Z",
+					End:   "2026-04-01T10:00:00Z",
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	args := map[string]any{
+		"description": "Focus",
+		"start":       "2026-04-01T09:00:00Z",
+		"end":         "2026-04-01T10:00:00Z",
+	}
+	_, err := svc.LogTime(context.Background(), args)
+	if err == nil || !strings.Contains(err.Error(), "overlaps 1 existing entry") {
+		t.Fatalf("expected overlap rejection, got %v", err)
+	}
+	if postCount != 0 {
+		t.Fatalf("POST must not run after overlap rejection, got %d calls", postCount)
+	}
+
+	args["allow_overlap"] = true
+	if _, err := svc.LogTime(context.Background(), args); err != nil {
+		t.Fatalf("log time with allow_overlap failed: %v", err)
+	}
+	if postCount != 1 {
+		t.Fatalf("expected one POST after allow_overlap, got %d", postCount)
 	}
 }
 
@@ -314,6 +420,13 @@ func TestTodayEntriesPaginationSanitizesBounds(t *testing.T) {
 			if result.Meta["page"] != tt.wantMetaPage || result.Meta["pageSize"] != tt.wantMetaSize {
 				t.Fatalf("unexpected pagination meta: %+v", result.Meta)
 			}
+			pagination, ok := result.Meta["pagination"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected structured pagination meta, got %+v", result.Meta)
+			}
+			if pagination["requested_page_size"] != tt.args["page_size"] || pagination["applied_page_size"] != tt.wantMetaSize || pagination["clamped"] != true {
+				t.Fatalf("unexpected structured pagination meta: %+v", pagination)
+			}
 		})
 	}
 }
@@ -352,11 +465,12 @@ func TestAddEntry(t *testing.T) {
 
 	svc := New(client, "ws1")
 	result, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":       "2026-04-06T09:00:00Z",
-		"end":         "2026-04-06T10:00:00Z",
-		"description": "New task",
-		"project_id":  "p1",
-		"billable":    true,
+		"start":         "2026-04-06T09:00:00Z",
+		"end":           "2026-04-06T10:00:00Z",
+		"description":   "New task",
+		"project_id":    "p1",
+		"billable":      true,
+		"allow_overlap": true,
 	})
 	if err != nil {
 		t.Fatalf("add entry failed: %v", err)
@@ -370,6 +484,162 @@ func TestAddEntry(t *testing.T) {
 	}
 	if entry.ID != "new1" {
 		t.Fatalf("unexpected entry ID: %s", entry.ID)
+	}
+}
+
+func TestAddEntryRejectsOverlapWhenFinishedEntry(t *testing.T) {
+	var postCount int
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:          "existing1",
+				Description: "Existing",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:30:00Z",
+					End:   "2026-04-06T10:30:00Z",
+				},
+			}})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			postCount++
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "new1",
+				Description: "New task",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:00:00Z",
+					End:   "2026-04-06T10:00:00Z",
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	args := map[string]any{
+		"start":       "2026-04-06T09:00:00Z",
+		"end":         "2026-04-06T10:00:00Z",
+		"description": "New task",
+	}
+	_, err := svc.AddEntry(context.Background(), args)
+	if err == nil || !strings.Contains(err.Error(), "overlaps 1 existing entry") {
+		t.Fatalf("expected overlap rejection, got %v", err)
+	}
+	if postCount != 0 {
+		t.Fatalf("POST must not run after overlap rejection, got %d calls", postCount)
+	}
+
+	args["allow_overlap"] = true
+	if _, err := svc.AddEntry(context.Background(), args); err != nil {
+		t.Fatalf("add entry with allow_overlap failed: %v", err)
+	}
+	if postCount != 1 {
+		t.Fatalf("expected one POST after allow_overlap, got %d", postCount)
+	}
+}
+
+func TestAddEntryDedupeBlockRejectsExactDuplicate(t *testing.T) {
+	var postCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			if got := r.URL.Query().Get("page-size"); got != "5" {
+				t.Fatalf("dedupe lookback page-size = %q, want 5", got)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:          "existing1",
+				Description: "New task",
+				ProjectID:   "p1",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:00:30Z",
+					End:   "2026-04-06T10:00:00Z",
+				},
+			}})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			postCalled = true
+			t.Fatal("POST must not be called when dedupe block rejects")
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	cfg := dedupe.Config{Mode: dedupe.Block, LookbackCount: 5, OverlapCheck: false}
+	svc.DedupeConfig = &cfg
+	_, err := svc.AddEntry(context.Background(), map[string]any{
+		"start":         "2026-04-06T09:00:00Z",
+		"end":           "2026-04-06T10:00:00Z",
+		"description":   "New task",
+		"project_id":    "p1",
+		"allow_overlap": true,
+	})
+	if err == nil {
+		t.Fatal("expected duplicate rejection")
+	}
+	if !strings.Contains(err.Error(), "duplicate time entry blocked") || !strings.Contains(err.Error(), "existing1") {
+		t.Fatalf("unexpected duplicate error: %v", err)
+	}
+	if postCalled {
+		t.Fatal("POST should not be called after duplicate rejection")
+	}
+}
+
+func TestAddEntryDedupeWarnAddsMetaAndPosts(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:          "existing1",
+				Description: "New task",
+				ProjectID:   "p1",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:00:30Z",
+					End:   "2026-04-06T10:00:00Z",
+				},
+			}})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "new1",
+				Description: "New task",
+				ProjectID:   "p1",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:00:00Z",
+					End:   "2026-04-06T10:00:00Z",
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	cfg := dedupe.Config{Mode: dedupe.Warn, LookbackCount: 5, OverlapCheck: false}
+	svc.DedupeConfig = &cfg
+	result, err := svc.AddEntry(context.Background(), map[string]any{
+		"start":         "2026-04-06T09:00:00Z",
+		"end":           "2026-04-06T10:00:00Z",
+		"description":   "New task",
+		"project_id":    "p1",
+		"allow_overlap": true,
+	})
+	if err != nil {
+		t.Fatalf("add entry with warning failed: %v", err)
+	}
+	dedupeMeta, ok := result.Meta["dedupe"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected dedupe meta, got %+v", result.Meta)
+	}
+	if dedupeMeta["duplicateOf"] != "existing1" {
+		t.Fatalf("unexpected dedupe meta: %+v", dedupeMeta)
 	}
 }
 
@@ -440,6 +710,45 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	}
 	if len(changedFields) != 2 {
 		t.Fatalf("expected 2 changed fields, got %d: %v", len(changedFields), changedFields)
+	}
+}
+
+func TestUpdateEntryProjectResolutionGuidesResolveName(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/time-entries/abc123def456789012345678" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "abc123def456789012345678",
+				Description: "Old description",
+				ProjectID:   "p1",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-01T09:00:00Z",
+					End:   "2026-04-01T10:00:00Z",
+				},
+			})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			respondJSON(t, w, []map[string]any{
+				{"id": "p1", "name": "Alpha"},
+				{"id": "p2", "name": "Alpha"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/abc123def456789012345678" && r.Method == http.MethodPut:
+			t.Fatalf("PUT should not run when project resolution is ambiguous")
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.UpdateEntry(context.Background(), map[string]any{
+		"entry_id": "abc123def456789012345678",
+		"project":  "Alpha",
+	})
+	if err == nil || !strings.Contains(err.Error(), "multiple projects match") {
+		t.Fatalf("expected ambiguous project error, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "clockify_resolve_name") {
+		t.Fatalf("expected resolve_name guidance, got %v", err)
 	}
 }
 
@@ -819,6 +1128,120 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 	}
 }
 
+func TestFindAndUpdateEntryPushesDescriptionFilter(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        map[string]any
+		wantQuery   string
+		description string
+	}{
+		{
+			name: "description_contains",
+			args: map[string]any{
+				"description_contains": "draft docs",
+				"new_description":      "Write docs",
+			},
+			wantQuery:   "draft docs",
+			description: "draft docs",
+		},
+		{
+			name: "exact_description",
+			args: map[string]any{
+				"exact_description": "large workspace target",
+				"new_description":   "updated target",
+			},
+			wantQuery:   "large workspace target",
+			description: "large workspace target",
+		},
+		{
+			name: "exact_wins_when_both_set",
+			args: map[string]any{
+				"exact_description":    "broader exact target",
+				"description_contains": "broader",
+				"new_description":      "updated target",
+			},
+			wantQuery:   "broader exact target",
+			description: "broader exact target",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotQuery := ""
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+				case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+					gotQuery = r.URL.Query().Get("description")
+					respondJSON(t, w, []clockify.TimeEntry{
+						{ID: "e1", Description: tt.description, ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
+					})
+				case r.URL.Path == "/workspaces/ws1/time-entries/e1" && r.Method == http.MethodPut:
+					updated := clockify.TimeEntry{ID: "e1", Description: "updated target", ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}}
+					if v, _ := tt.args["new_description"].(string); v != "" {
+						updated.Description = v
+					}
+					respondJSON(t, w, updated)
+				default:
+					t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+				}
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			if _, err := svc.FindAndUpdateEntry(context.Background(), tt.args); err != nil {
+				t.Fatalf("find and update failed: %v", err)
+			}
+			if gotQuery != tt.wantQuery {
+				t.Fatalf("description query=%q, want %q", gotQuery, tt.wantQuery)
+			}
+		})
+	}
+}
+
+func TestFindAndUpdateEntryAcceptsFlexibleDateFiltersAndUpdateTimes(t *testing.T) {
+	var gotQueryStart, gotQueryEnd string
+	var gotPutBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			gotQueryStart = r.URL.Query().Get("start")
+			gotQueryEnd = r.URL.Query().Get("end")
+			respondJSON(t, w, []clockify.TimeEntry{
+				{ID: "e1", Description: "move me", ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/e1" && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&gotPutBody); err != nil {
+				t.Fatalf("decode PUT body: %v", err)
+			}
+			respondJSON(t, w, clockify.TimeEntry{ID: "e1", Description: "move me", ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T10:00:00Z", End: "2026-04-01T11:00:00Z"}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
+		"exact_description": "move me",
+		"start_after":       "2026-04-01",
+		"start_before":      "2026-04-02",
+		"start":             "2026-04-01 10:00",
+		"end":               "2026-04-01 11:00",
+	})
+	if err != nil {
+		t.Fatalf("find and update failed: %v", err)
+	}
+	if gotQueryStart != "2026-04-01T00:00:00Z" || gotQueryEnd != "2026-04-02T00:00:00Z" {
+		t.Fatalf("unexpected normalized search query start=%q end=%q", gotQueryStart, gotQueryEnd)
+	}
+	if gotPutBody["start"] != "2026-04-01T10:00:00Z" || gotPutBody["end"] != "2026-04-01T11:00:00Z" {
+		t.Fatalf("unexpected normalized PUT body: %+v", gotPutBody)
+	}
+}
+
 func TestFindAndUpdateEntryFindsMatchBeyondFirstPage(t *testing.T) {
 	firstPage := make([]clockify.TimeEntry, 200)
 	for i := range firstPage {
@@ -944,6 +1367,9 @@ func TestFindAndUpdateEntryDetectsAmbiguousMatchAcrossPages(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "multiple entries matched") {
 		t.Fatalf("expected ambiguous match error, got %v", err)
 	}
+	if !strings.Contains(err.Error(), "clockify_resolve_name") {
+		t.Fatalf("expected resolve_name guidance, got %v", err)
+	}
 }
 
 func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
@@ -1035,12 +1461,19 @@ func TestListClientsPageSizeCap(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.ListClients(context.Background(), map[string]any{"page_size": 9999})
+	result, err := svc.ListClients(context.Background(), map[string]any{"page_size": 9999})
 	if err != nil {
 		t.Fatalf("list clients failed: %v", err)
 	}
 	if gotPageSize != "200" {
 		t.Fatalf("expected page-size capped at 200, got %s", gotPageSize)
+	}
+	pagination, ok := result.Meta["pagination"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected structured pagination meta, got %+v", result.Meta)
+	}
+	if pagination["requested_page_size"] != 9999 || pagination["applied_page_size"] != 200 || pagination["clamped"] != true {
+		t.Fatalf("unexpected structured pagination meta: %+v", pagination)
 	}
 }
 
@@ -1196,28 +1629,29 @@ func TestListEntriesPaginationSanitizesBounds(t *testing.T) {
 	}
 }
 
-func TestListEntriesProjectFilterScansBeyondFirstPage(t *testing.T) {
+func TestListEntriesProjectFilterPushesResolvedName(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/projects":
+			q := r.URL.Query()
+			if q.Get("name") != "Alpha" || q.Get("strict-name-search") != "true" {
+				t.Fatalf("expected strict project-name lookup for Alpha, got %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []map[string]any{{"id": "p-alpha", "name": "Alpha"}})
 		case "/workspaces/ws1/user/u1/time-entries":
 			q := r.URL.Query()
 			if q.Get("page-size") != "200" {
 				t.Fatalf("expected upstream page-size=200 for filtered scan, got %s", r.URL.RawQuery)
 			}
-			switch q.Get("page") {
-			case "1":
-				entries := make([]clockify.TimeEntry, 200)
-				for i := range entries {
-					entries[i] = clockify.TimeEntry{ID: fmt.Sprintf("other-%03d", i), ProjectID: "other", ProjectName: "Other"}
-				}
-				respondJSON(t, w, entries)
-			case "2":
-				respondJSON(t, w, []clockify.TimeEntry{{ID: "target", ProjectID: "p-alpha", ProjectName: "Alpha"}})
-			default:
+			if q.Get("project") != "p-alpha" {
+				t.Fatalf("expected resolved project=p-alpha upstream, got %s", r.URL.RawQuery)
+			}
+			if q.Get("page") != "1" {
 				t.Fatalf("unexpected page for filtered scan: %s", r.URL.RawQuery)
 			}
+			respondJSON(t, w, []clockify.TimeEntry{{ID: "target", ProjectID: "p-alpha", ProjectName: "Alpha"}})
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -1234,28 +1668,34 @@ func TestListEntriesProjectFilterScansBeyondFirstPage(t *testing.T) {
 		t.Fatalf("expected []clockify.TimeEntry, got %T", result.Data)
 	}
 	if len(entries) != 1 || entries[0].ID != "target" {
-		t.Fatalf("expected target entry from page 2, got %+v", entries)
+		t.Fatalf("expected target entry from resolved project filter, got %+v", entries)
 	}
-	if result.Meta["filteredCount"] != 1 || result.Meta["pagesFetched"] != 2 || result.Meta["entriesScanned"] != 201 {
+	if result.Meta["filteredCount"] != 1 || result.Meta["pagesFetched"] != 1 || result.Meta["entriesScanned"] != 1 || result.Meta["projectFilterResolvedId"] != "p-alpha" {
 		t.Fatalf("unexpected filter metadata: %+v", result.Meta)
 	}
 }
 
 func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
+	const projectID = "abc123def456789012345678"
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/projects":
+			t.Fatalf("project ID filter should not resolve through /projects")
 		case "/workspaces/ws1/user/u1/time-entries":
 			if r.URL.Query().Get("page") != "1" {
 				t.Fatalf("unexpected extra page for short filtered result: %s", r.URL.RawQuery)
 			}
+			if r.URL.Query().Get("project") != projectID {
+				t.Fatalf("expected project=%s upstream, got %s", projectID, r.URL.RawQuery)
+			}
 			respondJSON(t, w, []clockify.TimeEntry{
-				{ID: "e1", ProjectID: "p-alpha", ProjectName: "Alpha"},
-				{ID: "e2", ProjectID: "p-alpha", ProjectName: "Alpha"},
-				{ID: "e3", ProjectID: "p-alpha", ProjectName: "Alpha"},
-				{ID: "e4", ProjectID: "p-alpha", ProjectName: "Alpha"},
-				{ID: "e5", ProjectID: "p-alpha", ProjectName: "Alpha"},
+				{ID: "e1", ProjectID: projectID, ProjectName: "Alpha"},
+				{ID: "e2", ProjectID: projectID, ProjectName: "Alpha"},
+				{ID: "e3", ProjectID: projectID, ProjectName: "Alpha"},
+				{ID: "e4", ProjectID: projectID, ProjectName: "Alpha"},
+				{ID: "e5", ProjectID: projectID, ProjectName: "Alpha"},
 			})
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
@@ -1264,7 +1704,7 @@ func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.ListEntries(context.Background(), map[string]any{"project": "p-alpha", "page": 2, "page_size": 2})
+	result, err := svc.ListEntries(context.Background(), map[string]any{"project": projectID, "page": 2, "page_size": 2})
 	if err != nil {
 		t.Fatalf("list entries failed: %v", err)
 	}
@@ -1277,6 +1717,9 @@ func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
 	}
 	if result.Meta["count"] != 2 || result.Meta["filteredCount"] != 5 || result.Meta["page"] != 2 || result.Meta["pageSize"] != 2 {
 		t.Fatalf("unexpected pagination metadata: %+v", result.Meta)
+	}
+	if result.Meta["projectFilterResolvedId"] != projectID {
+		t.Fatalf("expected projectFilterResolvedId=%s, got %+v", projectID, result.Meta)
 	}
 }
 
@@ -1302,14 +1745,14 @@ func TestListUsersPagination(t *testing.T) {
 	}
 }
 
-func newTestClient(t *testing.T, handler http.HandlerFunc) (*clockify.Client, func()) {
+func newTestClient(t testing.TB, handler http.HandlerFunc) (*clockify.Client, func()) {
 	t.Helper()
 	ts := httptest.NewServer(handler)
 	client := clockify.NewClient("test-key", ts.URL, 5*time.Second, 0)
 	return client, ts.Close
 }
 
-func respondJSON(t *testing.T, w http.ResponseWriter, v any) {
+func respondJSON(t testing.TB, w http.ResponseWriter, v any) {
 	t.Helper()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -40,8 +39,9 @@ const ServerInstructions = `This is the Clockify Go MCP server. It exposes a tie
 Tool tiers:
   - Tier 1 tools are registered at startup and visible in tools/list.
   - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
-  - Use 'clockify_search_tools' to discover tools by keyword or group name.
-  - Activate Tier 2 tools with 'clockify_search_tools' using 'activate_group' (preferred) or 'activate_tool' before calling them. Each Tier-2 group is the unit of activation: passing a single tool name via 'activate_tool' brings the entire containing group online, and the response enumerates every newly-available tool name.
+  - Use 'clockify_list_tools' to discover tools by keyword or group name.
+  - Activate Tier 2 tools with 'clockify_activate_group' (preferred) or 'clockify_activate_tool' before calling them, and use 'clockify_deactivate_group' to shrink the visible surface after a task. Each Tier-2 group is the unit of activation: passing a single Tier-2 tool name to 'clockify_activate_tool' brings the entire containing group online, and activated_tools enumerates only currently visible/callable names.
+  - 'clockify_search_tools' remains as a deprecated compatibility shim for older clients.
 
 Safety:
   - The server supports five policy modes: read_only, time_tracking_safe, safe_core, standard (default), full.
@@ -227,8 +227,9 @@ type Server struct {
 	// empty = no extras registered, which is the default production path.
 	ExtraHTTPHandlers []ExtraHandler
 
-	mu    sync.RWMutex
-	tools map[string]ToolDescriptor
+	mu           sync.RWMutex
+	tools        map[string]ToolDescriptor
+	activeGroups map[string][]string
 	// toolListCache stores the sorted, enforcement-filtered tools/list
 	// snapshot. Protected by mu and invalidated when descriptors or
 	// activation visibility change.
@@ -245,6 +246,7 @@ type Server struct {
 	advertiseListChanged atomic.Bool
 	encoder              *json.Encoder // stored for push notifications
 	encoderMu            sync.Mutex    // protects concurrent encoder writes
+	writer               io.Writer     // raw stdio writer for cached JSON-RPC responses
 	requestSeq           atomic.Int64  // monotonic request ID for log correlation
 
 	hub               notifierHub
@@ -369,12 +371,13 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 		toolMap[d.Tool.Name] = d
 	}
 	return &Server{
-		Version:     version,
-		Enforcement: enforcement,
-		Activator:   activator,
-		tools:       toolMap,
-		inflight:    make(map[any]context.CancelFunc),
-		prompts:     newPromptRegistry(),
+		Version:      version,
+		Enforcement:  enforcement,
+		Activator:    activator,
+		tools:        toolMap,
+		activeGroups: make(map[string][]string),
+		inflight:     make(map[any]context.CancelFunc),
+		prompts:      newPromptRegistry(),
 	}
 }
 
@@ -452,6 +455,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	scanner.Buffer(buf, maxMsg)
 	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)
+	s.writer = w
 	s.encoderMu.Unlock()
 	// Install the stdio notifier so activation events (tools/list_changed)
 	// flow back through the same thread-safe encoder the responses use.
@@ -557,6 +561,18 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 				continue
 			}
 
+			if out, ok, err := s.tryMarshalCachedToolsListResponse(req); ok || err != nil {
+				if err != nil {
+					return err
+				}
+				if out != nil {
+					if err := s.writeRawResponse(out); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+
 			resp := s.handle(ctx, req)
 			if resp.Error != nil {
 				metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
@@ -651,6 +667,19 @@ func (s *Server) writeResponse(resp Response) error {
 		return nil
 	}
 	return s.encoder.Encode(resp)
+}
+
+func (s *Server) writeRawResponse(raw []byte) error {
+	s.encoderMu.Lock()
+	defer s.encoderMu.Unlock()
+	if s.writer == nil {
+		return nil
+	}
+	if _, err := s.writer.Write(raw); err != nil {
+		return err
+	}
+	_, err := s.writer.Write([]byte("\n"))
+	return err
 }
 
 // DispatchMessageWithRecover is the recovery-wrapped variant of
@@ -849,18 +878,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				"isError": true,
 			}
 		} else {
-			// Dual-emit per MCP 2025-06-18: text content preserves the wire
-			// contract for clients that still read content[0].text, and
-			// structuredContent surfaces the typed payload for clients that
-			// validate against the advertised outputSchema. structuredContent
-			// is only attached when the result marshals to a JSON object (the
-			// spec forbids arrays/scalars there); tools whose result is a
-			// slice or nil keep text-only output.
-			out := map[string]any{"content": []map[string]any{{"type": "text", "text": mustJSON(result)}}}
-			if structured, okStruct := structuredContentValue(result); okStruct {
-				out["structuredContent"] = structured
-			}
-			resp.Result = out
+			resp.Result = toolResultEnvelope(result)
 		}
 	default:
 		resp.Error = &RPCError{Code: -32601, Message: fmt.Sprintf("method not found: %s", req.Method)}
@@ -1022,46 +1040,52 @@ func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 	return p, nil
 }
 
-// mustJSON serialises a tool's return value into the string payload of
-// the MCP content envelope. Previously used json.MarshalIndent with a
-// two-space indent; the pretty-printing cost every successful
-// tools/call about 20% of its wall-clock time and doubled the allocated
-// bytes for no observable benefit — the output is transported inside a
-// JSON string field, so clients decode it uniformly regardless of
-// whitespace. Switched to json.Marshal; the MCP wire format is unchanged.
-func mustJSON(v any) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Sprintf(`{"error":%q}`, err.Error())
+// toolResultEnvelope builds the successful MCP tools/call envelope.
+// Text content preserves the wire contract for clients that still read
+// content[0].text. structuredContent reuses the same marshalled bytes via
+// json.RawMessage so object-shaped tool results are not encoded once for the
+// text block and again for the structured field.
+func toolResultEnvelope(v any) map[string]any {
+	text, structured := marshalToolResult(v)
+	out := map[string]any{"content": []map[string]any{{"type": "text", "text": text}}}
+	if structured != nil {
+		out["structuredContent"] = structured
 	}
-	return string(b)
+	return out
 }
 
-// structuredContentValue reports whether v is safe to place in the MCP
-// structuredContent field. The spec restricts structuredContent to a JSON
-// object, so slices, scalars, nil, and non-string-keyed maps are rejected.
-// ResultEnvelope and map[string]any — the two shapes tool handlers actually
-// return today — both pass.
-func structuredContentValue(v any) (any, bool) {
-	if v == nil {
-		return nil, false
+// marshalToolResult serialises a tool's return value into the string payload
+// of the MCP content envelope. Previously used json.MarshalIndent with a
+// two-space indent; the pretty-printing cost every successful tools/call about
+// 20% of its wall-clock time and doubled the allocated bytes for no observable
+// benefit. The output is transported inside a JSON string field, so clients
+// decode it uniformly regardless of whitespace.
+func marshalToolResult(v any) (string, json.RawMessage) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf(`{"error":%q}`, err.Error()), nil
 	}
-	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
-		if rv.IsNil() {
-			return nil, false
+	if jsonObjectRaw(b) {
+		return string(b), json.RawMessage(b)
+	}
+	return string(b), nil
+}
+
+// jsonObjectRaw reports whether raw JSON may be used as MCP
+// structuredContent. The spec restricts structuredContent to a JSON object,
+// so arrays, scalars, and null keep text-only output.
+func jsonObjectRaw(raw []byte) bool {
+	for _, b := range raw {
+		switch b {
+		case ' ', '\n', '\r', '\t':
+			continue
+		case '{':
+			return true
+		default:
+			return false
 		}
-		rv = rv.Elem()
 	}
-	switch rv.Kind() {
-	case reflect.Struct:
-		return v, true
-	case reflect.Map:
-		if rv.Type().Key().Kind() == reflect.String {
-			return v, true
-		}
-	}
-	return nil, false
+	return false
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.

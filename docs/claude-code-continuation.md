@@ -1,4 +1,4 @@
-# Claude Code Continuation Packet
+# Claude Code Continuation Packet (Historical PR #51 Archive)
 
 Prepared 2026-05-02 after PR #51 merged into `main`.
 
@@ -6,7 +6,9 @@ Prepared 2026-05-02 after PR #51 merged into `main`.
 > after PR #51. The current autonomous-agent entry point is
 > [`docs/agent-handoff.md`](agent-handoff.md), which includes the
 > post-PR #59 exhaustive manual live-probe coverage, PR #62's
-> invite-user validation probe, and the current 123-tool catalog notes.
+> invite-user validation probe, and the current 128-tool catalog notes.
+> Do not run the prompt blocks below as written; they intentionally
+> preserve PR #51-era SHAs for audit history only.
 
 ## Current State
 
@@ -101,10 +103,12 @@ If this packet is read from a later local continuation commit, `git log
 6. `docs/release-policy.md`
 7. This continuation packet
 
-## Exact Next Prompts
+## Historical Prompt Examples (Do Not Run As Written)
 
-Use one of these prompts in Claude Code depending on which external
-evidence is now available.
+These prompt examples are retained to show what was handed off after
+PR #51. For current Claude Code work, use
+[`docs/agent-handoff.md`](agent-handoff.md) and substitute the actual
+candidate SHA or release-candidate tag target under review.
 
 ### Live-Contract Evidence
 

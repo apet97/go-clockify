@@ -8,13 +8,15 @@
 //   - additionalProperties: false (true is a no-op)
 //   - properties (recursive)
 //   - items (array element schema)
+//   - minItems (array)
 //   - minimum / maximum (integer and number)
 //   - minLength / maxLength (string)
 //   - pattern (regexp; anchored via ^...$ if not already)
 //   - format: date / date-time (lenient time.Parse)
 //   - enum (array of any; exact JSON-equal match)
+//   - anyOf (array of schemas; at least one must validate)
 //
-// Not supported (deliberately): $ref, $defs, allOf/anyOf/oneOf, not,
+// Not supported (deliberately): $ref, $defs, allOf/oneOf, not,
 // conditionals (if/then/else), dependentSchemas, const,
 // exclusiveMinimum/exclusiveMaximum, multipleOf, propertyNames,
 // patternProperties. None of those keywords appear in the Tier 1 or
@@ -84,27 +86,39 @@ func validate(schema map[string]any, value any, ptr string) error {
 	}
 
 	typ, _ := schema["type"].(string)
+	var err error
 	switch typ {
 	case "":
 		// Untyped schema — validate subkeywords that don't depend on type.
+		if hasObjectMemberKeywords(schema) {
+			if obj, ok := value.(map[string]any); ok {
+				err = validateObjectMembers(schema, obj, ptr)
+			}
+		}
 	case "object":
-		return validateObject(schema, value, ptr)
+		err = validateObject(schema, value, ptr)
 	case "array":
-		return validateArray(schema, value, ptr)
+		err = validateArray(schema, value, ptr)
 	case "string":
-		return validateString(schema, value, ptr)
+		err = validateString(schema, value, ptr)
 	case "integer":
-		return validateInteger(schema, value, ptr)
+		err = validateInteger(schema, value, ptr)
 	case "number":
-		return validateNumber(schema, value, ptr)
+		err = validateNumber(schema, value, ptr)
 	case "boolean":
 		if _, ok := value.(bool); !ok {
-			return typeError(ptr, "boolean", value)
+			err = typeError(ptr, "boolean", value)
 		}
 	default:
 		// Unknown type keyword — treat as no-op to stay forward-compatible
 		// with tightenings that introduce new type strings we don't know
 		// about yet.
+	}
+	if err != nil {
+		return err
+	}
+	if raw, ok := schema["anyOf"]; ok {
+		return checkAnyOf(raw, value, ptr)
 	}
 	return nil
 }
@@ -114,7 +128,17 @@ func validateObject(schema map[string]any, value any, ptr string) error {
 	if !ok {
 		return typeError(ptr, "object", value)
 	}
+	return validateObjectMembers(schema, obj, ptr)
+}
 
+func hasObjectMemberKeywords(schema map[string]any) bool {
+	_, hasRequired := schema["required"]
+	_, hasProps := schema["properties"]
+	_, hasAdditional := schema["additionalProperties"]
+	return hasRequired || hasProps || hasAdditional
+}
+
+func validateObjectMembers(schema map[string]any, obj map[string]any, ptr string) error {
 	// required
 	if req, ok := schema["required"]; ok {
 		names, err := toStringSlice(req)
@@ -174,6 +198,11 @@ func validateArray(schema map[string]any, value any, ptr string) error {
 	if !ok {
 		return typeError(ptr, "array", value)
 	}
+	if raw, ok := schema["minItems"]; ok {
+		if n, ok := toInt(raw); ok && len(arr) < n {
+			return &ValidationError{Pointer: ptr, Message: fmt.Sprintf("array shorter than minItems %d", n)}
+		}
+	}
 	items, _ := schema["items"].(map[string]any)
 	if items == nil {
 		return nil
@@ -184,6 +213,23 @@ func validateArray(schema map[string]any, value any, ptr string) error {
 		}
 	}
 	return nil
+}
+
+func checkAnyOf(raw any, value any, ptr string) error {
+	options, ok := raw.([]any)
+	if !ok || len(options) == 0 {
+		return &ValidationError{Pointer: ptr, Message: "schema anyOf must contain at least one subschema"}
+	}
+	for _, option := range options {
+		sub, ok := option.(map[string]any)
+		if !ok {
+			continue
+		}
+		if err := validate(sub, value, ptr); err == nil {
+			return nil
+		}
+	}
+	return &ValidationError{Pointer: ptr, Message: "value does not match any allowed schema"}
 }
 
 func validateString(schema map[string]any, value any, ptr string) error {

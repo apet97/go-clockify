@@ -37,22 +37,24 @@ func init() {
 func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List expenses
-		{Tool: toolRO("clockify_list_expenses", "List expenses in the workspace with pagination", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_list_expenses", "List expenses in the workspace with pagination and optional date range", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+				"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
+				"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
 			},
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMapSlice("clockify_list_expenses")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenses(ctx, args)
 		}},
 
 		// 2. Get expense
-		{Tool: toolRO("clockify_get_expense", "Get a single expense by ID", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_get_expense", "Get a single expense by ID", map[string]any{
 			"type":       "object",
 			"required":   []string{"expense_id"},
 			"properties": map[string]any{"expense_id": map[string]any{"type": "string"}},
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMap("clockify_get_expense")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getExpense(ctx, args)
 		}},
 
@@ -75,12 +77,12 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 4. Update expense
-		{Tool: toolRW("clockify_update_expense", "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; values omitted from change_fields are silently ignored even when sent.", map[string]any{
+		{Tool: toolRW("clockify_update_expense", "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument.", map[string]any{
 			"type":     "object",
 			"required": []string{"expense_id", "change_fields"},
 			"properties": map[string]any{
 				"expense_id":    map[string]any{"type": "string"},
-				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE", "FILE"}}, "description": "Field tokens to update; one or more of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE"},
+				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE", "FILE"}}, "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. FILE is not supported."},
 				"amount":        map[string]any{"type": "number"},
 				"date":          map[string]any{"type": "string", "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ"},
 				"category_id":   map[string]any{"type": "string"},
@@ -107,9 +109,9 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 6. List expense categories
-		{Tool: toolRO("clockify_list_expense_categories", "List expense categories in the workspace", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_list_expense_categories", "List expense categories in the workspace", map[string]any{
 			"type": "object",
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMapSlice("clockify_list_expense_categories")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenseCategories(ctx, args)
 		}},
 
@@ -149,7 +151,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 10. Expense report
-		{Tool: toolRO("clockify_expense_report", "Get expenses filtered by date range with aggregation by category", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_expense_report", "Get expenses filtered by date range with page-scoped category totals", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
@@ -157,7 +159,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 			},
-		}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeOpenMap("clockify_expense_report")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.expenseReport(ctx, args)
 		}},
 	}
@@ -188,10 +190,17 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 			Count    int              `json:"count"`
 		} `json:"expenses"`
 	}
-	if err := s.Client.Get(ctx, path, map[string]string{
+	query := map[string]string{
 		"page":      fmt.Sprintf("%d", page),
 		"page-size": fmt.Sprintf("%d", pageSize),
-	}, &envelope); err != nil {
+	}
+	if v := stringArg(args, "start"); v != "" {
+		query["start"] = v
+	}
+	if v := stringArg(args, "end"); v != "" {
+		query["end"] = v
+	}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
 	items := envelope.Expenses.Expenses
@@ -199,6 +208,7 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		"workspaceId": wsID,
 		"count":       envelope.Expenses.Count,
 		"page":        page,
+		"pageSize":    pageSize,
 	}), nil
 }
 
@@ -297,9 +307,94 @@ var validUpdateExpenseChangeFields = map[string]bool{
 	"FILE":     true,
 }
 
+func parseUpdateExpenseChangeFields(args map[string]any) ([]string, error) {
+	raw, hasChange := args["change_fields"]
+	if !hasChange {
+		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
+	}
+	var values []any
+	switch v := raw.(type) {
+	case []any:
+		values = v
+	case []string:
+		values = make([]any, 0, len(v))
+		for _, item := range v {
+			values = append(values, item)
+		}
+	default:
+		return nil, fmt.Errorf("change_fields must be an array of strings; got %T", raw)
+	}
+	if len(values) == 0 {
+		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
+	}
+
+	changeFields := make([]string, 0, len(values))
+	for _, raw := range values {
+		token, isStr := raw.(string)
+		if !isStr {
+			return nil, fmt.Errorf("change_fields must be strings; got %T", raw)
+		}
+		token = strings.ToUpper(strings.TrimSpace(token))
+		if !validUpdateExpenseChangeFields[token] {
+			return nil, fmt.Errorf("change_fields contains unsupported token %q", token)
+		}
+		changeFields = append(changeFields, token)
+	}
+	return changeFields, nil
+}
+
+func validateUpdateExpenseChangedValues(changeFields []string, args map[string]any) error {
+	for _, token := range changeFields {
+		switch token {
+		case "USER":
+			if stringArg(args, "user_id") == "" {
+				return fmt.Errorf("change_fields includes USER but user_id is required")
+			}
+		case "DATE":
+			if stringArg(args, "date") == "" {
+				return fmt.Errorf("change_fields includes DATE but date is required")
+			}
+		case "PROJECT":
+			if stringArg(args, "project_id") == "" {
+				return fmt.Errorf("change_fields includes PROJECT but project_id is required")
+			}
+		case "TASK":
+			if stringArg(args, "task_id") == "" {
+				return fmt.Errorf("change_fields includes TASK but task_id is required")
+			}
+		case "CATEGORY":
+			if stringArg(args, "category_id") == "" {
+				return fmt.Errorf("change_fields includes CATEGORY but category_id is required")
+			}
+		case "NOTES":
+			if _, ok := args["notes"].(string); !ok {
+				return fmt.Errorf("change_fields includes NOTES but notes is required")
+			}
+		case "AMOUNT":
+			if _, ok := args["amount"].(float64); !ok {
+				return fmt.Errorf("change_fields includes AMOUNT but amount is required")
+			}
+		case "BILLABLE":
+			if _, ok := args["billable"].(bool); !ok {
+				return fmt.Errorf("change_fields includes BILLABLE but billable is required")
+			}
+		case "FILE":
+			return fmt.Errorf("change_fields includes FILE, but file updates are not supported")
+		}
+	}
+	return nil
+}
+
 func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	expenseID := stringArg(args, "expense_id")
 	if err := resolve.ValidateID(expenseID, "expense_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	changeFields, err := parseUpdateExpenseChangeFields(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := validateUpdateExpenseChangedValues(changeFields, args); err != nil {
 		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -316,23 +411,8 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	// changeFields is mandatory and case-sensitive — without it the
-	// upstream silently ignores every other field per probe finding
-	// (SUMMARY rev 3 #13).
-	rawChange, hasChange := args["change_fields"].([]any)
-	if !hasChange || len(rawChange) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
-	}
 	form := url.Values{}
-	for _, raw := range rawChange {
-		token, isStr := raw.(string)
-		if !isStr {
-			return ResultEnvelope{}, fmt.Errorf("change_fields must be strings; got %T", raw)
-		}
-		token = strings.ToUpper(strings.TrimSpace(token))
-		if !validUpdateExpenseChangeFields[token] {
-			return ResultEnvelope{}, fmt.Errorf("change_fields contains unsupported token %q", token)
-		}
+	for _, token := range changeFields {
 		form.Add("changeFields", token)
 	}
 	if v, ok := args["amount"].(float64); ok {
@@ -367,7 +447,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if userID != "" {
 		form.Set("userId", userID)
 	}
-	if v := stringArg(args, "notes"); v != "" {
+	if v, ok := args["notes"].(string); ok {
 		form.Set("notes", v)
 	}
 	if v, ok := args["billable"].(bool); ok {
@@ -565,27 +645,34 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 	}
 	expenses := envelope.Expenses.Expenses
 
-	// Aggregate by category.
-	var totalAmount float64
-	byCategory := map[string]float64{}
+	// Aggregates are page-scoped because the upstream endpoint returns a
+	// paginated expense slice plus the total matching count.
+	var pageTotalAmount float64
+	pageByCategory := map[string]float64{}
 	for _, exp := range expenses {
 		if amt, ok := exp["amount"].(float64); ok {
-			totalAmount += amt
+			pageTotalAmount += amt
 			catID, _ := exp["categoryId"].(string)
 			if catID == "" {
 				catID = "uncategorized"
 			}
-			byCategory[catID] += amt
+			pageByCategory[catID] += amt
 		}
 	}
 
 	return ok("clockify_expense_report", map[string]any{
-		"expenses":    expenses,
-		"totalAmount": totalAmount,
-		"byCategory":  byCategory,
+		"expenses":         expenses,
+		"aggregationScope": "page",
+		"pageTotalAmount":  pageTotalAmount,
+		"pageByCategory":   pageByCategory,
+		"totalAmount":      pageTotalAmount,
+		"byCategory":       pageByCategory,
 	}, map[string]any{
-		"workspaceId": wsID,
-		"count":       envelope.Expenses.Count,
-		"page":        page,
+		"workspaceId":      wsID,
+		"count":            envelope.Expenses.Count,
+		"pageCount":        len(expenses),
+		"page":             page,
+		"pageSize":         pageSize,
+		"aggregationScope": "page",
 	}), nil
 }

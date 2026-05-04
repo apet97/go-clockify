@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -308,6 +309,13 @@ func assertNoOpenObjects(schema any, tool, path string) error {
 	if items, ok := m["items"].(map[string]any); ok {
 		if err := assertNoOpenObjects(items, tool, path+"[*]"); err != nil {
 			return err
+		}
+	}
+	if options, ok := m["anyOf"].([]any); ok {
+		for i, option := range options {
+			if err := assertNoOpenObjects(option, tool, fmt.Sprintf("%s.anyOf[%d]", path, i)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

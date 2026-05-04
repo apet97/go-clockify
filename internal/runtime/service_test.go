@@ -383,3 +383,59 @@ func TestBuildServer_ActivateToolByTier2Name(t *testing.T) {
 		t.Fatalf("activated tools does not include requested tool: %+v", result.ActivatedTools)
 	}
 }
+
+func TestBuildServer_ActivateToolClassifiesPolicyHiddenTools(t *testing.T) {
+	client := clockify.NewClient("k", "https://api.clockify.me/api/v1", time.Second, 0)
+	service := tools.New(client, "ws-test")
+	pol := &policy.Policy{Mode: policy.ReadOnly}
+	bc := &bootstrap.Config{Mode: bootstrap.Minimal}
+	deps := runtimeDeps{cfg: config.Config{}}
+	server := buildServer("test-version", deps, service, pol, bc)
+	if server == nil {
+		t.Fatal("expected server")
+	}
+
+	result, err := service.ActivateTool(context.Background(), "clockify_create_project")
+	if err != nil {
+		t.Fatalf("activate tier1 write tool: %v", err)
+	}
+	if len(result.VisibleActivatedTools) != 0 {
+		t.Fatalf("write tool should remain hidden under read_only policy, got visible=%v", result.VisibleActivatedTools)
+	}
+	if len(result.ActivatedToolsBlockedByPolicy) != 1 || result.ActivatedToolsBlockedByPolicy[0] != "clockify_create_project" {
+		t.Fatalf("expected policy-blocked classification, got hidden=%v blocked=%v",
+			result.ActivatedToolsHiddenByBootstrap, result.ActivatedToolsBlockedByPolicy)
+	}
+	if server.VisibleToolNames()["clockify_create_project"] {
+		t.Fatal("policy-blocked tool should not appear in tools/list visibility")
+	}
+}
+
+func TestBuildServer_DeactivateGroupRemovesTier2Tools(t *testing.T) {
+	client := clockify.NewClient("k", "https://api.clockify.me/api/v1", time.Second, 0)
+	service := tools.New(client, "ws-test")
+	pol := &policy.Policy{Mode: policy.Standard}
+	bc := &bootstrap.Config{Mode: bootstrap.Minimal}
+	deps := runtimeDeps{cfg: config.Config{}}
+	server := buildServer("test-version", deps, service, pol, bc)
+	if server == nil {
+		t.Fatal("expected server")
+	}
+
+	if _, err := service.ActivateGroup(context.Background(), "invoices"); err != nil {
+		t.Fatalf("activate invoices: %v", err)
+	}
+	if !server.VisibleToolNames()["clockify_list_invoices"] {
+		t.Fatal("expected invoice tool visible after activation")
+	}
+	result, err := service.DeactivateGroup(context.Background(), "invoices")
+	if err != nil {
+		t.Fatalf("deactivate invoices: %v", err)
+	}
+	if result.ToolCount != 12 {
+		t.Fatalf("ToolCount=%d, want 12", result.ToolCount)
+	}
+	if server.VisibleToolNames()["clockify_list_invoices"] {
+		t.Fatal("expected invoice tool hidden after deactivation")
+	}
+}

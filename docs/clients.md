@@ -25,7 +25,7 @@ against those modes unless the table says so.
 
 ### Tool Discovery
 Most clients fetch the list of available tools at startup using `tools/list`.
-- **Stdio Clients:** Automatically receive `notifications/tools/list_changed` when new tools are activated via `clockify_search_tools`.
+- **Stdio Clients:** Automatically receive `notifications/tools/list_changed` when tools are activated or deactivated via `clockify_activate_group`, `clockify_activate_tool`, or `clockify_deactivate_group`.
 - **`streamable_http` Clients:** Receive the same notifications via the
   spec-canonical SSE stream on `GET /mcp` (Streamable HTTP 2025-03-26
   §3.3) — no manual re-fetch needed. The `/mcp/events` alias is
@@ -45,22 +45,34 @@ Most clients fetch the list of available tools at startup using `tools/list`.
 
 ### Tier-2 Activation Semantics
 Each Tier-2 group (invoices, expenses, scheduling, time_off, …) is the
-unit of activation. Calling `clockify_search_tools` with either
-`activate_group:"<group>"` **or** `activate_tool:"<tool>"` brings the
+unit of activation. Calling `clockify_activate_group` with
+`name:"<group>"` **or** `clockify_activate_tool` with `name:"<tool>"`
+brings the
 **entire containing group** online — the response payload includes
-`activated_tools: [...]` enumerating every tool name now reachable,
-while `activation_message` stays concise and identifies the activated
-group/count without repeating the tool list. `activate_group` is the
-preferred form for new code; `activate_tool` is preserved for
-backwards compatibility.
+`activated_tools: [...]` enumerating the activated tool names that are now
+visible and callable,
+`tool_count` for the activated group, and `total_visible_tools` for the
+post-activation session-visible `tools/list` count. `tool_count` is not
+the session total. If bootstrap or policy filtering still hides an activated
+name, the response reports it separately under
+`activated_tools_hidden_by_bootstrap` or
+`activated_tools_blocked_by_policy`; clients should only call names from
+`activated_tools` or from a fresh `tools/list`. `activation_message` stays
+concise and identifies the activated group/count without repeating the
+tool list. `clockify_deactivate_group` removes a previously activated group
+from the same session. `clockify_search_tools` remains as a deprecated
+compatibility shim for older clients.
 
 ### Safety and Destructive Operations
 `clockify-mcp-go` provides safety hints in tool definitions (`destructiveHint: true`)
-plus a structured `RiskClass` bitmask on every descriptor
-(`Read | Write | Billing | Admin | PermissionChange |
-ExternalSideEffect | Destructive`). Audit events for billing /
-admin / permission-change tools capture the action-defining fields
-(role, status, quantity, unit_price), not just the IDs.
+plus `annotations.riskClass` on every `tools/list` descriptor
+(`read`, `write`, `billing`, `admin`, `permission_change`,
+`external_side_effect`, `destructive`) and `annotations.dryRun`
+so clients can tell whether `dry_run:true` is accepted before
+calling. The same risk taxonomy is stored as the server-side
+`RiskClass` bitmask. Audit events for billing / admin /
+permission-change tools capture the action-defining fields (role,
+status, quantity, unit_price), not just the IDs.
 
 - Clients like Claude Desktop may display a confirmation dialog before executing a destructive tool (e.g., `clockify_delete_entry`).
 - The `CLOCKIFY_DRY_RUN` environment variable (default: `enabled`) enables server-side preview support for destructive tools when the caller sends `dry_run:true`. If `dry_run` is omitted or `false`, the mutation executes.
@@ -129,6 +141,6 @@ The server supports multiple versions of the MCP protocol (today: `2025-11-25`, 
 
 ## Troubleshooting Client Issues
 
-1.  **"Tools not found":** Some clients require a restart to see new tools if they don't support `notifications/tools/list_changed`. Try `clockify_search_tools` followed by a client reload.
+1.  **"Tools not found":** Some clients require a restart to see new tools if they don't support `notifications/tools/list_changed`. Try `clockify_list_tools`, activate with `clockify_activate_group`, then reload the client.
 2.  **Authentication Errors:** Ensure environment variables are passed correctly to the sub-process. Claude Desktop requires them in its `config.json` under the `env` key.
 3.  **Logs:** Stdio clients often hide `stderr`. Check the client's internal log file (e.g., `~/Library/Logs/Claude/mcp.log` for Claude Desktop) to see redacted `clockify-mcp` logs.

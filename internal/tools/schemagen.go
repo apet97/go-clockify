@@ -164,6 +164,14 @@ func envelopeSchemaFor[T any](action string) map[string]any {
 	}
 }
 
+func envelopeOpenMap(action string) map[string]any {
+	return envelopeSchemaFor[map[string]any](action)
+}
+
+func envelopeOpenMapSlice(action string) map[string]any {
+	return envelopeSchemaFor[[]map[string]any](action)
+}
+
 // envelopeOpaque produces an outputSchema for tools whose Data field is
 // an open-shape map[string]any (most Tier 2 CRUD wrappers). It still
 // pins the action field as a const and validates the required envelope

@@ -40,10 +40,10 @@ type Profile struct {
 var allProfilesSlice = []Profile{
 	{
 		Name:    "local-stdio",
-		Summary: "Single-user local stdio server — no control plane, no auth, safe_core policy",
+		Summary: "Single-user local stdio server — no control plane, no auth, time_tracking_safe policy",
 		Env: map[string]string{
 			"MCP_TRANSPORT":        "stdio",
-			"CLOCKIFY_POLICY":      "safe_core",
+			"CLOCKIFY_POLICY":      "time_tracking_safe",
 			"MCP_AUDIT_DURABILITY": "best_effort",
 		},
 	},
@@ -57,7 +57,15 @@ var allProfilesSlice = []Profile{
 			"MCP_ALLOW_DEV_BACKEND":  "1",
 			"MCP_AUDIT_DURABILITY":   "best_effort",
 			"MCP_HTTP_LEGACY_POLICY": "deny",
-			"CLOCKIFY_POLICY":        "time_tracking_safe",
+			// Small-team HTTP still sends tool errors over an MCP wire
+			// to remote clients. Keep Clockify response bodies in
+			// server-side logs, not in client-visible error envelopes.
+			"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS": "1",
+			// The profile is API-key backed, so inline control-plane
+			// credentials are unnecessary risk. Operators can override
+			// explicitly during migration.
+			"MCP_DISABLE_INLINE_SECRETS": "1",
+			"CLOCKIFY_POLICY":            "time_tracking_safe",
 		},
 	},
 	{
@@ -78,9 +86,12 @@ var allProfilesSlice = []Profile{
 			//
 			// MCP_OIDC_STRICT=1 — reject tokens missing exp; require
 			//   audience or resource URI binding (Config.Load gate).
-			// MCP_REQUIRE_TENANT_CLAIM=1 — reject tokens without a
-			//   tenant claim instead of falling back to the shared
+			// MCP_REQUIRE_TENANT_CLAIM=1 — reject OIDC tokens without
+			//   a tenant claim instead of falling back to the shared
 			//   default tenant (catastrophic in multi-tenant mode).
+			// MCP_REQUIRE_FORWARD_TENANT_CLAIM=1 — same fail-closed
+			//   posture if an operator overrides the hosted profile to
+			//   use forward_auth behind a reverse proxy.
 			// MCP_DISABLE_INLINE_SECRETS=1 — reject credential refs
 			//   with backend=inline. Inline secrets sit in the
 			//   control-plane DB and survive operator forgetfulness;
@@ -88,10 +99,11 @@ var allProfilesSlice = []Profile{
 			// CLOCKIFY_POLICY=time_tracking_safe — AI-facing untrusted
 			//   default. safe_core / standard / full remain available
 			//   for trusted-team deployments via explicit override.
-			"MCP_OIDC_STRICT":            "1",
-			"MCP_REQUIRE_TENANT_CLAIM":   "1",
-			"MCP_DISABLE_INLINE_SECRETS": "1",
-			"CLOCKIFY_POLICY":            "time_tracking_safe",
+			"MCP_OIDC_STRICT":                  "1",
+			"MCP_REQUIRE_TENANT_CLAIM":         "1",
+			"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
+			"MCP_DISABLE_INLINE_SECRETS":       "1",
+			"CLOCKIFY_POLICY":                  "time_tracking_safe",
 		},
 	},
 	{
@@ -107,15 +119,16 @@ var allProfilesSlice = []Profile{
 		Name:    "prod-postgres",
 		Summary: "Shared-service strict + ENVIRONMENT=prod — postgres DSN required, fail-closed everywhere",
 		Env: map[string]string{
-			"MCP_TRANSPORT":              "streamable_http",
-			"MCP_AUTH_MODE":              "oidc",
-			"MCP_AUDIT_DURABILITY":       "fail_closed",
-			"MCP_HTTP_LEGACY_POLICY":     "deny",
-			"ENVIRONMENT":                "prod",
-			"MCP_OIDC_STRICT":            "1",
-			"MCP_REQUIRE_TENANT_CLAIM":   "1",
-			"MCP_DISABLE_INLINE_SECRETS": "1",
-			"CLOCKIFY_POLICY":            "time_tracking_safe",
+			"MCP_TRANSPORT":                    "streamable_http",
+			"MCP_AUTH_MODE":                    "oidc",
+			"MCP_AUDIT_DURABILITY":             "fail_closed",
+			"MCP_HTTP_LEGACY_POLICY":           "deny",
+			"ENVIRONMENT":                      "prod",
+			"MCP_OIDC_STRICT":                  "1",
+			"MCP_REQUIRE_TENANT_CLAIM":         "1",
+			"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
+			"MCP_DISABLE_INLINE_SECRETS":       "1",
+			"CLOCKIFY_POLICY":                  "time_tracking_safe",
 		},
 	},
 }

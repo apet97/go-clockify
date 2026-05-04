@@ -111,12 +111,13 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	// updateExpense — every optional field set + change_fields
 	res, err = svc.updateExpense(ctx, map[string]any{
 		"expense_id":    "exp1",
-		"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES"},
+		"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES", "BILLABLE"},
 		"amount":        250.0,
 		"date":          "2026-04-12T00:00:00Z",
 		"category_id":   "cat1",
 		"project_id":    "p2",
 		"notes":         "Dinner",
+		"billable":      false,
 	})
 	mustOK(t, res, err, "clockify_update_expense")
 	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
@@ -172,6 +173,226 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_delete_expense_category")
 	if _, err := svc.deleteExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty category_id")
+	}
+}
+
+func TestUpdateExpenseFallsBackToExistingFields(t *testing.T) {
+	var gotForm map[string][]string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+			respondJSON(t, w, map[string]any{
+				"id":         "exp1",
+				"amount":     100.5,
+				"date":       "2026-04-11T00:00:00Z",
+				"categoryId": "cat-old",
+				"billable":   true,
+			})
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+				t.Fatalf("update_expense expected multipart/form-data, got %q", r.Header.Get("Content-Type"))
+			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotForm = r.MultipartForm.Value
+			respondJSON(t, w, map[string]any{"id": "exp1"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.updateExpense(context.Background(), map[string]any{
+		"expense_id":    "exp1",
+		"change_fields": []any{"CATEGORY"},
+		"category_id":   "cat-new",
+		"user_id":       "u-7",
+	})
+	mustOK(t, res, err, "clockify_update_expense")
+	if gotForm["amount"][0] != "100.5" {
+		t.Fatalf("expected fallback amount=100.5, got form=%v", gotForm)
+	}
+	if gotForm["date"][0] != "2026-04-11T00:00:00Z" {
+		t.Fatalf("expected fallback date, got form=%v", gotForm)
+	}
+	if gotForm["categoryId"][0] != "cat-new" {
+		t.Fatalf("expected updated categoryId=cat-new, got form=%v", gotForm)
+	}
+	if gotForm["billable"][0] != "true" {
+		t.Fatalf("expected fallback billable=true, got form=%v", gotForm)
+	}
+	if gotForm["userId"][0] != "u-7" {
+		t.Fatalf("expected explicit userId=u-7, got form=%v", gotForm)
+	}
+}
+
+func TestUpdateExpenseFallsBackToCurrentUserWhenUserIDOmitted(t *testing.T) {
+	userHit := false
+	var gotForm map[string][]string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+			respondJSON(t, w, map[string]any{
+				"id":         "exp1",
+				"amount":     100,
+				"date":       "2026-04-11T00:00:00Z",
+				"categoryId": "cat1",
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			userHit = true
+			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "t@example.com"})
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotForm = r.MultipartForm.Value
+			respondJSON(t, w, map[string]any{"id": "exp1"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateExpense(context.Background(), map[string]any{
+		"expense_id":    "exp1",
+		"change_fields": []any{"USER"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "user_id is required") {
+		t.Fatalf("expected missing user_id error, got %v", err)
+	}
+	if userHit {
+		t.Fatal("updateExpense must reject change_fields=[USER] without resolving /user")
+	}
+
+	res, err := svc.updateExpense(context.Background(), map[string]any{
+		"expense_id":    "exp1",
+		"change_fields": []any{"CATEGORY"},
+		"category_id":   "cat2",
+	})
+	mustOK(t, res, err, "clockify_update_expense")
+	if !userHit {
+		t.Fatal("expected updateExpense to resolve omitted user_id via /user")
+	}
+	if gotForm["userId"][0] != "u-current" {
+		t.Fatalf("expected current user fallback userId=u-current, got form=%v", gotForm)
+	}
+}
+
+func TestUpdateExpenseRequiresValuesForChangeFieldsBeforeUpstream(t *testing.T) {
+	upstreamHit := false
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		upstreamHit = true
+		t.Fatalf("updateExpense validation must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	tests := []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{
+			name: "amount",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"AMOUNT"}},
+			want: "amount is required",
+		},
+		{
+			name: "date",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"DATE"}},
+			want: "date is required",
+		},
+		{
+			name: "project",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"PROJECT"}},
+			want: "project_id is required",
+		},
+		{
+			name: "task",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"TASK"}},
+			want: "task_id is required",
+		},
+		{
+			name: "category",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"CATEGORY"}},
+			want: "category_id is required",
+		},
+		{
+			name: "notes",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"NOTES"}},
+			want: "notes is required",
+		},
+		{
+			name: "billable false is present",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"BILLABLE"}},
+			want: "billable is required",
+		},
+		{
+			name: "user",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"USER"}},
+			want: "user_id is required",
+		},
+		{
+			name: "file unsupported",
+			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"FILE"}},
+			want: "file updates are not supported",
+		},
+	}
+
+	for _, tt := range tests {
+		upstreamHit = false
+		_, err := svc.updateExpense(context.Background(), tt.args)
+		if err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Fatalf("%s: expected error containing %q, got %v", tt.name, tt.want, err)
+		}
+		if upstreamHit {
+			t.Fatalf("%s: validation hit upstream", tt.name)
+		}
+	}
+}
+
+func TestListExpensesDateRangeFilters(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses":
+			q := r.URL.Query()
+			if got := q.Get("page"); got != "2" {
+				t.Fatalf("expected page=2, got %q", got)
+			}
+			if got := q.Get("page-size"); got != "75" {
+				t.Fatalf("expected page-size=75, got %q", got)
+			}
+			if got := q.Get("start"); got != "2026-04-01" {
+				t.Fatalf("expected start filter, got %q", got)
+			}
+			if got := q.Get("end"); got != "2026-04-30" {
+				t.Fatalf("expected end filter, got %q", got)
+			}
+			respondJSON(t, w, map[string]any{
+				"expenses": map[string]any{
+					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
+					"count":    1,
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.listExpenses(context.Background(), map[string]any{
+		"page":      2,
+		"page_size": 75,
+		"start":     "2026-04-01",
+		"end":       "2026-04-30",
+	})
+	mustOK(t, res, err, "clockify_list_expenses")
+	if res.Meta["pageSize"] != 75 {
+		t.Fatalf("expected meta pageSize=75, got %v", res.Meta["pageSize"])
 	}
 }
 

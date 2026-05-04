@@ -46,15 +46,20 @@ func tier1OutputSchemas() map[string]map[string]any {
 		"clockify_create_tag":            envelopeSchemaFor[clockify.Tag]("clockify_create_tag"),
 		"clockify_create_task":           envelopeSchemaFor[clockify.Task]("clockify_create_task"),
 		"clockify_start_timer":           envelopeSchemaFor[clockify.TimeEntry]("clockify_start_timer"),
-		"clockify_switch_project":        envelopeSchemaFor[clockify.TimeEntry]("clockify_switch_project"),
 
 		// --- open-shape tools (helper-driven, dynamic data) ---
-		"clockify_stop_timer":    envelopeOpaque("clockify_stop_timer"),
-		"clockify_timer_status":  envelopeOpaque("clockify_timer_status"),
-		"clockify_delete_entry":  envelopeOpaque("clockify_delete_entry"),
-		"clockify_resolve_debug": envelopeOpaque("clockify_resolve_debug"),
-		"clockify_policy_info":   envelopeOpaque("clockify_policy_info"),
-		"clockify_search_tools":  envelopeOpaque("clockify_search_tools"),
+		"clockify_stop_timer":       envelopeOpaque("clockify_stop_timer"),
+		"clockify_timer_status":     envelopeOpaque("clockify_timer_status"),
+		"clockify_switch_project":   envelopeOpaque("clockify_switch_project"),
+		"clockify_delete_entry":     envelopeOpaque("clockify_delete_entry"),
+		"clockify_resolve_name":     envelopeOpaque("clockify_resolve_name"),
+		"clockify_resolve_debug":    envelopeOpaque("clockify_resolve_debug"),
+		"clockify_policy_info":      envelopeOpaque("clockify_policy_info"),
+		"clockify_list_tools":       envelopeOpaque("clockify_list_tools"),
+		"clockify_activate_group":   envelopeOpaque("clockify_activate_group"),
+		"clockify_activate_tool":    envelopeOpaque("clockify_activate_tool"),
+		"clockify_deactivate_group": envelopeOpaque("clockify_deactivate_group"),
+		"clockify_search_tools":     envelopeOpaque("clockify_search_tools"),
 	}
 }
 

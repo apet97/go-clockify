@@ -24,16 +24,18 @@ func TestToolContractMatrix(t *testing.T) {
 			all[d.Tool.Name] = mcpToolContract{readOnly: d.ReadOnlyHint, destructive: d.DestructiveHint, idempotent: d.IdempotentHint, annotations: d.Tool.Annotations}
 		}
 	}
-	if len(all) != 123 {
-		t.Fatalf("expected 123 tools, got %d", len(all))
+	if len(all) != 128 {
+		t.Fatalf("expected 128 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
 	timeTrackingSafe := &policy.Policy{Mode: policy.TimeTrackingSafe, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
 	safeCore := &policy.Policy{Mode: policy.SafeCore, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
 	introspection := map[string]bool{
+		"clockify_activate_group": true, "clockify_activate_tool": true,
+		"clockify_deactivate_group": true, "clockify_list_tools": true,
 		"clockify_whoami": true, "clockify_current_user": true, "clockify_list_workspaces": true,
-		"clockify_search_tools": true, "clockify_policy_info": true, "clockify_resolve_debug": true,
+		"clockify_search_tools": true, "clockify_policy_info": true, "clockify_resolve_name": true, "clockify_resolve_debug": true,
 	}
 	timeTrackingSafeWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,

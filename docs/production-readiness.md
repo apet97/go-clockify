@@ -44,7 +44,7 @@ state (`ff0047aa50cdcd4bb43037c72d66b218d51f13e8`) plus later
 same-surface stabilization commits. That includes the post-PR #51
 local readiness gates, PR #59's manual sacrificial-workspace MCP-path
 probes, PR #62's invite-user validation probe, and later live-test
-hooks for the current 123-tool catalog. The remaining blockers are
+hooks or local coverage for the current 128-tool catalog. The remaining blockers are
 external evidence only: two consecutive scheduled
 live-contract cron greens, candidate-tag security walk-through
 evidence, and release/sigstore/SLSA evidence. Local `release-check`,
@@ -187,6 +187,7 @@ Triage flows for operational classes:
 - [`clockify-upstream-outage.md`](runbooks/clockify-upstream-outage.md) — upstream outage drill and response.
 - [`postgres-restore-drill.md`](runbooks/postgres-restore-drill.md) — database restore procedures.
 - [`auth-failures.md`](runbooks/auth-failures.md) — auth triage.
+- [`credential-leak-response.md`](runbooks/credential-leak-response.md) — credential rotation, audit, and notification.
 - [`image-digest-pinning.md`](runbooks/image-digest-pinning.md) — image pinning policy.
 
 ## Testing and Verification

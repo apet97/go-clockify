@@ -9,8 +9,9 @@ changes break customer integrations without anyone noticing.
 ## Current launch-candidate evidence status
 
 As of 2026-05-03, local live-contract false-green prevention is in
-place and all 123 generated catalog tools have manual
-sacrificial-workspace MCP-path probes or live-test hooks. Group 1 is
+place and the current 128-tool catalog has manual
+sacrificial-workspace MCP-path probes, live-test hooks, or local-only
+helper coverage. Group 1 is
 still open: two manual-dispatch runs are green
 (read-only 25238997088, full-tier 25239216412), but only two
 consecutive scheduled cron greens on the candidate SHA count as

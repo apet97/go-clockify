@@ -17,7 +17,7 @@ import (
 // route, dispatching by the ?page query parameter. Pages are 1-indexed.
 // It also serves the /user endpoint so getCurrentUser works. Callers may
 // pass pages of any size (including zero-length tail pages).
-func newPaginatedHandler(t *testing.T, pages [][]clockify.TimeEntry) http.HandlerFunc {
+func newPaginatedHandler(t testing.TB, pages [][]clockify.TimeEntry) http.HandlerFunc {
 	t.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -153,6 +153,7 @@ func TestWeeklySummary(t *testing.T) {
 	if data.Totals.Entries != 5 {
 		t.Fatalf("expected 5 total entries, got %d", data.Totals.Entries)
 	}
+	assertReportSuggestedActions(t, data.SuggestedActions, "p1")
 }
 
 // TestQuickReport verifies TopProject selection, RunningEntries detection,
@@ -204,6 +205,7 @@ func TestQuickReport(t *testing.T) {
 	if len(data.EntriesSample) != 5 {
 		t.Fatalf("expected EntriesSample len 5, got %d", len(data.EntriesSample))
 	}
+	assertReportSuggestedActions(t, data.SuggestedActions, "p1")
 
 	// With include_entries=true, sample should contain all 7
 	result2, err := svc.QuickReport(context.Background(), map[string]any{
@@ -252,6 +254,49 @@ func TestQuickReportLargeRangeStreamsBoundedSample(t *testing.T) {
 	}
 }
 
+func TestQuickReportAllowsQuarterAndYearWindows(t *testing.T) {
+	var gotDaySpans []int
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			start, err := time.Parse(time.RFC3339, r.URL.Query().Get("start"))
+			if err != nil {
+				t.Fatalf("parse start query: %v", err)
+			}
+			end, err := time.Parse(time.RFC3339, r.URL.Query().Get("end"))
+			if err != nil {
+				t.Fatalf("parse end query: %v", err)
+			}
+			gotDaySpans = append(gotDaySpans, int(end.Sub(start).Hours()/24))
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	for _, days := range []int{90, 365} {
+		result, err := svc.QuickReport(context.Background(), map[string]any{"days": days})
+		if err != nil {
+			t.Fatalf("quick report days=%d failed: %v", days, err)
+		}
+		if result.Meta["days"] != days {
+			t.Fatalf("quick report days=%d meta days = %v", days, result.Meta["days"])
+		}
+	}
+	if len(gotDaySpans) != 2 || gotDaySpans[0] != 90 || gotDaySpans[1] != 365 {
+		t.Fatalf("expected queried day spans [90 365], got %v", gotDaySpans)
+	}
+
+	_, err := svc.QuickReport(context.Background(), map[string]any{"days": 366})
+	if err == nil || !strings.Contains(err.Error(), "days must be between 1 and 365") {
+		t.Fatalf("expected max-days error for 366, got %v", err)
+	}
+}
+
 // TestDetailedReport covers project filtering, the default include_entries=true
 // behavior, and the truncation warning when count equals the page size (100).
 func TestDetailedReport(t *testing.T) {
@@ -291,6 +336,18 @@ func TestDetailedReport(t *testing.T) {
 	if len(gotEntries) != 3 {
 		t.Fatalf("expected 3 unfiltered entries, got %d", len(gotEntries))
 	}
+	projects, ok := data["byProject"].([]ProjectSummary)
+	if !ok {
+		t.Fatalf("expected byProject slice, got %T", data["byProject"])
+	}
+	if len(projects) != 2 || projects[0].ProjectID != "p2" {
+		t.Fatalf("expected top detailed project p2, got %+v", projects)
+	}
+	suggestions, ok := data["suggestedActions"].([]ToolSuggestion)
+	if !ok {
+		t.Fatalf("expected suggestedActions slice, got %T", data["suggestedActions"])
+	}
+	assertReportSuggestedActions(t, suggestions, "p2")
 
 	// With include_entries=false, "entries" is omitted.
 	resultNoEntries, err := svc.DetailedReport(context.Background(), map[string]any{
@@ -305,6 +362,9 @@ func TestDetailedReport(t *testing.T) {
 	if _, exists := dataNoEntries["entries"]; exists {
 		t.Fatalf("expected entries omitted when include_entries=false")
 	}
+	if _, exists := dataNoEntries["suggestedActions"]; !exists {
+		t.Fatalf("expected suggestedActions when include_entries=false")
+	}
 }
 
 // TestDetailedReportProjectFilter resolves the project name and filters entries.
@@ -314,9 +374,11 @@ func TestDetailedReportProjectFilter(t *testing.T) {
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case "/workspaces/ws1/user/u1/time-entries":
+			if got := r.URL.Query().Get("project"); got != "p1" {
+				t.Fatalf("expected detailed report to push project=p1 upstream, got %s", r.URL.RawQuery)
+			}
 			respondJSON(t, w, []clockify.TimeEntry{
 				{ID: "a", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
-				{ID: "b", ProjectID: "p2", ProjectName: "Beta", TimeInterval: clockify.TimeInterval{Start: "2026-04-02T09:00:00Z", End: "2026-04-02T11:00:00Z"}},
 			})
 		case "/workspaces/ws1/projects":
 			// Called by resolve.ResolveProjectID when the ref isn't a 24-char hex ID
@@ -348,6 +410,95 @@ func TestDetailedReportProjectFilter(t *testing.T) {
 	}
 	if filtered[0].ID != "a" {
 		t.Fatalf("expected entry a, got %s", filtered[0].ID)
+	}
+	pagination := result.Meta["pagination"].(map[string]any)
+	if pagination["project_filter_resolved_id"] != "p1" {
+		t.Fatalf("expected project_filter_resolved_id=p1, got %+v", pagination)
+	}
+}
+
+func TestReportProjectFiltersPushDown(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(context.Context, *Service) (ResultEnvelope, error)
+	}{
+		{
+			name: "summary",
+			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
+				return svc.SummaryReport(ctx, map[string]any{
+					"start":   "2026-04-01T00:00:00Z",
+					"end":     "2026-04-08T00:00:00Z",
+					"project": "Alpha",
+				})
+			},
+		},
+		{
+			name: "weekly",
+			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
+				return svc.WeeklySummary(ctx, map[string]any{
+					"week_start": "2026-04-06",
+					"timezone":   "UTC",
+					"project":    "Alpha",
+				})
+			},
+		},
+		{
+			name: "quick",
+			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
+				return svc.QuickReport(ctx, map[string]any{
+					"days":    7,
+					"project": "Alpha",
+				})
+			},
+		},
+		{
+			name: "detailed",
+			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
+				return svc.DetailedReport(ctx, map[string]any{
+					"start":           "2026-04-01T00:00:00Z",
+					"end":             "2026-04-08T00:00:00Z",
+					"project":         "Alpha",
+					"include_entries": false,
+				})
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotProject string
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/workspaces/ws1/projects":
+					if got := r.URL.Query().Get("name"); got != "Alpha" {
+						t.Fatalf("expected project name lookup Alpha, got %s", r.URL.RawQuery)
+					}
+					respondJSON(t, w, []map[string]any{{"id": "p1", "name": "Alpha"}})
+				case "/user":
+					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+				case "/workspaces/ws1/user/u1/time-entries":
+					gotProject = r.URL.Query().Get("project")
+					respondJSON(t, w, []clockify.TimeEntry{
+						{ID: "a", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
+					})
+				default:
+					t.Fatalf("unexpected path: %s", r.URL.Path)
+				}
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			result, err := tt.run(context.Background(), svc)
+			if err != nil {
+				t.Fatalf("%s report failed: %v", tt.name, err)
+			}
+			if gotProject != "p1" {
+				t.Fatalf("expected %s report to push project=p1 upstream, got %q", tt.name, gotProject)
+			}
+			pagination := result.Meta["pagination"].(map[string]any)
+			if pagination["project_filter_resolved_id"] != "p1" {
+				t.Fatalf("expected project_filter_resolved_id=p1, got %+v", pagination)
+			}
+		})
 	}
 }
 
@@ -505,8 +656,9 @@ func TestReports_PaginationMeta(t *testing.T) {
 	svc := New(client, "ws1")
 	svc.ReportMaxEntries = 10000
 	result, err := svc.SummaryReport(context.Background(), map[string]any{
-		"start": "2026-04-01T00:00:00Z",
-		"end":   "2026-04-30T00:00:00Z",
+		"start":       "2026-04-01T00:00:00Z",
+		"end":         "2026-04-30T00:00:00Z",
+		"max_entries": 20000,
 	})
 	if err != nil {
 		t.Fatalf("summary report failed: %v", err)
@@ -524,6 +676,9 @@ func TestReports_PaginationMeta(t *testing.T) {
 	if pagination["page_size"].(int) != reportPageSize {
 		t.Fatalf("page_size = %v, want %d", pagination["page_size"], reportPageSize)
 	}
+	if pagination["applied_page_size"].(int) != reportPageSize {
+		t.Fatalf("applied_page_size = %v, want %d", pagination["applied_page_size"], reportPageSize)
+	}
 	limits, ok := result.Meta["limits"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected structured limits meta, got %T", result.Meta["limits"])
@@ -531,8 +686,92 @@ func TestReports_PaginationMeta(t *testing.T) {
 	if limits["max_entries"].(int) != 10000 {
 		t.Fatalf("max_entries = %v, want 10000", limits["max_entries"])
 	}
+	if limits["requested_max_entries"].(int) != 20000 || limits["applied_max_entries"].(int) != 10000 || limits["clamped"] != true {
+		t.Fatalf("unexpected limit clamp meta: %+v", limits)
+	}
 	if _, exists := result.Meta["warning"]; exists {
 		t.Fatalf("legacy warning string must be removed from meta")
+	}
+}
+
+func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wantProject string) {
+	t.Helper()
+	if len(suggestions) < 2 {
+		t.Fatalf("expected at least 2 suggested actions, got %+v", suggestions)
+	}
+
+	var listEntries *ToolSuggestion
+	var logTime *ToolSuggestion
+	for i := range suggestions {
+		switch suggestions[i].Tool {
+		case "clockify_list_entries":
+			listEntries = &suggestions[i]
+		case "clockify_log_time":
+			logTime = &suggestions[i]
+		}
+	}
+	if listEntries == nil {
+		t.Fatalf("missing clockify_list_entries suggestion in %+v", suggestions)
+	}
+	if got := listEntries.Arguments["project"]; got != wantProject {
+		t.Fatalf("list_entries project argument = %v, want %s", got, wantProject)
+	}
+	if listEntries.Arguments["start"] == "" || listEntries.Arguments["end"] == "" {
+		t.Fatalf("list_entries suggestion missing start/end arguments: %+v", listEntries.Arguments)
+	}
+	if got := listEntries.Arguments["page_size"]; got != 50 {
+		t.Fatalf("list_entries page_size argument = %v, want 50", got)
+	}
+
+	if logTime == nil {
+		t.Fatalf("missing clockify_log_time suggestion in %+v", suggestions)
+	}
+	if got := logTime.Arguments["dry_run"]; got != true {
+		t.Fatalf("log_time dry_run argument = %v, want true", got)
+	}
+	for _, want := range []string{"project", "description", "start", "end"} {
+		if !stringSliceContains(logTime.MissingArgs, want) {
+			t.Fatalf("log_time missingArgs = %+v, want %s", logTime.MissingArgs, want)
+		}
+	}
+}
+
+func stringSliceContains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func TestAggregatePaginationMetaReportsPageSizeClamp(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			if got := r.URL.Query().Get("page-size"); got != "200" {
+				t.Fatalf("expected clamped page-size=200, got %q", got)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	agg, _, _, err := svc.aggregateEntriesRange(context.Background(), time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC), time.UTC, aggregateOptions{
+		PageSize: 500,
+	})
+	if err != nil {
+		t.Fatalf("aggregate failed: %v", err)
+	}
+	meta := paginationMeta(agg, 500, svc.reportLimitsForArgs(map[string]any{}))
+	pagination := meta["pagination"].(map[string]any)
+	if pagination["requested_page_size"].(int) != 500 || pagination["applied_page_size"].(int) != 200 || pagination["clamped"] != true {
+		t.Fatalf("unexpected pagination clamp meta: %+v", pagination)
 	}
 }
 

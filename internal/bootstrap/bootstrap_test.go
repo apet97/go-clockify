@@ -97,6 +97,7 @@ func TestAlwaysVisible(t *testing.T) {
 		"clockify_whoami",
 		"clockify_search_tools",
 		"clockify_policy_info",
+		"clockify_resolve_name",
 		"clockify_resolve_debug",
 	}
 
@@ -222,19 +223,19 @@ func TestSearchCatalogByKeyword(t *testing.T) {
 
 func TestSearchCatalogEmpty(t *testing.T) {
 	results := SearchCatalog("")
-	if len(results) != 35 {
-		t.Errorf("expected 35 catalog entries for empty query, got %d", len(results))
+	if len(results) != 40 {
+		t.Errorf("expected 40 catalog entries for empty query, got %d", len(results))
 	}
 }
 
 func TestVisibleCount(t *testing.T) {
 	tier1 := allTier1Names()
 
-	// FullTier1: all 35 visible.
+	// FullTier1: all 40 visible.
 	cfg := Config{Mode: FullTier1}
 	cfg.SetTier1Tools(tier1)
-	if got := cfg.VisibleCount(); got != 35 {
-		t.Errorf("FullTier1 VisibleCount: expected 35, got %d", got)
+	if got := cfg.VisibleCount(); got != 40 {
+		t.Errorf("FullTier1 VisibleCount: expected 40, got %d", got)
 	}
 
 	// Minimal: only MinimalSet tools that are also in Tier1Names.
@@ -253,11 +254,11 @@ func TestVisibleCount(t *testing.T) {
 		},
 	}
 	cfg.SetTier1Tools(tier1)
-	// Custom tools (2) + AlwaysVisible (4) = 6, but always-visible are not in
+	// Custom tools (2) + AlwaysVisible (9) = 11, but always-visible are not in
 	// custom tools. VisibleCount iterates Tier1Names and checks IsVisible, so
-	// the 4 always-visible + 2 custom = 6.
-	if got := cfg.VisibleCount(); got != 6 {
-		t.Errorf("Custom VisibleCount: expected 6, got %d", got)
+	// the 9 always-visible + 2 custom = 11.
+	if got := cfg.VisibleCount(); got != 11 {
+		t.Errorf("Custom VisibleCount: expected 11, got %d", got)
 	}
 }
 

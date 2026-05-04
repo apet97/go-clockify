@@ -8,7 +8,6 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/paths"
-	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListProjects(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -29,12 +28,13 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_projects", projects, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(projects),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_projects", projects, meta), nil
 }
 
 func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnvelope, error) {
@@ -45,7 +45,7 @@ func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnve
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	projectID, err := resolve.ResolveProjectID(ctx, s.Client, wsID, projectRef)
+	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -74,7 +74,7 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 
 	clientRef := stringArg(args, "client")
 	if clientRef != "" {
-		clientID, err := resolve.ResolveClientID(ctx, s.Client, wsID, clientRef)
+		clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}

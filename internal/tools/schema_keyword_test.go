@@ -15,6 +15,7 @@ var supportedSchemaKeywords = map[string]bool{
 	"additionalProperties": true,
 	"properties":           true,
 	"items":                true,
+	"minItems":             true,
 	"minimum":              true,
 	"maximum":              true,
 	"minLength":            true,
@@ -22,6 +23,7 @@ var supportedSchemaKeywords = map[string]bool{
 	"pattern":              true,
 	"format":               true,
 	"enum":                 true,
+	"anyOf":                true,
 	"description":          true,
 	"title":                true,
 }
@@ -30,7 +32,6 @@ var forbiddenSchemaKeywords = map[string]bool{
 	"$ref":              true,
 	"$defs":             true,
 	"allOf":             true,
-	"anyOf":             true,
 	"oneOf":             true,
 	"not":               true,
 	"if":                true,
@@ -105,7 +106,8 @@ func TestSchemaSupportedKeywordsAcceptsSupportedSubset(t *testing.T) {
 				"format": "date-time",
 			},
 			"items": map[string]any{
-				"type": "array",
+				"type":     "array",
+				"minItems": 1,
 				"items": map[string]any{
 					"type":                 "object",
 					"additionalProperties": false,
@@ -114,6 +116,10 @@ func TestSchemaSupportedKeywordsAcceptsSupportedSubset(t *testing.T) {
 					},
 				},
 			},
+		},
+		"anyOf": []any{
+			map[string]any{"required": []string{"name"}},
+			map[string]any{"required": []string{"kind"}},
 		},
 	}
 
@@ -196,7 +202,7 @@ func walkSchemaKeywords(tool string, node any, pointer string, violations *[]sch
 			for _, propName := range propNames {
 				walkSchemaKeywords(tool, props[propName], jsonPointerJoin(nextPointer, propName), violations)
 			}
-		case "items", "additionalProperties":
+		case "items", "additionalProperties", "anyOf":
 			walkSchemaKeywordValue(tool, m[key], nextPointer, violations)
 		}
 	}
