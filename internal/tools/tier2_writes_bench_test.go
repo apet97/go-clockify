@@ -117,9 +117,10 @@ func BenchmarkClockifyCreateExpense(b *testing.B) {
 	invokeTier2WriteBench(b, "clockify_create_expense", []string{"expenses"}, func() map[string]any {
 		return map[string]any{
 			"amount":      42.5,
-			"date":        "2026-01-01",
+			"date":        "2026-01-01T00:00:00Z",
 			"category_id": "cat-bench",
-			"description": "bench",
+			"user_id":     "u-bench",
+			"notes":       "bench",
 		}
 	})
 }
@@ -147,7 +148,7 @@ func BenchmarkClockifyCreateCustomField(b *testing.B) {
 	invokeTier2WriteBench(b, "clockify_create_custom_field", []string{"custom_fields"}, func() map[string]any {
 		return map[string]any{
 			"name":       "bench",
-			"field_type": "TEXT",
+			"field_type": "TXT",
 			"required":   false,
 		}
 	})
