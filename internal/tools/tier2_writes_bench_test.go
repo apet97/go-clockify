@@ -55,6 +55,8 @@ func stubClockifyForTier2Writes(b *testing.B) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		path := r.URL.Path
 		switch {
+		case path == "/user" && r.Method == http.MethodGet:
+			_, _ = w.Write([]byte(`{"id":"u-bench","name":"Bench User"}`))
 		// expenses — clockify_create_expense
 		case strings.HasSuffix(path, "/expenses") && r.Method == http.MethodPost:
 			w.WriteHeader(http.StatusCreated)

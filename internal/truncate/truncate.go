@@ -116,7 +116,58 @@ func injectMetadata(v any, originalEstimate, budget int, rep *TruncationReport) 
 		info["array_reductions"] = rep.ArrayReductions
 	}
 	m["_truncation"] = info
+	injectEnvelopeMeta(m, rep)
 	return m
+}
+
+func injectEnvelopeMeta(m map[string]any, rep *TruncationReport) {
+	meta, ok := m["meta"].(map[string]any)
+	if !ok {
+		return
+	}
+	data, ok := m["data"].([]any)
+	if !ok {
+		return
+	}
+	if rep == nil || !reducedArrayPath(rep, "data") {
+		return
+	}
+	meta["truncated"] = true
+	meta["returned"] = len(data)
+	if _, ok := meta["fetched"]; ok {
+		return
+	}
+	if count, ok := meta["count"]; ok {
+		meta["fetched"] = count
+		return
+	}
+	if original, ok := originalArrayLen(rep, "data"); ok {
+		meta["fetched"] = original
+	}
+}
+
+func reducedArrayPath(rep *TruncationReport, path string) bool {
+	if rep == nil {
+		return false
+	}
+	for _, reduction := range rep.ArrayReductions {
+		if reduction.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func originalArrayLen(rep *TruncationReport, path string) (int, bool) {
+	if rep == nil {
+		return 0, false
+	}
+	for _, reduction := range rep.ArrayReductions {
+		if reduction.Path == path {
+			return reduction.OriginalLen, true
+		}
+	}
+	return 0, false
 }
 
 // estimateTokens marshals v to JSON and estimates tokens as ceil(len/4).
@@ -133,20 +184,19 @@ func estimateTokens(v any) int {
 func stripNulls(v any) any {
 	switch val := v.(type) {
 	case map[string]any:
-		result := make(map[string]any, len(val))
 		for k, child := range val {
 			if child == nil && !isPaginationKey(k) {
+				delete(val, k)
 				continue
 			}
-			result[k] = stripNulls(child)
+			val[k] = stripNulls(child)
 		}
-		return result
+		return val
 	case []any:
-		result := make([]any, len(val))
 		for i, child := range val {
-			result[i] = stripNulls(child)
+			val[i] = stripNulls(child)
 		}
-		return result
+		return val
 	default:
 		return v
 	}
@@ -156,23 +206,22 @@ func stripNulls(v any) any {
 func stripEmpties(v any) any {
 	switch val := v.(type) {
 	case map[string]any:
-		result := make(map[string]any, len(val))
 		for k, child := range val {
 			child = stripEmpties(child)
 			if !isPaginationKey(k) {
 				if isEmptyCollection(child) {
+					delete(val, k)
 					continue
 				}
 			}
-			result[k] = child
+			val[k] = child
 		}
-		return result
+		return val
 	case []any:
-		result := make([]any, len(val))
 		for i, child := range val {
-			result[i] = stripEmpties(child)
+			val[i] = stripEmpties(child)
 		}
-		return result
+		return val
 	default:
 		return v
 	}
@@ -196,17 +245,15 @@ func truncateStrings(v any, maxLen int) any {
 	case string:
 		return truncateStringUTF8(val, maxLen)
 	case map[string]any:
-		result := make(map[string]any, len(val))
 		for k, child := range val {
-			result[k] = truncateStrings(child, maxLen)
+			val[k] = truncateStrings(child, maxLen)
 		}
-		return result
+		return val
 	case []any:
-		result := make([]any, len(val))
 		for i, child := range val {
-			result[i] = truncateStrings(child, maxLen)
+			val[i] = truncateStrings(child, maxLen)
 		}
-		return result
+		return val
 	default:
 		return v
 	}
@@ -218,23 +265,21 @@ func truncateStrings(v any, maxLen int) any {
 func reduceArrays(v any, path string, rep *TruncationReport) any {
 	switch val := v.(type) {
 	case map[string]any:
-		result := make(map[string]any, len(val))
 		for k, child := range val {
-			result[k] = reduceArrays(child, joinPath(path, k), rep)
+			val[k] = reduceArrays(child, joinPath(path, k), rep)
 		}
-		return result
+		return val
 	case []any:
 		if len(val) <= 1 {
 			// Don't halve single-element or empty arrays, but recurse into children.
-			result := make([]any, len(val))
 			for i, child := range val {
-				result[i] = reduceArrays(child, fmt.Sprintf("%s[%d]", path, i), rep)
+				val[i] = reduceArrays(child, fmt.Sprintf("%s[%d]", path, i), rep)
 			}
-			return result
+			return val
 		}
 		half := len(val) / 2
 		removed := len(val) - half
-		result := make([]any, half)
+		result := val[:half]
 		for i := 0; i < half; i++ {
 			result[i] = reduceArrays(val[i], fmt.Sprintf("%s[%d]", path, i), rep)
 		}

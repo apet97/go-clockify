@@ -150,7 +150,18 @@
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
+          "tag_ids": {
+            "description": "Optional Clockify tag IDs to attach to the entry",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "task_id": {
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -273,13 +284,16 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           }
@@ -351,7 +365,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -369,7 +383,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -387,6 +401,9 @@
             "description": "Hex color code",
             "pattern": "^#[0-9a-fA-F]{6}$",
             "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
           },
           "is_public": {
             "type": "boolean"
@@ -478,7 +495,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -496,13 +513,16 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           }
@@ -558,7 +578,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -576,7 +596,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -586,16 +606,21 @@
           "billable": {
             "type": "boolean"
           },
+          "dry_run": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           },
           "project": {
             "description": "Project name or ID",
             "type": "string"
+          },
+          "project_id": {
+            "type": "string"
           }
         },
         "required": [
-          "project",
           "name"
         ],
         "type": "object"
@@ -676,7 +701,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -911,6 +936,10 @@
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -1193,6 +1222,10 @@
           },
           "start_before": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -1752,6 +1785,10 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -2200,7 +2237,7 @@
     },
     {
       "name": "clockify_list_tools",
-      "description": "Search/list the tool catalog by keyword. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.",
+      "description": "Search/list the tool catalog by query string. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -2480,6 +2517,17 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "tag_ids": {
+            "description": "Optional Clockify tag IDs to attach to the entry",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
           }
         },
         "required": [
@@ -2680,6 +2728,10 @@
           },
           "project": {
             "description": "Optional project name or ID to push down as an upstream filter",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -2996,10 +3048,18 @@
         "additionalProperties": false,
         "properties": {
           "entity_type": {
-            "description": "project, client, tag, or user",
+            "description": "project, client, tag, user, or task",
             "type": "string"
           },
           "name_or_id": {
+            "type": "string"
+          },
+          "project": {
+            "description": "Project name or ID required when entity_type is task",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID required when entity_type is task unless project is supplied",
             "type": "string"
           }
         },
@@ -3039,7 +3099,7 @@
     },
     {
       "name": "clockify_resolve_name",
-      "description": "Resolve a project, client, tag, or user name/email to a Clockify ID. Prefer this before write tools when a user gives a name.",
+      "description": "Resolve a project, client, tag, user, or project-scoped task name/email to a Clockify ID. Prefer this before write tools when a user gives a name.",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -3053,10 +3113,18 @@
         "additionalProperties": false,
         "properties": {
           "entity_type": {
-            "description": "project, client, tag, or user",
+            "description": "project, client, tag, user, or task",
             "type": "string"
           },
           "name_or_id": {
+            "type": "string"
+          },
+          "project": {
+            "description": "Project name or ID required when entity_type is task",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID required when entity_type is task unless project is supplied",
             "type": "string"
           }
         },
@@ -3154,13 +3222,13 @@
     },
     {
       "name": "clockify_start_timer",
-      "description": "Start a new timer",
+      "description": "Start a new timer. Supports dry_run:true.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -3169,6 +3237,9 @@
         "properties": {
           "description": {
             "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
           },
           "project": {
             "type": "string"
@@ -3275,7 +3346,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -3367,6 +3438,10 @@
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -3600,7 +3675,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -3612,6 +3687,9 @@
           },
           "description": {
             "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
           },
           "project": {
             "description": "Project name or ID to switch to",
@@ -3644,7 +3722,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -3739,6 +3817,10 @@
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -4308,6 +4390,10 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -4460,6 +4546,10 @@
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -10369,6 +10459,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auth_token": {
+            "description": "Optional HMAC signing secret for webhook delivery; sent upstream as authToken and never returned unmasked",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Validate and preview the webhook payload without creating it",
             "type": "boolean"
@@ -10744,6 +10838,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auth_token": {
+            "description": "Optional replacement HMAC signing secret; sent upstream as authToken and never returned unmasked",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Validate and preview the webhook update without applying it",
             "type": "boolean"

@@ -35,7 +35,8 @@ especially omitting `end` to create a running entry. Use
 ## Time formats
 
 Tier-1 time-entry and report range fields accept RFC3339 values and
-common flexible forms parsed in UTC when no timezone is supplied:
+common flexible forms parsed in the requested `timezone`, `CLOCKIFY_TIMEZONE`,
+or local/server timezone when no timezone is supplied:
 `YYYY-MM-DD`, `YYYY-MM-DD HH:MM`, `today HH:MM`, `yesterday HH:MM`,
 and `now`. Fields whose schema still says `RFC3339` only are stricter;
 prefer the documented format on each tool descriptor.
@@ -47,10 +48,10 @@ prefer the documented format on each tool descriptor.
 | `clockify_activate_group` | `tier1` | no | no | yes | no | `write` | Activate every tool in the named Tier-2 group. The response puts only currently visible/callable names in activated_tools and reports unavailable names under activated_tools_hidden_by_bootstrap or activated_tools_blocked_by_policy. |
 | `clockify_activate_tool` | `tier1` | no | no | yes | no | `write` | Activate a hidden Tier-1 tool by name, or activate the full Tier-2 group that contains the named Tier-2 tool. The side effect can bring sibling tools online; inspect activated_tools after the call. |
 | `clockify_add_entry` | `tier1` | no | no | no | yes | `write` | Lower-level helper for creating a time entry with flexible start/end parsing. Prefer clockify_log_time for finished past work; when end is present this validates overlaps unless allow_overlap:true is passed. |
-| `clockify_create_client` | `tier1` | no | no | no | no | `write` | Create a new client |
-| `clockify_create_project` | `tier1` | no | no | no | no | `write` | Create a new project |
-| `clockify_create_tag` | `tier1` | no | no | no | no | `write` | Create a new tag |
-| `clockify_create_task` | `tier1` | no | no | no | no | `write` | Create a new task in a project |
+| `clockify_create_client` | `tier1` | no | no | no | yes | `write` | Create a new client |
+| `clockify_create_project` | `tier1` | no | no | no | yes | `write` | Create a new project |
+| `clockify_create_tag` | `tier1` | no | no | no | yes | `write` | Create a new tag |
+| `clockify_create_task` | `tier1` | no | no | no | yes | `write` | Create a new task in a project |
 | `clockify_current_user` | `tier1` | yes | no | yes | no | `read` | Get the current Clockify user |
 | `clockify_deactivate_group` | `tier1` | no | no | yes | no | `write` | Deactivate a previously activated Tier-2 group and remove its tools from tools/list for this session. Idempotent: deactivating an inactive group removes zero tools. |
 | `clockify_delete_entry` | `tier1` | no | yes | no | yes | `destructive` | Delete a time entry by ID |
@@ -64,19 +65,19 @@ prefer the documented format on each tool descriptor.
 | `clockify_list_projects` | `tier1` | yes | no | yes | no | `read` | List projects in the resolved workspace |
 | `clockify_list_tags` | `tier1` | yes | no | yes | no | `read` | List tags in the resolved workspace |
 | `clockify_list_tasks` | `tier1` | yes | no | yes | no | `read` | List tasks for a project |
-| `clockify_list_tools` | `tier1` | yes | no | yes | no | `read` | Search/list the tool catalog by keyword. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy. |
+| `clockify_list_tools` | `tier1` | yes | no | yes | no | `read` | Search/list the tool catalog by query string. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy. |
 | `clockify_list_users` | `tier1` | yes | no | yes | no | `read` | List users in the resolved workspace |
 | `clockify_list_workspaces` | `tier1` | yes | no | yes | no | `read` | List available Clockify workspaces |
 | `clockify_log_time` | `tier1` | no | no | no | yes | `write` | Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed. |
 | `clockify_policy_info` | `tier1` | yes | no | yes | no | `read` | Display effective policy configuration |
 | `clockify_quick_report` | `tier1` | yes | no | yes | no | `read` | Quick high-signal summary for a recent period. Safe helper over the current user's time entries. |
 | `clockify_resolve_debug` | `tier1` | yes | no | yes | no | `read` | Deprecated compatibility alias for clockify_resolve_name. |
-| `clockify_resolve_name` | `tier1` | yes | no | yes | no | `read` | Resolve a project, client, tag, or user name/email to a Clockify ID. Prefer this before write tools when a user gives a name. |
+| `clockify_resolve_name` | `tier1` | yes | no | yes | no | `read` | Resolve a project, client, tag, user, or project-scoped task name/email to a Clockify ID. Prefer this before write tools when a user gives a name. |
 | `clockify_search_tools` | `tier1` | no | no | yes | no | `write` | Deprecated compatibility shim. Prefer clockify_list_tools, clockify_activate_group, clockify_activate_tool, or clockify_deactivate_group for single-purpose planning. In minimal/custom bootstrap modes, search results mark hidden Tier-1 tools with availability=tier1_hidden_by_bootstrap. Tier-2 groups remain the unit of activation. |
-| `clockify_start_timer` | `tier1` | no | no | no | no | `write` | Start a new timer |
+| `clockify_start_timer` | `tier1` | no | no | no | yes | `write` | Start a new timer. Supports dry_run:true. |
 | `clockify_stop_timer` | `tier1` | no | no | yes | yes | `write` | Stop the current running timer |
 | `clockify_summary_report` | `tier1` | yes | no | yes | no | `read` | Summarize entries for a date/time range by project using the current user's time entries |
-| `clockify_switch_project` | `tier1` | no | no | no | no | `write` | Stop the current timer if one is running, then start a new one on a different project. Response includes stop_outcome. |
+| `clockify_switch_project` | `tier1` | no | no | no | yes | `write` | Stop the current timer if one is running, then start a new one on a different project. Response includes stop_outcome. |
 | `clockify_timer_status` | `tier1` | yes | no | yes | no | `read` | Check if a timer is currently running and show elapsed time |
 | `clockify_timesheet_fill_gap` | `tier1` | no | no | no | yes | `write` | Create one finished time entry for a reviewed gap after validating that the requested interval does not overlap existing entries. Supports dry_run:true. |
 | `clockify_timesheet_review` | `tier1` | yes | no | yes | no | `read` | Review a day, week, or date range and return timesheet issues plus ready next-tool suggestions for an AI agent. |

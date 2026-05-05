@@ -122,6 +122,7 @@ func (s *Service) aggregateEntriesRangeForWorkspace(ctx context.Context, workspa
 	query := make(map[string]string, len(baseQuery)+3)
 	maps.Copy(query, baseQuery)
 	query["page-size"] = strconv.Itoa(pageSize)
+	query["hydrated"] = "true"
 	if opts.ProjectID != "" {
 		query["project"] = opts.ProjectID
 	}
@@ -285,7 +286,11 @@ func mergeMeta(base, extra map[string]any) map[string]any {
 const reportPageSize = 200
 
 func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	start, end, err := parseRange(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	start, end, err := parseRangeInLocation(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -296,7 +301,7 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, time.UTC, aggregateOptions{
+	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, loc, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: include,
 		MaxEntries:     effectiveMax,
@@ -319,6 +324,7 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (Resul
 	meta := mergeMeta(map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
+		"timezone":    loc.String(),
 		"source":      "time-entries-wrapper",
 	}, paginationMeta(agg, reportPageSize, limits))
 	return ok("clockify_summary_report", data, meta), nil
@@ -380,8 +386,14 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	if days < 1 || days > quickReportMaxDays {
 		return ResultEnvelope{}, fmt.Errorf("days must be between 1 and %d", quickReportMaxDays)
 	}
-	end := time.Now().UTC()
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	end := time.Now().In(loc)
 	start := end.AddDate(0, 0, -days)
+	startUTC := start.UTC()
+	endUTC := end.UTC()
 	includeEntries := boolArg(args, "include_entries")
 	limits := s.reportLimitsForArgs(args)
 	effectiveMax := limits.AppliedMaxEntries
@@ -389,7 +401,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, time.UTC, aggregateOptions{
+	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, startUTC, endUTC, loc, aggregateOptions{
 		PageSize:              reportPageSize,
 		IncludeEntries:        includeEntries,
 		MaxEntries:            effectiveMax,
@@ -403,11 +415,11 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	projects := projectSummariesFromAgg(agg)
 	totals := totalsFromAgg(agg)
 	data := QuickReportData{
-		Range:               DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
+		Range:               DateRange{Start: startUTC.Format(time.RFC3339), End: endUTC.Format(time.RFC3339)},
 		Totals:              totals,
 		RunningEntries:      agg.RunningList,
 		ProjectsRepresented: len(projects),
-		SuggestedActions:    reportSuggestedActions(projects, totals, start, end),
+		SuggestedActions:    reportSuggestedActions(projects, totals, startUTC, endUTC),
 	}
 	if len(projects) > 0 {
 		data.TopProject = &projects[0]
@@ -421,13 +433,18 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 		"workspaceId": wsID,
 		"userId":      userID,
 		"days":        days,
+		"timezone":    loc.String(),
 		"source":      "time-entries-wrapper",
 	}, paginationMeta(agg, reportPageSize, limits))
 	return ok("clockify_quick_report", data, meta), nil
 }
 
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	start, end, err := parseRange(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	start, end, err := parseRangeInLocation(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -446,7 +463,7 @@ func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (Resu
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, time.UTC, aggregateOptions{
+	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, loc, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: includeEntries,
 		MaxEntries:     effectiveMax,
@@ -476,6 +493,7 @@ func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (Resu
 	meta := mergeMeta(map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
+		"timezone":    loc.String(),
 		"source":      "time-entries-wrapper",
 	}, paginationMeta(agg, reportPageSize, limits))
 	return ok("clockify_detailed_report", data, meta), nil

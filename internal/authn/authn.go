@@ -1292,7 +1292,13 @@ func verifyJWT(alg string, key crypto.PublicKey, signed string, sig []byte) erro
 	case *rsa.PublicKey:
 		return rsa.VerifyPKCS1v15(pub, hash, sum, sig)
 	case *ecdsa.PublicKey:
-		if !ecdsa.VerifyASN1(pub, sum, sig) {
+		size := (pub.Params().BitSize + 7) / 8
+		if len(sig) != 2*size {
+			return fmt.Errorf("ecdsa signature length %d != %d", len(sig), 2*size)
+		}
+		r := new(big.Int).SetBytes(sig[:size])
+		s := new(big.Int).SetBytes(sig[size:])
+		if !ecdsa.Verify(pub, sum, r, s) {
 			return fmt.Errorf("ecdsa signature verification failed")
 		}
 		return nil

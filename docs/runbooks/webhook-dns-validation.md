@@ -25,9 +25,9 @@ A tenant reports:
 
 | Profile | Default | Override |
 |---|---|---|
-| `local-stdio` | literal-IP-only | `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` to opt in |
-| `single-tenant-http` | literal-IP-only | same |
-| `private-network-grpc` | literal-IP-only | same |
+| `local-stdio` | DNS-aware | `CLOCKIFY_WEBHOOK_VALIDATE_DNS=0` to opt out |
+| `single-tenant-http` | DNS-aware | same |
+| `private-network-grpc` | DNS-aware | same |
 | `shared-service` | DNS-aware | `CLOCKIFY_WEBHOOK_VALIDATE_DNS=0` to opt out |
 | `prod-postgres` | DNS-aware | same |
 

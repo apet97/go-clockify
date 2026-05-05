@@ -302,13 +302,12 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 		r.Body = http.MaxBytesReader(w, r.Body, opts.MaxBodySize)
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
+		req, tooLarge, err := decodeSingleRequest(r.Body)
+		if tooLarge {
 			writeJSONError(w, http.StatusRequestEntityTooLarge, "request too large")
 			return
 		}
-		var req Request
-		if err := json.Unmarshal(body, &req); err != nil {
+		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
 			return
@@ -546,11 +545,13 @@ func validateProtocolVersion(r *http.Request, session *streamSession) error {
 // clients that cache it (browsers in particular). Emit only when
 // the connection actually carries TLS (r.TLS != nil) or when the
 // operator has declared a trusted HTTPS-terminating proxy in front
-// of us via MCP_BEHIND_HTTPS_PROXY=1.
+// of us via MCP_BEHIND_HTTPS_PROXY=1 and the proxy confirms the
+// original scheme with X-Forwarded-Proto: https.
 func applyHTTPBaselineHeaders(w http.ResponseWriter, r *http.Request, behindHTTPSProxy bool) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
-	if r != nil && (r.TLS != nil || behindHTTPSProxy) {
+	proxyHTTPS := behindHTTPSProxy && r != nil && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	if r != nil && (r.TLS != nil || proxyHTTPS) {
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 	}
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")

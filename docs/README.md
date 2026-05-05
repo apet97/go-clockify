@@ -37,6 +37,8 @@ live one section down under [Deployment Profiles](#deployment-profiles).
   single-user / small-team deployments. Applies to the
   `local-stdio` and `single-tenant-http` profiles.
 - [clients.md](clients.md) — MCP client compatibility matrix.
+- [internal-test-posture.md](internal-test-posture.md) — local
+  owner-key testing guardrails and policy choices.
 - [support-matrix.md](support-matrix.md) — what we support, in what
   combination, on which OS.
 
@@ -136,6 +138,9 @@ population is reflected across policy surfaces.
   GitHub branch-protection rules.
 - [coverage-policy.md](coverage-policy.md) — per-package coverage
   floors and the ratchet rule.
+- [opusreview-implementation-audit.md](opusreview-implementation-audit.md)
+  — checklist mapping the local Opus review implementation wave to
+  evidence and remaining blockers.
 
 ## Architecture & Decisions
 

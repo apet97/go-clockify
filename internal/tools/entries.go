@@ -24,15 +24,19 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if startRaw != "" {
-		t, err := timeparse.ParseDatetime(startRaw, time.UTC)
+		t, err := timeparse.ParseDatetime(startRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
 		}
 		baseQuery["start"] = timeparse.FormatISO(t)
 	}
 	if endRaw != "" {
-		t, err := timeparse.ParseDatetime(endRaw, time.UTC)
+		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
 		}
@@ -110,7 +114,10 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	page, pageSize := paginationFromArgs(args)
 
-	loc := time.Now().Location()
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	startOfDay, err := timeparse.ParseDatetime("today", loc)
 	if err != nil {
 		return ResultEnvelope{}, fmt.Errorf("failed to parse today: %w", err)
@@ -149,7 +156,11 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if startRaw == "" {
 		return ResultEnvelope{}, fmt.Errorf("start is required")
 	}
-	startTime, err := timeparse.ParseDatetime(startRaw, time.UTC)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	startTime, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
 		return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
 	}
@@ -161,7 +172,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	endRaw := stringArg(args, "end")
 	var endTime time.Time
 	if endRaw != "" {
-		endTime, err = timeparse.ParseDatetime(endRaw, time.UTC)
+		endTime, err = timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
 		}
@@ -196,6 +207,9 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	taskID := stringArg(args, "task_id")
 	if taskID != "" {
 		payload["taskId"] = taskID
+	}
+	if tagIDs := stringSliceArg(args, "tag_ids"); len(tagIDs) > 0 {
+		payload["tagIds"] = tagIDs
 	}
 
 	if billable, hasBillable := args["billable"].(bool); hasBillable {
@@ -334,8 +348,12 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	// Merge start
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if startRaw := stringArg(args, "start"); startRaw != "" {
-		t, err := timeparse.ParseDatetime(startRaw, time.UTC)
+		t, err := timeparse.ParseDatetime(startRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
 		}
@@ -348,7 +366,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 
 	// Merge end
 	if endRaw := stringArg(args, "end"); endRaw != "" {
-		t, err := timeparse.ParseDatetime(endRaw, time.UTC)
+		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
 		}
@@ -374,19 +392,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{OK: true, Action: "clockify_update_entry", Data: dryrun.Preview("clockify_update_entry", args), Meta: meta}, nil
 	}
 
-	// Build full PUT payload from merged entry
-	putPayload := map[string]any{
-		"start":       existing.TimeInterval.Start,
-		"description": existing.Description,
-		"projectId":   existing.ProjectID,
-		"billable":    existing.Billable,
-	}
-	if existing.TimeInterval.End != "" {
-		putPayload["end"] = existing.TimeInterval.End
-	}
-	if existing.TaskID != "" {
-		putPayload["taskId"] = existing.TaskID
-	}
+	putPayload := timeEntryPutPayload(existing)
 
 	var updated clockify.TimeEntry
 	if err := s.Client.Put(ctx, entryPath, putPayload, &updated); err != nil {

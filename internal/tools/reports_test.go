@@ -278,6 +278,7 @@ func TestQuickReportAllowsQuarterAndYearWindows(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.DefaultTimezone = time.UTC
 	for _, days := range []int{90, 365} {
 		result, err := svc.QuickReport(context.Background(), map[string]any{"days": days})
 		if err != nil {

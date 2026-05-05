@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -842,6 +844,58 @@ func TestAfterCall_TruncatesResultEnvelope(t *testing.T) {
 	}
 }
 
+func TestAfterCall_TruncationAnnotatesEnvelopeMetaCounts(t *testing.T) {
+	type envelope struct {
+		OK     bool           `json:"ok"`
+		Action string         `json:"action"`
+		Data   any            `json:"data,omitempty"`
+		Meta   map[string]any `json:"meta,omitempty"`
+	}
+	bigData := make([]any, 50)
+	for i := range bigData {
+		bigData[i] = map[string]any{
+			"id":   i,
+			"text": strings.Repeat("x", 200),
+		}
+	}
+	env := envelope{
+		OK:     true,
+		Action: "clockify_list_entries",
+		Data:   bigData,
+		Meta:   map[string]any{"workspaceId": "ws1", "count": 50, "pageSize": 50},
+	}
+	p := &Pipeline{Truncation: truncate.Config{Enabled: true, TokenBudget: 200}}
+
+	out, err := p.AfterCall(env)
+	if err != nil {
+		t.Fatalf("AfterCall error: %v", err)
+	}
+	m, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", out)
+	}
+	data, ok := m["data"].([]any)
+	if !ok {
+		t.Fatalf("expected data array, got %T", m["data"])
+	}
+	meta, ok := m["meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected meta map, got %T", m["meta"])
+	}
+	if meta["truncated"] != true {
+		t.Fatalf("expected meta.truncated=true, got %#v", meta["truncated"])
+	}
+	if meta["fetched"] != float64(50) {
+		t.Fatalf("expected meta.fetched=50, got %#v", meta["fetched"])
+	}
+	if meta["returned"] != len(data) {
+		t.Fatalf("expected meta.returned=%d, got %#v", len(data), meta["returned"])
+	}
+	if meta["count"] != float64(50) {
+		t.Fatalf("expected original meta.count to remain 50, got %#v", meta["count"])
+	}
+}
+
 func TestAfterCall_TruncationEnabled_SmallResult(t *testing.T) {
 	p := &Pipeline{
 		Truncation: truncate.Config{Enabled: true, TokenBudget: 8000},
@@ -895,6 +949,118 @@ func TestAfterCall_TruncationEnabled_SmallTypedResultPreservesType(t *testing.T)
 	}
 	if _, hasTrunc := decoded["_truncation"]; hasTrunc {
 		t.Fatal("did not expect _truncation metadata for small typed result within budget")
+	}
+}
+
+type testJSONMarshaler struct {
+	Value string
+}
+
+func (m testJSONMarshaler) MarshalJSON() ([]byte, error) {
+	return []byte(`{"value":` + strconv.Quote(m.Value) + `}`), nil
+}
+
+func TestNormalizeJSONTreeCoversJSONShapes(t *testing.T) {
+	type child struct {
+		Keep string `json:"keep"`
+		Skip string `json:"-"`
+		Zero string `json:"zero,omitempty"`
+	}
+	type envelope struct {
+		OK       bool              `json:"ok"`
+		Count    int               `json:"count"`
+		Uint     uint              `json:"uint"`
+		Float    float64           `json:"float"`
+		Child    *child            `json:"child,omitempty"`
+		NilChild *child            `json:"nilChild,omitempty"`
+		Labels   []string          `json:"labels"`
+		Meta     map[string]any    `json:"meta"`
+		Custom   testJSONMarshaler `json:"custom"`
+	}
+
+	input := envelope{
+		OK:     true,
+		Count:  7,
+		Uint:   8,
+		Float:  1.5,
+		Child:  &child{Keep: "kept", Skip: "hidden"},
+		Labels: []string{"a", "b"},
+		Meta:   map[string]any{"n": 3},
+		Custom: testJSONMarshaler{Value: "custom"},
+	}
+
+	out, ok := normalizeJSONTree(input)
+	if !ok {
+		t.Fatal("expected normalization to succeed")
+	}
+	m := out.(map[string]any)
+	if m["count"] != float64(7) || m["uint"] != float64(8) || m["float"] != 1.5 {
+		t.Fatalf("numeric fields should match encoding/json generic shape, got %#v", m)
+	}
+	if _, exists := m["nilChild"]; exists {
+		t.Fatalf("omitempty nil pointer should be omitted, got %#v", m["nilChild"])
+	}
+	childMap := m["child"].(map[string]any)
+	if childMap["keep"] != "kept" {
+		t.Fatalf("child.keep not preserved: %#v", childMap)
+	}
+	if _, exists := childMap["Skip"]; exists {
+		t.Fatalf("json:- field should be omitted, got %#v", childMap)
+	}
+	if _, exists := childMap["zero"]; exists {
+		t.Fatalf("omitempty zero field should be omitted, got %#v", childMap)
+	}
+	custom := m["custom"].(map[string]any)
+	if custom["value"] != "custom" {
+		t.Fatalf("json.Marshaler output not normalized, got %#v", custom)
+	}
+}
+
+func TestNormalizeJSONTreeUnsupportedFallsBack(t *testing.T) {
+	if _, ok := normalizeJSONTree(map[int]string{1: "one"}); ok {
+		t.Fatal("expected non-string map key to require JSON fallback")
+	}
+	if _, ok := normalizeJSONTree(make(chan int)); ok {
+		t.Fatal("expected channel to be unsupported")
+	}
+}
+
+func TestAfterCall_FallbackJSONUnmarshalForUnsupportedNormalizerShape(t *testing.T) {
+	p := &Pipeline{Truncation: truncate.Config{Enabled: true, TokenBudget: 1}}
+	input := map[int]string{1: strings.Repeat("x", 1000)}
+
+	out, err := p.AfterCall(input)
+	if err != nil {
+		t.Fatalf("AfterCall error: %v", err)
+	}
+	m, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("expected fallback generic map, got %T", out)
+	}
+	if _, ok := m["_truncation"]; !ok {
+		t.Fatalf("expected truncation metadata after fallback, got %#v", m)
+	}
+}
+
+func TestJSONFieldName(t *testing.T) {
+	type sample struct {
+		DefaultName string
+		Renamed     string `json:"renamed,omitempty"`
+		Skipped     string `json:"-"`
+	}
+	fields := reflect.TypeOf(sample{})
+
+	name, omit, skip := jsonFieldName(fields.Field(0))
+	if name != "DefaultName" || omit || skip {
+		t.Fatalf("default field = (%q,%v,%v)", name, omit, skip)
+	}
+	name, omit, skip = jsonFieldName(fields.Field(1))
+	if name != "renamed" || !omit || skip {
+		t.Fatalf("renamed field = (%q,%v,%v)", name, omit, skip)
+	}
+	_, _, skip = jsonFieldName(fields.Field(2))
+	if !skip {
+		t.Fatal("json:- field should be skipped")
 	}
 }
 

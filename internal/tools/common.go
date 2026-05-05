@@ -17,10 +17,32 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
+func timeEntryPutPayload(entry clockify.TimeEntry) map[string]any {
+	payload := map[string]any{
+		"start":       entry.TimeInterval.Start,
+		"description": entry.Description,
+		"projectId":   entry.ProjectID,
+		"billable":    entry.Billable,
+	}
+	if entry.TimeInterval.End != "" {
+		payload["end"] = entry.TimeInterval.End
+	}
+	if entry.TaskID != "" {
+		payload["taskId"] = entry.TaskID
+	}
+	if len(entry.TagIDs) > 0 {
+		payload["tagIds"] = entry.TagIDs
+	}
+	if entry.CustomFieldValues != nil {
+		payload["customFields"] = entry.CustomFieldValues
+	}
+	return payload
+}
+
 type Service struct {
 	Client          *clockify.Client
 	WorkspaceID     string
-	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil falls back to UTC at the direct-consumer call sites (entries.go, resources.go, reports.go aggregate path). The exception: tool args that go through loadLocation (WeeklySummary's `timezone` arg) ultimately fall through to `time.Now().Location()` when both the arg and DefaultTimezone are unset — see loadLocation in this file.
+	DefaultTimezone *time.Location        // from CLOCKIFY_TIMEZONE; nil falls back to time.Now().Location() for flexible date/time inputs.
 	DedupeConfig    *dedupe.Config        // optional, set during wiring
 	PolicyDescribe  func() map[string]any // set during wiring; returns policy description
 	Bootstrap       *bootstrap.Config     // set during wiring; describes current bootstrap visibility
@@ -30,11 +52,11 @@ type Service struct {
 	GroupActivation func(string) (allowed bool, reason string)
 	// WebhookValidateDNS, when true, makes CreateWebhook/UpdateWebhook
 	// resolve the webhook host via the system resolver and reject any
-	// reply that contains a private/reserved IP. Default false matches
-	// the literal-only check; hosted profiles flip it on so a hostname
-	// pointing at 169.254.169.254 (cloud-metadata) or 10.0.0.x cannot
-	// turn the Clockify webhook delivery into an SSRF probe across the
-	// hosted control plane. Audit finding 10.
+	// reply that contains a private/reserved IP. Config defaults this
+	// on for every profile so a hostname pointing at 169.254.169.254
+	// (cloud-metadata) or 10.0.0.x cannot turn the Clockify webhook
+	// delivery into an SSRF probe. Operators can explicitly opt out
+	// for trusted air-gapped tests.
 	WebhookValidateDNS bool
 	// WebhookHostResolver overrides the LookupIPAddr call for tests.
 	// nil = use net.DefaultResolver.
@@ -650,6 +672,10 @@ func loadLocation(name string, defaultTZ *time.Location) (*time.Location, error)
 	return loc, nil
 }
 
+func (s *Service) locationFromArgs(args map[string]any) (*time.Location, error) {
+	return loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
+}
+
 func parseFlexibleDateTime(raw string, loc *time.Location) (time.Time, error) {
 	if ts, err := time.Parse(time.RFC3339, raw); err == nil {
 		return ts.In(loc), nil
@@ -661,18 +687,28 @@ func parseFlexibleDateTime(raw string, loc *time.Location) (time.Time, error) {
 }
 
 func parseRange(args map[string]any) (time.Time, time.Time, error) {
+	return parseRangeInLocation(args, time.UTC)
+}
+
+func parseRangeInLocation(args map[string]any, loc *time.Location) (time.Time, time.Time, error) {
+	if loc == nil {
+		loc = time.UTC
+	}
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
 	if startRaw == "" || endRaw == "" {
 		return time.Time{}, time.Time{}, fmt.Errorf("start and end are required")
 	}
-	start, err := timeparse.ParseDatetime(startRaw, time.UTC)
+	start, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid start: %w", err)
 	}
-	end, err := timeparse.ParseDatetime(endRaw, time.UTC)
+	end, err := timeparse.ParseDatetime(endRaw, loc)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid end: %w", err)
+	}
+	if !end.After(start) && isBareDateString(endRaw) {
+		end = end.AddDate(0, 0, 1)
 	}
 	if !end.After(start) {
 		return time.Time{}, time.Time{}, fmt.Errorf("end must be after start")
@@ -680,8 +716,17 @@ func parseRange(args map[string]any) (time.Time, time.Time, error) {
 	return start.UTC(), end.UTC(), nil
 }
 
-func parseStartEnd(args map[string]any) (time.Time, time.Time, error) {
-	return parseRange(args)
+func isBareDateString(raw string) bool {
+	raw = strings.TrimSpace(raw)
+	if len(raw) != len("2006-01-02") {
+		return false
+	}
+	_, err := time.Parse("2006-01-02", raw)
+	return err == nil
+}
+
+func parseStartEndInLocation(args map[string]any, loc *time.Location) (time.Time, time.Time, error) {
+	return parseRangeInLocation(args, loc)
 }
 
 // entryRangeQuery builds the base date-range query for time-entry reports.

@@ -119,6 +119,11 @@ Work this list top-to-bottom; the most common causes are first.
   envelope and bump `CLOCKIFY_RATE_LIMIT` /
   `MCP_MAX_INFLIGHT_TOOL_CALLS` permanently in the Kustomize
   overlay.
+- [ ] **Broad report calls.** Report and timesheet tools can hold
+  large decoded entry sets before aggregation. If memory pressure
+  accompanies saturation, check whether clients are using broad date
+  ranges with `include_entries=true`, then lower
+  `CLOCKIFY_REPORT_MAX_ENTRIES` or ask clients to narrow the range.
 - [ ] **Upstream Clockify quota change.** Clockify occasionally
   tightens per-workspace quotas. Symptoms: 429s appear with no
   matching local saturation. Fix: lower `CLOCKIFY_RATE_LIMIT` to

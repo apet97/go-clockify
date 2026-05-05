@@ -383,6 +383,93 @@ func TestMetadataInjected(t *testing.T) {
 	}
 }
 
+func TestInjectEnvelopeMetaUsesExistingFetched(t *testing.T) {
+	rep := &TruncationReport{ArrayReductions: []ArrayReduction{{
+		Path:        "data",
+		OriginalLen: 10,
+		NewLen:      5,
+		Removed:     5,
+	}}}
+	m := map[string]any{
+		"data": []any{map[string]any{"id": 1}, map[string]any{"id": 2}},
+		"meta": map[string]any{"count": 10, "fetched": 99},
+	}
+
+	injectEnvelopeMeta(m, rep)
+	meta := m["meta"].(map[string]any)
+	if meta["truncated"] != true {
+		t.Fatalf("expected meta.truncated=true, got %#v", meta["truncated"])
+	}
+	if meta["returned"] != 2 {
+		t.Fatalf("expected returned=2, got %#v", meta["returned"])
+	}
+	if meta["fetched"] != 99 {
+		t.Fatalf("existing fetched should win, got %#v", meta["fetched"])
+	}
+}
+
+func TestInjectEnvelopeMetaFallsBackToOriginalArrayLen(t *testing.T) {
+	rep := &TruncationReport{ArrayReductions: []ArrayReduction{{
+		Path:        "data",
+		OriginalLen: 12,
+		NewLen:      3,
+		Removed:     9,
+	}}}
+	m := map[string]any{
+		"data": []any{map[string]any{"id": 1}, map[string]any{"id": 2}, map[string]any{"id": 3}},
+		"meta": map[string]any{"workspaceId": "ws1"},
+	}
+
+	injectEnvelopeMeta(m, rep)
+	meta := m["meta"].(map[string]any)
+	if meta["fetched"] != 12 {
+		t.Fatalf("expected fetched from original array length, got %#v", meta["fetched"])
+	}
+}
+
+func TestInjectEnvelopeMetaNoopsForNonEnvelopeOrUnreducedData(t *testing.T) {
+	cases := []map[string]any{
+		{"data": []any{}, "meta": "not-a-map"},
+		{"data": "not-array", "meta": map[string]any{}},
+		{"data": []any{}, "meta": map[string]any{}, "_truncation": map[string]any{}},
+	}
+	for i, m := range cases {
+		injectEnvelopeMeta(m, &TruncationReport{ArrayReductions: []ArrayReduction{{Path: "other", OriginalLen: 2, NewLen: 1, Removed: 1}}})
+		if meta, ok := m["meta"].(map[string]any); ok {
+			if _, exists := meta["truncated"]; exists {
+				t.Fatalf("case %d should not annotate meta: %#v", i, meta)
+			}
+		}
+	}
+}
+
+func TestArrayReductionHelpers(t *testing.T) {
+	rep := &TruncationReport{ArrayReductions: []ArrayReduction{{
+		Path:        "data",
+		OriginalLen: 20,
+		NewLen:      10,
+		Removed:     10,
+	}}}
+	if !reducedArrayPath(rep, "data") {
+		t.Fatal("expected data path to be reduced")
+	}
+	if reducedArrayPath(rep, "other") {
+		t.Fatal("did not expect other path to be reduced")
+	}
+	if reducedArrayPath(nil, "data") {
+		t.Fatal("nil report should not have reductions")
+	}
+	if got, ok := originalArrayLen(rep, "data"); !ok || got != 20 {
+		t.Fatalf("originalArrayLen(data) = %d,%v", got, ok)
+	}
+	if _, ok := originalArrayLen(rep, "missing"); ok {
+		t.Fatal("missing path should not have original length")
+	}
+	if _, ok := originalArrayLen(nil, "data"); ok {
+		t.Fatal("nil report should not have original length")
+	}
+}
+
 func TestEstimateTokens(t *testing.T) {
 	// 16-byte JSON → ceil(16/4) = 4 tokens
 	data := map[string]any{"a": "b"}

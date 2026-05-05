@@ -87,6 +87,24 @@ func TestClientRefusesCrossHostRedirect(t *testing.T) {
 	}
 }
 
+func TestClientRefusesSchemeDowngradeRedirect(t *testing.T) {
+	source := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://"+r.Host+"/capture", http.StatusFound)
+	}))
+	defer source.Close()
+
+	c := NewClient("test-key", source.URL, 5*time.Second, 0)
+	c.httpClient.Transport = source.Client().Transport
+	var out map[string]any
+	err := c.Get(context.Background(), "/redirect", nil, &out)
+	if err == nil {
+		t.Fatal("expected scheme downgrade redirect to be refused")
+	}
+	if !strings.Contains(err.Error(), "scheme downgrade") {
+		t.Fatalf("error = %v, want scheme downgrade", err)
+	}
+}
+
 func TestClientGetNormalizesPath(t *testing.T) {
 	for _, path := range []string{"/user", "user"} {
 		t.Run(path, func(t *testing.T) {

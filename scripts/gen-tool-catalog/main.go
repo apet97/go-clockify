@@ -234,7 +234,8 @@ func writeTimeEntryGuidance(b *strings.Builder) {
 
 	b.WriteString("## Time formats\n\n")
 	b.WriteString("Tier-1 time-entry and report range fields accept RFC3339 values and\n")
-	b.WriteString("common flexible forms parsed in UTC when no timezone is supplied:\n")
+	b.WriteString("common flexible forms parsed in the requested `timezone`, `CLOCKIFY_TIMEZONE`,\n")
+	b.WriteString("or local/server timezone when no timezone is supplied:\n")
 	b.WriteString("`YYYY-MM-DD`, `YYYY-MM-DD HH:MM`, `today HH:MM`, `yesterday HH:MM`,\n")
 	b.WriteString("and `now`. Fields whose schema still says `RFC3339` only are stricter;\n")
 	b.WriteString("prefer the documented format on each tool descriptor.\n\n")

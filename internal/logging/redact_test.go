@@ -122,6 +122,29 @@ func TestRedactingHandlerCaseInsensitiveSubstringMatching(t *testing.T) {
 	}
 }
 
+func TestRedactingHandlerPreservesAuthModeAndTTL(t *testing.T) {
+	record := renderRecord(t,
+		slog.String("auth_mode", "oidc"),
+		slog.String("session_ttl", "30m"),
+		slog.String("metrics_auth_mode", "static_bearer"),
+		slog.String("http_inline_metrics_auth_mode", "inherit_main_bearer"),
+		slog.String("session_token", "secret"),
+	)
+	for key, want := range map[string]any{
+		"auth_mode":                     "oidc",
+		"session_ttl":                   "30m",
+		"metrics_auth_mode":             "static_bearer",
+		"http_inline_metrics_auth_mode": "inherit_main_bearer",
+	} {
+		if got := record[key]; got != want {
+			t.Fatalf("%s = %v, want %v", key, got, want)
+		}
+	}
+	if got := record["session_token"]; got != "[REDACTED]" {
+		t.Fatalf("session_token should still redact, got %v", got)
+	}
+}
+
 func TestRedactingHandlerWithAttrsAndWithGroup(t *testing.T) {
 	var attrsBuf bytes.Buffer
 	attrsHandler := NewRedactingHandler(slog.NewJSONHandler(&attrsBuf, nil)).

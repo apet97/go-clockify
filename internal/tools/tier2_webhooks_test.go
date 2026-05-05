@@ -70,7 +70,7 @@ func TestListWebhooks(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"workspaceWebhookCount": 2,
 				"webhooks": []map[string]any{
-					{"id": "wh1", "url": "https://example.invalid/x", "webhookEvent": "NEW_TIME_ENTRY"},
+					{"id": "wh1", "url": "https://example.invalid/x", "webhookEvent": "NEW_TIME_ENTRY", "authToken": "abcdefghijklmnopqrstuvwxyz"},
 				},
 			})
 		default:
@@ -97,11 +97,43 @@ func TestListWebhooks(t *testing.T) {
 	if len(items) != 1 || items[0]["id"] != "wh1" {
 		t.Fatalf("ListWebhooks items: expected [{id:wh1}], got %#v", items)
 	}
+	if got := items[0]["authToken"]; got != "********wxyz" {
+		t.Fatalf("expected masked authToken, got %#v", got)
+	}
 	if result.Meta["count"] != 1 {
 		t.Fatalf("expected meta count=1, got %v", result.Meta["count"])
 	}
 	if result.Meta["workspaceWebhookCount"] != 2 {
 		t.Fatalf("expected meta workspaceWebhookCount=2, got %v", result.Meta["workspaceWebhookCount"])
+	}
+}
+
+func TestGetWebhookMasksAuthToken(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/abc123def456789012345678" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":           "abc123def456789012345678",
+				"authToken":    "secret-token-1234",
+				"webhookEvent": "NEW_TIME_ENTRY",
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.GetWebhook(context.Background(), map[string]any{"webhook_id": "abc123def456789012345678"})
+	if err != nil {
+		t.Fatalf("GetWebhook failed: %v", err)
+	}
+	item, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("GetWebhook data: expected map, got %T", result.Data)
+	}
+	if got := item["authToken"]; got != "********1234" {
+		t.Fatalf("expected masked authToken, got %#v", got)
 	}
 }
 
@@ -120,6 +152,7 @@ func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
 				"webhookEvent":      gotBody["webhookEvent"],
 				"triggerSourceType": gotBody["triggerSourceType"],
 				"triggerSource":     gotBody["triggerSource"],
+				"authToken":         gotBody["authToken"],
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -134,6 +167,7 @@ func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
 		"webhook_event":       "NEW_TIME_ENTRY",
 		"trigger_source_type": "WORKSPACE_ID",
 		"trigger_source":      []any{"ws1"},
+		"auth_token":          "secret-token-1234",
 	})
 	if err != nil {
 		t.Fatalf("CreateWebhook failed: %v", err)
@@ -146,6 +180,16 @@ func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
 	}
 	if _, ok := gotBody["events"]; ok {
 		t.Fatalf("body must not use legacy events array: %#v", gotBody)
+	}
+	if gotBody["authToken"] != "secret-token-1234" {
+		t.Fatalf("expected auth_token to map to authToken, got %#v", gotBody)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("CreateWebhook data: expected map, got %T", result.Data)
+	}
+	if got := data["authToken"]; got != "********1234" {
+		t.Fatalf("expected returned authToken to be masked, got %#v", got)
 	}
 }
 
@@ -226,6 +270,7 @@ func TestCreateWebhookDryRunAvoidsPost(t *testing.T) {
 		"name":          "live webhook",
 		"url":           "https://example.com/hook",
 		"webhook_event": "NEW_TIME_ENTRY",
+		"auth_token":    "dry-run-secret-9876",
 		"dry_run":       true,
 	})
 	if err != nil {
@@ -241,6 +286,9 @@ func TestCreateWebhookDryRunAvoidsPost(t *testing.T) {
 	payload, ok := dataMap["payload"].(map[string]any)
 	if !ok || payload["webhookEvent"] != "NEW_TIME_ENTRY" || payload["triggerSourceType"] != "WORKSPACE_ID" {
 		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
+	}
+	if got := payload["authToken"]; got != "********9876" {
+		t.Fatalf("expected dry-run authToken to be masked, got %#v", got)
 	}
 }
 
@@ -289,6 +337,7 @@ func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
 				"webhookEvent":      "NEW_TIME_ENTRY",
 				"triggerSourceType": "WORKSPACE_ID",
 				"triggerSource":     []string{"ws1"},
+				"authToken":         "old-secret-1234",
 			})
 		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodPut:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
@@ -301,6 +350,7 @@ func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
 				"webhookEvent":      gotBody["webhookEvent"],
 				"triggerSourceType": gotBody["triggerSourceType"],
 				"triggerSource":     gotBody["triggerSource"],
+				"authToken":         gotBody["authToken"],
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -313,6 +363,7 @@ func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
 		"webhook_id":    "wh1",
 		"name":          "new",
 		"webhook_event": "TIMER_STOPPED",
+		"auth_token":    "new-secret-9876",
 	})
 	if err != nil {
 		t.Fatalf("UpdateWebhook failed: %v", err)
@@ -337,6 +388,16 @@ func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
 	if gotBody["triggerSourceType"] != "WORKSPACE_ID" {
 		t.Fatalf("expected existing triggerSourceType to be carried forward, got body %#v", gotBody)
 	}
+	if gotBody["authToken"] != "new-secret-9876" {
+		t.Fatalf("expected auth_token to map to authToken, got body %#v", gotBody)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("UpdateWebhook data: expected map, got %T", result.Data)
+	}
+	if got := data["authToken"]; got != "********9876" {
+		t.Fatalf("expected returned authToken to be masked, got %#v", got)
+	}
 	source, ok := gotBody["triggerSource"].([]any)
 	if !ok || len(source) != 1 || source[0] != "ws1" {
 		t.Fatalf("expected existing triggerSource [ws1] to be carried forward, got %#v", gotBody["triggerSource"])
@@ -355,6 +416,7 @@ func TestUpdateWebhookDryRunAvoidsPut(t *testing.T) {
 				"webhookEvent":      "NEW_TIME_ENTRY",
 				"triggerSourceType": "WORKSPACE_ID",
 				"triggerSource":     []string{"ws1"},
+				"authToken":         "old-secret-1234",
 			})
 		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodPut:
 			putCalled = true
@@ -370,6 +432,7 @@ func TestUpdateWebhookDryRunAvoidsPut(t *testing.T) {
 		"webhook_id":    "wh1",
 		"name":          "new",
 		"webhook_event": "TIMER_STOPPED",
+		"auth_token":    "new-secret-9876",
 		"dry_run":       true,
 	})
 	if err != nil {
@@ -386,8 +449,15 @@ func TestUpdateWebhookDryRunAvoidsPut(t *testing.T) {
 	if !ok || payload["name"] != "new" || payload["webhookEvent"] != "TIMER_STOPPED" {
 		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
 	}
-	if _, ok := dataMap["current"].(map[string]any); !ok {
+	if got := payload["authToken"]; got != "********9876" {
+		t.Fatalf("expected dry-run payload authToken to be masked, got %#v", got)
+	}
+	current, ok := dataMap["current"].(map[string]any)
+	if !ok {
 		t.Fatalf("expected current webhook in dry-run data, got %#v", dataMap["current"])
+	}
+	if got := current["authToken"]; got != "********1234" {
+		t.Fatalf("expected current authToken to be masked, got %#v", got)
 	}
 }
 

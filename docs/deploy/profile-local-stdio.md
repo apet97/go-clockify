@@ -5,7 +5,9 @@
 > [`deploy/examples/env.local-stdio.example`](../../deploy/examples/env.local-stdio.example).
 > See also: [`internal/config/profile.go`](../../internal/config/profile.go)
 > for the pinned defaults, [ADR-0015](../adr/0015-profile-centric-configuration.md)
-> for the design rationale.
+> for the design rationale, and
+> [`internal-test-posture.md`](../internal-test-posture.md) for
+> owner-key testing guardrails.
 
 A single-user deployment where `clockify-mcp` runs as a subprocess
 of one MCP client (Claude Code, Claude Desktop, Cursor, Codex). No

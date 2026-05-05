@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -11,19 +12,42 @@ import (
 )
 
 func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ResultEnvelope, error) {
+	return s.startTimer(ctx, map[string]any{
+		"project_id":  projectID,
+		"project":     projectRef,
+		"description": description,
+	})
+}
+
+func (s *Service) StartTimerArgs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	return s.startTimer(ctx, args)
+}
+
+func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	projectID := stringArg(args, "project_id")
+	projectRef := stringArg(args, "project")
 	if projectID == "" && projectRef != "" {
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
 	}
-	payload := map[string]any{"start": time.Now().UTC().Format(time.RFC3339), "description": description}
+	payload := map[string]any{"start": time.Now().UTC().Format(time.RFC3339), "description": stringArg(args, "description")}
 	if projectID != "" {
 		payload["projectId"] = projectID
+	}
+	meta := map[string]any{"workspaceId": wsID}
+	if projectID != "" {
+		meta["projectId"] = projectID
+	}
+	if dryrun.Enabled(args) {
+		preview := dryrunPreviewPayload("clockify_start_timer", payload)
+		preview["args"] = maps.Clone(args)
+		return ok("clockify_start_timer", preview, meta), nil
 	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -33,17 +57,13 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 	if err := s.Client.Post(ctx, path, payload, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	meta := map[string]any{"workspaceId": wsID}
-	if projectID != "" {
-		meta["projectId"] = projectID
-	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	return ok("clockify_start_timer", out, meta), nil
 }
 
 func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, error) {
 	if dryrun.Enabled(args) {
-		return dryrun.Preview("clockify_stop_timer", args), nil
+		return ResultEnvelope{OK: true, Action: "clockify_stop_timer", Data: dryrun.Preview("clockify_stop_timer", args)}, nil
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

@@ -233,6 +233,7 @@ func TestSessionEventHubCancelSubscriber(t *testing.T) {
 func TestApplyHTTPBaselineHeaders(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
 	applyHTTPBaselineHeaders(rec, req, true /* behindHTTPSProxy */)
 	expected := map[string]string{
 		"X-Content-Type-Options":    "nosniff",
@@ -269,12 +270,21 @@ func TestApplyHTTPBaselineHeaders_HSTSConditional(t *testing.T) {
 			t.Fatal("non-HSTS baseline headers regressed under plaintext")
 		}
 	})
-	t.Run("plaintext_with_proxy_emits_hsts", func(t *testing.T) {
+	t.Run("plaintext_with_proxy_and_forwarded_proto_emits_hsts", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("X-Forwarded-Proto", "https")
+		applyHTTPBaselineHeaders(rec, req, true)
+		if rec.Header().Get("Strict-Transport-Security") == "" {
+			t.Fatal("MCP_BEHIND_HTTPS_PROXY=1 with X-Forwarded-Proto=https should emit HSTS")
+		}
+	})
+	t.Run("plaintext_with_proxy_without_forwarded_proto_no_hsts", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		applyHTTPBaselineHeaders(rec, req, true)
-		if rec.Header().Get("Strict-Transport-Security") == "" {
-			t.Fatal("MCP_BEHIND_HTTPS_PROXY=1 should emit HSTS even on plaintext")
+		if got := rec.Header().Get("Strict-Transport-Security"); got != "" {
+			t.Fatalf("proxy without X-Forwarded-Proto emitted HSTS = %q; expected empty", got)
 		}
 	})
 	t.Run("tls_emits_hsts", func(t *testing.T) {

@@ -29,7 +29,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_TIMEZONE", Group: "Core", Help: "IANA timezone for time parsing"},
 		{Name: "CLOCKIFY_INSECURE", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "Allow non-HTTPS base URLs"},
 		{Name: "CLOCKIFY_SANITIZE_UPSTREAM_ERRORS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, omit upstream Clockify response bodies from MCP tool-error responses (still logged server-side). HTTP/hosted profiles (single-tenant-http, shared-service, prod-postgres) default to 1."},
-		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, CreateWebhook/UpdateWebhook resolve the webhook host via DNS and reject any reply with a private/reserved IP (SSRF protection). Hosted profiles (shared-service, prod-postgres) default to 1."},
+		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS", Group: "Core", Enum: []string{"0", "1"}, Default: "1", Help: "When 1, CreateWebhook/UpdateWebhook resolve the webhook host via DNS and reject any reply with a private/reserved IP (SSRF protection). Defaults to 1 for every profile; set 0 only for trusted air-gapped tests."},
 		{Name: "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", Group: "Core", Help: "Comma-separated escape-hatch list of webhook hostnames that bypass the CLOCKIFY_WEBHOOK_VALIDATE_DNS private-IP check. Each entry matches exact (webhook.example.com) or as a leading-dot suffix (.example.com matches every subdomain but anchors at a full DNS label). Use case: split-horizon DNS where a known-trusted hostname resolves to a private IP only on the control-plane network."},
 
 		// --- Safety ---
@@ -45,7 +45,7 @@ func AllSpecs() []EnvSpec {
 		// --- Performance ---
 		{Name: "CLOCKIFY_MAX_CONCURRENT", Group: "Performance", Default: "10", Help: "Concurrent tool-call limit (0=disabled)"},
 		{Name: "CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT", Group: "Performance", Default: "100ms", Help: "Wait-for-slot timeout [1ms,30s]"},
-		{Name: "CLOCKIFY_RATE_LIMIT", Group: "Performance", Default: "120", Help: "Tool calls per 60s window (0=disabled)", EssentialDoc: true},
+		{Name: "CLOCKIFY_RATE_LIMIT", Group: "Performance", Default: "120", Help: "Global tool calls per 60s window (0=disabled). For multi-subject HTTP/gRPC deployments, size this at least active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT so per-subject fairness can engage.", EssentialDoc: true},
 		{Name: "CLOCKIFY_PER_TOKEN_CONCURRENCY", Group: "Performance", Default: "5", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per-subject concurrent tool-call limit; applies whenever an authenticated principal is in context (0=disabled)"},
 		{Name: "CLOCKIFY_PER_TOKEN_RATE_LIMIT", Group: "Performance", Default: "60", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per-subject tool calls per 60s window; applies whenever an authenticated principal is in context (0=disabled)"},
 		{Name: "CLOCKIFY_TOKEN_BUDGET", Group: "Performance", Default: "8000", Help: "Response token budget (0=disabled)"},

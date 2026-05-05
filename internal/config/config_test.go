@@ -1578,24 +1578,25 @@ func TestIsHostedProfile_Predicate(t *testing.T) {
 	}
 }
 
-// TestLoad_WebhookValidateDNS_HostedProfileDefault locks in the
-// profile-driven default added in audit finding 10: shared-service
-// flips WebhookValidateDNS=true so a hostname that resolves to a
-// private/reserved IP is rejected. local-stdio keeps the legacy
-// literal-only check.
-func TestLoad_WebhookValidateDNS_HostedProfileDefault(t *testing.T) {
+// TestLoad_WebhookValidateDNS_DefaultOn locks in the default-on SSRF
+// posture: every profile resolves webhook hosts unless the operator
+// explicitly opts out.
+func TestLoad_WebhookValidateDNS_DefaultOn(t *testing.T) {
 	cases := []struct {
 		profile string
 		want    bool
 	}{
 		{"shared-service", true},
-		{"local-stdio", false},
+		{"local-stdio", true},
+		{"", true},
 	}
 	for _, c := range cases {
 		t.Run(c.profile, func(t *testing.T) {
 			env := map[string]string{
 				"CLOCKIFY_API_KEY": "test-key",
-				"MCP_PROFILE":      c.profile,
+			}
+			if c.profile != "" {
+				env["MCP_PROFILE"] = c.profile
 			}
 			if isHostedProfile(c.profile) {
 				maps.Copy(env, hostedProfileEnv)

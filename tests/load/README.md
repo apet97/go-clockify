@@ -25,6 +25,9 @@ go run ./tests/load -scenario burst
 go run ./tests/load -scenario tenant-mix
 go run ./tests/load -scenario per-token-saturation
 go run ./tests/load -scenario ratelimit-reap-correctness
+go run ./tests/load -scenario tenant-churn
+go run ./tests/load -scenario transport-fan-out
+go run ./tests/load -scenario upstream-slow
 ```
 
 ## Scenarios
@@ -36,6 +39,9 @@ go run ./tests/load -scenario ratelimit-reap-correctness
 | `tenant-mix` | 10 tenants, tenant-0 fires 5× | Realistic multi-tenant mix with one noisy neighbour. Should show per-token rejections concentrated on tenant-0 without starving the others. |
 | `per-token-saturation` | 4 tenants, tenant-0 fires 10× | **W2-09 acceptance scenario.** The noisy tenant is expected to exhaust its per-token budget while quiet tenants keep flowing at 100% success. The harness encodes an explicit acceptance check that the noisy tenant's per-token rejections exceed 3× the quiet average, otherwise it `log.Fatal`s. |
 | `ratelimit-reap-correctness` | 2 tenants, noisy tenant-0 saturates → idles past one window → resumes | Verifies the per-subject limiter reaps correctly: after the noisy tenant idles past one rate-limit window, the reap must restore its full budget while the cold tenant stays unaffected. Two-phase scenario; uses a short 1.5 s window so the reap completes in seconds. |
+| `tenant-churn` | 50 short-lived tenants in 10-tenant waves | Owner-key multi-workspace churn check. Verifies subject limiters for short-lived tenants are reaped and the tracked-subject map drains instead of growing indefinitely. |
+| `transport-fan-out` | 8 goroutines × 25 real `tools/call` dispatches | Cross-layer load check. Dispatches `clockify_list_tags` through JSON-RPC, schema validation, enforcement, rate limiting, tool handling, and fake upstream HTTP; prints p50/p95/p99 latency and fails if any dispatch errors or misses the upstream. |
+| `upstream-slow` | 4 tenants with a 50 ms simulated upstream; tenant-0 has 12 workers | Backpressure check. Verifies a slow noisy subject hits its per-token semaphore while quiet tenants complete every call without rejection. |
 
 ## Acceptance criteria
 
