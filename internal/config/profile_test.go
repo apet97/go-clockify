@@ -33,6 +33,7 @@ func setProfileEnv(t *testing.T, profile string, overrides map[string]string) {
 		"MCP_OIDC_STRICT",
 		"MCP_REQUIRE_TENANT_CLAIM",
 		"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
+		"MCP_REQUIRE_MTLS_TENANT",
 		"MCP_DISABLE_INLINE_SECRETS",
 		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
 	}
@@ -321,6 +322,9 @@ func TestProfile_PrivateNetworkGRPCPostgresOK(t *testing.T) {
 	}
 	if cfg.AuditDurabilityMode != "fail_closed" {
 		t.Errorf("AuditDurabilityMode = %q, want fail_closed", cfg.AuditDurabilityMode)
+	}
+	if !cfg.RequireMTLSTenant {
+		t.Error("RequireMTLSTenant = false, want true from private-network-grpc profile")
 	}
 }
 

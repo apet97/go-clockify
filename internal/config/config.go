@@ -516,11 +516,12 @@ func Load() (Config, error) {
 	} else if isHostedProfile(profileName) {
 		cfg.SanitizeUpstreamErrors = true
 	}
-	// CLOCKIFY_WEBHOOK_VALIDATE_DNS: same pattern — explicit override
-	// wins, hosted profiles default to true.
+	// CLOCKIFY_WEBHOOK_VALIDATE_DNS: explicit override wins; default
+	// to true for every profile so hostname-based webhook SSRF checks
+	// are active unless an operator opts out.
 	if raw := os.Getenv("CLOCKIFY_WEBHOOK_VALIDATE_DNS"); raw != "" {
 		cfg.WebhookValidateDNS = raw == "1" || strings.EqualFold(raw, "true")
-	} else if isHostedProfile(profileName) {
+	} else {
 		cfg.WebhookValidateDNS = true
 	}
 	// CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: comma-separated escape-hatch

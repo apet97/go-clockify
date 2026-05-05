@@ -89,10 +89,12 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 		maxRetries = 0
 	}
 	transport := &http.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 10,
-		MaxConnsPerHost:     20,
-		IdleConnTimeout:     90 * time.Second,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   10,
+		MaxConnsPerHost:       20,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   5 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
 	}
 	return &Client{
 		apiKey:  apiKey,
@@ -106,6 +108,9 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 				}
 				if len(via) > 0 && !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
 					return fmt.Errorf("refusing cross-host redirect from %s to %s", via[0].URL.Host, req.URL.Host)
+				}
+				if len(via) > 0 && strings.EqualFold(via[0].URL.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
+					return fmt.Errorf("refusing scheme downgrade from %s to %s", via[0].URL.Scheme, req.URL.Scheme)
 				}
 				return nil
 			},

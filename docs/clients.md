@@ -94,10 +94,10 @@ deployments keep verbose errors by default for fast diagnostics.
 ### Hosted-Mode Webhook URL Validation
 `CreateWebhook` / `UpdateWebhook` resolve the host via DNS and reject
 any reply containing a private, reserved, link-local, or loopback IP
-when the deployment is on a hosted profile (or
-`CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` is set explicitly). Local profiles
-keep the literal-IP-only check. Operators can opt specific hostnames
-out of the DNS check via `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]`
+by default in every profile. Operators can disable the DNS layer with
+`CLOCKIFY_WEBHOOK_VALIDATE_DNS=0` for trusted air-gapped tests, or
+can opt specific hostnames out of the DNS check via
+`CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]`
 (exact or leading-dot suffix); a webhook URL whose host matches a
 listed entry will succeed even if its DNS reply contains a private IP.
 Clients seeing an unexpectedly-accepted webhook in such an environment

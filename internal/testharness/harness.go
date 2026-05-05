@@ -351,11 +351,16 @@ func parseDispatchResult(t testing.TB, raw []byte, upstreamHit bool) InvokeResul
 // continue to use Invoke — each test case needs an isolated pipeline
 // so that state (rate-limit counters, initialized flag) from a prior
 // assertion does not leak into the next one.
+//
+// The default benchmark pipeline intentionally contains only policy
+// enforcement. Rate-limit, dry-run, and truncation benchmarks must
+// construct those collaborators explicitly so the measured path is
+// obvious at the call site.
 type BenchHarness struct {
 	tb        testing.TB
 	server    *mcp.Server
 	upstream  *FakeClockify
-	requestID int
+	requestID atomic.Int64
 }
 
 // NewBenchHarness wires the full MCP stack once and returns a handle
@@ -439,12 +444,13 @@ func NewBenchHarness(tb testing.TB, opts InvokeOpts) *BenchHarness {
 		}
 	}
 
-	return &BenchHarness{
-		tb:        tb,
-		server:    server,
-		upstream:  opts.Upstream,
-		requestID: opts.RequestID + 1,
+	h := &BenchHarness{
+		tb:       tb,
+		server:   server,
+		upstream: opts.Upstream,
 	}
+	h.requestID.Store(int64(opts.RequestID + 1))
+	return h
 }
 
 // Call dispatches one tools/call through the already-initialized MCP
@@ -452,11 +458,11 @@ func NewBenchHarness(tb testing.TB, opts InvokeOpts) *BenchHarness {
 // Invoke. Call is safe to invoke from the benchmark's b.Loop() body.
 func (h *BenchHarness) Call(ctx context.Context, tool string, args map[string]any) InvokeResult {
 	h.tb.Helper()
-	h.requestID++
+	requestID := h.requestID.Add(1)
 
 	callMsg := mustMarshal(h.tb, mcp.Request{
 		JSONRPC: "2.0",
-		ID:      h.requestID,
+		ID:      requestID,
 		Method:  "tools/call",
 		Params: mcp.ToolCallParams{
 			Name:      tool,

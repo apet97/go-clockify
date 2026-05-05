@@ -1,6 +1,7 @@
 package clockify
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -21,6 +22,9 @@ func (e *APIError) Error() string {
 	}
 	if e.Body == "" {
 		return fmt.Sprintf("clockify %s %s failed: %s", e.Method, e.Path, e.Status)
+	}
+	if compact, ok := compactUpstreamErrorBody(e.Body); ok {
+		return fmt.Sprintf("clockify %s failed: %s: %s", e.Method, e.Status, compact)
 	}
 	return fmt.Sprintf("clockify %s %s failed: %s: %s", e.Method, e.Path, e.Status, e.Body)
 }
@@ -43,4 +47,22 @@ func trimBody(s string) string {
 		return s[:1000] + "..."
 	}
 	return s
+}
+
+func compactUpstreamErrorBody(body string) (string, bool) {
+	var payload struct {
+		Message string `json:"message"`
+		Code    any    `json:"code"`
+	}
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return "", false
+	}
+	message := strings.TrimSpace(payload.Message)
+	if message == "" {
+		return "", false
+	}
+	if payload.Code == nil {
+		return message, true
+	}
+	return fmt.Sprintf("%s (upstream_code=%v)", message, payload.Code), true
 }

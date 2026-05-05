@@ -300,7 +300,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_DEDUPE_MODE` | `warn` | Duplicate entry detection |
 | `CLOCKIFY_DRY_RUN` | `enabled` | Enable dry-run preview support for destructive tools when callers pass dry_run:true |
 | `CLOCKIFY_POLICY` | `standard` | Tool-access policy tier |
-| `CLOCKIFY_RATE_LIMIT` | `120` | Tool calls per 60s window (0=disabled) |
+| `CLOCKIFY_RATE_LIMIT` | `120` | Global tool calls per 60s window (0=disabled). For multi-subject HTTP/gRPC deployments, size this at least active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT so per-subject fairness can engage. |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |
 | `MCP_ALLOW_DEV_BACKEND` | `—` | Permit memory/file backends for streamable_http or grpc (single-process only) |
 | `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod) |

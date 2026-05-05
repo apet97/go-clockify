@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
@@ -154,17 +156,137 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 	if p.Truncation.TokenBudget > 0 && estimatedTokensFromJSONLen(len(b)) <= p.Truncation.TokenBudget {
 		return result, nil
 	}
-	var generic any
-	if err := json.Unmarshal(b, &generic); err != nil {
-		metrics.TruncationSkippedTotal.Inc("unmarshal_failed")
-		slog.Warn("truncate_unmarshal_failed", "error", err.Error())
-		return result, nil
+	generic, ok := normalizeJSONTree(result)
+	if !ok {
+		if err := json.Unmarshal(b, &generic); err != nil {
+			metrics.TruncationSkippedTotal.Inc("unmarshal_failed")
+			slog.Warn("truncate_unmarshal_failed", "error", err.Error())
+			return result, nil
+		}
 	}
 	truncated, wasTruncated := p.Truncation.Truncate(generic)
 	if wasTruncated {
 		slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
 	}
 	return truncated, nil
+}
+
+func normalizeJSONTree(v any) (any, bool) {
+	if v == nil {
+		return nil, true
+	}
+	return normalizeJSONValue(reflect.ValueOf(v))
+}
+
+func normalizeJSONValue(v reflect.Value) (any, bool) {
+	if !v.IsValid() {
+		return nil, true
+	}
+	for v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil, true
+		}
+		v = v.Elem()
+	}
+	if v.CanInterface() {
+		if marshaler, ok := v.Interface().(json.Marshaler); ok {
+			b, err := marshaler.MarshalJSON()
+			if err != nil {
+				return nil, false
+			}
+			var out any
+			if err := json.Unmarshal(b, &out); err != nil {
+				return nil, false
+			}
+			return out, true
+		}
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		return v.Bool(), true
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(v.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return float64(v.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		return v.Float(), true
+	case reflect.String:
+		return v.String(), true
+	case reflect.Map:
+		if v.Type().Key().Kind() != reflect.String {
+			return nil, false
+		}
+		out := make(map[string]any, v.Len())
+		iter := v.MapRange()
+		for iter.Next() {
+			child, ok := normalizeJSONValue(iter.Value())
+			if !ok {
+				return nil, false
+			}
+			out[iter.Key().String()] = child
+		}
+		return out, true
+	case reflect.Slice, reflect.Array:
+		if v.Kind() == reflect.Slice && v.IsNil() {
+			return nil, true
+		}
+		out := make([]any, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			child, ok := normalizeJSONValue(v.Index(i))
+			if !ok {
+				return nil, false
+			}
+			out[i] = child
+		}
+		return out, true
+	case reflect.Struct:
+		out := make(map[string]any, v.NumField())
+		t := v.Type()
+		for i := 0; i < v.NumField(); i++ {
+			field := t.Field(i)
+			if field.PkgPath != "" {
+				continue
+			}
+			name, omitEmpty, skip := jsonFieldName(field)
+			if skip {
+				continue
+			}
+			fv := v.Field(i)
+			if omitEmpty && fv.IsZero() {
+				continue
+			}
+			child, ok := normalizeJSONValue(fv)
+			if !ok {
+				return nil, false
+			}
+			out[name] = child
+		}
+		return out, true
+	default:
+		return nil, false
+	}
+}
+
+func jsonFieldName(field reflect.StructField) (name string, omitEmpty bool, skip bool) {
+	tag := field.Tag.Get("json")
+	if tag == "-" {
+		return "", false, true
+	}
+	name = field.Name
+	if tag != "" {
+		parts := strings.Split(tag, ",")
+		if parts[0] != "" {
+			name = parts[0]
+		}
+		for _, opt := range parts[1:] {
+			if opt == "omitempty" {
+				omitEmpty = true
+				break
+			}
+		}
+	}
+	return name, omitEmpty, false
 }
 
 func estimatedTokensFromJSONLen(n int) int {

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ func (s *Service) ResolveName(ctx context.Context, args map[string]any) (ResultE
 }
 
 func (s *Service) ResolveDebug(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	slog.Warn("deprecated_tool_alias", "tool", "clockify_resolve_debug", "replacement", "clockify_resolve_name")
 	return s.resolveName(ctx, args, "clockify_resolve_debug")
 }
 
@@ -42,8 +44,20 @@ func (s *Service) resolveName(ctx context.Context, args map[string]any, action s
 		resolvedID, resolveErr = s.resolveTagID(ctx, wsID, nameOrID)
 	case "user":
 		resolvedID, resolveErr = s.resolveUserID(ctx, wsID, nameOrID)
+	case "task":
+		projectID := stringArg(args, "project_id")
+		if projectID == "" {
+			projectRef := stringArg(args, "project")
+			if projectRef == "" {
+				return ResultEnvelope{}, fmt.Errorf("project or project_id is required when entity_type is task")
+			}
+			projectID, resolveErr = s.resolveProjectID(ctx, wsID, projectRef)
+		}
+		if resolveErr == nil {
+			resolvedID, resolveErr = s.resolveTaskID(ctx, wsID, projectID, nameOrID)
+		}
 	default:
-		return ResultEnvelope{}, fmt.Errorf("entity_type must be project, client, tag, or user; got %q", entityType)
+		return ResultEnvelope{}, fmt.Errorf("entity_type must be project, client, tag, user, or task; got %q", entityType)
 	}
 
 	status := "exact_match"

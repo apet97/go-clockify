@@ -8,10 +8,16 @@ import (
 
 const flexibleDatetimeDescription = "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')"
 
+func timezoneInputProperty() map[string]any {
+	return map[string]any{"type": "string", "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone."}
+}
+
 func resolveNameInputSchema() map[string]any {
 	return map[string]any{"type": "object", "required": []string{"entity_type", "name_or_id"}, "properties": map[string]any{
-		"entity_type": map[string]any{"type": "string", "description": "project, client, tag, or user"},
+		"entity_type": map[string]any{"type": "string", "description": "project, client, tag, user, or task"},
 		"name_or_id":  map[string]any{"type": "string"},
+		"project":     map[string]any{"type": "string", "description": "Project name or ID required when entity_type is task"},
+		"project_id":  map[string]any{"type": "string", "description": "Project ID required when entity_type is task unless project is supplied"},
 	}}
 }
 
@@ -44,9 +50,10 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}},
 		{Tool: toolRO("clockify_list_entries", "List recent time entries for the current user with optional date range, project filter, and pagination", paginationSchema(map[string]any{
 			"properties": map[string]any{
-				"start":   map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"end":     map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"project": map[string]any{"type": "string", "description": "Filter by project name or ID"},
+				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"timezone": timezoneInputProperty(),
+				"project":  map[string]any{"type": "string", "description": "Filter by project name or ID"},
 			},
 		})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListEntries(ctx, args)
@@ -54,12 +61,13 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_get_entry", "Get a single time entry by ID", requiredSchema("entry_id")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.GetEntry(ctx, args)
 		}},
-		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", paginationSchema(map[string]any{"properties": map[string]any{"timezone": timezoneInputProperty()}})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TodayEntries(ctx, args)
 		}},
 		{Tool: toolRO("clockify_summary_report", "Summarize entries for a date/time range by project using the current user's time entries", map[string]any{"type": "object", "properties": map[string]any{
 			"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"timezone":        timezoneInputProperty(),
 			"project":         map[string]any{"type": "string", "description": "Optional project name or ID to push down as an upstream filter"},
 			"include_entries": map[string]any{"type": "boolean"},
 			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
@@ -77,6 +85,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}},
 		{Tool: toolRO("clockify_quick_report", "Quick high-signal summary for a recent period. Safe helper over the current user's time entries.", map[string]any{"type": "object", "properties": map[string]any{
 			"days":            map[string]any{"type": "integer", "minimum": 1, "maximum": quickReportMaxDays},
+			"timezone":        timezoneInputProperty(),
 			"project":         map[string]any{"type": "string", "description": "Optional project name or ID to push down as an upstream filter"},
 			"include_entries": map[string]any{"type": "boolean"},
 			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
@@ -98,18 +107,19 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TimesheetReview(ctx, args)
 		}},
-		{Tool: toolRW("clockify_start_timer", "Start a new timer", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.StartTimer(ctx, stringArg(args, "project_id"), stringArg(args, "project"), stringArg(args, "description"))
+		{Tool: toolRW("clockify_start_timer", "Start a new timer. Supports dry_run:true.", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.StartTimerArgs(ctx, args)
 		}},
 		{Tool: toolRWIdem("clockify_stop_timer", "Stop the current running timer", map[string]any{"type": "object", "properties": map[string]any{"dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.StopTimer(ctx, args)
 		}},
-		{Tool: toolRW("clockify_log_time", "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "billable": map[string]any{"type": "boolean"}, "allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRW("clockify_log_time", "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "timezone": timezoneInputProperty(), "tag_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional Clockify tag IDs to attach to the entry"}, "billable": map[string]any{"type": "boolean"}, "allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.LogTime(ctx, args)
 		}},
 		{Tool: toolRW("clockify_timesheet_fill_gap", "Create one finished time entry for a reviewed gap after validating that the requested interval does not overlap existing entries. Supports dry_run:true.", map[string]any{"type": "object", "required": []string{"start", "end", "description"}, "properties": map[string]any{
 			"start":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"timezone":      timezoneInputProperty(),
 			"project":       map[string]any{"type": "string", "description": "Project name or ID"},
 			"project_id":    map[string]any{"type": "string"},
 			"description":   map[string]any{"type": "string"},
@@ -122,10 +132,12 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRW("clockify_add_entry", "Lower-level helper for creating a time entry with flexible start/end parsing. Prefer clockify_log_time for finished past work; when end is present this validates overlaps unless allow_overlap:true is passed.", map[string]any{"type": "object", "required": []string{"start"}, "properties": map[string]any{
 			"start":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"timezone":      timezoneInputProperty(),
 			"description":   map[string]any{"type": "string"},
 			"project":       map[string]any{"type": "string", "description": "Project name or ID"},
 			"project_id":    map[string]any{"type": "string"},
 			"task_id":       map[string]any{"type": "string"},
+			"tag_ids":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional Clockify tag IDs to attach to the entry"},
 			"billable":      map[string]any{"type": "boolean"},
 			"allow_overlap": map[string]any{"type": "boolean", "description": "Default false for finished entries with end set. Set true only after manually confirming the overlap is intentional."},
 			"dry_run":       map[string]any{"type": "boolean"},
@@ -139,6 +151,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"project_id":  map[string]any{"type": "string"},
 			"start":       map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"timezone":    timezoneInputProperty(),
 			"billable":    map[string]any{"type": "boolean"},
 			"dry_run":     map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -150,7 +163,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.DeleteEntry(ctx, args)
 		}},
-		{Tool: toolRWIdem("clockify_find_and_update_entry", "Find one current-user entry by exact ID or safe filters, then update selected fields. Fails closed on ambiguous matches.", map[string]any{"type": "object", "properties": map[string]any{"entry_id": map[string]any{"type": "string"}, "description_contains": map[string]any{"type": "string"}, "exact_description": map[string]any{"type": "string"}, "start_after": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "start_before": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "new_description": map[string]any{"type": "string"}, "project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "billable": map[string]any{"type": "boolean"}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRWIdem("clockify_find_and_update_entry", "Find one current-user entry by exact ID or safe filters, then update selected fields. Fails closed on ambiguous matches.", map[string]any{"type": "object", "properties": map[string]any{"entry_id": map[string]any{"type": "string"}, "description_contains": map[string]any{"type": "string"}, "exact_description": map[string]any{"type": "string"}, "start_after": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "start_before": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "new_description": map[string]any{"type": "string"}, "project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "timezone": timezoneInputProperty(), "billable": map[string]any{"type": "boolean"}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.FindAndUpdateEntry(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_project", "Create a new project", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
@@ -159,23 +172,28 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"color":     map[string]any{"type": "string", "description": "Hex color code"},
 			"billable":  map[string]any{"type": "boolean"},
 			"is_public": map[string]any{"type": "boolean"},
+			"dry_run":   map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateProject(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_client", "Create a new client", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name": map[string]any{"type": "string"},
+			"name":    map[string]any{"type": "string"},
+			"dry_run": map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateClient(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_tag", "Create a new tag", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name": map[string]any{"type": "string"},
+			"name":    map[string]any{"type": "string"},
+			"dry_run": map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateTag(ctx, args)
 		}},
-		{Tool: toolRW("clockify_create_task", "Create a new task in a project", map[string]any{"type": "object", "required": []string{"project", "name"}, "properties": map[string]any{
-			"project":  map[string]any{"type": "string", "description": "Project name or ID"},
-			"name":     map[string]any{"type": "string"},
-			"billable": map[string]any{"type": "boolean"},
+		{Tool: toolRW("clockify_create_task", "Create a new task in a project", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID"},
+			"project_id": map[string]any{"type": "string"},
+			"name":       map[string]any{"type": "string"},
+			"billable":   map[string]any{"type": "boolean"},
+			"dry_run":    map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateTask(ctx, args)
 		}},
@@ -189,19 +207,21 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"description": map[string]any{"type": "string"},
 			"task_id":     map[string]any{"type": "string"},
 			"billable":    map[string]any{"type": "boolean"},
+			"dry_run":     map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SwitchProject(ctx, args)
 		}},
 		{Tool: toolRO("clockify_detailed_report", "Detailed time entry report with filtering by project and date range", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{
 			"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"timezone":        timezoneInputProperty(),
 			"project":         map[string]any{"type": "string"},
 			"include_entries": map[string]any{"type": "boolean"},
 			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.DetailedReport(ctx, args)
 		}},
-		{Tool: toolRO("clockify_resolve_name", "Resolve a project, client, tag, or user name/email to a Clockify ID. Prefer this before write tools when a user gives a name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_resolve_name", "Resolve a project, client, tag, user, or project-scoped task name/email to a Clockify ID. Prefer this before write tools when a user gives a name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ResolveName(ctx, args)
 		}},
 		{Tool: toolRO("clockify_resolve_debug", "Deprecated compatibility alias for clockify_resolve_name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -210,7 +230,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_policy_info", "Display effective policy configuration", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 			return s.PolicyInfo(ctx)
 		}},
-		{Tool: toolRO("clockify_list_tools", "Search/list the tool catalog by keyword. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.", map[string]any{"type": "object", "properties": map[string]any{
+		{Tool: toolRO("clockify_list_tools", "Search/list the tool catalog by query string. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.", map[string]any{"type": "object", "properties": map[string]any{
 			"query": map[string]any{"type": "string", "description": "Search query for tools or groups"},
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTools(ctx, args)

@@ -47,9 +47,10 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 }
 
 func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
-	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+	if projectID == "" && projectRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("project is required (or project_id)")
 	}
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -59,14 +60,19 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
-	if err != nil {
-		return ResultEnvelope{}, err
+	if projectID == "" {
+		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 
 	payload := map[string]any{"name": name}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
+	}
+	if boolArg(args, "dry_run") {
+		return ok("clockify_create_task", dryrunPreviewPayload("clockify_create_task", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "projects", projectID, "tasks")

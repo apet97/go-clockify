@@ -241,6 +241,9 @@ go run ./tests/load -scenario steady
 go run ./tests/load -scenario burst
 go run ./tests/load -scenario tenant-mix
 go run ./tests/load -scenario ratelimit-reap-correctness
+go run ./tests/load -scenario tenant-churn
+go run ./tests/load -scenario transport-fan-out
+go run ./tests/load -scenario upstream-slow
 ```
 
 Or via CI: `gh workflow run load.yml -f scenario=per-token-saturation`.
@@ -295,11 +298,56 @@ tune based on observed metrics (`clockify_mcp_rate_limit_rejections_total`):
 | **Large** (100-500 users) | `1200/min` | `256` | Multi-replica deployment recommended (e.g. 2-3 replicas). |
 | **Enterprise** (>500 users)| `2400/min` | `512` (Aggregate) | Scaling horizontally is mandatory. Limit each replica to `256` inflight. |
 
+For authenticated HTTP, streamable HTTP, and gRPC deployments,
+`CLOCKIFY_PER_TOKEN_RATE_LIMIT` is evaluated after the global
+`CLOCKIFY_RATE_LIMIT`. Size the global window so the per-token layer
+can actually isolate tenants: at minimum,
+`CLOCKIFY_RATE_LIMIT >= active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT`
+for the expected steady-state subject count. If the global default
+of `120/min` serves three subjects at the default `60/min` per subject,
+the global cap binds first and quiet subjects can see avoidable
+rejections before the noisy subject exhausts its own slice.
+
 `CLOCKIFY_RATE_LIMIT` should always be set with the upstream
 Clockify quota in mind — exceed it and the upstream will start
 returning `429`s, which the local rate limiter cannot prevent. See
 [`docs/runbooks/rate-limit-saturation.md`](runbooks/rate-limit-saturation.md)
 for the triage flow when this happens.
+
+### Report memory ceiling
+
+Report and timesheet tools can materialize many Clockify entries in
+memory before they aggregate totals, apply output truncation, and
+serialize the MCP response. Keep `CLOCKIFY_REPORT_MAX_ENTRIES`
+bounded for shared deployments; reserve `0` (unbounded) for one-off
+local debugging against a known small range.
+
+Use this sizing rule for owner-key, multi-workspace testing:
+
+```text
+peak_report_entry_heap ~= concurrent_report_calls
+  * min(CLOCKIFY_REPORT_MAX_ENTRIES, requested max_entries/server cap)
+  * average_decoded_entry_bytes
+```
+
+The decoded entry shape is workload-dependent, but budget roughly
+500-700 bytes per entry before aggregation maps, JSON encoding, and
+transport buffers. For example, 50 concurrent report calls capped at
+5,000 entries each can transiently hold about 125-175 MiB of decoded
+entry data before buckets and response serialization are counted.
+
+Operational guardrails:
+
+- Prefer `include_entries=false` for dashboards, health checks, and
+  summary workflows.
+- Keep `CLOCKIFY_REPORT_MAX_ENTRIES` lower on shared HTTP/gRPC
+  deployments than on local stdio debugging profiles.
+- Ask clients to narrow date ranges before raising the cap. A higher
+  cap increases memory pressure even when the final MCP response is
+  later truncated.
+- Treat report-cap errors as capacity signals, not as generic tool
+  failures: either narrow the query, disable raw entries, or resize the
+  deployment intentionally.
 
 ## What the envelope does NOT cover
 
@@ -307,10 +355,11 @@ for the triage flow when this happens.
   measure mean. Production tail latency is dominated by upstream
   Clockify behavior (especially during their own incidents) and
   network jitter. There is no SLO for tail latency in this document.
-- **Memory under sustained load.** The `tests/chaos/` package covers
-  panic-recovery memory growth under fault injection but not
-  long-running memory profile. If you suspect a leak, run
-  `pprof` against `/debug/pprof/heap` (build with `-tags=pprof`).
+- **Memory under sustained load.** The report sizing rule above covers
+  bounded entry materialization, and the `tests/chaos/` package covers
+  panic-recovery memory growth under fault injection, but neither is a
+  long-running heap profile. If you suspect a leak, run `pprof`
+  against `/debug/pprof/heap` (build with `-tags=pprof`).
 - **Cold-start latency.** Startup is dominated by Go runtime init
   and tool registration, both of which are O(constant) and do not
   scale with workload. Not measured here.

@@ -1,8 +1,10 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -179,6 +181,11 @@ func TestSwitchProjectNoRunningTimerOutcome(t *testing.T) {
 }
 
 func TestResolveDebugExactMatch(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/workspaces/ws1/projects":
@@ -215,6 +222,9 @@ func TestResolveDebugExactMatch(t *testing.T) {
 	if data["error"] != "" {
 		t.Fatalf("expected empty error, got %v", data["error"])
 	}
+	if got := logs.String(); !strings.Contains(got, "deprecated_tool_alias") || !strings.Contains(got, "clockify_resolve_name") {
+		t.Fatalf("expected deprecation warning with replacement, got %q", got)
+	}
 }
 
 func TestResolveNameAliasExactMatch(t *testing.T) {
@@ -250,6 +260,37 @@ func TestResolveNameAliasExactMatch(t *testing.T) {
 	}
 	if data["resolved_id"] != "p1" {
 		t.Fatalf("expected resolved_id=p1, got %v", data["resolved_id"])
+	}
+}
+
+func TestResolveNameTaskExactMatch(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/ws1/projects/p1/tasks":
+			respondJSON(t, w, []map[string]any{
+				{"id": "task1", "name": "Design"},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ResolveName(context.Background(), map[string]any{
+		"entity_type": "task",
+		"name_or_id":  "Design",
+		"project_id":  "p1",
+	})
+	if err != nil {
+		t.Fatalf("resolve task failed: %v", err)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	if data["status"] != "exact_match" || data["resolved_id"] != "task1" {
+		t.Fatalf("unexpected resolve data: %+v", data)
 	}
 }
 

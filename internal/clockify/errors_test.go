@@ -25,6 +25,23 @@ func TestAPIError_ErrorIncludesBody(t *testing.T) {
 	}
 }
 
+func TestAPIError_ErrorCompactsClockifyMessageCodeBody(t *testing.T) {
+	e := &APIError{
+		Method:     "POST",
+		Path:       "/workspaces/ws1/projects",
+		StatusCode: 400,
+		Status:     "400 Bad Request",
+		Body:       `{"message":"Project with this name already exists","code":501}`,
+	}
+	got := e.Error()
+	if !strings.Contains(got, "Project with this name already exists") || !strings.Contains(got, "upstream_code=501") {
+		t.Fatalf("compact error missing upstream message/code: %q", got)
+	}
+	if strings.Contains(got, "/workspaces/ws1/projects") {
+		t.Fatalf("compact upstream error should omit workspace path: %q", got)
+	}
+}
+
 // TestAPIError_SanitizedDropsBody locks in audit finding 9 fix: the
 // sanitized form keeps the verb/path/status (those are always safe to
 // surface) but omits Body, which can carry per-tenant identifiers.

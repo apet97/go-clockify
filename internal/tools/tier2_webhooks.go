@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"net/netip"
 	neturl "net/url"
@@ -84,7 +85,11 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs (default: current workspace ID)",
 					},
-					"name":    map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
+					"name": map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
+					"auth_token": map[string]any{
+						"type":        "string",
+						"description": "Optional HMAC signing secret for webhook delivery; sent upstream as authToken and never returned unmasked",
+					},
 					"dry_run": map[string]any{"type": "boolean", "description": "Validate and preview the webhook payload without creating it"},
 				},
 			}),
@@ -115,7 +120,11 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs",
 					},
-					"name":    map[string]any{"type": "string", "description": "New name for the webhook"},
+					"name": map[string]any{"type": "string", "description": "New name for the webhook"},
+					"auth_token": map[string]any{
+						"type":        "string",
+						"description": "Optional replacement HMAC signing secret; sent upstream as authToken and never returned unmasked",
+					},
 					"dry_run": map[string]any{"type": "boolean", "description": "Validate and preview the webhook update without applying it"},
 				},
 			}),
@@ -415,6 +424,9 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	for _, webhook := range envelope.Webhooks {
+		maskWebhookAuthToken(webhook)
+	}
 
 	return ok("clockify_list_webhooks", envelope.Webhooks, map[string]any{
 		"workspaceId":           wsID,
@@ -445,8 +457,32 @@ func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.Get(ctx, path, nil, &webhook); err != nil {
 		return ResultEnvelope{}, err
 	}
+	maskWebhookAuthToken(webhook)
 
 	return ok("clockify_get_webhook", webhook, map[string]any{"workspaceId": wsID}), nil
+}
+
+func maskWebhookAuthToken(webhook map[string]any) {
+	raw, ok := webhook["authToken"].(string)
+	if !ok || raw == "" {
+		return
+	}
+	if len(raw) <= 4 {
+		webhook["authToken"] = "********"
+		return
+	}
+	webhook["authToken"] = "********" + raw[len(raw)-4:]
+}
+
+func webhookDryRunPreview(tool string, payload map[string]any) map[string]any {
+	previewPayload := maps.Clone(payload)
+	maskWebhookAuthToken(previewPayload)
+	return map[string]any{
+		"dry_run": true,
+		"tool":    tool,
+		"payload": previewPayload,
+		"note":    "No changes were made.",
+	}
 }
 
 // CreateWebhook creates a new webhook with URL validation.
@@ -481,8 +517,11 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 		"triggerSource":     triggerSource,
 		"name":              name,
 	}
+	if authToken := stringArg(args, "auth_token"); authToken != "" {
+		payload["authToken"] = authToken
+	}
 	if dryrun.Enabled(args) {
-		return ok("clockify_create_webhook", dryrunPreviewPayload("clockify_create_webhook", payload), map[string]any{"workspaceId": wsID}), nil
+		return ok("clockify_create_webhook", webhookDryRunPreview("clockify_create_webhook", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "webhooks")
@@ -493,6 +532,7 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
+	maskWebhookAuthToken(result)
 
 	return ok("clockify_create_webhook", result, map[string]any{"workspaceId": wsID}), nil
 }
@@ -549,16 +589,22 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 		payload["name"] = name
 		changed = true
 	}
+	if authToken := stringArg(args, "auth_token"); authToken != "" {
+		payload["authToken"] = authToken
+		changed = true
+	}
 
 	if !changed {
-		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name) must be provided for update")
+		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name, auth_token) must be provided for update")
 	}
 	if dryrun.Enabled(args) {
+		current := maps.Clone(existing)
+		maskWebhookAuthToken(current)
 		return ok("clockify_update_webhook", map[string]any{
 			"dry_run": true,
 			"tool":    "clockify_update_webhook",
-			"current": existing,
-			"payload": payload,
+			"current": current,
+			"payload": webhookDryRunPreview("clockify_update_webhook", payload)["payload"],
 			"note":    "No changes were made.",
 		}, map[string]any{"workspaceId": wsID, "webhookId": webhookID}), nil
 	}
@@ -566,6 +612,7 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
+	maskWebhookAuthToken(result)
 
 	return ok("clockify_update_webhook", result, map[string]any{"workspaceId": wsID, "webhookId": webhookID}), nil
 }
@@ -591,6 +638,7 @@ func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (Resul
 		if err := s.Client.Get(ctx, webhookPath, nil, &webhook); err != nil {
 			return ResultEnvelope{}, err
 		}
+		maskWebhookAuthToken(webhook)
 		return ResultEnvelope{
 			OK:     true,
 			Action: "clockify_delete_webhook",

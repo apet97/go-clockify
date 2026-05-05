@@ -196,14 +196,14 @@ jobs:
             exit 1
           fi
           wrong_code="$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: Bearer smoke-test-token-1234567890" \
+            --oauth2-bearer "smoke-test-token-1234567890" \
             http://127.0.0.1:8092/metrics)"
           if [ "$wrong_code" != "401" ]; then
             echo "/metrics accepted main bearer (expected 401): $wrong_code"
             exit 1
           fi
           metrics="$(curl -sf \
-            -H "Authorization: Bearer smoke-test-metrics-token-1234567890" \
+            --oauth2-bearer "smoke-test-metrics-token-1234567890" \
             http://127.0.0.1:8092/metrics)"
           expected="clockify_mcp_build_info{version=\"${VERSION}\",commit=\"${COMMIT}\",build_date=\"${BUILD_DATE}\","
           printf '%s\n' "$metrics" | grep -F "$expected" >/dev/null || {

@@ -24,7 +24,6 @@ import (
 // will be masked. Case-insensitive, substring match.
 var DefaultSensitiveKeys = []string{
 	"authorization",
-	"auth",
 	"api_key",
 	"apikey",
 	"x-api-key",
@@ -36,8 +35,10 @@ var DefaultSensitiveKeys = []string{
 	"cookie",
 	"set-cookie",
 	"credential",
-	"session",
-	"csrf",
+	"session_token",
+	"session_id",
+	"session_secret",
+	"csrf_token",
 	"private_key",
 	"privatekey",
 	"client_secret",

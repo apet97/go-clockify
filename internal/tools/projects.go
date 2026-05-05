@@ -89,6 +89,9 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 	if isPublic, ok := args["is_public"].(bool); ok {
 		payload["isPublic"] = isPublic
 	}
+	if boolArg(args, "dry_run") {
+		return ok("clockify_create_project", dryrunPreviewPayload("clockify_create_project", payload), map[string]any{"workspaceId": wsID}), nil
+	}
 
 	path, err := paths.Workspace(wsID, "projects")
 	if err != nil {

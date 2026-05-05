@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -419,14 +418,12 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
 		// 4. Read and parse JSON-RPC request
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
+		req, tooLarge, err := decodeSingleRequest(r.Body)
+		if tooLarge {
 			writeJSONError(w, http.StatusRequestEntityTooLarge, "request too large")
 			return
 		}
-
-		var req Request
-		if err := json.Unmarshal(body, &req); err != nil {
+		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(Response{
 				JSONRPC: "2.0",

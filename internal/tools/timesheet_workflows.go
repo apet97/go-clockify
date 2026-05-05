@@ -136,7 +136,11 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 }
 
 func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	start, end, err := parseRange(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	start, end, err := parseRangeInLocation(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -447,7 +451,8 @@ func gapIssue(start, end time.Time) TimesheetIssue {
 }
 
 func (s *Service) findEntryOverlaps(ctx context.Context, start, end time.Time) ([]TimeEntryRef, string, error) {
-	agg, _, userID, err := s.aggregateEntriesRange(ctx, start, end, time.UTC, aggregateOptions{
+	lookbackStart := start.Add(-24 * time.Hour)
+	agg, _, userID, err := s.aggregateEntriesRange(ctx, lookbackStart, end, time.UTC, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: true,
 	})

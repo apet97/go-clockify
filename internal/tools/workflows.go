@@ -17,13 +17,17 @@ import (
 
 func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error) {
 	if dryrun.Enabled(args) {
-		return dryrun.Preview("clockify_log_time", args), nil
+		return ResultEnvelope{OK: true, Action: "clockify_log_time", Data: dryrun.Preview("clockify_log_time", args)}, nil
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	start, end, err := parseStartEnd(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return nil, err
+	}
+	start, end, err := parseStartEndInLocation(args, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +50,9 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
 	}
+	if tagIDs := stringSliceArg(args, "tag_ids"); len(tagIDs) > 0 {
+		payload["tagIds"] = tagIDs
+	}
 	if err := s.rejectEntryOverlap(ctx, start, end, args); err != nil {
 		return nil, err
 	}
@@ -61,7 +68,11 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 }
 
 func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (any, error) {
-	parsed, err := parseFindAndUpdateArgs(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := parseFindAndUpdateArgs(args, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -111,17 +122,9 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: entry, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID, "noop": true}), nil
 	}
 	if parsed.DryRun {
-		return dryrun.Preview("clockify_find_and_update_entry", args), nil
+		return ResultEnvelope{OK: true, Action: "clockify_find_and_update_entry", Data: dryrun.Preview("clockify_find_and_update_entry", args), Meta: map[string]any{"workspaceId": wsID}}, nil
 	}
-	payload := map[string]any{
-		"start":       entry.TimeInterval.Start,
-		"description": entry.Description,
-		"projectId":   entry.ProjectID,
-		"billable":    entry.Billable,
-	}
-	if entry.TimeInterval.End != "" {
-		payload["end"] = entry.TimeInterval.End
-	}
+	payload := timeEntryPutPayload(entry)
 	path, err := paths.Workspace(wsID, "time-entries", entry.ID)
 	if err != nil {
 		return nil, err
@@ -139,6 +142,21 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, fmt.Errorf("project is required")
 	}
 	description := stringArg(args, "description")
+	if dryrun.Enabled(args) {
+		wsID, err := s.ResolveWorkspaceID(ctx)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		payload := map[string]any{
+			"description": description,
+			"projectId":   projectID,
+		}
+		return ok("clockify_switch_project", dryrunPreviewPayload("clockify_switch_project", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+	}
 
 	// Stop the current timer; ignore "no running timer" errors.
 	var stoppedEntry any
@@ -157,7 +175,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	}
 
 	// Start a new timer with the given project.
-	startResult, startErr := s.StartTimer(ctx, "", projectRef, description)
+	startResult, startErr := s.StartTimerArgs(ctx, map[string]any{"project": projectRef, "description": description})
 	if startErr != nil {
 		return ResultEnvelope{}, fmt.Errorf("start timer: %w", startErr)
 	}
@@ -169,7 +187,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	}, startResult.Meta), nil
 }
 
-func parseFindAndUpdateArgs(args map[string]any) (findAndUpdateArgs, error) {
+func parseFindAndUpdateArgs(args map[string]any, loc *time.Location) (findAndUpdateArgs, error) {
 	out := findAndUpdateArgs{
 		DescriptionContains: stringArg(args, "description_contains"),
 		ExactDescription:    stringArg(args, "exact_description"),
@@ -201,7 +219,7 @@ func parseFindAndUpdateArgs(args map[string]any) (findAndUpdateArgs, error) {
 		{"start", &out.Start},
 		{"end", &out.End},
 	} {
-		normalized, err := normalizeFindAndUpdateDatetime(pair.label, *pair.dst)
+		normalized, err := normalizeFindAndUpdateDatetime(pair.label, *pair.dst, loc)
 		if err != nil {
 			return out, err
 		}
@@ -210,12 +228,15 @@ func parseFindAndUpdateArgs(args map[string]any) (findAndUpdateArgs, error) {
 	return out, nil
 }
 
-func normalizeFindAndUpdateDatetime(label, value string) (string, error) {
+func normalizeFindAndUpdateDatetime(label, value string, loc *time.Location) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return "", nil
 	}
-	parsed, err := timeparse.ParseDatetime(value, time.UTC)
+	if loc == nil {
+		loc = time.UTC
+	}
+	parsed, err := timeparse.ParseDatetime(value, loc)
 	if err != nil {
 		return "", fmt.Errorf("invalid %s: %w", label, err)
 	}

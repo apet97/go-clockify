@@ -138,18 +138,18 @@ func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {
 }
 
 func TestLogTimeCreatesFinishedEntry(t *testing.T) {
+	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/workspaces/ws1/time-entries":
 			if r.Method != http.MethodPost {
 				t.Fatalf("unexpected method: %s", r.Method)
 			}
-			var body map[string]any
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&postBody); err != nil {
 				t.Fatalf("decode body: %v", err)
 			}
-			if body["start"] != "2026-04-01T09:00:00Z" || body["end"] != "2026-04-01T10:30:00Z" {
-				t.Fatalf("unexpected body: %+v", body)
+			if postBody["start"] != "2026-04-01T09:00:00Z" || postBody["end"] != "2026-04-01T10:30:00Z" {
+				t.Fatalf("unexpected body: %+v", postBody)
 			}
 			respondJSON(t, w, clockify.TimeEntry{ID: "e1", Description: "Focus", ProjectID: "p1", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:30:00Z"}})
 		default:
@@ -164,6 +164,7 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 		"description":   "Focus",
 		"start":         "2026-04-01T09:00:00Z",
 		"end":           "2026-04-01T10:30:00Z",
+		"tag_ids":       []any{"tag1", "tag2"},
 		"billable":      true,
 		"allow_overlap": true,
 	})
@@ -181,6 +182,48 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 	if data.Entry.ID != "e1" {
 		t.Fatalf("unexpected entry: %+v", data.Entry)
 	}
+	tagIDs, ok := postBody["tagIds"].([]any)
+	if !ok || len(tagIDs) != 2 || tagIDs[0] != "tag1" || tagIDs[1] != "tag2" {
+		t.Fatalf("expected tagIds in log-time payload, got %#v", postBody["tagIds"])
+	}
+}
+
+func TestLogTimeUsesServiceDefaultTimezoneForFlexibleTimes(t *testing.T) {
+	var postBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/ws1/time-entries":
+			if r.Method != http.MethodPost {
+				t.Fatalf("unexpected method: %s", r.Method)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&postBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, clockify.TimeEntry{ID: "e1"})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	loc, err := time.LoadLocation("Europe/Belgrade")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	svc := New(client, "ws1")
+	svc.DefaultTimezone = loc
+	_, err = svc.LogTime(context.Background(), map[string]any{
+		"description":   "Focus",
+		"start":         "2026-04-01 09:00",
+		"end":           "2026-04-01 10:00",
+		"allow_overlap": true,
+	})
+	if err != nil {
+		t.Fatalf("log time failed: %v", err)
+	}
+	if postBody["start"] != "2026-04-01T07:00:00Z" || postBody["end"] != "2026-04-01T08:00:00Z" {
+		t.Fatalf("expected Europe/Belgrade local times to convert to UTC, got %+v", postBody)
+	}
 }
 
 func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
@@ -191,7 +234,7 @@ func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
 			q := r.URL.Query()
-			if q.Get("start") != "2026-04-01T09:00:00Z" || q.Get("end") != "2026-04-01T10:00:00Z" {
+			if q.Get("start") != "2026-03-31T09:00:00Z" || q.Get("end") != "2026-04-01T10:00:00Z" {
 				t.Fatalf("unexpected overlap scan query: %s", r.URL.RawQuery)
 			}
 			if q.Get("page") != "1" || q.Get("page-size") != "200" {
@@ -221,6 +264,7 @@ func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
 		"description": "Focus",
 		"start":       "2026-04-01 09:00",
 		"end":         "2026-04-01 10:00",
+		"timezone":    "UTC",
 	})
 	if err != nil {
 		t.Fatalf("log time failed: %v", err)
@@ -652,7 +696,13 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 				ID:          "abc123def456789012345678",
 				Description: "Old description",
 				ProjectID:   "p1",
-				Billable:    false,
+				TaskID:      "task1",
+				TagIDs:      []string{"tag1", "tag2"},
+				CustomFieldValues: []map[string]any{{
+					"customFieldId": "cf1",
+					"value":         "kept",
+				}},
+				Billable: false,
 				TimeInterval: clockify.TimeInterval{
 					Start: "2026-04-01T09:00:00Z",
 					End:   "2026-04-01T10:00:00Z",
@@ -702,6 +752,16 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	}
 	if gotPutBody["billable"] != true {
 		t.Fatalf("PUT should carry new billable=true, got %v", gotPutBody["billable"])
+	}
+	if gotPutBody["taskId"] != "task1" {
+		t.Fatalf("PUT should preserve taskId, got %v", gotPutBody["taskId"])
+	}
+	tagIDs, ok := gotPutBody["tagIds"].([]any)
+	if !ok || len(tagIDs) != 2 || tagIDs[0] != "tag1" || tagIDs[1] != "tag2" {
+		t.Fatalf("PUT should preserve tagIds, got %#v", gotPutBody["tagIds"])
+	}
+	if _, ok := gotPutBody["customFields"]; !ok {
+		t.Fatalf("PUT should preserve custom fields, got body %#v", gotPutBody)
 	}
 	// Verify changedFields in meta
 	changedFields, ok := result.Meta["changedFields"].([]string)
@@ -1069,7 +1129,7 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
 			respondJSON(t, w, []clockify.TimeEntry{
-				{ID: "e1", Description: "draft docs", ProjectID: "p1", ProjectName: "Docs", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}, Billable: false},
+				{ID: "e1", Description: "draft docs", ProjectID: "p1", ProjectName: "Docs", TaskID: "task1", TagIDs: []string{"tag1"}, TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}, Billable: false},
 			})
 		case r.URL.Path == "/workspaces/ws1/time-entries/e1" && r.Method == http.MethodPut:
 			putCalled = true
@@ -1125,6 +1185,202 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 	}
 	if gotPutBody["billable"] != true {
 		t.Fatalf("expected billable=true in PUT body, got %+v", gotPutBody)
+	}
+	if gotPutBody["taskId"] != "task1" {
+		t.Fatalf("PUT should preserve taskId, got %v", gotPutBody["taskId"])
+	}
+	findTagIDs, ok := gotPutBody["tagIds"].([]any)
+	if !ok || len(findTagIDs) != 1 || findTagIDs[0] != "tag1" {
+		t.Fatalf("PUT should preserve tagIds, got %#v", gotPutBody["tagIds"])
+	}
+}
+
+func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry-run should not call upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	cases := []struct {
+		name string
+		call func() (any, error)
+	}{
+		{
+			name: "clockify_log_time",
+			call: func() (any, error) {
+				return svc.LogTime(context.Background(), map[string]any{
+					"start":   "2026-04-01T09:00:00Z",
+					"end":     "2026-04-01T10:00:00Z",
+					"dry_run": true,
+				})
+			},
+		},
+		{
+			name: "clockify_stop_timer",
+			call: func() (any, error) {
+				return svc.StopTimer(context.Background(), map[string]any{"dry_run": true})
+			},
+		},
+		{
+			name: "clockify_start_timer",
+			call: func() (any, error) {
+				return svc.StartTimerArgs(context.Background(), map[string]any{
+					"project_id":  "123456789012345678901234",
+					"description": "planned timer",
+					"dry_run":     true,
+				})
+			},
+		},
+		{
+			name: "clockify_create_project",
+			call: func() (any, error) {
+				return svc.CreateProject(context.Background(), map[string]any{
+					"name":    "Dry project",
+					"dry_run": true,
+				})
+			},
+		},
+		{
+			name: "clockify_create_client",
+			call: func() (any, error) {
+				return svc.CreateClient(context.Background(), map[string]any{
+					"name":    "Dry client",
+					"dry_run": true,
+				})
+			},
+		},
+		{
+			name: "clockify_create_tag",
+			call: func() (any, error) {
+				return svc.CreateTag(context.Background(), map[string]any{
+					"name":    "Dry tag",
+					"dry_run": true,
+				})
+			},
+		},
+		{
+			name: "clockify_create_task",
+			call: func() (any, error) {
+				return svc.CreateTask(context.Background(), map[string]any{
+					"project_id": "123456789012345678901234",
+					"name":       "Dry task",
+					"dry_run":    true,
+				})
+			},
+		},
+		{
+			name: "clockify_switch_project",
+			call: func() (any, error) {
+				return svc.SwitchProject(context.Background(), map[string]any{
+					"project": "123456789012345678901234",
+					"dry_run": true,
+				})
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.call()
+			if err != nil {
+				t.Fatalf("dry-run: %v", err)
+			}
+			env, ok := got.(ResultEnvelope)
+			if !ok {
+				t.Fatalf("dry-run result type = %T, want ResultEnvelope", got)
+			}
+			if !env.OK || env.Action != tc.name {
+				t.Fatalf("dry-run envelope = %+v, want OK action %s", env, tc.name)
+			}
+		})
+	}
+}
+
+func TestFindEntryOverlapsPadsLookupWindow(t *testing.T) {
+	var gotStart string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			gotStart = r.URL.Query().Get("start")
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	start := time.Date(2026, 4, 2, 9, 0, 0, 0, time.UTC)
+	end := start.Add(time.Hour)
+	if _, _, err := svc.findEntryOverlaps(context.Background(), start, end); err != nil {
+		t.Fatalf("findEntryOverlaps: %v", err)
+	}
+	want := start.Add(-24 * time.Hour).Format(time.RFC3339)
+	if gotStart != want {
+		t.Fatalf("overlap lookup start = %q, want padded %q", gotStart, want)
+	}
+}
+
+func TestAggregateEntriesRangeRequestsHydratedEntries(t *testing.T) {
+	var gotHydrated string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			gotHydrated = r.URL.Query().Get("hydrated")
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, _, _, err := svc.aggregateEntriesRange(context.Background(), time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC), time.UTC, aggregateOptions{})
+	if err != nil {
+		t.Fatalf("aggregateEntriesRange: %v", err)
+	}
+	if gotHydrated != "true" {
+		t.Fatalf("hydrated query = %q, want true", gotHydrated)
+	}
+}
+
+func TestParseRangeSameBareDateEndMeansNextMidnight(t *testing.T) {
+	start, end, err := parseRange(map[string]any{
+		"start": "2026-05-04",
+		"end":   "2026-05-04",
+	})
+	if err != nil {
+		t.Fatalf("parseRange: %v", err)
+	}
+	if want := time.Date(2026, 5, 4, 0, 0, 0, 0, time.UTC); !start.Equal(want) {
+		t.Fatalf("start = %s, want %s", start, want)
+	}
+	if want := time.Date(2026, 5, 5, 0, 0, 0, 0, time.UTC); !end.Equal(want) {
+		t.Fatalf("end = %s, want %s", end, want)
+	}
+}
+
+func TestParseRangeInLocationUsesLocalBareDateBoundary(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Belgrade")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	start, end, err := parseRangeInLocation(map[string]any{
+		"start": "2026-05-04",
+		"end":   "2026-05-04",
+	}, loc)
+	if err != nil {
+		t.Fatalf("parseRangeInLocation: %v", err)
+	}
+	if want := time.Date(2026, 5, 3, 22, 0, 0, 0, time.UTC); !start.Equal(want) {
+		t.Fatalf("start = %s, want %s", start, want)
+	}
+	if want := time.Date(2026, 5, 4, 22, 0, 0, 0, time.UTC); !end.Equal(want) {
+		t.Fatalf("end = %s, want %s", end, want)
 	}
 }
 
@@ -1230,6 +1486,7 @@ func TestFindAndUpdateEntryAcceptsFlexibleDateFiltersAndUpdateTimes(t *testing.T
 		"start_before":      "2026-04-02",
 		"start":             "2026-04-01 10:00",
 		"end":               "2026-04-01 11:00",
+		"timezone":          "UTC",
 	})
 	if err != nil {
 		t.Fatalf("find and update failed: %v", err)

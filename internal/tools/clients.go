@@ -46,13 +46,17 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	payload := map[string]any{"name": name}
+	if boolArg(args, "dry_run") {
+		return ok("clockify_create_client", dryrunPreviewPayload("clockify_create_client", payload), map[string]any{"workspaceId": wsID}), nil
+	}
 	path, err := paths.Workspace(wsID, "clients")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
 	var client clockify.ClientEntity
-	if err := s.Client.Post(ctx, path, map[string]any{"name": name}, &client); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &client); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_client", client, map[string]any{"workspaceId": wsID}), nil

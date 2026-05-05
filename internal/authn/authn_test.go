@@ -25,7 +25,7 @@ import (
 // across every supported mode and rejects unknown modes / missing tokens.
 func TestNewDefaults(t *testing.T) {
 	t.Run("static_bearer_default_mode", func(t *testing.T) {
-		auth, err := New(Config{BearerToken: "abcdef0123456789"})
+		auth, err := New(Config{BearerToken: strings.Repeat("a", 16)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -928,6 +928,49 @@ func TestVerifyJWTRSARoundTrip(t *testing.T) {
 	// Unsupported key type.
 	if err := verifyJWT("RS256", "not-a-key", signed, sig); err == nil {
 		t.Fatal("expected unsupported key type error")
+	}
+}
+
+func TestVerifyJWTECDSARoundTrip(t *testing.T) {
+	cases := []struct {
+		name  string
+		alg   string
+		curve elliptic.Curve
+	}{
+		{"ES256", "ES256", elliptic.P256()},
+		{"ES384", "ES384", elliptic.P384()},
+		{"ES512", "ES512", elliptic.P521()},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			key, err := ecdsa.GenerateKey(tc.curve, rand.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			signed := "header.claims"
+			sum, _, err := hashForAlg(tc.alg, signed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, s, err := ecdsa.Sign(rand.Reader, key, sum)
+			if err != nil {
+				t.Fatal(err)
+			}
+			size := (key.Curve.Params().BitSize + 7) / 8
+			sig := make([]byte, 2*size)
+			r.FillBytes(sig[:size])
+			s.FillBytes(sig[size:])
+
+			if err := verifyJWT(tc.alg, &key.PublicKey, signed, sig); err != nil {
+				t.Fatalf("ECDSA verify: %v", err)
+			}
+			if err := verifyJWT(tc.alg, &key.PublicKey, signed+"-tamper", sig); err == nil {
+				t.Fatal("expected verify to fail on tampered payload")
+			}
+			if err := verifyJWT(tc.alg, &key.PublicKey, signed, sig[:len(sig)-1]); err == nil {
+				t.Fatal("expected verify to fail on short JOSE signature")
+			}
+		})
 	}
 }
 

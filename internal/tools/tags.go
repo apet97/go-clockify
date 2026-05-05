@@ -46,13 +46,17 @@ func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnv
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	payload := map[string]any{"name": name}
+	if boolArg(args, "dry_run") {
+		return ok("clockify_create_tag", dryrunPreviewPayload("clockify_create_tag", payload), map[string]any{"workspaceId": wsID}), nil
+	}
 	path, err := paths.Workspace(wsID, "tags")
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
 	var tag clockify.Tag
-	if err := s.Client.Post(ctx, path, map[string]any{"name": name}, &tag); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &tag); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_tag", tag, map[string]any{"workspaceId": wsID}), nil

@@ -110,9 +110,10 @@ var allProfilesSlice = []Profile{
 		Name:    "private-network-grpc",
 		Summary: "gRPC transport for private-network callers (requires -tags=grpc build); mTLS by default",
 		Env: map[string]string{
-			"MCP_TRANSPORT":        "grpc",
-			"MCP_AUTH_MODE":        "mtls",
-			"MCP_AUDIT_DURABILITY": "fail_closed",
+			"MCP_TRANSPORT":           "grpc",
+			"MCP_AUTH_MODE":           "mtls",
+			"MCP_AUDIT_DURABILITY":    "fail_closed",
+			"MCP_REQUIRE_MTLS_TENANT": "1",
 		},
 	},
 	{
