@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -35,11 +36,11 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		// 1. List user groups (admin)
 		{
 			Tool: toolRO("clockify_list_user_groups_admin",
-				"List user groups in the workspace (admin view)",
-				map[string]any{"type": "object"}),
+				"List user groups in the workspace (admin view) with pagination",
+				paginationSchema(nil)),
 			ReadOnlyHint: true, IdempotentHint: true,
-			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
-				return s.ListUserGroupsAdmin(ctx)
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.ListUserGroupsAdmin(ctx, args)
 			},
 		},
 		// 2. Get user group by ID
@@ -165,10 +166,15 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 // User Group Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListUserGroupsAdmin(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
 	}
 
 	path, err := paths.Workspace(wsID, "user-groups")
@@ -176,13 +182,14 @@ func (s *Service) ListUserGroupsAdmin(ctx context.Context) (ResultEnvelope, erro
 		return ResultEnvelope{}, err
 	}
 	var out []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_user_groups_admin", out, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_user_groups_admin", out, meta), nil
 }
 
 func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

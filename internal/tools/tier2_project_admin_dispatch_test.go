@@ -28,6 +28,10 @@ func newProjectAdminUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
+			q := r.URL.Query()
+			if q.Get("is-template") != "true" || q.Get("page") != "2" || q.Get("page-size") != "25" {
+				t.Fatalf("unexpected template-list query: %s", r.URL.RawQuery)
+			}
 			_, _ = w.Write([]byte(`[{"id":"tpl-1","name":"Standard","isTemplate":true}]`))
 		case http.MethodPost:
 			_, _ = w.Write([]byte(`{"id":"tpl-new","name":"Created","isTemplate":true}`))
@@ -101,7 +105,7 @@ func TestTier2Dispatch_ProjectAdmin_TemplatesListAndGet(t *testing.T) {
 	res := dispatchTier2(t, tier2InvokeOpts{
 		Group:    "project_admin",
 		Tool:     "clockify_list_project_templates",
-		Args:     map[string]any{},
+		Args:     map[string]any{"page": 2, "page_size": 25},
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeSuccess {

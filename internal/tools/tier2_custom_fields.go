@@ -183,15 +183,31 @@ func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "custom-fields", fieldID)
+	field, scanned, err := s.findCustomFieldByID(ctx, wsID, fieldID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var out map[string]any
-	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+	return ok("clockify_get_custom_field", field, map[string]any{
+		"workspaceId": wsID,
+		"scanned":     scanned,
+	}), nil
+}
+
+func (s *Service) findCustomFieldByID(ctx context.Context, wsID, fieldID string) (map[string]any, int, error) {
+	path, err := paths.Workspace(wsID, "custom-fields")
+	if err != nil {
+		return nil, 0, err
 	}
-	return ok("clockify_get_custom_field", out, map[string]any{"workspaceId": wsID}), nil
+	var fields []map[string]any
+	if err := s.Client.Get(ctx, path, nil, &fields); err != nil {
+		return nil, 0, err
+	}
+	for _, field := range fields {
+		if id, _ := field["id"].(string); id == fieldID {
+			return field, len(fields), nil
+		}
+	}
+	return nil, len(fields), fmt.Errorf("custom field %s not found", fieldID)
 }
 
 // validCustomFieldTypes lists the upstream-accepted enum for the
@@ -299,9 +315,8 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 	}
 
 	if dryrun.Enabled(args) {
-		// Preview: fetch the field then wrap as dry-run result
-		var field map[string]any
-		if err := s.Client.Get(ctx, fieldPath, nil, &field); err != nil {
+		field, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
+		if err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{

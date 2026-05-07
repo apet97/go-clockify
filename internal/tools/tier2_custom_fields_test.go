@@ -15,7 +15,7 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/custom-fields":
 			respondJSON(t, w, []map[string]any{{"id": "f1", "name": "Region"}})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
-			respondJSON(t, w, map[string]any{"id": "f1", "name": "Region", "type": "DROPDOWN_SINGLE"})
+			t.Fatalf("single custom-field GET must not be used; live Clockify returns 405 for this path")
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/custom-fields":
 			respondJSON(t, w, map[string]any{"id": "f-new", "name": "Priority"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":

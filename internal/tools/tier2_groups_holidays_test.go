@@ -59,7 +59,7 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	ctx := context.Background()
 
 	// User groups
-	res, err := svc.ListUserGroupsAdmin(ctx)
+	res, err := svc.ListUserGroupsAdmin(ctx, map[string]any{})
 	mustOK(t, res, err, "clockify_list_user_groups_admin")
 
 	res, err = svc.GetUserGroup(ctx, map[string]any{"group_id": "g1"})

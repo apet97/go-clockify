@@ -135,7 +135,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_delete_user_group_admin` | no | yes | no | yes | `destructive` | Delete a user group by ID (supports dry_run preview) |
 | `clockify_get_user_group` | yes | no | yes | no | `read` | Get a user group by ID |
 | `clockify_list_holidays` | yes | no | yes | no | `read` | List holidays configured in the workspace |
-| `clockify_list_user_groups_admin` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) |
+| `clockify_list_user_groups_admin` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_update_user_group_admin` | no | no | no | no | `write` | Update an existing user group by ID |
 
 ### `invoices`
@@ -162,7 +162,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_archive_projects` | no | no | no | no | `write` | Archive multiple projects by setting them to archived state |
 | `clockify_create_project_template` | no | no | no | no | `write` | Create a new project template |
 | `clockify_get_project_template` | yes | no | yes | no | `read` | Get a project template by ID |
-| `clockify_list_project_templates` | yes | no | yes | no | `read` | List project templates in the workspace |
+| `clockify_list_project_templates` | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_set_project_memberships` | no | no | no | no | `write` | Set project memberships with optional hourly rates |
 | `clockify_update_project_estimate` | no | no | no | no | `write` | Update a project's estimate (TIME or BUDGET) |
 

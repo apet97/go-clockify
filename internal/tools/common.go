@@ -222,9 +222,22 @@ type LogTimeData struct {
 }
 
 type FindAndUpdateEntryData struct {
-	Entry         clockify.TimeEntry `json:"entry"`
-	MatchedBy     map[string]any     `json:"matchedBy"`
-	UpdatedFields []string           `json:"updatedFields"`
+	Entry          clockify.TimeEntry      `json:"entry"`
+	MatchedBy      map[string]any          `json:"matchedBy"`
+	UpdatedFields  []string                `json:"updatedFields"`
+	MatchedEntryID string                  `json:"matched_entry_id,omitempty"`
+	Current        *TimeEntryUpdatePreview `json:"current,omitempty"`
+	Proposed       map[string]any          `json:"proposed_changes,omitempty"`
+	DryRun         bool                    `json:"dry_run,omitempty"`
+	Note           string                  `json:"note,omitempty"`
+}
+
+type TimeEntryUpdatePreview struct {
+	Description string `json:"description"`
+	ProjectID   string `json:"project_id,omitempty"`
+	Start       string `json:"start,omitempty"`
+	End         string `json:"end,omitempty"`
+	Billable    bool   `json:"billable"`
 }
 
 type DateRange struct {

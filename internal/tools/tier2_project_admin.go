@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
@@ -31,11 +32,11 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		// 1. List project templates
 		{
 			Tool: toolRO("clockify_list_project_templates",
-				"List project templates in the workspace",
-				map[string]any{"type": "object"}),
+				"List project templates in the workspace with pagination",
+				paginationSchema(nil)),
 			ReadOnlyHint: true, IdempotentHint: true,
-			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
-				return s.ListProjectTemplates(ctx)
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.ListProjectTemplates(ctx, args)
 			},
 		},
 		// 2. Get project template by ID
@@ -127,13 +128,18 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 // Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListProjectTemplates(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	query := map[string]string{"is-template": "true"}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"is-template": "true",
+		"page":        strconv.Itoa(page),
+		"page-size":   strconv.Itoa(pageSize),
+	}
 	path, err := paths.Workspace(wsID, "projects")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -142,10 +148,11 @@ func (s *Service) ListProjectTemplates(ctx context.Context) (ResultEnvelope, err
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_project_templates", out, map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
-	}), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_project_templates", out, meta), nil
 }
 
 func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

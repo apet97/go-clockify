@@ -16,9 +16,6 @@ import (
 )
 
 func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error) {
-	if dryrun.Enabled(args) {
-		return ResultEnvelope{OK: true, Action: "clockify_log_time", Data: dryrun.Preview("clockify_log_time", args)}, nil
-	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return nil, err
@@ -53,8 +50,34 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	if tagIDs := stringSliceArg(args, "tag_ids"); len(tagIDs) > 0 {
 		payload["tagIds"] = tagIDs
 	}
-	if err := s.rejectEntryOverlap(ctx, start, end, args); err != nil {
-		return nil, err
+
+	var overlaps []TimeEntryRef
+	var userID string
+	if !boolArg(args, "allow_overlap") {
+		overlaps, userID, err = s.findEntryOverlaps(ctx, start, end)
+		if err != nil {
+			return nil, err
+		}
+		if len(overlaps) > 0 {
+			if dryrun.Enabled(args) {
+				preview := dryrunPreviewPayload("clockify_log_time", payload)
+				preview["blocked"] = true
+				preview["warning"] = fmt.Sprintf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
+				preview["overlaps"] = overlaps
+				preview["validated"] = true
+				return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
+			}
+			return nil, fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
+		}
+	}
+	if dryrun.Enabled(args) {
+		preview := dryrunPreviewPayload("clockify_log_time", payload)
+		preview["blocked"] = false
+		preview["validated"] = true
+		if len(overlaps) > 0 {
+			preview["overlaps"] = overlaps
+		}
+		return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
 	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -65,6 +88,17 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 		return nil, err
 	}
 	return ok("clockify_log_time", LogTimeData{Entry: out, ResolvedProject: projectID}, map[string]any{"workspaceId": wsID}), nil
+}
+
+func logTimePreviewMeta(wsID, userID, projectID string) map[string]any {
+	meta := map[string]any{"workspaceId": wsID}
+	if userID != "" {
+		meta["userId"] = userID
+	}
+	if projectID != "" {
+		meta["projectId"] = projectID
+	}
+	return meta
 }
 
 func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (any, error) {
@@ -84,6 +118,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return nil, err
 	}
+	current := entry
 	updatedFields := make([]string, 0, 4)
 	if parsed.NewDescription != "" && parsed.NewDescription != entry.Description {
 		entry.Description = parsed.NewDescription
@@ -118,11 +153,20 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		entry.Billable = *parsed.Billable
 		updatedFields = append(updatedFields, "billable")
 	}
+	if parsed.DryRun {
+		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{
+			Entry:          entry,
+			MatchedBy:      matchedBy,
+			UpdatedFields:  updatedFields,
+			MatchedEntryID: current.ID,
+			Current:        timeEntryUpdatePreview(current),
+			Proposed:       proposedEntryChanges(entry, updatedFields),
+			DryRun:         true,
+			Note:           "No changes were made.",
+		}, map[string]any{"workspaceId": wsID, "noop": len(updatedFields) == 0}), nil
+	}
 	if len(updatedFields) == 0 {
 		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: entry, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID, "noop": true}), nil
-	}
-	if parsed.DryRun {
-		return ResultEnvelope{OK: true, Action: "clockify_find_and_update_entry", Data: dryrun.Preview("clockify_find_and_update_entry", args), Meta: map[string]any{"workspaceId": wsID}}, nil
 	}
 	payload := timeEntryPutPayload(entry)
 	path, err := paths.Workspace(wsID, "time-entries", entry.ID)
@@ -134,6 +178,35 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		return nil, err
 	}
 	return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: out, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID}), nil
+}
+
+func timeEntryUpdatePreview(entry clockify.TimeEntry) *TimeEntryUpdatePreview {
+	return &TimeEntryUpdatePreview{
+		Description: entry.Description,
+		ProjectID:   entry.ProjectID,
+		Start:       entry.TimeInterval.Start,
+		End:         entry.TimeInterval.End,
+		Billable:    entry.Billable,
+	}
+}
+
+func proposedEntryChanges(entry clockify.TimeEntry, fields []string) map[string]any {
+	out := make(map[string]any, len(fields))
+	for _, field := range fields {
+		switch field {
+		case "description":
+			out["description"] = entry.Description
+		case "projectId":
+			out["project_id"] = entry.ProjectID
+		case "start":
+			out["start"] = entry.TimeInterval.Start
+		case "end":
+			out["end"] = entry.TimeInterval.End
+		case "billable":
+			out["billable"] = entry.Billable
+		}
+	}
+	return out
 }
 
 func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

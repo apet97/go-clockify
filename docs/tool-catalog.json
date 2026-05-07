@@ -1241,6 +1241,34 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "current": {
+                "additionalProperties": false,
+                "properties": {
+                  "billable": {
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "description",
+                  "billable"
+                ],
+                "type": "object"
+              },
+              "dry_run": {
+                "type": "boolean"
+              },
               "entry": {
                 "additionalProperties": false,
                 "properties": {
@@ -1314,6 +1342,16 @@
                 "type": "object"
               },
               "matchedBy": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "matched_entry_id": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "proposed_changes": {
                 "additionalProperties": {},
                 "type": "object"
               },
@@ -6803,7 +6841,7 @@
     },
     {
       "name": "clockify_list_user_groups_admin",
-      "description": "List user groups in the workspace (admin view)",
+      "description": "List user groups in the workspace (admin view) with pagination",
       "group": "groups_holidays",
       "tier": 2,
       "read_only": true,
@@ -6815,6 +6853,19 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50, max 200)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "output_schema": {
@@ -7945,7 +7996,7 @@
     },
     {
       "name": "clockify_list_project_templates",
-      "description": "List project templates in the workspace",
+      "description": "List project templates in the workspace with pagination",
       "group": "project_admin",
       "tier": 2,
       "read_only": true,
@@ -7957,6 +8008,19 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50, max 200)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "output_schema": {
