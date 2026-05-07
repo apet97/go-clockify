@@ -39,6 +39,22 @@ create projects, clients, tags, or tasks. Use `standard` and `full` only
 when the specific delete, billing, admin, or Tier 2 behaviour is the
 thing being tested.
 
+### Cleanup Under `time_tracking_safe`
+
+`time_tracking_safe` allows normal time-entry creation and updates but
+intentionally blocks destructive cleanup tools such as
+`clockify_delete_entry`. For safe-mode dogfood tests that create real
+entries, plan one of these cleanup paths before the run starts:
+
+- temporarily switch the same sacrificial workspace to `standard` only
+  for cleanup, then switch back to `time_tracking_safe`;
+- delete the temporary entries in the Clockify UI;
+- use dry-run-only tests when cleanup cannot be guaranteed.
+
+Do not relax the default policy just to make cleanup convenient. The
+safe-mode deny is the expected policy behaviour; the cleanup path is a
+test-harness responsibility.
+
 ## Guards That Should Stay On
 
 Keep these enabled unless the test explicitly needs to prove the escape

@@ -564,8 +564,11 @@ func TestSearchToolsActivateToolEnumeratesGroup(t *testing.T) {
 			t.Errorf("activation_message %q should not duplicate activated_tools entry %q", msg, sibling)
 		}
 	}
-	if !strings.Contains(msg, `group "invoices"`) {
+	if !strings.Contains(msg, "group invoices") {
 		t.Errorf("activation_message %q should identify the activated group", msg)
+	}
+	if strings.Contains(msg, `"`) {
+		t.Errorf("activation_message %q should avoid quoted identifiers; clients also get structured group/tool fields", msg)
 	}
 	if data["total_visible_tools"] != 48 || !strings.Contains(msg, "48 total visible tools") {
 		t.Errorf("activation response should include session total, got data=%+v message=%q", data, msg)
@@ -607,6 +610,25 @@ func TestSearchToolsActivateGroupEnumerates(t *testing.T) {
 	}
 	if data["total_visible_tools"] != 39 || !strings.Contains(msg, "39 total visible tools") {
 		t.Errorf("activation response should include session total, got data=%+v message=%q", data, msg)
+	}
+	if strings.Contains(msg, `"`) {
+		t.Errorf("activation_message %q should avoid quoted identifiers; clients also get structured group/tool fields", msg)
+	}
+}
+
+func TestDeactivationMessageAvoidsQuotedIdentifiers(t *testing.T) {
+	msg := deactivationMessage(DeactivationResult{
+		Kind:              "group",
+		Name:              "expenses",
+		Group:             "expenses",
+		ToolCount:         10,
+		TotalVisibleTools: 40,
+	})
+	if !strings.Contains(msg, "Deactivated group expenses") {
+		t.Fatalf("deactivation message should identify group without quotes, got %q", msg)
+	}
+	if strings.Contains(msg, `"`) {
+		t.Fatalf("deactivation message should avoid quoted identifiers, got %q", msg)
 	}
 }
 

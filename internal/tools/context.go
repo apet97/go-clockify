@@ -395,20 +395,20 @@ func activationPayload(result ActivationResult, message string) map[string]any {
 func activationMessage(result ActivationResult) string {
 	if result.Group != "" && result.Kind == "group" {
 		if result.TotalVisibleTools > 0 {
-			return fmt.Sprintf("Activated group %q (%d tools in group; %d total visible tools)", result.Group, result.ToolCount, result.TotalVisibleTools)
+			return fmt.Sprintf("Activated group %s (%d tools in group; %d total visible tools)", result.Group, result.ToolCount, result.TotalVisibleTools)
 		}
-		return fmt.Sprintf("Activated group %q (%d tools in group)", result.Group, result.ToolCount)
+		return fmt.Sprintf("Activated group %s (%d tools in group)", result.Group, result.ToolCount)
 	}
 	if result.Group != "" {
 		if result.TotalVisibleTools > 0 {
-			return fmt.Sprintf("Activated tool %q via group %q (%d tools in group; %d total visible tools)", result.Name, result.Group, result.ToolCount, result.TotalVisibleTools)
+			return fmt.Sprintf("Activated tool %s via group %s (%d tools in group; %d total visible tools)", result.Name, result.Group, result.ToolCount, result.TotalVisibleTools)
 		}
-		return fmt.Sprintf("Activated tool %q via group %q (%d tools in group)", result.Name, result.Group, result.ToolCount)
+		return fmt.Sprintf("Activated tool %s via group %s (%d tools in group)", result.Name, result.Group, result.ToolCount)
 	}
 	if result.TotalVisibleTools > 0 {
-		return fmt.Sprintf("Activated tool %q (%d total visible tools)", result.Name, result.TotalVisibleTools)
+		return fmt.Sprintf("Activated tool %s (%d total visible tools)", result.Name, result.TotalVisibleTools)
 	}
-	return fmt.Sprintf("Activated tool %q", result.Name)
+	return fmt.Sprintf("Activated tool %s", result.Name)
 }
 
 func deactivationPayload(result DeactivationResult, message string) map[string]any {
@@ -432,9 +432,9 @@ func deactivationPayload(result DeactivationResult, message string) map[string]a
 
 func deactivationMessage(result DeactivationResult) string {
 	if result.TotalVisibleTools > 0 {
-		return fmt.Sprintf("Deactivated group %q (%d tools removed; %d total visible tools)", result.Group, result.ToolCount, result.TotalVisibleTools)
+		return fmt.Sprintf("Deactivated group %s (%d tools removed; %d total visible tools)", result.Group, result.ToolCount, result.TotalVisibleTools)
 	}
-	return fmt.Sprintf("Deactivated group %q (%d tools removed)", result.Group, result.ToolCount)
+	return fmt.Sprintf("Deactivated group %s (%d tools removed)", result.Group, result.ToolCount)
 }
 
 func containsKeyword(keywords []string, query string) bool {

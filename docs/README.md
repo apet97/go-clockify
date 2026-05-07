@@ -39,6 +39,9 @@ live one section down under [Deployment Profiles](#deployment-profiles).
 - [clients.md](clients.md) — MCP client compatibility matrix.
 - [internal-test-posture.md](internal-test-posture.md) — local
   owner-key testing guardrails and policy choices.
+- [testing/standard-http-dogfood-2026-05-07.md](testing/standard-http-dogfood-2026-05-07.md)
+  — internal `standard` policy single-tenant HTTP dogfood evidence
+  from 2026-05-07; not launch-candidate evidence.
 - [support-matrix.md](support-matrix.md) — what we support, in what
   combination, on which OS.
 
