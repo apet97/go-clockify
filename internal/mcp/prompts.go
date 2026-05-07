@@ -151,7 +151,7 @@ func builtinPrompts() []Prompt {
 				{Name: "lookback_days", Description: "How many days of history to scan. Default 14.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for the last {{lookback_days}} days, defaulting to 14 if that argument is absent. Inspect overlap issues and relatedEntryIds, then describe each suspected duplicate pair. Do not delete anything."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` with explicit `start` and `end` covering the requested lookback window. If `lookback_days` is absent, use the last 14 days. Inspect overlap issues and relatedEntryIds, then describe each suspected duplicate pair. Do not delete anything."}},
 			},
 		},
 		{

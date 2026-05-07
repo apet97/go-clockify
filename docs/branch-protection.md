@@ -124,7 +124,9 @@ required-checks list on `main`, as reported by
   consecutive green runs on `main`
   (25240007056, 25240085916, 25240163213 on 2026-05-02).
 - `Build, scan, sign` — the container image builds, Trivy passes on
-  HIGH/CRITICAL, cosign signs, SBOM and SLSA attest.
+  HIGH/CRITICAL, cosign signs, and SBOM attestation succeeds. SLSA
+  provenance is best-effort while GitHub artifact attestations are
+  unavailable for this user-owned private repository.
 - `Lychee` — external Markdown link check across the repo.
 - `Build -tags=grpc` — Wave K compile-only cell for the gRPC
   transport.

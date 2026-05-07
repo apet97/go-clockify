@@ -47,7 +47,7 @@ func ConfigFromEnv() (Config, error) {
 	}
 
 	if v := os.Getenv("CLOCKIFY_DEDUPE_MODE"); v != "" {
-		switch strings.ToLower(v) {
+		switch strings.ToLower(strings.TrimSpace(v)) {
 		case "warn":
 			cfg.Mode = Warn
 		case "block":
@@ -60,7 +60,7 @@ func ConfigFromEnv() (Config, error) {
 	}
 
 	if v := os.Getenv("CLOCKIFY_DEDUPE_LOOKBACK"); v != "" {
-		n, err := strconv.Atoi(v)
+		n, err := strconv.Atoi(strings.TrimSpace(v))
 		if err != nil {
 			return cfg, fmt.Errorf("invalid CLOCKIFY_DEDUPE_LOOKBACK: %w", err)
 		}
@@ -71,7 +71,7 @@ func ConfigFromEnv() (Config, error) {
 	}
 
 	if v := os.Getenv("CLOCKIFY_OVERLAP_CHECK"); v != "" {
-		switch strings.ToLower(v) {
+		switch strings.ToLower(strings.TrimSpace(v)) {
 		case "true", "1", "warn":
 			cfg.OverlapCheck = true
 		case "false", "0", "off":

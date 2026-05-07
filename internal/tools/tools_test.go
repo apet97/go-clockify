@@ -1524,7 +1524,7 @@ func TestFindAndUpdateEntryPushesDescriptionFilter(t *testing.T) {
 		{
 			name: "description_contains",
 			args: map[string]any{
-				"description_contains": "draft docs",
+				"description_contains": " draft docs ",
 				"new_description":      "Write docs",
 			},
 			wantQuery:   "draft docs",

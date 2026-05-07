@@ -23,24 +23,24 @@ from `git log` and inline code comments.
 | 0010 | Metrics stack direction (proposed) | [0010-metrics-stack-direction.md](0010-metrics-stack-direction.md) |
 | 0011 | Control-plane schema versioning | [0011-controlplane-schema-versioning.md](0011-controlplane-schema-versioning.md) |
 | 0012 | Backward-compatibility policy | [0012-backward-compatibility-policy.md](0012-backward-compatibility-policy.md) |
-| 0013 | Private-repo SLSA posture (superseded) | [0013-private-repo-slsa-posture.md](0013-private-repo-slsa-posture.md) |
+| 0013 | Private-repo SLSA posture | [0013-private-repo-slsa-posture.md](0013-private-repo-slsa-posture.md) |
 | 0014 | Production fail-closed defaults | [0014-prod-fail-closed-defaults.md](0014-prod-fail-closed-defaults.md) |
 | 0015 | Profile-centric configuration model | [0015-profile-centric-configuration.md](0015-profile-centric-configuration.md) |
 | 0016 | Single-maintainer governance reality | [0016-single-maintainer-governance.md](0016-single-maintainer-governance.md) |
 | 0017 | Streamable-HTTP session rehydration (proposed) | [0017-streamable-http-session-rehydration.md](0017-streamable-http-session-rehydration.md) |
 | 0018 | Risk-class enforcement and confirmation tokens (proposed) | [0018-risk-class-confirmation-tokens.md](0018-risk-class-confirmation-tokens.md) |
 
-ADRs 0001–0009, 0011, 0012, 0014, 0015, and 0016 are **Accepted**.
+ADRs 0001–0009 and 0011–0016 are **Accepted**.
 0010, 0017, and 0018 are **Proposed** — 0010 captures the design
 surface around whether to keep the homegrown metrics facade or move
 to OpenTelemetry metrics; 0017 records the cross-pod
 session-rehydration follow-up to the Wave 2026-04-28 ClientIP-affinity
 band-aid; 0018 records the risk-class-driven enforcement +
 confirmation-token follow-up that needs an MCP-client-coordinated
-token-format decision before it can land. 0013 is **Superseded
-2026-04-22** when the repository flipped to public — the skip path
-and `continue-on-error` treatments it codified are gone, but the
-ADR stays in the tree as the historical record.
+token-format decision before it can land. 0013 is active again as
+of 2026-05-07 because GitHub artifact attestations remain
+unavailable for this user-owned private repository; its skip path
+applies only to that platform gate.
 
 New ADRs should follow the MADR 3.0 template (status / context /
 decision / consequences / alternatives / references) used by the

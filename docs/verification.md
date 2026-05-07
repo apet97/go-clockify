@@ -66,21 +66,16 @@ attestation has not yet propagated through GitHub's storage (this is
 eventually consistent — retry in 10 minutes for a freshly published
 release).
 
-> **Note — historical context for v1.0.x verification.** Before
-> 2026-04-22 the repository was user-owned-private, the GitHub
-> attestation service was not active for that account tier, and
-> `gh attestation verify` returned "Feature not available for
-> user-owned private repositories" (HTTP 404). `release.yml`'s
-> `actions/attest-build-provenance` step ran with
-> `continue-on-error: true`, no attestation was produced, and the
-> release-smoke workflow treated this as **skipped**
-> (surfaced as a `::notice::`); the two mandatory cosign checks
-> below were the gate during that window. After the public flip
-> on 2026-04-22 the attestation step became a mandatory gate
-> (no `continue-on-error`) and every release since carries an
-> attestation. Operators verifying a v1.0.x binary may still hit
-> the legacy 404; verifying anything from `v1.1.0` onward should
-> succeed. See
+> **Note — user-owned private repository limitation.** GitHub
+> artifact attestations may return "Feature not available for
+> user-owned private repositories" (HTTP 404) for this repository's
+> current account tier. In that case `release.yml`'s
+> `actions/attest-build-provenance` step is allowed to continue,
+> release-smoke reports the SLSA check as **skipped**
+> (surfaced as a `::notice::`), and the mandatory cosign binary and
+> image checks remain the cryptographic gate. If GitHub enables
+> attestations for this repository, the same verification command
+> succeeds and no skip path is used. See
 > [`docs/adr/0013-private-repo-slsa-posture.md`](adr/0013-private-repo-slsa-posture.md)
 > for the rationale and the post-flip upgrade.
 

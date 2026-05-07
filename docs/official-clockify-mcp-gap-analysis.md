@@ -29,7 +29,7 @@ The repo cleared this bar at v1.0.0 and has stayed there:
 
 - Stable v1 wire format, tool names, and env-var surface.
 - Three transports (stdio, streamable HTTP, opt-in gRPC).
-- Four policy modes with a load-time guard against misuse.
+- Five policy modes with a load-time guard against misuse.
 - Signed releases (cosign + SLSA), SBOMs, FIPS variant,
   reproducibility workflow.
 - Cross-transport parity matrix (`tests/parity_test.go` and

@@ -86,9 +86,9 @@ func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 		},
 		{
 			name:        "find-duplicate-entries",
-			args:        map[string]any{"lookback_days": 14},
+			args:        map[string]any{},
 			want:        []string{"clockify_timesheet_review", "overlap issues"},
-			notWant:     []string{"clockify_list_entries"},
+			notWant:     []string{"clockify_list_entries", "{{lookback_days}}"},
 			description: "duplicate scan should use review issues instead of manual entry loops",
 		},
 	}

@@ -71,6 +71,10 @@ in addition to logging time:
 | Tier 2 tools (invoices, admin, …) | ❌ | ❌ | ❌ | On-demand |
 | Recommended for | Read-only dashboards, dev clusters | **Untrusted AI agents** | Trusted shared-service agents | Local development, power users |
 
+`full` is intentionally omitted from recommended production defaults:
+it preloads the full tool surface, including Tier 2 tools, and is for
+explicit admin automation only.
+
 `time_tracking_safe` is the recommended default for any deployment
 that exposes the MCP surface to an LLM agent the operator cannot
 fully audit. It is the strictest mode that still lets the agent

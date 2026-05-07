@@ -107,7 +107,9 @@ admitted that hostname.
 ### Resource Templates
 The server exposes `clockify://` URI templates.
 - Clients should use `resources/templates/list` to discover these.
-- When a user asks for "my current timer," the client should resolve the template to a concrete URI and fetch it via `resources/read`.
+- When a user asks for "my current timer," call
+  `clockify_timer_status`; the resource templates cover workspace,
+  user, project, entry, group, and weekly-report state.
 
 ### Session Rehydration Boundaries
 The streamable-HTTP transport (MCP 2025-03-26) supports cross-pod session rehydration: when a request lands on a replica that did not run the original `initialize`, the server reads the persisted session from the shared control-plane store and rebuilds the per-tenant runtime in-place. From the client's perspective this is invisible — `tools/call`, `resources/read`, etc. all succeed without the client having to retry or re-initialize. See [`docs/adr/0017-streamable-http-session-rehydration.md`](adr/0017-streamable-http-session-rehydration.md) for the design.

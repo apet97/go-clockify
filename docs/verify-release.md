@@ -97,7 +97,11 @@ The output ends with `Verification succeeded!`. A non-zero exit
 means either the binary was tampered with or the attestation has
 not yet propagated through the GitHub attestation service
 (eventually-consistent — retry in 10 minutes for a freshly
-published release).
+published release). On the current user-owned private repository,
+GitHub may also return "Feature not available for user-owned private
+repositories"; in that case SLSA provenance is unavailable at this
+account tier and the mandatory cryptographic gate is the cosign
+binary/image signature chain.
 
 ## 4. Inspect and scan the SBOM
 

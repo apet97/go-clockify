@@ -66,9 +66,9 @@ first when the visible tool list is smaller than expected.
 3. Resolve the Clockify client ID:
    `clockify_resolve_name { "entity_type": "client", "name_or_id": "Acme" }`
 4. Ask the user to confirm invoice number, dates, currency, amount, and
-   line-item wording; `clockify_create_invoice` creates a real draft and
-   does not have `dry_run`.
-5. Create the confirmed invoice draft:
+   line-item wording; preview the draft first:
+   `clockify_create_invoice { "client_id": "client123", "number": "INV-2026-04", "issued_date": "2026-05-01T00:00:00Z", "due_date": "2026-05-15T00:00:00Z", "currency": "USD", "dry_run": true }`
+5. Create the confirmed invoice draft without `dry_run`:
    `clockify_create_invoice { "client_id": "client123", "number": "INV-2026-04", "issued_date": "2026-05-01T00:00:00Z", "due_date": "2026-05-15T00:00:00Z", "currency": "USD" }`
 6. Before delivery, preview the send side effect:
    `clockify_send_invoice { "invoice_id": "invoice123", "dry_run": true }`

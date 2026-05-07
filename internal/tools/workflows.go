@@ -434,8 +434,11 @@ func entryMatchesFindArgs(entry clockify.TimeEntry, args findAndUpdateArgs) bool
 	if args.ExactDescription != "" && !strings.EqualFold(strings.TrimSpace(entry.Description), strings.TrimSpace(args.ExactDescription)) {
 		return false
 	}
-	if args.DescriptionContains != "" && !strings.Contains(strings.ToLower(entry.Description), strings.ToLower(args.DescriptionContains)) {
-		return false
+	if args.DescriptionContains != "" {
+		needle := strings.ToLower(strings.TrimSpace(args.DescriptionContains))
+		if needle != "" && !strings.Contains(strings.ToLower(entry.Description), needle) {
+			return false
+		}
 	}
 	if args.StartAfter != "" || args.StartBefore != "" {
 		start, err := entry.StartTime()

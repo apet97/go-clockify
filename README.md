@@ -305,7 +305,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_API_KEY` | `—` | API key (required for stdio/http/grpc and MCP_PROFILE=single-tenant-http; optional for shared-service / prod-postgres streamable_http where tenant credentials come from the control plane) |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | Initial tool surface |
 | `CLOCKIFY_DEDUPE_MODE` | `warn` | Duplicate entry detection |
-| `CLOCKIFY_DRY_RUN` | `enabled` | Enable dry-run preview support for destructive tools when callers pass dry_run:true |
+| `CLOCKIFY_DRY_RUN` | `enabled` | Enable dry-run preview support for tools that expose dry_run:true |
 | `CLOCKIFY_POLICY` | `standard` | Tool-access policy tier |
 | `CLOCKIFY_RATE_LIMIT` | `120` | Global tool calls per 60s window (0=disabled). For multi-subject HTTP/gRPC deployments, size this at least active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT so per-subject fairness can engage. |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |

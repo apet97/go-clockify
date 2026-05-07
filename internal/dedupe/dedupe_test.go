@@ -1,7 +1,6 @@
 package dedupe
 
 import (
-	"os"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -15,7 +14,7 @@ func clearEnv(t *testing.T) {
 		"CLOCKIFY_DEDUPE_LOOKBACK",
 		"CLOCKIFY_OVERLAP_CHECK",
 	} {
-		os.Unsetenv(key)
+		t.Setenv(key, "")
 	}
 }
 
@@ -40,7 +39,7 @@ func TestConfigFromEnvDefaults(t *testing.T) {
 
 func TestConfigFromEnvBlock(t *testing.T) {
 	clearEnv(t)
-	os.Setenv("CLOCKIFY_DEDUPE_MODE", "block")
+	t.Setenv("CLOCKIFY_DEDUPE_MODE", "block")
 	cfg, err := ConfigFromEnv()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -52,13 +51,34 @@ func TestConfigFromEnvBlock(t *testing.T) {
 
 func TestConfigFromEnvOff(t *testing.T) {
 	clearEnv(t)
-	os.Setenv("CLOCKIFY_DEDUPE_MODE", "off")
+	t.Setenv("CLOCKIFY_DEDUPE_MODE", "off")
 	cfg, err := ConfigFromEnv()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if cfg.Mode != Off {
 		t.Errorf("Mode = %d, want Off (%d)", cfg.Mode, Off)
+	}
+}
+
+func TestConfigFromEnvTrimsValues(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("CLOCKIFY_DEDUPE_MODE", " block ")
+	t.Setenv("CLOCKIFY_DEDUPE_LOOKBACK", " 7 ")
+	t.Setenv("CLOCKIFY_OVERLAP_CHECK", " off ")
+
+	cfg, err := ConfigFromEnv()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Mode != Block {
+		t.Errorf("Mode = %d, want Block (%d)", cfg.Mode, Block)
+	}
+	if cfg.LookbackCount != 7 {
+		t.Errorf("LookbackCount = %d, want 7", cfg.LookbackCount)
+	}
+	if cfg.OverlapCheck {
+		t.Error("OverlapCheck = true, want false")
 	}
 }
 

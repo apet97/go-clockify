@@ -2,23 +2,14 @@
 
 ## Status
 
-**Superseded 2026-04-22 — the repository flipped to public.** The
-skip path and `continue-on-error` treatments this ADR codified
-are removed; SLSA attestation is now a mandatory gate on every
-release and every main-branch image push. The ADR stays in the
-tree as the historical record of why the private-repo workaround
-existed from 2026-04-20 (SLSA workaround introduction via
-`fix(ci): make SLSA attestation non-fatal for private user-owned
-repo`, shipped with v1.0.3) through 2026-04-22 (this flip) —
-the v1.0.3 era only; v1.0.0–v1.0.2 predated the workaround.
-Future readers finding a reference to this ADR in a commit
-message or PR body should understand: private-repo posture, no
-longer live.
-
-Prior status (pre-supersedure): Accepted — codifies the
-release-smoke skip path added alongside this ADR and the
-`continue-on-error` treatment already in `release.yml` and
-`docker-image.yml`.
+**Accepted; reactivated 2026-05-07.** The repository is again a
+user-owned private repository, and GitHub's artifact attestation
+service still rejects this account/repository shape with
+`Feature not available for user-owned private repositories`. The
+skip path and `continue-on-error` treatments this ADR codified are
+therefore live again for the GitHub attestation layer only.
+Docker image build, Trivy, cosign keyless signatures, SBOM
+attestations, and release asset checks remain mandatory.
 
 ## Context
 
@@ -47,11 +38,13 @@ whose availability depends on the repository's **account tier**:
 
 `go-clockify` is currently a user-owned private repository.
 Commit [`6f4f748`](https://github.com/apet97/go-clockify/commit/6f4f748)
-already flipped `docker-image.yml`'s attest-build-provenance step
+first flipped `docker-image.yml`'s attest-build-provenance step
 to `continue-on-error: true` so the per-main-push build pipeline
-does not fail. The release workflow (`release.yml`) carries the
-same `continue-on-error` on its attestation step for the same
-reason.
+did not fail. The 2026-05-07 CI regression showed the same
+platform gate still applies, so `docker-image.yml` and
+`release.yml` keep the attestation step best-effort and
+`release-smoke.yml` narrowly skips only the known feature-gate
+error.
 
 The gap this ADR closes: **release-smoke** still ran
 `gh attestation verify` as fatal, so every scheduled or

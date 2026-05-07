@@ -32,11 +32,11 @@ The nightly **Live contract** workflow
       tests run, not just read-only.
 - [ ] Latest scheduled run of `live-contract.yml` is green with
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
-      _Tracking 2026-05-02: two manual-dispatch runs green
-      (25238997088 read-only-only, 25239216412 full-tier);
-      as of 03:25 UTC, no 2026-05-02 scheduled run is listed by
-      GitHub Actions. Latest scheduled run remains the 2026-05-01
-      failure 25204240398. Awaiting first cron-event green._
+      _Tracking 2026-05-07: scheduled runs 25418599859
+      (2026-05-06) and 25478227690 (2026-05-07) were green on
+      commit 805d63e. The candidate SHA has advanced, so this box
+      remains open until the current candidate has scheduled-run
+      evidence._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -47,10 +47,10 @@ The nightly **Live contract** workflow
 - [ ] Two consecutive nightly runs green with no flakes; if there
       is a flake, the rolling `live-test-failure` GitHub issue is
       closed and the root cause is documented in `CHANGELOG.md`.
-      _Tracking 2026-05-02 03:25 UTC: 0/2 nightly cron greens. The
-      live-test-failure issue (#41) was auto-closed by the manual
-      run 25238997088, and issue #50 is also closed. Calendar-bound
-      on the next two visible 02:30 UTC cron firings._
+      _Tracking 2026-05-07: 2/2 cron greens exist on 805d63e
+      (25418599859 and 25478227690), but the candidate SHA has
+      advanced. The live-test-failure issues remain closed; awaiting
+      two cron greens on the current candidate._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
@@ -135,7 +135,7 @@ asserts the tenant + audit invariants.
       `scripts/audit-branch-protection.sh`._
 
 **Definition of done.** A CI-driven shared-service E2E exists,
-runs nightly, and asserts both functional behaviour (tools
+runs per PR/push, and asserts both functional behaviour (tools
 behave) and operational invariants (tenant isolation, audit
 durability, no cross-tenant leakage).
 

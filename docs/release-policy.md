@@ -122,16 +122,18 @@ All binaries are built with `-trimpath`. Every binary ships:
 
 - A SPDX SBOM (`<binary>.spdx.json`).
 - A keyless cosign signature (`<binary>.sigstore.json`).
-- A SLSA build provenance attestation per binary, stored in the
-  GitHub attestation service. SLSA was conditional while the repo
-  was user-owned-private (per ADR-0013, now Superseded); mandatory
-  on every release since 2026-04-22 when the repo flipped public.
+- A SLSA build provenance attestation per binary when GitHub's
+  attestation service is available for the repository account tier.
+  For user-owned private repository runs where GitHub returns
+  "Feature not available", ADR-0013 keeps SLSA best-effort and the
+  mandatory cryptographic gate is the cosign binary/image chain.
 
 Plus, per release tag:
 
 - A multi-arch container image at
   `ghcr.io/apet97/go-clockify:v<version>` carrying a cosign signature,
-  SPDX SBOM attestation, and SLSA build provenance attestation.
+  SPDX SBOM attestation, and SLSA build provenance attestation when
+  GitHub's attestation service is available.
 - An npm wrapper package (publish gated on `NPM_TOKEN` being set).
 - An unsigned `SHA256SUMS.txt` listing every binary in the release.
   Each row lets `sha256sum -c` cross-check a downloaded binary
@@ -142,10 +144,10 @@ Plus, per release tag:
 
 Verification steps live in [docs/verification.md](verification.md). A
 post-release smoke job (`.github/workflows/release-smoke.yml`)
-re-verifies the SLSA attestation, sigstore bundle, and container
-image signature on every published release and weekly thereafter, so
-delayed drift surfaces as a `release-smoke-failure` GitHub issue
-rather than silently rotting.
+re-verifies the SLSA attestation when available, the sigstore bundle,
+and the container image signature on every published release and
+weekly thereafter, so delayed drift surfaces as a
+`release-smoke-failure` GitHub issue rather than silently rotting.
 
 ## Launch-candidate evidence
 
