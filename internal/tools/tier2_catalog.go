@@ -66,7 +66,7 @@ func buildTier2CatalogIndex() {
 // Tier2Handlers returns the descriptors for a named Tier 2 group. Every
 // returned descriptor has its Tool.OutputSchema populated with at least
 // envelopeOpaque so MCP clients see a consistent envelope shape across
-// all 91 lazy-loaded tools.
+// all 88 lazy-loaded tools.
 func (s *Service) Tier2Handlers(groupName string) ([]mcp.ToolDescriptor, bool) {
 	g, ok := Tier2Groups[groupName]
 	if !ok {

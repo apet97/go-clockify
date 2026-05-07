@@ -56,6 +56,13 @@ npx @apet97/clockify-mcp-go
 # https://github.com/apet97/go-clockify/releases
 ```
 
+Private/internal installs: while this repository is private, configure
+Go to bypass the public module proxy for this module and make sure your
+GitHub credentials can read the repo before running `go install`:
+`go env -w GOPRIVATE=github.com/apet97/go-clockify`. SSH auth, GitHub
+CLI auth, or an HTTPS credential/PAT with repo access are all valid.
+GitHub Releases and Issues also require access to the private repository.
+
 Verify:
 
 ```sh
@@ -431,8 +438,8 @@ is retained as the historical post-PR #51 handoff.
 - Adoption expectations, response-time posture, `v1.x` wire-format stability guarantee: [SUPPORT.md](SUPPORT.md)
 - Governance (single-maintainer, merge gate, sensitive-area self-review): [GOVERNANCE.md](GOVERNANCE.md)
 - Security vulnerabilities: [SECURITY.md](SECURITY.md) (private disclosure channel)
-- Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues)
-- Release history: [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/apet97/go-clockify/releases)
+- Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues) (requires repo access while private)
+- Release history: [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/apet97/go-clockify/releases) (requires repo access while private)
 - Versioning, support window, breaking-change policy: [docs/release-policy.md](docs/release-policy.md)
 - Documentation map: [docs/README.md](docs/README.md)
 

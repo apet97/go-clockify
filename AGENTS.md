@@ -10,7 +10,7 @@
 A production-grade [Model Context Protocol](https://modelcontextprotocol.io)
 server for [Clockify](https://clockify.me), written in Go. Three
 transports (stdio, streamable HTTP 2025-03-26, opt-in gRPC behind
-`-tags=grpc`), four policy modes, signed releases. v1.2.0 is the
+`-tags=grpc`), five policy modes, signed releases. v1.2.0 is the
 current stable line. The active workstream is the **official
 Clockify launch candidate** promotion.
 
