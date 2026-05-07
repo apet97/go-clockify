@@ -747,11 +747,15 @@ func (m *streamSessionManager) touch(id string) {
 	}
 	session.lastSeenAt = time.Now().UTC()
 	session.expiresAt = session.lastSeenAt.Add(m.ttl)
+	clientName, clientVersion := session.server.ClientInfo()
 	record := controlplane.SessionRecord{
 		ID:              session.id,
 		TenantID:        session.runtime.TenantID,
 		Subject:         session.principal.Subject,
 		Transport:       "streamable_http",
+		ProtocolVersion: session.server.NegotiatedProtocolVersion(),
+		ClientName:      clientName,
+		ClientVersion:   clientVersion,
 		CreatedAt:       session.createdAt,
 		ExpiresAt:       session.expiresAt,
 		LastSeenAt:      session.lastSeenAt,

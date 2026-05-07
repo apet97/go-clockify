@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Streamable-HTTP session touches preserve negotiation state.**
+  Persisted session refreshes now keep the initialized
+  `protocolVersion` and `clientInfo` fields intact, so a request
+  rehydrated on another replica continues to enforce the original
+  `Mcp-Protocol-Version` session contract after ordinary `tools/list`
+  or SSE activity. Pinned by
+  `internal/mcp/transport_streamable_http_test.go::TestStreamableTouchPreservesNegotiationForRehydration`.
+
 - **Sacrificial live campaign now includes the invite-user route
   safely.** Added `TestLiveT2UserInviteValidationProbe`, which
   probes Clockify's documented add-user endpoint with

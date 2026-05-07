@@ -788,6 +788,66 @@ func TestStreamableProtocolVersionMismatch(t *testing.T) {
 	}
 }
 
+func TestStreamableTouchPreservesNegotiationForRehydration(t *testing.T) {
+	if len(SupportedProtocolVersions) < 2 {
+		t.Skip("test requires at least two supported protocol versions")
+	}
+	negotiated := SupportedProtocolVersions[1]
+	wrongButSupported := SupportedProtocolVersions[0]
+
+	mgrA, opts := newTestStreamableStack(t)
+	handlerA := streamableRPCHandler(opts, mgrA)
+	sessionID := initializeStreamSession(t, handlerA,
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"`+
+			negotiated+`","clientInfo":{"name":"rehydrate-test","version":"1.0.0"}}}`)
+
+	// Any non-initialize request refreshes LastSeenAt/ExpiresAt through
+	// touch(). That rewrite must not drop the initialize negotiation
+	// state stored for cross-instance rehydration.
+	resp := callStreamSession(t, handlerA, sessionID, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	if resp.Error != nil {
+		t.Fatalf("tools/list after initialize returned error: %+v", resp.Error)
+	}
+	record, ok := opts.ControlPlane.Session(sessionID)
+	if !ok {
+		t.Fatalf("session %q missing from control plane", sessionID)
+	}
+	if record.ProtocolVersion != negotiated {
+		t.Fatalf("persisted protocol version after touch = %q, want %q", record.ProtocolVersion, negotiated)
+	}
+	if record.ClientName != "rehydrate-test" || record.ClientVersion != "1.0.0" {
+		t.Fatalf("persisted client info after touch = %q/%q, want rehydrate-test/1.0.0",
+			record.ClientName, record.ClientVersion)
+	}
+
+	// Simulate a second replica: empty local session cache, same durable
+	// control plane, same runtime factory. The wrong but supported header
+	// must still be rejected after MarkInitialized restores the persisted
+	// negotiated version.
+	mgrB := &streamSessionManager{
+		ttl:   30 * time.Minute,
+		store: opts.ControlPlane,
+		items: map[string]*streamSession{},
+	}
+	handlerB := streamableRPCHandler(opts, mgrB)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	req.Header.Set("Mcp-Protocol-Version", wrongButSupported)
+	handlerB.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("rehydrated mismatch: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var mismatchResp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &mismatchResp); err != nil {
+		t.Fatalf("decode mismatch response: %v", err)
+	}
+	if mismatchResp.Error == nil || mismatchResp.Error.Code != -32600 {
+		t.Fatalf("expected -32600 after rehydration, got %+v", mismatchResp.Error)
+	}
+}
+
 // TestStreamableProtocolVersionAbsent allows non-initialize requests without
 // the Mcp-Protocol-Version header (pre-2025-03-26 clients).
 func TestStreamableProtocolVersionAbsent(t *testing.T) {
