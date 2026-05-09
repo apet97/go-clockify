@@ -40,10 +40,12 @@ The blessed production profile for shared services is documented in [Production 
 
 `main` is locally prepared for the Clockify launch-candidate evidence
 pass. The current pushed `main` / `origin/main` baseline is
-`4fe957547f9e6aea749a85f87823d17a0ccc2928`
-(`fix(streamable): preserve session negotiation on touch`), before the
-uncommitted May 8 remediation tree. The manual live-campaign baseline
-remains `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: it includes the
+`308c81560a75db037dfdaf306ac04afb48a5cff6`
+(`chore(launch): harden hosted candidate readiness`). Manual
+`live-contract.yml` candidate verification run 25605467213 is green on
+that SHA with read-only, schema-diff, mutating, and audit-phase steps.
+The manual live-campaign baseline remains
+`ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: it includes the
 post-PR #51 local readiness gates, PR #59's manual
 sacrificial-workspace MCP-path probes, PR #62's invite-user validation
 probe, and later live-test hooks or local coverage for the current
@@ -51,11 +53,15 @@ probe, and later live-test hooks or local coverage for the current
 blockers are not local test failures, but they are still launch
 blockers: Group 1 scheduled final-SHA live-contract evidence, Group 6
 candidate-tag security evidence, Group 7 release/sigstore/SLSA
-evidence, pushed workflow first-run evidence, repository-state cleanup,
-public-readiness disposition, and legal/product approval for any
+evidence, repository-state cleanup, public-readiness disposition, and
+legal/product approval for any
 official-product claim. Local `release-check`, PR CI greens, and manual
 exhaustive live probes are necessary context but not sufficient for an
-official/product launch-ready claim. Agent
+official/product launch-ready claim.
+pushed workflow evidence for CI, CodeQL, Dependency Review, Semgrep,
+Build matrix, Docker Image, and Link check is now green on `308c815`;
+future workflow drift still belongs in the evidence set, not in local
+green wording. Agent
 continuation details live in [`docs/agent-handoff.md`](agent-handoff.md);
 [`docs/claude-code-continuation.md`](claude-code-continuation.md) is
 the historical PR #51 packet.

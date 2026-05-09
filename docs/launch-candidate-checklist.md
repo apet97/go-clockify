@@ -38,9 +38,20 @@ The nightly **Live contract** workflow
       4fe957547f9e6aea749a85f87823d17a0ccc2928 and include the
       required read-only, mutating, audit-phase, and schema-diff log
       markers. Current `origin/main`
-      (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`) and this dirty
-      local remediation tree are newer, so this box remains open until
-      the final candidate SHA has scheduled-run evidence._
+      (`308c81560a75db037dfdaf306ac04afb48a5cff6`) is newer, so this
+      box remains open until the final candidate SHA has scheduled-run
+      evidence._
+- [x] Manual candidate verification run is green on the current
+      candidate SHA.
+      _Closed 2026-05-09: workflow_run_id: 25605467213,
+      https://github.com/apet97/go-clockify/actions/runs/25605467213,
+      `workflow_dispatch` on
+      `308c81560a75db037dfdaf306ac04afb48a5cff6`; steps passed for
+      read-only live tests including `TestLiveReadSideSchemaDiff`,
+      mutating live tests, and
+      `TestLiveCreateUpdateDeleteEntryAuditPhases`. Manual dispatch is
+      candidate-now evidence only and does not close the scheduled-run
+      boxes._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -54,9 +65,8 @@ The nightly **Live contract** workflow
       _Tracking 2026-05-09: two consecutive scheduled greens exist on
       pushed commit 4fe957547f9e6aea749a85f87823d17a0ccc2928, but
       not on current `origin/main`
-      (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`) or the final
-      remediation SHA because this local tree is still dirty and
-      uncommitted. The live-test-failure issues remain closed;
+      (`308c81560a75db037dfdaf306ac04afb48a5cff6`). The
+      live-test-failure issues remain closed;
       awaiting two cron greens on the final candidate._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`

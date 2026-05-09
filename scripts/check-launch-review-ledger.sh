@@ -306,7 +306,7 @@ required_prompt_artifact_patterns=(
   "clean candidate-tag gitleaks remains required"
   "Keep CI/release/external state honest."
   "make launch-external-status"
-  "11 open, 0 unknown"
+  "7 open, 0 unknown"
   "CLOCKIFY_LIVE_AUDIT_REQUIRED=true"
   "live-contract cron log markers"
   "TestLiveCreateUpdateDeleteEntryAuditPhases"
