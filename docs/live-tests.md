@@ -13,13 +13,14 @@ place and `scripts/check-live-tool-coverage.sh` statically verifies
 that the current 128-tool catalog has every Tier-2 and API-backed
 Tier-1 tool named by the livee2e source bundle, with only local
 catalog/tool-surface helpers explicitly allowed out of live Clockify
-calls. Group 1 is still open: scheduled run 25538247771 is green on
-candidate SHA `4fe957547f9e6aea749a85f87823d17a0ccc2928`, but the
-previous scheduled green is on an older SHA, and only two consecutive
-scheduled cron greens on the final candidate SHA count as
-launch-candidate evidence. The exhaustive manual probes are local
-coverage artifacts and are intentionally not part of the nightly
-`live-contract.yml` regex.
+calls. Group 1 scheduled-cron evidence is closed as of 2026-05-09:
+scheduled runs 25608259477 and 25607242862 are consecutive greens on
+`feef83c641ced93d2ab6ba07ef766d61c82cc703` and include the
+read-only/schema-diff, mutating, MCP-path safety, and audit-phase
+steps. The temporary launch-evidence cron used to gather those runs
+was removed after the evidence was archived. The exhaustive manual
+probes are local coverage artifacts and are intentionally not part of
+the nightly `live-contract.yml` regex.
 
 ## What runs
 
@@ -217,9 +218,8 @@ only read-only or narrow calls first:
 - short-range reports with `include_entries=false`
 
 Those personal checks can prove your local client wiring, but they are
-not Group 1 launch-candidate evidence. Only two consecutive scheduled
-cron runs of `.github/workflows/live-contract.yml` on the candidate SHA
-count for launch.
+not Group 1 launch-candidate evidence. The evidence that closed Group 1
+is the pair of scheduled GitHub Actions runs recorded above.
 
 ## Required live coverage before paid hosted launch
 

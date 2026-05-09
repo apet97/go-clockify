@@ -56,8 +56,15 @@ rules live in this file and the docs above.
   current SHA with `git ls-remote origin refs/heads/main` before
   binding scheduled or manual workflow evidence to a candidate. Manual
   `live-contract.yml` dispatches on May 9 are useful candidate-now
-  evidence, but they do **not** close Group 1's scheduled-cron
-  requirement, Group 6, or Group 7 launch blockers.
+  evidence, but they do **not** replace the scheduled evidence that
+  closed Group 1 or the still-open Group 6/7 gates.
+- **Latest scheduled live-contract evidence SHA:**
+  `feef83c641ced93d2ab6ba07ef766d61c82cc703`
+  (`ci(live): add temporary launch evidence cron`). Scheduled
+  `live-contract.yml` runs 25608259477 and 25607242862 are consecutive
+  greens on this SHA and include the read-only/schema-diff, mutating,
+  MCP-path safety, and audit-phase steps. The temporary high-frequency
+  cron was removed after these runs were archived.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   full sacrificial-workspace live API campaign refresh: the documented
@@ -76,6 +83,12 @@ rules live in this file and the docs above.
   audit continuity only. Do not cite either as the current
   launch-state baseline.
 - **Closed launch-candidate groups:**
+  - **Group 1 — Live API contract.** Scheduled
+    `live-contract.yml` runs 25608259477 and 25607242862 are green on
+    `feef83c641ced93d2ab6ba07ef766d61c82cc703` and include
+    `TestLiveReadSideSchemaDiff`, `TestE2EMutating`, MCP-path safety
+    contracts, and `TestLiveCreateUpdateDeleteEntryAuditPhases`. The
+    rolling `live-test-failure` issues remain closed.
   - **Group 2 — Shared-service Postgres E2E.** Lives at
     `internal/controlplane/postgres/e2e_shared_service_test.go`
     (`make shared-service-e2e`); runs per-PR as the
@@ -118,39 +131,26 @@ rules live in this file and the docs above.
     and name-resolution helpers were added on top of the raw API
     coverage surface; those helpers are covered by unit tests, and
     the timesheet workflow helpers also have live-test hooks.
-    This is coverage evidence only; it does **not** close Group 1,
-    Group 6, or Group 7 launch blockers.
+    This is coverage evidence only; it did not itself close Group 1
+    and does **not** close Group 6 or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)
   is wired into the read-only step of
-  `.github/workflows/live-contract.yml`. It needs scheduled-cron
-  evidence on the candidate SHA before Group 1 fully closes.
+  `.github/workflows/live-contract.yml`; scheduled run evidence is
+  archived under Group 1 above.
 
 ## Remaining launch blockers
 
 Listed in priority order; full detail in
 [`docs/agent-handoff.md`](docs/agent-handoff.md).
 
-1. **Group 1 — scheduled-cron evidence on the candidate SHA.**
-   Two consecutive *scheduled* (cron) green runs of
-   `live-contract.yml` are required, including the
-   `TestLiveReadSideSchemaDiff` evidence. The rolling
-   `live-test-failure` issue is currently closed. Scheduled runs
-   25593042387 and 25538247771 are green on pushed commit
-   `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
-   mutating, audit-phase, and schema-diff log markers, but that commit
-   is not the May 9 code-bearing baseline (`308c815`) or any later
-   candidate docs tip. Manual dispatches are useful candidate-now
-   evidence, but they are not scheduled-cron evidence. Group 1 remains
-   open until the final candidate SHA has two consecutive scheduled
-   greens with the same evidence.
-2. **Group 6 — security walk-through on the candidate tag.**
+1. **Group 6 — security walk-through on the candidate tag.**
    Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
    semgrep on the final candidate tag and file findings or
    "no findings" evidence in `SECURITY.md`. The same suite was
    refreshed as local preflight on 2026-05-09 after the Go 1.25.10 and
    `govulncheck@v1.3.0` hardening, but candidate-tag evidence is still
    required.
-3. **Group 7 — release/sigstore/SLSA evidence on the candidate tag.**
+2. **Group 7 — release/sigstore/SLSA evidence on the candidate tag.**
    Cut `vX.Y.Z-rc.N`, watch `release-smoke.yml`, verify
    sigstore + SLSA artefact attestation, and archive the
    `release-smoke-doctor-output` artifact containing the reference

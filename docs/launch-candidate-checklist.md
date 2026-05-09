@@ -31,16 +31,17 @@ The nightly **Live contract** workflow
       [`live-tests.md`](live-tests.md).
 - [x] `CLOCKIFY_LIVE_WRITE_ENABLED=true` (repo variable) — mutating
       tests run, not just read-only.
-- [ ] Latest scheduled run of `live-contract.yml` is green with
+- [x] Latest scheduled run of `live-contract.yml` is green with
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
-      _Tracking 2026-05-09: latest scheduled runs 25593042387 and
-      25538247771 are green on commit
-      4fe957547f9e6aea749a85f87823d17a0ccc2928 and include the
-      required read-only, mutating, audit-phase, and schema-diff log
-      markers. Current `origin/main`
-      (`308c81560a75db037dfdaf306ac04afb48a5cff6`) is newer, so this
-      box remains open until the final candidate SHA has scheduled-run
-      evidence._
+      _Closed 2026-05-09: workflow_run_id: 25608259477,
+      https://github.com/apet97/go-clockify/actions/runs/25608259477,
+      `schedule` on
+      `feef83c641ced93d2ab6ba07ef766d61c82cc703`; the read-only step
+      ran `TestE2EReadOnly` and `TestLiveReadSideSchemaDiff`, and the
+      mutating step ran `TestE2EMutating` plus the MCP-path safety
+      contracts. Previous scheduled green on the same SHA:
+      workflow_run_id: 25607242862,
+      https://github.com/apet97/go-clockify/actions/runs/25607242862._
 - [x] Manual candidate verification run is green after the May 9
       code-bearing candidate hardening.
       _Closed 2026-05-09: workflow_run_id: 25605467213,
@@ -50,36 +51,40 @@ The nightly **Live contract** workflow
       read-only live tests including `TestLiveReadSideSchemaDiff`,
       mutating live tests, and
       `TestLiveCreateUpdateDeleteEntryAuditPhases`. Manual dispatch is
-      candidate-now evidence only; rerun it whenever `main` advances
-      before using it as current-tip evidence, and do not close the
-      scheduled-run boxes with it._
-- [ ] `TestLiveDryRunDoesNotMutate` and
+      background candidate-now evidence only; the scheduled-run boxes
+      are closed by workflow_run_id: 25608259477 and workflow_run_id:
+      25607242862 above._
+- [x] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
-      _Tracking 2026-05-02: both green on the manual full-tier
-      run 25239216412 (after the dry-run envelope fix in
-      commit 71c4f8a). Restating the proof on a scheduled run is
-      gated on box 3._
-- [ ] Two consecutive nightly runs green with no flakes; if there
+      _Closed 2026-05-09: workflow_run_id: 25608259477,
+      https://github.com/apet97/go-clockify/actions/runs/25608259477,
+      scheduled run command included
+      `TestLiveDryRunDoesNotMutate` and
+      `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` in the
+      green mutating MCP-path safety step on
+      `feef83c641ced93d2ab6ba07ef766d61c82cc703`._
+- [x] Two consecutive nightly runs green with no flakes; if there
       is a flake, the rolling `live-test-failure` GitHub issue is
       closed and the root cause is documented in `CHANGELOG.md`.
-      _Tracking 2026-05-09: two consecutive scheduled greens exist on
-      pushed commit 4fe957547f9e6aea749a85f87823d17a0ccc2928, but
-      not on the May 9 code-bearing baseline
-      (`308c81560a75db037dfdaf306ac04afb48a5cff6`) or any later
-      candidate docs tip. The
-      live-test-failure issues remain closed;
-      awaiting two cron greens on the final candidate._
-- [ ] Read-side schema diff: response shapes returned by the
+      _Closed 2026-05-09: workflow_run_id: 25608259477,
+      https://github.com/apet97/go-clockify/actions/runs/25608259477,
+      and workflow_run_id: 25607242862,
+      https://github.com/apet97/go-clockify/actions/runs/25607242862,
+      are consecutive scheduled greens on
+      `feef83c641ced93d2ab6ba07ef766d61c82cc703`. The rolling
+      `live-test-failure` issues remain closed._
+- [x] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
       candidate cut, recorded in the wave's commit messages).
-      _Tracking 2026-05-02: `TestLiveReadSideSchemaDiff` now fetches
-      raw read-side Clockify JSON and fails on top-level fields not
-      represented in `internal/clockify/models.go`; the read-only
-      `live-contract.yml` step runs it alongside `TestE2EReadOnly`.
-      Awaiting scheduled-run evidence on the candidate SHA before
-      this box can close._
+      _Closed 2026-05-09: workflow_run_id: 25608259477,
+      https://github.com/apet97/go-clockify/actions/runs/25608259477,
+      and workflow_run_id: 25607242862,
+      https://github.com/apet97/go-clockify/actions/runs/25607242862,
+      both scheduled runs included the read-only
+      `TestLiveReadSideSchemaDiff` step on
+      `feef83c641ced93d2ab6ba07ef766d61c82cc703`._
 
 **Definition of done.** Two clean nightly runs in a row with
 mutating + audit tiers enabled, no open `live-test-failure` issue,

@@ -23,7 +23,16 @@ work and commit it.
   current SHA with `git ls-remote origin refs/heads/main` before
   binding scheduled or manual workflow evidence to a candidate. Manual
   `live-contract.yml` dispatches on May 9 are useful candidate-now
-  evidence, but they do not tick the scheduled launch-evidence box.
+  evidence, but they do not replace the scheduled evidence that closed
+  Group 1.
+- **Latest scheduled live-contract evidence SHA:**
+  `feef83c641ced93d2ab6ba07ef766d61c82cc703`
+  (`ci(live): add temporary launch evidence cron`). Scheduled
+  `live-contract.yml` runs 25608259477 and 25607242862 are consecutive
+  greens on this SHA and include `TestLiveReadSideSchemaDiff`,
+  `TestE2EMutating`, the MCP-path safety contracts, and
+  `TestLiveCreateUpdateDeleteEntryAuditPhases`. The temporary
+  high-frequency cron was removed after these runs were archived.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   manual sacrificial-workspace campaign state after PR #62: the
@@ -47,7 +56,8 @@ work and commit it.
   (`docs(launch): record bench comparison evidence`) are retained for
   audit continuity only. Do not cite either as the current
   launch-state baseline.
-- **Closed locally:** Groups 2 (shared-service Postgres E2E,
+- **Closed locally:** Group 1 (scheduled live-contract evidence),
+  Groups 2 (shared-service Postgres E2E,
   required-gated on `main`), 3 (ADR 0017 Path A — streamable-HTTP
   cross-instance session rehydration), 4 (auth-model docs +
   `forward_auth` cardinality/size guard), 5 (per-profile "How to
@@ -61,12 +71,6 @@ work and commit it.
   probes are coverage evidence only and do not tick any external
   launch-evidence box.
 - **Open launch-evidence gates (not a complete blocker list):**
-  - **Scheduled live-contract cron greens** — two consecutive
-    *scheduled* runs of `live-contract.yml` on the candidate SHA,
-    with `TestLiveReadSideSchemaDiff`, mutating tests, and the
-    audit-phase tier captured. The rolling `live-test-failure`
-    issue is closed; two manual-dispatch runs are green; cron is
-    calendar-bound.
   - **Candidate-tag security walk-through** — re-run
     `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
     on the final candidate tag. Local preflight was green on
@@ -130,34 +134,17 @@ evidence and approval gates are closed. Additional non-blocking
 code/CI hardening backlog is tracked in
 [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md).
 
-1. **Scheduled live-contract cron evidence on the candidate SHA.**
-   The rolling `live-test-failure` issue is closed (auto-closed by
-   manual run 25238997088). Two manual-dispatch runs are green
-   (read-only 25238997088, full-tier 25239216412).
-   `TestLiveReadSideSchemaDiff` is wired into the read-only step of
-   `.github/workflows/live-contract.yml`. What is still open: two
-   consecutive **scheduled** (cron) green runs of
-   `live-contract.yml` on the candidate SHA, with schema-diff,
-   mutating, and audit-phase evidence captured. Rechecked on
-   2026-05-09: scheduled runs 25593042387 and 25538247771 are green on
-   `4fe957547f9e6aea749a85f87823d17a0ccc2928` and their logs include
-   `TestE2EMutating`, `TestLiveCreateUpdateDeleteEntryAuditPhases`,
-   and `TestLiveReadSideSchemaDiff`, but that SHA is not the May 9
-   code-bearing baseline (`308c815`) or any later candidate docs tip.
-   Manual dispatches on May 9 have been green with the same
-   live-contract tiers, but manual dispatch is candidate-now evidence
-   only. Use `/fix-live-contract` only if a future cron firing reds.
-2. **Candidate-tag security walk-through.** Local launch-review
+1. **Candidate-tag security walk-through.** Local launch-review
    preflight was green on 2026-05-09 after moving to Go 1.25.10 and
    tagged `govulncheck@v1.3.0`; the final candidate tag still needs
    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
    evidence. The Semgrep workflow artifact still needs its first
    pushed-run evidence and does not replace the candidate-tag scan.
    File findings or explicit "no findings" evidence in `SECURITY.md`.
-3. **Release/sigstore/SLSA evidence.** The candidate tag still
+2. **Release/sigstore/SLSA evidence.** The candidate tag still
    needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
    archived `doctor --strict` outputs for the reference deployment.
-4. **Externally visible repo-state cleanup.** The May 8 review
+3. **Externally visible repo-state cleanup.** The May 8 review
    ledger records maintainer-owned cleanup still outside local code:
    stale GitHub repository description wording, stale issue #28, and
    branch-protection API limitation. Rechecked on 2026-05-09 after
@@ -169,7 +156,7 @@ code/CI hardening backlog is tracked in
    `make launch-external-status` directly checks
    `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` and prints maintainer action
    hints for each open gate while staying read-only.
-5. **Mutation cron evidence.** The local workflow timeout was raised
+4. **Mutation cron evidence.** The local workflow timeout was raised
    for the slow `internal/tools` leg, but `make launch-external-status`
    recheck on 2026-05-09 shows latest scheduled mutation run
    25592823559 is `completed/cancelled` on pushed commit
@@ -177,7 +164,7 @@ code/CI hardening backlog is tracked in
    `internal/tools` matrix leg was cancelled while the other mutation
    legs succeeded. Wait for scheduled-run evidence on the final
    candidate SHA after the workflow change lands.
-6. **Paid-hosted external review and legal/commercial gates.** A paid
+5. **Paid-hosted external review and legal/commercial gates.** A paid
    hosted launch still needs the final plan's non-code evidence:
    third-party or peer security review recorded in `SECURITY.md`
    against the candidate tag, DPA / customer terms, privacy and
@@ -238,7 +225,8 @@ scheduled-cron, candidate-tag security, or release-evidence gates:
   `0 open, 0 unknown`: all 88 Tier-2 tools and all API-backed Tier-1
   tools are named in live E2E source, the four local-only Tier-1
   helpers are explicitly allowed, and no unknown `clockify_*` live-test
-  references exist. This does not replace scheduled cron evidence.
+  references exist. The authoritative scheduled cron evidence is
+  archived in live-contract runs 25608259477 and 25607242862.
 - Generator idempotence was checked by rerunning
   `go run ./cmd/gen-config-docs -mode=all` and
   `make gen-tool-catalog`, then comparing working-tree checksums for
@@ -264,13 +252,14 @@ scheduled-cron, candidate-tag security, or release-evidence gates:
   bin, dist, `.out`, or `.test` candidates were present. Ignored local
   artifacts are covered by `.gitignore`.
 - `bash scripts/check-launch-external-status.sh --fail-open` exits
-  nonzero with `7 open, 0 unknown`; `bash
+  nonzero with `6 open, 0 unknown`; `bash
   scripts/check-public-content-audit.sh --fail-open` exits 0 with
   `0 open, 0 unknown`.
-- Manual `live-contract.yml` workflow_dispatch run 25605467213 is
-  green on `308c815`, including read-only, `TestLiveReadSideSchemaDiff`,
-  mutating, and audit-phase steps. Manual dispatch does not close the
-  scheduled-cron Group 1 boxes.
+- Scheduled `live-contract.yml` runs 25608259477 and 25607242862 are
+  consecutive greens on `feef83c641ced93d2ab6ba07ef766d61c82cc703`,
+  including read-only, `TestLiveReadSideSchemaDiff`, mutating,
+  MCP-path safety, and audit-phase steps. Manual dispatch
+  25605467213 remains useful candidate-now evidence only.
 - `bash scripts/collect-license-evidence.sh --fail-missing-license`
   reports `0 module(s) without local license candidates,
   0 unknown variant(s)`. This is raw evidence input only, not legal
@@ -446,18 +435,20 @@ external evidence gates below.
    remediation tree; workflow first-run, mutation, live-contract,
    repository metadata, issue, branch-protection, npm, release, and
    legal/product gates still need their own evidence.
-3. **Freeze `main` while Group 1 is pending.** After the remediation
-   tree lands, avoid unrelated default-branch churn until the two
-   scheduled `live-contract.yml` runs for that final SHA either close
-   Group 1 or produce a focused fix. This is an operator coordination
-   rule, not a local git setting changed by agents.
+3. **Keep post-Group-1 churn intentional.** Group 1 closed on
+   scheduled runs 25608259477 and 25607242862; after the temporary
+   cron-removal commit, avoid unrelated default-branch churn until
+   Group 6/7 evidence and the remaining external repo-state gates have
+   a clear owner. This is an operator coordination rule, not a local
+   git setting changed by agents.
 4. **Audit scheduled live-contract evidence.** Start with
    `make launch-external-status` for the read-only snapshot, then use
    `gh run list --workflow=live-contract.yml --branch=main --limit 10`
-   and the rolling `live-test-failure` issue for detailed evidence. If
-   two consecutive scheduled runs are green on the candidate SHA and
-   the run logs show schema-diff, mutating, and audit-phase tests
-   executed, update the launch checklist with the exact run URLs.
+   and the rolling `live-test-failure` issue for detailed evidence.
+   The archived Group 1 pair is 25608259477 and 25607242862 on
+   `feef83c641ced93d2ab6ba07ef766d61c82cc703`; future agents should
+   re-audit only if `live-contract.yml`, live tests, or candidate
+   scope changes.
 5. **Perform candidate-tag security walk-through.** Start with
    `docs/runbooks/release-candidate-evidence.md` and rehearse with
    `make rc-evidence-plan TAG=vX.Y.Z-rc.N`. On the final candidate

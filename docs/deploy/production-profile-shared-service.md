@@ -209,5 +209,6 @@ Two artefacts gate the shared-service profile:
 
 A green run of both artifacts closes the shared-service profile gate
 only (Group 2 of `docs/launch-candidate-checklist.md`). It does not
-make the repository launch-ready or replace the remaining Group 1,
-Group 6, or Group 7 external evidence gates.
+make the repository launch-ready, replace the archived Group 1
+scheduled evidence, or replace the remaining Group 6 evidence gate or
+Group 7 external evidence gates.

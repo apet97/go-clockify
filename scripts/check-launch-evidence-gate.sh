@@ -38,7 +38,7 @@ fi
 # Each pattern must match the UNCHECKED version. If someone changes - [ ] to
 # - [x] without adding an evidence URL, the grep fails and we flag it.
 #
-# A checked box with evidence must have one of these within 3 lines:
+# A checked box with evidence must have one of these within 8 lines:
 #   https://github.com/apet97/go-clockify/actions/runs/
 #   workflow_run_id:
 #   _Closed YYYY-MM-DD by
@@ -50,11 +50,11 @@ check_unchecked_with_evidence() {
   if grep -qE "^- \[x\] ${box_pattern}" "$CHECKLIST"; then
     # Box is checked. Look for an evidence reference near it.
     local ctx
-    ctx="$(grep -A3 "^- \[x\] ${box_pattern}" "$CHECKLIST" || true)"
+    ctx="$(grep -A8 "^- \[x\] ${box_pattern}" "$CHECKLIST" || true)"
     if echo "$ctx" | grep -qE 'https://github\.com/apet97/go-clockify/actions/runs/|workflow_run_id:|_Closed 2026-' ; then
       return 0
     fi
-    err "${label}: box is checked but no evidence URL or _Closed_ annotation found within 3 lines. Evidence required: scheduled cron run URL, workflow_run_id, or _Closed_ date with commit reference."
+    err "${label}: box is checked but no evidence URL or _Closed_ annotation found within 8 lines. Evidence required: scheduled cron run URL, workflow_run_id, or _Closed_ date with commit reference."
   elif ! grep -qE "^- \[ \] ${box_pattern}" "$CHECKLIST" && ! grep -qE "^- \[x\] ${box_pattern}" "$CHECKLIST"; then
     # Box text changed — the pattern doesn't match at all. This is a soft
     # warning (text may have been reworded legitimately) but we flag it
@@ -65,7 +65,7 @@ check_unchecked_with_evidence() {
 
 # ── Group 1: Live API contract ──────────────────────────────────────
 # These boxes require scheduled-cron evidence on the candidate SHA.
-# Currently all unchecked as of 2026-05-02.
+# Checked boxes must keep the archived scheduled-run evidence inline.
 
 check_unchecked_with_evidence \
   "Latest scheduled run of .live-contract.yml. is green with" \

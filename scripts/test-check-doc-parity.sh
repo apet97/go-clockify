@@ -576,25 +576,26 @@ EOF
 # Production readiness
 
 The remaining blockers are not local test failures. They are still launch
-blockers: Group 1 scheduled final-SHA live-contract evidence, Group 6
-candidate-tag security evidence, Group 7 release/sigstore/SLSA evidence,
-pushed workflow first-run evidence, repository-state cleanup,
-public-readiness disposition, and legal/product approval for any
-official-product claim. Local checks are useful but not sufficient for an
-official/product launch-ready claim.
+blockers: Group 6 candidate-tag security evidence, Group 7
+release/sigstore/SLSA evidence, pushed workflow evidence where still
+missing, repository-state cleanup, public-readiness disposition, and
+legal/product approval for any official-product claim. Group 1 scheduled
+final-SHA evidence is closed. Local checks are useful but not sufficient
+for an official/product launch-ready claim.
 EOF
 
     cat > "$dir/docs/official-clockify-mcp-gap-analysis.md" <<'EOF'
 # Official Clockify MCP gap analysis
 
 The remaining blockers are not local test failures. They are still launch
-blockers: Group 1 scheduled live-contract cron greens on the final candidate
-SHA, Group 6 candidate-tag security walk-through evidence, Group 7
-release/sigstore/SLSA evidence, pushed workflow first-run evidence,
-repository-state cleanup, public-readiness disposition, hosted/platform
-evidence, and legal/product approval for any Clockify-supported product launch
-claim. Local checks are useful but not sufficient for a Clockify-supported
-product launch claim.
+blockers: Group 6 candidate-tag security walk-through evidence, Group 7
+release/sigstore/SLSA evidence, pushed workflow first-run evidence where still
+missing, repository-state cleanup, public-readiness disposition,
+hosted/platform evidence, and legal/product approval for any
+Clockify-supported product launch claim. Local checks are useful but not sufficient
+for a Clockify-supported product launch claim. Group 1 scheduled
+live-contract cron greens are now archived on
+feef83c641ced93d2ab6ba07ef766d61c82cc703.
 EOF
 
     cat > "$dir/docs/agent-handoff.md" <<'EOF'
@@ -1020,7 +1021,7 @@ run_case "Phase 7: required hosted-launch runbook missing fails closed" \
 
 # --- Case 27: shared-service profile gate missing Group 1/6/7 caveat ---
 mut_shared_service_profile_gate_caveat_missing() {
-    perl -0pi -e 's/\nA green run of both artifacts closes the shared-service profile gate\nonly \(Group 2 of docs\/launch-candidate-checklist\.md\)\. It does not make\nthe repository launch-ready or replace the remaining Group 1, Group 6,\nor Group 7 external evidence gates\.\n/\nA green run of both artifacts is the launch-candidate gate for this profile.\n/' \
+    perl -0pi -e 's/A green run of both artifacts closes the shared-service profile gate.*?Group 7 external evidence gates\./A green run of both artifacts is the launch-candidate gate for this profile./s' \
         "$1/docs/deploy/production-profile-shared-service.md"
 }
 MUTATOR=mut_shared_service_profile_gate_caveat_missing
@@ -1029,7 +1030,7 @@ run_case "Phase 7: shared-service profile gate missing Group 1/6/7 caveat fails 
 
 # --- Case 28: production-readiness blocker scope missing repo/legal gates ---
 mut_production_readiness_gate_scope_missing() {
-    perl -0pi -e 's/The remaining blockers are not local test failures\. They are still launch\nblockers: Group 1 scheduled final-SHA live-contract evidence, Group 6\ncandidate-tag security evidence, Group 7 release\/sigstore\/SLSA evidence,\npushed workflow first-run evidence, repository-state cleanup,\npublic-readiness disposition, and legal\/product approval for any\nofficial-product claim\. Local checks are useful but not sufficient for an\nofficial\/product launch-ready claim\./The remaining blockers are external evidence only: scheduled live-contract, candidate-tag security, and release evidence./' \
+    perl -0pi -e 's/The remaining blockers are not local test failures\. They are still launch\s+blockers: Group 6 candidate-tag security evidence, Group 7\s+release\/sigstore\/SLSA evidence, pushed workflow evidence where still\s+missing, repository-state cleanup, public-readiness disposition, and\s+legal\/product approval for any official-product claim\. Group 1 scheduled\s+final-SHA evidence is closed\. Local checks are useful but not sufficient\s+for an official\/product launch-ready claim\./The remaining blockers are external evidence only: scheduled live-contract, candidate-tag security, and release evidence./s' \
         "$1/docs/production-readiness.md"
 }
 MUTATOR=mut_production_readiness_gate_scope_missing
@@ -1381,7 +1382,7 @@ run_case "Phase 7: Makefile verify-vuln skipping pinned module fails closed" \
 
 # --- Case 61: gap analysis blocker scope missing repo/legal/product gates ---
 mut_gap_analysis_gate_scope_missing() {
-    perl -0pi -e 's/The remaining blockers are not local test failures\. They are still launch\nblockers: Group 1 scheduled live-contract cron greens on the final candidate\nSHA, Group 6 candidate-tag security walk-through evidence, Group 7\nrelease\/sigstore\/SLSA evidence, pushed workflow first-run evidence,\nrepository-state cleanup, public-readiness disposition, hosted\/platform\nevidence, and legal\/product approval for any Clockify-supported product launch\nclaim\. Local checks are useful but not sufficient for a Clockify-supported\nproduct launch claim\./Only external evidence blockers remain after the May 8 launch-review remediation tree is locally green: scheduled live-contract cron greens, candidate-tag security evidence, and release evidence./' \
+    perl -0pi -e 's/The remaining blockers are not local test failures.*?feef83c641ced93d2ab6ba07ef766d61c82cc703\./Only external evidence blockers remain after the May 8 launch-review remediation tree is locally green: scheduled live-contract cron greens, candidate-tag security evidence, and release evidence./s' \
         "$1/docs/official-clockify-mcp-gap-analysis.md"
 }
 MUTATOR=mut_gap_analysis_gate_scope_missing

@@ -46,6 +46,11 @@ evidence commits may move `main`; verify the current SHA before
 binding workflow evidence to a candidate. May 9 manual
 `live-contract.yml` dispatches are green on pushed candidate SHAs with
 read-only, schema-diff, mutating, and audit-phase steps.
+Group 1 scheduled-cron evidence is also archived: scheduled runs
+25608259477 and 25607242862 are consecutive greens on
+`feef83c641ced93d2ab6ba07ef766d61c82cc703` with the required
+read-only/schema-diff, mutating, MCP-path safety, and audit-phase
+steps.
 The manual live-campaign baseline remains
 `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: it includes the
 post-PR #51 local readiness gates, PR #59's manual
@@ -53,10 +58,9 @@ sacrificial-workspace MCP-path probes, PR #62's invite-user validation
 probe, and later live-test hooks or local coverage for the current
 128-tool catalog. The remaining
 blockers are not local test failures, but they are still launch
-blockers: Group 1 scheduled final-SHA live-contract evidence, Group 6
-candidate-tag security evidence, Group 7 release/sigstore/SLSA
-evidence, repository-state cleanup, public-readiness disposition, and
-legal/product approval for any
+blockers: Group 6 candidate-tag security evidence, Group 7
+release/sigstore/SLSA evidence, repository-state cleanup,
+public-readiness disposition, and legal/product approval for any
 official-product claim. Local `release-check`, PR CI greens, and manual
 exhaustive live probes are necessary context but not sufficient for an
 official/product launch-ready claim.

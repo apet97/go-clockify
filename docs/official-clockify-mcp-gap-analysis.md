@@ -145,8 +145,9 @@ Caveats that the tier carries today:
 - Read-side schema drift is now mechanically checked by
   `tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`,
   which compares raw Clockify JSON field sets against the
-  `internal/clockify` structs. It still needs a scheduled green run
-  on the candidate SHA before the launch checklist box can close.
+  `internal/clockify` structs. Scheduled run evidence is archived in
+  `live-contract.yml` runs 25608259477 and 25607242862 on
+  `feef83c641ced93d2ab6ba07ef766d61c82cc703`.
 
 ### Tier 3 — Clockify-supported product launch (⛔ not yet)
 
@@ -158,13 +159,12 @@ tenant's data, or an unrecoverable session loss is a P0.
 
 What is missing for tier 3 is intentionally narrow:
 
-1. **Scheduled live-contract evidence is still missing.** Every
-   promotion to launch candidate must start from two consecutive
-   green scheduled runs with the mutating + audit tiers enabled
-   and `TestLiveReadSideSchemaDiff` captured. The rolling
-   `live-test-failure` issue is closed and May 9 manual dispatches are
-   green on pushed candidate SHAs, but scheduled cron evidence on the
-   candidate SHA has not arrived yet.
+1. ~~**Scheduled live-contract evidence is still missing.**~~
+   **Closed 2026-05-09** by consecutive scheduled runs 25608259477
+   and 25607242862 on
+   `feef83c641ced93d2ab6ba07ef766d61c82cc703`, with the mutating,
+   MCP-path safety, audit, and `TestLiveReadSideSchemaDiff` tiers
+   captured. The rolling `live-test-failure` issues remain closed.
 2. ~~**Shared-service Postgres E2E does not exist as a single
    green-or-red test.**~~ **Closed 2026-05-02** by commits
    42502cf + 79f0769. The
@@ -294,34 +294,28 @@ In priority order — closing the lower-numbered ones first
 unblocks the next.
 
 The remaining blockers are not local test failures. They are still
-launch blockers: Group 1 scheduled live-contract cron greens on the
-final candidate SHA, Group 6 candidate-tag security walk-through
-evidence, Group 7 release/sigstore/SLSA evidence, pushed workflow
-first-run evidence, repository-state cleanup, public-readiness
-disposition, hosted/platform evidence, and legal/product approval for
-any Clockify-supported product launch claim. Local checks are useful
-but not sufficient for a Clockify-supported product launch claim. The
-PR #59 through PR #62 manual live-probe work remains coverage evidence
-only; PR #63 and the May 8 local remediation wave did not add
-candidate-SHA live Clockify evidence. Rechecked on 2026-05-09: the
-repository description and issue #28 remain stale/open, and the
-locally added CodeQL, dependency-review, and Semgrep workflow files
-have not produced default-branch runs yet.
+launch blockers: Group 6 candidate-tag security walk-through evidence,
+Group 7 release/sigstore/SLSA evidence, pushed workflow first-run
+evidence where still missing, repository-state cleanup,
+public-readiness disposition, hosted/platform evidence, and
+legal/product approval for any Clockify-supported product launch claim.
+Local checks are useful but not sufficient for a Clockify-supported
+product launch claim. Group 1 scheduled live-contract cron greens are
+now archived on `feef83c641ced93d2ab6ba07ef766d61c82cc703`; the PR #59
+through PR #62 manual live-probe work remains coverage evidence only.
+Rechecked on 2026-05-09: the repository description and issue #28
+remain stale/open, and candidate-tag security plus release evidence are
+still missing.
 
-1. **Scheduled live-contract cron evidence (current).**
+1. ~~**Scheduled live-contract cron evidence.**~~ **Closed 2026-05-09.**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
    `live-test-failure` issue.
-   *Why blocking:* the launch-candidate definition starts with two
-   consecutive scheduled green nightlies on the candidate SHA. The
-   rolling issue is currently closed and May 9 manual dispatches are
-   green on pushed candidate SHAs, but manual runs
-   do not start or close the candidate cron clock.
-   Rechecked on 2026-05-09: scheduled run 25538247771 also proves the
-   audit-phase DSN path (`CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, redacted
-   `MCP_LIVE_CONTROL_PLANE_DSN`, and green
-   `TestLiveCreateUpdateDeleteEntryAuditPhases`), but it is on
-   `4fe9575`, not the May 9 code-bearing baseline (`308c815`) or any
-   later candidate docs tip.
+   *Evidence:* scheduled runs 25608259477 and 25607242862 are
+   consecutive greens on
+   `feef83c641ced93d2ab6ba07ef766d61c82cc703`; their logs include
+   the read-only/schema-diff, mutating, MCP-path safety, and
+   audit-phase tiers. The temporary launch-evidence cron was removed
+   after these runs were archived.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
    (commits 42502cf + 79f0769 plus the local `make test-postgres`

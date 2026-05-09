@@ -206,11 +206,11 @@ in this case being a direct fast-forward push).
 **Non-claim.** Logging this bypass does **not** count as
 launch-candidate evidence and does **not** close any group of
 [`launch-candidate-checklist.md`](launch-candidate-checklist.md).
-Group 1 still requires two consecutive scheduled-cron greens of
-`live-contract.yml` on the candidate SHA. Group 6 still requires
-the candidate-tag security walk-through. Group 7 still requires
-release/sigstore/SLSA evidence on the candidate tag. The bypass
-log is a governance audit artefact; it is not a substitute for
+Group 1 scheduled-cron evidence is now archived separately in
+`live-contract.yml` runs 25608259477 and 25607242862. Group 6 still
+requires the candidate-tag security walk-through. Group 7 still
+requires release/sigstore/SLSA evidence on the candidate tag. The
+bypass log is a governance audit artefact; it is not a substitute for
 any of those gates.
 
 ## How to audit

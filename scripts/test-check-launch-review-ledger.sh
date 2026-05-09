@@ -124,7 +124,7 @@ EOF
 | Fix safe documentation, CI, and public-surface drift. | Safe docs and CI drift are dispositioned. | Locally satisfied. |
 | Leave human/legal/product approval items clearly documented. | External gates below name legal/product approval and the `clockify://` URI plus gRPC service-name branding review. | Open by design. |
 | Keep tests and release posture verifiable. | Verification log exists. | Locally green. |
-| Decide whether the objective is actually complete. | Completion requires no missing objective requirement. Group 1 scheduled final-SHA evidence, Group 6 candidate-tag security evidence, Group 7 release/sigstore/SLSA evidence, pushed workflow evidence, repository-state cleanup, hosted quota evidence, and legal/product approval are still missing. | **Not complete. Do not mark launch-ready.** |
+| Decide whether the objective is actually complete. | Completion requires no missing objective requirement. Group 1 scheduled final-SHA evidence is closed, while Group 6 candidate-tag security evidence, Group 7 release/sigstore/SLSA evidence, mutation cron evidence, repository-state cleanup, hosted quota evidence, and legal/product approval are still missing. | **Not complete. Do not mark launch-ready.** |
 
 ## Prompt-to-artifact checklist
 
@@ -136,15 +136,15 @@ EOF
 | Fix safe code findings. | `GOTOOLCHAIN=go1.25.10 make release-check`. | Release-check passed. | Locally green. |
 | Fix safe docs, CI, release, and public-surface drift. | `make doc-parity`; `bash scripts/test-check-doc-parity.sh`. | The current doc-parity regression suite has 70 cases covering README/CONTRIBUTING local-verification wording, Makefile release-check wording, stale shippable release-check wording in docs, shared-service profile Group 2 scoping, production-readiness blocker-scope wording, gap-analysis blocker-scope wording, P3-5 baseline header docs, serverInfo identity guidance, default protocol-version guidance, May 8 ledger read-first routing, brand/legal URI plus gRPC service-name review docs, T-17 gRPC reflection dev-only posture, build-tag/tool-module Dependabot watcher coverage, root Dependabot build-tag ignore coverage, pinned verify-vuln tool-module execution, govulncheck CI version proof, SUPPORT.md SLSA private-repo cosign fallback, stale unconditional SLSA public wording, release-smoke SLSA bare-404 skip guard, README SLSA provenance availability wording, workflow action SHA-pin guard, deploy SLSA bare-404 skip guard, release workflow/docs SLSA availability wording, release-smoke doctor-output artifact guard, docker-image SLSA feature-gate notice guard, gh release view <tag> plus scripts/check-release-assets.sh 46-asset validation, legacy HTTP EOL runbook, stale public-content local-artifact wording, stale shared-service launch-blocking wording, agent handoff permissioned landing sequence, and dependency-review default-branch evidence trigger. | Locally green; workflow first-run evidence still external. |
 | Keep Group 6 security posture verifiable. | `docs/launch-candidate-checklist.md`; `docs/runbooks/release-candidate-evidence.md`; `scripts/prepare-rc-evidence.sh`. | `govulncheck@v1.3.0`, Semgrep `p/default`, and FIPS passed locally; `make secret-scan` needs a clean candidate tag because clean candidate-tag gitleaks remains required. | Locally documented; final candidate-tag evidence open. |
-| Keep CI/release/external state honest. | `make launch-external-status`. | Latest snapshot reports `7 open, 0 unknown`, and the helper directly verifies `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, then verifies live-contract cron log markers including `TestLiveCreateUpdateDeleteEntryAuditPhases` and `TestLiveReadSideSchemaDiff` before Group 1 can close. | Open external/repo-state gates. |
+| Keep CI/release/external state honest. | `make launch-external-status`. | Latest snapshot reports `6 open, 0 unknown`, and the helper directly verifies `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, then verifies live-contract cron log markers including `TestLiveCreateUpdateDeleteEntryAuditPhases` and `TestLiveReadSideSchemaDiff` before Group 1 can close. | Open external/repo-state gates. |
 | Keep public-readiness story honest. | `make public-content-audit`; `docs/release/public-history-review.md`; `docs/release/local-artifact-review.md`. | Latest snapshot reports `0 open, 0 unknown`; candidate, history, and local artifact buckets are clean. | Public-content audit clean locally; public flip still requires external, repo-state, and legal/product gates. |
 | Leave human/legal/product approvals documented, not guessed. | `docs/release/brand-legal-review.md`; `make license-evidence`. | Dependency evidence is not legal advice or license clearance; gRPC service-name branding review stays external. | Evidence input exists; legal/product approval open. |
 | Decide completion from real evidence only. | `git status --short --branch`; external/public status helpers. | The tree is dirty and external gates remain open. | **Not complete. Do not mark launch-ready.** |
 
 ## External evidence or approval gates
 
-- **Group 1 scheduled live-contract evidence.** Still open.
-- **Main freeze while Group 1 is pending.** Requires operator coordination.
+- **Group 1 scheduled live-contract evidence.** Closed.
+- **Main freeze while Group 1 is pending.** Released after closure.
 - **Group 6 candidate-tag security walk-through.** Still open.
 - **Group 7 release/sigstore/SLSA evidence.** Still open.
 - **Launch-candidate tracking issue.** Requires approval-gated issue creation.
@@ -394,7 +394,7 @@ run_case "missing launch-candidate tracking issue gate fails closed" \
   1 'external gate disposition missing required text.*Launch-candidate tracking issue'
 
 mut_missing_main_freeze_external_gate() {
-  perl -0pi -e 's/- \*\*Main freeze while Group 1 is pending\.\*\* Requires operator coordination\.\n//' "$1"
+  perl -0pi -e 's/- \*\*Main freeze while Group 1 is pending\.\*\* Released after closure\.\n//' "$1"
 }
 MUTATOR=mut_missing_main_freeze_external_gate
 run_case "missing main-freeze external gate fails closed" \

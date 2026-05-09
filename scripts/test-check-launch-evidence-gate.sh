@@ -46,8 +46,10 @@ fi
 echo "== Test 2: checked box without evidence annotation => FAIL"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] Two consecutive nightly runs green with no flakes/- [x] Two consecutive nightly runs green with no flakes/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+- [x] Two consecutive nightly runs green with no flakes
+      _Tracking: evidence intentionally missing._
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "checked box without evidence should fail but exited 0"
 else
@@ -59,9 +61,10 @@ fi
 echo "== Test 3: checked box with _Closed_ annotation => OK"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] Two consecutive nightly runs green with no flakes/- [x] Two consecutive nightly runs green with no flakes\
-      _Closed 2026-05-03 by commit abc1234_/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+- [x] Two consecutive nightly runs green with no flakes
+      _Closed 2026-05-03 by commit abc1234_
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   pass "checked box with _Closed_ annotation passes"
 else
@@ -73,9 +76,10 @@ fi
 echo "== Test 4: checked box with workflow run URL => OK"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] Two consecutive nightly runs green with no flakes/- [x] Two consecutive nightly runs green with no flakes\
-      https:\/\/github.com\/apet97\/go-clockify\/actions\/runs\/25240000001/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+- [x] Two consecutive nightly runs green with no flakes
+      https://github.com/apet97/go-clockify/actions/runs/25240000001
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   pass "checked box with workflow run URL passes"
 else
@@ -87,9 +91,10 @@ fi
 echo "== Test 5: checked box with workflow_run_id evidence => OK"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] Two consecutive nightly runs green with no flakes/- [x] Two consecutive nightly runs green with no flakes\
-      workflow_run_id: 25240000001/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+- [x] Two consecutive nightly runs green with no flakes
+      workflow_run_id: 25240000001
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   pass "checked box with workflow_run_id evidence passes"
 else
