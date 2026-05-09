@@ -22,6 +22,67 @@ Until this review is closed:
 - Keep public launch language framed as a launch-candidate evidence or
   review pass.
 
+## Owner / Reviewer Role
+
+This is a CAKE.com / Clockify-side approval gate. The repository
+maintainer cannot self-approve it.
+
+- **Owner role: CAKE.com / Clockify legal, brand, or product
+  reviewer.** A specific reviewer with written authority to grant or
+  refuse trademark and official-product framing must accept the
+  request. No reviewer is currently assigned; the maintainer must
+  record the assigned reviewer's identity in this section before any
+  decision iteration is treated as approval. The repository
+  maintainer (`@apet97`) drives the request, packages evidence, and
+  archives the response.
+- A peer maintainer or contributor cannot serve as the reviewer for
+  this gate.
+- If the assigned reviewer changes, replace the prior owner record
+  with the new reviewer's identity and the reassignment date before
+  the next request iteration.
+
+## Approval Evidence Format
+
+Approval (or a written rebrand decision) closes `L-10`, the
+`clockify://` URI gate, and the gRPC service-name gate only when the
+evidence archived in `docs/launch-readiness-review-may-8.md` carries
+all of the following:
+
+- Reviewer identity (full name, role, and CAKE.com / Clockify team).
+- ISO 8601 decision date.
+- Decision scope, listing the question numbers in this document that
+  are answered. The `clockify://` URI gate requires question 5 to be
+  answered; the gRPC service-name gate requires question 6 to be
+  answered. A trademark approval that does not name questions 5 and 6
+  leaves both transport-identifier gates open.
+- Decision text (approve / approve-with-changes / rebrand / refuse)
+  and the exact wording approved for each affected surface: repository
+  name, npm package name, binary name, MCP tool prefix, `clockify://`
+  URI scheme, gRPC service name, README, package metadata, container
+  labels, GitHub repository description, and release notes.
+- Rebrand instructions (when not approved): replacement names,
+  schemes, and timelines, plus the maintainer who owns execution.
+- Pointer to the originating ticket, email thread, or signed document,
+  redacted of any private contact details before archival.
+
+A `docs/release/brand-legal-review.md` edit alone does not close any
+of these gates; it must be paired with the ledger entry above.
+
+## Non-Goal of This Document
+
+This file frames reviewer questions and is not approval. The following
+local checks do **not** close `L-10`, the `clockify://` URI gate, or
+the gRPC service-name gate:
+
+- `make doc-parity`, `make release-check`, the launch-review ledger,
+  and any other local verifier passing on this repository.
+- `make license-evidence` raw inventory output (it is evidence input
+  for counsel, not legal clearance).
+- Local wording cleanups that frame the project as
+  "launch-candidate evidence" rather than "official-product."
+- A maintainer's personal opinion that the brand framing is
+  "obviously fine."
+
 ## Questions for Reviewers
 
 1. Is `go-clockify` an acceptable repository name for a public project

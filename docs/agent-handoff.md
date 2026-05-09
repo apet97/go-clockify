@@ -165,12 +165,19 @@ code/CI hardening backlog is tracked in
    legs succeeded. Wait for scheduled-run evidence on the final
    candidate SHA after the workflow change lands.
 5. **Paid-hosted external review and legal/commercial gates.** A paid
-   hosted launch still needs the final plan's non-code evidence:
-   third-party or peer security review recorded in `SECURITY.md`
-   against the candidate tag, DPA / customer terms, privacy and
-   data-handling review by counsel, and the trademark / official
-   Clockify framing decision. Local tests and repo docs cannot close
-   these gates.
+   hosted launch still needs the final plan's non-code evidence: the
+   `Paid-hosted external security review`,
+   `DPA / terms / privacy posture`,
+   `Trademark / "official Clockify" language`,
+   `Clockify URI scheme and gRPC service-name branding review`,
+   `P1-8 paid-commercial RLS decision`, and
+   `Cross-replica hosted HTTP quotas` external gates in
+   `docs/launch-readiness-review-may-8.md`. Each gate now lists Owner,
+   Evidence artifact, and Non-goal sub-bullets so a maintainer can
+   route the request without inventing the format. Closure requires
+   the named external reviewer's written decision archived per the
+   listed evidence artifact; local tests, doc edits, and runbook
+   pointers are inputs, not approvals.
 
 ## Current commit-readiness checkpoint
 
