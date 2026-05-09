@@ -223,3 +223,28 @@ fail-closed validator before treating workflow-backed boxes as closed.
 - `docs/release-policy.md`
 - `docs/verification.md`
 - `.github/workflows/release-smoke.yml`
+
+## Failed-evidence record — v1.2.1-rc.1 (2026-05-09)
+
+`v1.2.1-rc.1` was cut on `a5d5f75769dc834a268f6ab24949b139ac4cff85` and is **preserved as failed-evidence only** — it is **not** a releasable RC. Recorded here so future RC work (rc.2+) does not silently re-hit the same failures and so the rc.2 fix bundle has a referenceable baseline.
+
+| Workflow | Run ID | Result | Failure point |
+|---|---|---|---|
+| Docker Image | [25612037638](https://github.com/apet97/go-clockify/actions/runs/25612037638) | ✅ success | `Build, scan, sign` job; `cosign sign` pushed signature at 21:19:21Z (`tlog entry created with index: 1487221873`) |
+| Release (goreleaser) | [25612037642](https://github.com/apet97/go-clockify/actions/runs/25612037642) | ❌ failure | Step `Publish npm packages` exit 1 — `npm error You must specify a tag using --tag when publishing a prerelease version.` First package staged was `@apet97/clockify-mcp-go-darwin-arm64@1.2.1-rc.1`. |
+| Deploy | [25612037645](https://github.com/apet97/go-clockify/actions/runs/25612037645) | ❌ failure | Step `Verify image signature` exit 10 — `Error: no signatures found`. Verify ran at 21:19:16Z, signature not pushed until 21:19:21Z (5-second timing race against Docker Image's `cosign sign`). |
+| `release-smoke.yml` (release event) | _not fired_ | — | Did not auto-trigger. The Release workflow uses `GITHUB_TOKEN` to publish the GitHub Release object, and GitHub suppresses downstream workflow triggers from `GITHUB_TOKEN`-driven actions, so `release: [published]` never reached release-smoke. |
+
+Asset state on the rc.1 GitHub Release object remained intact:
+
+- 47 release assets uploaded between 21:19:47Z and 21:19:56Z (binaries, `.sigstore.json` cosign bundles, `.spdx.json` SBOMs, `SHA256SUMS.txt`).
+- GitHub Release object: `name=v1.2.1-rc.1`, `isPrerelease=true`, `isDraft=false`, `publishedAt=2026-05-09T21:19:56Z`.
+- No partial npm publish — `Publish npm packages` aborted on the first staged package, before any `npm publish` request reached the registry. Verifiable: `npm view @apet97/clockify-mcp-go-darwin-arm64@1.2.1-rc.1` returns 404; `@apet97/clockify-mcp-go` `dist-tags.latest` remains `1.2.0`.
+
+Why these are **not** transient and require an rc.2:
+
+1. **npm `--tag` script bug.** `scripts/publish-npm.sh` did not pass `--tag` for prereleases. Re-running the same Release workflow on the same `v1.2.1-rc.1` tag would hit the identical failure because the workflow runs against the tag's tree and the script bug is on that tree. **Fix-and-retag (rc.2) is required.**
+2. **Deploy timing race.** The image **is** correctly signed (Docker Image's `cosign sign` step succeeded with tlog index 1487221873). Deploy's `Verify image signature` simply ran 5 seconds early. Rerunning the failed Deploy run on rc.1 will pass — but rc.1's npm gate stays unproven regardless. The deploy.yml fix wraps `cosign verify` in the same 24×30s retry budget as the digest-lookup step so the race cannot recur on rc.2+.
+3. **release-smoke not firing.** Architectural — `GITHUB_TOKEN`-suppressed event chain. The release.yml fix adds an explicit `gh workflow run release-smoke.yml --ref main -f tag=$RELEASE_VERSION` step after the existing `Trigger reproducibility verification` step (mirrors the same pattern reproducibility.yml uses for the same reason).
+
+rc.2 cuts only after the fix PR for these three issues lands on `main`. This runbook is updated again with the rc.2 evidence pointers when rc.2's Release / Docker Image / Deploy / release-smoke / npm-publish all complete green and the Group 7 evidence is recordable.
