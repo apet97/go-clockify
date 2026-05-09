@@ -129,3 +129,14 @@ was accidentally pointed at a real workspace.
 - `docs/runbooks/hosted-error-sanitization.md` — upstream error body
   redaction.
 - `docs/live-tests.md` — sacrificial live workspace key rotation.
+
+## 8. Privacy / DPA Gate Boundary
+
+This runbook is operational guidance for credential rotation and
+audit. It does **not** close the `DPA / terms / privacy posture`
+external approval gate in `docs/launch-readiness-review-may-8.md`.
+That gate requires a counsel-signed data-flow review and DPA
+disposition, with the artifact format documented in the gate's
+evidence-artifact bullet. Following this runbook during an incident is
+necessary, but it does not constitute a privacy / data-handling
+review.

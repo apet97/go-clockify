@@ -126,6 +126,12 @@ profile and is covered by cross-tenant E2E tests, but a paid
 commercial hosted plane should treat database-enforced RLS as a
 separate defense-in-depth design gate.
 
+This document records the current posture; it does **not** close the
+`P1-8 paid-commercial RLS decision` external approval gate in
+`docs/launch-readiness-review-may-8.md`. Closing that gate requires the
+recorded ADR named in the gate's evidence artifact, not an edit to
+this section.
+
 ## Failure modes
 
 Categorised by [`authn.FailureCategory`](../internal/authn/category.go),

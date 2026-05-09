@@ -872,21 +872,105 @@ prints a specific maintainer action beside each open gate.
   posture is documented, but implementing database-enforced RLS still
   requires a product/commercial design decision and tenant-context
   plumbing through the Postgres store API.
+  - Owner role: paid-hosted product/commercial decision-maker plus
+    the maintainer responsible for the Postgres control-plane store
+    API. A specific decision-maker is not yet assigned; record the
+    assigned individual and date when the request is sent. A peer
+    maintainer cannot self-approve this; the decision-maker must
+    record the call.
+  - Evidence artifact: a new ADR under `docs/adr/` (proposed title
+    "Postgres row-level security for the paid-hosted plane") that
+    names the decision (adopt / defer / refuse) and, if adopted,
+    references a landed RLS migration under
+    `internal/controlplane/postgres/migrations/` plus a passing
+    cross-tenant store-API test that exercises `SET LOCAL
+    app.current_tenant`. The launch-readiness ledger must quote the
+    ADR number, decision text, and decision date before this gate can
+    close.
+  - Non-goal: `docs/auth-model.md` documenting the v1.x app-layer
+    scoping, `docs/runbooks/postgres-restore.md` carrying the
+    RLS-aware restore checks, `make test-postgres` Testcontainers
+    passing, and any cross-tenant E2E test against the application
+    layer alone do NOT close this gate. They are necessary
+    preconditions; the recorded ADR is the only closure artifact.
 - **Cross-replica hosted HTTP quotas.** The in-process
   `MCP_HTTP_RATELIMIT_*` guards reject obvious abuse on each pod, but
   an official hosted plane still needs gateway/load-balancer evidence
   for global source/principal quotas.
+  - Owner role: hosted-platform / SRE owner of the production gateway,
+    ingress, or load balancer enforcing global quotas. No specific
+    owner is assigned yet; record the assigned individual and date
+    when the request is sent. The repository maintainer cannot satisfy
+    this gate from the MCP process alone.
+  - Evidence artifact: archived gateway/load-balancer quota policy
+    (config snippet or signed change record) plus a metrics snapshot
+    showing the global quota counter is visible to on-call dashboards.
+    `docs/runbooks/rate-limit.md` § "Launch Evidence" lists the
+    expected items; the launch-readiness ledger must quote the
+    archived policy reference and metrics-snapshot identifier before
+    this gate can close.
+  - Non-goal: `MCP_HTTP_RATELIMIT_PER_IP`,
+    `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`, and
+    `MCP_HTTP_RATELIMIT_GET_PER_SESSION` defaults in deployment
+    manifests, the
+    `clockify_mcp_http_admission_rejections_total{path,reason}`
+    metric, and the `ClockifyMCPHTTPAdmissionRejections` alert do NOT
+    close this gate. They enforce per-process admission only;
+    cross-replica enforcement still depends on the external gateway
+    evidence above.
 - **Paid-hosted external security review.** The final integrated plan
   requires at least one third-party or peer security review recorded
   in `SECURITY.md` against the candidate tag before a paid hosted
   launch. Local tests, internal review, and candidate-tag Group 6
   scans are necessary evidence, not a substitute for this external
   review gate.
+  - Owner role: a third-party security firm, a peer reviewer outside
+    the `@apet97` self-merge boundary, or a designated CAKE.com
+    security reviewer with authority to record findings. No specific
+    reviewer is assigned yet; record the assigned reviewer and
+    engagement date when the request is sent. The repository
+    maintainer cannot serve as the reviewer for this gate.
+  - Evidence artifact: a new section in `SECURITY.md` (or a linked
+    review report under `docs/security/`) carrying reviewer identity,
+    ISO 8601 review date, the candidate tag reviewed, scope statement
+    (auth modes, audit, tenant isolation, transport surfaces, supply
+    chain), findings list (or explicit "no findings"), and the
+    reviewer's release-status recommendation. The launch-readiness
+    ledger must quote the reviewer identity and review date before
+    this gate can close.
+  - Non-goal: `make verify-vuln`, `make verify-fips`,
+    `make secret-scan`, `semgrep scan`, the candidate-tag Group 6
+    evidence walk-through, and the Group 7 release-smoke output do
+    NOT close this gate. They are inputs the external reviewer must
+    inspect; only the reviewer's written attestation closes it.
 - **DPA / terms / privacy posture.** The paid-hosted checklist requires
   customer terms / DPA and privacy / data-handling review by counsel,
   including `docs/auth-model.md` and the credential-leak response
   posture. This is explicitly out of scope for local code changes and
   remains a legal/commercial approval gate.
+  - Owner role: CAKE.com / Clockify legal counsel responsible for
+    customer terms and the data-processing addendum, plus a privacy /
+    data-handling reviewer authorized to sign off on personal-data
+    flows. No specific reviewer is assigned yet; record the assigned
+    counsel and engagement date when the request is sent. The
+    repository maintainer cannot self-approve this gate.
+  - Evidence artifact: an executed DPA template (or counsel-signed
+    written confirmation that the existing CAKE.com DPA covers
+    `clockify-mcp` paid-hosted usage) plus a counsel-acknowledged
+    data-flow review covering: principal claims persisted in the
+    `sessions` and `audit_events` tables, Clockify API key handling
+    described in `docs/auth-model.md`, the credential-leak response
+    posture in `docs/runbooks/credential-leak-response.md`, OIDC
+    token decode and verify-cache behavior, slog redaction posture,
+    and audit retention behind `MCP_CONTROL_PLANE_AUDIT_RETENTION`.
+    The launch-readiness ledger must reference the executed
+    document (ticket / contract reference, redacted of private contact
+    details) and counsel identity before this gate can close.
+  - Non-goal: `docs/auth-model.md`, `docs/runbooks/credential-leak-response.md`,
+    `SECURITY.md` scope sections, the `RedactingHandler` slog tests,
+    and any local doc-parity guard about privacy wording do NOT close
+    this gate. They describe operator behavior; counsel's written
+    sign-off is the only closure artifact.
 - **Trademark / "official Clockify" language.** This needs legal or
   product approval before any public promotion language claims official
   Clockify status. Safe local wording changes now frame the work as a
@@ -896,12 +980,48 @@ prints a specific maintainer action beside each open gate.
   does not close `L-10`; `docs/release/brand-legal-review.md` now
   frames the reviewer questions, but written legal/product approval or
   a final rebrand decision is still required.
+  - Owner role: CAKE.com / Clockify trademark, legal, or product
+    reviewer with written authority to grant or refuse the
+    official-product framing per
+    `docs/release/brand-legal-review.md` § "Owner / Reviewer Role".
+    No specific reviewer is assigned yet; record the assigned
+    reviewer and engagement date when the request is sent. The
+    repository maintainer cannot self-approve this gate.
+  - Evidence artifact: a `docs/launch-readiness-review-may-8.md` entry
+    quoting the reviewer's approval (or rebrand decision) per
+    `docs/release/brand-legal-review.md` § "Approval Evidence
+    Format", with reviewer identity, ISO 8601 date, scope (which of
+    the 11 reviewer questions are answered), decision text, and
+    approved wording or rebrand instructions for each affected surface.
+  - Non-goal: `doc-parity` guards on official-launch-candidate
+    phrasing, the reviewer questions in
+    `docs/release/brand-legal-review.md`, and every local wording
+    change framing the project as "launch-candidate evidence" do NOT
+    close `L-10`. Only the recorded written reviewer decision closes
+    it.
 - **Clockify URI scheme and gRPC service-name branding review.**
   `clockify://` resource templates and the opt-in
   `clockify.mcp.v1.MCP` gRPC service name remain part of the same
   brand/legal approval or rebrand decision. The May 8 transport review
   flagged both before public client dependency, and no local test or
   doc cleanup closes the question.
+  - Owner role: the same CAKE.com / Clockify legal, brand, or product
+    reviewer who owns `L-10`. This gate cannot be granted
+    independently of the trademark gate. No specific reviewer is
+    assigned yet; the same record kept for the trademark gate's
+    reviewer applies here.
+  - Evidence artifact: the same recorded reviewer decision required
+    for `L-10`, scoped to explicitly answer questions 5 and 6 in
+    `docs/release/brand-legal-review.md` (the `clockify://` URI scheme
+    and the opt-in `clockify.mcp.v1.MCP` gRPC service name). If the
+    reviewer's `L-10` decision does not name both, this gate stays
+    open until a follow-up decision lands.
+  - Non-goal: `internal/transport/grpc/service.go` carrying the
+    hand-written service descriptor, `docs/api-coverage.md` and
+    `docs/clients.md` describing `clockify_*` tools and `clockify://`
+    resources, and any local rename of one identifier in isolation do
+    NOT close this gate. The closure artifact is the written reviewer
+    decision covering both identifiers.
 - **Public repo content audit before visibility flip.** `make
   public-content-audit` is now the read-only local snapshot for the
   final integrated plan's public-flip content audit. Rechecked on
