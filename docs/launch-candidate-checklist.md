@@ -470,6 +470,19 @@ checked.
       workflow fix is on the default branch; the next scheduled
       `mutation.yml` cron after that landing still needs to record a
       green run on the final candidate SHA before this box can close._
+      _Tracking 2026-05-10 on rc.2 candidate SHA
+      `d83f9f86d3b95594abef2ee035554510faa799c1`: scheduled
+      `live-contract.yml` greens still pre-date rc.2 (workflow_run_id:
+      25608259477 / 25607242862 on `feef83c6`); `release-smoke.yml`
+      run 25613270137 is green on rc.2 via the new explicit
+      `workflow_dispatch` trigger added in PR #80; `reproducibility.yml`
+      run 25613269789 FAILED on rc.2 with sha256 mismatches across the
+      FIPS (linux-x64) and darwin (arm64, x64) binaries — local
+      rebuild bytes diverge from the published assets, indicating a
+      goreleaser/Go-toolchain non-determinism that has not been
+      triaged. This box stays open until reproducibility.yml is green
+      on the candidate SHA in addition to the previously tracked
+      mutation.yml gap. https://github.com/apet97/go-clockify/actions/runs/25613269789_
 - [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.
@@ -478,14 +491,44 @@ checked.
       25255062599, validated locally with `make bench-baseline-check`,
       then passed linux/amd64 comparison in
       https://github.com/apet97/go-clockify/actions/runs/25255216987._
-- [ ] Release artefacts: signed binaries (cosign, plus SLSA when
+- [x] Release artefacts: signed binaries (cosign, plus SLSA when
       GitHub artifact attestations are available), SBOMs,
       Docker images, FIPS variant. Verified by `release-smoke.yml`
       on the candidate tag for its sampled default/Postgres
       linux-x64 artifacts, plus manual `docs/verification.md`
       evidence for any required variant not sampled by
       `release-smoke.yml`.
-- [ ] `clockify-mcp doctor --strict` and
+      _Closed 2026-05-10 on rc.2 candidate SHA
+      `d83f9f86d3b95594abef2ee035554510faa799c1`: workflow_run_id:
+      25613270137,
+      https://github.com/apet97/go-clockify/actions/runs/25613270137,
+      release-smoke.yml workflow_dispatch on rc.2 verified `cosign
+      verify-blob` for `clockify-mcp-linux-x64` and
+      `clockify-mcp-postgres-linux-x64` (both `Verified OK`),
+      `gh attestation verify` for the same two binaries (SLSA
+      provenance succeeded — sourceRepositoryVisibilityAtSigning was
+      `public` on the rc.2 attestations), and `cosign verify
+      ghcr.io/apet97/go-clockify@sha256:4171a582016b55ae5365d626b697831c7146c7c3bed9cef134be91ef8083a3b5`
+      for the multi-arch container image (`OK: cosign verify
+      ghcr.io/apet97/go-clockify@sha256:4171…3b5`). Manual FIPS
+      variant evidence was captured locally per
+      `docs/verification.md` step 2 against the published rc.2
+      `clockify-mcp-fips-linux-x64.sigstore.json` bundle (`Verified
+      OK`). The 46-asset structural contract from
+      `scripts/check-release-assets.sh` returned `OK: all 46 expected
+      release assets present` against the rc.2 GitHub Release object.
+      The Release object also carries one supplementary
+      package-level SBOM whose name embeds the image digest
+      (`sha256:4171…3b5`); 47 total assets, but the count is not a
+      regression because the structural check excludes that name from
+      the contract surface.
+      Local SLSA verify of `clockify-mcp-linux-x64` recorded all 15
+      binary subjects in the SLSA provenance statement, with
+      `builder.id =
+      https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/v1.2.1-rc.2`
+      and `runDetails.metadata.invocationId =
+      https://github.com/apet97/go-clockify/actions/runs/25613215490/attempts/1`._
+- [x] `clockify-mcp doctor --strict` and
       `clockify-mcp-postgres doctor --strict --check-backends`
       both exit 0 against the candidate's reference deployment.
       For `release-smoke.yml`, archive or link the
@@ -493,6 +536,31 @@ checked.
       `release-doctor-strict-ok.txt`,
       `release-doctor-strict-fail.txt`, and
       `release-doctor-postgres-ok.txt`.
+      _Closed 2026-05-10 on rc.2 candidate SHA
+      `d83f9f86d3b95594abef2ee035554510faa799c1`: workflow_run_id:
+      25613270137,
+      https://github.com/apet97/go-clockify/actions/runs/25613270137,
+      uploaded the `release-smoke-doctor-output` artifact
+      (https://api.github.com/repos/apet97/go-clockify/actions/artifacts/6899048388/zip)
+      containing all three required files. `release-doctor-strict-ok.txt`
+      shows `Strict posture: OK no fatal findings; 1 warning(s)` for
+      the default `clockify-mcp-linux-x64` binary under
+      `MCP_PROFILE=prod-postgres`. `release-doctor-postgres-ok.txt`
+      shows the same `Strict posture: OK` for the
+      `clockify-mcp-postgres-linux-x64` binary with the workflow's
+      Postgres service container (`--check-backends` succeeded).
+      `release-doctor-strict-fail.txt` shows the negative case
+      `Strict posture: ERROR 1 error finding(s)` with
+      `CLOCKIFY_POLICY` rejected when broader than `time_tracking_safe`,
+      proving the strict gate is wired in the published binary. Local
+      doctor strict on the candidate-tag tree (built from HEAD
+      `d83f9f8…`) reproduces both behaviours: `MCP_PROFILE=prod-postgres
+      … doctor --strict` exits 0 and `CLOCKIFY_POLICY=standard …
+      doctor --strict` exits 3 with the expected `CLOCKIFY_POLICY`
+      error finding. Local `--check-backends` against the synthetic DSN
+      requires a real Postgres and is intentionally not closure
+      evidence; release-smoke's service-container run is the
+      authoritative `--check-backends` proof for this box._
 
 **Definition of done.** A clean checkout of the candidate tag
 produces a green `release-check`, every required workflow on

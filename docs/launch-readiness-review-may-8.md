@@ -781,9 +781,50 @@ prints a specific maintainer action beside each open gate.
   final candidate tag and evidence for `make verify-vuln`,
   `make verify-fips`, gitleaks, and semgrep/no-finding disposition.
   This is `L-04`.
-- **Group 7 release/sigstore/SLSA evidence.** Still requires an
-  actual `vX.Y.Z-rc.N` tag (`L-01`), release smoke, cosign/SLSA
-  verification, and archived `doctor --strict` output.
+- **Group 7 release/sigstore/SLSA evidence.** Partially closed on
+  2026-05-10 against rc.2 candidate SHA
+  `d83f9f86d3b95594abef2ee035554510faa799c1`. The two
+  artefact-and-doctor boxes are now closed in
+  `docs/launch-candidate-checklist.md`: release-smoke run
+  https://github.com/apet97/go-clockify/actions/runs/25613270137
+  verified cosign on `clockify-mcp-linux-x64` +
+  `clockify-mcp-postgres-linux-x64` + the multi-arch image at
+  `ghcr.io/apet97/go-clockify@sha256:4171a582016b55ae5365d626b697831c7146c7c3bed9cef134be91ef8083a3b5`,
+  succeeded on SLSA attestation verification for the same two
+  binaries (rc.2 attestations report
+  `sourceRepositoryVisibilityAtSigning="public"`, so the ADR-0013
+  user-owned-private feature gate did not trip), and uploaded the
+  `release-smoke-doctor-output` artifact with all three required
+  files. Local manual verification on darwin-arm64 reproduced
+  `Verified OK` for the FIPS variant
+  (`clockify-mcp-fips-linux-x64.sigstore.json`) and reproduced the
+  positive and negative `doctor --strict` cases from the
+  candidate-tag tree. The SLSA statement names all 15 binary
+  subjects with `builder.id =
+  https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/v1.2.1-rc.2`
+  and `runDetails.metadata.invocationId =
+  https://github.com/apet97/go-clockify/actions/runs/25613215490/attempts/1`.
+  Two Group 7 boxes remain open: `make release-check` on macOS
+  arm64 hits a pre-existing bash-3.2 trap in
+  `scripts/check-public-content-audit.sh:441` when invoked through
+  `bash -lc` (script not in this lane's allowed write set), and the
+  required-workflows row stays open because `reproducibility.yml`
+  run https://github.com/apet97/go-clockify/actions/runs/25613269789
+  failed on rc.2 with sha256 mismatches between local rebuilds and
+  published assets for `clockify-mcp-fips-linux-x64`,
+  `clockify-mcp-darwin-arm64`, `clockify-mcp-fips-darwin-arm64`,
+  and `clockify-mcp-fips-darwin-x64`. The rc.2 Deploy run
+  https://github.com/apet97/go-clockify/actions/runs/25613215498
+  also failed (NEW rc.2 finding): the `Verify Release Assets`
+  job's `gh release download` step lacks the retry budget that
+  PR #80 added for the cosign-verify step, and ran 9 seconds
+  before the GitHub Release object finished publishing
+  (download attempt 22:20:29Z, release publishedAt 22:20:38Z).
+  Release artefacts themselves are intact and verifiable by the
+  release-smoke run; this is a Deploy-pipeline race, not a
+  release-artifact regression. Both `reproducibility.yml` and
+  `deploy.yml` remain owned by other lanes; this lane only records
+  the findings.
 - **Launch-candidate tracking issue.** The coordinator's Day 2 plan
   requires opening `Launch candidate vX.Y.Z-rc.N` after the rc exists
   and linking every green workflow run, archived `doctor --strict`

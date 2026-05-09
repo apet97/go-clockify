@@ -141,9 +141,46 @@ code/CI hardening backlog is tracked in
    evidence. The Semgrep workflow artifact still needs its first
    pushed-run evidence and does not replace the candidate-tag scan.
    File findings or explicit "no findings" evidence in `SECURITY.md`.
-2. **Release/sigstore/SLSA evidence.** The candidate tag still
-   needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
-   archived `doctor --strict` outputs for the reference deployment.
+2. **Release/sigstore/SLSA evidence.** Partially closed on
+   2026-05-10 against rc.2 candidate SHA
+   `d83f9f86d3b95594abef2ee035554510faa799c1` (peeled from annotated
+   tag SHA `681079e571bed0efbfd448129a3d9fa1de58cd15`):
+   `release-smoke.yml` run 25613270137 is green
+   (https://github.com/apet97/go-clockify/actions/runs/25613270137);
+   it auto-fired on rc.2 via the new explicit `workflow_dispatch`
+   trigger added to `release.yml` in PR #80, verified `cosign
+   verify-blob` for `clockify-mcp-linux-x64` +
+   `clockify-mcp-postgres-linux-x64` (both `Verified OK`), `gh
+   attestation verify` for the same two binaries (SLSA — rc.2
+   attestations report
+   `sourceRepositoryVisibilityAtSigning="public"`), `cosign verify
+   ghcr.io/apet97/go-clockify@sha256:4171a582016b55ae5365d626b697831c7146c7c3bed9cef134be91ef8083a3b5`,
+   and uploaded the `release-smoke-doctor-output` artifact
+   (https://api.github.com/repos/apet97/go-clockify/actions/artifacts/6899048388/zip)
+   with `release-doctor-strict-ok.txt`,
+   `release-doctor-strict-fail.txt`, and
+   `release-doctor-postgres-ok.txt`. Local manual `cosign
+   verify-blob` against the FIPS variant
+   (`clockify-mcp-fips-linux-x64.sigstore.json`) returns `Verified
+   OK`. The release artefact and reference-deployment doctor boxes
+   are now closed in `docs/launch-candidate-checklist.md` Group 7;
+   the `release-candidate-evidence.md` runbook records the rc.2
+   evidence pointers alongside the rc.1 failed-evidence record.
+   Two rc.2-specific NEW findings remain open and are owned by
+   other lanes: (a) `reproducibility.yml` run 25613269789 failed
+   with sha256 mismatches on `clockify-mcp-fips-linux-x64`,
+   `clockify-mcp-darwin-arm64`, `clockify-mcp-fips-darwin-arm64`,
+   and `clockify-mcp-fips-darwin-x64` (cosign and SLSA still
+   verify; reproducibility means bit-identical rebuild diverges,
+   not provenance); (b) Deploy run 25613215498 failed because the
+   `Verify Release Assets / Download release binary for SLSA
+   verification` step's `gh release download` ran 9 seconds before
+   the GitHub Release object finished publishing (download
+   22:20:29Z, publishedAt 22:20:38Z) — PR #80's cosign-verify
+   retry budget did not extend to the release-asset download
+   step. Neither failure invalidates the rc.2 release artefacts;
+   both are CI-pipeline races/regressions that the next lane on
+   those workflows owns.
 3. **Externally visible repo-state cleanup.** Rechecked on 2026-05-09
    after `a07443b` landed: CodeQL run 25609129989, Dependency Review
    run 25609129978, and Semgrep run 25609129983 are green on the
