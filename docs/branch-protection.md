@@ -9,9 +9,15 @@ The snapshot exists so an auditor or external reviewer can see what
 the merge gate actually enforces without having admin access to the
 repository.
 
-Last reviewed: 2026-05-02 (Shared-service Postgres E2E promoted
-to required-status check after three consecutive green runs on
-`main`; see Group 2 closure in
+Last reviewed: 2026-05-09 (classic branch protection re-applied on
+`main` after `gh api repos/apet97/go-clockify/branches/main/protection`
+returned `Branch not protected` and the rulesets list was empty;
+required-status checks are scoped to the three D9 launch checks so
+the merge gate enforces what is named in
+[`docs/launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md).
+2026-05-02 history: Shared-service Postgres E2E was promoted to a
+required-status check after three consecutive green runs on `main`;
+see Group 2 closure in
 [`launch-candidate-checklist.md`](launch-candidate-checklist.md);
 admin bypass logged once for `f3897b2` — see "Bypass log" below).
 
@@ -23,6 +29,14 @@ admin bypass logged once for `f3897b2` — see "Bypass log" below).
 > four are a direct consequence of the single-maintainer reality
 > documented in [`GOVERNANCE.md`](../GOVERNANCE.md) and
 > [`docs/adr/0016`](adr/0016-single-maintainer-governance.md).
+> The required-status-check list below was scoped down on 2026-05-09
+> from the historical 19-context snapshot to the three D9 launch
+> checks the maintainer pre-approved (`Doctor strict smoke`,
+> `Doctor Postgres backend`, `Shared-service Postgres E2E`) when the
+> classic rule was re-applied. Restoring the broader 16-check
+> hardening list documented in the "Historical 19-context required
+> list" section below remains a maintainer follow-up that is not in
+> scope for the 2026-05-09 repo-state cleanup pass.
 
 ## Applied protection rules on `main`
 
@@ -82,6 +96,37 @@ These are the exact GitHub check-run names currently in the
 required-checks list on `main`, as reported by
 `scripts/audit-branch-protection.sh`:
 
+- `Doctor strict smoke` — `scripts/smoke-doctor-strict.sh` verifies
+  hosted strict-posture behavior, including the broad-policy
+  negative exit path. Runs as a standalone CI job so a strict-doctor
+  regression does not hide behind an HTTP/stdio smoke failure.
+- `Doctor Postgres backend` — builds `clockify-mcp` with
+  `-tags=postgres` against an ephemeral `postgres:16-alpine` service
+  and runs `doctor --strict --check-backends`. Exit 0 proves the
+  embedded migrations apply, `audit_events.phase` exists, and the
+  audit health round-trip through `DoctorCheck(ctx)` succeeds.
+- `Shared-service Postgres E2E` — drives `mcp.ServeStreamableHTTP`
+  in-process against an ephemeral `postgres:16-alpine` service
+  with two distinct `forward_auth` principals and asserts tenant
+  isolation in `audit_events` + `sessions`, the cross-tenant
+  negative, per-tenant policy enforcement
+  (`time_tracking_safe` blocks `clockify_create_project`), and
+  read-only-tools-emit-no-audit. Closes Group 2 of
+  `docs/launch-candidate-checklist.md`. Promoted after three
+  consecutive green runs on `main`
+  (25240007056, 25240085916, 25240163213 on 2026-05-02).
+
+### Historical 19-context required list (follow-up to restore)
+
+Before the 2026-05-09 re-application, the snapshot enumerated 19
+required-status contexts. The current rule scopes down to the three
+D9 launch checks above so the merge gate enforces what the
+2026-05-09 maintainer pre-approval named explicitly. The wider
+list below is preserved here so a follow-up PR can lift the merge
+gate back to the full hardening profile after explicit maintainer
+approval; the contexts are still reported as `success` on every
+push to `main`, they just are not required to merge today.
+
 - `Format` — `gofmt` parity.
 - `Vet` — `go vet ./...`.
 - `Lint` — `golangci-lint run ./...`.
@@ -104,25 +149,6 @@ required-checks list on `main`, as reported by
 - `Test (HTTP smoke)` — `scripts/smoke-http.sh` and
   `scripts/smoke-stdio.sh` exercise HTTP and stdio transports
   end-to-end against dummy credentials.
-- `Doctor strict smoke` — `scripts/smoke-doctor-strict.sh` verifies
-  hosted strict-posture behavior, including the broad-policy
-  negative exit path. Runs as a standalone CI job so a strict-doctor
-  regression does not hide behind an HTTP/stdio smoke failure.
-- `Doctor Postgres backend` — builds `clockify-mcp` with
-  `-tags=postgres` against an ephemeral `postgres:16-alpine` service
-  and runs `doctor --strict --check-backends`. Exit 0 proves the
-  embedded migrations apply, `audit_events.phase` exists, and the
-  audit health round-trip through `DoctorCheck(ctx)` succeeds.
-- `Shared-service Postgres E2E` — drives `mcp.ServeStreamableHTTP`
-  in-process against an ephemeral `postgres:16-alpine` service
-  with two distinct `forward_auth` principals and asserts tenant
-  isolation in `audit_events` + `sessions`, the cross-tenant
-  negative, per-tenant policy enforcement
-  (`time_tracking_safe` blocks `clockify_create_project`), and
-  read-only-tools-emit-no-audit. Closes Group 2 of
-  `docs/launch-candidate-checklist.md`. Promoted after three
-  consecutive green runs on `main`
-  (25240007056, 25240085916, 25240163213 on 2026-05-02).
 - `Build, scan, sign` — the container image builds, Trivy passes on
   HIGH/CRITICAL, cosign signs, and SBOM attestation succeeds. SLSA
   provenance is best-effort while GitHub artifact attestations are
