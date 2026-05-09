@@ -133,7 +133,7 @@ replacement for `docs/launch-candidate-checklist.md`.
   closed if that sequence is removed.
 - **Launch-state baseline wording.** `AGENTS.md`,
   `docs/agent-handoff.md`, and `docs/production-readiness.md` now name
-  the actual current pushed `main` / `origin/main` baseline
+  the latest code-bearing launch-remediation baseline
   (`308c81560a75db037dfdaf306ac04afb48a5cff6`) instead of treating the
   older cron-proven, post-PR #62, or post-PR #63 SHAs as current. The older
   `4fe957547f9e6aea749a85f87823d17a0ccc2928`,
@@ -752,11 +752,12 @@ prints a specific maintainer action beside each open gate.
   25538247771 are green on
   `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
   mutating, audit, and schema-diff log markers, but that SHA is still
-  not current `origin/main` (`308c81560a75db037dfdaf306ac04afb48a5cff6`).
-  Manual dispatch run 25605467213 is green on `308c815` with the same
-  live-contract tiers, but `make launch-external-status` correctly
-  keeps Group 1 open until scheduled cron greens land on the candidate
-  SHA.
+  not the May 9 code-bearing baseline
+  (`308c81560a75db037dfdaf306ac04afb48a5cff6`) or any later candidate
+  docs tip. May 9 manual dispatches are green on pushed candidate SHAs
+  with the same live-contract tiers, but `make launch-external-status`
+  correctly keeps Group 1 open until scheduled cron greens land on the
+  candidate SHA.
 - **Main freeze while Group 1 is pending.** The coordinator's Day 0
   plan says to freeze `main` until Group 1 closes after the
   remediation tree lands. This pass documents the operator

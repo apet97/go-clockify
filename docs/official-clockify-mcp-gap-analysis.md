@@ -162,9 +162,9 @@ What is missing for tier 3 is intentionally narrow:
    promotion to launch candidate must start from two consecutive
    green scheduled runs with the mutating + audit tiers enabled
    and `TestLiveReadSideSchemaDiff` captured. The rolling
-   `live-test-failure` issue is closed and manual dispatch run
-   25605467213 is green on current `main` (`308c815`), but scheduled
-   cron evidence on the candidate SHA has not arrived yet.
+   `live-test-failure` issue is closed and May 9 manual dispatches are
+   green on pushed candidate SHAs, but scheduled cron evidence on the
+   candidate SHA has not arrived yet.
 2. ~~**Shared-service Postgres E2E does not exist as a single
    green-or-red test.**~~ **Closed 2026-05-02** by commits
    42502cf + 79f0769. The
@@ -313,14 +313,15 @@ have not produced default-branch runs yet.
    `live-test-failure` issue.
    *Why blocking:* the launch-candidate definition starts with two
    consecutive scheduled green nightlies on the candidate SHA. The
-   rolling issue is currently closed and manual dispatch run
-   25605467213 is green on current `main` (`308c815`), but manual runs
+   rolling issue is currently closed and May 9 manual dispatches are
+   green on pushed candidate SHAs, but manual runs
    do not start or close the candidate cron clock.
    Rechecked on 2026-05-09: scheduled run 25538247771 also proves the
    audit-phase DSN path (`CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, redacted
    `MCP_LIVE_CONTROL_PLANE_DSN`, and green
    `TestLiveCreateUpdateDeleteEntryAuditPhases`), but it is on
-   `4fe9575`, not current `origin/main` (`308c815`).
+   `4fe9575`, not the May 9 code-bearing baseline (`308c815`) or any
+   later candidate docs tip.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
    (commits 42502cf + 79f0769 plus the local `make test-postgres`

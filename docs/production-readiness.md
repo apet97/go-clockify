@@ -39,11 +39,13 @@ The blessed production profile for shared services is documented in [Production 
 ## Launch-candidate status
 
 `main` is locally prepared for the Clockify launch-candidate evidence
-pass. The current pushed `main` / `origin/main` baseline is
+pass. The latest code-bearing launch baseline is
 `308c81560a75db037dfdaf306ac04afb48a5cff6`
-(`chore(launch): harden hosted candidate readiness`). Manual
-`live-contract.yml` candidate verification run 25605467213 is green on
-that SHA with read-only, schema-diff, mutating, and audit-phase steps.
+(`chore(launch): harden hosted candidate readiness`). Later docs-only
+evidence commits may move `main`; verify the current SHA before
+binding workflow evidence to a candidate. May 9 manual
+`live-contract.yml` dispatches are green on pushed candidate SHAs with
+read-only, schema-diff, mutating, and audit-phase steps.
 The manual live-campaign baseline remains
 `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: it includes the
 post-PR #51 local readiness gates, PR #59's manual

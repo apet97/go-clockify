@@ -41,8 +41,8 @@ The nightly **Live contract** workflow
       (`308c81560a75db037dfdaf306ac04afb48a5cff6`) is newer, so this
       box remains open until the final candidate SHA has scheduled-run
       evidence._
-- [x] Manual candidate verification run is green on the current
-      candidate SHA.
+- [x] Manual candidate verification run is green after the May 9
+      code-bearing candidate hardening.
       _Closed 2026-05-09: workflow_run_id: 25605467213,
       https://github.com/apet97/go-clockify/actions/runs/25605467213,
       `workflow_dispatch` on
@@ -50,8 +50,9 @@ The nightly **Live contract** workflow
       read-only live tests including `TestLiveReadSideSchemaDiff`,
       mutating live tests, and
       `TestLiveCreateUpdateDeleteEntryAuditPhases`. Manual dispatch is
-      candidate-now evidence only and does not close the scheduled-run
-      boxes._
+      candidate-now evidence only; rerun it whenever `main` advances
+      before using it as current-tip evidence, and do not close the
+      scheduled-run boxes with it._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -64,8 +65,9 @@ The nightly **Live contract** workflow
       closed and the root cause is documented in `CHANGELOG.md`.
       _Tracking 2026-05-09: two consecutive scheduled greens exist on
       pushed commit 4fe957547f9e6aea749a85f87823d17a0ccc2928, but
-      not on current `origin/main`
-      (`308c81560a75db037dfdaf306ac04afb48a5cff6`). The
+      not on the May 9 code-bearing baseline
+      (`308c81560a75db037dfdaf306ac04afb48a5cff6`) or any later
+      candidate docs tip. The
       live-test-failure issues remain closed;
       awaiting two cron greens on the final candidate._
 - [ ] Read-side schema diff: response shapes returned by the

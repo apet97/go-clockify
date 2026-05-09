@@ -49,14 +49,15 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Current pushed main baseline:** `308c81560a75db037dfdaf306ac04afb48a5cff6`
+- **Latest code-bearing launch baseline:** `308c81560a75db037dfdaf306ac04afb48a5cff6`
   (`chore(launch): harden hosted candidate readiness`). This is the
-  current `main` / `origin/main` tip after the May 9 hosted/public
-  hardening and dependency-security push. Manual `live-contract.yml`
-  candidate verification run 25605467213 is green on this SHA with
-  read-only, schema-diff, mutating, and audit-phase steps. That run is
-  useful candidate-now evidence, but it does **not** close Group 1's
-  scheduled-cron requirement, Group 6, or Group 7 launch blockers.
+  May 9 hosted/public hardening and dependency-security push. Later
+  docs-only evidence commits may move `main`; always verify the
+  current SHA with `git ls-remote origin refs/heads/main` before
+  binding scheduled or manual workflow evidence to a candidate. Manual
+  `live-contract.yml` dispatches on May 9 are useful candidate-now
+  evidence, but they do **not** close Group 1's scheduled-cron
+  requirement, Group 6, or Group 7 launch blockers.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   full sacrificial-workspace live API campaign refresh: the documented
@@ -137,11 +138,11 @@ Listed in priority order; full detail in
    25593042387 and 25538247771 are green on pushed commit
    `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
    mutating, audit-phase, and schema-diff log markers, but that commit
-   is not current `origin/main` (`308c815`). Manual dispatch run
-   25605467213 is green on `308c815`, but manual dispatch is not
-   scheduled-cron evidence. Group 1 remains open until the final
-   candidate SHA has two consecutive scheduled greens with the same
-   evidence.
+   is not the May 9 code-bearing baseline (`308c815`) or any later
+   candidate docs tip. Manual dispatches are useful candidate-now
+   evidence, but they are not scheduled-cron evidence. Group 1 remains
+   open until the final candidate SHA has two consecutive scheduled
+   greens with the same evidence.
 2. **Group 6 — security walk-through on the candidate tag.**
    Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
    semgrep on the final candidate tag and file findings or

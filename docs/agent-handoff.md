@@ -16,14 +16,14 @@ work and commit it.
 
 ## Launch-state baseline
 
-- **Current pushed main baseline:** `308c81560a75db037dfdaf306ac04afb48a5cff6`
+- **Latest code-bearing launch baseline:** `308c81560a75db037dfdaf306ac04afb48a5cff6`
   (`chore(launch): harden hosted candidate readiness`). This is the
-  current `main` / `origin/main` tip after the May 9 hosted/public
-  hardening and dependency-security push. Manual `live-contract.yml`
-  candidate verification run 25605467213 is green on this SHA with
-  read-only, schema-diff, mutating, and audit-phase steps. That run is
-  useful candidate-now evidence, but it does not tick the scheduled
-  launch-evidence box.
+  May 9 hosted/public hardening and dependency-security push. Later
+  docs-only evidence commits may move `main`; always verify the
+  current SHA with `git ls-remote origin refs/heads/main` before
+  binding scheduled or manual workflow evidence to a candidate. Manual
+  `live-contract.yml` dispatches on May 9 are useful candidate-now
+  evidence, but they do not tick the scheduled launch-evidence box.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   manual sacrificial-workspace campaign state after PR #62: the
@@ -142,11 +142,11 @@ code/CI hardening backlog is tracked in
    2026-05-09: scheduled runs 25593042387 and 25538247771 are green on
    `4fe957547f9e6aea749a85f87823d17a0ccc2928` and their logs include
    `TestE2EMutating`, `TestLiveCreateUpdateDeleteEntryAuditPhases`,
-   and `TestLiveReadSideSchemaDiff`, but that SHA is not current
-   `origin/main` (`308c815`). Manual dispatch run 25605467213 is green
-   on `308c815` with the same live-contract tiers, but manual dispatch
-   is candidate-now evidence only. Use `/fix-live-contract` only if a
-   future cron firing reds.
+   and `TestLiveReadSideSchemaDiff`, but that SHA is not the May 9
+   code-bearing baseline (`308c815`) or any later candidate docs tip.
+   Manual dispatches on May 9 have been green with the same
+   live-contract tiers, but manual dispatch is candidate-now evidence
+   only. Use `/fix-live-contract` only if a future cron firing reds.
 2. **Candidate-tag security walk-through.** Local launch-review
    preflight was green on 2026-05-09 after moving to Go 1.25.10 and
    tagged `govulncheck@v1.3.0`; the final candidate tag still needs
