@@ -144,18 +144,46 @@ code/CI hardening backlog is tracked in
 2. **Release/sigstore/SLSA evidence.** The candidate tag still
    needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
    archived `doctor --strict` outputs for the reference deployment.
-3. **Externally visible repo-state cleanup.** The May 8 review
-   ledger records maintainer-owned cleanup still outside local code:
-   stale GitHub repository description wording, stale issue #28, and
-   branch-protection API limitation. Rechecked on 2026-05-09 after
-   `308c815` landed: CodeQL run 25605458561, Dependency Review run
-   25605458562, and Semgrep run 25605458570 are green on the pushed
-   candidate SHA; the repo is public, the description still has stale
-   tool-count / policy-count wording, issue #28 is still open, and
-   the branch-protection API still returns "Branch not protected".
+3. **Externally visible repo-state cleanup.** Rechecked on 2026-05-09
+   after `a07443b` landed: CodeQL run 25609129989, Dependency Review
+   run 25609129978, and Semgrep run 25609129983 are green on the
+   pushed candidate SHA. The maintainer-owned cleanup pass on the same
+   day closed the description, issue #28, and branch-protection rows
+   that were still open at the start of the day:
+   the GitHub repository description was set to
+   `128 tools, three transports (stdio / streamable HTTP / optional gRPC), five policy modes, cosign-signed releases.`;
+   issue #28 was closed with a comment linking commit `50aa87f`, the
+   `Shared-service Postgres E2E` required-status check, and
+   `internal/controlplane/postgres/e2e_shared_service_test.go`; classic
+   branch protection was re-applied via
+   `gh api PUT repos/apet97/go-clockify/branches/main/protection` with
+   the three D9 launch required-status checks
+   (`Doctor strict smoke`, `Doctor Postgres backend`, and
+   `Shared-service Postgres E2E`) plus the documented hygiene
+   (linear history, conversation resolution, no force push, no
+   deletion, dismiss stale reviews, strict up-to-date, 0 required
+   approvals, code-owner reviews disabled, signed commits disabled,
+   admin enforcement disabled). Restoring the historical 19-context
+   required list documented in
+   [`docs/branch-protection.md`](branch-protection.md) is a separate
+   maintainer follow-up. Five fully-merged stale local branches
+   (`codex/resolve-benchmark-worktree`, `stabilize/quality-perf`,
+   `wave-a`, `wave-d`, `wave-e`) were deleted with `git branch -d`
+   from this workstation; `docs/document-f3897b2-bypass`
+   (`ahead=1`) and `fwbranch` (`ahead=20`) still hold non-main
+   commits and remain in maintainer manual review.
    `make launch-external-status` directly checks
    `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` and prints maintainer action
-   hints for each open gate while staying read-only.
+   hints for each open gate while staying read-only; after the
+   2026-05-09 cleanup it reports `4 open, 0 unknown` from default
+   HEAD evaluation, three of which are real launch gates (mutation
+   cron evidence pending the next scheduled green on a final
+   candidate SHA, six non-main local branches that are either active
+   worktree branches or held for maintainer review, and the
+   next-release npm expected-version proof) and one is a current-HEAD
+   validator nuance — Group 1 evidence remains closed on canonical
+   SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703` via scheduled
+   `live-contract.yml` runs 25608259477 and 25607242862.
 4. **Mutation cron evidence.** The `internal/tools` matrix-leg
    timeout increase landed on `main` in `2e7b6bd` ("May 9 hardening")
    ahead of `308c815` and the later docs-only commits, so the

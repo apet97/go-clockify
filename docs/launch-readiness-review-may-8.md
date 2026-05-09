@@ -4,6 +4,24 @@ Source of truth: `~/Downloads/review may 8/` as provided on
 2026-05-08. This file is a maintainer-facing disposition ledger, not a
 replacement for `docs/launch-candidate-checklist.md`.
 
+## ⚠️ Open risk callouts
+
+- **Branch-protection posture is the 2026-05-09 cleanup posture, not
+  the final hardening posture.** Classic protection on `main` is
+  currently restored with only the three D9 launch required-status
+  checks (`Doctor strict smoke`, `Doctor Postgres backend`,
+  `Shared-service Postgres E2E`). This recovers from a prior
+  `Branch not protected` state observed during the 2026-05-09 repo-state
+  cleanup pass and is **not** equivalent to the historical 19 PR-required
+  context profile documented in
+  [`docs/branch-protection.md`](branch-protection.md). Restoring the
+  remaining 16 contexts (the full PR-required list is enumerated in
+  the "Required status checks" section of
+  [`docs/branch-protection.md`](branch-protection.md)) is preserved as an
+  explicit maintainer follow-up. **Do not treat the 3-of-19 posture as
+  equivalent to the documented hardening profile, and do not change
+  branch protection again without explicit operator approval.**
+
 ## Closed in this remediation pass
 
 - **T-02 initialize protocol header mismatch.** `streamable_http`
@@ -725,7 +743,7 @@ that every requirement is covered.
 | Fix safe code findings. | Targeted unit/integration tests, pinned CI-lint/workflow-lint proof, plus `GOTOOLCHAIN=go1.25.10 make release-check`. | Release check passed on 2026-05-09 after the latest doc/security-evidence refresh; it includes coverage floors, script tests, config/doc parity, build-tag checks, HTTP/stdio smokes, strict doctor smoke, gRPC race E2E, and deploy render. The CI-pinned `golangci-lint` v2.5.0 command also ran locally via `go run` and reported `0 issues` after the final lint cleanup. The CI-pinned actionlint revision also ran locally against `.github/workflows/*.yml`. | Locally green. |
 | Fix safe docs, CI, release, and public-surface drift. | `make doc-parity`; `bash scripts/test-check-doc-parity.sh`; `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`, `.github/dependabot.yml`; `.github/workflows/semgrep.yml`; `scripts/check-go-version-parity.sh`; `.github/workflows/ci.yml`; `tools/govulncheck`. | `doc-parity` passed, including the launch-review ledger, launch-checklist parity, and launch-evidence gate. The current doc-parity regression suite has 70 cases covering tool-count drift, public onboarding, ADR status, official-claim wording, brand/legal evidence, JSON Schema rationale, README/CONTRIBUTING local-verification wording, Makefile release-check wording, stale shippable release-check wording in docs, shared-service profile Group 2 scoping, production-readiness blocker-scope wording, gap-analysis blocker-scope wording, P3-5 baseline header docs, serverInfo identity guidance, default protocol-version guidance, May 8 ledger read-first routing, brand/legal URI plus gRPC service-name review docs, T-17 gRPC reflection dev-only posture, build-tag/tool-module Dependabot watcher coverage, root Dependabot build-tag ignore coverage, pinned verify-vuln tool-module execution, govulncheck CI version proof, SUPPORT.md SLSA private-repo cosign fallback, stale unconditional SLSA public wording, release-smoke SLSA bare-404 skip guard, README SLSA provenance availability wording, workflow action SHA-pin guard, deploy SLSA bare-404 skip guard, release workflow/docs SLSA availability wording, release-smoke doctor-output artifact guard, docker-image SLSA feature-gate notice guard, legacy HTTP EOL runbook, stale public-content local-artifact wording, stale shared-service launch-blocking wording, agent handoff permissioned landing sequence, and dependency-review default-branch evidence trigger. The RC evidence regression suite also now guards that raw workflow snapshots are not treated as final-SHA proof. | Locally green; workflow first-run evidence still external. |
 | Keep Group 6 security posture verifiable. | `docs/launch-candidate-checklist.md`; `docs/runbooks/release-candidate-evidence.md`; `scripts/prepare-rc-evidence.sh`. | Current local preflight: pinned `govulncheck@v1.3.0` found no vulnerabilities under `GOTOOLCHAIN=go1.25.10`, Semgrep `p/default` scanned 1153 tracked files with 0 findings, `nosemgrep` context still maps to ADR 0008 / ADR 0017, and `make verify-fips` passed. A host-toolchain govulncheck scan with Go 1.26.2 reports standard-library issues fixed in Go 1.26.3, so README/CONTRIBUTING now avoid broad `1.25.10+` support wording and keep the exact Go 1.25.10 launch-candidate pin. `make secret-scan` is not green on this dirty workstation because ignored/local artifacts remain; clean candidate-tag gitleaks remains required. | Locally documented; final candidate-tag evidence open. |
-| Keep CI/release/external state honest. | `make launch-external-status`; `docs/launch-candidate-checklist.md`; `scripts/check-launch-evidence-gate.sh`. | Latest read-only snapshot before temporary-cron removal reports `6 open, 0 unknown`: non-main local branches, missing mutation cron evidence, branch-protection API limitation, stale repo description, issue #28 open, and missing next-release npm expected-version proof. Scheduled `live-contract.yml` runs 25608259477 and 25607242862 are green on `feef83c641ced93d2ab6ba07ef766d61c82cc703` with read-only/schema-diff, mutating, MCP-path safety, and audit-phase steps; manual run 25605467213 remains useful background evidence only. The helper directly verifies `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, verifies live-contract cron log markers including `TestLiveCreateUpdateDeleteEntryAuditPhases` and `TestLiveReadSideSchemaDiff` before Group 1 can close, fails open if readable branch protection omits `Doctor strict smoke`, `Doctor Postgres backend`, or `Shared-service Postgres E2E` from either GitHub required-check API shape, and rejects stale/PR-only CodeQL/dependency-review/Semgrep runs as launch evidence. The RC evidence bundle keeps raw workflow metadata for audit context, while `check-launch-external-status --fail-open` remains the evidence validator. | Open external/repo-state gates. |
+| Keep CI/release/external state honest. | `make launch-external-status`; `docs/launch-candidate-checklist.md`; `scripts/check-launch-evidence-gate.sh`. | Latest read-only snapshot after the 2026-05-09 repo-state cleanup pass reports `4 open, 0 unknown` from default HEAD evaluation. Group 1 launch evidence **remains closed** on canonical SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703` via scheduled `live-contract.yml` runs 25608259477 and 25607242862 (both green with read-only/schema-diff, mutating, MCP-path safety, and audit-phase markers); `make launch-external-status` reports a Group-1 SHA mismatch only because it auto-uses HEAD (currently `a07443b`), which is a current-HEAD validator nuance, not a Group-1 re-opening — Group 1 audits must be invoked with `--candidate-sha feef83c641ced93d2ab6ba07ef766d61c82cc703`. The three remaining real open gates are mutation cron evidence still pending the next scheduled green on a final candidate SHA, six non-main local branches (three are active worktree branches, two are not fully merged and held for maintainer review, plus `docs/opus-remaining-prompts` covering the primary worktree), and the next-release npm expected-version proof. The five stale `ahead=0` local-branch pointers (`codex/resolve-benchmark-worktree`, `stabilize/quality-perf`, `wave-a`, `wave-d`, `wave-e`) were deleted with `git branch -d` from this workstation. The repository description, issue #28, and classic branch-protection items are now closed: description set to `128 tools, three transports (stdio / streamable HTTP / optional gRPC), five policy modes, cosign-signed releases.`; issue #28 closed with a Group 2 evidence comment linking commit `50aa87f`, the `Shared-service Postgres E2E` required-status check, and `internal/controlplane/postgres/e2e_shared_service_test.go`; classic branch protection re-applied with the three D9 required-status checks (`Doctor strict smoke`, `Doctor Postgres backend`, `Shared-service Postgres E2E`) plus the documented hygiene. Restoring the historical 19-context required-status list is preserved as a maintainer follow-up in [`docs/branch-protection.md`](branch-protection.md). The helper directly verifies `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, verifies live-contract cron log markers including `TestLiveCreateUpdateDeleteEntryAuditPhases` and `TestLiveReadSideSchemaDiff` before Group 1 can close, fails open if readable branch protection omits `Doctor strict smoke`, `Doctor Postgres backend`, or `Shared-service Postgres E2E` from either GitHub required-check API shape, and rejects stale/PR-only CodeQL/dependency-review/Semgrep runs as launch evidence. The RC evidence bundle keeps raw workflow metadata for audit context, while `check-launch-external-status --fail-open` remains the evidence validator. | Open external/repo-state gates. |
 | Keep public-readiness story honest. | `make public-content-audit`; `scripts/check-public-content-audit.sh`; `docs/release/public-history-review.md`; `docs/release/local-artifact-review.md`. | Latest read-only snapshot reports `0 open, 0 unknown`: candidate branch file content is `0 open, 0 unknown`, public-history review is `0 open, 0 unknown`, and local artifact/full-tree review is `0 open, 0 unknown`. | Public-content audit clean locally; public flip still requires external, repo-state, and legal/product gates. |
 | Leave human/legal/product approvals documented, not guessed. | `docs/release/brand-legal-review.md`; `make license-evidence`; `scripts/collect-license-evidence.sh`. | License helper produced a raw build-variant dependency/license-candidate inventory with 0 modules missing local license candidates and 0 unknown variants, but it is explicitly not legal advice or license clearance. Trademark/official-product wording, `clockify://`, and gRPC service-name branding review remain written approval or rebrand decisions. | Evidence input exists; legal/product approval open. |
 | Decide completion from real evidence only. | This checklist; `make launch-external-status`; `make public-content-audit`; `git status --short --branch`. | The tree is landed on `main` and locally coherent, and Group 1 scheduled-cron launch evidence is archived. Candidate-tag security evidence, release/sigstore/SLSA evidence, mutation cron evidence, external repo-state cleanup, and legal/product approval remain incomplete. | **Not complete. Do not mark launch-ready.** |
@@ -777,13 +795,14 @@ prints a specific maintainer action beside each open gate.
   attestation limitation is a maintainer/repo-visibility decision.
   Do not remove best-effort handling or claim official SLSA readiness
   without evidence on the final public/private posture. This is `L-05`.
-- **D1 / D2 GitHub repository description drift.** Rechecked on 2026-05-09:
+- **D1 / D2 GitHub repository description drift.** Closed on
+  2026-05-09: the GitHub repository description was set to
+  `128 tools, three transports (stdio / streamable HTTP / optional gRPC), five policy modes, cosign-signed releases.`
+  via `gh repo edit apet97/go-clockify --description "..."`.
   `gh repo view apet97/go-clockify --json description,visibility`
-  still reports a private repository and stale tool-count /
-  policy-count wording in the repository description. Updating the
-  description to `128 tools, three transports (stdio / streamable HTTP / optional gRPC), five policy modes, cosign-signed releases.`
-  is an externally visible maintainer action and the remaining external
-  part of `L-03`.
+  now reports the matching wording on the public repository.
+  `make launch-external-status` reports the description row as
+  `closed`. This closes the remaining external part of `L-03`.
 - **P1-3 SLSA fail-closed posture.** Dropping `continue-on-error` on
   release attestations depends on the private-repo/platform stance and
   must be proven on an rc tag before Group 7 closes.
@@ -796,58 +815,76 @@ prints a specific maintainer action beside each open gate.
   the expected-version `check-launch-external-status` command for that
   proof. This is `G-01`.
 - **D7 / D9 branch protection, mutation cron, and stale local branches.**
-  Branch protection audit is currently blocked by GitHub's private-repo
-  protection API response (`Upgrade to GitHub Pro or make this
-  repository public`); `make launch-external-status` now records that
-  response as an open D9 item instead of relying on prose only. If the
-  branch-protection API becomes readable, the helper now also fails
-  open unless the D9 launch required checks include
+  Branch protection on `main` was re-applied on 2026-05-09 via
+  `gh api PUT repos/apet97/go-clockify/branches/main/protection` after
+  `gh api repos/apet97/go-clockify/branches/main/protection` returned
+  `Branch not protected` and the rulesets list was empty. The classic
+  rule now requires three status checks (`Doctor strict smoke`,
+  `Doctor Postgres backend`, `Shared-service Postgres E2E`) with
+  strict up-to-date enforcement, and keeps the documented hygiene
+  (linear history, conversation resolution, no force push, no
+  deletion, dismiss stale reviews on push, 0 required approvals,
+  code-owner reviews disabled, signed commits disabled, admin
+  enforcement disabled). `make launch-external-status` now reports the
+  branch-protection row as `closed`. Restoring the historical
+  19-context required-status list documented in
+  [`docs/branch-protection.md`](branch-protection.md) remains a
+  maintainer follow-up; the additional 16 contexts still run on every
+  push and PR, they just are not required to merge today. The helper
+  also fails open unless the D9 launch required checks include
   `Doctor strict smoke`, `Doctor Postgres backend`, and
   `Shared-service Postgres E2E`, whether GitHub returns them through
   the classic `required_status_checks.contexts` array or the newer
   `required_status_checks.checks[].context` objects.
-  `scripts/audit-branch-protection.sh` now fails clearly for that
-  private-repo limitation and avoids emitting a null-field
-  pseudo-snapshot. Seven
-  non-main local branches remain on this workstation and require
-  maintainer disposition: `codex/resolve-benchmark-worktree`,
-  `docs/document-f3897b2-bypass`, `fwbranch`,
-  `stabilize/quality-perf`, `wave-a`, `wave-d`, and `wave-e`. The
-  helper reports them without deleting or pushing branches, and now
-  includes each branch head plus ahead/behind counts against
-  `origin/main`, plus an explicit action to review, merge, archive, or
-  delete branches only after maintainer approval. Rechecked on
-  2026-05-09: only
-  `docs/document-f3897b2-bypass` (`ahead=1`) and `fwbranch`
-  (`ahead=20`) still contain commits ahead of `origin/main`; the other
-  five are stale local pointers with `ahead=0`. The mutation cron
-  `internal/tools` matrix-leg timeout increase landed on `main` in
-  `2e7b6bd` ("May 9 hardening") ahead of `308c815` and the later
-  docs-only commits, so the workflow fix is on the default branch.
-  Rechecked on 2026-05-09 via `make launch-external-status`: latest
-  `mutation.yml` scheduled run 25592823559 is still
-  `completed/cancelled` on pushed commit
+  `scripts/audit-branch-protection.sh` now confirms the live state
+  matches the documented snapshot after re-application. Five
+  fully-merged stale local branches were deleted on 2026-05-09
+  with `git branch -d`: `codex/resolve-benchmark-worktree` (was
+  `b3420a2`), `stabilize/quality-perf` (was `c9bf1d2`), `wave-a` (was
+  `7a2fd75`), `wave-d` (was `25ea053`), and `wave-e` (was `19fdda6`).
+  Each of the five had `ahead=0` against `origin/main` before
+  deletion. Two non-main local branches were held for maintainer
+  manual review because they still hold non-main commits:
+  `docs/document-f3897b2-bypass` (`ahead=1`, head `0d0e0ce`) and
+  `fwbranch` (`ahead=20`, head `cb664f6`). `docs/opus-remaining-prompts`
+  remains because it is the active worktree branch for the primary
+  workstation checkout, alongside the three opus-prompt-lane worktree
+  branches (`opus/hosted-legal-product-20260509`,
+  `opus/mutation-cron-evidence-20260509`, `opus/repo-state-20260509`).
+  The mutation cron `internal/tools` matrix-leg timeout increase
+  landed on `main` in `2e7b6bd` ("May 9 hardening") ahead of
+  `308c815` and the later docs-only commits, so the workflow fix is
+  on the default branch. Rechecked on 2026-05-09 via
+  `make launch-external-status`: latest `mutation.yml` scheduled run
+  25592823559 is still `completed/cancelled` on pushed commit
   `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled
   cron fired before `2e7b6bd` landed. `gh run view` confirms only the
   `internal/tools` matrix leg was cancelled while the other mutation
   legs succeeded. `make launch-external-status` now also prints that
   non-green mutation matrix job so handoffs do not need a separate
-  `gh run view` inspection. These are the open external pieces of
-  `G-02`, `G-03`, and `G-04`; the next scheduled `mutation.yml` cron
-  on the final candidate SHA still needs to record a green run with
-  the workflow fix in place before this gate can close.
+  `gh run view` inspection. These remain the open external pieces of
+  `G-02` and `G-04`; the next scheduled `mutation.yml` cron on the
+  final candidate SHA still needs to record a green run with the
+  workflow fix in place before this gate can close. `G-03`
+  branch-protection enforcement closed locally with the 2026-05-09
+  re-application — see the "⚠️ Open risk callouts" at the top of
+  this document for the 3-of-19 posture caveat.
 - **Public-repo stale PR hygiene.** The final integrated launch plan
   requires no open PRs older than 14 days unless they carry a `wip` or
   `blocked` label. `make launch-external-status` now checks the first
   100 open PRs read-only, reports stale unlabeled PRs with action
   hints, and treats parse/API failures as unknown rather than silently
   passing the public-reopen gate.
-- **D8 issue #28 stale.** Rechecked on 2026-05-09:
-  `gh issue view 28 --repo apet97/go-clockify --json state,title,url`
-  still reports the "Postgres-backed shared-service integration test"
-  issue open even though Group 2 is locally documented as closed.
-  Closing it is externally visible and should reference the Group 2
-  closure commits or checklist evidence. This is `G-05`.
+- **D8 issue #28 stale.** Closed on 2026-05-09:
+  `gh issue close 28 --repo apet97/go-clockify --comment "..."` was
+  invoked with a comment linking commit
+  `50aa87f` (`chore(governance): promote Shared-service Postgres E2E
+  to required check`), the `Shared-service Postgres E2E`
+  required-status check on `main`, and
+  `internal/controlplane/postgres/e2e_shared_service_test.go`.
+  `gh issue view 28 --repo apet97/go-clockify --json state` now
+  reports `CLOSED`. `make launch-external-status` reports the
+  issue #28 row as `closed`. This closes `G-05`.
 - **P2-5 dependency-review first-run evidence.** The workflow file
   exists locally, but launch evidence still needs a pushed `main` run
   or PR run showing the dependency-review gate executes with the
@@ -1069,11 +1106,22 @@ prints a specific maintainer action beside each open gate.
 - `make public-content-audit` (0 open, 0 unknown; candidate branch
   file content, public-history review, and local-artifact/full-tree
   review all clean)
-- `make launch-external-status` (6 open, 0 unknown before temporary
-  cron removal; Group 1 scheduled cron evidence is closed, while
-  mutation cron, repository-state, release, and maintainer-action
-  gates remain open; `CLOCKIFY_LIVE_AUDIT_REQUIRED` is directly
-  checked and closed as `true`)
+- `make launch-external-status` (4 open, 0 unknown after the
+  2026-05-09 repo-state cleanup pass closed the description, issue
+  #28, and branch-protection rows and removed five fully-merged
+  `ahead=0` local branches; Group 1 launch evidence remains closed
+  on canonical SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703`
+  (scheduled runs 25608259477 + 25607242862) — the validator
+  reports a Group-1 SHA mismatch only because it auto-uses default
+  HEAD (`a07443b`), a current-HEAD nuance, not a re-opening; the
+  three real remaining open gates are mutation cron evidence
+  pending the next scheduled green on a final candidate SHA, the
+  six non-main local branches that are either active worktree
+  branches or held for maintainer review, and the next rc/release
+  npm expected-version proof; the `6 open, 0 unknown` snapshot
+  before the cleanup pass is preserved in the `agent-handoff.md`
+  checkpoint and earlier git history; `CLOCKIFY_LIVE_AUDIT_REQUIRED`
+  is directly checked and closed as `true`)
 - `GOTOOLCHAIN=go1.25.10 make release-check` (ended with
   `release-check: OK — local pre-ship gate passed`; local
   `golangci-lint` and `actionlint` were unavailable and skipped via
