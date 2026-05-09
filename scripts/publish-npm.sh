@@ -23,6 +23,30 @@ fi
 RAW_VERSION="$1"
 VERSION="${RAW_VERSION#v}"  # strip leading v — npm semver must be bare
 
+# npm refuses to publish a prerelease without an explicit --tag (the
+# v1.2.1-rc.1 release workflow failed at exactly this step:
+# "npm error You must specify a tag using --tag when publishing a
+# prerelease version."). Stable releases must still publish without
+# --tag so npm defaults the dist-tag to "latest". Prereleases must
+# choose an explicit channel: rc / beta / alpha / next (catch-all).
+NPM_DIST_TAG=""
+if [[ "$VERSION" == *-* ]]; then
+  pre_first_id="$(echo "${VERSION#*-}" | sed 's/[.+].*$//' | tr '[:upper:]' '[:lower:]')"
+  case "$pre_first_id" in
+    rc)    NPM_DIST_TAG="rc" ;;
+    beta)  NPM_DIST_TAG="beta" ;;
+    alpha) NPM_DIST_TAG="alpha" ;;
+    *)     NPM_DIST_TAG="next" ;;
+  esac
+fi
+
+# All npm publish invocations use this argv shape so the dist-tag
+# decision is made once and applies uniformly to every package.
+NPM_PUBLISH_ARGS=(--access public)
+if [ -n "$NPM_DIST_TAG" ]; then
+  NPM_PUBLISH_ARGS+=(--tag "$NPM_DIST_TAG")
+fi
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE="$REPO_ROOT/npm/package.json.tmpl"
 BASE_DIR="$REPO_ROOT/npm/clockify-mcp-go"
@@ -55,7 +79,7 @@ publish_platform() {
   local pkg_dir="$WORK_DIR/platform-$suffix"
   local pkg_name="@apet97/clockify-mcp-go-$suffix"
 
-  echo "[npm] staging $pkg_name@$VERSION from $src"
+  echo "[npm] staging $pkg_name@$VERSION from $src${NPM_DIST_TAG:+ (--tag $NPM_DIST_TAG)}"
   if [ ! -f "$REPO_ROOT/$src" ]; then
     echo "error: expected binary $REPO_ROOT/$src not found — did goreleaser run?" >&2
     exit 1
@@ -80,7 +104,7 @@ publish_platform() {
     -e "s|CPU_VALUE|$cpu|g" \
     "$TEMPLATE" > "$pkg_dir/package.json"
 
-  (cd "$pkg_dir" && npm publish --access public)
+  (cd "$pkg_dir" && npm publish "${NPM_PUBLISH_ARGS[@]}")
 }
 
 publish_base() {
@@ -91,8 +115,8 @@ publish_base() {
     xargs -0 sed -i.bak -e "s|VERSION|$VERSION|g"
   find "$pkg_dir" -type f -name '*.bak' -delete
   chmod +x "$pkg_dir/bin/clockify-mcp.js"
-  echo "[npm] publishing base package @apet97/clockify-mcp-go@$VERSION"
-  (cd "$pkg_dir" && npm publish --access public)
+  echo "[npm] publishing base package @apet97/clockify-mcp-go@$VERSION${NPM_DIST_TAG:+ (--tag $NPM_DIST_TAG)}"
+  (cd "$pkg_dir" && npm publish "${NPM_PUBLISH_ARGS[@]}")
 }
 
 for row in "${PLATFORMS[@]}"; do

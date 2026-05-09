@@ -175,6 +175,7 @@ script-tests:
 	bash scripts/test-check-live-tool-coverage.sh
 	bash scripts/test-collect-license-evidence.sh
 	bash scripts/test-prepare-rc-evidence.sh
+	bash scripts/test-publish-npm.sh
 	bash scripts/test-claude-campaign.sh
 
 claude-campaign-plan:

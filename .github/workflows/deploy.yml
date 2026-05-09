@@ -107,9 +107,32 @@ jobs:
           DIGEST: ${{ steps.image_digest.outputs.digest }}
         run: |
           set -euo pipefail
-          cosign verify "$IMAGE@$DIGEST" \
-            --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/.*$' \
-            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+          # Deploy and Docker Image fire in parallel on the same tag
+          # push. The previous step's digest-lookup retry can succeed
+          # before Docker Image's `cosign sign` step pushes the
+          # signature — observed live in v1.2.1-rc.1 (Deploy run
+          # 25612037645): digest existed at 21:19:16Z, but `cosign
+          # sign` did not push the signature until 21:19:21Z, so
+          # `cosign verify` returned "no signatures found" 5 seconds
+          # before the signature became visible. Retry verify on the
+          # same 24x30s budget as the digest-lookup step (~12 minutes
+          # total) so a slow signature push does not red the workflow.
+          LAST_LOG="$(mktemp)"
+          for i in $(seq 1 24); do
+            if cosign verify "$IMAGE@$DIGEST" \
+              --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/.*$' \
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+              >"$LAST_LOG" 2>&1; then
+              cat "$LAST_LOG"
+              echo "Signature verified on attempt $i."
+              exit 0
+            fi
+            echo "Attempt $i: cosign verify pending (signature not yet visible). Sleeping 30s..."
+            sleep 30
+          done
+          echo "::error::cosign verify failed after 24 attempts (~12 minutes). Last attempt output:"
+          cat "$LAST_LOG"
+          exit 1
 
       - name: Download release binary for SLSA verification
         env:

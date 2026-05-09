@@ -145,3 +145,27 @@ jobs:
             --ref "${RELEASE_VERSION}" \
             -f tag="${RELEASE_VERSION}"
           echo "Dispatched. Monitor: gh run list --workflow=reproducibility.yml"
+      - name: Trigger release smoke verification
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # release-smoke.yml listens on `release: [published]` for
+          # the same GITHUB_TOKEN-suppression reason as reproducibility:
+          # the release is created by an action using GITHUB_TOKEN, so
+          # the published event never reaches release-smoke. Observed
+          # live for v1.2.1-rc.1 — Release ran, the GitHub Release
+          # object was created, but release-smoke never auto-fired.
+          # Dispatch it explicitly here using the workflow_dispatch
+          # trigger that release-smoke.yml already supports. The
+          # workflow file lives on `main`, so --ref must be `main`
+          # (workflow_dispatch can only target a ref where the
+          # workflow file exists); the `tag` input passes the rc
+          # tag through to the verifier steps.
+          echo "Dispatching release-smoke.yml for tag ${RELEASE_VERSION}"
+          gh workflow run release-smoke.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f tag="${RELEASE_VERSION}"
+          echo "Dispatched. Monitor: gh run list --workflow=release-smoke.yml"
