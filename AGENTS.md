@@ -49,12 +49,11 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Current pushed main baseline:** `4fe957547f9e6aea749a85f87823d17a0ccc2928`
-  (`fix(streamable): preserve session negotiation on touch`). This is
-  the current `main` / `origin/main` tip before the uncommitted May 8
-  remediation tree. It includes the post-PR #63 local/CI remediation
-  wave plus later review-readiness fixes, but it does **not** represent
-  the dirty local remediation tree and does **not** close Group 1,
+- **Current pushed main baseline:** `2e7b6bd4a7968ba45921e103d948f74dd82175b8`
+  (`May 9 hardening`). This is the current `main` / `origin/main`
+  tip after the May 9 hardening push. It is newer than the two
+  scheduled live-contract greens on `4fe9575`, and this local tree has
+  additional uncommitted P1 hardening. It does **not** close Group 1,
   Group 6, or Group 7 launch blockers.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
@@ -136,9 +135,9 @@ Listed in priority order; full detail in
    25593042387 and 25538247771 are green on pushed commit
    `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
    mutating, audit-phase, and schema-diff log markers, but that commit
-   is not this dirty local remediation tree. Group 1 remains open until
-   the final remediation SHA has two consecutive scheduled greens with
-   the same evidence.
+   is not current `origin/main` (`2e7b6bd`) or this dirty local
+   remediation tree. Group 1 remains open until the final remediation
+   SHA has two consecutive scheduled greens with the same evidence.
 2. **Group 6 — security walk-through on the candidate tag.**
    Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
    semgrep on the final candidate tag and file findings or

@@ -88,15 +88,15 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 		return nil, nil, fmt.Errorf("tool blocked by policy: %s", reason)
 	}
 
-	// 2. Rate limit — per-subject when a Principal is on the context,
-	// global-only fallback otherwise. Scope label distinguishes the two
-	// rejection layers so dashboards can tell a noisy tenant from a global
-	// saturation event.
+	// 2. Rate limit -- per tenant+subject when a Principal is on the
+	// context, global-only fallback otherwise. Scope label distinguishes the
+	// two rejection layers so dashboards can tell a noisy tenant from a
+	// global saturation event.
 	var release func()
 	if p.RateLimit != nil {
 		subject := ""
 		if principal, ok := authn.PrincipalFromContext(ctx); ok && principal != nil {
-			subject = principal.Subject
+			subject = rateLimitSubjectKey(principal)
 		}
 		rel, scope, err := p.RateLimit.AcquireForSubject(ctx, subject)
 		if err != nil {
@@ -132,6 +132,16 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 	return nil, release, nil
 }
 
+func rateLimitSubjectKey(principal *authn.Principal) string {
+	if principal == nil || principal.Subject == "" {
+		return ""
+	}
+	if principal.TenantID == "" {
+		return principal.Subject
+	}
+	return principal.TenantID + "\x00" + principal.Subject
+}
+
 // AfterCall applies post-processing (truncation) to a successful result.
 //
 // Tool handlers return typed structs (e.g. ResultEnvelope) which the truncate
@@ -140,18 +150,17 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 // are JSON-roundtripped into a generic map[string]any / []any tree before
 // calling Truncate so the walker sees the whole structure.
 //
-// On marshal/unmarshal failure we fail open and return the original result
-// unchanged — dropping a tool response because truncation misbehaved would be
-// worse than returning an over-budget payload.
+// On marshal/unmarshal failure, local/default deployments fail open and return
+// the original result unchanged. Hosted profiles set FailClosedOnError so a
+// truncation failure returns a tool error instead of sending an over-budget
+// payload to the client.
 func (p *Pipeline) AfterCall(result any) (any, error) {
 	if !p.Truncation.Enabled {
 		return result, nil
 	}
 	b, err := json.Marshal(result)
 	if err != nil {
-		metrics.TruncationSkippedTotal.Inc("marshal_failed")
-		slog.Warn("truncate_marshal_failed", "error", err.Error())
-		return result, nil
+		return p.handleTruncationFailure("marshal_failed", err, result)
 	}
 	if p.Truncation.TokenBudget > 0 && estimatedTokensFromJSONLen(len(b)) <= p.Truncation.TokenBudget {
 		return result, nil
@@ -159,9 +168,7 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 	generic, ok := normalizeJSONTree(result)
 	if !ok {
 		if err := json.Unmarshal(b, &generic); err != nil {
-			metrics.TruncationSkippedTotal.Inc("unmarshal_failed")
-			slog.Warn("truncate_unmarshal_failed", "error", err.Error())
-			return result, nil
+			return p.handleTruncationFailure("unmarshal_failed", err, result)
 		}
 	}
 	truncated, wasTruncated := p.Truncation.Truncate(generic)
@@ -169,6 +176,17 @@ func (p *Pipeline) AfterCall(result any) (any, error) {
 		slog.Debug("response_truncated", "budget", p.Truncation.TokenBudget)
 	}
 	return truncated, nil
+}
+
+func (p *Pipeline) handleTruncationFailure(reason string, err error, original any) (any, error) {
+	metrics.TruncationSkippedTotal.Inc(reason)
+	event := "truncate_" + reason
+	if p.Truncation.FailClosedOnError {
+		slog.Error(event, "error", err.Error(), "fail_closed", true)
+		return nil, fmt.Errorf("response truncation %s: %w", strings.TrimSuffix(reason, "_failed"), err)
+	}
+	slog.Warn(event, "error", err.Error(), "fail_closed", false)
+	return original, nil
 }
 
 func normalizeJSONTree(v any) (any, bool) {

@@ -60,24 +60,25 @@
 #   49. Phase 3 fail: stale shared-service launch-blocking wording
 #   50. Phase 7 fail: gRPC reflection dev-only posture missing
 #   51. Phase 7 fail: build-tag submodule Dependabot watcher missing
-#   52. Phase 7 fail: govulncheck version proof missing from CI
-#   53. Phase 7 fail: govulncheck tool module missing
-#   54. Phase 3 fail: stale unconditional SLSA wording in public docs
-#   55. Phase 7 fail: legacy HTTP EOL runbook missing migration headers
-#   56. Phase 4 fail: clients doc missing serverInfo identity guidance
-#   57. Phase 4 fail: clients doc missing default protocol-version guidance
-#   58. Phase 7 fail: AGENTS.md missing May 8 review-ledger read-first routing
-#   59. Phase 7 fail: Makefile verify-vuln skips pinned govulncheck module
-#   60. Phase 7 fail: gap analysis blocker scope missing repo/legal/product gates
-#   61. Phase 7 fail: release-smoke SLSA skip accepts bare HTTP 404
-#   62. Phase 3 fail: README unqualified SLSA provenance wording
-#   63. Phase 7 fail: workflow action reference is not SHA-pinned
-#   64. Phase 7 fail: deploy SLSA skip accepts bare HTTP 404
-#   65. Phase 3 fail: release workflow/docs unqualified SLSA chain wording
-#   66. Phase 7 fail: agent handoff permissioned landing sequence missing
-#   67. Phase 7 fail: dependency-review lacks default-branch evidence trigger
-#   68. Phase 7 fail: release-smoke doctor output artifact missing
-#   69. Phase 7 fail: docker-image SLSA feature-gate notice missing
+#   52. Phase 7 fail: root Dependabot build-tag ignore missing
+#   53. Phase 7 fail: govulncheck version proof missing from CI
+#   54. Phase 7 fail: govulncheck tool module missing
+#   55. Phase 3 fail: stale unconditional SLSA wording in public docs
+#   56. Phase 7 fail: legacy HTTP EOL runbook missing migration headers
+#   57. Phase 4 fail: clients doc missing serverInfo identity guidance
+#   58. Phase 4 fail: clients doc missing default protocol-version guidance
+#   59. Phase 7 fail: AGENTS.md missing May 8 review-ledger read-first routing
+#   60. Phase 7 fail: Makefile verify-vuln skips pinned govulncheck module
+#   61. Phase 7 fail: gap analysis blocker scope missing repo/legal/product gates
+#   62. Phase 7 fail: release-smoke SLSA skip accepts bare HTTP 404
+#   63. Phase 3 fail: README unqualified SLSA provenance wording
+#   64. Phase 7 fail: workflow action reference is not SHA-pinned
+#   65. Phase 7 fail: deploy SLSA skip accepts bare HTTP 404
+#   66. Phase 3 fail: release workflow/docs unqualified SLSA chain wording
+#   67. Phase 7 fail: agent handoff permissioned landing sequence missing
+#   68. Phase 7 fail: dependency-review lacks default-branch evidence trigger
+#   69. Phase 7 fail: release-smoke doctor output artifact missing
+#   70. Phase 7 fail: docker-image SLSA feature-gate notice missing
 #
 # Each case builds throwaway fixtures in a per-case tmpdir, runs the
 # script with cwd set to the fixture (the script under test uses
@@ -194,7 +195,7 @@ on:
 jobs:
   dependency-review:
     steps:
-      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
         with:
           vulnerability-check: true
           license-check: false
@@ -263,7 +264,7 @@ jobs:
   verify:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       - name: Verify SLSA build provenance
         run: |
           if ! gh attestation verify clockify-mcp-linux-x64 \
@@ -290,6 +291,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "github.com/jackc/pgx/v5"
+      - dependency-name: "github.com/testcontainers/testcontainers-go*"
+      - dependency-name: "google.golang.org/grpc"
+      - dependency-name: "go.opentelemetry.io/*"
   - package-ecosystem: gomod
     directory: /internal/controlplane/postgres
     schedule:
@@ -1282,7 +1288,16 @@ MUTATOR=mut_dependabot_submodule_watcher_missing
 run_case "Phase 7: build-tag submodule Dependabot watcher missing fails closed" \
     1 'must watch Go module dependency updates for /internal/transport/grpc'
 
-# --- Case 52: govulncheck version proof missing from CI ---
+# --- Case 52: root Dependabot build-tag ignore missing ---
+mut_dependabot_root_ignore_missing() {
+    perl -0pi -e 's/\n      - dependency-name: "github\.com\/jackc\/pgx\/v5"//' \
+        "$1/.github/dependabot.yml"
+}
+MUTATOR=mut_dependabot_root_ignore_missing
+run_case "Phase 7: root Dependabot build-tag ignore missing fails closed" \
+    1 'root gomod watcher must ignore build-tag dependency updates for github.com/jackc/pgx/v5'
+
+# --- Case 53: govulncheck version proof missing from CI ---
 mut_govulncheck_version_proof_missing() {
     perl -0pi -e 's/\n          govulncheck -version//' \
         "$1/.github/workflows/ci.yml"
@@ -1291,7 +1306,7 @@ MUTATOR=mut_govulncheck_version_proof_missing
 run_case "Phase 7: govulncheck version proof missing from CI fails closed" \
     1 'must print govulncheck -version'
 
-# --- Case 53: govulncheck tool module missing ---
+# --- Case 54: govulncheck tool module missing ---
 mut_govulncheck_tool_module_missing() {
     rm "$1/tools/govulncheck/go.mod"
 }
@@ -1299,7 +1314,7 @@ MUTATOR=mut_govulncheck_tool_module_missing
 run_case "Phase 7: govulncheck tool module missing fails closed" \
     1 'tools/govulncheck/go\.mod missing'
 
-# --- Case 54: stale unconditional SLSA wording in public docs ---
+# --- Case 55: stale unconditional SLSA wording in public docs ---
 mut_stale_public_slsa_wording() {
     printf '\nSigned releases (cosign + SLSA), SBOMs, FIPS variant.\n' \
         >> "$1/docs/support-matrix.md"
@@ -1308,7 +1323,7 @@ MUTATOR=mut_stale_public_slsa_wording
 run_case "Phase 3: stale unconditional SLSA wording fails closed" \
     1 'banned stale public-surface string'
 
-# --- Case 55: legacy HTTP EOL runbook missing migration headers ---
+# --- Case 56: legacy HTTP EOL runbook missing migration headers ---
 mut_legacy_http_eol_missing_headers() {
     perl -0pi -e 's/Legacy responses carry Deprecation: true and a successor-version Link\./Legacy clients should migrate eventually./' \
         "$1/docs/runbooks/legacy-http-eol.md"
@@ -1317,7 +1332,7 @@ MUTATOR=mut_legacy_http_eol_missing_headers
 run_case "Phase 7: legacy HTTP EOL runbook missing migration headers fails closed" \
     1 'legacy-http-eol\.md must document deprecation headers'
 
-# --- Case 56: clients doc missing serverInfo identity guidance ---
+# --- Case 57: clients doc missing serverInfo identity guidance ---
 mut_clients_missing_server_identity() {
     perl -0pi -e 's/\nThe protocol initialize response uses serverInfo\.name: "clockify-go-mcp"\.\nThe clockify-mcp binary and \@apet97\/clockify-mcp-go wrapper are packaging names\.\n//' \
         "$1/docs/clients.md"
@@ -1326,7 +1341,7 @@ MUTATOR=mut_clients_missing_server_identity
 run_case "Phase 4: clients doc missing serverInfo identity guidance fails closed" \
     1 'clients\.md must document protocol server identity'
 
-# --- Case 57: clients doc missing default protocol-version guidance ---
+# --- Case 58: clients doc missing default protocol-version guidance ---
 mut_clients_missing_protocol_default() {
     perl -0pi -e 's/\nWhen a client omits params\.protocolVersion, MCP_DEFAULT_PROTOCOL_VERSION can\npin the fallback instead of the newest supported version\. Explicit supported\nclient versions are still echoed\.\n//' \
         "$1/docs/clients.md"
@@ -1335,7 +1350,7 @@ MUTATOR=mut_clients_missing_protocol_default
 run_case "Phase 4: clients doc missing default protocol-version guidance fails closed" \
     1 'clients\.md must document default protocol-version fallback semantics'
 
-# --- Case 58: AGENTS.md missing May 8 review-ledger read-first routing ---
+# --- Case 59: AGENTS.md missing May 8 review-ledger read-first routing ---
 mut_agents_missing_may8_review_ledger() {
     perl -0pi -e 's#docs/launch-readiness-review-may-8\.md\. The May 8 review disposition ledger\ncontains the objective-to-artifact completion audit\. Do not mark launch-ready\nwhile that audit says external evidence or approval gates remain open\.#docs/official-clockify-mcp-gap-analysis.md.#' \
         "$1/AGENTS.md"
@@ -1344,7 +1359,7 @@ MUTATOR=mut_agents_missing_may8_review_ledger
 run_case "Phase 7: AGENTS.md missing May 8 review-ledger read-first routing fails closed" \
     1 'AGENTS\.md must route agents to the May 8 review ledger'
 
-# --- Case 59: Makefile verify-vuln skips pinned govulncheck module ---
+# --- Case 60: Makefile verify-vuln skips pinned govulncheck module ---
 mut_makefile_verify_vuln_skips_pinned_module() {
     cat > "$1/Makefile" <<'EOF'
 release-check:
@@ -1364,7 +1379,7 @@ MUTATOR=mut_makefile_verify_vuln_skips_pinned_module
 run_case "Phase 7: Makefile verify-vuln skipping pinned module fails closed" \
     1 'Makefile verify-vuln must not skip'
 
-# --- Case 60: gap analysis blocker scope missing repo/legal/product gates ---
+# --- Case 61: gap analysis blocker scope missing repo/legal/product gates ---
 mut_gap_analysis_gate_scope_missing() {
     perl -0pi -e 's/The remaining blockers are not local test failures\. They are still launch\nblockers: Group 1 scheduled live-contract cron greens on the final candidate\nSHA, Group 6 candidate-tag security walk-through evidence, Group 7\nrelease\/sigstore\/SLSA evidence, pushed workflow first-run evidence,\nrepository-state cleanup, public-readiness disposition, hosted\/platform\nevidence, and legal\/product approval for any Clockify-supported product launch\nclaim\. Local checks are useful but not sufficient for a Clockify-supported\nproduct launch claim\./Only external evidence blockers remain after the May 8 launch-review remediation tree is locally green: scheduled live-contract cron greens, candidate-tag security evidence, and release evidence./' \
         "$1/docs/official-clockify-mcp-gap-analysis.md"
@@ -1373,7 +1388,7 @@ MUTATOR=mut_gap_analysis_gate_scope_missing
 run_case "Phase 7: gap analysis blocker scope missing repo/legal/product gates fails closed" \
     1 'official-clockify-mcp-gap-analysis\.md must not narrow remaining launch blockers'
 
-# --- Case 61: release-smoke SLSA skip accepts bare HTTP 404 ---
+# --- Case 62: release-smoke SLSA skip accepts bare HTTP 404 ---
 mut_release_smoke_broad_slsa_404_skip() {
     perl -0pi -e "s/if grep -qiF 'Feature not available' \\/tmp\\/slsa-default\\.err &&\\n               grep -qiF 'user-owned private repositor' \\/tmp\\/slsa-default\\.err; then/if grep -qiE 'Feature not available for user-owned private repositor|HTTP 404' \\/tmp\\/slsa-default.err; then/" \
         "$1/.github/workflows/release-smoke.yml"
@@ -1382,7 +1397,7 @@ MUTATOR=mut_release_smoke_broad_slsa_404_skip
 run_case "Phase 7: release-smoke SLSA bare HTTP 404 skip fails closed" \
     1 'release-smoke SLSA skip must not accept a bare HTTP 404'
 
-# --- Case 62: README unqualified SLSA provenance wording ---
+# --- Case 63: README unqualified SLSA provenance wording ---
 mut_readme_unqualified_slsa_wording() {
     perl -0pi -e 's/Signed releases ship with cosign signatures and SPDX SBOMs\. SLSA build provenance is attached when GitHub artifact attestations are available\./Every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance./' \
         "$1/README.md"
@@ -1391,7 +1406,7 @@ MUTATOR=mut_readme_unqualified_slsa_wording
 run_case "Phase 3: README unqualified SLSA provenance wording fails closed" \
     1 'banned stale public-surface string|README\.md must qualify SLSA provenance'
 
-# --- Case 63: workflow action reference is not SHA-pinned ---
+# --- Case 64: workflow action reference is not SHA-pinned ---
 mut_workflow_action_not_sha_pinned() {
     perl -0pi -e 's/actions\/checkout\@de0fac2e4500dabe0009e67214ff5f5447ce83dd/actions\/checkout\@v4/' \
         "$1/.github/workflows/deploy.yml"
@@ -1400,7 +1415,7 @@ MUTATOR=mut_workflow_action_not_sha_pinned
 run_case "Phase 7: workflow action references must be SHA-pinned" \
     1 'GitHub workflow action must be pinned to a full commit SHA'
 
-# --- Case 64: deploy SLSA skip accepts bare HTTP 404 ---
+# --- Case 65: deploy SLSA skip accepts bare HTTP 404 ---
 mut_deploy_broad_slsa_404_skip() {
     perl -0pi -e "s/if grep -qiF 'Feature not available' \\/tmp\\/deploy-slsa\\.err &&\\n               grep -qiF 'user-owned private repositor' \\/tmp\\/deploy-slsa\\.err; then/if grep -qiE 'Feature not available for user-owned private repositor|HTTP 404' \\/tmp\\/deploy-slsa.err; then/" \
         "$1/.github/workflows/deploy.yml"
@@ -1409,7 +1424,7 @@ MUTATOR=mut_deploy_broad_slsa_404_skip
 run_case "Phase 7: deploy SLSA bare HTTP 404 skip fails closed" \
     1 'deploy SLSA skip must not accept a bare HTTP 404'
 
-# --- Case 65: release workflow/docs unqualified SLSA chain wording ---
+# --- Case 66: release workflow/docs unqualified SLSA chain wording ---
 mut_unqualified_release_slsa_chain_wording() {
     perl -0pi -e 's/SLSA provenance when GitHub artifact attestations\n# are available/attested with SLSA build provenance, and scanned with/' \
         "$1/.github/workflows/docker-image.yml"
@@ -1422,7 +1437,7 @@ MUTATOR=mut_unqualified_release_slsa_chain_wording
 run_case "Phase 3: release workflow/docs unqualified SLSA wording fails closed" \
     1 'banned stale public-surface string|docs/verify-release\.md must qualify SLSA provenance|docker-image\.yml must qualify image SLSA provenance'
 
-# --- Case 66: agent handoff permissioned landing sequence ---
+# --- Case 67: agent handoff permissioned landing sequence ---
 mut_agent_handoff_landing_sequence_missing() {
     perl -0pi -e 's/Land the remediation tree only after explicit approval\./Land when locally green./' \
         "$1/docs/agent-handoff.md"
@@ -1431,7 +1446,7 @@ MUTATOR=mut_agent_handoff_landing_sequence_missing
 run_case "Phase 7: agent handoff permissioned landing sequence missing fails closed" \
     1 'agent-handoff\.md must preserve the permissioned landing sequence'
 
-# --- Case 67: dependency-review lacks default-branch evidence trigger ---
+# --- Case 68: dependency-review lacks default-branch evidence trigger ---
 mut_dependency_review_missing_push_trigger() {
     perl -0pi -e 's/\n  push:\n    branches: \[main\]//' \
         "$1/.github/workflows/dependency-review.yml"
@@ -1440,7 +1455,7 @@ MUTATOR=mut_dependency_review_missing_push_trigger
 run_case "Phase 7: dependency-review default-branch trigger missing fails closed" \
     1 'dependency-review\.yml must support PR checks and first default-branch evidence runs'
 
-# --- Case 68: release-smoke doctor output artifact missing ---
+# --- Case 69: release-smoke doctor output artifact missing ---
 mut_release_smoke_doctor_artifact_missing() {
     perl -0pi -e 's/\n      - name: Validate doctor strict evidence files\n.*?          retention-days: 30\n//s' \
         "$1/.github/workflows/release-smoke.yml"
@@ -1449,7 +1464,7 @@ MUTATOR=mut_release_smoke_doctor_artifact_missing
 run_case "Phase 7: release-smoke doctor output artifact missing fails closed" \
     1 'release-smoke\.yml must archive doctor strict output as a workflow artifact'
 
-# --- Case 69: docker-image SLSA feature-gate notice missing ---
+# --- Case 70: docker-image SLSA feature-gate notice missing ---
 mut_docker_image_slsa_notice_missing() {
     perl -0pi -e "s/steps\\.slsa_provenance\\.outcome == 'failure'/steps.slsa_provenance.outcome == 'success'/" \
         "$1/.github/workflows/docker-image.yml"

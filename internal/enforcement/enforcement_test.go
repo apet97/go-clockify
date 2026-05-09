@@ -781,6 +781,28 @@ func TestAfterCall_MarshalFailureEmitsWarnAndMetric(t *testing.T) {
 	}
 }
 
+func TestAfterCall_MarshalFailureFailsClosedWhenConfigured(t *testing.T) {
+	type badResult struct {
+		C chan int
+	}
+
+	p := &Pipeline{Truncation: truncate.Config{Enabled: true, TokenBudget: 1, FailClosedOnError: true}}
+	before := metrics.TruncationSkippedTotal.Get("marshal_failed")
+	result, err := p.AfterCall(badResult{C: make(chan int)})
+	if err == nil {
+		t.Fatal("expected fail-closed truncation error")
+	}
+	if !strings.Contains(err.Error(), "response truncation marshal") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Fatalf("expected nil result on fail-closed truncation error, got %T", result)
+	}
+	if gotMetric := metrics.TruncationSkippedTotal.Get("marshal_failed"); gotMetric != before+1 {
+		t.Fatalf("truncate skip metric = %d, want %d", gotMetric, before+1)
+	}
+}
+
 // TestAfterCall_TruncatesResultEnvelope proves the JSON roundtrip in AfterCall
 // lets truncation reach typed struct results. It constructs a ResultEnvelope-
 // shaped struct (anonymous, to avoid importing the tools package and creating

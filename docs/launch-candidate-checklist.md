@@ -37,9 +37,10 @@ The nightly **Live contract** workflow
       25538247771 are green on commit
       4fe957547f9e6aea749a85f87823d17a0ccc2928 and include the
       required read-only, mutating, audit-phase, and schema-diff log
-      markers. The local May 8 remediation tree is newer and
-      uncommitted, so this box remains open until the final candidate
-      SHA has scheduled-run evidence._
+      markers. Current `origin/main`
+      (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`) and this dirty
+      local remediation tree are newer, so this box remains open until
+      the final candidate SHA has scheduled-run evidence._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -52,9 +53,11 @@ The nightly **Live contract** workflow
       closed and the root cause is documented in `CHANGELOG.md`.
       _Tracking 2026-05-09: two consecutive scheduled greens exist on
       pushed commit 4fe957547f9e6aea749a85f87823d17a0ccc2928, but
-      not on the final remediation SHA because this local tree is
-      still dirty and uncommitted. The live-test-failure issues remain
-      closed; awaiting two cron greens on the final candidate._
+      not on current `origin/main`
+      (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`) or the final
+      remediation SHA because this local tree is still dirty and
+      uncommitted. The live-test-failure issues remain closed;
+      awaiting two cron greens on the final candidate._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
@@ -239,13 +242,13 @@ read every commit.
       The JWKS rotation propagation window is bounded
       by `internal/authn/oidc_verify_cache_test.go::TestOIDCVerifyCache_CeilingTTL`
       (cache entries cannot survive past `oidcVerifyCacheTTLCeiling`,
-      capped at 5m) and `TestOIDCVerifyCache_TTLClamping`. A literal
-      mid-session key-swap test (issuer rotates kid → next request
-      re-fetches JWKS) is not present today; the safety margin is
-      the bounded TTL plus the JWKS-fetch error semantics in
-      `internal/authn/jwks_document_test.go`. Documented in
-      `docs/auth-model.md` "Edge cases" and the failure-mode
-      table._
+      capped at 5m) and `TestOIDCVerifyCache_TTLClamping`.
+      `internal/authn/jwks_document_test.go::TestJWKSCache_RefreshesOnKidMissAfterRotation`
+      is now the literal mid-session key-swap test: it primes kid A,
+      rotates the JWKS server to kid B, accepts a fresh kid-B token
+      after kid-miss refresh, and rejects a freshly signed kid-A token
+      without process restart. Documented in `docs/auth-model.md`
+      "Edge cases" and the failure-mode table._
 - [x] Tenant isolation invariants are documented in
       [`docs/auth-model.md`](auth-model.md) "Tenant resolution"
       and `docs/production-readiness.md` "Pick an auth mode" /

@@ -16,13 +16,12 @@ work and commit it.
 
 ## Launch-state baseline
 
-- **Current pushed main baseline:** `4fe957547f9e6aea749a85f87823d17a0ccc2928`
-  (`fix(streamable): preserve session negotiation on touch`). This is
-  the current `main` / `origin/main` tip before the uncommitted May 8
-  remediation tree. It includes the post-PR #63 local/CI remediation
-  wave plus later review-readiness fixes. It does not represent the
-  dirty local remediation tree, did not run live Clockify probes from
-  this remediation state, and does not tick any external
+- **Current pushed main baseline:** `2e7b6bd4a7968ba45921e103d948f74dd82175b8`
+  (`May 9 hardening`). This is the current `main` / `origin/main`
+  tip after the May 9 hardening push. It is newer than the two
+  scheduled live-contract greens on `4fe9575`, and this local tree has
+  additional uncommitted P1 hardening. It did not run live Clockify
+  probes from this remediation state and does not tick any external
   launch-evidence box.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
@@ -142,10 +141,10 @@ code/CI hardening backlog is tracked in
    2026-05-09: scheduled runs 25593042387 and 25538247771 are green on
    `4fe957547f9e6aea749a85f87823d17a0ccc2928` and their logs include
    `TestE2EMutating`, `TestLiveCreateUpdateDeleteEntryAuditPhases`,
-   and `TestLiveReadSideSchemaDiff`, but that SHA is not this newer
-   dirty remediation tree. Those runs prove the audit-phase DSN path
-   for the pushed HEAD only. Use `/fix-live-contract` only if a future
-   cron firing reds.
+   and `TestLiveReadSideSchemaDiff`, but that SHA is not current
+   `origin/main` (`2e7b6bd`) or this newer dirty remediation tree.
+   Those runs prove the audit-phase DSN path for the older pushed HEAD
+   only. Use `/fix-live-contract` only if a future cron firing reds.
 2. **Candidate-tag security walk-through.** Local launch-review
    preflight was green on 2026-05-09 after moving to Go 1.25.10 and
    tagged `govulncheck@v1.3.0`; the final candidate tag still needs

@@ -55,7 +55,7 @@ func New(cfg config.Config, opts NewOpts) (*Runtime, error) {
 		return nil, err
 	}
 	rl := ratelimit.FromEnvWithAcquireTimeout(cfg.ConcurrencyAcquireTimeout)
-	tc := truncate.ConfigFromEnv()
+	tc := truncate.ConfigFromEnv(config.IsHostedProfile(cfg.Profile))
 	dc := dryrun.ConfigFromEnv()
 	bc, err := bootstrap.ConfigFromEnv()
 	if err != nil {

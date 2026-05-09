@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -16,10 +17,11 @@ import (
 
 // testEnforcement is a minimal Enforcement implementation for tests.
 type testEnforcement struct {
-	policy     *policy.Policy
-	bootstrap  *bootstrap.Config
-	truncation truncate.Config
-	dryRun     dryrun.Config
+	policy       *policy.Policy
+	bootstrap    *bootstrap.Config
+	truncation   truncate.Config
+	dryRun       dryrun.Config
+	afterCallErr error
 }
 
 func (e *testEnforcement) FilterTool(name string, hints ToolHints) bool {
@@ -46,6 +48,9 @@ func (e *testEnforcement) BeforeCall(ctx context.Context, name string, args map[
 }
 
 func (e *testEnforcement) AfterCall(result any) (any, error) {
+	if e.afterCallErr != nil {
+		return nil, e.afterCallErr
+	}
 	if e.truncation.Enabled {
 		truncated, _ := e.truncation.Truncate(result)
 		return truncated, nil
@@ -987,6 +992,55 @@ func TestTruncationApplied(t *testing.T) {
 	text, _ := textObj["text"].(string)
 	if !strings.Contains(text, "_truncation") {
 		t.Fatal("expected _truncation metadata in truncated response")
+	}
+}
+
+func TestAfterCallErrorReturnsToolError(t *testing.T) {
+	readTool := ToolDescriptor{
+		Tool: Tool{
+			Name:        "read_tool",
+			Description: "returns data",
+			InputSchema: map[string]any{"type": "object"},
+			Annotations: map[string]any{"readOnlyHint": true},
+		},
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return map[string]any{"ok": true}, nil
+		},
+		ReadOnlyHint: true,
+	}
+
+	server := NewServer("test", []ToolDescriptor{readTool}, &testEnforcement{afterCallErr: errors.New("postprocess failed")}, nil)
+	server.initialized.Store(true)
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_tool","arguments":{}}}`
+
+	var out strings.Builder
+	if err := server.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	var resp Response
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected JSON-RPC error: %v", resp.Error)
+	}
+	resultMap, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", resp.Result)
+	}
+	isErr, _ := resultMap["isError"].(bool)
+	if !isErr {
+		t.Fatal("expected isError=true for post-processing failure")
+	}
+	content, _ := resultMap["content"].([]any)
+	if len(content) == 0 {
+		t.Fatal("expected tool-error content")
+	}
+	textObj, _ := content[0].(map[string]any)
+	text, _ := textObj["text"].(string)
+	if !strings.Contains(text, "postprocess failed") {
+		t.Fatalf("expected postprocess error text, got %q", text)
 	}
 }
 

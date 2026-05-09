@@ -161,8 +161,9 @@ func TestJWKSCache_RejectsDuplicateEmptyKid(t *testing.T) {
 // The test stands up a JWKS server whose response can be atomically
 // swapped, primes the cache with key A, "rotates" to key B by
 // swapping the payload, and drives a token signed with B through the
-// authenticator. The verify must succeed and the server must have
-// been hit exactly twice (initial fetch + kid-miss-triggered refresh).
+// authenticator. The verify must succeed, the old key must no longer
+// verify a fresh token after refresh, and the server must be hit for
+// each kid-miss refresh.
 func TestJWKSCache_RefreshesOnKidMissAfterRotation(t *testing.T) {
 	const issuer = "https://issuer.example.test"
 
@@ -231,6 +232,20 @@ func TestJWKSCache_RefreshesOnKidMissAfterRotation(t *testing.T) {
 	}
 	if got := fetches.Load(); got != 2 {
 		t.Fatalf("expected 2 fetches after rotation (initial + kid-miss refresh), got %d", got)
+	}
+
+	tokOldAfterRotation := signJWT(t, privA, "kA", map[string]any{
+		"iss": issuer,
+		"sub": "old-key-after-rotation",
+		"exp": now + 300,
+	})
+	if _, err := authenticate(t, auth, tokOldAfterRotation); err == nil {
+		t.Fatal("fresh token signed by rotated-out kA must be rejected after JWKS refresh")
+	} else if !strings.Contains(err.Error(), `oidc key "kA" not found`) {
+		t.Fatalf("expected old-key rejection after rotation, got: %v", err)
+	}
+	if got := fetches.Load(); got != 3 {
+		t.Fatalf("expected 3 fetches after old-key kid-miss refresh, got %d", got)
 	}
 }
 

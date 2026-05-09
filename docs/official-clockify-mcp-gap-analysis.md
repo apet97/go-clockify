@@ -319,7 +319,8 @@ have not produced default-branch runs yet.
    audit-phase DSN path (`CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, redacted
    `MCP_LIVE_CONTROL_PLANE_DSN`, and green
    `TestLiveCreateUpdateDeleteEntryAuditPhases`), but it is on
-   `4fe9575`, not the newer local remediation tree.
+   `4fe9575`, not current `origin/main` (`2e7b6bd`) or the newer
+   local remediation tree.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
    (commits 42502cf + 79f0769 plus the local `make test-postgres`

@@ -5,6 +5,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # The root module is stdlib-only. With go.work present, Dependabot's
+    # root gomod scanner can otherwise open broad workspace PRs for optional
+    # build-tag modules; those dependencies are watched by the submodule
+    # entries below instead.
+    ignore:
+      - dependency-name: "github.com/jackc/pgx/v5"
+      - dependency-name: "github.com/testcontainers/testcontainers-go*"
+      - dependency-name: "google.golang.org/grpc"
+      - dependency-name: "go.opentelemetry.io/*"
   # Build-tag submodules carry the real third-party Go dependency
   # surface; the root module stays stdlib-only by design.
   - package-ecosystem: gomod

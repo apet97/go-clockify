@@ -55,7 +55,10 @@ replacement for `docs/launch-candidate-checklist.md`.
   Dependabot now watches the root module and all build-tag submodules
   (`internal/controlplane/postgres`, `internal/transport/grpc`, and
   `internal/tracing/otel`) so the third-party Go dependency surface is
-  not hidden behind the root module's stdlib-only posture. Added
+  not hidden behind the root module's stdlib-only posture. The root
+  watcher ignores build-tag dependency families so `go.work` does not
+  produce broad root/workspace PRs for packages owned by the submodule
+  watchers. Added
   `tools/govulncheck` as a separate tool module that pins
   `golang.org/x/vuln v1.3.0`; Dependabot watches that module and CI
   installs govulncheck from it instead of duplicating a shell-step
@@ -131,8 +134,9 @@ replacement for `docs/launch-candidate-checklist.md`.
 - **Launch-state baseline wording.** `AGENTS.md`,
   `docs/agent-handoff.md`, and `docs/production-readiness.md` now name
   the actual current pushed `main` / `origin/main` baseline
-  (`4fe957547f9e6aea749a85f87823d17a0ccc2928`) instead of treating the
-  older post-PR #62 or post-PR #63 SHAs as current. The older
+  (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`) instead of treating the
+  older cron-proven, post-PR #62, or post-PR #63 SHAs as current. The older
+  `4fe957547f9e6aea749a85f87823d17a0ccc2928`,
   `ff0047aa50cdcd4bb43037c72d66b218d51f13e8` and
   `0960bfa03db143778deb59f9b9522012116c9c9b` baselines remain documented
   as manual/historical evidence, not candidate-SHA closure.
@@ -368,7 +372,7 @@ replacement for `docs/launch-candidate-checklist.md`.
 - **P2-5 dependency-review workflow artifact.** Added
   `.github/workflows/dependency-review.yml` for PR-time and
   default-branch dependency vulnerability review with SHA-pinned
-  `actions/dependency-review-action@v4.9.0`, read-only contents/PR
+  `actions/dependency-review-action@v5.0.0`, read-only contents/PR
   permissions, high-severity blocking, and explicit push compare refs
   so the first post-landing `main` run can serve as workflow evidence.
   First-run GitHub evidence remains external.
@@ -718,7 +722,7 @@ that every requirement is covered.
 | Preserve every reviewed finding disposition. | `docs/launch-readiness-review-may-8.md`; `scripts/test-check-launch-review-ledger.sh`. | The verifier requires dispositions for `T-01`..`T-24`, `MP-01`..`MP-13`, `P1-1`..`P3-7`, `D1`..`D10`, `G-01`..`G-05`, `L-01`..`L-05`, `L-08`, and `L-10`, excluding the summary and verification sections. It also requires local dispositions for the un-IDed Appendix B open-question groups `B.03` through `B.08`, the coordinator's un-IDed "files not deeply read" specialist scope, and the final plan's §9/§10 checklist coverage. Regression tests cover missing IDs, unexpected IDs, Unicode hyphens, source-bundle drift, dropped Appendix B coverage, dropped coordinator file-scope coverage, and dropped final checklist coverage. | Locally covered and guarded. |
 | Prioritize high-impact blockers before polish. | Closed finding order in this file; code areas under `internal/mcp/`, `internal/authn/`, `internal/config/`, `internal/controlplane/`, `internal/transport/grpc/`, and `internal/metrics/`. | The closed section starts with protocol/admission/audit/OIDC/gRPC/supply-chain blockers, then lower-risk docs, public-readiness, and evidence helpers. | Locally covered by disposition order. |
 | Fix safe code findings. | Targeted unit/integration tests, pinned CI-lint/workflow-lint proof, plus `GOTOOLCHAIN=go1.25.10 make release-check`. | Release check passed on 2026-05-09 after the latest doc/security-evidence refresh; it includes coverage floors, script tests, config/doc parity, build-tag checks, HTTP/stdio smokes, strict doctor smoke, gRPC race E2E, and deploy render. The CI-pinned `golangci-lint` v2.5.0 command also ran locally via `go run` and reported `0 issues` after the final lint cleanup. The CI-pinned actionlint revision also ran locally against `.github/workflows/*.yml`. | Locally green. |
-| Fix safe docs, CI, release, and public-surface drift. | `make doc-parity`; `bash scripts/test-check-doc-parity.sh`; `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`, `.github/dependabot.yml`; `.github/workflows/semgrep.yml`; `scripts/check-go-version-parity.sh`; `.github/workflows/ci.yml`; `tools/govulncheck`. | `doc-parity` passed, including the launch-review ledger, launch-checklist parity, and launch-evidence gate. The current doc-parity regression suite has 69 cases covering tool-count drift, public onboarding, ADR status, official-claim wording, brand/legal evidence, JSON Schema rationale, README/CONTRIBUTING local-verification wording, Makefile release-check wording, stale shippable release-check wording in docs, shared-service profile Group 2 scoping, production-readiness blocker-scope wording, gap-analysis blocker-scope wording, P3-5 baseline header docs, serverInfo identity guidance, default protocol-version guidance, May 8 ledger read-first routing, brand/legal URI plus gRPC service-name review docs, T-17 gRPC reflection dev-only posture, build-tag/tool-module Dependabot watcher coverage, pinned verify-vuln tool-module execution, govulncheck CI version proof, SUPPORT.md SLSA private-repo cosign fallback, stale unconditional SLSA public wording, release-smoke SLSA bare-404 skip guard, README SLSA provenance availability wording, workflow action SHA-pin guard, deploy SLSA bare-404 skip guard, release workflow/docs SLSA availability wording, release-smoke doctor-output artifact guard, docker-image SLSA feature-gate notice guard, legacy HTTP EOL runbook, stale public-content local-artifact wording, stale shared-service launch-blocking wording, agent handoff permissioned landing sequence, and dependency-review default-branch evidence trigger. The RC evidence regression suite also now guards that raw workflow snapshots are not treated as final-SHA proof. | Locally green; workflow first-run evidence still external. |
+| Fix safe docs, CI, release, and public-surface drift. | `make doc-parity`; `bash scripts/test-check-doc-parity.sh`; `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`, `.github/dependabot.yml`; `.github/workflows/semgrep.yml`; `scripts/check-go-version-parity.sh`; `.github/workflows/ci.yml`; `tools/govulncheck`. | `doc-parity` passed, including the launch-review ledger, launch-checklist parity, and launch-evidence gate. The current doc-parity regression suite has 70 cases covering tool-count drift, public onboarding, ADR status, official-claim wording, brand/legal evidence, JSON Schema rationale, README/CONTRIBUTING local-verification wording, Makefile release-check wording, stale shippable release-check wording in docs, shared-service profile Group 2 scoping, production-readiness blocker-scope wording, gap-analysis blocker-scope wording, P3-5 baseline header docs, serverInfo identity guidance, default protocol-version guidance, May 8 ledger read-first routing, brand/legal URI plus gRPC service-name review docs, T-17 gRPC reflection dev-only posture, build-tag/tool-module Dependabot watcher coverage, root Dependabot build-tag ignore coverage, pinned verify-vuln tool-module execution, govulncheck CI version proof, SUPPORT.md SLSA private-repo cosign fallback, stale unconditional SLSA public wording, release-smoke SLSA bare-404 skip guard, README SLSA provenance availability wording, workflow action SHA-pin guard, deploy SLSA bare-404 skip guard, release workflow/docs SLSA availability wording, release-smoke doctor-output artifact guard, docker-image SLSA feature-gate notice guard, legacy HTTP EOL runbook, stale public-content local-artifact wording, stale shared-service launch-blocking wording, agent handoff permissioned landing sequence, and dependency-review default-branch evidence trigger. The RC evidence regression suite also now guards that raw workflow snapshots are not treated as final-SHA proof. | Locally green; workflow first-run evidence still external. |
 | Keep Group 6 security posture verifiable. | `docs/launch-candidate-checklist.md`; `docs/runbooks/release-candidate-evidence.md`; `scripts/prepare-rc-evidence.sh`. | Current local preflight: pinned `govulncheck@v1.3.0` found no vulnerabilities under `GOTOOLCHAIN=go1.25.10`, Semgrep `p/default` scanned 1153 tracked files with 0 findings, `nosemgrep` context still maps to ADR 0008 / ADR 0017, and `make verify-fips` passed. A host-toolchain govulncheck scan with Go 1.26.2 reports standard-library issues fixed in Go 1.26.3, so README/CONTRIBUTING now avoid broad `1.25.10+` support wording and keep the exact Go 1.25.10 launch-candidate pin. `make secret-scan` is not green on this dirty workstation because ignored/local artifacts remain; clean candidate-tag gitleaks remains required. | Locally documented; final candidate-tag evidence open. |
 | Keep CI/release/external state honest. | `make launch-external-status`; `docs/launch-candidate-checklist.md`; `scripts/check-launch-evidence-gate.sh`. | Latest read-only snapshot reports `11 open, 0 unknown`: dirty remediation tree, non-main local branches, missing final-SHA live/mutation cron evidence, workflow first-runs not on the final candidate SHA, private-repo branch-protection API limitation, stale repo description, issue #28 open, and missing next-release npm expected-version proof. The helper now directly verifies `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, verifies live-contract cron log markers including `TestLiveCreateUpdateDeleteEntryAuditPhases` and `TestLiveReadSideSchemaDiff` before Group 1 can close, fails open if readable branch protection omits `Doctor strict smoke`, `Doctor Postgres backend`, or `Shared-service Postgres E2E` from either GitHub required-check API shape, and rejects stale/PR-only CodeQL/dependency-review/Semgrep runs as launch evidence. The RC evidence bundle keeps raw workflow metadata for audit context, while `check-launch-external-status --fail-open` remains the fail-closed final-SHA validator. | Open external/repo-state gates. |
 | Keep public-readiness story honest. | `make public-content-audit`; `scripts/check-public-content-audit.sh`; `docs/release/public-history-review.md`; `docs/release/local-artifact-review.md`. | Latest read-only snapshot reports `0 open, 0 unknown`: candidate branch file content is `0 open, 0 unknown`, public-history review is `0 open, 0 unknown`, and local artifact/full-tree review is `0 open, 0 unknown`. | Public-content audit clean locally; public flip still requires external, repo-state, and legal/product gates. |
@@ -748,7 +752,8 @@ prints a specific maintainer action beside each open gate.
   25538247771 are green on
   `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
   mutating, audit, and schema-diff log markers, but that SHA is still
-  not this dirty local remediation tree. `make launch-external-status`
+  not current `origin/main` (`2e7b6bd4a7968ba45921e103d948f74dd82175b8`)
+  or this dirty local remediation tree. `make launch-external-status`
   therefore keeps Group 1 open unless the final remediation SHA is
   explicit or the tree is clean.
 - **Main freeze while Group 1 is pending.** The coordinator's Day 0
@@ -926,12 +931,13 @@ prints a specific maintainer action beside each open gate.
 - `ruby -ryaml -e 'ARGV.each { |p| YAML.load_file(p); puts "OK #{p}" }'
   .github/workflows/docker-image.yml .github/workflows/release.yml
   .github/workflows/deploy.yml .github/workflows/release-smoke.yml`
-- `bash scripts/test-check-doc-parity.sh` (69/69 OK, including the
+- `bash scripts/test-check-doc-parity.sh` (70/70 OK, including the
   workflow action SHA-pin, deploy SLSA bare-404 skip, and release
   workflow/docs SLSA availability wording, and agent handoff
   permissioned landing sequence plus dependency-review default-branch
-  evidence, release-smoke doctor-output artifact, and docker-image
-  SLSA feature-gate notice guards)
+  evidence, root Dependabot build-tag ignore coverage,
+  release-smoke doctor-output artifact, and docker-image SLSA
+  feature-gate notice guards)
 - `bash scripts/test-check-launch-review-ledger.sh` (39/39 OK,
   including the 69-case prompt-to-artifact guard and
   launch-candidate tracking issue, main-freeze, external security
@@ -961,9 +967,9 @@ prints a specific maintainer action beside each open gate.
 - `make shellcheck` (local `shellcheck` installed; all `scripts/*.sh`
   clean)
 - `make script-tests` (all script regression suites passed, including
-  doc parity 69/69, launch-review ledger 39/39,
+  doc parity 70/70, launch-review ledger 39/39,
   launch-external-status 20 run / 0 failed, public-content audit
-  5 run / 0 failed, Go-version parity 9/9, live-tool coverage
+  6 run / 0 failed, Go-version parity 9/9, live-tool coverage
   6 run / 0 failed, license evidence 3/3, and RC evidence
   4 run / 0 failed with raw-snapshot-vs-validator assertions)
 - `make bench-baseline-check` (committed

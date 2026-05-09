@@ -315,7 +315,11 @@ fi
 personal_marker="pet""kovic"
 loop_marker="claude""-loop"
 scratch_pattern="${personal_marker}|${loop_marker}|[.]planning|[.]claude|[.]remember"
-scratch_refs="$(git -C "$repo_root" grep -n -I -E "$scratch_pattern" -- . ':(exclude).gitignore' ':(exclude).gitleaks.toml' 2>/dev/null |
+scratch_refs="$(git -C "$repo_root" grep -n -I -E "$scratch_pattern" -- . \
+  ':(exclude).gitignore' \
+  ':(exclude).gitleaks.toml' \
+  ':(exclude)scripts/check-public-content-audit.sh' \
+  ':(exclude)scripts/test-check-public-content-audit.sh' 2>/dev/null |
   awk -F: '{ print $1 ":" $2 }' || true)"
 if [ -n "$scratch_refs" ]; then
   record_candidate open "tracked personal/scratch references require review before a public repo flip"

@@ -71,8 +71,14 @@ in addition to logging time:
 | Tier 2 tools (invoices, admin, …) | ❌ | ❌ | ❌ | On-demand |
 | Recommended for | Read-only dashboards, dev clusters | **Untrusted AI agents** | Trusted shared-service agents | Local development, power users |
 
+At runtime, `standard` and `full` have the same policy allow rules:
+any non-denied tool or group can run after the bootstrap/activation
+surface exposes it. Treat `full` as an explicit operator/admin label,
+not as an additional code-level gate. RiskClass-driven restrictions for
+`standard` remain a proposed design in ADR-0018, not current behaviour.
+
 `full` is intentionally omitted from recommended production defaults:
-it preloads the full tool surface, including Tier 2 tools, and is for
+it represents an intentionally unrestricted policy posture and is for
 explicit admin automation only.
 
 `time_tracking_safe` is the recommended default for any deployment

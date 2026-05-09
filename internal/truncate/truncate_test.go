@@ -10,12 +10,16 @@ import (
 
 func TestConfigFromEnvDefault(t *testing.T) {
 	os.Unsetenv("CLOCKIFY_TOKEN_BUDGET")
+	os.Unsetenv("CLOCKIFY_TRUNCATION_FAIL_CLOSED")
 	cfg := ConfigFromEnv()
 	if cfg.TokenBudget != 8000 {
 		t.Errorf("expected default budget 8000, got %d", cfg.TokenBudget)
 	}
 	if !cfg.Enabled {
 		t.Error("expected Enabled=true for default budget")
+	}
+	if cfg.FailClosedOnError {
+		t.Error("expected FailClosedOnError=false by default outside hosted profiles")
 	}
 }
 
@@ -27,6 +31,24 @@ func TestConfigFromEnvDisabled(t *testing.T) {
 	}
 	if cfg.Enabled {
 		t.Error("expected Enabled=false when budget is 0")
+	}
+}
+
+func TestConfigFromEnvHostedFailClosed(t *testing.T) {
+	t.Setenv("CLOCKIFY_TOKEN_BUDGET", "8000")
+	t.Setenv("CLOCKIFY_TRUNCATION_FAIL_CLOSED", "0")
+	cfg := ConfigFromEnv(true)
+	if !cfg.FailClosedOnError {
+		t.Fatal("hosted profiles must force FailClosedOnError")
+	}
+}
+
+func TestConfigFromEnvFailClosedOptIn(t *testing.T) {
+	t.Setenv("CLOCKIFY_TOKEN_BUDGET", "8000")
+	t.Setenv("CLOCKIFY_TRUNCATION_FAIL_CLOSED", "1")
+	cfg := ConfigFromEnv()
+	if !cfg.FailClosedOnError {
+		t.Fatal("CLOCKIFY_TRUNCATION_FAIL_CLOSED=1 should enable FailClosedOnError")
 	}
 }
 

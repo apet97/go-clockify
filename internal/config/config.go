@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -535,6 +536,15 @@ func Load() (Config, error) {
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
 	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"
 	cfg.ExposeAuthErrors = os.Getenv("MCP_EXPOSE_AUTH_ERRORS") == "1"
+	if cfg.ExposeAuthErrors && isHostedProfile(profileName) {
+		if os.Getenv("MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS") != "1" {
+			return Config{}, fmt.Errorf("MCP_EXPOSE_AUTH_ERRORS=1 is refused under MCP_PROFILE=%s; set MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS=1 only for a documented temporary incident response", profileName)
+		}
+		slog.Warn("hosted_break_glass_enabled",
+			"profile", profileName,
+			"setting", "MCP_EXPOSE_AUTH_ERRORS",
+			"break_glass_env", "MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS")
+	}
 	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS: explicit override always wins.
 	// If unset, hosted profiles default to sanitised output to keep a
 	// per-tenant Clockify response body off the MCP wire.
@@ -550,6 +560,15 @@ func Load() (Config, error) {
 		cfg.WebhookValidateDNS = raw == "1" || strings.EqualFold(raw, "true")
 	} else {
 		cfg.WebhookValidateDNS = true
+	}
+	if !cfg.WebhookValidateDNS && isHostedProfile(profileName) {
+		if os.Getenv("CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS") != "1" {
+			return Config{}, fmt.Errorf("CLOCKIFY_WEBHOOK_VALIDATE_DNS=0 is refused under MCP_PROFILE=%s; prefer CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS or set CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS=1 only for a documented temporary incident response", profileName)
+		}
+		slog.Warn("hosted_break_glass_enabled",
+			"profile", profileName,
+			"setting", "CLOCKIFY_WEBHOOK_VALIDATE_DNS",
+			"break_glass_env", "CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS")
 	}
 	// CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: comma-separated escape-hatch
 	// list of hostnames that bypass the WebhookValidateDNS private-IP

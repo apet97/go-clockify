@@ -290,10 +290,18 @@ Call `clockify_list_tools` to discover a Tier 2 group or specific tool, `clockif
 | `read_only` | yes | no | no | no | Untrusted agents — observe only |
 | `time_tracking_safe` | yes | time-entry allowlist | no | no | **Recommended AI-facing default** for time tracking |
 | `safe_core` | yes | broader allowlist | no | no | Trusted assistants that may create projects, clients, tags, and tasks |
-| `standard` | yes | yes | yes | on demand | Raw no-profile default / trusted operator mode, not a public AI default |
-| `full` | yes | yes | yes | yes | Admin and automation |
+| `standard` | yes | yes | yes | on demand | Raw no-profile default / trusted operator mode; code-level allow rules match `full` |
+| `full` | yes | yes | yes | on demand | Admin automation label for operators intentionally running the unrestricted policy |
 
 Introspection tools (`clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`, `clockify_activate_group`, `clockify_activate_tool`, `clockify_deactivate_group`, `clockify_search_tools`, `clockify_resolve_name`, `clockify_resolve_debug`) are always available regardless of policy. `clockify_resolve_debug` is a compatibility alias; new clients should call `clockify_resolve_name`.
+
+`standard` and `full` currently share the same enforcement semantics:
+any non-denied tool or group is policy-allowed. Their operational
+difference is convention plus bootstrap/activation posture, not a
+separate RiskClass gate. Use `time_tracking_safe` or `safe_core` for
+hosted AI-facing defaults, and use `CLOCKIFY_DENY_*`,
+`CLOCKIFY_ALLOW_GROUPS`, and `CLOCKIFY_BOOTSTRAP_MODE` to narrow a
+trusted operator deployment.
 
 ## Configuration
 

@@ -34,6 +34,7 @@ data:
   # CLOCKIFY_INSECURE: "0"
   # CLOCKIFY_SANITIZE_UPSTREAM_ERRORS: "1"  # omit Clockify response bodies from MCP tool errors (hosted-default; explicit override always wins)
   # CLOCKIFY_WEBHOOK_VALIDATE_DNS: "1"      # DNS-resolve webhook hosts and reject private/reserved IPs (hosted-default)
+  # CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS: "0" # set "1" only for documented incident response when a hosted profile must temporarily disable webhook DNS validation
   # CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: "webhook.example.com,.internal.example.com"  # comma-separated escape hatch — hostnames bypass the DNS private-IP check (exact or leading-dot suffix; see runbooks/webhook-dns-validation.md §4b)
   # CLOCKIFY_DELTA_FORMAT: "merge"
   # MCP_GRPC_REAUTH_INTERVAL: ""
@@ -55,6 +56,7 @@ data:
   # MCP_REQUIRE_TENANT_CLAIM: "1"   # reject oidc tokens missing the tenant claim (no fallback to MCP_DEFAULT_TENANT_ID)
   # MCP_DISABLE_INLINE_SECRETS: "1" # reject credential refs with backend=inline (hosted-service hardening)
   # MCP_EXPOSE_AUTH_ERRORS: "0"     # keep client auth failures generic; set "1" only for development
+  # MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS: "0" # set "1" only for documented incident response when a hosted profile must temporarily expose detailed auth failures
   # MCP_FORWARD_TENANT_HEADER: ""
   # MCP_FORWARD_SUBJECT_HEADER: ""
   # MCP_REQUIRE_FORWARD_TENANT_CLAIM: "1" # reject forward_auth requests missing the tenant header

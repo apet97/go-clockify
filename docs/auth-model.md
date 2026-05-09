@@ -224,8 +224,11 @@ lines 20-36).
   auth layer.
 - **`MCP_EXPOSE_AUTH_ERRORS`** is a dev-only knob — when set, the
   HTTP error envelope's `error_description` carries the raw
-  authenticator error string. In hosted profiles the field is
-  scrubbed to a generic `authentication failed` message; the raw
+  authenticator error string. Hosted profiles refuse that setting
+  unless `MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS=1` is also present for a
+  documented incident response, and emit a `hosted_break_glass_enabled`
+  startup warning when the hatch is used. The normal hosted path
+  returns the generic `authentication failed` message while the raw
   reason still appears in the structured server log under
   `auth_failed=`.
 - **gRPC stream re-auth** (`MCP_GRPC_REAUTH_INTERVAL`, default
@@ -233,10 +236,11 @@ lines 20-36).
   bidirectional stream at the configured interval. Failures
   surface as `clockify_mcp_grpc_auth_rejections_total{reason="reauth_expired"}`
   and a `msg=grpc_reauth_failed` log line.
-- **Per-subject rate limiting** (`CLOCKIFY_PER_TOKEN_RATE_LIMIT`,
-  default 60 calls / 60s) keys off `principal.Subject` whenever a
-  Principal is in context; the limit is enforced before the tool
-  call dispatches and surfaces as
+- **Per-principal rate limiting** (`CLOCKIFY_PER_TOKEN_RATE_LIMIT`,
+  default 60 calls / 60s) keys off `tenant_id + "\x00" + subject`
+  whenever a Principal carries tenant identity, falling back to
+  `subject` only when the tenant is absent. The limit is enforced
+  before the tool call dispatches and surfaces as
   `clockify_mcp_rate_limit_rejections_total{kind="window",scope="per_token"}`
   for rolling-window saturation, or the same metric with
   `kind="concurrency"` for concurrency saturation. When no principal

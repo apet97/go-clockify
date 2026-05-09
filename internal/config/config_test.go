@@ -125,6 +125,9 @@ var profileLeakedEnvs = []string{
 	"CLOCKIFY_INSECURE",
 	"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
 	"CLOCKIFY_WEBHOOK_VALIDATE_DNS",
+	"CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS",
+	"MCP_EXPOSE_AUTH_ERRORS",
+	"MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS",
 }
 
 func TestLoadReportsURLRemoved(t *testing.T) {
@@ -1769,6 +1772,80 @@ func TestLoad_WebhookValidateDNS_DefaultOn(t *testing.T) {
 				t.Fatalf("profile %q WebhookValidateDNS=%v want=%v", c.profile, cfg.WebhookValidateDNS, c.want)
 			}
 		})
+	}
+}
+
+func TestLoad_HostedProfileRefusesExposeAuthErrorsWithoutBreakGlass(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":       "test-key",
+		"MCP_PROFILE":            "shared-service",
+		"MCP_EXPOSE_AUTH_ERRORS": "1",
+	}
+	maps.Copy(env, hostedProfileEnv)
+	setEnvs(t, env)
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected hosted profile to reject detailed auth errors without break-glass")
+	}
+	if !strings.Contains(err.Error(), "MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS") {
+		t.Fatalf("error = %q, want break-glass env name", err.Error())
+	}
+}
+
+func TestLoad_HostedProfileAllowsExposeAuthErrorsWithBreakGlass(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":                   "test-key",
+		"MCP_PROFILE":                        "shared-service",
+		"MCP_EXPOSE_AUTH_ERRORS":             "1",
+		"MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS": "1",
+	}
+	maps.Copy(env, hostedProfileEnv)
+	setEnvs(t, env)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.ExposeAuthErrors {
+		t.Fatal("ExposeAuthErrors = false, want true with break-glass")
+	}
+}
+
+func TestLoad_HostedProfileRefusesWebhookDNSDisableWithoutBreakGlass(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":              "test-key",
+		"MCP_PROFILE":                   "shared-service",
+		"CLOCKIFY_WEBHOOK_VALIDATE_DNS": "0",
+	}
+	maps.Copy(env, hostedProfileEnv)
+	setEnvs(t, env)
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected hosted profile to reject disabled webhook DNS validation without break-glass")
+	}
+	if !strings.Contains(err.Error(), "CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS") {
+		t.Fatalf("error = %q, want break-glass env name", err.Error())
+	}
+}
+
+func TestLoad_HostedProfileAllowsWebhookDNSDisableWithBreakGlass(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":                          "test-key",
+		"MCP_PROFILE":                               "shared-service",
+		"CLOCKIFY_WEBHOOK_VALIDATE_DNS":             "0",
+		"CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS": "1",
+	}
+	maps.Copy(env, hostedProfileEnv)
+	setEnvs(t, env)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.WebhookValidateDNS {
+		t.Fatal("WebhookValidateDNS = true, want false with break-glass")
 	}
 }
 

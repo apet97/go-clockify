@@ -56,16 +56,16 @@ gap:
 > first" scenarios; that is tracked as a separate follow-up rather
 > than half-wired here.
 
-The current safety story is:
+The proposed safety story after this ADR lands is:
 
 1. `CLOCKIFY_DRY_RUN=enabled` is on by default (operators must opt
    out, not opt in).
-2. The policy mode (`CLOCKIFY_POLICY`) defaults to `standard`, which
-   denies the destructive tools that carry `RiskBilling`,
-   `RiskAdmin`, or `RiskPermissionChange`. Operators must explicitly
-   switch to `CLOCKIFY_POLICY=full` (or use the new
-   `time_tracking_safe` AI-facing default in the hosted profiles)
-   to expose them.
+2. The policy mode (`CLOCKIFY_POLICY`) defaults to `standard`; after
+   this ADR's implementation it would deny destructive tools that
+   carry `RiskBilling`, `RiskAdmin`, or `RiskPermissionChange`.
+   Operators would explicitly switch to `CLOCKIFY_POLICY=full` (or
+   use the existing `time_tracking_safe` AI-facing default in the
+   hosted profiles) to expose them.
 3. 18 high-risk tools currently rely on this two-layer gate:
    - **Invoices** (7): `clockify_send_invoice`, `_mark_invoice_paid`,
      `_create_invoice`, `_update_invoice`, `_delete_invoice`,

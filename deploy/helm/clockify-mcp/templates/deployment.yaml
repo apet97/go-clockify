@@ -110,6 +110,10 @@ spec:
             - name: CLOCKIFY_WEBHOOK_VALIDATE_DNS
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.clockify.webhookValidateDnsBreakGlass }}
+            - name: CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS
+              value: {{ . | quote }}
+            {{- end }}
             {{- with .Values.clockify.webhookAllowedDomains }}
             - name: CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS
               value: {{ . | quote }}
@@ -164,6 +168,10 @@ spec:
             {{- end }}
             {{- with .Values.auth.exposeAuthErrors }}
             - name: MCP_EXPOSE_AUTH_ERRORS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.exposeAuthErrorsBreakGlass }}
+            - name: MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS
               value: {{ . | quote }}
             {{- end }}
             {{- with .Values.auth.forwardTenantHeader }}

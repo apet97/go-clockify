@@ -60,6 +60,7 @@ Operators can either:
 - [ ] OIDC `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI` set (RFC 8707 binding)
 - [ ] If mTLS is used: `MCP_MTLS_TENANT_SOURCE=cert` (default) and `MCP_REQUIRE_MTLS_TENANT=1`
 - [ ] `MCP_EXPOSE_AUTH_ERRORS=0` (default; clients must not see internal error detail)
+- [ ] `MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS` and `CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS` unset or `0` unless there is a documented temporary incident response with startup-log evidence
 - [ ] TLS termination wired (one of):
   - reverse-proxy TLS in front of `streamable_http` (recommended), **or**
   - native streamable TLS via `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY`, **or**

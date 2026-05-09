@@ -55,6 +55,46 @@ func TestBeforeCallIsolatesPerSubjectBudgets(t *testing.T) {
 	}
 }
 
+// TestBeforeCallIsolatesSameSubjectAcrossTenants asserts that hosted
+// deployments do not let identical subject strings in different tenants share
+// one per-token budget.
+func TestBeforeCallIsolatesSameSubjectAcrossTenants(t *testing.T) {
+	rl := ratelimit.NewWithAcquireTimeout(0, 1000, 60000, 0)
+	setPerTokenLimits(t, rl, 0, 1)
+
+	pipe := &Pipeline{
+		Policy:    standardPolicy(),
+		Bootstrap: fullTier1Bootstrap("probe"),
+		RateLimit: rl,
+	}
+
+	tenantA := &authn.Principal{Subject: "alice", TenantID: "tenant-a", AuthMode: authn.ModeOIDC}
+	tenantB := &authn.Principal{Subject: "alice", TenantID: "tenant-b", AuthMode: authn.ModeOIDC}
+	ctxA := authn.WithPrincipal(context.Background(), tenantA)
+	ctxB := authn.WithPrincipal(context.Background(), tenantB)
+
+	_, rel, err := pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
+	if err != nil {
+		t.Fatalf("tenant A first call: %v", err)
+	}
+	if rel != nil {
+		rel()
+	}
+
+	_, _, err = pipe.BeforeCall(ctxA, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
+	if err == nil {
+		t.Fatal("expected tenant A second call to be rejected")
+	}
+
+	_, rel, err = pipe.BeforeCall(ctxB, "probe", nil, mcp.ToolHints{ReadOnly: true}, nil, noLookup)
+	if err != nil {
+		t.Fatalf("tenant B first call with same subject should have isolated budget: %v", err)
+	}
+	if rel != nil {
+		rel()
+	}
+}
+
 // TestBeforeCallAnonymousFallsBackToGlobal asserts that when no Principal is
 // on the context, the pipeline does NOT bucket by subject — the global
 // budget is the only gate.

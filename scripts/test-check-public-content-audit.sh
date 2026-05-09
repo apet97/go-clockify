@@ -183,6 +183,37 @@ rm -rf "$stub_dir" "$repo_dir"
 trap - EXIT
 
 tests_run=$((tests_run + 1))
+stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-public-content-audit-self-stub.XXXXXX")"
+repo_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-public-content-audit-self-repo.XXXXXX")"
+trap 'rm -rf "$stub_dir" "$repo_dir"' EXIT
+write_stub_gitleaks "$stub_dir"
+make_repo "$repo_dir"
+mkdir -p "$repo_dir/scripts"
+cat > "$repo_dir/scripts/check-public-content-audit.sh" <<'EOF'
+required_gitignore_patterns=(
+  ".claude/"
+  ".serena/"
+  ".remember/"
+  ".planning/"
+)
+EOF
+cat > "$repo_dir/scripts/test-check-public-content-audit.sh" <<'EOF'
+cat > "$dir/.gitignore" <<'INNER'
+.claude/
+.serena/
+.remember/
+.planning/
+INNER
+EOF
+git -C "$repo_dir" add scripts/check-public-content-audit.sh scripts/test-check-public-content-audit.sh
+git -C "$repo_dir" commit -q -m "test: add audit script fixtures"
+self_output="$(PATH="$stub_dir/bin:$PATH" bash "$script" --repo-root "$repo_dir" --fail-open)"
+assert_contains "$self_output" "[closed] no tracked personal/scratch references outside .gitignore/.gitleaks.toml" "audit script fixture references do not trip scratch scan"
+assert_contains "$self_output" "Summary: 0 open, 0 unknown" "audit script fixture references keep audit clean"
+rm -rf "$stub_dir" "$repo_dir"
+trap - EXIT
+
+tests_run=$((tests_run + 1))
 stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-public-content-audit-open-stub.XXXXXX")"
 repo_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-public-content-audit-open-repo.XXXXXX")"
 trap 'rm -rf "$stub_dir" "$repo_dir"' EXIT

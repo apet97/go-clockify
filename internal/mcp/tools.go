@@ -323,7 +323,11 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 
 	// Post-processing (truncation)
 	if s.Enforcement != nil {
-		result, _ = s.Enforcement.AfterCall(result)
+		processed, err := s.Enforcement.AfterCall(result)
+		if err != nil {
+			return nil, err
+		}
+		result = processed
 	}
 
 	return result, nil

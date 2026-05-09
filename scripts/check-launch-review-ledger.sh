@@ -268,7 +268,7 @@ required_prompt_artifact_patterns=(
   "GOTOOLCHAIN=go1.25.10 make release-check"
   "Fix safe docs, CI, release, and public-surface drift."
   "bash scripts/test-check-doc-parity.sh"
-  "current doc-parity regression suite has 69 cases"
+  "current doc-parity regression suite has 70 cases"
   "README/CONTRIBUTING local-verification wording"
   "Makefile release-check wording"
   "stale shippable release-check wording in docs"

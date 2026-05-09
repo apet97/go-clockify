@@ -739,6 +739,50 @@ else
       err ".github/dependabot.yml must watch Go module dependency updates for $dir"
     fi
   done
+  root_gomod_block=$(
+    awk '
+      /^[[:space:]]*-[[:space:]]*package-ecosystem:/ {
+        if (capture) {
+          printf "%s", entry
+          printed = 1
+          exit
+        }
+        in_entry = 1
+        entry = $0 ORS
+        ecosystem = $0
+        sub(/^.*package-ecosystem:[[:space:]]*/, "", ecosystem)
+        gsub(/"/, "", ecosystem)
+        next
+      }
+      in_entry {
+        entry = entry $0 ORS
+        if ($0 ~ /^[[:space:]]*directory:/) {
+          dir = $0
+          sub(/^.*directory:[[:space:]]*/, "", dir)
+          gsub(/"/, "", dir)
+          if (ecosystem == "gomod" && dir == "/") {
+            capture = 1
+          }
+        }
+      }
+      END {
+        if (capture && !printed) {
+          printf "%s", entry
+        }
+      }
+    ' .github/dependabot.yml
+  )
+  required_root_dependabot_ignores=(
+    "github.com/jackc/pgx/v5"
+    "github.com/testcontainers/testcontainers-go*"
+    "google.golang.org/grpc"
+    "go.opentelemetry.io/*"
+  )
+  for dep in "${required_root_dependabot_ignores[@]}"; do
+    if ! printf "%s\n" "$root_gomod_block" | grep -qxF "      - dependency-name: \"$dep\""; then
+      err ".github/dependabot.yml root gomod watcher must ignore build-tag dependency updates for $dep"
+    fi
+  done
 fi
 
 if [ ! -f .github/workflows/ci.yml ]; then
@@ -799,7 +843,7 @@ if [ -f .github/workflows/dependency-review.yml ]; then
     "pull_request:"
     "push:"
     "branches: [main]"
-    "actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48"
+    "actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294"
     "vulnerability-check: true"
     "license-check: false"
     "fail-on-severity: high"

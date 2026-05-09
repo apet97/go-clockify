@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 )
 
 // Config holds token-budget truncation settings.
 type Config struct {
-	TokenBudget int
-	Enabled     bool
+	TokenBudget       int
+	Enabled           bool
+	FailClosedOnError bool
 }
 
 // TruncationReport captures side-channel metadata about reductions applied
@@ -35,17 +37,24 @@ type ArrayReduction struct {
 const maxArrayReductions = 50
 
 // ConfigFromEnv reads CLOCKIFY_TOKEN_BUDGET from the environment.
-// Default is 8000. Setting it to 0 disables truncation.
-func ConfigFromEnv() Config {
+// Default is 8000. Setting it to 0 disables truncation. Hosted
+// profiles force fail-closed truncation errors; non-hosted profiles can
+// opt into the same behavior with CLOCKIFY_TRUNCATION_FAIL_CLOSED=1.
+func ConfigFromEnv(hosted ...bool) Config {
 	budget := 8000
 	if v := os.Getenv("CLOCKIFY_TOKEN_BUDGET"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			budget = n
 		}
 	}
+	failClosed := len(hosted) > 0 && hosted[0]
+	if v := os.Getenv("CLOCKIFY_TRUNCATION_FAIL_CLOSED"); v != "" {
+		failClosed = failClosed || v == "1" || strings.EqualFold(v, "true")
+	}
 	return Config{
-		TokenBudget: budget,
-		Enabled:     budget > 0,
+		TokenBudget:       budget,
+		Enabled:           budget > 0,
+		FailClosedOnError: failClosed,
 	}
 }
 

@@ -30,6 +30,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_INSECURE", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "Allow non-HTTPS base URLs"},
 		{Name: "CLOCKIFY_SANITIZE_UPSTREAM_ERRORS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, omit upstream Clockify response bodies from MCP tool-error responses (still logged server-side). HTTP/hosted profiles (single-tenant-http, shared-service, prod-postgres) default to 1."},
 		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS", Group: "Core", Enum: []string{"0", "1"}, Default: "1", Help: "When 1, CreateWebhook/UpdateWebhook resolve the webhook host via DNS and reject any reply with a private/reserved IP (SSRF protection). Defaults to 1 for every profile; set 0 only for trusted air-gapped tests."},
+		{Name: "CLOCKIFY_WEBHOOK_VALIDATE_DNS_BREAK_GLASS", Group: "Core", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, allow CLOCKIFY_WEBHOOK_VALIDATE_DNS=0 under hosted profiles and emit a startup warning; break-glass only."},
 		{Name: "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", Group: "Core", Help: "Comma-separated escape-hatch list of webhook hostnames that bypass the CLOCKIFY_WEBHOOK_VALIDATE_DNS private-IP check. Each entry matches exact (webhook.example.com) or as a leading-dot suffix (.example.com matches every subdomain but anchors at a full DNS label). Use case: split-horizon DNS where a known-trusted hostname resolves to a private IP only on the control-plane network."},
 
 		// --- Safety ---
@@ -46,9 +47,10 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_MAX_CONCURRENT", Group: "Performance", Default: "10", Help: "Concurrent tool-call limit (0=disabled)"},
 		{Name: "CLOCKIFY_CONCURRENCY_ACQUIRE_TIMEOUT", Group: "Performance", Default: "100ms", Help: "Wait-for-slot timeout [1ms,30s]"},
 		{Name: "CLOCKIFY_RATE_LIMIT", Group: "Performance", Default: "120", Help: "Global tool calls per 60s window (0=disabled). For multi-subject HTTP/gRPC deployments, size this at least active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT so per-subject fairness can engage.", EssentialDoc: true},
-		{Name: "CLOCKIFY_PER_TOKEN_CONCURRENCY", Group: "Performance", Default: "5", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per-subject concurrent tool-call limit; applies whenever an authenticated principal is in context (0=disabled)"},
-		{Name: "CLOCKIFY_PER_TOKEN_RATE_LIMIT", Group: "Performance", Default: "60", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per-subject tool calls per 60s window; applies whenever an authenticated principal is in context (0=disabled)"},
+		{Name: "CLOCKIFY_PER_TOKEN_CONCURRENCY", Group: "Performance", Default: "5", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per tenant+subject concurrent tool-call limit; falls back to subject when tenant is absent; applies whenever an authenticated principal is in context (0=disabled)"},
+		{Name: "CLOCKIFY_PER_TOKEN_RATE_LIMIT", Group: "Performance", Default: "60", AppliesTo: []string{"http", "streamable_http", "grpc"}, Help: "Per tenant+subject tool calls per 60s window; falls back to subject when tenant is absent; applies whenever an authenticated principal is in context (0=disabled)"},
 		{Name: "CLOCKIFY_TOKEN_BUDGET", Group: "Performance", Default: "8000", Help: "Response token budget (0=disabled)"},
+		{Name: "CLOCKIFY_TRUNCATION_FAIL_CLOSED", Group: "Performance", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, response truncation marshal/unmarshal errors fail the tool call instead of returning the original payload. Hosted profiles force this on."},
 		{Name: "CLOCKIFY_TOOL_TIMEOUT", Group: "Performance", Default: "45s", Help: "Per-tool deadline [5s,10m]"},
 		{Name: "MCP_MAX_INFLIGHT_TOOL_CALLS", Group: "Performance", Default: "64", Help: "Stdio dispatch goroutine cap (0=disabled)"},
 		{Name: "CLOCKIFY_REPORT_MAX_ENTRIES", Group: "Performance", Default: "10000", Help: "Hard cap on aggregated report entries (0=unbounded)"},
@@ -108,6 +110,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_MTLS_CA_CERT_PATH", Group: "Auth", Help: "Client CA bundle for mtls verification (required for grpc + mtls and streamable_http + mtls)"},
 		{Name: "MCP_DISABLE_INLINE_SECRETS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject credential refs with backend=inline (hosted-service hardening; prefer env/file/external vault backends)"},
 		{Name: "MCP_EXPOSE_AUTH_ERRORS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, expose detailed auth failure reasons to clients (development only); default 0 returns 'authentication failed' to clients while logging the underlying reason server-side."},
+		{Name: "MCP_EXPOSE_AUTH_ERRORS_BREAK_GLASS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, allow MCP_EXPOSE_AUTH_ERRORS=1 under hosted profiles and emit a startup warning; break-glass only."},
 		{Name: "MCP_GRPC_REAUTH_INTERVAL", Group: "Auth", Default: "0", AppliesTo: []string{"grpc"}, Help: "gRPC stream reauth interval (0=disabled)"},
 		{Name: "MCP_GRPC_PEER_CIDR_ALLOW", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "Optional comma-separated CIDR allowlist for gRPC peer source addresses; peers outside the list are rejected before authentication"},
 
