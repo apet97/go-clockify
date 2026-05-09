@@ -1,5 +1,19 @@
 # Claude Code Opus 4.7 Prompts — Remaining Launch Work
 
+> **Historical / operator handoff material.** This file is the prompt
+> packet that was used to launch the 2026-05-09 multi-lane Claude Code
+> Opus 4.7 work — lanes 1, 4, and 5 ran from these prompts and landed
+> their outputs in PRs **#75** (mutation cron), **#77** (repo-state
+> cleanup, including a follow-up recovery commit and two reviewer
+> follow-ups), and **#76** (hosted/legal/product approval audit). The
+> "Current State" section below reflects the snapshot the operator
+> handed lanes at launch time; some of its claims have been
+> **superseded** by the lane PR outputs (notably the repo-state and
+> branch-protection rows in PR #77). This document is **not launch
+> evidence** and does **not close any gates**. Merge only if it is
+> clearly framed as historical and does not conflict with newer lane
+> outputs; otherwise close it as superseded.
+
 Prepared 2026-05-09 from `main` at
 `a07443bb260974f263ae8f39349544b72d351aab`
 (`docs(launch): archive scheduled live evidence`).
