@@ -821,20 +821,21 @@ prints a specific maintainer action beside each open gate.
   `docs/document-f3897b2-bypass` (`ahead=1`) and `fwbranch`
   (`ahead=20`) still contain commits ahead of `origin/main`; the other
   five are stale local pointers with `ahead=0`. The mutation cron
-  timeout has a local workflow fix in
-  this pass, but still needs the next scheduled run as evidence.
+  `internal/tools` matrix-leg timeout increase landed on `main` in
+  `2e7b6bd` ("May 9 hardening") ahead of `308c815` and the later
+  docs-only commits, so the workflow fix is on the default branch.
   Rechecked on 2026-05-09 via `make launch-external-status`: latest
-  `mutation.yml` scheduled run 25592823559 is now
+  `mutation.yml` scheduled run 25592823559 is still
   `completed/cancelled` on pushed commit
-  `4fe957547f9e6aea749a85f87823d17a0ccc2928`. `gh run view` shows the
+  `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled
+  cron fired before `2e7b6bd` landed. `gh run view` confirms only the
   `internal/tools` matrix leg was cancelled while the other mutation
   legs succeeded. `make launch-external-status` now also prints that
-  non-green mutation matrix job and tells maintainers to land the
-  local timeout fix before waiting for the next scheduled success, so
-  handoffs do not need a separate `gh run view` inspection. These are
-  the open external pieces of
-  `G-02`, `G-03`, and `G-04`; the local timeout increase still needs
-  to land and prove a scheduled run on the final candidate SHA.
+  non-green mutation matrix job so handoffs do not need a separate
+  `gh run view` inspection. These are the open external pieces of
+  `G-02`, `G-03`, and `G-04`; the next scheduled `mutation.yml` cron
+  on the final candidate SHA still needs to record a green run with
+  the workflow fix in place before this gate can close.
 - **Public-repo stale PR hygiene.** The final integrated launch plan
   requires no open PRs older than 14 days unless they carry a `wip` or
   `blocked` label. `make launch-external-status` now checks the first
