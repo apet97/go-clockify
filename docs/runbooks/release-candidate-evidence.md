@@ -223,3 +223,25 @@ fail-closed validator before treating workflow-backed boxes as closed.
 - `docs/release-policy.md`
 - `docs/verification.md`
 - `.github/workflows/release-smoke.yml`
+
+## Recorded Candidate-Tag Evidence
+
+The Group 6 candidate-tag evidence ledger lives in
+[`../../SECURITY.md`](../../SECURITY.md#candidate-tag-security-evidence).
+Each candidate tag must add a dated subsection there before the
+matching Group 6 boxes in `docs/launch-candidate-checklist.md` can be
+ticked. The ledger entries are the canonical referenceable artifact
+for the launch-evidence gate's `_Closed YYYY-MM-DD` annotations.
+
+- **`v1.2.1-rc.1` — closed 2026-05-09.** Peeled SHA
+  `a5d5f75769dc834a268f6ab24949b139ac4cff85`; sanitised host
+  `darwin-arm64-launch-host`. The four scan-driven Group 6 boxes
+  (`make verify-vuln`, gitleaks, Semgrep with `nosemgrep` audit,
+  `make verify-fips`) all exited `0` against the candidate-tag tree
+  with `govulncheck@v1.3.0`, `gitleaks 8.30.1`, `semgrep 1.157.0`,
+  Go 1.25.10 via `GOTOOLCHAIN`, and `GOFIPS140=latest`. See the
+  [`../../SECURITY.md`](../../SECURITY.md#v121-rc1--2026-05-09) entry
+  for the verbatim transcript. Group 7
+  release/sigstore/SLSA evidence, mutation cron evidence on the
+  candidate SHA, the npm expected-version proof, and the launch-
+  candidate tracking issue remain open against this tag.

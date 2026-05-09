@@ -154,3 +154,91 @@ builder's absolute paths.
 See [docs/verification.md](docs/verification.md) for step-by-step
 verification commands using `cosign verify-blob --bundle`,
 `cosign verify <image>`, and `gh attestation verify`.
+
+## Candidate-tag security evidence
+
+This section is the per-candidate-tag evidence ledger for Group 6 of
+[`docs/launch-candidate-checklist.md`](docs/launch-candidate-checklist.md).
+Each entry must record the candidate tag, the peeled commit SHA,
+sanitised host short name (no user-identifying or IP context), date,
+exact command, exit code, and tool version, plus any nontrivial output.
+Local logs alone are not enough for the workflow-backed Group 7 boxes;
+this section is the candidate-tag preflight-on-tag evidence anchor for
+Group 6 only. External reviewer attestations remain a separate gate
+documented under "Paid-hosted external security review" in
+[`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md).
+
+### v1.2.1-rc.1 — 2026-05-09
+
+- **Candidate tag:** `v1.2.1-rc.1`
+- **Annotated tag SHA:** `49351c73b6cc60f93427dd9e633f606f2df341a9`
+- **Peeled commit SHA:** `a5d5f75769dc834a268f6ab24949b139ac4cff85`
+- **Host short name:** `darwin-arm64-launch-host` (sanitised)
+- **Working directory:** `GOCLMCP-worktrees/opus-group6-security-20260509`
+  (worktree pinned at the peeled tag SHA; not a tag checkout, so
+  `git status -sb` reports the worktree branch, not a detached
+  `HEAD`)
+- **Date (UTC):** 2026-05-09
+- **Toolchain envelope:** `GOTOOLCHAIN=go1.25.10` for `make check`,
+  `make verify-vuln`, and `make verify-fips`. The host system Go is
+  `go1.26.2 darwin/arm64`; the pin keeps results reproducible against
+  the launch-candidate Go 1.25.10 line documented in
+  [`docs/support-matrix.md`](docs/support-matrix.md).
+
+| # | Command | Exit | Tool version and key output |
+|---|---------|-----:|----------------------------|
+| 1 | `GOTOOLCHAIN=go1.25.10 make check` | `0` | `go1.25.10`; ran `gofmt -l`, `go vet ./...`, and `go test -race -count=1 -timeout 120s ./...`. Every package reported `ok`; no `FAIL` lines. |
+| 2 | `make verify-vuln` | `0` | Pinned `govulncheck@v1.3.0` invoked under `GOTOOLCHAIN=go1.25.10` with `Go: go1.25.10`. Vulnerability database `https://vuln.go.dev` updated 2026-05-07 19:21:40 UTC. Final line: `No vulnerabilities found.` |
+| 3 | `make secret-scan` | `0` | Ran `gitleaks detect --no-git --source . --redact --config .gitleaks.toml` with `gitleaks 8.30.1`. Final lines: `scanned ~4954224 bytes (4.95 MB) in 642ms` and `no leaks found`. |
+| 4 | `semgrep scan --config p/default --metrics=off --error --exclude .git --exclude .bench --exclude clockify-mcp .` | `0` | `semgrep 1.157.0` with the `p/default` rule pack. Scan summary: 558 rules / 1154 targets / 0 findings (0 blocking); `~99.9%` parsed lines; 27 `--exclude` matches and 210 `.semgrepignore` matches. |
+| 5 | `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` | `0` | Local `git` (host); the command runs with `\|\| true` in the runbook plan so any non-zero exit only signals "no matches". Enumerated five code-side `nosemgrep` directives, all with inline justification within five lines (see list below); no untracked or undocumented suppression sites. |
+| 6 | `GOTOOLCHAIN=go1.25.10 make verify-fips` | `0` | `go1.25.10` with `GOFIPS140=latest`. The `-tags=fips` binary printed `fips140_enabled` on startup; the `-tags=fips` race test suite reported every package `ok`. The `-tags=fips,grpc` build combination completed cleanly; no `FAIL` lines. |
+
+`nosemgrep` directive enumeration (item 5) — every code-side
+suppression has an inline justification within five lines and points
+back to a tracked ADR or runbook:
+
+- `tests/harness/grpc.go:71` — `grpc.WithTransportCredentials(insecure.NewCredentials())`
+  for the `bufconn`-backed in-memory test transport. ADR
+  [`0008-grpc-auth-interceptor`](docs/adr/0008-grpc-auth-interceptor.md)
+  records why this is scoped to the in-memory test harness only;
+  production gRPC auth and mTLS coverage live in
+  `internal/transport/grpc/` tests and the `grpc-auth-smoke` target.
+- `internal/mcp/transport_streamable_http.go:541` — `: session <id>\n\n`
+  SSE comment frame.
+- `internal/mcp/transport_streamable_http.go:563` — `id: <int>\n` SSE
+  ID line (server-generated monotonic integer).
+- `internal/mcp/transport_streamable_http.go:565` — `event: <method>\n`
+  SSE event line (server constants only).
+- `internal/mcp/transport_streamable_http.go:568` — `data: <json>\n\n`
+  SSE payload line (`json.Marshal`-encoded before framing).
+
+  All four SSE suppressions are scoped to `text/event-stream` framing,
+  not HTML, and are recorded in ADR
+  [`0017-streamable-http-session-rehydration`](docs/adr/0017-streamable-http-session-rehydration.md)
+  under "Security-review note".
+
+The remaining `nosemgrep` hits captured by the `git grep` enumeration
+are documentation references in this file family
+(`docs/adr/0008-*.md`, `docs/adr/0017-*.md`,
+`docs/claude-code-opus-remaining-prompts.md`,
+`docs/launch-candidate-checklist.md`,
+`docs/launch-readiness-review-may-8.md`,
+`docs/runbooks/release-candidate-evidence.md`,
+`scripts/prepare-rc-evidence.sh`,
+`scripts/test-prepare-rc-evidence.sh`) describing the directive itself,
+not new uses.
+
+**Scope and non-claims.** This evidence closes only the four
+candidate-tag scan boxes in Group 6 of the launch-candidate checklist
+(`make verify-vuln`, gitleaks, Semgrep with `nosemgrep` audit, and
+`make verify-fips`). It does **not** declare the repository
+launch-ready: Group 7 release/sigstore/SLSA evidence, the mutation
+cron evidence on the candidate SHA, the npm expected-version proof,
+the paid-hosted external security review, the
+DPA/terms/privacy/trademark/branding gates, the P1-8 paid-commercial
+RLS decision, the cross-replica hosted HTTP quotas, and the
+launch-candidate tracking issue all remain open as documented in
+[`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md).
+Issue #78 (19-context branch-protection restoration) is preserved as
+open by operator instruction and is not affected by this evidence.

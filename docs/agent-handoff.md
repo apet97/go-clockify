@@ -71,11 +71,20 @@ work and commit it.
   probes are coverage evidence only and do not tick any external
   launch-evidence box.
 - **Open launch-evidence gates (not a complete blocker list):**
-  - **Candidate-tag security walk-through** — re-run
-    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
-    on the final candidate tag. Local preflight was green on
-    2026-05-02, and Semgrep now has a recurring CI workflow artifact,
-    but candidate-tag evidence is still required.
+  - **Candidate-tag security walk-through** — closed 2026-05-09 on
+    candidate tag `v1.2.1-rc.1` (annotated tag
+    `49351c73b6cc60f93427dd9e633f606f2df341a9`, peeled SHA
+    `a5d5f75769dc834a268f6ab24949b139ac4cff85`). The four scan-driven
+    Group 6 boxes (`make verify-vuln`, gitleaks, Semgrep with
+    `nosemgrep` audit, `make verify-fips`) are recorded with
+    verbatim transcripts in
+    [`../SECURITY.md`](../SECURITY.md#v121-rc1--2026-05-09); the
+    runbook in
+    [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+    points there. The paid-hosted external security review remains a
+    separate external gate. Local preflight history (2026-05-02 and
+    2026-05-09 dirty-workstation reruns) is retained inside the
+    individual checklist box notes.
   - **Release/sigstore/SLSA evidence** — cut `vX.Y.Z-rc.N`, run
     `release-smoke.yml`, verify sigstore + SLSA artefact
     attestations, and archive the reference `doctor --strict`
@@ -134,13 +143,24 @@ evidence and approval gates are closed. Additional non-blocking
 code/CI hardening backlog is tracked in
 [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md).
 
-1. **Candidate-tag security walk-through.** Local launch-review
-   preflight was green on 2026-05-09 after moving to Go 1.25.10 and
-   tagged `govulncheck@v1.3.0`; the final candidate tag still needs
-   `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
-   evidence. The Semgrep workflow artifact still needs its first
-   pushed-run evidence and does not replace the candidate-tag scan.
-   File findings or explicit "no findings" evidence in `SECURITY.md`.
+1. **Candidate-tag security walk-through.** Closed 2026-05-09 on
+   candidate tag `v1.2.1-rc.1` (annotated tag
+   `49351c73b6cc60f93427dd9e633f606f2df341a9`, peeled SHA
+   `a5d5f75769dc834a268f6ab24949b139ac4cff85`). The four scan-driven
+   Group 6 boxes are recorded with verbatim
+   command/exit/tool-version/host/date evidence in
+   [`../SECURITY.md`](../SECURITY.md#v121-rc1--2026-05-09);
+   `make verify-vuln` (pinned `govulncheck@v1.3.0`,
+   `GOTOOLCHAIN=go1.25.10`, no vulnerabilities), `make secret-scan`
+   (`gitleaks 8.30.1`, no leaks), the verbatim Semgrep `p/default`
+   command (`semgrep 1.157.0`, 558 rules / 1154 files / 0 findings)
+   plus the `nosemgrep` enumeration mapping every code-side
+   suppression to ADR 0008 / ADR 0017, and `make verify-fips` (FIPS
+   tests plus `-tags=fips,grpc` build) all exited `0`. The
+   paid-hosted external security review remains a separate external
+   gate. The Semgrep workflow artifact still needs its first
+   pushed-run evidence and does not replace the candidate-tag scan
+   even though the candidate-tag scan is now closed.
 2. **Release/sigstore/SLSA evidence.** The candidate tag still
    needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
    archived `doctor --strict` outputs for the reference deployment.
