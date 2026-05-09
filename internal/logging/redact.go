@@ -17,7 +17,9 @@ import (
 	"context"
 	"log/slog"
 	"reflect"
+	"regexp"
 	"strings"
+	"unicode"
 )
 
 // DefaultSensitiveKeys is the built-in list of attribute keys whose values
@@ -47,12 +49,22 @@ var DefaultSensitiveKeys = []string{
 	"id_token",
 }
 
+const minSecretShapeScanLen = 20
+
+var secretValuePatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----`),
+	regexp.MustCompile(`\bpk_[A-Za-z0-9_-]{20,}\b`),
+	regexp.MustCompile(`\b[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\b`),
+	regexp.MustCompile(`(?i)(?:api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|token)=([^&\s]{12,})`),
+}
+
 // RedactingHandler wraps a slog.Handler and scrubs sensitive values from
 // attributes before delegating to the inner handler.
 type RedactingHandler struct {
-	inner     slog.Handler
-	sensitive []string
-	mask      string
+	inner         slog.Handler
+	sensitive     []string
+	mask          string
+	boundaryMatch bool
 }
 
 // NewRedactingHandler wraps inner with the default sensitive-key list and
@@ -84,6 +96,17 @@ func (h *RedactingHandler) WithMask(mask string) *RedactingHandler {
 	return &cp
 }
 
+// WithSensitiveKeyBoundaryMatching returns a copy that only matches
+// configured sensitive keys at identifier boundaries. The default remains
+// substring matching because it is safer for generic log redaction; this
+// opt-in mode is for callers that can tolerate maintaining a more explicit
+// key list and want to avoid false positives such as "tokenizer_results".
+func (h *RedactingHandler) WithSensitiveKeyBoundaryMatching() *RedactingHandler {
+	cp := *h
+	cp.boundaryMatch = true
+	return &cp
+}
+
 // Enabled delegates to the inner handler.
 func (h *RedactingHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.inner.Enabled(ctx, level)
@@ -108,18 +131,20 @@ func (h *RedactingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 		scrubbed[i] = h.scrubAttr(a)
 	}
 	return &RedactingHandler{
-		inner:     h.inner.WithAttrs(scrubbed),
-		sensitive: h.sensitive,
-		mask:      h.mask,
+		inner:         h.inner.WithAttrs(scrubbed),
+		sensitive:     h.sensitive,
+		mask:          h.mask,
+		boundaryMatch: h.boundaryMatch,
 	}
 }
 
 // WithGroup delegates to the inner handler.
 func (h *RedactingHandler) WithGroup(name string) slog.Handler {
 	return &RedactingHandler{
-		inner:     h.inner.WithGroup(name),
-		sensitive: h.sensitive,
-		mask:      h.mask,
+		inner:         h.inner.WithGroup(name),
+		sensitive:     h.sensitive,
+		mask:          h.mask,
+		boundaryMatch: h.boundaryMatch,
 	}
 }
 
@@ -138,11 +163,19 @@ func (h *RedactingHandler) scrubAttr(a slog.Attr) slog.Attr {
 	if a.Value.Kind() == slog.KindAny {
 		return slog.Attr{Key: a.Key, Value: slog.AnyValue(h.scrubAny(a.Value.Any()))}
 	}
+	if a.Value.Kind() == slog.KindString && h.looksSensitiveValue(a.Value.String()) {
+		return slog.String(a.Key, h.mask)
+	}
 	return a
 }
 
 func (h *RedactingHandler) scrubAny(v any) any {
 	switch x := v.(type) {
+	case string:
+		if h.looksSensitiveValue(x) {
+			return h.mask
+		}
+		return x
 	case map[string]any:
 		return h.scrubMap(x)
 	case []any:
@@ -205,12 +238,60 @@ func (h *RedactingHandler) scrubSliceValue(rv reflect.Value) []any {
 }
 
 // isSensitive does a case-insensitive substring check against the configured
-// key list. Substring matching is deliberate — it catches variants like
-// `x-api-key`, `oauth_access_token`, `clockify_api_key`.
+// key list by default. Substring matching is deliberate — it catches variants
+// like `x-api-key`, `oauth_access_token`, `clockify_api_key`. Callers that
+// need fewer false positives can opt into boundary matching with
+// WithSensitiveKeyBoundaryMatching.
 func (h *RedactingHandler) isSensitive(key string) bool {
 	lk := strings.ToLower(key)
 	for _, s := range h.sensitive {
-		if strings.Contains(lk, strings.ToLower(s)) {
+		ls := strings.ToLower(s)
+		if h.boundaryMatch {
+			if containsBoundaryToken(lk, ls) {
+				return true
+			}
+			continue
+		}
+		if strings.Contains(lk, ls) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsBoundaryToken(key, token string) bool {
+	if token == "" {
+		return false
+	}
+	start := 0
+	for {
+		idx := strings.Index(key[start:], token)
+		if idx < 0 {
+			return false
+		}
+		idx += start
+		end := idx + len(token)
+		if atIdentifierBoundary(key, idx-1) && atIdentifierBoundary(key, end) {
+			return true
+		}
+		start = idx + 1
+	}
+}
+
+func atIdentifierBoundary(s string, idx int) bool {
+	if idx < 0 || idx >= len(s) {
+		return true
+	}
+	r := rune(s[idx])
+	return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+}
+
+func (h *RedactingHandler) looksSensitiveValue(value string) bool {
+	if len(value) < minSecretShapeScanLen {
+		return false
+	}
+	for _, pattern := range secretValuePatterns {
+		if pattern.MatchString(value) {
 			return true
 		}
 	}

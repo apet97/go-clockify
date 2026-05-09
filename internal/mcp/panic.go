@@ -1,11 +1,25 @@
 package mcp
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/metrics"
+)
+
+const maxLoggedPanicStackFrames = 8
+
+var (
+	stackSanitizeGOROOTOnce sync.Once
+	stackSanitizeGOROOT     string
 )
 
 // PanicResponseSink receives the JSON-RPC response built from a
@@ -44,7 +58,7 @@ func RecoverDispatch(reqID any, site, toolHint string, sink PanicResponseSink) {
 		return
 	}
 	metrics.PanicsRecoveredTotal.Inc(site)
-	stack := string(debug.Stack())
+	stack := sanitizedDebugStack()
 	slog.Error("panic_recovered",
 		"site", site,
 		"tool", toolHint,
@@ -69,4 +83,103 @@ func RecoverDispatch(reqID any, site, toolHint string, sink PanicResponseSink) {
 			"isError": true,
 		},
 	})
+}
+
+func sanitizedDebugStack() string {
+	return sanitizePanicStack(string(debug.Stack()))
+}
+
+func sanitizePanicStack(stack string) string {
+	if strings.TrimSpace(stack) == "" {
+		return stack
+	}
+	lines := strings.Split(stack, "\n")
+	out := make([]string, 0, 1+maxLoggedPanicStackFrames*2)
+	frames := 0
+	for i, line := range lines {
+		if i == 0 {
+			out = append(out, line)
+			continue
+		}
+		if line == "" {
+			continue
+		}
+		if isStackFunctionLine(line) {
+			if frames >= maxLoggedPanicStackFrames {
+				out = append(out, "... stack truncated ...")
+				break
+			}
+			frames++
+			out = append(out, line)
+			continue
+		}
+		if frames > 0 && frames <= maxLoggedPanicStackFrames {
+			out = append(out, sanitizeStackPathLine(line))
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+func isStackFunctionLine(line string) bool {
+	return !strings.HasPrefix(line, "\t") && !strings.HasPrefix(line, " ")
+}
+
+func sanitizeStackPathLine(line string) string {
+	replacements := make([]struct {
+		prefix string
+		label  string
+	}, 0, 4)
+	if goroot := goRootForStackSanitization(); goroot != "" {
+		replacements = append(replacements, struct {
+			prefix string
+			label  string
+		}{prefix: goroot, label: "$GOROOT"})
+	}
+	for _, gp := range filepath.SplitList(os.Getenv("GOPATH")) {
+		replacements = append(replacements, struct {
+			prefix string
+			label  string
+		}{prefix: gp, label: "$GOPATH"})
+	}
+	if wd, err := os.Getwd(); err == nil {
+		replacements = append(replacements, struct {
+			prefix string
+			label  string
+		}{prefix: wd, label: "$PWD"})
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		replacements = append(replacements, struct {
+			prefix string
+			label  string
+		}{prefix: home, label: "$HOME"})
+	}
+	for _, repl := range replacements {
+		prefix := filepath.Clean(repl.prefix)
+		if prefix == "." || prefix == "" {
+			continue
+		}
+		line = strings.ReplaceAll(line, prefix, repl.label)
+	}
+	return line
+}
+
+func goRootForStackSanitization() string {
+	stackSanitizeGOROOTOnce.Do(func() {
+		if goroot := strings.TrimSpace(os.Getenv("GOROOT")); goroot != "" {
+			stackSanitizeGOROOT = goroot
+			return
+		}
+		goBin, err := exec.LookPath("go")
+		if err != nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, goBin, "env", "GOROOT").Output()
+		if err != nil {
+			return
+		}
+		stackSanitizeGOROOT = strings.TrimSpace(string(out))
+	})
+	return stackSanitizeGOROOT
 }

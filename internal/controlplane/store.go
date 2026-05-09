@@ -36,19 +36,18 @@ type CredentialRef struct {
 }
 
 type SessionRecord struct {
-	ID                string    `json:"id"`
-	TenantID          string    `json:"tenantId"`
-	Subject           string    `json:"subject"`
-	Transport         string    `json:"transport"`
-	ProtocolVersion   string    `json:"protocolVersion,omitempty"`
-	ClientName        string    `json:"clientName,omitempty"`
-	ClientVersion     string    `json:"clientVersion,omitempty"`
-	CreatedAt         time.Time `json:"createdAt"`
-	ExpiresAt         time.Time `json:"expiresAt"`
-	LastSeenAt        time.Time `json:"lastSeenAt"`
-	WorkspaceID       string    `json:"workspaceId,omitempty"`
-	ClockifyBaseURL   string    `json:"clockifyBaseUrl,omitempty"`
-	SessionAffinityID string    `json:"sessionAffinityId,omitempty"`
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenantId"`
+	Subject         string    `json:"subject"`
+	Transport       string    `json:"transport"`
+	ProtocolVersion string    `json:"protocolVersion,omitempty"`
+	ClientName      string    `json:"clientName,omitempty"`
+	ClientVersion   string    `json:"clientVersion,omitempty"`
+	CreatedAt       time.Time `json:"createdAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+	LastSeenAt      time.Time `json:"lastSeenAt"`
+	WorkspaceID     string    `json:"workspaceId,omitempty"`
+	ClockifyBaseURL string    `json:"clockifyBaseUrl,omitempty"`
 }
 
 type AuditEvent struct {

@@ -3,6 +3,7 @@ package mcp
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/authn"
 )
@@ -14,7 +15,20 @@ func writeAuthFailure(w http.ResponseWriter, err error, expose bool) {
 	if expose && err != nil {
 		desc = err.Error()
 	}
-	authn.WriteUnauthorized(w, "invalid_token", desc)
+	w.Header().Set("WWW-Authenticate", authn.UnauthorizedHeaderValue("invalid_token", desc))
+	writeJSONRPCErrorData(w, http.StatusUnauthorized, RPCCodeUnauthenticated, desc, map[string]any{
+		"oauth_error": "invalid_token",
+	})
+}
+
+func bearerValue(authHeader string) (string, bool) {
+	authHeader = strings.TrimSpace(authHeader)
+	scheme, token, ok := strings.Cut(authHeader, " ")
+	if !ok || !strings.EqualFold(scheme, "Bearer") {
+		return "", false
+	}
+	token = strings.TrimSpace(token)
+	return token, token != ""
 }
 
 func logHTTPAuthFailure(transport string, r *http.Request, err error, attrs ...any) {

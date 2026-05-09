@@ -5,7 +5,7 @@
 #   code-quality, performance, stability, observability, ai-agent-ux
 #
 # Non-dry runs create one branch + worktree per lane, write a lane prompt
-# under .claude-campaign/, then open one iTerm window per lane and type:
+# under .agent-campaign/, then open one iTerm window per lane and type:
 #   claude --model opus "$(cat <prompt-file>)"
 
 set -euo pipefail
@@ -16,7 +16,7 @@ DRY_RUN=0
 PREPARE_ONLY=0
 CAMPAIGN_ID="${CLAUDE_CAMPAIGN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 BASE_REF="${CLAUDE_CAMPAIGN_BASE_REF:-HEAD}"
-WORKTREE_ROOT="${CLAUDE_CAMPAIGN_WORKTREE_ROOT:-../.claude-campaign-worktrees}"
+WORKTREE_ROOT="${CLAUDE_CAMPAIGN_WORKTREE_ROOT:-../.agent-campaign-worktrees}"
 MODEL="${CLAUDE_CAMPAIGN_MODEL:-opus}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 ITERM_APP="${CLAUDE_CAMPAIGN_ITERM_APP:-iTerm}"
@@ -299,7 +299,7 @@ print_plan() {
     validate_lane "$lane"
     branch="campaign/$CAMPAIGN_ID/$lane"
     worktree="$CAMPAIGN_DIR/$lane"
-    prompt_file="$worktree/.claude-campaign/prompt.md"
+    prompt_file="$worktree/.agent-campaign/prompt.md"
     printf 'lane=%s branch=%s worktree=%s prompt=%s\n' "$lane" "$branch" "$worktree" "$prompt_file"
     printf 'command=%s\n' "$(command_for_lane "$worktree" "$prompt_file")"
   done
@@ -331,7 +331,7 @@ for lane_raw in "${LANES[@]}"; do
   validate_lane "$lane"
   branch="campaign/$CAMPAIGN_ID/$lane"
   worktree="$CAMPAIGN_DIR/$lane"
-  prompt_file="$worktree/.claude-campaign/prompt.md"
+  prompt_file="$worktree/.agent-campaign/prompt.md"
 
   if git show-ref --verify --quiet "refs/heads/$branch"; then
     fail "branch already exists: $branch"
@@ -341,7 +341,7 @@ for lane_raw in "${LANES[@]}"; do
   fi
 
   git worktree add -b "$branch" "$worktree" "$BASE_SHA"
-  mkdir -p "$worktree/.claude-campaign"
+  mkdir -p "$worktree/.agent-campaign"
   render_prompt "$lane" "$branch" "$worktree" >"$prompt_file"
   command="$(command_for_lane "$worktree" "$prompt_file")"
   printf '%s\t%s\t%s\t%s\t%s\n' "$lane" "$branch" "$worktree" "$prompt_file" "$command" >>"$MANIFEST"

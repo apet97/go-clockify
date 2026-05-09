@@ -212,6 +212,20 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		}
 	})
 
+	t.Run("resolve_name", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		probe := c.LivePrefix("resolve-name-probe", 0)
+		result := h.callOK(ctx, "clockify_resolve_name", map[string]any{
+			"entity_type": "project",
+			"name_or_id":  probe,
+		})
+		data := extractDataMap(t, result)
+		if status, _ := data["status"].(string); status == "" {
+			t.Fatalf("resolve_name returned no status for probe %q: %#v", probe, data)
+		}
+	})
+
 	t.Run("policy_info", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

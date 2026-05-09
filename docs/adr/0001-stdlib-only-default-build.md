@@ -74,6 +74,14 @@ their own sub-modules or build-tagged files:
 
 - The Prometheus exposition format is implemented by hand in
   `internal/metrics/`. It is a deliberate cost, not an oversight.
+- Runtime tool-argument validation uses the narrow
+  `internal/jsonschema` validator instead of a full JSON Schema engine.
+  The tool descriptors only rely on a Draft 2020-12 subset
+  (`type`, `required`, `properties`, `additionalProperties`, `items`,
+  simple numeric/string bounds, `pattern`, `format`, `enum`, and
+  `anyOf`), and `internal/tools/schema_keyword_test.go` fails if tool
+  schemas introduce unsupported keywords without updating the
+  validator.
 - Build tags and sub-modules increase the matrix that
   `scripts/check-build-tags.sh` has to exercise. The script is the
   single source of truth for which combinations CI cares about.
@@ -87,6 +95,13 @@ their own sub-modules or build-tagged files:
   runtime** — rejected because the symbols would still link, the SBOM
   would still inherit OTel's transitive graph, and operators auditing
   the binary could not tell whether tracing was actually enabled.
+- **Use a full JSON Schema engine such as
+  `github.com/santhosh-tekuri/jsonschema/v6` in the default build** —
+  rejected for the same supply-chain and license-review reason as the
+  metrics stack. The server does not need `$ref`, `$defs`, conditionals,
+  or full schema composition for the current tool catalog; importing a
+  full engine would broaden the default SBOM to validate keywords that
+  no descriptor is allowed to use.
 - **Vendor selected dependencies into `internal/`** — rejected because
   the licensing posture and upgrade story would still be that of the
   upstream projects, only with extra friction.

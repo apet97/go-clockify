@@ -94,10 +94,12 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	}
 	server := mcp.NewServer(version, registry, pipeline, gate)
 	server.ToolTimeout = deps.cfg.ToolTimeout
+	server.DefaultProtocolVersion = deps.cfg.DefaultProtocolVersion
 	server.MaxInFlightToolCalls = deps.cfg.MaxInFlightToolCalls
 	server.MaxMessageSize = deps.cfg.MaxMessageSize
 	server.StrictHostCheck = deps.cfg.StrictHostCheck
 	server.BehindHTTPSProxy = deps.cfg.BehindHTTPSProxy
+	server.HTTPAdmissionLimits = httpAdmissionLimits(deps.cfg)
 	// SanitizeUpstreamErrors must be set centrally so every transport
 	// (stdio, legacy_http, streamable_http session, grpc) honours
 	// CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1 — pre-fix only legacy_http
@@ -204,6 +206,14 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	}
 
 	return server
+}
+
+func httpAdmissionLimits(cfg config.Config) mcp.HTTPAdmissionLimits {
+	return mcp.HTTPAdmissionLimits{
+		PerIPPerMinute:        cfg.HTTPRateLimitPerIP,
+		PerPrincipalPerMinute: cfg.HTTPRateLimitPerPrincipal,
+		SSEPerSession:         cfg.HTTPRateLimitGETPerSession,
+	}
 }
 
 // toolNames extracts the descriptor names so the activation result can

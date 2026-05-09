@@ -197,6 +197,7 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatalf("entry URI %q not emitted; got %+v", uri, calls)
+		return
 	}
 	if got.Delta.Format != "merge" {
 		t.Fatalf("format = %q, want merge", got.Delta.Format)

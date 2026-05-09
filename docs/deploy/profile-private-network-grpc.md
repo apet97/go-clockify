@@ -54,6 +54,17 @@ the full set, either `config.Load()` rejects the configuration or
 | `MCP_REQUIRE_MTLS_TENANT=1` | Reject clients whose cert exposes no tenant identity. Without this, misissued certs collapse onto `MCP_DEFAULT_TENANT_ID` — the multi-tenant footgun this gate closes. `doctor --strict` enforces this when `MCP_AUTH_MODE=mtls`. |
 | `MCP_CONTROL_PLANE_DSN=postgres://…` | Production HA — required by `doctor --strict`. |
 
+### Optional peer-source allowlist
+
+Set `MCP_GRPC_PEER_CIDR_ALLOW` to a comma-separated CIDR list when
+the gRPC service should only accept calls from known private source
+ranges, for example `10.0.0.0/8,192.168.0.0/16`. When set, the
+auth interceptor rejects calls whose `peer.Addr` is missing, non-TCP,
+or outside the list before authentication and increments
+`clockify_mcp_grpc_auth_rejections_total{reason="peer_addr_disallowed"}`.
+Leave it empty when a service mesh, local test harness, or Unix-style
+listener cannot expose a stable TCP peer address.
+
 ## Build requirement
 
 The gRPC transport lives behind the `grpc` build tag and is **not**
@@ -69,8 +80,9 @@ paths to a gRPC-capable build:
      `clockify-mcp-grpc-postgres-linux-arm64` for HA gRPC with the
      pgx-backed control-plane store. The hosted-launch checklist
      contracts on these names.
-   These ship with the same SBOM + cosign sigstore + SLSA
-   attestation chain as the default and Postgres binaries; the
+   These ship with the same SBOM + cosign sigstore chain as the
+   default and Postgres binaries, plus SLSA provenance when GitHub
+   artifact attestations are available; the
    `scripts/check-release-assets.sh` post-goreleaser gate refuses to
    ship a release that drops them.
 
@@ -90,8 +102,9 @@ paths to a gRPC-capable build:
      -t clockify-mcp:grpc-postgres .
    ```
 
-   Self-builds bypass the cosign / SLSA chain and should be reserved
-   for emergency rollouts; document the deviation in the deploy PR.
+   Self-builds bypass the published cosign chain and any GitHub SLSA
+   attestation, so they should be reserved for emergency rollouts;
+   document the deviation in the deploy PR.
 
 If `clockify-mcp` exits with `MCP_TRANSPORT=grpc requires
 -tags=grpc at build time`, the running binary is the default build
@@ -111,6 +124,14 @@ If `clockify-mcp` exits with `MCP_TRANSPORT=grpc requires
 - The server cert / key must be PEM files readable by the process
   user. Paths come from `MCP_GRPC_TLS_CERT` and
   `MCP_GRPC_TLS_KEY`.
+- Plaintext gRPC is refused on non-loopback binds. Local development
+  can bind `MCP_GRPC_BIND=127.0.0.1:9090` without certs; every
+  private-network or pod-facing bind must set `MCP_GRPC_TLS_CERT` and
+  `MCP_GRPC_TLS_KEY`.
+- `MCP_GRPC_PEER_CIDR_ALLOW` is defence-in-depth for private
+  deployments where source ranges are predictable. It complements mTLS
+  certificate verification; it does not replace cert issuance,
+  revocation, or tenant extraction from the verified certificate.
 - The client CA bundle (`MCP_MTLS_CA_CERT_PATH`) must contain
   every CA whose certs you trust. Revoke via your CA's CRL /
   OCSP, not by editing the bundle.
@@ -121,6 +142,20 @@ If `clockify-mcp` exits with `MCP_TRANSPORT=grpc requires
   --strict` and document the deployment threat model in the deploy
   PR; the profile's `MCP_REQUIRE_MTLS_TENANT=1` invariant only
   applies to mTLS.
+- gRPC health checks report `NOT_SERVING` as soon as shutdown drain
+  starts, before `GracefulStop` waits for existing streams. Point
+  readiness probes at `grpc.health.v1.Health/Check` so the load
+  balancer stops sending new traffic during the drain window.
+- Server-initiated notification delivery is best-effort when a
+  client stream stops reading. Slow streams are dropped from the
+  notification path after a bounded enqueue wait and counted with
+  `clockify_mcp_grpc_notification_drops_total{reason="slow_consumer"}`.
+- gRPC reflection is intentionally not registered in supported
+  release artifacts. Keep it off in production; exposing reflection
+  would reveal service and method names to any authenticated client
+  on the private network. For local protocol exploration only, build
+  a throwaway binary with `-tags=grpc,grpcreflection`; do not deploy
+  that tag outside development.
 
 ## Control plane
 
@@ -158,6 +193,7 @@ export MCP_GRPC_TLS_CERT=/etc/clockify-mcp/server.crt
 export MCP_GRPC_TLS_KEY=/etc/clockify-mcp/server.key
 export MCP_MTLS_CA_CERT_PATH=/etc/clockify-mcp/client-ca.pem
 export MCP_REQUIRE_MTLS_TENANT=1
+export MCP_GRPC_PEER_CIDR_ALLOW=10.0.0.0/8
 
 clockify-mcp-grpc-postgres doctor \
   --profile=private-network-grpc \

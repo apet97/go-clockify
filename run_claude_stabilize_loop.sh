@@ -19,7 +19,7 @@
 #   BRANCH=stabilize/quality-perf
 #   AUTO_PUSH=0
 #   CLAUDE_TIMEOUT_SECONDS=1800
-#   LOG_DIR=.claude-loop
+#   LOG_DIR=.agent-loop
 #   RUN_FINAL_REVIEW=0
 #   WATCH_CHECKS=0
 #   PR_NUMBER=
@@ -37,7 +37,7 @@ MODEL_REVIEW="${MODEL_REVIEW:-opus}"
 BRANCH="${BRANCH:-stabilize/quality-perf}"
 AUTO_PUSH="${AUTO_PUSH:-0}"
 CLAUDE_TIMEOUT_SECONDS="${CLAUDE_TIMEOUT_SECONDS:-1800}"
-LOG_DIR="${LOG_DIR:-.claude-loop}"
+LOG_DIR="${LOG_DIR:-.agent-loop}"
 RUN_FINAL_REVIEW="${RUN_FINAL_REVIEW:-0}"
 WATCH_CHECKS="${WATCH_CHECKS:-0}"
 PR_NUMBER="${PR_NUMBER:-}"
@@ -112,7 +112,7 @@ ensure_ignored() {
     GITIGNORE_CHANGED=1
   fi
 }
-ensure_ignored ".claude-loop/"
+ensure_ignored ".agent-loop/"
 ensure_ignored ".bench/"
 
 if [ "$GITIGNORE_CHANGED" = "1" ]; then
@@ -120,7 +120,7 @@ if [ "$GITIGNORE_CHANGED" = "1" ]; then
   OTHER_DIRTY="$(git status --porcelain | awk '$2 != ".gitignore"' | wc -l | tr -d ' ')"
   if [ "$OTHER_DIRTY" = "0" ]; then
     git add .gitignore
-    git commit -m "chore: ignore loop artifacts (.claude-loop, .bench)"
+    git commit -m "chore: ignore loop artifacts (.agent-loop, .bench)"
   else
     echo "== .gitignore updated; other changes present, leaving uncommitted =="
   fi
@@ -187,7 +187,7 @@ commit_loop_changes() {
   echo "== committing uncommitted changes from pass $pass_num =="
   git add -A
   # Defensive: never sweep loop artifacts even if .gitignore was bypassed.
-  git restore --staged .claude-loop .bench 2>/dev/null || true
+  git restore --staged .agent-loop .bench 2>/dev/null || true
 
   if git diff --cached --quiet; then
     echo "== nothing staged after unstaging loop artifacts =="

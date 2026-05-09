@@ -23,13 +23,35 @@ against those modes unless the table says so.
 
 ## Expected Client Behavior
 
+### Server Identity
+
+The protocol `initialize` response uses `serverInfo.name:
+"clockify-go-mcp"`. Treat that as the stable MCP server identity. The
+`clockify-mcp` binary/container name and `@apet97/clockify-mcp-go` npm
+wrapper are packaging names, not alternate `serverInfo.name` values.
+Clients that do exact-match server identification should compare
+against `clockify-go-mcp` and use `serverInfo.title` only for display.
+
 ### Tool Discovery
 Most clients fetch the list of available tools at startup using `tools/list`.
 - **Stdio Clients:** Automatically receive `notifications/tools/list_changed` when tools are activated or deactivated via `clockify_activate_group`, `clockify_activate_tool`, or `clockify_deactivate_group`.
 - **`streamable_http` Clients:** Receive the same notifications via the
   spec-canonical SSE stream on `GET /mcp` (Streamable HTTP 2025-03-26
   §3.3) — no manual re-fetch needed. The `/mcp/events` alias is
-  preserved for older client implementations.
+  preserved for older client implementations and increments
+  `clockify_mcp_streamable_events_alias_requests_total`; operators
+  should treat non-zero alias use as a migration signal.
+  Clients should send `Mcp-Protocol-Version` on every post-initialize
+  POST and SSE GET request. The default server posture accepts older
+  clients that omit it and increments
+  `clockify_mcp_protocol_version_header_missing_total`; operators can
+  set `MCP_HTTP_REQUIRE_PROTOCOL_VERSION=1` to reject missing headers
+  after measuring client impact.
+  During protocol rollout windows, operators can set
+  `MCP_DEFAULT_PROTOCOL_VERSION` to pin only the initialize fallback
+  used when a client omits `params.protocolVersion`. Explicit
+  supported client versions are still echoed, and unsupported
+  requested versions still negotiate to the newest supported version.
 - **`grpc` Clients:** Receive the same notifications fanned out
   through the bidirectional `Exchange` stream — every active client
   stream registers a per-stream `streamNotifier` (see ADR-0008
@@ -37,11 +59,21 @@ Most clients fetch the list of available tools at startup using `tools/list`.
   `notifications/progress`, and `notifications/resources/updated`
   reach every connected gRPC client without polling. Requires the
   `-tags=grpc` build (the `private-network-grpc` profile artifact).
+  Delivery is best-effort under backpressure: if a client stops
+  reading and its per-stream queue stays full, the server drops the
+  notification and increments
+  `clockify_mcp_grpc_notification_drops_total{reason="slow_consumer"}`.
+  Clients should treat notification gaps as a signal to re-fetch
+  `tools/list` or subscribed resource state.
 - **Legacy `http` Clients:** Must manually re-fetch the tool list
   after activation. The legacy POST-only transport does not carry
   server-initiated notifications; this is a known limitation and one
   of the reasons it is deprecated (`MCP_HTTP_LEGACY_POLICY=deny`
-  refuses it on hosted profiles).
+  refuses it on hosted profiles). Every legacy response carries
+  `Deprecation: true` plus a `Link: </mcp>; rel="successor-version"`
+  header so machine clients can detect the migration path; see
+  [`docs/runbooks/legacy-http-eol.md`](runbooks/legacy-http-eol.md)
+  for operator migration steps and future `Sunset` handling.
 
 ### Tier-2 Activation Semantics
 Each Tier-2 group (invoices, expenses, scheduling, time_off, …) is the
@@ -91,6 +123,17 @@ overridable). Clients see the verb / path / status only; full bodies
 are still emitted to server-side slog for operator debugging. Local
 deployments keep verbose errors by default for fast diagnostics.
 
+### HTTP Envelope Boundaries
+Protocol-level JSON-RPC errors use the MCP JSON-RPC envelope. MCP
+endpoint admission failures such as origin/host rejection, missing auth,
+missing session, rate limiting, and request bodies over
+`MCP_MAX_MESSAGE_SIZE` also return JSON-RPC 2.0 error envelopes with
+`id:null` while preserving the HTTP status code for retry and back-off
+logic. Oversized bodies are still intentionally rejected as HTTP `413`
+before JSON-RPC dispatch so the server can stop reading the request body
+promptly. See [`docs/operators/error-codes.md`](operators/error-codes.md)
+for the reserved transport error codes.
+
 ### Hosted-Mode Webhook URL Validation
 `CreateWebhook` / `UpdateWebhook` resolve the host via DNS and reject
 any reply containing a private, reserved, link-local, or loopback IP
@@ -123,7 +166,7 @@ What survives the rehydration boundary:
 What does NOT survive the rehydration boundary:
 - **In-flight tool-call cancellation.** A `tools/call` running on instance A cannot be cancelled by sending `notifications/cancelled` to instance B; B has no record of the in-flight call and the cancel is a silent no-op. Clients should treat cancellation as best-effort across rehydration; if a cancel is critical, route the cancel back to the original instance (when sticky-session affinity is in use, this is the common case).
 - **SSE backlog.** A long-lived `GET /mcp` SSE stream that resumes against a freshly-rebuilt session sees `oldest > Last-Event-ID + 1` because the new instance's `sessionEventHub` ring buffer is empty. The server's `SSEReplayMissesTotal` Prometheus counter increments on this boundary; clients should fall back to a fresh subscription and re-fetch any state delta they were tracking (the MCP `notifications/resources/list_changed` contract permits this).
-- **Server-side tool-call counters and rate-limit token state.** Rebuilt fresh; per-tenant rate-limit accounting is best-effort across the boundary. Operators who need strict cross-replica rate limiting should pair the deployment with an external proxy (Envoy, an API gateway) and cap there.
+- **Server-side tool-call counters and rate-limit token state.** Rebuilt fresh; per-tenant rate-limit accounting is best-effort across the boundary. The app-layer HTTP admission limits (`MCP_HTTP_RATELIMIT_PER_IP`, `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`, `MCP_HTTP_RATELIMIT_GET_PER_SESSION`) are also process-local. Operators who need strict cross-replica rate limiting should pair the deployment with an external proxy (Envoy, an API gateway) and cap there.
 
 Practical client guidance:
 - **Retry idempotent calls** — `tools/list`, `clockify_list_*`, `clockify_get_*`, and any `resources/read` call are safe to retry verbatim. The MCP spec already recommends this for transient-network errors; rehydration is a bounded subset of the same envelope.
@@ -139,7 +182,7 @@ We follow Semantic Versioning (SemVer). Breaking changes to the tool schema (ren
 - See `docs/release-policy.md` for our full deprecation policy.
 
 ### Backwards Compatibility
-The server supports multiple versions of the MCP protocol (today: `2025-11-25`, `2025-06-18`, `2025-03-26`, and `2024-11-05`). It will negotiate the highest mutually supported version during the `initialize` handshake. The canonical list lives in `internal/mcp/server.go` (`SupportedProtocolVersions`); this doc tracks it.
+The server supports multiple versions of the MCP protocol (today: `2025-11-25`, `2025-06-18`, `2025-03-26`, and `2024-11-05`). It echoes any supported version requested during the `initialize` handshake. If a client omits `params.protocolVersion`, the server defaults to the newest supported version unless `MCP_DEFAULT_PROTOCOL_VERSION` pins a supported fallback for a rollout window. The canonical list lives in `internal/mcp/server.go` (`SupportedProtocolVersions`); this doc tracks it.
 
 ## Troubleshooting Client Issues
 

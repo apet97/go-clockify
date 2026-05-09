@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -110,7 +109,8 @@ func (s *Server) serveHTTP(ctx context.Context, ln net.Listener, authenticator a
 	if inlineMetrics.Enabled {
 		mux.HandleFunc("GET /metrics", observeHTTP("/metrics", inlineMetricsHandler(inlineMetrics)))
 	}
-	mcpHandler := s.handleMCP(authenticator, allowedOrigins, allowAnyOrigin, maxBodySize)
+	admission := newHTTPAdmissionLimiter(s.HTTPAdmissionLimits)
+	mcpHandler := s.handleMCP(authenticator, allowedOrigins, allowAnyOrigin, maxBodySize, admission)
 	mux.Handle("POST /mcp", observeHTTPH("/mcp", mcpHandler))
 	// Handle OPTIONS for CORS preflight on /mcp
 	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", mcpHandler))
@@ -178,22 +178,22 @@ func inlineMetricsHandler(opts InlineMetricsOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch opts.AuthMode {
 		case "inherit_main_bearer":
-			auth := r.Header.Get("Authorization")
-			if !strings.HasPrefix(auth, "Bearer ") {
+			token, ok := bearerValue(r.Header.Get("Authorization"))
+			if !ok {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
-			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.MainBearerToken)) != 1 {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(opts.MainBearerToken)) != 1 {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 		case "static_bearer":
-			auth := r.Header.Get("Authorization")
-			if !strings.HasPrefix(auth, "Bearer ") {
+			token, ok := bearerValue(r.Header.Get("Authorization"))
+			if !ok {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
-			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.BearerToken)) != 1 {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(opts.BearerToken)) != 1 {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
@@ -259,7 +259,7 @@ func observeHTTPH(path string, h http.Handler) http.HandlerFunc {
 					"path", path,
 					"method", r.Method,
 					"panic", fmtAny(rec),
-					"stack", string(debug.Stack()),
+					"stack", sanitizedDebugStack(),
 				)
 				if w.status == 0 {
 					w.Header().Set("Content-Type", "application/json")
@@ -339,11 +339,12 @@ func (s *Server) checkReady(ctx context.Context) error {
 	return err
 }
 
-func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64) http.HandlerFunc {
+func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []string, allowAnyOrigin bool, maxBodySize int64, admissionArg ...*httpAdmissionLimiter) http.HandlerFunc {
 	if s.hub.len() == 0 {
 		s.SetNotifier(droppingNotifier{})
 	}
 	s.advertiseListChanged.Store(false)
+	admission := optionalHTTPAdmission(admissionArg)
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		reqID := s.requestSeq.Add(1)
@@ -352,6 +353,7 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// so the conditional-HSTS rule (TLS-in-front or behind-proxy)
 		// stays in one place.
 		applyHTTPBaselineHeaders(w, r, s.BehindHTTPSProxy)
+		applyLegacyHTTPDeprecationHeaders(w)
 
 		// DNS rebinding protection: when strict host checking is enabled,
 		// reject Host headers that don't match the configured origin
@@ -359,7 +361,7 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// omit Origin and is specifically the attack vector DNS rebinding
 		// uses against loopback-bound services.
 		if s.StrictHostCheck && !isHostAllowed(r.Host, allowedOrigins, allowAnyOrigin) {
-			writeJSONError(w, http.StatusForbidden, "host not allowed")
+			writeJSONRPCError(w, http.StatusForbidden, RPCCodeHostNotAllowed, "host not allowed")
 			slog.Warn("http_request",
 				"method", r.Method,
 				"path", r.URL.Path,
@@ -375,7 +377,7 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// 1. CORS check
 		if origin := r.Header.Get("Origin"); origin != "" {
 			if !isOriginAllowed(origin, allowedOrigins, allowAnyOrigin) {
-				writeJSONError(w, http.StatusForbidden, "origin not allowed")
+				writeJSONRPCError(w, http.StatusForbidden, RPCCodeOriginNotAllowed, "origin not allowed")
 				slog.Warn("http_request", "method", r.Method, "path", r.URL.Path, "status", 403, "reason", "cors_rejected", "req_id", reqID, "duration_ms", time.Since(start).Milliseconds())
 				return
 			}
@@ -390,14 +392,17 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// Handle preflight
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "POST")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Protocol-Version, Last-Event-ID")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
 		if r.Method != http.MethodPost {
-			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			writeJSONRPCError(w, http.StatusMethodNotAllowed, RPCCodeMethodNotAllowed, "method not allowed")
+			return
+		}
+		if !applyHTTPAdmissionIP(w, r, admission, s.BehindHTTPSProxy) {
 			return
 		}
 
@@ -412,6 +417,9 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 			writeAuthFailure(w, err, s.ExposeAuthErrors)
 			return
 		}
+		if !applyHTTPAdmissionPrincipal(w, r, admission, principal) {
+			return
+		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 
 		// 3. Body size limit
@@ -420,7 +428,7 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 		// 4. Read and parse JSON-RPC request
 		req, tooLarge, err := decodeSingleRequest(r.Body)
 		if tooLarge {
-			writeJSONError(w, http.StatusRequestEntityTooLarge, "request too large")
+			writeJSONRPCError(w, http.StatusRequestEntityTooLarge, RPCCodeRequestTooLarge, "request too large")
 			return
 		}
 		if err != nil {
@@ -471,11 +479,41 @@ func (s *Server) handleMCP(authenticator authn.Authenticator, allowedOrigins []s
 	}
 }
 
+func applyLegacyHTTPDeprecationHeaders(w http.ResponseWriter) {
+	// Legacy POST-only HTTP remains supported under ADR 0012 until a major
+	// version removal, but clients should be able to detect the deprecated
+	// route mechanically and migrate to the streamable HTTP /mcp endpoint.
+	w.Header().Set("Deprecation", "true")
+	w.Header().Add("Link", `</mcp>; rel="successor-version"; type="application/json"`)
+}
+
 // writeJSONError sends an error response as JSON instead of text/plain.
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+// writeJSONRPCError sends a transport/admission failure as a JSON-RPC 2.0
+// envelope while preserving the HTTP status for retry and back-off logic.
+// The request has not reached JSON-RPC dispatch, so id is intentionally null.
+func writeJSONRPCError(w http.ResponseWriter, status, code int, message string) {
+	writeJSONRPCErrorData(w, status, code, message, nil)
+}
+
+func writeJSONRPCErrorData(w http.ResponseWriter, status, code int, message string, data map[string]any) {
+	type response struct {
+		JSONRPC string    `json:"jsonrpc"`
+		ID      any       `json:"id"`
+		Error   *RPCError `json:"error"`
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(response{
+		JSONRPC: "2.0",
+		ID:      nil,
+		Error:   &RPCError{Code: code, Message: message, Data: data},
+	})
 }
 
 func isOriginAllowed(origin string, allowed []string, allowAnyOrigin bool) bool {

@@ -4,7 +4,11 @@ name: Deploy
 #
 # Stages:
 #   verify           — verify the published image's cosign signature and the
-#                      release binaries' SLSA build provenance. Always runs.
+#                      release binaries' SLSA build provenance when GitHub
+#                      artifact attestations are available. The SLSA check
+#                      note-skips only GitHub's user-owned-private repository
+#                      feature gate; the cosign image check always remains
+#                      mandatory.
 #   deploy-staging   — apply the new image to the staging cluster. Skipped
 #                      cleanly with a `::warning::` when the staging cluster
 #                      is not configured (no STAGING_KUBECONFIG secret), so
@@ -53,10 +57,10 @@ jobs:
       image_tag:    ${{ steps.image_digest.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Resolve image digest
         id: image_digest
@@ -122,7 +126,20 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-          gh attestation verify clockify-mcp-linux-x64 --owner "$OWNER"
+          if ! gh attestation verify clockify-mcp-linux-x64 \
+            --owner "$OWNER" \
+            >/tmp/deploy-slsa-ok.txt 2>/tmp/deploy-slsa.err; then
+            cat /tmp/deploy-slsa.err >&2
+            # Do not skip on a bare 404: that can also mean the
+            # expected attestation is missing. Only the known
+            # user-owned-private repository feature gate is non-fatal.
+            if grep -qiF 'Feature not available' /tmp/deploy-slsa.err &&
+               grep -qiF 'user-owned private repositor' /tmp/deploy-slsa.err; then
+              echo "::notice title=SLSA attestation skipped::GitHub artifact attestations are unavailable for this user-owned private repository; cosign image verification remains mandatory."
+              exit 0
+            fi
+            exit 1
+          fi
 
   deploy-staging:
     name: Deploy to Staging

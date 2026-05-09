@@ -22,6 +22,11 @@ data:
   CLOCKIFY_BOOTSTRAP_MODE: "full_tier1"
   MCP_MAX_INFLIGHT_TOOL_CALLS: "64"
   MCP_MAX_MESSAGE_SIZE: "4194304"
+  MCP_HTTP_RATELIMIT_PER_IP: "600"          # process-local HTTP admission requests/source IP/minute (0=disabled)
+  MCP_HTTP_RATELIMIT_PER_PRINCIPAL: "300"   # process-local HTTP admission requests/subject+tenant/minute (0=disabled)
+  MCP_HTTP_RATELIMIT_GET_PER_SESSION: "4"   # concurrent streamable_http SSE GETs per session on this pod (0=disabled)
+  MCP_HTTP_REQUIRE_PROTOCOL_VERSION: "0"    # set 1 to reject post-initialize streamable_http requests missing Mcp-Protocol-Version
+  MCP_DEFAULT_PROTOCOL_VERSION: ""          # optional initialize fallback when clients omit params.protocolVersion; empty = newest supported
   # Core Clockify API (uncomment and set as needed)
   # CLOCKIFY_WORKSPACE_ID: ""
   # CLOCKIFY_BASE_URL: "https://api.clockify.me/api/v1"
@@ -32,6 +37,7 @@ data:
   # CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS: "webhook.example.com,.internal.example.com"  # comma-separated escape hatch — hostnames bypass the DNS private-IP check (exact or leading-dot suffix; see runbooks/webhook-dns-validation.md §4b)
   # CLOCKIFY_DELTA_FORMAT: "merge"
   # MCP_GRPC_REAUTH_INTERVAL: ""
+  # MCP_GRPC_PEER_CIDR_ALLOW: ""   # optional comma-separated source CIDRs allowed to call gRPC
   # MCP_GRPC_TLS_CERT: ""
   # MCP_GRPC_TLS_KEY: ""
   # MCP_HTTP_TLS_CERT: ""           # streamable_http TLS cert PEM (required for streamable_http + mtls)
@@ -45,6 +51,7 @@ data:
   # MCP_OIDC_JWKS_ALLOW_PRIVATE: "0" # set "1" only for trusted local/private IdP JWKS endpoints
   # MCP_RESOURCE_URI: ""
   # MCP_OIDC_STRICT: "1"            # fail config if oidc has no audience/resource; reject tokens missing exp
+  # MCP_OIDC_REQUIRE_KID: "1"       # reject OIDC JWTs without a kid header
   # MCP_REQUIRE_TENANT_CLAIM: "1"   # reject oidc tokens missing the tenant claim (no fallback to MCP_DEFAULT_TENANT_ID)
   # MCP_DISABLE_INLINE_SECRETS: "1" # reject credential refs with backend=inline (hosted-service hardening)
   # MCP_EXPOSE_AUTH_ERRORS: "0"     # keep client auth failures generic; set "1" only for development
@@ -60,7 +67,7 @@ data:
   # MCP_SESSION_TTL: "30m"
   # MCP_TENANT_CLAIM: "tenant_id"
   # MCP_SUBJECT_CLAIM: "sub"
-  # MCP_DEFAULT_TENANT_ID: "default"
+  # MCP_DEFAULT_TENANT_ID: "shared-service-fallback-disabled" # use a deployment-specific hosted fallback sentinel
   # CORS
   # MCP_ALLOWED_ORIGINS: ""
   # MCP_ALLOW_ANY_ORIGIN: "0"

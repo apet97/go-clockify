@@ -22,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that turns time-entry coverage into issues and suggested next tool
   calls, and `clockify_timesheet_fill_gap`, a time-tracking-safe
   write helper that validates overlap before creating one finished
-  entry. The current catalog is now 35 Tier 1 tools + 88 Tier 2
-  tools = 123 total.
+  entry. After later local discovery/activation and name-resolution
+  helpers, the current catalog is now 40 Tier 1 tools + 88 Tier 2
+  tools = 128 total.
 
 ### Removed
 
@@ -35,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is no `/scheduling/{id}` or `POST /scheduling` endpoint at any
   Clockify host. That cleanup dropped the endpoint-wrapper catalog
   from 90 → 88 Tier 2 tools and 123 → 121 total before the later
-  high-level workflow-tool addition brought the current total back
-  to 123. The blocked-groups live test no longer pins
+  high-level workflow-tool and helper additions brought the current
+  total to 128. The blocked-groups live test no longer pins
   these two tools, and the scheduling group's tool count in
   `docs/api-coverage.md` is now 7. Numeric / unit questions
   surfaced by the same probe lab pass (invoice `unitPrice`, expense
@@ -121,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   operator-owned HTTP/gRPC clients, names the exact transport +
   auth shape for Claude Code, Claude Desktop, Cursor, Codex, and
   VS Code MCP, and flags untested non-stdio desktop-client
-  combinations. `docs/support-matrix.md` now records the Go 1.25.9
+  combinations. `docs/support-matrix.md` now records the Go 1.25.10
   pin, default/Postgres/gRPC/FIPS artifact OS-arch matrix,
   container-platform coverage, Windows limitations, FIPS posture,
   and the absence of project-specific Linux kernel requirements.
@@ -356,7 +357,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suite. The OIDC `claimString` path
   (`internal/authn/authn.go:625-630`) shares the same trim-only
   shape and is left for a separate atomic commit (Finding #3 in
-  `~/.claude/plans/you-are-in-floating-fountain.md`); OIDC tokens
+  a workstation-private Claude Code plan file); OIDC tokens
   are signed end-to-end so the attack surface is narrower.
 - **`docs/runbooks/auth-failures.md` lists the full set of gRPC
   auth-rejection reasons.** §1 Symptoms named four `reason` label
@@ -2145,7 +2146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`internal/paths` package doc no longer leaks an absolute path.**
   The package comment previously pointed reviewers at
-  `/Users/15x/.claude/plans/...` for the audit-finding context — a
+  a workstation-private Claude Code plan directory for the audit-finding context — a
   personal local path with no meaning on any other machine. Now
   references the in-repo CHANGELOG entries (0de5458, 1919006) and
   describes the migration sweep in past tense since it completed.

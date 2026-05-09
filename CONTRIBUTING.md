@@ -8,7 +8,12 @@ cd go-clockify
 go build ./...
 ```
 
-Requires Go 1.25.9+. No external dependencies. Module path: `github.com/apet97/go-clockify`.
+While the repository is private, the HTTPS clone requires GitHub access
+to `apet97/go-clockify`; use SSH or set `GOPRIVATE=github.com/apet97/go-clockify`
+before `go install` / module commands. When the repository is public
+again, the same clone command works without additional auth.
+
+Requires the pinned Go 1.25.10 toolchain. No external dependencies. Module path: `github.com/apet97/go-clockify`.
 
 ## Running Tests
 
@@ -33,12 +38,17 @@ Two local targets:
 
 ```sh
 make check   # fast inner loop (seconds): gofmt + go vet + go test
-make verify  # full pipeline (minutes): mirrors PR-blocking CI jobs
+make verify  # pre-PR pipeline (minutes): mirrors PR-blocking CI jobs where local tools exist
+make release-check  # pre-ship/tag gate: docs, scripts, smokes, gRPC E2E, deploy render
 ```
 
 `make check` is for the edit-test cycle. `make verify` is what you run
 before opening a PR — it exercises every PR-blocking CI step that can
-run on a contributor laptop.
+run on a contributor laptop when its local tool is installed. Tool-gated
+local tiers print a skip warning when the binary or FIPS-capable
+toolchain is missing; CI remains authoritative for those checks.
+`make release-check` is the pre-ship/tag gate and must be green before
+launch-candidate handoff.
 
 ### What `make verify` runs locally
 
@@ -46,14 +56,14 @@ run on a contributor laptop.
 |---|---|---|
 | `fmt` | gofmt | always runs |
 | `vet` | go vet | always runs |
-| `lint` | golangci-lint | always runs (install via `brew install golangci-lint`) |
+| `lint` | golangci-lint | **skips** with a warning if not installed; CI enforces |
 | `test` | go test -race | always runs |
 | `cover-check` | go test -coverprofile + floors | always runs |
 | `fuzz-short` | go test -fuzz | 100000 executions per target (CI uses 300000) |
 | `build-tags` | scripts/check-build-tags.sh | otel/grpc/pprof symbol + go.mod parity checks |
 | `http-smoke` | scripts/smoke-http.sh | builds binary, curls `/health` + `/ready` |
 | `config-parity` | scripts/check-config-parity.sh | env-var parity across config.go / Helm / Kustomize |
-| `verify-vuln` | govulncheck | **skips** with a warning if not installed |
+| `verify-vuln` | tools/govulncheck | always installs and runs the pinned `govulncheck` module with the repo Go pin |
 | `verify-k8s` | kubeconform + helm | **skips** with a warning if any tool missing |
 | `verify-fips` | GOFIPS140=latest | **soft-fails** locally if toolchain lacks FIPS support |
 
@@ -76,7 +86,7 @@ internal/
   mcp/                Protocol core — pure JSON-RPC/MCP engine (server, tools, resources, audit, prompts)
   runtime/            Process wiring — selects transport, builds Server (extracted in C2.2)
   clockify/           HTTP client (connection pooling, retry/backoff, pagination)
-  tools/              All 124 tool handlers (Tier 1 registry + Tier 2 lazy groups)
+  tools/              All 128 tool handlers (40 Tier 1 + 88 Tier 2 lazy groups)
   enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
   config/             EnvSpec + profile system + fail-fast validation
   policy/             Policy modes (read_only/time_tracking_safe/safe_core/standard/full)
@@ -136,7 +146,7 @@ Use conventional commit prefixes:
 
 ## Go version pin
 
-This project pins to **Go 1.25.9** — the latest patch on the current
+This project pins to **Go 1.25.10** — the latest patch on the current
 minor at the time of this writing. We do not pin for a specific
 language feature or stdlib bug fix; we follow the principle "track
 the latest patch on the current minor, bump the minor on a documented
@@ -149,24 +159,27 @@ The bump cadence is:
 - **Minor** (1.25 → 1.26): within four weeks of upstream release,
   after running `make verify` against the new toolchain locally.
 
-The pin lives in three places that must move together:
+The pin lives in these checked surfaces that must move together:
 
-1. `go.mod` — `go 1.25.9` directive on the second line.
+1. `go.mod`, `go.work`, and build-tag module `go.mod` files —
+   `go 1.25.10` directives near the top.
 2. `.github/workflows/*.yml` — every `actions/setup-go` block uses
-   `go-version: "1.25.9"`. There are eleven of these today; a one-line
-   bump in any one of them without the others is a structural drift
-   bug.
+   `go-version: "1.25.10"`. A bump in any one workflow without the
+   others is a structural drift bug.
 3. `deploy/Dockerfile` — `FROM golang:1.25-bookworm AS builder`. This
-   is intentionally a loose pin to the minor (not the patch) because
-   the Debian base image gets security updates that we want to inherit
-   automatically; the exact patch is bound at build time and recorded
-   in the SBOM.
+   keeps the human-readable tag at the minor line, while the digest
+   pins the exact builder image. Bump the digest when the Go patch
+   moves so Docker builds use the same patched toolchain as CI.
+4. Current public support docs, including `README.md`,
+   `CONTRIBUTING.md`, and `docs/support-matrix.md`.
 
-When bumping the pin, change all three in the same commit and run
-`make verify` end-to-end before opening the PR. The
+When bumping the pin, change all four in the same commit and run
+`make go-version-parity` before opening the PR. That gate fails when
+module directives, workflow pins, current public docs, or the Docker
+builder digest drift apart. Then run `make verify` end-to-end. The
 `scripts/check-build-tags.sh` script exercises every build-tag
-combination against the new toolchain; if any combination breaks,
-the bump is not safe.
+combination against the new toolchain; if any combination breaks, the
+bump is not safe.
 
 Why "track latest patch" rather than "stay on the LTS-equivalent"?
 Go has no LTS — every minor receives security fixes only until the

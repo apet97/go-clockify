@@ -28,6 +28,17 @@ func TestEffectiveVersionPrefersInjectedVersion(t *testing.T) {
 	}
 }
 
+func TestValidateBuildCapabilitiesRequiresGRPCTag(t *testing.T) {
+	withGRPCBuildAvailable(t, false)
+	err := validateBuildCapabilities(config.Config{Transport: "grpc"})
+	if err == nil {
+		t.Fatal("expected grpc transport to require grpc build tag")
+	}
+	if !strings.Contains(err.Error(), "-tags=grpc") {
+		t.Fatalf("error should name -tags=grpc, got: %v", err)
+	}
+}
+
 func TestDoctorStrictFailsUnsafeHostedPosture(t *testing.T) {
 	code, out := runDoctorForTest(t, []string{"--strict"}, map[string]string{
 		"MCP_TRANSPORT":              "streamable_http",
@@ -65,6 +76,37 @@ func TestDoctorStrictProdPostgresPasses(t *testing.T) {
 	}
 	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
 		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
+	}
+}
+
+func TestDoctorStrictHostedDefaultTenantWarnsWithoutFailing(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--profile=prod-postgres", "--strict"}, map[string]string{
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-prod",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+	})
+	if code != 0 {
+		t.Fatalf("runDoctor strict prod-postgres exit = %d, want 0 despite warning; output:\n%s", code, out)
+	}
+	for _, want := range []string{"Strict posture", "OK", "WARN", "MCP_DEFAULT_TENANT_ID", "deployment-specific fallback"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("doctor hosted default-tenant warning missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDoctorStrictHostedCustomDefaultTenantClearsWarning(t *testing.T) {
+	code, out := runDoctorForTest(t, []string{"--profile=prod-postgres", "--strict"}, map[string]string{
+		"MCP_OIDC_ISSUER":       "https://issuer.example",
+		"MCP_OIDC_AUDIENCE":     "clockify-mcp-prod",
+		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
+		"MCP_DEFAULT_TENANT_ID": "prod-fallback-disabled",
+	})
+	if code != 0 {
+		t.Fatalf("runDoctor strict prod-postgres exit = %d, want 0; output:\n%s", code, out)
+	}
+	if strings.Contains(out, "deployment-specific fallback") {
+		t.Fatalf("doctor emitted default-tenant warning despite custom fallback:\n%s", out)
 	}
 }
 
@@ -271,6 +313,21 @@ func TestDoctorStrictForbidsAllowAnyOrigin(t *testing.T) {
 	}
 }
 
+func TestDoctorReportsMissingGRPCBuildTag(t *testing.T) {
+	withGRPCBuildAvailable(t, false)
+	code, out := runDoctorForTest(t, nil, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_BIND":         "127.0.0.1:9090",
+		"MCP_AUTH_MODE":         "static_bearer",
+		"MCP_BEARER_TOKEN":      "super-secret-token-at-least-sixteen",
+		"MCP_ALLOW_DEV_BACKEND": "1",
+	})
+	if code != 2 || !strings.Contains(out, "-tags=grpc") {
+		t.Fatalf("doctor missing-grpc-build exit/output mismatch: code=%d output:\n%s", code, out)
+	}
+}
+
 func TestDoctorRedactsSensitiveValues(t *testing.T) {
 	env := map[string]string{
 		"CLOCKIFY_API_KEY":                     "correcthorsebatterystaple",
@@ -324,6 +381,7 @@ func TestDoctorRedactsSensitiveValues(t *testing.T) {
 }
 
 func TestDoctorStrictMTLSRequiresCertTenantSource(t *testing.T) {
+	withGRPCBuildAvailable(t, true)
 	code, out := runDoctorForTest(t, []string{"--strict"}, map[string]string{
 		"CLOCKIFY_API_KEY":           "test-key",
 		"MCP_TRANSPORT":              "grpc",
@@ -371,6 +429,7 @@ func strictMTLSDoctorEnv(overrides map[string]string) map[string]string {
 // cert exposes no tenant identity silently collapses onto
 // MCP_DEFAULT_TENANT_ID — the multi-tenant footgun this gate closes.
 func TestDoctorStrictMTLSRequiresTenantRequired(t *testing.T) {
+	withGRPCBuildAvailable(t, true)
 	env := strictMTLSDoctorEnv(map[string]string{
 		"MCP_REQUIRE_MTLS_TENANT": "0",
 	})
@@ -387,6 +446,7 @@ func TestDoctorStrictMTLSRequiresTenantRequired(t *testing.T) {
 // mTLS + tenant source cert + require-mtls-tenant + every other strict
 // flag self-consistent → no findings.
 func TestDoctorStrictMTLSWithRequireTenantPasses(t *testing.T) {
+	withGRPCBuildAvailable(t, true)
 	env := strictMTLSDoctorEnv(nil)
 	code, out := runDoctorForTest(t, []string{"--strict"}, env)
 	if code != 0 {
@@ -433,6 +493,13 @@ func TestParseDoctorArgsCheckBackends(t *testing.T) {
 	if !opts.checkBackends {
 		t.Fatal("parseDoctorArgs did not set checkBackends")
 	}
+}
+
+func withGRPCBuildAvailable(t *testing.T, available bool) {
+	t.Helper()
+	old := grpcBuildAvailable
+	grpcBuildAvailable = available
+	t.Cleanup(func() { grpcBuildAvailable = old })
 }
 
 func runDoctorForTest(t *testing.T, args []string, env map[string]string) (int, string) {

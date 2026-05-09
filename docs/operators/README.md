@@ -13,6 +13,11 @@ the registered profile(s) it covers — apply with `clockify-mcp
   `single-tenant-http` profiles. The legacy `http` transport is
   deprecated and rejected by the `single-tenant-http` profile via
   `MCP_HTTP_LEGACY_POLICY=deny`.
+- [MCP HTTP Error Codes](error-codes.md) — JSON-RPC error codes used
+  by HTTP transport admission failures before JSON-RPC dispatch.
+- [Legacy HTTP EOL](../runbooks/legacy-http-eol.md) — deprecated
+  POST-only HTTP migration, `Deprecation` / successor `Link` response
+  headers, and future `Sunset` handling.
 
 The fifth registered profile, `private-network-grpc`, has no
 operator guide here — its concerns (gRPC + mTLS behind a private

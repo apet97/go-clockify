@@ -188,6 +188,7 @@ jobs:
       - name: Smoke-test doctor --strict on release binary
         run: |
           set -euo pipefail
+          mkdir -p release-smoke-evidence
           chmod +x artifacts/clockify-mcp-linux-x64
 
           export MCP_PROFILE=prod-postgres
@@ -196,21 +197,23 @@ jobs:
           export MCP_OIDC_AUDIENCE="clockify-mcp"
           export CLOCKIFY_API_KEY="dummy"
 
-          artifacts/clockify-mcp-linux-x64 doctor --strict >/tmp/release-doctor-strict-ok.txt
-          grep -q "Strict posture" /tmp/release-doctor-strict-ok.txt
-          grep -q "OK" /tmp/release-doctor-strict-ok.txt
+          artifacts/clockify-mcp-linux-x64 doctor --strict 2>&1 \
+            | tee release-smoke-evidence/release-doctor-strict-ok.txt
+          grep -q "Strict posture" release-smoke-evidence/release-doctor-strict-ok.txt
+          grep -q "OK" release-smoke-evidence/release-doctor-strict-ok.txt
 
           set +e
-          CLOCKIFY_POLICY=standard artifacts/clockify-mcp-linux-x64 doctor --strict >/tmp/release-doctor-strict-fail.txt 2>&1
+          CLOCKIFY_POLICY=standard artifacts/clockify-mcp-linux-x64 doctor --strict \
+            >release-smoke-evidence/release-doctor-strict-fail.txt 2>&1
           code=$?
           set -e
 
           if [ "$code" -ne 3 ]; then
             echo "expected doctor --strict to exit 3 for strict findings, got $code"
-            cat /tmp/release-doctor-strict-fail.txt
+            cat release-smoke-evidence/release-doctor-strict-fail.txt
             exit 1
           fi
-          grep -q "CLOCKIFY_POLICY" /tmp/release-doctor-strict-fail.txt
+          grep -q "CLOCKIFY_POLICY" release-smoke-evidence/release-doctor-strict-fail.txt
 
       - name: Verify SLSA build provenance attestation
         env:
@@ -230,7 +233,11 @@ jobs:
             --owner "${GITHUB_REPOSITORY_OWNER}" \
             >/tmp/slsa-default-ok.txt 2>/tmp/slsa-default.err; then
             cat /tmp/slsa-default.err >&2
-            if grep -qiE 'Feature not available for user-owned private repositor|HTTP 404' /tmp/slsa-default.err; then
+            # Do not skip on a bare 404: that can also mean the
+            # expected attestation is missing. Only the known
+            # user-owned-private repository feature gate is non-fatal.
+            if grep -qiF 'Feature not available' /tmp/slsa-default.err &&
+               grep -qiF 'user-owned private repositor' /tmp/slsa-default.err; then
               echo "::notice title=SLSA attestation skipped::GitHub artifact attestations are unavailable for this user-owned private repository; cosign binary/image checks remain mandatory."
               exit 0
             fi
@@ -262,6 +269,7 @@ jobs:
           PG_DSN: postgres://clockify:clockify@localhost:5432/clockify_mcp?sslmode=disable
         run: |
           set -euo pipefail
+          mkdir -p release-smoke-evidence
           chmod +x artifacts/clockify-mcp-postgres-linux-x64
 
           # Same prod-postgres profile + dummy OIDC env as the
@@ -276,10 +284,10 @@ jobs:
           export MCP_TENANT_CLAIM="tenant_id"
           export CLOCKIFY_API_KEY="dummy"
 
-          artifacts/clockify-mcp-postgres-linux-x64 doctor --strict --check-backends \
-            >/tmp/release-doctor-postgres-ok.txt 2>&1
-          grep -q "Strict posture" /tmp/release-doctor-postgres-ok.txt
-          grep -q "OK" /tmp/release-doctor-postgres-ok.txt
+          artifacts/clockify-mcp-postgres-linux-x64 doctor --strict --check-backends 2>&1 \
+            | tee release-smoke-evidence/release-doctor-postgres-ok.txt
+          grep -q "Strict posture" release-smoke-evidence/release-doctor-postgres-ok.txt
+          grep -q "OK" release-smoke-evidence/release-doctor-postgres-ok.txt
 
       - name: Verify SLSA build provenance attestation (Postgres binary)
         env:
@@ -295,7 +303,11 @@ jobs:
             --owner "${GITHUB_REPOSITORY_OWNER}" \
             >/tmp/slsa-postgres-ok.txt 2>/tmp/slsa-postgres.err; then
             cat /tmp/slsa-postgres.err >&2
-            if grep -qiE 'Feature not available for user-owned private repositor|HTTP 404' /tmp/slsa-postgres.err; then
+            # Do not skip on a bare 404: that can also mean the
+            # expected attestation is missing. Only the known
+            # user-owned-private repository feature gate is non-fatal.
+            if grep -qiF 'Feature not available' /tmp/slsa-postgres.err &&
+               grep -qiF 'user-owned private repositor' /tmp/slsa-postgres.err; then
               echo "::notice title=SLSA attestation skipped::GitHub artifact attestations are unavailable for this user-owned private repository; cosign binary/image checks remain mandatory."
               exit 0
             fi
@@ -319,6 +331,30 @@ jobs:
             --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             artifacts/clockify-mcp-postgres-linux-x64
+
+      - name: Validate doctor strict evidence files
+        if: always()
+        run: |
+          set -euo pipefail
+          for path in \
+            release-smoke-evidence/release-doctor-strict-ok.txt \
+            release-smoke-evidence/release-doctor-strict-fail.txt \
+            release-smoke-evidence/release-doctor-postgres-ok.txt
+          do
+            if [ ! -s "$path" ]; then
+              echo "::error title=Missing doctor strict evidence::$path is missing or empty"
+              exit 1
+            fi
+          done
+
+      - name: Upload doctor strict evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-smoke-doctor-output
+          path: release-smoke-evidence/*.txt
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Resolve container image digest
         id: image

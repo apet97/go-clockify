@@ -46,6 +46,7 @@ flakiness; several have been ratcheted up since.
 | `internal/authn` | 87% | ratcheted post-calibration |
 | `internal/policy` | 75% | |
 | `internal/resolve` | 78% | |
+| `internal/runtime` | 40% | launch-review B.07 guard for build/profile glue; current local measurement is 46.7% |
 | `internal/timeparse` | 94% | ratcheted post-calibration |
 | `internal/truncate` | 90% | |
 | `internal/tracing` | 99% | ratcheted post-calibration |
@@ -55,16 +56,15 @@ flakiness; several have been ratcheted up since.
 
 The previous target of **global 70%** was reached and the floor has
 since ratcheted to **71%** (current). The next planned ratchet is
-**global 72%**, which requires lifting `internal/tools` into the
-low 60s. The dispatcher-level negative-path tests
-in `internal/tools/dispatch_test.go` cover the enforcement surface but
-intentionally do not re-cover what the service-layer tests in
-`internal/tools/tools_test.go` already hit — follow-up PRs should add
-harness-driven happy-path tests for the tier-1 write tools that don't yet
-have them (`clockify_log_time`, `clockify_add_entry`, `clockify_update_entry`,
+**global 72%**. Current local release-check coverage is higher than
+that, but the floor moves one point at a time so package-specific weak
+spots stay visible. Follow-up PRs should add harness-driven happy-path
+tests for the tier-1 write tools that don't yet have them
+(`clockify_log_time`, `clockify_add_entry`, `clockify_update_entry`,
 `clockify_find_and_update_entry`, `clockify_create_project`,
 `clockify_create_task`, `clockify_switch_project`, `clockify_start_timer`,
-`clockify_stop_timer`).
+`clockify_stop_timer`) and branch-oriented tests for `internal/runtime`
+profile/build-capability glue.
 
 ## Why these exact numbers
 
@@ -75,10 +75,12 @@ regressions — a PR could delete 13% worth of tests and still merge.
 
 The 71% global floor (initially calibrated to 69%, ratcheted upward
 in subsequent waves; see the table above) closes that gap. The
-per-package floors cover every non-trivial package in `internal/`
-(the previous six became fifteen), including the safety-critical
-ones that had no floor at all: `internal/tools`, `internal/authn`,
-`internal/policy`, `internal/clockify`.
+per-package floors cover the non-trivial `internal/` packages that
+currently have stable branch coverage (the previous six became
+sixteen), including the safety-critical ones that had no floor at all:
+`internal/tools`, `internal/authn`, `internal/policy`,
+`internal/clockify`, and now the lower-coverage `internal/runtime`
+glue package.
 
 ## Running locally
 

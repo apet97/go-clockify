@@ -3,6 +3,7 @@ package vault
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/controlplane"
@@ -217,5 +218,18 @@ func TestDecodeMaterialMissingAPIKey(t *testing.T) {
 		Reference: `{"workspace_id":"ws-only"}`,
 	}); err == nil {
 		t.Fatal("expected api_key missing error")
+	}
+}
+
+func TestDecodeMaterialRejectsOversizedPayload(t *testing.T) {
+	payload := `{"api_key":"` + strings.Repeat("x", maxInlineCredentialPayloadBytes) + `"}`
+	if len(payload) <= maxInlineCredentialPayloadBytes {
+		t.Fatalf("test payload is not oversized: len=%d", len(payload))
+	}
+	if _, err := Resolve(controlplane.CredentialRef{
+		Backend:   "inline",
+		Reference: payload,
+	}); err == nil {
+		t.Fatal("expected oversized credential payload error")
 	}
 }

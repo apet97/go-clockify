@@ -8,13 +8,15 @@ changes break customer integrations without anyone noticing.
 
 ## Current launch-candidate evidence status
 
-As of 2026-05-03, local live-contract false-green prevention is in
-place and the current 128-tool catalog has manual
-sacrificial-workspace MCP-path probes, live-test hooks, or local-only
-helper coverage. Group 1 is
-still open: two manual-dispatch runs are green
-(read-only 25238997088, full-tier 25239216412), but only two
-consecutive scheduled cron greens on the candidate SHA count as
+As of 2026-05-09, local live-contract false-green prevention is in
+place and `scripts/check-live-tool-coverage.sh` statically verifies
+that the current 128-tool catalog has every Tier-2 and API-backed
+Tier-1 tool named by the livee2e source bundle, with only local
+catalog/tool-surface helpers explicitly allowed out of live Clockify
+calls. Group 1 is still open: scheduled run 25538247771 is green on
+candidate SHA `4fe957547f9e6aea749a85f87823d17a0ccc2928`, but the
+previous scheduled green is on an older SHA, and only two consecutive
+scheduled cron greens on the final candidate SHA count as
 launch-candidate evidence. The exhaustive manual probes are local
 coverage artifacts and are intentionally not part of the nightly
 `live-contract.yml` regex.
@@ -35,6 +37,16 @@ The read-only tests are always enabled because they have no side effects.
 The mutating tests are gated by a repository variable so writes can be
 disabled from the GitHub UI without editing the workflow — useful when
 the sacrificial workspace needs a break or when Clockify is flapping.
+
+The static inventory guard is:
+
+```sh
+bash scripts/check-live-tool-coverage.sh
+```
+
+It proves only that the livee2e source inventory names the current
+catalog surface. It does not prove the tests ran, passed, or count as
+Group 1 evidence.
 
 ## The sacrificial workspace
 

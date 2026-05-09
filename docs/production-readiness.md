@@ -38,18 +38,24 @@ The blessed production profile for shared services is documented in [Production 
 
 ## Launch-candidate status
 
-`main` is locally prepared for the official Clockify launch-candidate
-evidence pass. The current launch-state baseline is the post-PR #62
-state (`ff0047aa50cdcd4bb43037c72d66b218d51f13e8`) plus later
-same-surface stabilization commits. That includes the post-PR #51
-local readiness gates, PR #59's manual sacrificial-workspace MCP-path
-probes, PR #62's invite-user validation probe, and later live-test
-hooks or local coverage for the current 128-tool catalog. The remaining blockers are
-external evidence only: two consecutive scheduled
-live-contract cron greens, candidate-tag security walk-through
-evidence, and release/sigstore/SLSA evidence. Local `release-check`,
-PR CI greens, and manual exhaustive live probes are necessary context
-but not sufficient for an official launch-ready claim. Agent
+`main` is locally prepared for the Clockify launch-candidate evidence
+pass. The current pushed `main` / `origin/main` baseline is
+`4fe957547f9e6aea749a85f87823d17a0ccc2928`
+(`fix(streamable): preserve session negotiation on touch`), before the
+uncommitted May 8 remediation tree. The manual live-campaign baseline
+remains `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`: it includes the
+post-PR #51 local readiness gates, PR #59's manual
+sacrificial-workspace MCP-path probes, PR #62's invite-user validation
+probe, and later live-test hooks or local coverage for the current
+128-tool catalog. The remaining
+blockers are not local test failures, but they are still launch
+blockers: Group 1 scheduled final-SHA live-contract evidence, Group 6
+candidate-tag security evidence, Group 7 release/sigstore/SLSA
+evidence, pushed workflow first-run evidence, repository-state cleanup,
+public-readiness disposition, and legal/product approval for any
+official-product claim. Local `release-check`, PR CI greens, and manual
+exhaustive live probes are necessary context but not sufficient for an
+official/product launch-ready claim. Agent
 continuation details live in [`docs/agent-handoff.md`](agent-handoff.md);
 [`docs/claude-code-continuation.md`](claude-code-continuation.md) is
 the historical PR #51 packet.
@@ -183,11 +189,13 @@ in [`docs/runbooks/image-digest-pinning.md`](runbooks/image-digest-pinning.md).
 
 Triage flows for operational classes:
 
-- [`rate-limit-saturation.md`](runbooks/rate-limit-saturation.md) — local/upstream quota saturation.
+- [`rate-limit.md`](runbooks/rate-limit.md) — local and gateway quota posture.
+- [`rate-limit-saturation.md`](runbooks/rate-limit-saturation.md) — active local/upstream quota saturation.
 - [`clockify-upstream-outage.md`](runbooks/clockify-upstream-outage.md) — upstream outage drill and response.
 - [`postgres-restore-drill.md`](runbooks/postgres-restore-drill.md) — database restore procedures.
 - [`auth-failures.md`](runbooks/auth-failures.md) — auth triage.
 - [`credential-leak-response.md`](runbooks/credential-leak-response.md) — credential rotation, audit, and notification.
+- [`tenant-offboarding.md`](runbooks/tenant-offboarding.md) — hosted-tenant suspension and revocation limits.
 - [`image-digest-pinning.md`](runbooks/image-digest-pinning.md) — image pinning policy.
 
 ## Testing and Verification
@@ -210,8 +218,11 @@ you need a checklist for a third-party assessor, this is the list.
   rebuild from the tag and assert byte-for-byte parity with the
   release artifact.
 - **Signed releases** — every binary carries a cosign keyless
-  signature (sigstore bundle) and a SLSA build provenance
-  attestation. Verification flow:
+  signature (sigstore bundle), plus a SLSA build provenance
+  attestation when GitHub artifact attestations are available for the
+  repository account tier. ADR-0013 keeps SLSA best-effort on the
+  current user-owned private repository; the mandatory cryptographic
+  gate is the cosign binary/image chain. Verification flow:
   [`docs/verification.md`](verification.md). Continuous re-verification:
   [`.github/workflows/release-smoke.yml`](../.github/workflows/release-smoke.yml).
 - **SBOM** — every binary and image carries a SPDX SBOM.
@@ -235,13 +246,14 @@ you need a checklist for a third-party assessor, this is the list.
   `MCP_HTTP_TLS_CERT` at config.Load.
 - **Panic containment** — both the stdio dispatch goroutine and the
   HTTP handlers recover panics, emit a structured `panic_recovered`
-  log event with the stack, increment
+  log event with a bounded, path-sanitized stack, increment
   `clockify_mcp_panics_recovered_total{site}`, and return a tool-error
   envelope instead of crashing the process. See
   [`SECURITY.md`](../SECURITY.md) "Security Features".
 - **Audit durability** — every non-read-only tool call emits an
   `AuditEvent`. Persistence failures are logged at `ERROR` and
-  increment `clockify_mcp_audit_failures_total{reason="persist_error"}`.
+  increment
+  `clockify_mcp_audit_failures_total{reason="persist_error",phase="intent|outcome|single"}`.
   Set `MCP_AUDIT_DURABILITY=fail_closed` to abort tool calls on audit
   failure (default `best_effort` succeeds and alerts via metrics/logs).
   See [`SECURITY.md`](../SECURITY.md) "Inline /metrics security" and

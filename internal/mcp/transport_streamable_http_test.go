@@ -2,14 +2,17 @@ package mcp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -301,6 +304,30 @@ func TestStreamableRPCHandlerPOSTWriteDeadlineStartsAtFirstWrite(t *testing.T) {
 	}
 	if rec.deadlineCount() != 2 {
 		t.Fatalf("deadline calls=%d, want set+clear", rec.deadlineCount())
+	}
+}
+
+func TestStreamableCORSPreflightAllowsResumeHeaders(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	opts.AllowedOrigins = []string{"https://client.example.com"}
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	req.Header.Set("Origin", "https://client.example.com")
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("preflight status %d body %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://client.example.com" {
+		t.Fatalf("allow-origin = %q", got)
+	}
+	allowHeaders := rec.Header().Get("Access-Control-Allow-Headers")
+	for _, want := range []string{"MCP-Session-Id", "X-MCP-Session-ID", "MCP-Protocol-Version", "Last-Event-ID"} {
+		if !strings.Contains(allowHeaders, want) {
+			t.Fatalf("allow-headers missing %s: %q", want, allowHeaders)
+		}
 	}
 }
 
@@ -605,6 +632,11 @@ func TestStreamableSessionPersistenceFailures(t *testing.T) {
 		handler := streamableRPCHandler(opts, mgr)
 		sessionID := initializeStreamSession(t, handler, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
 
+		var logs bytes.Buffer
+		prev := slog.Default()
+		slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+		t.Cleanup(func() { slog.SetDefault(prev) })
+
 		baseMetric := metrics.StreamableSessionStoreErrorsTotal.Get("touch")
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
@@ -626,6 +658,12 @@ func TestStreamableSessionPersistenceFailures(t *testing.T) {
 		mgr.destroy(sessionID, session)
 		if got := metrics.StreamableSessionStoreErrorsTotal.Get("delete") - baseMetric; got < 1 {
 			t.Fatalf("expected delete metric increment, got %d", got)
+		}
+		if strings.Contains(logs.String(), sessionID) || strings.Contains(logs.String(), `"session_id"`) {
+			t.Fatalf("streamable session store log leaked session id %q:\n%s", sessionID, logs.String())
+		}
+		if !strings.Contains(logs.String(), `"streamable_session_store_error"`) {
+			t.Fatalf("expected streamable session store warning, got:\n%s", logs.String())
 		}
 	})
 }
@@ -698,6 +736,7 @@ func TestStreamableUnifiedRouteSSE(t *testing.T) {
 // facing route is a major-version bump).
 func TestStreamableEventsBackCompatAlias(t *testing.T) {
 	mgr, opts := newTestStreamableStack(t)
+	aliasRequests := metrics.StreamableEventsAliasRequestsTotal.Get()
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /mcp", streamableRPCHandler(opts, mgr))
@@ -724,6 +763,86 @@ func TestStreamableEventsBackCompatAlias(t *testing.T) {
 	}
 	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
 		t.Fatalf("content-type: %q", ct)
+	}
+	if got := metrics.StreamableEventsAliasRequestsTotal.Get() - aliasRequests; got != 1 {
+		t.Fatalf("legacy alias metric delta = %d, want 1", got)
+	}
+}
+
+func TestStreamableEventsAliasFullMuxRecordsHTTPPathMetric(t *testing.T) {
+	_, opts := newTestStreamableStack(t)
+	ln, addr := newLoopbackListener(t)
+	opts.Listener = ln
+	opts.Bind = addr
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- ServeStreamableHTTP(ctx, opts)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("ServeStreamableHTTP did not return after shutdown")
+		}
+	})
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	initReq, _ := http.NewRequest(
+		http.MethodPost,
+		"http://"+addr+"/mcp",
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`),
+	)
+	initReq.Header.Set("Authorization", "Bearer "+testBearerToken)
+	initResp, err := client.Do(initReq)
+	if err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	_ = initResp.Body.Close()
+	if initResp.StatusCode != http.StatusOK {
+		t.Fatalf("initialize status: %d", initResp.StatusCode)
+	}
+	sessionID := initResp.Header.Get(MCPSessionIDHeader)
+	if sessionID == "" {
+		t.Fatal("initialize response missing session id")
+	}
+
+	httpRequests := metrics.HTTPRequestsTotal.Get("/mcp/events", http.MethodGet, "200")
+	aliasRequests := metrics.StreamableEventsAliasRequestsTotal.Get()
+
+	reqCtx, reqCancel := context.WithCancel(context.Background())
+	req, _ := http.NewRequestWithContext(reqCtx, http.MethodGet, "http://"+addr+"/mcp/events", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	resp, err := client.Do(req)
+	if err != nil {
+		reqCancel()
+		t.Fatalf("GET /mcp/events: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		reqCancel()
+		t.Fatalf("GET /mcp/events status: %d", resp.StatusCode)
+	}
+	_ = resp.Body.Close()
+	reqCancel()
+
+	deadline := time.After(1 * time.Second)
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		httpDelta := metrics.HTTPRequestsTotal.Get("/mcp/events", http.MethodGet, "200") - httpRequests
+		aliasDelta := metrics.StreamableEventsAliasRequestsTotal.Get() - aliasRequests
+		if httpDelta == 1 && aliasDelta == 1 {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("metric deltas after GET /mcp/events: http=%d alias=%d, want 1/1", httpDelta, aliasDelta)
+		case <-tick.C:
+		}
 	}
 }
 
@@ -788,6 +907,86 @@ func TestStreamableProtocolVersionMismatch(t *testing.T) {
 	}
 }
 
+// TestStreamableInitializeProtocolVersionHeaderMismatch rejects a
+// contradictory initialize handshake before creating a session. Without this
+// guard the body-negotiated version won silently, and every later request from
+// a proxy stamping the mismatched header failed after session creation.
+func TestStreamableInitializeProtocolVersionHeaderMismatch(t *testing.T) {
+	if len(SupportedProtocolVersions) < 2 {
+		t.Skip("test requires at least two supported protocol versions")
+	}
+	mgr, opts := newTestStreamableStack(t)
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"`+SupportedProtocolVersions[1]+`"}}`,
+	))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Mcp-Protocol-Version", SupportedProtocolVersions[0])
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("mismatched initialize: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Error == nil || resp.Error.Code != -32600 {
+		t.Fatalf("expected -32600, got %+v", resp.Error)
+	}
+	if got := len(mgr.items); got != 0 {
+		t.Fatalf("mismatched initialize created %d sessions", got)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Mcp-Protocol-Version", SupportedProtocolVersions[0])
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("matching initialize: status %d body %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStreamableInitializeProtocolVersionHeaderHonorsConfiguredDefault(t *testing.T) {
+	if len(SupportedProtocolVersions) < 3 {
+		t.Skip("test requires at least three supported protocol versions")
+	}
+	configuredDefault := SupportedProtocolVersions[2]
+	mgr, opts := newTestStreamableStack(t)
+	opts.DefaultProtocolVersion = configuredDefault
+	opts.Factory = func(_ context.Context, principal authn.Principal, _ string) (*StreamableSessionRuntime, error) {
+		server := NewServer("test", []ToolDescriptor{}, nil, nil)
+		server.DefaultProtocolVersion = opts.DefaultProtocolVersion
+		return &StreamableSessionRuntime{
+			Server:          server,
+			Close:           func() {},
+			TenantID:        principal.TenantID,
+			WorkspaceID:     "ws1",
+			ClockifyBaseURL: "https://api.clockify.me/api/v1",
+		}, nil
+	}
+	handler := streamableRPCHandler(opts, mgr)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set("Mcp-Protocol-Version", configuredDefault)
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("configured-default initialize: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	result, _ := resp.Result.(map[string]any)
+	if got := result["protocolVersion"]; got != configuredDefault {
+		t.Fatalf("protocolVersion = %v, want %q", got, configuredDefault)
+	}
+}
+
 func TestStreamableTouchPreservesNegotiationForRehydration(t *testing.T) {
 	if len(SupportedProtocolVersions) < 2 {
 		t.Skip("test requires at least two supported protocol versions")
@@ -848,12 +1047,281 @@ func TestStreamableTouchPreservesNegotiationForRehydration(t *testing.T) {
 	}
 }
 
+func TestStreamSessionManagerConcurrentRehydrationCoalesces(t *testing.T) {
+	store, err := controlplane.Open("memory")
+	if err != nil {
+		t.Fatalf("control plane: %v", err)
+	}
+	const sessionID = "rehydrate-race-session"
+	now := time.Now().UTC()
+	principal := authn.Principal{Subject: "user-1", TenantID: "tenant-1"}
+	if err := store.PutSession(controlplane.SessionRecord{
+		ID:              sessionID,
+		TenantID:        principal.TenantID,
+		Subject:         principal.Subject,
+		Transport:       "streamable_http",
+		ProtocolVersion: SupportedProtocolVersions[0],
+		ClientName:      "race-client",
+		ClientVersion:   "1",
+		CreatedAt:       now,
+		ExpiresAt:       now.Add(30 * time.Minute),
+		LastSeenAt:      now,
+		WorkspaceID:     "ws-1",
+		ClockifyBaseURL: "https://api.clockify.me/api/v1",
+	}); err != nil {
+		t.Fatalf("seed session: %v", err)
+	}
+
+	mgr := &streamSessionManager{
+		ttl:   30 * time.Minute,
+		store: store,
+		items: map[string]*streamSession{},
+	}
+	var factoryCalls atomic.Int32
+	var closedRuntimes atomic.Int32
+	releaseFactory := make(chan struct{})
+	var releaseOnce sync.Once
+	t.Cleanup(func() { releaseOnce.Do(func() { close(releaseFactory) }) })
+	opts := StreamableHTTPOptions{
+		Factory: func(_ context.Context, principal authn.Principal, _ string) (*StreamableSessionRuntime, error) {
+			factoryCalls.Add(1)
+			<-releaseFactory
+			return &StreamableSessionRuntime{
+				Server:          NewServer("test", nil, nil, nil),
+				Close:           func() { closedRuntimes.Add(1) },
+				TenantID:        principal.TenantID,
+				WorkspaceID:     "ws-1",
+				ClockifyBaseURL: "https://api.clockify.me/api/v1",
+			}, nil
+		},
+		ControlPlane: store,
+		SessionTTL:   30 * time.Minute,
+	}
+
+	const callers = 32
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	results := make([]*streamSession, callers)
+	errs := make([]error, callers)
+	for i := range callers {
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			results[i], errs[i] = mgr.get(context.Background(), sessionID, principal, opts)
+		}(i)
+	}
+	close(start)
+
+	deadline := time.After(time.Second)
+	for factoryCalls.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatalf("expected concurrent rehydration factory calls, got %d", factoryCalls.Load())
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	releaseOnce.Do(func() { close(releaseFactory) })
+	wg.Wait()
+
+	var first *streamSession
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("get[%d]: %v", i, err)
+		}
+		if results[i] == nil {
+			t.Fatalf("get[%d] returned nil session", i)
+		}
+		if first == nil {
+			first = results[i]
+			continue
+		}
+		if results[i] != first {
+			t.Fatalf("get[%d] returned a distinct session pointer: %p != %p", i, results[i], first)
+		}
+	}
+	if got := len(mgr.items); got != 1 {
+		t.Fatalf("manager retained %d sessions, want 1", got)
+	}
+	if factoryCalls.Load() < 2 {
+		t.Fatalf("factory calls = %d, want >= 2 to exercise duplicate discard", factoryCalls.Load())
+	}
+	if closed := closedRuntimes.Load(); closed != factoryCalls.Load()-1 {
+		t.Fatalf("discarded runtime closes = %d, want %d", closed, factoryCalls.Load()-1)
+	}
+	if first.server.NegotiatedProtocolVersion() != SupportedProtocolVersions[0] {
+		t.Fatalf("rehydrated protocol = %q, want %q", first.server.NegotiatedProtocolVersion(), SupportedProtocolVersions[0])
+	}
+	name, version := first.server.ClientInfo()
+	if name != "race-client" || version != "1" {
+		t.Fatalf("rehydrated client info = %q/%q, want race-client/1", name, version)
+	}
+}
+
+func TestStreamableHTTP_CrossPodCancel_IsBestEffort(t *testing.T) {
+	authenticator, err := authn.New(authn.Config{
+		Mode:            authn.ModeStaticBearer,
+		BearerToken:     testBearerToken,
+		DefaultTenantID: "tenant-a",
+	})
+	if err != nil {
+		t.Fatalf("authenticator: %v", err)
+	}
+	store, err := controlplane.Open("memory")
+	if err != nil {
+		t.Fatalf("control plane: %v", err)
+	}
+
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
+	finished := make(chan error, 1)
+	blockingTool := ToolDescriptor{
+		Tool: Tool{
+			Name:        "blocking_tool",
+			Description: "blocks until released",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		ReadOnlyHint: true,
+		Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			started <- struct{}{}
+			select {
+			case <-ctx.Done():
+				finished <- ctx.Err()
+				return nil, ctx.Err()
+			case <-release:
+				finished <- nil
+				return map[string]any{"released": true}, nil
+			}
+		},
+	}
+	opts := StreamableHTTPOptions{
+		Version:       "test",
+		MaxBodySize:   2097152,
+		SessionTTL:    30 * time.Minute,
+		Authenticator: authenticator,
+		ControlPlane:  store,
+		Factory: func(_ context.Context, principal authn.Principal, _ string) (*StreamableSessionRuntime, error) {
+			return &StreamableSessionRuntime{
+				Server:          NewServer("test", []ToolDescriptor{blockingTool}, nil, nil),
+				Close:           func() {},
+				TenantID:        principal.TenantID,
+				WorkspaceID:     "ws1",
+				ClockifyBaseURL: "https://api.clockify.me/api/v1",
+			}, nil
+		},
+	}
+	mgrA := &streamSessionManager{
+		ttl:   30 * time.Minute,
+		store: store,
+		items: map[string]*streamSession{},
+	}
+	mgrB := &streamSessionManager{
+		ttl:   30 * time.Minute,
+		store: store,
+		items: map[string]*streamSession{},
+	}
+	handlerA := streamableRPCHandler(opts, mgrA)
+	handlerB := streamableRPCHandler(opts, mgrB)
+	sessionID := initializeStreamSession(t, handlerA, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
+
+	type callOutcome struct {
+		status int
+		body   string
+		resp   Response
+	}
+	callDone := make(chan callOutcome, 1)
+	go func() {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(
+			`{"jsonrpc":"2.0","id":42,"method":"tools/call","params":{"name":"blocking_tool","arguments":{}}}`,
+		))
+		req.Header.Set("Authorization", "Bearer "+testBearerToken)
+		req.Header.Set(MCPSessionIDHeader, sessionID)
+		handlerA.ServeHTTP(rec, req)
+		outcome := callOutcome{status: rec.Code, body: rec.Body.String()}
+		_ = json.Unmarshal(rec.Body.Bytes(), &outcome.resp)
+		callDone <- outcome
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for blocking tool to start")
+	}
+	mgrA.mu.Lock()
+	sessionA := mgrA.items[sessionID]
+	mgrA.mu.Unlock()
+	if sessionA == nil {
+		t.Fatal("session A missing after initialize")
+		return
+	}
+	if got := sessionA.server.InflightCount(); got != 1 {
+		t.Fatalf("expected instance A to track one in-flight call, got %d", got)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(
+		`{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":42,"reason":"cross-pod best effort"}}`,
+	))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	handlerB.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("cross-pod cancellation notification status %d body %s", rec.Code, rec.Body.String())
+	}
+	mgrB.mu.Lock()
+	_, rehydratedOnB := mgrB.items[sessionID]
+	mgrB.mu.Unlock()
+	if !rehydratedOnB {
+		t.Fatal("instance B should rehydrate the session before accepting cancellation")
+	}
+
+	select {
+	case err := <-finished:
+		t.Fatalf("cross-pod cancellation propagated to instance A unexpectedly: %v", err)
+	case outcome := <-callDone:
+		t.Fatalf("instance A call completed before local release: status=%d body=%s", outcome.status, outcome.body)
+	case <-time.After(150 * time.Millisecond):
+	}
+	if got := sessionA.server.InflightCount(); got != 1 {
+		t.Fatalf("cross-pod cancellation should leave instance A call in-flight, got %d", got)
+	}
+
+	releaseOnce.Do(func() { close(release) })
+	select {
+	case err := <-finished:
+		if err != nil {
+			t.Fatalf("blocking tool should finish normally after local release, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for blocking tool to finish after release")
+	}
+	select {
+	case outcome := <-callDone:
+		if outcome.status != http.StatusOK {
+			t.Fatalf("tools/call status %d body %s", outcome.status, outcome.body)
+		}
+		if outcome.resp.Error != nil {
+			t.Fatalf("tools/call returned error after local release: %+v", outcome.resp.Error)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for tools/call response after release")
+	}
+	if got := sessionA.server.InflightCount(); got != 0 {
+		t.Fatalf("expected instance A inflight map to drain after completion, got %d", got)
+	}
+}
+
 // TestStreamableProtocolVersionAbsent allows non-initialize requests without
 // the Mcp-Protocol-Version header (pre-2025-03-26 clients).
 func TestStreamableProtocolVersionAbsent(t *testing.T) {
 	mgr, opts := newTestStreamableStack(t)
 	handler := streamableRPCHandler(opts, mgr)
 	sessionID := initializeStreamSession(t, handler, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
+	missingHeaders := metrics.ProtocolVersionHeaderMissingTotal.Get()
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
@@ -862,6 +1330,56 @@ func TestStreamableProtocolVersionAbsent(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("absent header: status %d body %s", rec.Code, rec.Body.String())
+	}
+	if got := metrics.ProtocolVersionHeaderMissingTotal.Get() - missingHeaders; got != 1 {
+		t.Fatalf("missing-header metric delta = %d, want 1", got)
+	}
+}
+
+func TestStreamableProtocolVersionRequired(t *testing.T) {
+	mgr, opts := newTestStreamableStack(t)
+	opts.RequireProtocolVersionHeader = true
+	rpcHandler := streamableRPCHandler(opts, mgr)
+	eventsHandler := streamableEventsHandler(opts, mgr)
+	sessionID := initializeStreamSession(t, rpcHandler, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
+	missingHeaders := metrics.ProtocolVersionHeaderMissingTotal.Get()
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	rpcHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("strict absent POST status %d body %s", rec.Code, rec.Body.String())
+	}
+	var resp Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode strict POST response: %v", err)
+	}
+	if resp.Error == nil || resp.Error.Code != -32600 || !strings.Contains(resp.Error.Message, "missing Mcp-Protocol-Version") {
+		t.Fatalf("strict POST error = %+v, want -32600 missing-header error", resp.Error)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/list"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	req.Header.Set("Mcp-Protocol-Version", SupportedProtocolVersions[0])
+	rpcHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("strict header-present POST status %d body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	req.Header.Set(MCPSessionIDHeader, sessionID)
+	eventsHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("strict absent GET status %d body %s", rec.Code, rec.Body.String())
+	}
+	if got := metrics.ProtocolVersionHeaderMissingTotal.Get() - missingHeaders; got != 2 {
+		t.Fatalf("missing-header metric delta = %d, want 2", got)
 	}
 }
 

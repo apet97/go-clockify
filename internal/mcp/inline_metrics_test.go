@@ -56,6 +56,52 @@ func TestInlineMetrics_InheritMainBearer_CorrectToken(t *testing.T) {
 	}
 }
 
+// TestInlineMetrics_BearerSchemeCaseAndTokenWhitespace verifies inline
+// /metrics keeps the same RFC 6750-compatible bearer parsing as the main
+// HTTP auth path: scheme comparison is case-insensitive and token whitespace
+// is trimmed before constant-time comparison.
+func TestInlineMetrics_BearerSchemeCaseAndTokenWhitespace(t *testing.T) {
+	tests := []struct {
+		name  string
+		opts  InlineMetricsOptions
+		token string
+	}{
+		{
+			name: "inherit_main_bearer",
+			opts: InlineMetricsOptions{
+				Enabled:         true,
+				AuthMode:        "inherit_main_bearer",
+				MainBearerToken: testMainBearer,
+			},
+			token: testMainBearer,
+		},
+		{
+			name: "static_bearer",
+			opts: InlineMetricsOptions{
+				Enabled:         true,
+				AuthMode:        "static_bearer",
+				BearerToken:     testMetricsBearer,
+				MainBearerToken: testMainBearer,
+			},
+			token: testMetricsBearer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := inlineMetricsHandler(tt.opts)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+			req.Header.Set("Authorization", "  bEaReR   "+tt.token+"  ")
+			h(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200 with case-insensitive bearer scheme and trimmed token, got %d", rec.Code)
+			}
+		})
+	}
+}
+
 // TestInlineMetrics_InheritMainBearer_WrongToken verifies wrong token → 401.
 func TestInlineMetrics_InheritMainBearer_WrongToken(t *testing.T) {
 	opts := InlineMetricsOptions{

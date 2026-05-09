@@ -50,7 +50,7 @@ Defaults that apply automatically and don't need to be set:
 
 ### Claude Code
 
-Add to `~/.claude/mcp.json`:
+Add to the Claude Code MCP config file:
 
 ```json
 {

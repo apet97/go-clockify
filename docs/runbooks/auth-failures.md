@@ -52,7 +52,7 @@ layer is failing.
     more than one identity value or a value larger than the 1024-byte
     per-header bound. Strip client-supplied copies before stamping
     trusted headers and keep principal identifiers short.
-- gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|missing_metadata|reauth_expired"}` rises. (`missing_metadata` fires when the gRPC stream lands without any metadata at all — earlier than `missing_authorization`, which fires when metadata exists but the `authorization` key is absent.)
+- gRPC transport: `clockify_mcp_grpc_auth_rejections_total{reason="auth_failed|missing_authorization|empty_authorization|missing_metadata|peer_addr_disallowed|reauth_expired"}` rises. (`missing_metadata` fires when the gRPC stream lands without any metadata at all — earlier than `missing_authorization`, which fires when metadata exists but the `authorization` key is absent. `peer_addr_disallowed` means `MCP_GRPC_PEER_CIDR_ALLOW` is set and the TCP peer IP is missing or outside the configured ranges.)
 - Upstream Clockify auth failure: `msg=tool_call` errors consistently
   include `401 Unauthorized` from `api.clockify.me` across multiple
   tools.

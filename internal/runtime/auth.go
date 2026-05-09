@@ -29,6 +29,7 @@ func buildAuthnConfig(cfg config.Config) authn.Config {
 		OIDCVerifyCacheTTL:        cfg.OIDCVerifyCacheTTL,
 		OIDCJWKSCacheTTL:          cfg.OIDCJWKSCacheTTL,
 		OIDCStrict:                cfg.OIDCStrict,
+		OIDCRequireKID:            cfg.OIDCRequireKID,
 		RequireTenantClaim:        cfg.RequireTenantClaim,
 		ForwardTenantHeader:       cfg.ForwardTenantHeader,
 		ForwardSubjectHeader:      cfg.ForwardSubjectHeader,

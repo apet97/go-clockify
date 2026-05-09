@@ -13,9 +13,12 @@ name: Docker Image
 #   ghcr.io/apet97/go-clockify:latest         # on tag (explicit, intentional)
 #
 # Push/tag builds are multi-arch (linux/amd64, linux/arm64), signed with
-# cosign keyless OIDC, attested with SLSA build provenance, and scanned with
-# Trivy. PR builds stay local and single-platform so the workflow can smoke-test
-# the actual image that Trivy scans. Scan failures on HIGH or CRITICAL
+# cosign keyless OIDC, scanned with Trivy, and receive SLSA provenance when
+# GitHub artifact attestations are available for the repository account tier.
+# The SLSA step is best-effort for the current user-owned private repository;
+# image build, scan, cosign signature, and SBOM gates remain mandatory. PR
+# builds stay local and single-platform so the workflow can smoke-test the
+# actual image that Trivy scans. Scan failures on HIGH or CRITICAL
 # vulnerabilities block the workflow.
 
 on:
@@ -80,7 +83,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
           labels: |
             org.opencontainers.image.title=clockify-mcp
-            org.opencontainers.image.description=Go MCP server for Clockify
+            org.opencontainers.image.description=Go MCP server for Clockify: 128 tools, three transports, five policy modes
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.version=${{ steps.build_meta.outputs.version }}
@@ -216,12 +219,16 @@ jobs:
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$COMMIT"
           test "$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "$BUILD_DATE"
-          # Confirm the OCI description label is plain — the "Production-grade"
-          # marketing string was removed in the 2026-04-25 hardening wave so
-          # the registry index does not parrot claims the binary doesn't earn.
+          # Confirm the OCI description label stays factual and current. It
+          # should not parrot marketing claims, and it must carry the public
+          # tool/policy counts that reviewers see in registry indexes.
           desc="$(docker image inspect "$IMAGE_REF" --format '{{ index .Config.Labels "org.opencontainers.image.description" }}')"
           if printf '%s' "$desc" | grep -Eqi 'production-grade|enterprise-grade|best-in-class'; then
             echo "OCI description contains marketing puffery: $desc"
+            exit 1
+          fi
+          if ! printf '%s' "$desc" | grep -Eq '128 tools.*five policy modes'; then
+            echo "OCI description is stale: $desc"
             exit 1
           fi
 
@@ -376,6 +383,7 @@ jobs:
             "$IMAGE_REF"
 
       - name: Attest SLSA build provenance
+        id: slsa_provenance
         # GitHub artifact attestations are feature-gated for this
         # user-owned private repository. Keep this best-effort so the
         # mandatory build, Trivy, cosign image signature, and SBOM
@@ -388,6 +396,11 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      - name: Report SLSA attestation feature-gate skip
+        if: github.event_name != 'pull_request' && steps.slsa_provenance.outcome == 'failure'
+        run: |
+          echo "::notice title=SLSA attestation skipped::GitHub artifact attestations are unavailable for this user-owned private repository per ADR-0013; mandatory image build, Trivy, cosign image signature, and SBOM attestation gates already passed. Investigate this run if the failure was not GitHub's user-owned-private feature gate."
 
       - name: Summarize
         if: always()

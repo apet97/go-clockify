@@ -552,6 +552,9 @@ var (
 	// Path is normalized at the call site to a bounded set (/mcp, /health,
 	// /ready, /metrics, /other) to prevent cardinality blowup from probes.
 	HTTPRequestsTotal *Counter
+	// HTTPAdmissionRejectionsTotal counts app-layer HTTP admission limiter
+	// rejections before a request reaches JSON-RPC dispatch.
+	HTTPAdmissionRejectionsTotal *Counter
 	// HTTPRequestDuration records HTTP request wall-clock duration.
 	HTTPRequestDuration *Histogram
 	// ReadyState is 1 when the server is ready, 0 otherwise.
@@ -575,11 +578,18 @@ var (
 	UpstreamRetryAfterUnparseableTotal *Counter
 	// ProtocolErrorsTotal counts JSON-RPC protocol-level errors by code.
 	ProtocolErrorsTotal *Counter
+	// ProtocolVersionHeaderMissingTotal counts post-initialize streamable HTTP
+	// requests that omitted Mcp-Protocol-Version. Default-compatible mode
+	// accepts them; strict deployments can reject them.
+	ProtocolVersionHeaderMissingTotal *Counter
 	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
 	PanicsRecoveredTotal *Counter
 	// GRPCSendPumpPanicsTotal counts panics recovered from the gRPC
 	// Exchange send-pump goroutine.
 	GRPCSendPumpPanicsTotal *Counter
+	// GRPCNotificationDropsTotal counts gRPC server-initiated
+	// notifications dropped before they reached a client stream.
+	GRPCNotificationDropsTotal *Counter
 	// ClockifyResponsesOversizeTotal counts upstream Clockify responses
 	// rejected because the body exceeded the client's hard cap. Lets
 	// operators detect adversarial / misconfigured upstreams that
@@ -590,8 +600,9 @@ var (
 	GRPCAuthRejectionsTotal *Counter
 	// AuditEventsTotal counts audit-record attempts (all non-read-only calls).
 	AuditEventsTotal *Counter
-	// AuditFailuresTotal counts audit persistence failures by coarse reason class.
-	// Label "reason" uses a small fixed vocabulary: "persist_error".
+	// AuditFailuresTotal counts audit persistence failures by coarse reason
+	// class and audit phase. Label "reason" uses a small fixed vocabulary:
+	// "persist_error". Label "phase" uses "intent", "outcome", or "single".
 	AuditFailuresTotal *Counter
 	// SSESubscriberDropsTotal counts SSE subscribers dropped because the
 	// hub's non-blocking publish saw their channel full. Reason vocabulary:
@@ -604,6 +615,10 @@ var (
 	// signals operator-facing lost-event risk even though SSE semantics
 	// accept it.
 	SSEReplayMissesTotal *Counter
+	// StreamableEventsAliasRequestsTotal counts GET /mcp/events legacy
+	// alias use. Canonical streamable HTTP clients should use GET /mcp;
+	// any non-zero value identifies old clients to migrate.
+	StreamableEventsAliasRequestsTotal *Counter
 	// StreamableSessionsReapedTotal counts sessions evicted by the
 	// streamable HTTP session reaper. Reason vocabulary: "ttl" (TTL
 	// expired) and "orphan" (no subscribers past the idle grace).
@@ -648,6 +663,11 @@ func init() {
 		"clockify_mcp_http_requests_total",
 		"HTTP requests by path (normalized), method, and status.",
 		"path", "method", "status",
+	)
+	HTTPAdmissionRejectionsTotal = Default.NewCounter(
+		"clockify_mcp_http_admission_rejections_total",
+		"HTTP requests rejected by the app-layer admission limiter, by path and reason.",
+		"path", "reason",
 	)
 	HTTPRequestDuration = Default.NewHistogram(
 		"clockify_mcp_http_request_duration_seconds",
@@ -694,6 +714,10 @@ func init() {
 		"JSON-RPC protocol-level error responses by error code.",
 		"code",
 	)
+	ProtocolVersionHeaderMissingTotal = Default.NewCounter(
+		"clockify_mcp_protocol_version_header_missing_total",
+		"Post-initialize streamable HTTP requests missing Mcp-Protocol-Version.",
+	)
 	PanicsRecoveredTotal = Default.NewCounter(
 		"clockify_mcp_panics_recovered_total",
 		"Panics recovered from tool handlers or HTTP handlers by site.",
@@ -702,6 +726,11 @@ func init() {
 	GRPCSendPumpPanicsTotal = Default.NewCounter(
 		"clockify_grpc_send_pump_panics_total",
 		"Panics recovered from the gRPC Exchange send-pump goroutine.",
+	)
+	GRPCNotificationDropsTotal = Default.NewCounter(
+		"clockify_mcp_grpc_notification_drops_total",
+		"gRPC server-initiated notifications dropped before reaching a client stream, by reason.",
+		"reason",
 	)
 	ClockifyResponsesOversizeTotal = Default.NewCounter(
 		"clockify_mcp_responses_oversize_total",
@@ -719,8 +748,8 @@ func init() {
 	)
 	AuditFailuresTotal = Default.NewCounter(
 		"clockify_mcp_audit_failures_total",
-		"Audit persistence failures by coarse reason class.",
-		"reason",
+		"Audit persistence failures by coarse reason class and audit phase.",
+		"reason", "phase",
 	)
 	SSESubscriberDropsTotal = Default.NewCounter(
 		"clockify_mcp_sse_subscriber_drops_total",
@@ -730,6 +759,10 @@ func init() {
 	SSEReplayMissesTotal = Default.NewCounter(
 		"clockify_mcp_sse_replay_misses_total",
 		"Last-Event-ID resumes that requested a position older than the live backlog ring; client loses events between lastEventID and the oldest retained id.",
+	)
+	StreamableEventsAliasRequestsTotal = Default.NewCounter(
+		"clockify_mcp_streamable_events_alias_requests_total",
+		"GET /mcp/events legacy streamable HTTP SSE alias requests. Non-zero values identify older clients that should migrate to GET /mcp.",
 	)
 	StreamableSessionsReapedTotal = Default.NewCounter(
 		"clockify_mcp_sessions_reaped_total",

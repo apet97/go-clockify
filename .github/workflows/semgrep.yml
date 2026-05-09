@@ -1,0 +1,38 @@
+name: Semgrep
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Weekly CE scan so Semgrep is not only a manual candidate-tag step.
+    # Candidate-tag Group 6 evidence still requires the explicit
+    # p/default command captured by scripts/prepare-rc-evidence.sh.
+    - cron: "47 4 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep CE
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    container:
+      image: semgrep/semgrep:1.162.0@sha256:9349edbadf90c3f3c0c3f55867625354e89680e6fa10d9034042af52fdb0e0d0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Semgrep
+        run: >
+          semgrep scan
+          --config p/default
+          --metrics=off
+          --error
+          --exclude .git
+          --exclude .bench
+          --exclude clockify-mcp
+          .

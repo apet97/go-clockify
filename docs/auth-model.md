@@ -115,6 +115,17 @@ principal mismatch" — see
 [`production-readiness.md` § Session rehydration](production-readiness.md#session-rehydration-streamable-http-multi-replica)
 and [`clients.md` § Session Rehydration Boundaries](clients.md#session-rehydration-boundaries).
 
+The v1.x Postgres control-plane posture is **application-layer tenant
+scoping**. Tables such as `sessions` and `audit_events` store
+`tenant_id`, and every production access path reaches those rows
+through authenticated request handling, session principal checks, and
+tenant-keyed audit writes. The schema does not currently enable
+Postgres row-level security or require `SET LOCAL app.current_tenant`
+before reads. That is acceptable for the community/self-hosted launch
+profile and is covered by cross-tenant E2E tests, but a paid
+commercial hosted plane should treat database-enforced RLS as a
+separate defense-in-depth design gate.
+
 ## Failure modes
 
 Categorised by [`authn.FailureCategory`](../internal/authn/category.go),
@@ -131,6 +142,8 @@ returned over the wire by
 | OIDC issuer mismatch | 401 | `Unauthenticated` | `unexpected issuer` | `token_verification` |
 | OIDC audience / resource mismatch | 401 | `Unauthenticated` | `unexpected audience`, `token aud does not contain resource URI` | `audience_mismatch` |
 | OIDC strict mode rejects token without `exp` | 401 | `Unauthenticated` | `token missing exp claim (strict mode)` | `token_verification` |
+| OIDC `kid` requirement rejects token without `kid` | 401 | `Unauthenticated` | `oidc token missing kid header` | `token_verification` |
+| OIDC JWT JSON segment exceeds local decode bounds | 401 | `Unauthenticated` | `JWT header too large`, `JWT claims too large` | `claim_validation` |
 | OIDC tenant claim missing under `MCP_REQUIRE_TENANT_CLAIM=1` | 401 | `Unauthenticated` | `oidc token missing tenant claim` | `tenant_claim` |
 | OIDC subject/tenant carries control byte / non-printable Unicode | 401 | `Unauthenticated` | `oidc: <subject\|tenant> contains disallowed byte 0x<hex>` | `claim_validation` / `tenant_claim` |
 | `forward_auth` source not in CIDR allow-list | 401 | `Unauthenticated` | `forward_auth: source X.X.X.X not in MCP_FORWARD_AUTH_TRUSTED_PROXIES allow-list` | `invalid_token` |
@@ -200,6 +213,15 @@ lines 20-36).
   `MCP_AUTH_MODE=oidc` without either `MCP_OIDC_AUDIENCE` or
   `MCP_RESOURCE_URI` set; (b) rejects tokens missing the `exp`
   claim at runtime.
+- **OIDC `kid` requirement** (`MCP_OIDC_REQUIRE_KID=1`) rejects
+  JWTs whose JOSE header omits `kid`. Hosted profiles enable it
+  so single-key JWKS compatibility cannot hide key-selection or
+  rotation drift.
+- **OIDC JWT decode bounds** reject oversized decoded JSON segments
+  before claim parsing: JOSE headers are capped at 16 KiB and claims at
+  128 KiB. These are local parser hardening limits; normal IdP tokens
+  should be far smaller, and HTTP header limits still apply before this
+  auth layer.
 - **`MCP_EXPOSE_AUTH_ERRORS`** is a dev-only knob — when set, the
   HTTP error envelope's `error_description` carries the raw
   authenticator error string. In hosted profiles the field is
@@ -215,7 +237,10 @@ lines 20-36).
   default 60 calls / 60s) keys off `principal.Subject` whenever a
   Principal is in context; the limit is enforced before the tool
   call dispatches and surfaces as
-  `clockify_mcp_per_subject_rate_limited_total`.
+  `clockify_mcp_rate_limit_rejections_total{kind="window",scope="per_token"}`
+  for rolling-window saturation, or the same metric with
+  `kind="concurrency"` for concurrency saturation. When no principal
+  is available, the metric uses `scope="global"`.
 
 ## 5-question reviewer self-quiz
 

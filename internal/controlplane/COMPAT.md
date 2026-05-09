@@ -14,6 +14,9 @@ of truth per backend.
 | Version | Migration file | Ships | Summary |
 |---------|----------------|-------|---------|
 | 1 | `internal/controlplane/postgres/migrations/001_init.sql` | v1.1.0 (Wave B1) | Initial four-table schema: `tenants`, `credential_refs`, `sessions`, `audit_events`, plus `schema_migrations` and hot-path indexes. |
+| 2 | `internal/controlplane/postgres/migrations/002_audit_phase.sql` | v1.2.0 | Adds `audit_events.phase` and `idx_audit_events_phase` for two-phase intent/outcome audit durability. |
+| 3 | `internal/controlplane/postgres/migrations/003_drop_session_affinity_id.sql` | next | Drops the unused `sessions.session_affinity_id` column after ADR 0017 made it obsolete. |
+| 4 | `internal/controlplane/postgres/migrations/004_audit_events_tenant_at_index.sql` | next | Adds `idx_audit_events_tenant_id_at` for tenant-scoped audit review over bounded time windows. |
 
 A version number appears here **once** — migrations are append-only.
 Removing a column is a new row ("version 2 — drop obsolete foo").

@@ -15,6 +15,8 @@ type Material struct {
 	BaseURL   string
 }
 
+const maxInlineCredentialPayloadBytes = 64 * 1024
+
 // Options tunes credential resolution behaviour. Zero value preserves
 // the historical permissive default (all three backends enabled).
 type Options struct {
@@ -109,6 +111,9 @@ func fromFile(ref controlplane.CredentialRef) (Material, error) {
 }
 
 func decodeMaterial(raw string, ref controlplane.CredentialRef) (Material, error) {
+	if len(raw) > maxInlineCredentialPayloadBytes {
+		return Material{}, fmt.Errorf("credential payload exceeds %d byte limit", maxInlineCredentialPayloadBytes)
+	}
 	var payload struct {
 		APIKey    string `json:"api_key"`
 		Workspace string `json:"workspace_id"`

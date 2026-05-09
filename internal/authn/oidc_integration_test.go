@@ -216,6 +216,57 @@ func TestOIDCAuthenticator_NoResourceURI(t *testing.T) {
 	}
 }
 
+// TestOIDCAuthenticator_RequireKID rejects kid-less JWTs under hosted
+// posture. The legacy compatibility path still accepts a kid-less token when
+// the JWKS has exactly one key and OIDCRequireKID is disabled.
+func TestOIDCAuthenticator_RequireKID(t *testing.T) {
+	const (
+		issuer   = "https://issuer.example.test"
+		audience = "clockify-mcp"
+		subject  = "user-42"
+	)
+	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	jwks := buildJWKS(t, "", &privKey.PublicKey)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	defer ts.Close()
+
+	cfg := Config{
+		Mode:                 ModeOIDC,
+		OIDCIssuer:           issuer,
+		OIDCAudience:         audience,
+		OIDCJWKSURL:          ts.URL,
+		OIDCJWKSAllowPrivate: true,
+		HTTPClient:           ts.Client(),
+	}
+	now := time.Now().Unix()
+	tok := signJWT(t, privKey, "", map[string]any{
+		"iss": issuer,
+		"sub": subject,
+		"aud": []string{audience},
+		"exp": now + 300,
+	})
+
+	auth, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New legacy auth: %v", err)
+	}
+	if _, err := authenticate(t, auth, tok); err != nil {
+		t.Fatalf("legacy kid-less single-key path failed: %v", err)
+	}
+
+	cfg.OIDCRequireKID = true
+	auth, err = New(cfg)
+	if err != nil {
+		t.Fatalf("New require-kid auth: %v", err)
+	}
+	if _, err := authenticate(t, auth, tok); err == nil || !strings.Contains(err.Error(), "missing kid") {
+		t.Fatalf("expected missing kid rejection, got: %v", err)
+	}
+}
+
 // TestOIDCAuthenticator_RequireTenantClaim covers the hosted-service
 // switch that disables silent fallback to MCP_DEFAULT_TENANT_ID when a
 // token omits the tenant claim. Without the flag, missing tenant

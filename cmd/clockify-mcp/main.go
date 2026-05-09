@@ -33,6 +33,8 @@ var (
 	version   = "dev"
 	commit    = "unknown"
 	buildDate = "unknown"
+
+	grpcBuildAvailable = svcruntime.GRPCBuildAvailable
 )
 
 func effectiveVersion() string {
@@ -107,6 +109,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if err := validateBuildCapabilities(cfg); err != nil {
+		return err
+	}
 	effective := effectiveVersion()
 	rt, err := svcruntime.New(cfg, svcruntime.NewOpts{
 		Version:       effective,
@@ -161,6 +166,13 @@ func run() error {
 	}
 
 	return rt.Run(ctx)
+}
+
+func validateBuildCapabilities(cfg config.Config) error {
+	if cfg.Transport == "grpc" && !grpcBuildAvailable {
+		return fmt.Errorf("MCP_TRANSPORT=grpc requires a binary built with -tags=grpc; use a clockify-mcp-grpc* release artifact or see docs/deploy/profile-private-network-grpc.md")
+	}
+	return nil
 }
 
 func parseLogLevel(s string) slog.Level {

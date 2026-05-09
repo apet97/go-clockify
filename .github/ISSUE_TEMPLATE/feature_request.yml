@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for suggesting a feature!
+        Thank you for suggesting a feature! Do not include secrets, personal data, or vulnerability details in public issues; use the private GitHub Security Advisory link for security reports.
   - type: textarea
     id: problem
     attributes:

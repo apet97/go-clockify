@@ -120,7 +120,7 @@ check_unchecked_with_evidence \
   "Group 7: verify-bench and bench-baseline-check green"
 
 check_unchecked_with_evidence \
-  "Release artefacts: signed binaries .cosign . SLSA., SBOMs," \
+  "Release artefacts: signed binaries .cosign, plus SLSA when" \
   "Group 7: release artefacts verified"
 
 check_unchecked_with_evidence \

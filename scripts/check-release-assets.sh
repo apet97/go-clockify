@@ -225,20 +225,17 @@ if [ -f "$artifacts_json" ] && command -v jq >/dev/null 2>&1; then
     done < <(jq -r '.[].name' "$artifacts_json" | sort -u | grep -E "$ASSET_RE")
     found_count=${#found_names[@]}
 else
-    declare -A seen
     found_count=0
     found_names=()
-    while IFS= read -r f; do
-        base="$(basename "$f")"
-        if [[ ! "$base" =~ $ASSET_RE ]]; then
-            continue
-        fi
-        if [ -z "${seen[$base]:-}" ]; then
-            seen[$base]=1
-            found_count=$((found_count + 1))
-            found_names+=("$base")
-        fi
-    done < <(find "$DIST" -type f)
+    while IFS= read -r base; do
+        [ -n "$base" ] || continue
+        found_count=$((found_count + 1))
+        found_names+=("$base")
+    done < <(
+        find "$DIST" -type f -exec basename {} \; \
+            | grep -E "$ASSET_RE" \
+            | sort -u || true
+    )
 fi
 
 if [ "$found_count" -ne "$EXPECTED_COUNT" ]; then

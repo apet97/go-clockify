@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -355,11 +356,31 @@ func TestMCPCORSPreflight(t *testing.T) {
 	if got := rec.Header().Get("Access-Control-Allow-Methods"); got != "POST" {
 		t.Fatalf("expected Allow-Methods POST, got %q", got)
 	}
-	if got := rec.Header().Get("Access-Control-Allow-Headers"); got != "Content-Type, Authorization" {
-		t.Fatalf("expected Allow-Headers 'Content-Type, Authorization', got %q", got)
+	if got := rec.Header().Get("Access-Control-Allow-Headers"); got != "Content-Type, Authorization, MCP-Protocol-Version, Last-Event-ID" {
+		t.Fatalf("unexpected Allow-Headers: %q", got)
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://allowed.example.com" {
 		t.Fatalf("expected CORS origin header, got %q", got)
+	}
+}
+
+func TestLegacyHTTPDeprecationHeaders(t *testing.T) {
+	s := newTestServer()
+	handler := s.handleMCP(testBearerAuth(t), nil, true, 2097152)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Deprecation"); got != "true" {
+		t.Fatalf("Deprecation header = %q, want true", got)
+	}
+	if got := rec.Header().Values("Link"); !slices.Contains(got, `</mcp>; rel="successor-version"; type="application/json"`) {
+		t.Fatalf("Link headers = %v, want streamable successor-version link", got)
 	}
 }
 

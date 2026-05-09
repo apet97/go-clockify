@@ -122,6 +122,56 @@ func TestRedactingHandlerCaseInsensitiveSubstringMatching(t *testing.T) {
 	}
 }
 
+func TestRedactingHandlerBoundaryKeyMatchingOptIn(t *testing.T) {
+	record := renderRecordWithHandler(t,
+		NewRedactingHandler,
+		slog.String("tokenizer_results", "safe diagnostics"),
+		slog.String("session_token", "secret-token"),
+		slog.String("x-api-key", "secret-key"),
+		slog.Any("payload", map[string]any{
+			"tokenizer_results": "nested safe diagnostics",
+			"access_token":      "nested-secret",
+		}),
+	)
+
+	if got := record["tokenizer_results"]; got != "[REDACTED]" {
+		t.Fatalf("default substring matching should still redact tokenizer_results, got %v", got)
+	}
+
+	record = renderRecordWithHandler(t,
+		func(inner slog.Handler) *RedactingHandler {
+			return NewRedactingHandler(inner).WithSensitiveKeyBoundaryMatching()
+		},
+		slog.String("tokenizer_results", "safe diagnostics"),
+		slog.String("session_token", "secret-token"),
+		slog.String("x-api-key", "secret-key"),
+		slog.Any("payload", map[string]any{
+			"tokenizer_results": "nested safe diagnostics",
+			"access_token":      "nested-secret",
+		}),
+	)
+
+	if got := record["tokenizer_results"]; got != "safe diagnostics" {
+		t.Fatalf("boundary mode should preserve tokenizer_results, got %v", got)
+	}
+	if got := record["session_token"]; got != "[REDACTED]" {
+		t.Fatalf("boundary mode should still redact session_token, got %v", got)
+	}
+	if got := record["x-api-key"]; got != "[REDACTED]" {
+		t.Fatalf("boundary mode should still redact x-api-key, got %v", got)
+	}
+	payload, ok := record["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected payload object, got %T", record["payload"])
+	}
+	if got := payload["tokenizer_results"]; got != "nested safe diagnostics" {
+		t.Fatalf("boundary mode should preserve nested tokenizer_results, got %v", got)
+	}
+	if got := payload["access_token"]; got != "[REDACTED]" {
+		t.Fatalf("boundary mode should still redact nested access_token, got %v", got)
+	}
+}
+
 func TestRedactingHandlerPreservesAuthModeAndTTL(t *testing.T) {
 	record := renderRecord(t,
 		slog.String("auth_mode", "oidc"),
@@ -239,11 +289,50 @@ func TestRedactingHandlerReflectMapAndSlicePaths(t *testing.T) {
 	}
 }
 
+func TestRedactingHandlerScrubsSecretShapedStringValues(t *testing.T) {
+	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyJ9.abcdefghijklmnopqrstuvwxyz123456"
+	apiKeyURL := "https://example.com/callback?api_key=pk_abcdefghijklmnopqrstuvwxyz123456"
+	privateKey := "-----BEGIN PRIVATE KEY-----\nabcdefghijklmnopqrstuvwxyz\n-----END PRIVATE KEY-----"
+
+	record := renderRecord(t,
+		slog.String("url", apiKeyURL),
+		slog.String("jwt_value", jwt),
+		slog.Any("payload", map[string]any{
+			"callback": "https://example.com/cb?access_token=abcdefghijklmnopqrstuvwxyz",
+			"pem":      privateKey,
+			"note":     "this is a long but harmless operational note",
+		}),
+	)
+
+	if got := record["url"]; got != "[REDACTED]" {
+		t.Fatalf("secret-shaped URL should be redacted, got %v", got)
+	}
+	if got := record["jwt_value"]; got != "[REDACTED]" {
+		t.Fatalf("jwt-shaped value should be redacted, got %v", got)
+	}
+	payload, ok := record["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected payload object, got %T", record["payload"])
+	}
+	for _, key := range []string{"callback", "pem"} {
+		if got := payload[key]; got != "[REDACTED]" {
+			t.Fatalf("%s should be redacted, got %v", key, got)
+		}
+	}
+	if got := payload["note"]; got != "this is a long but harmless operational note" {
+		t.Fatalf("safe long string changed, got %v", got)
+	}
+}
+
 func renderRecord(t *testing.T, attrs ...slog.Attr) map[string]any {
 	t.Helper()
+	return renderRecordWithHandler(t, NewRedactingHandler, attrs...)
+}
 
+func renderRecordWithHandler(t *testing.T, newHandler func(slog.Handler) *RedactingHandler, attrs ...slog.Attr) map[string]any {
+	t.Helper()
 	var buf bytes.Buffer
-	logger := slog.New(NewRedactingHandler(slog.NewJSONHandler(&buf, nil)))
+	logger := slog.New(newHandler(slog.NewJSONHandler(&buf, nil)))
 	logger.LogAttrs(t.Context(), slog.LevelInfo, "test", attrs...)
 
 	var record map[string]any

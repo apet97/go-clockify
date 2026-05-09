@@ -1,0 +1,7 @@
+name: go-clockify-codeql
+
+paths-ignore:
+  # Generated and upstream-shape API client code is covered by unit tests and
+  # contract probes; keep CodeQL focused on server/auth/transport/control-plane
+  # flow where taint findings are actionable for launch review.
+  - internal/clockify/**

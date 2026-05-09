@@ -77,12 +77,12 @@ func metricsMux(opts MetricsServerOptions) *http.ServeMux {
 				writeJSONError(w, http.StatusInternalServerError, "metrics auth misconfigured")
 				return
 			}
-			auth := r.Header.Get("Authorization")
-			if !strings.HasPrefix(auth, "Bearer ") {
+			token, ok := bearerValue(r.Header.Get("Authorization"))
+			if !ok {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
-			if subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(opts.BearerToken)) != 1 {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(opts.BearerToken)) != 1 {
 				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}

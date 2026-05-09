@@ -4,9 +4,16 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
+
+func TestSessionRecordDoesNotExposeSessionAffinityID(t *testing.T) {
+	if _, ok := reflect.TypeOf(SessionRecord{}).FieldByName("SessionAffinityID"); ok {
+		t.Fatal("SessionRecord still exposes phantom SessionAffinityID field")
+	}
+}
 
 // TestOpenMemory verifies the in-memory DSN forms ("memory", "memory://",
 // empty string) all return a usable Store with no on-disk persistence.

@@ -70,11 +70,12 @@ What we promise for the `v1.x` series:
   where we intentionally accept both.
 - **Signed releases.** Every tagged release ships 15 binaries
   (5 default + 4 FIPS + 2 Postgres + 2 gRPC + 2 gRPC + Postgres),
-  each with a per-binary cosign signature, SPDX SBOM, and SLSA
-  build provenance attestation. SLSA was conditional pre-2026-04-22
-  when the repo was user-owned-private (per ADR-0013, now
-  Superseded); it has been mandatory on every release since the
-  public flip. Verification recipe in
+  each with a per-binary cosign signature and SPDX SBOM. SLSA build
+  provenance is attached when GitHub artifact attestations are
+  available for the repository account tier; when GitHub returns
+  "Feature not available" for this user-owned private repository,
+  ADR-0013 keeps SLSA best-effort and the mandatory cryptographic
+  gate is the cosign binary/image chain. Verification recipe in
   [`docs/verification.md`](docs/verification.md).
 - **No surprise removals.** Deprecations are announced one minor
   version before removal. The `MCP_HTTP_MAX_BODY` alias is the

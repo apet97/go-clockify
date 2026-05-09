@@ -20,7 +20,8 @@
 #   MCP_CONTROL_PLANE_DSN  postgres:// or postgresql:// DSN
 #
 # Optional env (sane defaults applied):
-#   MCP_OIDC_ISSUER, MCP_OIDC_AUDIENCE, MCP_TENANT_CLAIM, CLOCKIFY_API_KEY
+#   MCP_OIDC_ISSUER, MCP_OIDC_AUDIENCE, MCP_TENANT_CLAIM,
+#   MCP_DEFAULT_TENANT_ID, CLOCKIFY_API_KEY
 
 set -euo pipefail
 
@@ -66,6 +67,7 @@ env -i \
     MCP_OIDC_ISSUER="${MCP_OIDC_ISSUER:-https://issuer.example.com}" \
     MCP_OIDC_AUDIENCE="${MCP_OIDC_AUDIENCE:-clockify-mcp}" \
     MCP_TENANT_CLAIM="${MCP_TENANT_CLAIM:-tenant_id}" \
+    MCP_DEFAULT_TENANT_ID="${MCP_DEFAULT_TENANT_ID:-prod-fallback-disabled}" \
     CLOCKIFY_API_KEY="${CLOCKIFY_API_KEY:-dummy}" \
     "$BIN" doctor --strict --check-backends >"$OUT" 2>&1
 code=$?

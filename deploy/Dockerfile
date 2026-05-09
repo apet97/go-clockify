@@ -8,9 +8,9 @@
 # happen in its own commit alongside a note about what changed upstream
 # (toolchain bump, CVE fix, etc.). See docs/runbooks/image-digest-pinning.md.
 #
-# Digest resolved from `golang:1.25-bookworm` on 2026-04-14 via
+# Digest resolved from `golang:1.25-bookworm` on 2026-05-09 via
 #   docker buildx imagetools inspect golang:1.25-bookworm
-FROM --platform=$BUILDPLATFORM golang:1.25-bookworm@sha256:29e59af995c51a5bf63d072eca973b918e0e7af4db0e4667aa73f1b8da1a6d8c AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm@sha256:09a7b80838f9cf987d81f86dd96f41306c08012b30e8b20ba8e4b2435e43f24a AS builder
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /build
@@ -78,7 +78,7 @@ ARG BUILD_DATE=unknown
 # OCI image labels for registry UX and supply-chain tooling. org.opencontainers.*
 # is the standard; GitHub + GHCR + Grafana + other scanners index these.
 LABEL org.opencontainers.image.title="clockify-mcp" \
-      org.opencontainers.image.description="Go MCP server for Clockify" \
+      org.opencontainers.image.description="Go MCP server for Clockify: 128 tools, three transports, five policy modes" \
       org.opencontainers.image.source="https://github.com/apet97/go-clockify" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}" \

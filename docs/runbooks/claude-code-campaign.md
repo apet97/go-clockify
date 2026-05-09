@@ -15,12 +15,12 @@ branch per lane:
 - `observability`
 - `ai-agent-ux`
 
-Each worktree gets an ignored `.claude-campaign/prompt.md` file. The
+Each worktree gets an ignored `.agent-campaign/prompt.md` file. The
 launcher opens one iTerm window per lane, waits `0.5` seconds, then
 types a command shaped like:
 
 ```sh
-cd <lane-worktree> && claude --model opus "$(cat <lane-worktree>/.claude-campaign/prompt.md)"
+cd <lane-worktree> && claude --model opus "$(cat <lane-worktree>/.agent-campaign/prompt.md)"
 ```
 
 The sessions then run in parallel. Each prompt tells the agent to make

@@ -42,6 +42,22 @@ func TestMetricsMuxAuth(t *testing.T) {
 		}
 	})
 
+	t.Run("static_bearer_case_insensitive_scheme_and_trimmed_token", func(t *testing.T) {
+		mux := metricsMux(MetricsServerOptions{
+			AuthMode:    "static_bearer",
+			BearerToken: testToken,
+		})
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		req.Header.Set("Authorization", "  bearer   "+testToken+"  ")
+		mux.ServeHTTP(rec, req)
+
+		if rec.Code == http.StatusUnauthorized {
+			t.Fatal("expected NOT 401 for case-insensitive bearer scheme with trimmed token")
+		}
+	})
+
 	t.Run("static_bearer_invalid", func(t *testing.T) {
 		mux := metricsMux(MetricsServerOptions{
 			AuthMode:    "static_bearer",

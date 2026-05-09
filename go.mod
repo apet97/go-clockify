@@ -1,6 +1,6 @@
 module github.com/apet97/go-clockify
 
-go 1.25.9
+go 1.25.10
 
 replace github.com/apet97/go-clockify/internal/tracing/otel => ./internal/tracing/otel
 

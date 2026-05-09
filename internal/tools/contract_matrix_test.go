@@ -13,7 +13,13 @@ func TestToolContractMatrix(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	all := map[string]mcpToolContract{}
 	for _, d := range svc.Registry() {
-		all[d.Tool.Name] = mcpToolContract{readOnly: d.ReadOnlyHint, destructive: d.DestructiveHint, idempotent: d.IdempotentHint, annotations: d.Tool.Annotations}
+		all[d.Tool.Name] = mcpToolContract{
+			readOnly:    d.ReadOnlyHint,
+			destructive: d.DestructiveHint,
+			idempotent:  d.IdempotentHint,
+			dryRun:      schemaHasDryRun(d.Tool.InputSchema),
+			annotations: d.Tool.Annotations,
+		}
 	}
 	for group := range Tier2Groups {
 		descriptors, ok := svc.Tier2Handlers(group)
@@ -21,7 +27,13 @@ func TestToolContractMatrix(t *testing.T) {
 			t.Fatalf("missing tier2 handlers for group %q", group)
 		}
 		for _, d := range descriptors {
-			all[d.Tool.Name] = mcpToolContract{readOnly: d.ReadOnlyHint, destructive: d.DestructiveHint, idempotent: d.IdempotentHint, annotations: d.Tool.Annotations}
+			all[d.Tool.Name] = mcpToolContract{
+				readOnly:    d.ReadOnlyHint,
+				destructive: d.DestructiveHint,
+				idempotent:  d.IdempotentHint,
+				dryRun:      schemaHasDryRun(d.Tool.InputSchema),
+				annotations: d.Tool.Annotations,
+			}
 		}
 	}
 	if len(all) != 128 {
@@ -94,6 +106,7 @@ func TestToolContractMatrix(t *testing.T) {
 		assertBoolAnnotation(t, name, contract.annotations, "readOnlyHint", contract.readOnly)
 		assertBoolAnnotation(t, name, contract.annotations, "destructiveHint", contract.destructive)
 		assertBoolAnnotation(t, name, contract.annotations, "idempotentHint", contract.idempotent)
+		assertBoolAnnotation(t, name, contract.annotations, "dryRun", contract.dryRun)
 
 		expectReadOnlyAllowed := contract.readOnly || introspection[name]
 		if got := readOnly.IsAllowed(name, contract.readOnly); got != expectReadOnlyAllowed {
@@ -115,6 +128,9 @@ func TestToolContractMatrix(t *testing.T) {
 		if contract.destructive && !isDryRun {
 			t.Fatalf("destructive tool %s is missing dry-run interception", name)
 		}
+		if contract.destructive && !contract.dryRun {
+			t.Fatalf("destructive tool %s is missing dry_run in input schema", name)
+		}
 		if !contract.destructive && isDryRun {
 			t.Fatalf("non-destructive tool %s should not be intercepted by global dry-run", name)
 		}
@@ -125,6 +141,7 @@ type mcpToolContract struct {
 	readOnly    bool
 	destructive bool
 	idempotent  bool
+	dryRun      bool
 	annotations map[string]any
 }
 

@@ -93,6 +93,16 @@ spec:
           annotations:
             summary: clockify-mcp rate-limit rejection ratio >5% for 5m
 
+        - alert: ClockifyMCPHTTPAdmissionRejections
+          expr: |
+            sum by (path, reason) (rate(clockify_mcp_http_admission_rejections_total[5m])) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: clockify-mcp HTTP admission limiter rejecting requests
+            description: The app-layer HTTP admission guard is rejecting {{ "{{" }} $labels.reason {{ "}}" }} traffic on {{ "{{" }} $labels.path {{ "}}" }}.
+
         - alert: ClockifyMCPHighLatency
           expr: |
             histogram_quantile(0.99,
@@ -120,4 +130,32 @@ spec:
             severity: warning
           annotations:
             summary: clockify-mcp 401 rate elevated
+
+        - alert: ClockifyMCPAuditFailure
+          expr: sum by (reason, phase) (rate(clockify_mcp_audit_failures_total[5m])) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: clockify-mcp audit persistence failure
+            description: Audit persistence is failing; inspect docs/runbooks/audit-durability.md before continuing hosted traffic.
+
+        - alert: ClockifyMCPAuditOutcomeNotDurable
+          expr: |
+            sum(rate(clockify_mcp_audit_failures_total{reason="persist_error",phase="outcome"}[5m])) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: clockify-mcp audit outcome row not durable
+            description: A mutation completed but the post-handler audit outcome row was not durable. Inspect docs/runbooks/audit-durability.md before continuing hosted traffic.
+
+        - alert: ClockifyMCPStreamableEventsAliasUse
+          expr: sum(increase(clockify_mcp_streamable_events_alias_requests_total[30m])) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: legacy /mcp/events streamable HTTP alias is in use
+            description: Clients are still using GET /mcp/events. Migrate them to the canonical GET /mcp SSE stream before retiring the alias.
 {{- end }}

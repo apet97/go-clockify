@@ -226,7 +226,11 @@ projects the fields the snapshot table covers. Any divergence from
 the target table above should be either reconciled (update the table
 in a PR labelled `governance-snapshot`) or fixed (re-apply the target
 rules via the GitHub UI). The script exits non-zero if the branch is
-unprotected, which is itself the signal to reconcile.
+unprotected, or if GitHub hides the protection API for a private
+repository without a paid plan. In the private-repo limitation case,
+the script prints the GitHub error and does not emit a null-field
+pseudo-snapshot; reconcile from the GitHub UI or make an explicit
+repository visibility / GitHub plan decision.
 
 ## Target state for paid / public hosted launch
 

@@ -38,22 +38,6 @@ if [ ! -f "$script" ]; then
     exit 1
 fi
 
-# The gate at scripts/check-release-assets.sh uses `declare -A`
-# (associative arrays, bash 4+) on its find-fallback dedup path.
-# macOS still ships bash 3.2 by default; CI runs Ubuntu bash 5+.
-# When the host bash is < 4 we cannot exercise the find-fallback or
-# the cardinality cases without the gate itself failing on a
-# language-level error before any assertion runs. Skip the suite
-# with a clear note in that case — CI is the authoritative gate.
-if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
-    printf '[skip] check-release-assets tests require bash 4+ '
-    printf '(host bash %s detected). The gate uses `declare -A` for '\
-'its find-fallback dedup path; CI (Ubuntu bash 5+) runs the suite '\
-'fully. Install a modern bash (`brew install bash`) to run locally.\n' \
-        "${BASH_VERSION%%[!0-9.]*}" >&2
-    exit 0
-fi
-
 tests_run=0
 tests_failed=0
 tests_skipped=0

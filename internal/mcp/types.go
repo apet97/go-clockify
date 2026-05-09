@@ -26,6 +26,19 @@ type RPCError struct {
 	Data    map[string]any `json:"data,omitempty"`
 }
 
+const (
+	RPCCodeSessionInvalid       = -32001
+	RPCCodeServerNotInitialized = -32002
+	RPCCodeOriginNotAllowed     = -32010
+	RPCCodeHostNotAllowed       = -32011
+	RPCCodeRateLimited          = -32012
+	RPCCodeRequestTooLarge      = -32013
+	RPCCodeSessionPrincipal     = -32014
+	RPCCodeMethodNotAllowed     = -32015
+	RPCCodeUnauthenticated      = -32020
+	RPCCodeForbidden            = -32021
+)
+
 // InvalidParamsError is returned from Enforcement.BeforeCall when the tool's
 // input arguments fail schema validation. The tools/call dispatch translates
 // it into a JSON-RPC -32602 (invalid params) response, with Pointer exposed

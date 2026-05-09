@@ -33,6 +33,7 @@ doctor_env() {
         MCP_OIDC_ISSUER="https://issuer.example.com" \
         MCP_OIDC_AUDIENCE="clockify-mcp" \
         MCP_TENANT_CLAIM="tenant_id" \
+        MCP_DEFAULT_TENANT_ID="prod-fallback-disabled" \
         CLOCKIFY_API_KEY="dummy" \
         "$@"
 }

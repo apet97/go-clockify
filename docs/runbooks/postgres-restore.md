@@ -67,3 +67,40 @@ SELECT count(*) FROM audit_events;
 ```
 
 Ensure the row counts match what is expected from the production database at the time of the backup.
+
+## 4. Tenant Isolation / RLS Check
+
+The current v1.x control-plane schema relies on application-layer
+tenant scoping; it does not yet ship database-enforced Postgres RLS
+policies. Do not use this restore runbook as evidence that the
+paid-hosted RLS launch gate is closed until an RLS migration and test
+have landed.
+
+When an RLS migration exists, every production restore drill must add
+these checks before the staging database is used for tenant traffic:
+
+```sql
+-- Confirm tenant-scoped tables have row security enabled.
+SELECT relname, relrowsecurity
+FROM pg_class
+WHERE relname IN ('tenants', 'credential_refs', 'sessions', 'audit_events');
+
+-- Confirm the expected tenant policies were restored.
+SELECT schemaname, tablename, policyname
+FROM pg_policies
+WHERE tablename IN ('tenants', 'credential_refs', 'sessions', 'audit_events')
+ORDER BY tablename, policyname;
+```
+
+Then run a two-tenant smoke against the restored staging deployment:
+
+1. Set the application tenant context for tenant A and confirm tenant
+   B rows are not visible.
+2. Set the application tenant context for tenant B and confirm tenant
+   A rows are not visible.
+3. Run `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends`
+   against the restored staging deployment.
+
+If any table reports `relrowsecurity = false`, if an expected policy
+is missing, or if the two-tenant smoke can read across tenants, treat
+the restore as failed and keep the environment closed to traffic.

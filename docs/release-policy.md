@@ -81,6 +81,9 @@ When a breaking change is planned for the next major:
    surface.
 
 This gives operators a documented window to migrate without surprise.
+The legacy POST-only HTTP transport's current migration signal and
+future `Sunset` handling are documented in
+[`docs/runbooks/legacy-http-eol.md`](runbooks/legacy-http-eol.md).
 
 ## Backport criteria
 
@@ -151,7 +154,7 @@ weekly thereafter, so delayed drift surfaces as a
 
 ## Launch-candidate evidence
 
-For the current official Clockify launch-candidate workstream, release
+For the current Clockify launch-candidate review workstream, release
 policy evidence is still external. Do not mark the project launch-ready
 from local gates alone. The candidate tag must have:
 
@@ -162,7 +165,8 @@ from local gates alone. The candidate tag must have:
   sampled by `release-smoke.yml`.
 - Reference `clockify-mcp doctor --strict` and
   `clockify-mcp-postgres doctor --strict --check-backends` outputs
-  archived alongside the release notes.
+  archived alongside the release notes. For release-smoke evidence,
+  this is the `release-smoke-doctor-output` workflow artifact.
 
 Use
 [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)

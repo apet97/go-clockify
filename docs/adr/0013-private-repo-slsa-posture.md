@@ -68,8 +68,11 @@ Release-smoke now:
 2. On success — as today — the step passes.
 3. On failure — the wrapper inspects the error:
    - If the error matches `Feature not available for
-     user-owned private repositor` or `HTTP 404`, the step logs a
-     `::notice::` titled "SLSA attestation skipped" and exits 0.
+     user-owned private repositor`, the step logs a `::notice::`
+     titled "SLSA attestation skipped" and exits 0.
+   - A bare `HTTP 404` is not enough to skip: that can also mean
+     the expected attestation is missing, the owner is wrong, or the
+     verification target does not match the release asset.
    - Every other failure mode (signature mismatch, missing
      bundle, wrong owner, expired cosign root, tampered
      binary) stays fatal.
@@ -77,9 +80,9 @@ Release-smoke now:
    signature on either binary or image still fails the smoke
    and opens an issue.
 
-The skip is **narrow and explicit**: it fires only on the two
-specific error signatures the attestation service emits when
-the feature gate is off. If GitHub later enables build
+The skip is **narrow and explicit**: it fires only when
+`gh attestation verify` reports the known user-owned-private
+repository feature gate. If GitHub later enables build
 provenance for user-owned private repos, the step will succeed
 and the skip branch becomes dead code — at which point the
 cosign checks continue to gate unchanged.

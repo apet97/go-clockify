@@ -1,13 +1,14 @@
-.PHONY: build test cover fmt vet check clean lint mutation \
+.PHONY: build test cover fmt vet check clean clean-deep lint mutation \
         verify verify-core verify-vuln verify-k8s verify-fips \
         cover-check fuzz-short build-tags http-smoke stdio-smoke \
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench bench-baseline-check \
         build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
-        gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity \
+        gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
         grpc-release-parity \
-        repo-hygiene script-tests actionlint shellcheck live-contract-local \
-        release-check rc-evidence rc-evidence-plan \
+	repo-hygiene script-tests actionlint shellcheck live-contract-local \
+	release-check rc-evidence rc-evidence-plan launch-external-status public-content-audit \
+	license-evidence license-evidence-plan \
         claude-campaign claude-campaign-plan
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -35,7 +36,8 @@ lint:
 		echo "golangci-lint not installed, skipping (CI enforces)"; \
 	fi
 
-# Fast inner-loop check — seconds, not minutes. Use `make verify` before a PR.
+# Fast inner-loop check — seconds, not minutes. Use `make verify` before a PR
+# and `make release-check` before a tag or launch-candidate handoff.
 check: fmt vet test
 
 # Full local verification pipeline. Mirrors the PR-blocking CI jobs where
@@ -44,15 +46,21 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
-# generated catalog, and no TODO/FIXME/TBD markers are left in
-# operator-facing docs. See scripts/check-doc-parity.sh for the
-# exact heuristics.
+# generated catalog, no TODO/FIXME/TBD markers are left in operator-
+# facing docs, SECURITY.md scope covers the advertised live security
+# surfaces, issue templates/support/CODEOWNERS route vulnerabilities
+# and sensitive-path ownership through the public-safe channels,
+# CONTRIBUTING.md keeps a public-compatible HTTPS clone path, and
+# launch checklists/ledgers keep their evidence gates intact. See
+# scripts/check-doc-parity.sh and companion launch-check scripts for
+# the exact heuristics.
 doc-parity:
 	bash scripts/check-doc-parity.sh
+	bash scripts/check-launch-review-ledger.sh
 	bash scripts/check-launch-checklist-parity.sh
 	bash scripts/check-launch-evidence-gate.sh
 
@@ -66,6 +74,9 @@ launch-checklist-parity:
 # -mode=all && git add README.md cmd/clockify-mcp/help_generated.go
 config-doc-parity:
 	bash scripts/check-config-doc-parity.sh
+
+go-version-parity:
+	bash scripts/check-go-version-parity.sh
 
 # repo-hygiene fails on tracked OS / editor / coverage junk. See
 # scripts/check-repo-hygiene.sh for the exact pattern list; .gitignore
@@ -86,7 +97,8 @@ repo-hygiene:
 #     floors; called by both CI and `make cover-check`.
 #   - check-doc-parity.sh — keeps operator docs in sync with code
 #     (env-var content, tool-name catalog match, banned strings,
-#     README↔npm engines parity, dangling markers). Wired into
+#     public onboarding/security/clone routing, README↔npm engines
+#     parity, dangling markers). Wired into
 #     `make verify-core` and the CI `config-doc-parity` job.
 #   - check-repo-hygiene.sh — fails on tracked OS / editor / coverage
 #     junk; called by `make repo-hygiene` and the CI `repo-hygiene`
@@ -114,6 +126,35 @@ repo-hygiene:
 #     checklist.md has a checked box in Groups 1/6/7 without an
 #     evidence URL, workflow_run_id, or _Closed_ annotation. Wired
 #     into make launch-checklist-parity and make doc-parity.
+#   - check-launch-review-ledger.sh — fails when the May 8 launch
+#     review disposition ledger drops any reviewed T/MP/P/D finding ID
+#     or loses the objective-to-artifact completion audit that keeps
+#     open launch evidence gates explicit.
+#   - check-launch-external-status.sh — prints the read-only GitHub/npm,
+#     open-PR, and local-branch evidence checks plus maintainer action
+#     hints for the still-open launch gates; offline stub tests pin the
+#     logic without credentials.
+#   - audit-branch-protection.sh — projects the live branch-protection
+#     API response and fails clearly when GitHub hides it for private
+#     repositories without emitting a null-field pseudo-snapshot.
+#   - check-public-content-audit.sh — reports the read-only public-repo
+#     flip content audit from the May 8 final plan without printing
+#     secret values; gitleaks is summarized from redacted metadata for
+#     candidate branch content and the full working tree, env-like
+#     files are split by candidate/full-tree scope, and internal/private
+#     TODO hits are reported by file and line only. Open/unknown findings
+#     include maintainer action hints without mutating files or history.
+#   - check-go-version-parity.sh — fails when the root Go patch pin
+#     drifts from workspace/module directives, setup-go workflow pins,
+#     current public support docs, or the pinned Docker builder digest.
+#   - check-live-tool-coverage.sh — fails when the generated tool
+#     catalog gains a Tier-2 or API-backed Tier-1 tool that is not at
+#     least named by the livee2e source bundle. Static guard only:
+#     scheduled cron runs remain the authoritative launch evidence.
+#   - collect-license-evidence.sh — prints raw `go list -deps` module
+#     graphs and local license-file candidates for release/build-tag
+#     variants. Legal/product review still decides whether the evidence
+#     clears B.08/L-10; the script does not classify licenses.
 #   - prepare-rc-evidence.sh — prints and runs the post-Group-1
 #     candidate-tag evidence sequence for launch checklist Groups 6/7.
 script-tests:
@@ -126,6 +167,13 @@ script-tests:
 	bash scripts/test-check-release-assets.sh
 	bash scripts/test-check-launch-checklist-parity.sh
 	bash scripts/test-check-launch-evidence-gate.sh
+	bash scripts/test-check-launch-review-ledger.sh
+	bash scripts/test-check-launch-external-status.sh
+	bash scripts/test-audit-branch-protection.sh
+	bash scripts/test-check-public-content-audit.sh
+	bash scripts/test-check-go-version-parity.sh
+	bash scripts/test-check-live-tool-coverage.sh
+	bash scripts/test-collect-license-evidence.sh
 	bash scripts/test-prepare-rc-evidence.sh
 	bash scripts/test-claude-campaign.sh
 
@@ -148,6 +196,18 @@ rc-evidence:
 		exit 2; \
 	fi
 	bash scripts/prepare-rc-evidence.sh "$(TAG)"
+
+launch-external-status:
+	bash scripts/check-launch-external-status.sh
+
+public-content-audit:
+	bash scripts/check-public-content-audit.sh
+
+license-evidence-plan:
+	bash scripts/collect-license-evidence.sh --plan
+
+license-evidence:
+	bash scripts/collect-license-evidence.sh
 
 # shellcheck statically analyses every shell script in scripts/ for
 # the bug classes contract tests can't catch — unquoted vars, set -u
@@ -198,13 +258,21 @@ catalog-drift:
 	       diff -u "$$tmpdir/tool-catalog.md.before" docs/tool-catalog.md | head -80; exit 1; }
 
 verify-vuln:
-	@if command -v govulncheck >/dev/null 2>&1; then \
-		echo "== govulncheck =="; \
-		govulncheck ./...; \
-	else \
-		echo "[verify-vuln] govulncheck not installed, skipping."; \
-		echo "              Install: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
-	fi
+	@go_pin="$$(awk '$$1 == "go" { print $$2; exit }' go.mod)"; \
+	 if [ -z "$$go_pin" ]; then \
+		echo "[verify-vuln] unable to read Go version from go.mod"; \
+		exit 1; \
+	 fi; \
+	 if [ ! -f tools/govulncheck/go.mod ]; then \
+		echo "[verify-vuln] tools/govulncheck/go.mod missing; cannot run pinned scanner"; \
+		exit 1; \
+	 fi; \
+	 echo "== govulncheck (tools/govulncheck, GOTOOLCHAIN=go$$go_pin) =="; \
+	 tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 (cd tools/govulncheck && GOWORK=off GOBIN="$$tmpdir" GOTOOLCHAIN="go$$go_pin" go install golang.org/x/vuln/cmd/govulncheck); \
+	 GOTOOLCHAIN="go$$go_pin" "$$tmpdir/govulncheck" -version; \
+	 GOTOOLCHAIN="go$$go_pin" "$$tmpdir/govulncheck" ./...
 
 verify-k8s:
 	@if command -v kubectl >/dev/null 2>&1 && command -v kubeconform >/dev/null 2>&1 && command -v helm >/dev/null 2>&1; then \
@@ -287,11 +355,20 @@ config-parity:
 clean:
 	rm -f clockify-mcp coverage.out
 
+clean-deep:
+	@if [ "$(CONFIRM)" != "1" ]; then \
+		echo "Refusing destructive cleanup. Re-run as: make clean-deep CONFIRM=1"; \
+		echo "This removes ignored build/scratch artifacts only: clockify-mcp coverage.out dist staging .bench .local .review .agent-campaign* .agent-loop .serena go-clockify"; \
+		exit 2; \
+	fi
+	rm -rf clockify-mcp coverage.out dist staging .bench .local .review \
+		.agent-campaign .agent-campaign-worktrees .agent-loop .serena go-clockify
+
 # release-check composes every pre-ship gate into one laptop-runnable
 # target. Humans run this before tagging; CI runs equivalent steps
-# across the jobs in ci.yml + release.yml. A single green
-# "release-check: OK — shippable" line is the one-word answer to
-# "is this repo shippable right now?".
+# across the jobs in ci.yml + release.yml. A green local gate means
+# the checkout passed local pre-ship checks; launch readiness still
+# depends on the external evidence in docs/launch-candidate-checklist.md.
 #
 # Skips optional tiers (vuln/k8s/fips) when their tools are absent —
 # verify-* tiers print a skip notice and return 0 — so the gate
@@ -304,7 +381,7 @@ release-check:
 	@echo "== release-check: config + doc parity =="
 	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
-	$(MAKE) repo-hygiene script-tests actionlint shellcheck build-tags http-smoke stdio-smoke
+	$(MAKE) repo-hygiene script-tests go-version-parity actionlint shellcheck build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
 	$(MAKE) verify-doctor-strict
 	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
@@ -315,7 +392,7 @@ release-check:
 	else \
 		echo "[release-check] kubectl/kubeconform/helm missing — skipping k8s render (CI runs the full check)."; \
 	fi
-	@echo "release-check: OK — shippable"
+	@echo "release-check: OK — local pre-ship gate passed"
 
 # Benchmark capture + regression gate.
 #

@@ -20,6 +20,10 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+const grpcNotifyEnqueueTimeout = 100 * time.Millisecond
+
+var errGRPCNotificationQueueFull = errors.New("grpctransport: notification dropped: slow consumer")
+
 // Options configures a Serve invocation. Bind is required; Server is the
 // shared mcp.Server instance every stream will dispatch against. MaxRecvSize
 // caps per-frame inbound bytes; when unset it inherits Server.MaxMessageSize
@@ -45,6 +49,7 @@ type Options struct {
 	ReauthInterval       time.Duration
 	ForwardTenantHeader  string
 	ForwardSubjectHeader string
+	PeerCIDRAllow        []*net.IPNet
 	TLSConfig            *tls.Config
 }
 
@@ -90,6 +95,7 @@ func Serve(ctx context.Context, opts Options) error {
 			reauthInterval:       opts.ReauthInterval,
 			forwardTenantHeader:  opts.ForwardTenantHeader,
 			forwardSubjectHeader: opts.ForwardSubjectHeader,
+			peerCIDRAllow:        opts.PeerCIDRAllow,
 			mtls:                 opts.TLSConfig != nil && opts.TLSConfig.ClientAuth == tls.RequireAndVerifyClientCert,
 		}
 		serverOpts = append(serverOpts,
@@ -100,6 +106,7 @@ func Serve(ctx context.Context, opts Options) error {
 	grpcSrv := grpc.NewServer(serverOpts...)
 	grpcSrv.RegisterService(&desc, handler)
 	grpcSrv.RegisterService(&healthDesc, hs)
+	registerOptionalReflection(grpcSrv)
 
 	ln := opts.Listener
 	if ln == nil {
@@ -109,10 +116,15 @@ func Serve(ctx context.Context, opts Options) error {
 			return fmt.Errorf("grpctransport: listen %s: %w", opts.Bind, err)
 		}
 	}
+	if opts.TLSConfig == nil && grpcPlaintextNonLoopback(ln.Addr()) {
+		_ = ln.Close()
+		return fmt.Errorf("grpctransport: plaintext bind to non-loopback %s refused; set MCP_GRPC_TLS_CERT and MCP_GRPC_TLS_KEY", ln.Addr().String())
+	}
 
 	go func() {
 		<-ctx.Done()
 		slog.Info("grpc_shutdown", "reason", "context cancelled")
+		opts.Server.SetReadyCached(false)
 		stopped := make(chan struct{})
 		go func() {
 			grpcSrv.GracefulStop()
@@ -131,6 +143,17 @@ func Serve(ctx context.Context, opts Options) error {
 		return err
 	}
 	return nil
+}
+
+func grpcPlaintextNonLoopback(addr net.Addr) bool {
+	tcp, ok := addr.(*net.TCPAddr)
+	if !ok {
+		return false
+	}
+	if tcp.IP == nil || tcp.IP.IsUnspecified() {
+		return true
+	}
+	return !tcp.IP.IsLoopback()
 }
 
 // exchangeServer implements the mcpServerIface contract registered by the
@@ -160,10 +183,10 @@ type exchangeServer struct {
 func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 	ctx := stream.Context()
 
-	// Buffered send channel absorbs notification bursts without stalling
-	// the hub; 64 is headroom for typical notification fan-out (metrics
-	// events, list_changed, progress). The capacity is not load-bearing —
-	// Notify blocks on ctx when full.
+	// Buffered send channel absorbs notification bursts without stalling the
+	// hub; 64 is headroom for typical notification fan-out (metrics events,
+	// list_changed, progress). Notify gives up on a full queue after a short
+	// timeout so one slow stream cannot stall every other notifier.
 	sends := make(chan []byte, 64)
 	sendDone := make(chan error, 1)
 
@@ -273,13 +296,15 @@ func (n *streamNotifier) Notify(method string, params any) error {
 	if err != nil {
 		return fmt.Errorf("grpctransport: notify marshal: %w", err)
 	}
-	// Block on the send channel rather than dropping: a full queue means
-	// SendMsg is slow, and dropping would violate the notifier's "best
-	// effort in order" contract with the hub. ctx.Done is the escape
-	// hatch so a dead stream cannot hold the notifier hub forever.
+	timer := time.NewTimer(grpcNotifyEnqueueTimeout)
+	defer timer.Stop()
+
 	select {
 	case n.sends <- payload:
 		return nil
+	case <-timer.C:
+		metrics.GRPCNotificationDropsTotal.Inc("slow_consumer")
+		return errGRPCNotificationQueueFull
 	case <-n.ctx.Done():
 		return n.ctx.Err()
 	}

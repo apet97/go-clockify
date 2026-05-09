@@ -9,15 +9,12 @@
 # detailed auth errors leaking to clients — trips a dedicated job
 # rather than hiding inside the broader test run.
 #
-# The gRPC transport currently always builds (no `-tags=grpc` wall) so
-# a default `go test ./internal/transport/grpc` suffices. The script
-# uses `-run` to scope to the auth/mTLS regression tests; running the
-# whole package would still catch them but a focused run keeps this
-# job's failure output actionable when the broader test job is also
-# red.
-#
-# If a future refactor moves the gRPC suite behind a build tag, add
-# `-tags=grpc` to the invocation below and update the CI job.
+# The production binary links gRPC only when built with `-tags=grpc`,
+# but the transport implementation lives in its own submodule and its
+# auth tests intentionally run directly without root build tags. The
+# script uses `-run` to scope to the auth/mTLS regression tests; running
+# the whole package would still catch them but a focused run keeps this
+# job's failure output actionable when the broader test job is also red.
 
 set -euo pipefail
 

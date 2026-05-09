@@ -16,6 +16,7 @@ func TestFromEnvDefaults(t *testing.T) {
 	rl := FromEnv()
 	if rl == nil {
 		t.Fatal("expected non-nil RateLimiter with default env")
+		return
 	}
 	if rl.maxConcurrent != 10 {
 		t.Errorf("maxConcurrent = %d; want 10", rl.maxConcurrent)
@@ -35,6 +36,7 @@ func TestFromEnvWithAcquireTimeoutRespectsOverride(t *testing.T) {
 	rl := FromEnvWithAcquireTimeout(250 * time.Millisecond)
 	if rl == nil {
 		t.Fatal("expected non-nil RateLimiter with default env")
+		return
 	}
 	if rl.acquireTimeout != 250*time.Millisecond {
 		t.Fatalf("acquireTimeout = %v; want 250ms", rl.acquireTimeout)

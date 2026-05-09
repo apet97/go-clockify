@@ -613,6 +613,14 @@ func TestDecodeJWT(t *testing.T) {
 		}
 	})
 
+	t.Run("oversized_header", func(t *testing.T) {
+		tooLargeHeader := enc(`{"alg":"RS256","kid":"` + strings.Repeat("a", maxJWTHeaderJSONBytes) + `"}`)
+		token := tooLargeHeader + "." + claims + "." + sig
+		if _, _, _, _, err := decodeJWT(token); err == nil || !strings.Contains(err.Error(), "JWT header too large") {
+			t.Fatalf("expected JWT header size error, got: %v", err)
+		}
+	})
+
 	t.Run("bad_json_header", func(t *testing.T) {
 		token := enc("not-json") + "." + claims + "." + sig
 		if _, _, _, _, err := decodeJWT(token); err == nil {
@@ -624,6 +632,14 @@ func TestDecodeJWT(t *testing.T) {
 		token := header + "." + enc("not-json") + "." + sig
 		if _, _, _, _, err := decodeJWT(token); err == nil {
 			t.Fatal("expected JSON claims error")
+		}
+	})
+
+	t.Run("oversized_claims", func(t *testing.T) {
+		tooLargeClaims := enc(`{"iss":"https://issuer.example.com","sub":"` + strings.Repeat("a", maxJWTClaimsJSONBytes) + `"}`)
+		token := header + "." + tooLargeClaims + "." + sig
+		if _, _, _, _, err := decodeJWT(token); err == nil || !strings.Contains(err.Error(), "JWT claims too large") {
+			t.Fatalf("expected JWT claims size error, got: %v", err)
 		}
 	})
 
@@ -1000,6 +1016,14 @@ func TestBearerTokenParsing(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("Authorization", "Bearer my-token")
+		got, ok := bearerToken(req)
+		if !ok || got != "my-token" {
+			t.Fatalf("got %q ok=%v", got, ok)
+		}
+	})
+	t.Run("case_insensitive_scheme_and_trimmed_token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "  bearer   my-token  ")
 		got, ok := bearerToken(req)
 		if !ok || got != "my-token" {
 			t.Fatalf("got %q ok=%v", got, ok)

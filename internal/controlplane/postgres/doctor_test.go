@@ -97,6 +97,31 @@ func TestDoctorCheckRequiresMigration002Row(t *testing.T) {
 	}
 }
 
+// TestDoctorCheckRequiresMigration003Row mirrors the migration-row guard
+// for the session_affinity_id removal. A hand-applied DROP COLUMN without
+// schema_migrations version 3 recorded is drift, not a healthy schema.
+func TestDoctorCheckRequiresMigration003Row(t *testing.T) {
+	store := openStore(t)
+	checker := asDoctorChecker(t, store)
+	pool := withDirectPool(t)
+	ctx := context.Background()
+
+	if _, err := pool.Exec(ctx, `DELETE FROM schema_migrations WHERE version = 3`); err != nil {
+		t.Fatalf("delete row: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES (3) ON CONFLICT DO NOTHING`)
+	})
+
+	err := checker.DoctorCheck(ctx)
+	if err == nil {
+		t.Fatal("DoctorCheck succeeded with migration 003 row missing; expected failure")
+	}
+	if !strings.Contains(err.Error(), "migration 003_drop_session_affinity_id is not recorded") {
+		t.Fatalf("error %q did not name the missing migration row", err.Error())
+	}
+}
+
 // TestDoctorCheckRequiresAuditPhaseColumn plants the inverse: the
 // migration row exists but the phase column has been dropped (e.g. a
 // destructive ALTER TABLE by an operator). DoctorCheck must refuse.
@@ -123,5 +148,29 @@ func TestDoctorCheckRequiresAuditPhaseColumn(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "audit_events.phase column is missing") {
 		t.Fatalf("error %q did not name the missing column", err.Error())
+	}
+}
+
+// TestDoctorCheckRejectsSessionAffinityColumn ensures the P1-7 cleanup is
+// durable: after migration 003, the old phantom column must stay absent.
+func TestDoctorCheckRejectsSessionAffinityColumn(t *testing.T) {
+	store := openStore(t)
+	checker := asDoctorChecker(t, store)
+	pool := withDirectPool(t)
+	ctx := context.Background()
+
+	if _, err := pool.Exec(ctx, `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS session_affinity_id TEXT NOT NULL DEFAULT ''`); err != nil {
+		t.Fatalf("add column: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `ALTER TABLE sessions DROP COLUMN IF EXISTS session_affinity_id`)
+	})
+
+	err := checker.DoctorCheck(ctx)
+	if err == nil {
+		t.Fatal("DoctorCheck succeeded with session_affinity_id present; expected failure")
+	}
+	if !strings.Contains(err.Error(), "sessions.session_affinity_id column is still present") {
+		t.Fatalf("error %q did not name the leftover column", err.Error())
 	}
 }

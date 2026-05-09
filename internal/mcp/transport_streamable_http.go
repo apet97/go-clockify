@@ -121,6 +121,19 @@ type StreamableHTTPOptions struct {
 	// avoid making honest http:// URLs unreachable on misconfigured
 	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
 	BehindHTTPSProxy bool
+	// AdmissionLimits configures process-local HTTP admission guards for
+	// POST /mcp and GET /mcp. These limits protect the application before
+	// JSON-RPC dispatch; multi-replica hosted deployments still need
+	// cross-replica gateway limits.
+	AdmissionLimits HTTPAdmissionLimits
+	// RequireProtocolVersionHeader, when true, rejects post-initialize
+	// streamable HTTP requests that omit Mcp-Protocol-Version. Default false
+	// preserves compatibility with older clients while still counting missing
+	// headers for operator migration visibility.
+	RequireProtocolVersionHeader bool
+	// DefaultProtocolVersion is the fallback initialize protocolVersion when a
+	// client omits params.protocolVersion. Empty means newest supported.
+	DefaultProtocolVersion string
 }
 
 type streamSession struct {
@@ -164,6 +177,7 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		store:                    opts.ControlPlane,
 		items:                    map[string]*streamSession{},
 	}
+	admission := newHTTPAdmissionLimiter(opts.AdmissionLimits)
 	go mgr.reapLoop(ctx)
 
 	mux := http.NewServeMux()
@@ -187,16 +201,16 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		}
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}))
-	mux.Handle("POST /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
-	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr)))
+	mux.Handle("POST /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr, admission)))
+	mux.Handle("OPTIONS /mcp", observeHTTPH("/mcp", streamableRPCHandler(opts, mgr, admission)))
 	// GET /mcp is the spec-canonical SSE stream for server→client
 	// notifications (MCP Streamable HTTP 2025-03-26 §3.3). GET /mcp/events
 	// is the legacy alias from the pre-1.0 transport shape; it now
 	// stays mounted indefinitely — under ADR-0012 removing an
 	// operator-facing route is a major-version bump, and clients
 	// pinned to the old path during the v0.x line still rely on it.
-	mux.Handle("GET /mcp", observeHTTPH("/mcp", streamableEventsHandler(opts, mgr)))
-	mux.Handle("GET /mcp/events", observeHTTPH("/mcp/events", streamableEventsHandler(opts, mgr)))
+	mux.Handle("GET /mcp", observeHTTPH("/mcp", streamableEventsHandler(opts, mgr, admission)))
+	mux.Handle("GET /mcp/events", observeHTTPH("/mcp/events", streamableEventsHandler(opts, mgr, admission)))
 	if opts.ProtectedResource != nil {
 		mux.Handle("/.well-known/oauth-protected-resource",
 			observeHTTPH("/.well-known/oauth-protected-resource", opts.ProtectedResource))
@@ -258,7 +272,7 @@ func applyOriginPolicy(w http.ResponseWriter, r *http.Request, opts StreamableHT
 		return true
 	}
 	if !isOriginAllowed(origin, opts.AllowedOrigins, opts.AllowAnyOrigin) {
-		writeJSONError(w, http.StatusForbidden, "origin not allowed")
+		writeJSONRPCError(w, http.StatusForbidden, RPCCodeOriginNotAllowed, "origin not allowed")
 		return false
 	}
 	if opts.AllowAnyOrigin {
@@ -270,11 +284,12 @@ func applyOriginPolicy(w http.ResponseWriter, r *http.Request, opts StreamableHT
 	return true
 }
 
-func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
+func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager, admissionArg ...*httpAdmissionLimiter) http.Handler {
+	admission := optionalHTTPAdmission(admissionArg)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		applyHTTPBaselineHeaders(w, r, opts.BehindHTTPSProxy)
 		if opts.StrictHostCheck && !isHostAllowed(r.Host, opts.AllowedOrigins, opts.AllowAnyOrigin) {
-			writeJSONError(w, http.StatusForbidden, "host not allowed")
+			writeJSONRPCError(w, http.StatusForbidden, RPCCodeHostNotAllowed, "host not allowed")
 			return
 		}
 		if !applyOriginPolicy(w, r, opts) {
@@ -282,13 +297,16 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Session-Id, X-MCP-Session-ID, MCP-Protocol-Version")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Session-Id, X-MCP-Session-ID, MCP-Protocol-Version, Last-Event-ID")
 			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		if r.Method != http.MethodPost {
-			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			writeJSONRPCError(w, http.StatusMethodNotAllowed, RPCCodeMethodNotAllowed, "method not allowed")
+			return
+		}
+		if !applyHTTPAdmissionIP(w, r, admission, opts.BehindHTTPSProxy) {
 			return
 		}
 		deadlineWriter := newLazyStreamablePOSTWriteDeadline(w, opts.POSTWriteTimeout)
@@ -300,11 +318,14 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			writeAuthFailure(w, err, opts.ExposeAuthErrors)
 			return
 		}
+		if !applyHTTPAdmissionPrincipal(w, r, admission, principal) {
+			return
+		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 		r.Body = http.MaxBytesReader(w, r.Body, opts.MaxBodySize)
 		req, tooLarge, err := decodeSingleRequest(r.Body)
 		if tooLarge {
-			writeJSONError(w, http.StatusRequestEntityTooLarge, "request too large")
+			writeJSONRPCError(w, http.StatusRequestEntityTooLarge, RPCCodeRequestTooLarge, "request too large")
 			return
 		}
 		if err != nil {
@@ -319,6 +340,13 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		}
 		var session *streamSession
 		if req.Method == "initialize" {
+			if vErr := validateInitializeProtocolVersionHeader(r, req, opts.DefaultProtocolVersion); vErr != nil {
+				metrics.ProtocolErrorsTotal.Inc("protocol_version_mismatch")
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(Response{JSONRPC: "2.0", ID: req.ID, Error: &RPCError{Code: -32600, Message: vErr.Error()}})
+				return
+			}
 			id, err := randomID()
 			if err != nil {
 				writeJSONError(w, http.StatusInternalServerError, "session id generation failed")
@@ -332,16 +360,16 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 		} else {
 			sessionID := sessionIDFromRequest(r)
 			if sessionID == "" {
-				writeJSONError(w, http.StatusBadRequest, "missing session id")
+				writeJSONRPCError(w, http.StatusBadRequest, RPCCodeSessionInvalid, "missing session id")
 				return
 			}
 			session, err = mgr.get(r.Context(), sessionID, principal, opts)
 			if err != nil {
 				if errors.Is(err, errSessionPrincipalMismatch) {
-					writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+					writeJSONRPCError(w, http.StatusForbidden, RPCCodeSessionPrincipal, "session principal mismatch")
 					return
 				}
-				writeJSONError(w, http.StatusNotFound, "invalid session")
+				writeJSONRPCError(w, http.StatusNotFound, RPCCodeSessionInvalid, "invalid session")
 				return
 			}
 			// Defence-in-depth on the local-hit path: get() does not
@@ -352,10 +380,10 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager)
 			// be rejected here. Rehydration already enforced this
 			// inside get() before invoking Factory.
 			if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
-				writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+				writeJSONRPCError(w, http.StatusForbidden, RPCCodeSessionPrincipal, "session principal mismatch")
 				return
 			}
-			if vErr := validateProtocolVersion(r, session); vErr != nil {
+			if vErr := validateProtocolVersion(r, session, opts.RequireProtocolVersionHeader); vErr != nil {
 				metrics.ProtocolErrorsTotal.Inc("protocol_version_mismatch")
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
@@ -433,14 +461,21 @@ func (w *lazyStreamablePOSTWriteDeadline) clear() {
 	}
 }
 
-func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManager) http.Handler {
+func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManager, admissionArg ...*httpAdmissionLimiter) http.Handler {
+	admission := optionalHTTPAdmission(admissionArg)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		applyHTTPBaselineHeaders(w, r, opts.BehindHTTPSProxy)
+		if r.URL != nil && r.URL.Path == "/mcp/events" {
+			metrics.StreamableEventsAliasRequestsTotal.Inc()
+		}
 		if opts.StrictHostCheck && !isHostAllowed(r.Host, opts.AllowedOrigins, opts.AllowAnyOrigin) {
-			writeJSONError(w, http.StatusForbidden, "host not allowed")
+			writeJSONRPCError(w, http.StatusForbidden, RPCCodeHostNotAllowed, "host not allowed")
 			return
 		}
 		if !applyOriginPolicy(w, r, opts) {
+			return
+		}
+		if !applyHTTPAdmissionIP(w, r, admission, opts.BehindHTTPSProxy) {
 			return
 		}
 		principal, err := opts.Authenticator.Authenticate(r.Context(), r)
@@ -449,27 +484,40 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 			writeAuthFailure(w, err, opts.ExposeAuthErrors)
 			return
 		}
+		if !applyHTTPAdmissionPrincipal(w, r, admission, principal) {
+			return
+		}
 		r = r.WithContext(authn.WithPrincipal(r.Context(), &principal))
 		sessionID := sessionIDFromRequest(r)
 		if sessionID == "" {
-			writeJSONError(w, http.StatusBadRequest, "missing session id")
+			writeJSONRPCError(w, http.StatusBadRequest, RPCCodeSessionInvalid, "missing session id")
 			return
 		}
 		session, err := mgr.get(r.Context(), sessionID, principal, opts)
 		if err != nil {
 			if errors.Is(err, errSessionPrincipalMismatch) {
-				writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+				writeJSONRPCError(w, http.StatusForbidden, RPCCodeSessionPrincipal, "session principal mismatch")
 				return
 			}
-			writeJSONError(w, http.StatusNotFound, "invalid session")
+			writeJSONRPCError(w, http.StatusNotFound, RPCCodeSessionInvalid, "invalid session")
 			return
 		}
 		// Defence-in-depth on the local-hit path; rehydration enforced
 		// inside get(). See streamableRPCHandler for the same pattern.
 		if principal.Subject != session.principal.Subject || principal.TenantID != session.principal.TenantID {
-			writeJSONError(w, http.StatusForbidden, "session principal mismatch")
+			writeJSONRPCError(w, http.StatusForbidden, RPCCodeSessionPrincipal, "session principal mismatch")
 			return
 		}
+		if vErr := validateProtocolVersion(r, session, opts.RequireProtocolVersionHeader); vErr != nil {
+			metrics.ProtocolErrorsTotal.Inc("protocol_version_mismatch")
+			writeJSONRPCError(w, http.StatusBadRequest, -32600, vErr.Error())
+			return
+		}
+		releaseSSE, ok := applyHTTPAdmissionSSE(w, r, admission, session.id)
+		if !ok {
+			return
+		}
+		defer releaseSSE()
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			writeJSONError(w, http.StatusInternalServerError, "streaming unsupported")
@@ -488,7 +536,8 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 		}
 		ch, cancel := session.events.subscribeFrom(lastEventID)
 		defer cancel()
-		// SSE direct writes are text/event-stream framing, not HTML; see ADR 0017.
+		// SSE direct writes are text/event-stream framing, not HTML. The
+		// comment line carries a server-generated session ID, not client text.
 		_, _ = io.WriteString(w, ": session "+session.id+"\n\n") // nosemgrep
 		flusher.Flush()
 		ticker := time.NewTicker(15 * time.Second)
@@ -509,11 +558,13 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 					"method":  event.method,
 					"params":  event.params,
 				})
-				// SSE direct writes are text/event-stream framing, not HTML; see ADR 0017.
+				// SSE ID values are server-generated monotonically increasing
+				// integers written as text/event-stream framing, not HTML.
 				_, _ = io.WriteString(w, "id: "+strconv.FormatUint(event.id, 10)+"\n") // nosemgrep
-				// Event names are server constants in an SSE frame; see ADR 0017.
+				// Event names are server constants in an SSE frame, never caller input.
 				_, _ = io.WriteString(w, "event: "+event.method+"\n") // nosemgrep
-				// Payload is JSON marshaled before SSE framing; see ADR 0017.
+				// Payload is JSON marshaled before SSE framing, so embedded
+				// newlines in values are escaped inside the JSON string.
 				_, _ = io.WriteString(w, "data: "+string(payload)+"\n\n") // nosemgrep
 				flusher.Flush()
 			}
@@ -521,12 +572,40 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 	})
 }
 
+// validateInitializeProtocolVersionHeader rejects a contradictory initialize
+// handshake before the session is created. The request body remains the
+// version-negotiation source of truth, but a present transport header must be
+// supported and agree with the version the body will negotiate; otherwise a
+// proxy that stamps a fixed Mcp-Protocol-Version can silently create a session
+// every later request rejects.
+func validateInitializeProtocolVersionHeader(r *http.Request, req Request, defaultProtocolVersion string) error {
+	headerVersion := strings.TrimSpace(r.Header.Get("Mcp-Protocol-Version"))
+	if headerVersion == "" {
+		return nil
+	}
+	if !slices.Contains(SupportedProtocolVersions, headerVersion) {
+		return fmt.Errorf("unsupported Mcp-Protocol-Version %q", headerVersion)
+	}
+	var params InitializeParams
+	_ = decodeParams(req.Params, &params)
+	negotiated := negotiateProtocolVersion(params.ProtocolVersion, defaultProtocolVersion)
+	if headerVersion != negotiated {
+		return fmt.Errorf("Mcp-Protocol-Version %q does not match initialize protocolVersion %q", headerVersion, negotiated)
+	}
+	return nil
+}
+
 // validateProtocolVersion enforces Mcp-Protocol-Version on non-initialize
-// requests. Absent = accept (pre-2025-03-26 clients). Present but unsupported
-// or mismatched against the session's negotiated version = reject.
-func validateProtocolVersion(r *http.Request, session *streamSession) error {
+// requests. Absent = counted and accepted by default (pre-2025-03-26 clients),
+// or rejected when requireHeader is enabled. Present but unsupported or
+// mismatched against the session's negotiated version = reject.
+func validateProtocolVersion(r *http.Request, session *streamSession, requireHeader bool) error {
 	v := strings.TrimSpace(r.Header.Get("Mcp-Protocol-Version"))
 	if v == "" {
+		metrics.ProtocolVersionHeaderMissingTotal.Inc()
+		if requireHeader {
+			return fmt.Errorf("missing Mcp-Protocol-Version header")
+		}
 		return nil
 	}
 	if !slices.Contains(SupportedProtocolVersions, v) {
@@ -556,6 +635,9 @@ func applyHTTPBaselineHeaders(w http.ResponseWriter, r *http.Request, behindHTTP
 	}
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+	w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
+	w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Permissions-Policy", "()")
 }
@@ -792,7 +874,7 @@ func (m *streamSessionManager) putSession(operation string, record controlplane.
 		return nil
 	}
 	if err := m.store.PutSession(record); err != nil {
-		recordStreamableSessionStoreError(operation, record.ID, err)
+		recordStreamableSessionStoreError(operation, err)
 		return err
 	}
 	return nil
@@ -803,20 +885,19 @@ func (m *streamSessionManager) deleteSession(operation, id string) error {
 		return nil
 	}
 	if err := m.store.DeleteSession(id); err != nil {
-		recordStreamableSessionStoreError(operation, id, err)
+		recordStreamableSessionStoreError(operation, err)
 		return err
 	}
 	return nil
 }
 
-func recordStreamableSessionStoreError(operation, sessionID string, err error) {
+func recordStreamableSessionStoreError(operation string, err error) {
 	if err == nil {
 		return
 	}
 	metrics.StreamableSessionStoreErrorsTotal.Inc(operation)
 	slog.Warn("streamable_session_store_error",
 		"operation", operation,
-		"session_id", sessionID,
 		"error", err.Error(),
 	)
 }

@@ -222,6 +222,10 @@ func TestDefaultRegistryPreRegistered(t *testing.T) {
 	ToolCallDuration.Observe(0.2, "some_tool")
 	RateLimitRejections.Inc("window", "global")
 	HTTPRequestsTotal.Inc("/mcp", "POST", "200")
+	HTTPAdmissionRejectionsTotal.Inc("/mcp", "ip")
+	GRPCNotificationDropsTotal.Inc("slow_consumer")
+	AuditFailuresTotal.Inc("persist_error", "outcome")
+	ProtocolVersionHeaderMissingTotal.Inc()
 	BuildInfo.SetFunc(func() float64 { return 1 }, "test-version")
 	ReadyState.SetFunc(func() float64 { return 1 })
 	InFlightToolCalls.SetFunc(func() float64 { return 3 })
@@ -236,6 +240,10 @@ func TestDefaultRegistryPreRegistered(t *testing.T) {
 		"clockify_mcp_tool_call_duration_seconds",
 		"clockify_mcp_rate_limit_rejections_total",
 		"clockify_mcp_http_requests_total",
+		"clockify_mcp_http_admission_rejections_total",
+		"clockify_mcp_grpc_notification_drops_total",
+		`clockify_mcp_audit_failures_total{reason="persist_error",phase="outcome"}`,
+		"clockify_mcp_protocol_version_header_missing_total",
 		"clockify_mcp_build_info",
 		"clockify_mcp_ready_state",
 		"clockify_mcp_inflight_tool_calls",

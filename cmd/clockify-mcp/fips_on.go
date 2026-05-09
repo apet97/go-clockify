@@ -27,7 +27,7 @@ func fipsStartupCheck() {
 		os.Exit(1)
 	}
 	// Note: crypto/fips140.Version() and crypto/fips140.Enforced() are Go
-	// 1.26+ only. Go 1.25.9 (the repo's go.mod floor) ships only Enabled().
+	// 1.26+ only. Go 1.25.10 (the repo's go.mod floor) ships only Enabled().
 	// Operators can read the module version + enforced flag from `go version
 	// -m` on the binary or from the GODEBUG setting in the environment.
 	slog.Info("fips140_enabled")

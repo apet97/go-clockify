@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for reporting a bug. Please fill out the following information.
+        Thank you for reporting a bug. Do not use this public form for security vulnerabilities or suspected secret exposure; use the private GitHub Security Advisory link from the issue chooser instead. Redact API keys, bearer tokens, workspace IDs, and personal data from logs.
   - type: textarea
     id: description
     attributes:
@@ -20,7 +20,7 @@ body:
       label: Steps to Reproduce
       description: How can we reproduce this?
       placeholder: |
-        1. Set CLOCKIFY_API_KEY=...
+        1. Set CLOCKIFY_API_KEY=<redacted>
         2. Run clockify-mcp
         3. Send MCP request...
     validations:

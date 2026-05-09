@@ -29,6 +29,11 @@ desktop.ini
 .planning/
 .claude-campaign/
 .claude-campaign-worktrees/
+.agent-campaign/
+.agent-campaign-worktrees/
+.agent-loop/
+.local/
+.review/
 # Local duplicate clone sometimes created during agent handoffs.
 /go-clockify/
 # Per-workstation Claude Code context. Contributors may keep their

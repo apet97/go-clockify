@@ -31,9 +31,11 @@ Operators can either:
 1. **(Recommended)** Download
    `clockify-mcp-postgres-linux-x64` /
    `clockify-mcp-postgres-linux-arm64` from the GitHub release the
-   deploy is rolling out. Verify its sigstore bundle and SLSA
-   attestation alongside the default binary (the release-smoke
-   workflow does this on every published tag and weekly).
+   deploy is rolling out. Verify its sigstore bundle alongside the
+   default binary, plus SLSA provenance when GitHub artifact
+   attestations are available (the release-smoke workflow does this
+   on every published tag and weekly, surfacing the ADR-0013 skip when
+   GitHub returns the private-repo feature gate).
 2. **(Self-build)** Build from a tagged source tree:
 
    ```sh
@@ -41,14 +43,18 @@ Operators can either:
    go build -tags=postgres -o clockify-mcp-postgres ./cmd/clockify-mcp
    ```
 
-   Self-builds bypass the cosign / SLSA chain and are only acceptable
-   for emergency rollouts; document the deviation in the deploy PR.
+   Self-builds bypass the published cosign chain and any GitHub SLSA
+   attestation, so they are only acceptable for emergency rollouts;
+   document the deviation in the deploy PR.
 
 ## Security
 - [ ] MCP_PROFILE=prod-postgres applied
 - [ ] MCP_OIDC_STRICT=1 (audience or resource URI bound)
+- [ ] MCP_OIDC_REQUIRE_KID=1
 - [ ] MCP_REQUIRE_TENANT_CLAIM=1
+- [ ] MCP_DEFAULT_TENANT_ID set to a deployment-specific sentinel
 - [ ] MCP_DISABLE_INLINE_SECRETS=1
+- [ ] `MCP_HTTP_RATELIMIT_PER_IP`, `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`, and `MCP_HTTP_RATELIMIT_GET_PER_SESSION` set for app-layer admission; gateway/load-balancer quotas documented for cross-replica enforcement
 - [ ] CLOCKIFY_POLICY=time_tracking_safe (or stricter, with documented reason)
 - [ ] No inline credentials in the control-plane DB
 - [ ] OIDC `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI` set (RFC 8707 binding)
@@ -76,7 +82,7 @@ check — strict posture passing on the default binary is *not* a substitute.
 - [ ] Docker smoke uses streamable_http with the static-bearer + memory + dev-backend env
 - [ ] Live contract job is required on main (not optional)
 - [ ] Release smoke (tag-driven) green for the version being shipped
-- [ ] SLSA build provenance attested for the image digest you're rolling out
+- [ ] SLSA build provenance attested for the image digest you're rolling out, or ADR-0013 private-repo skip evidence archived alongside mandatory cosign checks
 - [ ] Container image pinned by digest in the deployment manifest (no `:latest`)
 - [ ] Live hosted-safety tests green on the most recent nightly:
       `TestLiveDryRunDoesNotMutate`,
@@ -87,6 +93,20 @@ check — strict posture passing on the default binary is *not* a substitute.
 - [ ] `MCP_LIVE_CONTROL_PLANE_DSN` set and `CLOCKIFY_LIVE_AUDIT_REQUIRED=true`
       so an unset DSN fails the nightly (otherwise the audit-phase test
       skips silently with a `::warning::`)
+
+## Operations
+- [ ] Rate-limit posture reviewed against
+      [`docs/runbooks/rate-limit.md`](../runbooks/rate-limit.md),
+      including both process-local MCP limits and external
+      gateway/load-balancer quotas.
+- [ ] Tenant offboarding drill reviewed against
+      [`docs/runbooks/tenant-offboarding.md`](../runbooks/tenant-offboarding.md);
+      any requirement for sub-token-lifetime JWT revocation is enforced
+      at the IdP or proxy, not assumed from MCP's local verify cache.
+- [ ] Postgres restore drill reviewed against
+      [`docs/runbooks/postgres-restore.md`](../runbooks/postgres-restore.md),
+      including the RLS status check once a database-enforced RLS
+      migration exists.
 
 ## Governance
 - [ ] At least one non-author review on the deploy PR
@@ -100,3 +120,5 @@ check — strict posture passing on the default binary is *not* a substitute.
 - [Support Matrix](../support-matrix.md)
 - [Branch Protection Snapshot](../branch-protection.md)
 - [Governance](../../GOVERNANCE.md)
+- [Rate-limit Operations](../runbooks/rate-limit.md)
+- [Tenant Offboarding](../runbooks/tenant-offboarding.md)

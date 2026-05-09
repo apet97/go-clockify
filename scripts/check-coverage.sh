@@ -28,6 +28,9 @@ COVERAGE_OUT="${COVERAGE_OUT:-coverage.out}"
 # headroom was ≤2.2% (mcp, tools, config, ratelimit, logging,
 # jsonschema, policy, resolve, truncate) to keep a safety buffer
 # against test-order variance.
+# 2026-05-09 launch-review B.07: internal/runtime is mostly build/profile
+# glue and remains a low-coverage outlier, but a conservative 40% floor keeps
+# it from regressing silently while follow-up tests target the branchy paths.
 FLOORS_DEFAULT="internal/mcp=70 \
 internal/tools=63 \
 internal/clockify=73 \
@@ -39,6 +42,7 @@ internal/jsonschema=85 \
 internal/authn=87 \
 internal/policy=75 \
 internal/resolve=78 \
+internal/runtime=40 \
 internal/timeparse=94 \
 internal/truncate=90 \
 internal/tracing=99 \
@@ -74,6 +78,7 @@ if [ -z "$PKG_LIST" ]; then
     exit 0
 fi
 
+# shellcheck disable=SC2086 # intentional: PKG_LIST is space-separated package args.
 REPORT=$(go test -cover $PKG_LIST)
 printf '%s\n' "$REPORT"
 

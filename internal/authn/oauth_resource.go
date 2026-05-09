@@ -58,14 +58,7 @@ func ProtectedResourceHandler(cfg Config) http.Handler {
 // `error_description` parameters; pass empty strings to omit them. The
 // realm is fixed to "clockify-mcp" to match the metadata document.
 func WriteUnauthorized(w http.ResponseWriter, errCode, errDesc string) {
-	parts := []string{`Bearer realm="clockify-mcp"`}
-	if errCode != "" {
-		parts = append(parts, fmt.Sprintf(`error=%q`, errCode))
-	}
-	if errDesc != "" {
-		parts = append(parts, fmt.Sprintf(`error_description=%q`, sanitizeHeaderValue(errDesc)))
-	}
-	w.Header().Set("WWW-Authenticate", strings.Join(parts, ", "))
+	w.Header().Set("WWW-Authenticate", UnauthorizedHeaderValue(errCode, errDesc))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
 	body := map[string]string{"error": "unauthorized"}
@@ -76,6 +69,20 @@ func WriteUnauthorized(w http.ResponseWriter, errCode, errDesc string) {
 		body["error_description"] = errDesc
 	}
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// UnauthorizedHeaderValue returns the RFC 6750 §3 WWW-Authenticate header used
+// by MCP endpoints that need a JSON-RPC body while preserving OAuth bearer
+// challenge semantics.
+func UnauthorizedHeaderValue(errCode, errDesc string) string {
+	parts := []string{`Bearer realm="clockify-mcp"`}
+	if errCode != "" {
+		parts = append(parts, fmt.Sprintf(`error=%q`, errCode))
+	}
+	if errDesc != "" {
+		parts = append(parts, fmt.Sprintf(`error_description=%q`, sanitizeHeaderValue(errDesc)))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // sanitizeHeaderValue strips characters that would break the header

@@ -197,6 +197,7 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	}
 	if entryMergeCall == nil {
 		t.Fatalf("expected at least one entry-URI emit with format=merge after UpdateEntry; calls=%+v", calls)
+		return
 	}
 	patch, ok := entryMergeCall.Delta.Patch.(map[string]any)
 	if !ok {

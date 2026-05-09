@@ -20,25 +20,23 @@ from `git log` and inline code comments.
 | 0007 | FIPS 140-3 build via build tag | [0007-fips-build-tag.md](0007-fips-build-tag.md) |
 | 0008 | gRPC auth via stream interceptor | [0008-grpc-auth-interceptor.md](0008-grpc-auth-interceptor.md) |
 | 0009 | Resource delta-sync subscriptions | [0009-resource-delta-sync.md](0009-resource-delta-sync.md) |
-| 0010 | Metrics stack direction (proposed) | [0010-metrics-stack-direction.md](0010-metrics-stack-direction.md) |
+| 0010 | Metrics stack direction | [0010-metrics-stack-direction.md](0010-metrics-stack-direction.md) |
 | 0011 | Control-plane schema versioning | [0011-controlplane-schema-versioning.md](0011-controlplane-schema-versioning.md) |
 | 0012 | Backward-compatibility policy | [0012-backward-compatibility-policy.md](0012-backward-compatibility-policy.md) |
 | 0013 | Private-repo SLSA posture | [0013-private-repo-slsa-posture.md](0013-private-repo-slsa-posture.md) |
 | 0014 | Production fail-closed defaults | [0014-prod-fail-closed-defaults.md](0014-prod-fail-closed-defaults.md) |
 | 0015 | Profile-centric configuration model | [0015-profile-centric-configuration.md](0015-profile-centric-configuration.md) |
 | 0016 | Single-maintainer governance reality | [0016-single-maintainer-governance.md](0016-single-maintainer-governance.md) |
-| 0017 | Streamable-HTTP session rehydration (proposed) | [0017-streamable-http-session-rehydration.md](0017-streamable-http-session-rehydration.md) |
+| 0017 | Streamable-HTTP session rehydration | [0017-streamable-http-session-rehydration.md](0017-streamable-http-session-rehydration.md) |
 | 0018 | Risk-class enforcement and confirmation tokens (proposed) | [0018-risk-class-confirmation-tokens.md](0018-risk-class-confirmation-tokens.md) |
 
-ADRs 0001–0009 and 0011–0016 are **Accepted**.
-0010, 0017, and 0018 are **Proposed** — 0010 captures the design
-surface around whether to keep the homegrown metrics facade or move
-to OpenTelemetry metrics; 0017 records the cross-pod
-session-rehydration follow-up to the Wave 2026-04-28 ClientIP-affinity
-band-aid; 0018 records the risk-class-driven enforcement +
+ADRs 0001–0017 are **Accepted**. ADR 0010 was promoted from Proposed
+during the May 8 launch-readiness remediation because the v1.x line has
+already shipped on its homegrown-metrics decision. ADR 0018 remains
+**Proposed**: it records the risk-class-driven enforcement +
 confirmation-token follow-up that needs an MCP-client-coordinated
-token-format decision before it can land. 0013 is active again as
-of 2026-05-07 because GitHub artifact attestations remain
+token-format decision before it can land.
+0013 is active again as of 2026-05-07 because GitHub artifact attestations remain
 unavailable for this user-owned private repository; its skip path
 applies only to that platform gate.
 
@@ -96,5 +94,5 @@ want to know why?" — if yes, write an ADR.
 
 ADRs are factual artefacts of decisions that have already shipped or
 are about to ship. They are not RFCs; they describe what is, not
-what might be. If a decision is being debated, capture it in
-`.planning/` until the decision is made, then write the ADR.
+what might be. If a decision is being debated, capture it in a local
+planning queue until the decision is made, then write the ADR.

@@ -1,12 +1,13 @@
 # Launch Candidate Checklist
 
 The pre-flight gate to take `clockify-mcp` from "community MCP
-ready / internal-support alpha" to **official Clockify launch
-candidate**. This is **additive** to the existing
+ready / internal-support alpha" to a launch-candidate package for
+official-product review. This is **additive** to the existing
 [`deploy-readiness-checklist.md`](release/deploy-readiness-checklist.md)
 and [`public-hosted-launch-checklist.md`](release/public-hosted-launch-checklist.md);
 those checklists govern any deploy. This one governs the *promotion
-of the project itself* to official-product status.
+review for the project itself*; it does not grant official-product
+status or legal/product approval by itself.
 
 A box gets ticked only when it is reproducibly green from a clean
 checkout. "Worked once" is not green.
@@ -32,11 +33,13 @@ The nightly **Live contract** workflow
       tests run, not just read-only.
 - [ ] Latest scheduled run of `live-contract.yml` is green with
       both `TestE2EReadOnly` and `TestE2EMutating` passing.
-      _Tracking 2026-05-07: scheduled runs 25418599859
-      (2026-05-06) and 25478227690 (2026-05-07) were green on
-      commit 805d63e. The candidate SHA has advanced, so this box
-      remains open until the current candidate has scheduled-run
-      evidence._
+      _Tracking 2026-05-09: latest scheduled runs 25593042387 and
+      25538247771 are green on commit
+      4fe957547f9e6aea749a85f87823d17a0ccc2928 and include the
+      required read-only, mutating, audit-phase, and schema-diff log
+      markers. The local May 8 remediation tree is newer and
+      uncommitted, so this box remains open until the final candidate
+      SHA has scheduled-run evidence._
 - [ ] `TestLiveDryRunDoesNotMutate` and
       `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` are
       passing on the same run (MCP-path enforcement contract).
@@ -47,10 +50,11 @@ The nightly **Live contract** workflow
 - [ ] Two consecutive nightly runs green with no flakes; if there
       is a flake, the rolling `live-test-failure` GitHub issue is
       closed and the root cause is documented in `CHANGELOG.md`.
-      _Tracking 2026-05-07: 2/2 cron greens exist on 805d63e
-      (25418599859 and 25478227690), but the candidate SHA has
-      advanced. The live-test-failure issues remain closed; awaiting
-      two cron greens on the current candidate._
+      _Tracking 2026-05-09: two consecutive scheduled greens exist on
+      pushed commit 4fe957547f9e6aea749a85f87823d17a0ccc2928, but
+      not on the final remediation SHA because this local tree is
+      still dirty and uncommitted. The live-test-failure issues remain
+      closed; awaiting two cron greens on the final candidate._
 - [ ] Read-side schema diff: response shapes returned by the
       Clockify upstream match the structs in `internal/clockify/`
       with no fields silently dropped (manual diff once per
@@ -74,16 +78,12 @@ evidence hierarchy.
 
 ## 2. Shared-service / Postgres E2E
 
-This is the launch-blocking gap today. The shared-service profile
-docs (`docs/deploy/production-profile-shared-service.md`) describe
-the target deployment shape, but only fragments are covered by the
-existing test surface (`make test-postgres` covers the Postgres
-control-plane store unit + integration tests via Testcontainers,
-and the live audit-phase test exercises the Postgres write path
-end-to-end against an external DB). There is no end-to-end test
-that boots a Postgres-tagged binary, drives traffic through the
-streamable-HTTP transport with the shared-service profile, and
-asserts the tenant + audit invariants.
+Group 2 is closed. The shared-service profile now has a CI-driven
+Postgres-backed streamable-HTTP E2E that exercises the production
+tenant/runtime shape, tenant isolation, sessions, and audit
+durability. The checklist below records the evidence that closed the
+old gap; do not reopen it unless the E2E, required-status-check
+promotion, or documented invariants regress.
 
 - [x] `make test-postgres` runs green from a clean checkout
       (Testcontainers, `INTEGRATION_REQUIRED=1`).
@@ -95,9 +95,18 @@ asserts the tenant + audit invariants.
 - [x] `MCP_LIVE_CONTROL_PLANE_DSN` configured against a sacrificial
       Postgres database; `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` set as
       a repo variable.
+      _Rechecked 2026-05-09: `gh variable list --repo
+      apet97/go-clockify` reports `CLOCKIFY_LIVE_AUDIT_REQUIRED`
+      exists; scheduled `live-contract.yml` run 25538247771 logged
+      `AUDIT_REQUIRED: true` and a redacted
+      `MCP_LIVE_CONTROL_PLANE_DSN`._
 - [x] `TestLiveCreateUpdateDeleteEntryAuditPhases` is green on the
       latest `live-contract.yml` run (intent + outcome rows for
       every non-read tool call).
+      _Rechecked 2026-05-09: scheduled run 25538247771 executed
+      `go test -tags=postgres,livee2e -run
+      '^TestLiveCreateUpdateDeleteEntryAuditPhases$' ./...` and ended
+      `ok github.com/apet97/go-clockify/internal/controlplane/postgres`._
 - [x] **New** shared-service E2E
       (`internal/controlplane/postgres/e2e_shared_service_test.go`,
       build tag `postgres`, runnable via `make shared-service-e2e`)
@@ -144,7 +153,7 @@ durability, no cross-tenant leakage).
 ## 3. Streamable HTTP / session behavior
 
 Driven by ADR `0017-streamable-http-session-rehydration.md`
-(Proposed). One of the two paths below must be taken.
+(Accepted). One of the two paths below must be taken.
 
 - [x] **Path A — implement the rehydration fix.** The four design
       questions in ADR 0017 (Factory contract widening, Principal
@@ -220,12 +229,14 @@ read every commit.
       `TestForwardAuth_RejectsUntrustedSource` /
       `TestForwardAuth_AcceptsTrustedCIDR` /
       `TestForwardAuth_EmptyAllowlistPreservesLegacyBehaviour`._
-- [x] OIDC strict mode is the documented default for the
-      shared-service profile; the JWKS rotation path is covered by
-      a test that exercises a key swap mid-session.
-      _2026-05-02: `MCP_OIDC_STRICT=1` is pinned in
-      `docs/deploy/production-profile-shared-service.md` lines
-      36 + 69. The JWKS rotation propagation window is bounded
+- [x] OIDC strict mode and kid-required mode are documented defaults
+      for the shared-service profile; the JWKS rotation path is covered
+      by bounded cache semantics and a kid-less-token regression test.
+      _2026-05-02: `MCP_OIDC_STRICT=1` was pinned in
+      `docs/deploy/production-profile-shared-service.md`; 2026-05-08
+      adds `MCP_OIDC_REQUIRE_KID=1` and
+      `internal/authn/oidc_integration_test.go::TestOIDCAuthenticator_RequireKID`.
+      The JWKS rotation propagation window is bounded
       by `internal/authn/oidc_verify_cache_test.go::TestOIDCVerifyCache_CeilingTTL`
       (cache entries cannot survive past `oidcVerifyCacheTTLCeiling`,
       capped at 5m) and `TestOIDCVerifyCache_TTLClamping`. A literal
@@ -298,11 +309,12 @@ will read.
 - [x] `docs/support-matrix.md` is current for the candidate tag:
       Go version pin, OS/arch matrix, FIPS posture, kernel
       requirements (if any).
-      _Closed 2026-05-02: support matrix now records Go 1.25.9,
+      _Closed 2026-05-02: support matrix now records Go 1.25.10,
       default/Postgres/gRPC/FIPS artifact OS-arch coverage,
       container platform coverage, Windows limitations, FIPS
       posture, and the absence of project-specific Linux kernel
-      requirements._
+      requirements. Refreshed 2026-05-09 with the Go 1.25.10
+      security-patch bump._
 - [x] Every deployment profile doc under `docs/deploy/` ends with
       a "How to verify this deployment" section that names the
       `doctor --strict` invocation and the smoke-test workflow
@@ -331,16 +343,28 @@ Group 1 scheduled-cron evidence closes.
 
 - [ ] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
-      _Local preflight 2026-05-02 on the launch-doc/security-review
-      working tree: installed `govulncheck` and ran
-      `PATH="$(go env GOPATH)/bin:$PATH" make verify-vuln`;
-      result: `No vulnerabilities found.` Do not tick this box until
-      the same command is re-run on the final candidate tag._
+      _Local preflight 2026-05-09 on the May 8 remediation tree:
+      `govulncheck@v1.3.0` failed against Go 1.25.9 with
+      GO-2026-4971 and GO-2026-4918, then passed after the repo pin
+      moved to Go 1.25.10. Rechecked on 2026-05-09 with
+      pinned `govulncheck@v1.3.0` and `GOTOOLCHAIN=go1.25.10`;
+      no vulnerabilities found. A host-toolchain scan with Go 1.26.2
+      reports standard-library issues GO-2026-4971 and GO-2026-4918
+      fixed in Go 1.26.3, so the public support docs now state the
+      exact Go 1.25.10 launch-candidate pin instead of a broad
+      `1.25.10+` claim. Do not tick this box until the same pinned
+      scan is re-run on the final candidate tag._
 - [ ] `gitleaks` scan green (config in `.gitleaks.toml`).
       _Local preflight 2026-05-02: `make secret-scan` ran
       `gitleaks detect --no-git --source . --redact --config
-      .gitleaks.toml`; no leaks found. Do not tick this box until
-      the scan is re-run on the final candidate tag._
+      .gitleaks.toml`; no leaks found. Rechecked on 2026-05-09:
+      the candidate branch-content gitleaks scan in
+      `make public-content-audit` returned no findings, but
+      `make secret-scan` on this dirty workstation failed on ignored
+      local artifacts (`.local/`, `.serena/`, and the duplicate
+      `go-clockify/` checkout). Do not tick this box until
+      `make secret-scan` is re-run from a clean checkout of the final
+      candidate tag._
 - [ ] `semgrep` review green; any `// nosemgrep` directive has a
       justification comment within five lines and is referenced
       from the relevant ADR or runbook.
@@ -349,16 +373,22 @@ Group 1 scheduled-cron evidence closes.
       --exclude clockify-mcp .` scanned 1094 tracked files and
       returned 0 findings. The SSE `text/event-stream` suppressions
       in `internal/mcp/transport_streamable_http.go` have inline
-      justification comments and are recorded in ADR 0017. Do not
-      tick this box until the scan is re-run on the final candidate
-      tag._
+      justification comments and are recorded in ADR 0017. 2026-05-08
+      adds `.github/workflows/semgrep.yml` as a recurring CE scan using
+      the same `p/default` rule pack. Rechecked on 2026-05-09 against
+      the current tree; Semgrep scanned 1153 tracked files and returned
+      0 findings. Do not tick this box until the scan is re-run on the
+      final candidate tag._
 - [ ] `make verify-fips` green when the FIPS-aware tooling is
       installed (auto-skips otherwise — record the run on a host
       that has it).
       _Local preflight 2026-05-02 on macOS arm64 with a FIPS-capable Go
       toolchain: `make verify-fips` built and tested `-tags=fips`
-      plus the `-tags=fips,grpc` build combination. Do not tick this
-      box until the same gate is re-run on the final candidate tag._
+      plus the `-tags=fips,grpc` build combination. Rechecked on
+      2026-05-09 with `GOTOOLCHAIN=go1.25.10 make verify-fips`;
+      default FIPS tests and the `-tags=fips,grpc` build combination
+      passed. Do not tick this box until the same gate is re-run on the
+      final candidate tag._
 - [x] No public AI-facing deployment can boot with a policy
       weaker than `time_tracking_safe`; the load-time guard
       remains in place.
@@ -409,6 +439,13 @@ checked.
       run), `release-smoke.yml` (latest tag), `link-check.yml`,
       `chaos.yml`, `mutation.yml`, `reproducibility.yml`,
       `bench.yml`. No skipped-but-required steps.
+      _Tracking 2026-05-09: `make launch-external-status` reports the
+      latest `mutation.yml` scheduled run 25592823559 is
+      `completed/cancelled` on pushed commit
+      4fe957547f9e6aea749a85f87823d17a0ccc2928. `gh run view` shows
+      the `internal/tools` matrix leg was cancelled while the other
+      mutation legs succeeded. The local timeout increase still needs
+      pushed scheduled-run evidence on the final candidate SHA._
 - [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.
@@ -417,7 +454,8 @@ checked.
       25255062599, validated locally with `make bench-baseline-check`,
       then passed linux/amd64 comparison in
       https://github.com/apet97/go-clockify/actions/runs/25255216987._
-- [ ] Release artefacts: signed binaries (cosign + SLSA), SBOMs,
+- [ ] Release artefacts: signed binaries (cosign, plus SLSA when
+      GitHub artifact attestations are available), SBOMs,
       Docker images, FIPS variant. Verified by `release-smoke.yml`
       on the candidate tag for its sampled default/Postgres
       linux-x64 artifacts, plus manual `docs/verification.md`
@@ -426,11 +464,19 @@ checked.
 - [ ] `clockify-mcp doctor --strict` and
       `clockify-mcp-postgres doctor --strict --check-backends`
       both exit 0 against the candidate's reference deployment.
+      For `release-smoke.yml`, archive or link the
+      `release-smoke-doctor-output` artifact containing
+      `release-doctor-strict-ok.txt`,
+      `release-doctor-strict-fail.txt`, and
+      `release-doctor-postgres-ok.txt`.
 
 **Definition of done.** A clean checkout of the candidate tag
 produces a green `release-check`, every required workflow on
-`main` is green, and the release artefacts verify under cosign
-+ SLSA.
+`main` is green, and the release artefacts verify under cosign plus
+SLSA when GitHub artifact attestations are available. If GitHub still
+returns the ADR-0013 private-repo feature gate on the candidate tag,
+the skip evidence must be archived with the mandatory cosign binary
+and image verification.
 
 ---
 
@@ -444,9 +490,14 @@ satisfied:
 3. Update `docs/official-clockify-mcp-gap-analysis.md`: move
    "blockers" entries that have been closed into the "what is
    already strong" section.
-4. Open a tracking issue titled `Launch candidate vX.Y.Z-rc.N`
+4. Link the closed `docs/release/brand-legal-review.md` decision if
+   any public copy will claim official-product status; otherwise use
+   the approved rebrand/community framing in release notes and public
+   metadata.
+5. Open a tracking issue titled `Launch candidate vX.Y.Z-rc.N`
    that links to the green workflow runs and the archived
-   `doctor --strict` output.
+   `doctor --strict` output, including the
+   `release-smoke-doctor-output` artifact.
 
 Only at that point may any agent or human report **"launch
 candidate ready"**.

@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed — recorded as a placeholder for the long-standing
-`.planning/loop-followups.md` queue items "Risk-class-driven
+Proposed — recorded as a placeholder for the long-standing local
+planning queue items "Risk-class-driven
 enforcement" and "Confirmation-token enforcement for minimal-fallback
 destructive tools." Both have been deferred multiple times because
 shipping them requires inventing a confirmation-token protocol that
@@ -185,7 +185,7 @@ clients that don't read annotations.
 
 ### Q5: Dependency on other deferred work
 
-This ADR's predecessor in `.planning/loop-followups.md` paired
+This ADR's predecessor in the local planning queue paired
 risk-class enforcement with the empty `confirmTools` follow-up.
 ADR-0017 (session rehydration) is a separate concern — it touches
 the transport layer; this ADR touches the enforcement layer. The
@@ -249,6 +249,6 @@ the design questions above.
   policy-mode gate this ADR slots in alongside).
 - ADR-0005 — Tool tier activation (covers disclosure vs.
   availability — orthogonal concern).
-- `.planning/loop-followups.md` Queue entries "Risk-class-driven
+- Local planning queue entries "Risk-class-driven
   enforcement" and "Confirmation-token enforcement for
   minimal-fallback destructive tools" — superseded by this ADR.

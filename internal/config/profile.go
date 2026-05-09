@@ -86,6 +86,8 @@ var allProfilesSlice = []Profile{
 			//
 			// MCP_OIDC_STRICT=1 — reject tokens missing exp; require
 			//   audience or resource URI binding (Config.Load gate).
+			// MCP_OIDC_REQUIRE_KID=1 — reject kid-less JWTs instead
+			//   of using the single-key JWKS compatibility fallback.
 			// MCP_REQUIRE_TENANT_CLAIM=1 — reject OIDC tokens without
 			//   a tenant claim instead of falling back to the shared
 			//   default tenant (catastrophic in multi-tenant mode).
@@ -99,11 +101,19 @@ var allProfilesSlice = []Profile{
 			// CLOCKIFY_POLICY=time_tracking_safe — AI-facing untrusted
 			//   default. safe_core / standard / full remain available
 			//   for trusted-team deployments via explicit override.
-			"MCP_OIDC_STRICT":                  "1",
-			"MCP_REQUIRE_TENANT_CLAIM":         "1",
-			"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
-			"MCP_DISABLE_INLINE_SECRETS":       "1",
-			"CLOCKIFY_POLICY":                  "time_tracking_safe",
+			// MCP_HTTP_RATELIMIT_* — process-local admission limits for
+			//   pre-auth HTTP probes, authenticated request floods, and
+			//   SSE stream holds. Cross-replica hosted quotas still live
+			//   at the gateway/load-balancer layer.
+			"MCP_OIDC_STRICT":                    "1",
+			"MCP_OIDC_REQUIRE_KID":               "1",
+			"MCP_REQUIRE_TENANT_CLAIM":           "1",
+			"MCP_REQUIRE_FORWARD_TENANT_CLAIM":   "1",
+			"MCP_DISABLE_INLINE_SECRETS":         "1",
+			"MCP_HTTP_RATELIMIT_PER_IP":          "600",
+			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
+			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
+			"CLOCKIFY_POLICY":                    "time_tracking_safe",
 		},
 	},
 	{
@@ -120,16 +130,20 @@ var allProfilesSlice = []Profile{
 		Name:    "prod-postgres",
 		Summary: "Shared-service strict + ENVIRONMENT=prod — postgres DSN required, fail-closed everywhere",
 		Env: map[string]string{
-			"MCP_TRANSPORT":                    "streamable_http",
-			"MCP_AUTH_MODE":                    "oidc",
-			"MCP_AUDIT_DURABILITY":             "fail_closed",
-			"MCP_HTTP_LEGACY_POLICY":           "deny",
-			"ENVIRONMENT":                      "prod",
-			"MCP_OIDC_STRICT":                  "1",
-			"MCP_REQUIRE_TENANT_CLAIM":         "1",
-			"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
-			"MCP_DISABLE_INLINE_SECRETS":       "1",
-			"CLOCKIFY_POLICY":                  "time_tracking_safe",
+			"MCP_TRANSPORT":                      "streamable_http",
+			"MCP_AUTH_MODE":                      "oidc",
+			"MCP_AUDIT_DURABILITY":               "fail_closed",
+			"MCP_HTTP_LEGACY_POLICY":             "deny",
+			"ENVIRONMENT":                        "prod",
+			"MCP_OIDC_STRICT":                    "1",
+			"MCP_OIDC_REQUIRE_KID":               "1",
+			"MCP_REQUIRE_TENANT_CLAIM":           "1",
+			"MCP_REQUIRE_FORWARD_TENANT_CLAIM":   "1",
+			"MCP_DISABLE_INLINE_SECRETS":         "1",
+			"MCP_HTTP_RATELIMIT_PER_IP":          "600",
+			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
+			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
+			"CLOCKIFY_POLICY":                    "time_tracking_safe",
 		},
 	},
 }

@@ -64,6 +64,10 @@ emits — no prose-only guesses.
 
 - [runbooks/auth-failures.md](runbooks/auth-failures.md) — 401 / 403
   triage.
+- [runbooks/legacy-http-eol.md](runbooks/legacy-http-eol.md) —
+  deprecated POST-only HTTP migration and future `Sunset` handling.
+- [runbooks/rate-limit.md](runbooks/rate-limit.md) — launch
+  checklist entry point for local and gateway rate-limit posture.
 - [runbooks/rate-limit-saturation.md](runbooks/rate-limit-saturation.md)
   — hot tenant diagnosis.
 - [runbooks/audit-durability.md](runbooks/audit-durability.md) —
@@ -74,6 +78,9 @@ emits — no prose-only guesses.
 - [runbooks/credential-leak-response.md](runbooks/credential-leak-response.md)
   — rotate, audit, and notify after API key, bearer token, OIDC,
   mTLS, CI, or tenant credential exposure.
+- [runbooks/tenant-offboarding.md](runbooks/tenant-offboarding.md) —
+  suspend or remove a hosted tenant without overstating JWT
+  revocation guarantees.
 - [runbooks/webhook-dns-validation.md](runbooks/webhook-dns-validation.md)
   — DNS-rebinding guard, allowlist escape hatch, and split-horizon
   triage.
@@ -112,6 +119,9 @@ Supply-chain verification, release process, and the smoke cadence.
   — pre-flight gates for going from "works on my cluster" to
   accepting traffic from clients you don't control. Use the
   Postgres-tagged binary for the strict-doctor backend check.
+- [release/brand-legal-review.md](release/brand-legal-review.md)
+  — product/legal/brand questions that must be answered before public
+  copy claims official-product status.
 - [upgrade-checklist.md](upgrade-checklist.md) — per-release
   upgrade notes.
 - [live-tests.md](live-tests.md) — why `release-smoke` and

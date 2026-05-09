@@ -6,12 +6,13 @@ This document outlines the supported configurations and clients for `clockify-mc
 
 | Surface | Current support statement | Source of truth |
 |---------|---------------------------|-----------------|
-| Go toolchain | Go `1.25.9` for local builds and CI. The module's `go` directive is `1.25.9`; workflows pin the same version unless they deliberately read `go.mod`. | [`go.mod`](../go.mod), `.github/workflows/*.yml` |
+| Go toolchain | Go `1.25.10` for local builds and CI. The module's `go` directive is `1.25.10`; workflows pin the same version unless they deliberately read `go.mod`. | [`go.mod`](../go.mod), `.github/workflows/*.yml` |
 | Default binary platforms | `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`. Windows arm64 is intentionally not shipped. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`scripts/check-release-assets.sh`](../scripts/check-release-assets.sh) |
 | Tagged server artifacts | Postgres, gRPC, and gRPC+Postgres artifacts are Linux-only (`amd64`, `arm64`) because those profiles target hosted or private-network server deployments. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/verification.md`](verification.md) |
 | Container image | Linux `amd64` and `arm64`, distroless runtime, non-root. The builder image is pinned by digest. | [`deploy/Dockerfile`](../deploy/Dockerfile), [`.github/workflows/docker-image.yml`](../.github/workflows/docker-image.yml) |
 | FIPS posture | Separate `clockify-mcp-fips-*` binaries for Linux and Darwin (`amd64`, `arm64`) built with `-tags=fips` and `GOFIPS140=latest`. Windows FIPS binaries are not shipped. Local `make verify-fips` auto-skips when the toolchain lacks GOFIPS140 support; CI is the release gate. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/adr/0007-fips-build-tag.md`](adr/0007-fips-build-tag.md) |
 | Kernel requirements | No project-specific Linux kernel feature is required by the default binary. Container and Kubernetes deployments inherit the baseline of the runtime, CNI, and storage driver; Postgres-backed profiles require normal TCP reachability to Postgres. | [`deploy/k8s/README.md`](../deploy/k8s/README.md), [`docs/deploy/production-profile-shared-service.md`](deploy/production-profile-shared-service.md) |
+| MCP request size | `MCP_MAX_MESSAGE_SIZE` defaults to `4194304` bytes (4 MiB) and caps stdio scanner frames, HTTP request bodies, and gRPC inbound frames. It accepts values from 1 byte through 100 MiB; `MCP_HTTP_MAX_BODY` is only a deprecated compatibility alias. | [`internal/config/spec.go`](../internal/config/spec.go), [`internal/mcp/server.go`](../internal/mcp/server.go), [`internal/transport/grpc/transport.go`](../internal/transport/grpc/transport.go) |
 | Active release line | `v1.2.0` is the current Active line referenced by release-verification docs. A launch-candidate tag must update this row if it changes the supported Go version, artifact matrix, or FIPS posture. | [`SUPPORT.md`](../SUPPORT.md), [`docs/verification.md`](verification.md) |
 
 ## Transports and Auth Modes
@@ -54,7 +55,8 @@ The following matrix shows supported authentication modes for each transport.
     two supported paths: download a published
     `clockify-mcp-grpc-linux-{x64,arm64}` /
     `clockify-mcp-grpc-postgres-linux-{x64,arm64}` artifact (same
-    SBOM + cosign + SLSA chain as the default and Postgres binaries),
+    SBOM + cosign chain as the default and Postgres binaries, plus
+    SLSA provenance when GitHub artifact attestations are available),
     or build their own with `go build -tags=grpc[,postgres]` /
     `docker build --build-arg GO_TAGS=grpc[,postgres]`. The default
     `clockify-mcp` binary and default Docker image do not include

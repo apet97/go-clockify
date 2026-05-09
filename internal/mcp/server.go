@@ -20,15 +20,38 @@ import (
 
 // SupportedProtocolVersions lists MCP protocol versions this server can
 // negotiate, newest first. The first entry is returned as the default when
-// the client does not send a protocolVersion. When a client requests an
-// unsupported version, we echo back the newest supported version — clients
-// that cannot downgrade will treat that as an error and disconnect, which is
-// the spec-compliant behaviour.
+// the client does not send a protocolVersion unless an operator configures a
+// per-server default. When a client requests an unsupported version, we echo
+// back the newest supported version — clients that cannot downgrade will treat
+// that as an error and disconnect, which is the spec-compliant behaviour.
 var SupportedProtocolVersions = []string{
 	"2025-11-25",
 	"2025-06-18",
 	"2025-03-26",
 	"2024-11-05",
+}
+
+func IsSupportedProtocolVersion(version string) bool {
+	return slices.Contains(SupportedProtocolVersions, strings.TrimSpace(version))
+}
+
+func DefaultProtocolVersion(configured string) string {
+	configured = strings.TrimSpace(configured)
+	if IsSupportedProtocolVersion(configured) {
+		return configured
+	}
+	return SupportedProtocolVersions[0]
+}
+
+func negotiateProtocolVersion(requested, configuredDefault string) string {
+	requested = strings.TrimSpace(requested)
+	if requested == "" {
+		return DefaultProtocolVersion(configuredDefault)
+	}
+	if IsSupportedProtocolVersion(requested) {
+		return requested
+	}
+	return SupportedProtocolVersions[0]
 }
 
 // ServerInstructions is returned in the initialize response to teach MCP
@@ -170,11 +193,15 @@ type ToolDescriptor struct {
 }
 
 type Server struct {
-	Version      string
-	Enforcement  Enforcement                     // nil = no filtering or enforcement
-	Activator    Activator                       // nil = activation unrestricted
-	ToolTimeout  time.Duration                   // per-call timeout; 0 = default 45s
-	ReadyChecker func(ctx context.Context) error // optional upstream health check for /ready
+	Version     string
+	Enforcement Enforcement   // nil = no filtering or enforcement
+	Activator   Activator     // nil = activation unrestricted
+	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
+	// DefaultProtocolVersion is used only when initialize omits
+	// params.protocolVersion. Empty or unsupported values fall back to
+	// SupportedProtocolVersions[0]; explicit supported client requests still win.
+	DefaultProtocolVersion string
+	ReadyChecker           func(ctx context.Context) error // optional upstream health check for /ready
 	// ExposeAuthErrors controls whether HTTP transports return detailed
 	// authenticator errors to unauthenticated clients. The default is false:
 	// transports return a generic OAuth error_description and log details
@@ -219,6 +246,11 @@ type Server struct {
 	// to avoid making honest http:// URLs unreachable on misconfigured
 	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
 	BehindHTTPSProxy bool
+
+	// HTTPAdmissionLimits configures process-local app-layer admission
+	// guards for legacy HTTP. Streamable HTTP receives the same values
+	// through StreamableHTTPOptions.
+	HTTPAdmissionLimits HTTPAdmissionLimits
 
 	// ExtraHTTPHandlers carries optional handlers that the legacy HTTP
 	// transport mounts on its mux before ListenAndServe. Used by the
@@ -268,15 +300,19 @@ type Server struct {
 	AuditTransport string
 
 	// AuditDurabilityMode controls what happens when audit persistence fails
-	// for a non-read-only successful tool call.
+	// for a non-read-only tool call.
 	//
 	//   "best_effort" (default): log the error and increment the failure metric;
-	//   do not fail the tool call. The mutation already happened; the operator
-	//   is alerted but the client sees success.
+	//   do not fail the tool call.
 	//
-	//   "fail_closed": return an error to the caller so the client knows the
-	//   mutation's audit trail is incomplete. The mutation still happened, but
-	//   reporting success when the audit write failed is suppressed.
+	//   "fail_closed": fail before mutation when the intent record cannot be
+	//   persisted; post-mutation outcome failures stay log/metric-only for
+	//   backwards compatibility.
+	//
+	//   "fail_closed_strict": same pre-mutation intent guard, plus post-mutation
+	//   outcome failures are returned to the client so the missing durable
+	//   outcome row is visible on the MCP wire.
+	//
 	//   Read-only operations are never affected regardless of this setting.
 	AuditDurabilityMode string
 
@@ -422,6 +458,24 @@ func (s *Server) cancelInflight(id any) bool {
 		cancel()
 	}
 	return ok
+}
+
+// cancelAllInflight cancels and untracks every in-flight request. It is used
+// when a client repeats initialize: the session negotiation is being reset, so
+// request IDs from the previous negotiated session must not remain cancellable.
+func (s *Server) cancelAllInflight() int {
+	s.inflightMu.Lock()
+	cancels := make([]context.CancelFunc, 0, len(s.inflight))
+	for id, cancel := range s.inflight {
+		delete(s.inflight, id)
+		cancels = append(cancels, cancel)
+	}
+	s.inflightMu.Unlock()
+
+	for _, cancel := range cancels {
+		cancel()
+	}
+	return len(cancels)
 }
 
 // InflightCount returns the number of tracked in-flight tools/call
@@ -742,7 +796,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 	resp := Response{JSONRPC: "2.0", ID: req.ID}
 
 	if requiresInitialized(req.Method) && !s.initialized.Load() {
-		resp.Error = &RPCError{Code: -32002, Message: "server not initialized: send initialize first"}
+		resp.Error = &RPCError{Code: RPCCodeServerNotInitialized, Message: "server not initialized: send initialize first"}
 		return resp
 	}
 
@@ -901,19 +955,31 @@ func requiresInitialized(method string) bool {
 // capabilities and instructions.
 //
 // Version negotiation policy: if the client requests a version we support,
-// echo it back. Otherwise return our newest supported version — the client
-// is expected to either accept the downgrade or disconnect. A previously-
+// echo it back. If the client omits a version, use the operator-configured
+// default or our newest supported version. Unsupported requested versions still
+// return our newest supported version — the client is expected to either accept
+// the downgrade or disconnect. A previously-
 // initialized server accepts a repeat initialize and re-negotiates; the
 // current spec does not forbid this and a strict rejection has historically
-// broken clients that aggressively reconnect.
+// broken clients that aggressively reconnect. A repeat initialize resets
+// session-scoped dispatch state by cancelling outstanding tools/call handlers
+// and invalidating the cached tools/list payload. Transport capability flags
+// such as listChanged advertisement remain owned by the transport.
 func (s *Server) handleInitialize(raw any) map[string]any {
 	var params InitializeParams
 	_ = decodeParams(raw, &params) // tolerate missing / malformed params
 
-	negotiated := SupportedProtocolVersions[0]
-	if requested := strings.TrimSpace(params.ProtocolVersion); requested != "" && slices.Contains(SupportedProtocolVersions, requested) {
-		negotiated = requested
+	if s.initialized.Load() {
+		cancelled := s.cancelAllInflight()
+		s.mu.Lock()
+		s.invalidateToolListCacheLocked()
+		s.mu.Unlock()
+		slog.Info("repeat_initialize_reset",
+			"cancelled_inflight", cancelled,
+		)
 	}
+
+	negotiated := negotiateProtocolVersion(params.ProtocolVersion, s.DefaultProtocolVersion)
 
 	// Extract clientInfo name/version for log correlation.
 	var clientName, clientVersion string

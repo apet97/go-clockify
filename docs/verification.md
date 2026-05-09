@@ -172,6 +172,7 @@ export MCP_PROFILE=prod-postgres
 export MCP_CONTROL_PLANE_DSN="postgres://user:pass@localhost:5432/clockify?sslmode=disable"
 export MCP_OIDC_ISSUER="https://issuer.example.com"
 export MCP_OIDC_AUDIENCE="clockify-mcp"
+export MCP_DEFAULT_TENANT_ID="prod-fallback-disabled"
 export CLOCKIFY_API_KEY="dummy"
 
 ./clockify-mcp-linux-x64 doctor --strict
@@ -211,10 +212,12 @@ concern, not a security gate. The cryptographic signatures in steps
 
 The `.github/workflows/release-smoke.yml` workflow runs steps 1, 2,
 and 3 above on every published release and once a week thereafter,
-and opens a `release-smoke-failure` GitHub issue if any step fails.
-The issue stays open until the next green run closes it
-automatically. There is no Slack, no email, no polling dashboard —
-the open issue is the exclusive failure signal.
+archives the `release-smoke-doctor-output` artifact for the default
+and Postgres `doctor --strict` checks, and opens a
+`release-smoke-failure` GitHub issue if any step fails. The issue
+stays open until the next green run closes it automatically. There is
+no Slack, no email, no polling dashboard — the open issue is the
+exclusive failure signal.
 
 ## Related documents
 

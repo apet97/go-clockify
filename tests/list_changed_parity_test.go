@@ -11,16 +11,16 @@ import (
 	"github.com/apet97/go-clockify/tests/harness"
 )
 
-// TestListChanged_ParityAcrossTransports fires a server-initiated
-// notifications/tools/list_changed via the harness's underlying
+// TestListChanged_ParityAcrossTransports fires server-initiated list_changed
+// notifications for tools, resources, and prompts via the harness's underlying
 // mcp.Server (reached through the optional SharedServer interface)
-// and verifies every notification-capable transport delivers it on
+// and verifies every notification-capable transport delivers them on
 // its Notifications() channel.
 //
 // Legacy HTTP is excluded by design: its POST-only request/response
-// model has no server→client stream, so the server drops list_changed
-// via droppingNotifier. Clients of legacy HTTP must re-poll tools/list
-// on their own schedule.
+// model has no server→client stream, so the server drops list_changed frames
+// via droppingNotifier. Clients of legacy HTTP must re-poll list endpoints on
+// their own schedule.
 func TestListChanged_ParityAcrossTransports(t *testing.T) {
 	cases := map[string]harness.Factory{
 		"stdio":           harness.NewStdio,
@@ -60,8 +60,23 @@ func TestListChanged_ParityAcrossTransports(t *testing.T) {
 			if !ok {
 				t.Fatalf("%s: SharedServer returned !ok", h.Name())
 			}
-			if err := srv.Notify("notifications/tools/list_changed", map[string]any{}); err != nil {
-				t.Fatalf("%s Notify: %v", h.Name(), err)
+			want := map[string]bool{
+				"notifications/tools/list_changed":     false,
+				"notifications/resources/list_changed": false,
+				"notifications/prompts/list_changed":   false,
+			}
+			allSeen := func() bool {
+				for _, seen := range want {
+					if !seen {
+						return false
+					}
+				}
+				return true
+			}
+			for method := range want {
+				if err := srv.Notify(method, map[string]any{}); err != nil {
+					t.Fatalf("%s Notify(%s): %v", h.Name(), method, err)
+				}
 			}
 
 			notifs := h.Notifications()
@@ -72,7 +87,7 @@ func TestListChanged_ParityAcrossTransports(t *testing.T) {
 			for {
 				select {
 				case n := <-notifs:
-					if n.Method != "notifications/tools/list_changed" {
+					if _, ok := want[n.Method]; !ok {
 						// Ignore unrelated frames (e.g. keepalive or
 						// other notifications).
 						continue
@@ -80,12 +95,21 @@ func TestListChanged_ParityAcrossTransports(t *testing.T) {
 					if len(n.Params) > 0 {
 						var m map[string]any
 						if err := json.Unmarshal(n.Params, &m); err != nil {
-							t.Fatalf("%s: list_changed params not an object: %v raw=%s", h.Name(), err, string(n.Params))
+							t.Fatalf("%s: %s params not an object: %v raw=%s", h.Name(), n.Method, err, string(n.Params))
 						}
 					}
-					return
+					want[n.Method] = true
+					if allSeen() {
+						return
+					}
 				case <-deadline:
-					t.Fatalf("%s: notifications/tools/list_changed never delivered within 2s", h.Name())
+					var missing []string
+					for method, seen := range want {
+						if !seen {
+							missing = append(missing, method)
+						}
+					}
+					t.Fatalf("%s: list_changed notifications never delivered within 2s: %s", h.Name(), strings.Join(missing, ", "))
 				}
 			}
 		})

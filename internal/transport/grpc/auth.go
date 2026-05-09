@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ type authInterceptorConfig struct {
 	reauthInterval       time.Duration
 	forwardTenantHeader  string
 	forwardSubjectHeader string
+	peerCIDRAllow        []*net.IPNet
 	mtls                 bool
 }
 
@@ -50,6 +52,9 @@ func authStreamInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) 
 		if !ok {
 			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
 			return status.Error(codes.Unauthenticated, "missing gRPC metadata")
+		}
+		if err := rejectDisallowedPeer(ss.Context(), cfg.peerCIDRAllow); err != nil {
+			return err
 		}
 		var (
 			synth *http.Request
@@ -97,6 +102,9 @@ func authUnaryInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) g
 			metrics.GRPCAuthRejectionsTotal.Inc("missing_metadata")
 			return nil, status.Error(codes.Unauthenticated, "missing gRPC metadata")
 		}
+		if err := rejectDisallowedPeer(ctx, cfg.peerCIDRAllow); err != nil {
+			return nil, err
+		}
 		var (
 			synth *http.Request
 			err   error
@@ -121,6 +129,29 @@ func authUnaryInterceptor(auth authn.Authenticator, cfg authInterceptorConfig) g
 		}
 		return handler(authn.WithPrincipal(ctx, &principal), req)
 	}
+}
+
+func rejectDisallowedPeer(ctx context.Context, allow []*net.IPNet) error {
+	if len(allow) == 0 {
+		return nil
+	}
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		metrics.GRPCAuthRejectionsTotal.Inc("peer_addr_disallowed")
+		return status.Error(codes.Unauthenticated, "peer address not allowed")
+	}
+	tcp, ok := p.Addr.(*net.TCPAddr)
+	if !ok || tcp.IP == nil {
+		metrics.GRPCAuthRejectionsTotal.Inc("peer_addr_disallowed")
+		return status.Error(codes.Unauthenticated, "peer address not allowed")
+	}
+	for _, ipNet := range allow {
+		if ipNet != nil && ipNet.Contains(tcp.IP) {
+			return nil
+		}
+	}
+	metrics.GRPCAuthRejectionsTotal.Inc("peer_addr_disallowed")
+	return status.Error(codes.Unauthenticated, "peer address not allowed")
 }
 
 // buildSynthRequest is the bearer/OIDC/forward_auth path. It requires the

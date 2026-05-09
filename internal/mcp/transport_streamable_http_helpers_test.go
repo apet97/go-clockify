@@ -236,13 +236,16 @@ func TestApplyHTTPBaselineHeaders(t *testing.T) {
 	req.Header.Set("X-Forwarded-Proto", "https")
 	applyHTTPBaselineHeaders(rec, req, true /* behindHTTPSProxy */)
 	expected := map[string]string{
-		"X-Content-Type-Options":    "nosniff",
-		"Cache-Control":             "no-store",
-		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-		"Content-Security-Policy":   "default-src 'none'; frame-ancestors 'none'",
-		"X-Frame-Options":           "DENY",
-		"Referrer-Policy":           "no-referrer",
-		"Permissions-Policy":        "()",
+		"X-Content-Type-Options":       "nosniff",
+		"Cache-Control":                "no-store",
+		"Strict-Transport-Security":    "max-age=31536000; includeSubDomains",
+		"Content-Security-Policy":      "default-src 'none'; frame-ancestors 'none'",
+		"X-Frame-Options":              "DENY",
+		"Cross-Origin-Opener-Policy":   "same-origin",
+		"Cross-Origin-Embedder-Policy": "require-corp",
+		"Cross-Origin-Resource-Policy": "same-origin",
+		"Referrer-Policy":              "no-referrer",
+		"Permissions-Policy":           "()",
 	}
 	for k, want := range expected {
 		if got := rec.Header().Get(k); got != want {

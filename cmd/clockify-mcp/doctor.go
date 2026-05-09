@@ -53,6 +53,9 @@ func runDoctorReport(args []string, out io.Writer) int {
 	}
 
 	cfg, cfgErr := config.Load()
+	if cfgErr == nil {
+		cfgErr = validateBuildCapabilities(cfg)
+	}
 	var strictFindings []doctorFinding
 	if opts.strict {
 		strictFindings = strictDoctorFindings(cfg, cfgErr, opts.allowBroadPolicy)
@@ -90,14 +93,26 @@ func runDoctorReport(args []string, out io.Writer) int {
 	pln("")
 
 	if opts.strict {
+		errorCount := doctorFindingCount(strictFindings, "ERROR")
+		warnCount := doctorFindingCount(strictFindings, "WARN")
 		if len(strictFindings) == 0 {
 			message := "no hosted-service findings"
 			if opts.checkBackends {
 				message = "no hosted-service or backend findings"
 			}
 			pf("Strict posture:\tOK\t%s\n", message)
+		} else if errorCount == 0 {
+			pf("Strict posture:\tOK\tno fatal findings; %d warning(s)\n", warnCount)
+			pln("Severity\tKey\tMessage")
+			for _, f := range strictFindings {
+				pf("%s\t%s\t%s\n", f.Severity, f.Key, f.Message)
+			}
 		} else {
-			pf("Strict posture:\tERROR\t%d finding(s)\n", len(strictFindings))
+			detail := fmt.Sprintf("%d error finding(s)", errorCount)
+			if warnCount > 0 {
+				detail = fmt.Sprintf("%s, %d warning(s)", detail, warnCount)
+			}
+			pf("Strict posture:\tERROR\t%s\n", detail)
 			pln("Severity\tKey\tMessage")
 			for _, f := range strictFindings {
 				pf("%s\t%s\t%s\n", f.Severity, f.Key, f.Message)
@@ -142,7 +157,7 @@ func runDoctorReport(args []string, out io.Writer) int {
 	if cfgErr != nil {
 		return 2
 	}
-	if opts.strict && len(strictFindings) > 0 {
+	if opts.strict && doctorFindingCount(strictFindings, "ERROR") > 0 {
 		return 3
 	}
 	return 0
@@ -197,9 +212,17 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 			Message:  message,
 		})
 	}
+	warn := func(key, message string) {
+		findings = append(findings, doctorFinding{
+			Severity: "WARN",
+			Key:      key,
+			Message:  message,
+		})
+	}
 
 	transport := effectiveDoctorTransport(cfg, cfgErr)
 	authMode := effectiveDoctorAuthMode(cfg, cfgErr, transport)
+	profileName := effectiveDoctorProfile(cfg, cfgErr)
 
 	if transport == "http" {
 		add("MCP_TRANSPORT", "legacy http transport is forbidden in hosted strict posture; use streamable_http or grpc")
@@ -286,7 +309,21 @@ func strictDoctorFindings(cfg config.Config, cfgErr error, allowBroadPolicy bool
 		}
 	}
 
+	if config.IsHostedProfile(profileName) && effectiveDoctorString(cfg.DefaultTenantID, cfgErr, "MCP_DEFAULT_TENANT_ID", "default") == "default" {
+		warn("MCP_DEFAULT_TENANT_ID", "hosted profiles should set MCP_DEFAULT_TENANT_ID to a deployment-specific fallback; tenant-required gates prevent normal fallback use, but the literal default value makes future auth-mode drift harder to spot")
+	}
+
 	return findings
+}
+
+func doctorFindingCount(findings []doctorFinding, severity string) int {
+	var count int
+	for _, f := range findings {
+		if f.Severity == severity {
+			count++
+		}
+	}
+	return count
 }
 
 func isDoctorPostgresDSN(dsn string) bool {
@@ -315,6 +352,13 @@ func effectiveDoctorAuthMode(cfg config.Config, cfgErr error, transport string) 
 	default:
 		return ""
 	}
+}
+
+func effectiveDoctorProfile(cfg config.Config, cfgErr error) string {
+	if cfgErr == nil && strings.TrimSpace(cfg.Profile) != "" {
+		return strings.TrimSpace(cfg.Profile)
+	}
+	return strings.TrimSpace(os.Getenv("MCP_PROFILE"))
 }
 
 func effectiveDoctorAuditDurability(cfg config.Config, cfgErr error) string {

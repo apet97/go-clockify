@@ -369,10 +369,21 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(clockify_mcp_audit_failures_total[5m])",
-          "legendFormat": "Audit Failure ({{reason}})",
+          "expr": "sum by (reason, phase) (rate(clockify_mcp_audit_failures_total[5m]))",
+          "legendFormat": "Audit Failure ({{reason}}/{{phase}})",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(clockify_mcp_audit_failures_total{reason=\"persist_error\",phase=\"outcome\"}[5m])",
+          "legendFormat": "Outcome Not Durable",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "Audit Failures",
@@ -463,6 +474,17 @@
           "legendFormat": "{{kind}} ({{scope}})",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (path, reason) (rate(clockify_mcp_http_admission_rejections_total[5m]))",
+          "legendFormat": "http {{path}} ({{reason}})",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "Rate Limit Rejections",

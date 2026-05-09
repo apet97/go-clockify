@@ -16,7 +16,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
-- **Signed releases** — every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance.
+- **Signed releases** — every binary and container image ships with cosign signatures and SPDX SBOMs; SLSA build provenance is attached when GitHub artifact attestations are available for the repository account tier.
 
 [mcp]: https://modelcontextprotocol.io/docs/getting-started/intro
 [clockify]: https://clockify.me
@@ -310,7 +310,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `CLOCKIFY_RATE_LIMIT` | `120` | Global tool calls per 60s window (0=disabled). For multi-subject HTTP/gRPC deployments, size this at least active_subjects * CLOCKIFY_PER_TOKEN_RATE_LIMIT so per-subject fairness can engage. |
 | `CLOCKIFY_WORKSPACE_ID` | `auto` | Workspace ID (auto-detected if only one) |
 | `MCP_ALLOW_DEV_BACKEND` | `—` | Permit memory/file backends for streamable_http or grpc (single-process only) |
-| `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod) |
+| `MCP_AUDIT_DURABILITY` | `best_effort` | Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod); fail_closed_strict also surfaces post-mutation outcome persistence failures |
 | `MCP_AUTH_MODE` | `—` | Authentication mode (per-transport support varies; see matrix) |
 | `MCP_CONTROL_PLANE_AUDIT_CAP` | `0` | File/memory audit cap (0=unbounded). Postgres uses retention instead. |
 | `MCP_CONTROL_PLANE_AUDIT_RETENTION` | `720h` | Audit retention [1h,8760h]; 0=off |
@@ -321,12 +321,15 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_HTTP_INLINE_METRICS_ENABLED` | `0` | Expose /metrics on the main HTTP listener |
 | `MCP_HTTP_LEGACY_POLICY` | `warn` | Legacy HTTP startup behaviour (defaults to deny when ENVIRONMENT=prod) |
 | `MCP_HTTP_MAX_BODY` | `4194304` | **Deprecated — use `MCP_MAX_MESSAGE_SIZE`.** Deprecated alias for MCP_MAX_MESSAGE_SIZE |
+| `MCP_HTTP_RATELIMIT_GET_PER_SESSION` | `0` | Concurrent streamable HTTP SSE GET connections allowed per session on this process (0=disabled; hosted profiles default to 4) |
+| `MCP_HTTP_RATELIMIT_PER_IP` | `0` | Process-local HTTP admission limit per source IP per minute (0=disabled; hosted profiles default to 600) |
+| `MCP_HTTP_RATELIMIT_PER_PRINCIPAL` | `0` | Process-local HTTP admission limit per authenticated subject+tenant per minute (0=disabled; hosted profiles default to 300) |
 | `MCP_LOG_FORMAT` | `text` | Log format (stderr; PII-scrubbed) |
 | `MCP_MAX_MESSAGE_SIZE` | `4194304` | Max request size in bytes (primary knob); 0 < N <= 104857600 |
 | `MCP_METRICS_AUTH_MODE` | `static_bearer (when MCP_METRICS_BIND set)` | Auth mode for dedicated metrics listener |
 | `MCP_METRICS_BEARER_TOKEN` | `—` | Bearer token (>=16 chars) for static_bearer metrics |
 | `MCP_METRICS_BIND` | `—` | Dedicated metrics listener (optional; recommended for streamable_http) |
-| `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | OIDC verify cache TTL [1s,5m] |
+| `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | OIDC verify cache TTL [1s,5m]; hosted profiles clamp values above 60s |
 | `MCP_PROFILE` | `—` | Apply a bundle of pinned defaults for a named deployment shape; explicit env overrides still win |
 | `MCP_TRANSPORT` | `stdio` | Transport mode; http is legacy POST-only (deprecated) |
 <!-- CONFIG-TABLE END -->
@@ -375,25 +378,28 @@ The repository also ships [`deploy/docker-compose.yml`](deploy/docker-compose.ym
 
 ```sh
 make check   # fast inner loop: gofmt + go vet + go test
-make verify  # full local pipeline: lint, coverage floors, fuzz-short,
+make verify  # pre-PR local pipeline: lint, coverage floors, fuzz-short,
              # build-tag checks, HTTP smoke, k8s render, govulncheck
-             # (k8s/fips/vuln tiers auto-skip when their tools are missing)
+             # (lint/k8s/fips/vuln tiers skip when local tools are missing)
+make release-check  # pre-ship/tag gate: docs, scripts, smokes, gRPC E2E, deploy render
 make cover   # coverage report
 make build   # binary with version from git tags
 ```
 
-`make verify` mirrors the PR-blocking CI jobs that can run on a laptop —
-see `CONTRIBUTING.md` for the exact list of checks it runs locally versus
-the full CI set.
+`make verify` mirrors the PR-blocking CI jobs that can run on a laptop
+when their tools are installed; CI remains authoritative for skipped
+local tiers. `make release-check` is the laptop-runnable pre-ship gate.
+Neither command replaces the external launch-candidate evidence gates
+tracked in `docs/launch-candidate-checklist.md`.
 
-Go 1.25.9, stdlib only. Module path: `github.com/apet97/go-clockify`.
+Go 1.25.10, stdlib only. Module path: `github.com/apet97/go-clockify`.
 
 ## Compatibility
 
 | Component | Version |
 |-----------|---------|
 | MCP Protocol | `2025-11-25` (back-compat: `2025-06-18`, `2025-03-26`, `2024-11-05`) |
-| Go | 1.25.9+ |
+| Go | 1.25.10 pinned |
 | Node.js (npm wrapper) | 18+ |
 
 ## Troubleshooting

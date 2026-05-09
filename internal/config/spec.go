@@ -69,6 +69,11 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_ALLOWED_ORIGINS", Group: "Transport", AppliesTo: []string{"http", "streamable_http"}, Help: "Comma-separated CORS origins"},
 		{Name: "MCP_ALLOW_ANY_ORIGIN", Group: "Transport", Enum: []string{"0", "1"}, Default: "0", Help: "Allow all origins"},
 		{Name: "MCP_STRICT_HOST_CHECK", Group: "Transport", Enum: []string{"0", "1"}, Default: "0", Help: "Require Host header match"},
+		{Name: "MCP_HTTP_RATELIMIT_PER_IP", Group: "Transport", Default: "0", AppliesTo: []string{"http", "streamable_http"}, Help: "Process-local HTTP admission limit per source IP per minute (0=disabled; hosted profiles default to 600)", EssentialDoc: true},
+		{Name: "MCP_HTTP_RATELIMIT_PER_PRINCIPAL", Group: "Transport", Default: "0", AppliesTo: []string{"http", "streamable_http"}, Help: "Process-local HTTP admission limit per authenticated subject+tenant per minute (0=disabled; hosted profiles default to 300)", EssentialDoc: true},
+		{Name: "MCP_HTTP_RATELIMIT_GET_PER_SESSION", Group: "Transport", Default: "0", AppliesTo: []string{"streamable_http"}, Help: "Concurrent streamable HTTP SSE GET connections allowed per session on this process (0=disabled; hosted profiles default to 4)", EssentialDoc: true},
+		{Name: "MCP_HTTP_REQUIRE_PROTOCOL_VERSION", Group: "Transport", Enum: []string{"0", "1"}, Default: "0", AppliesTo: []string{"streamable_http"}, Help: "When 1, require Mcp-Protocol-Version on post-initialize streamable HTTP requests; default 0 accepts older clients and counts missing headers"},
+		{Name: "MCP_DEFAULT_PROTOCOL_VERSION", Group: "Transport", Enum: []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}, Help: "Optional fallback initialize protocolVersion when clients omit it; empty uses the newest supported version"},
 		{Name: "MCP_HTTP_LEGACY_POLICY", Group: "Transport", Enum: []string{"allow", "warn", "deny"}, Default: "warn", Help: "Legacy HTTP startup behaviour (defaults to deny when ENVIRONMENT=prod)", EssentialDoc: true},
 
 		// --- Auth ---
@@ -79,9 +84,10 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_OIDC_JWKS_URL", Group: "Auth", Help: "Optional JWKS URL override; HTTPS required except loopback development; private/loopback/reserved addresses require MCP_OIDC_JWKS_ALLOW_PRIVATE=1"},
 		{Name: "MCP_OIDC_JWKS_ALLOW_PRIVATE", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, permit MCP_OIDC_JWKS_URL to target loopback/private/reserved addresses for trusted local or private IdP endpoints"},
 		{Name: "MCP_OIDC_JWKS_PATH", Group: "Auth", Help: "Local JWKS file (tests/dev only)", Sensitive: true},
-		{Name: "MCP_OIDC_VERIFY_CACHE_TTL", Group: "Auth", Default: "60s", Help: "OIDC verify cache TTL [1s,5m]", EssentialDoc: true},
+		{Name: "MCP_OIDC_VERIFY_CACHE_TTL", Group: "Auth", Default: "60s", Help: "OIDC verify cache TTL [1s,5m]; hosted profiles clamp values above 60s", EssentialDoc: true},
 		{Name: "MCP_OIDC_JWKS_CACHE_TTL", Group: "Auth", Default: "5m", Help: "OIDC JWKS document cache TTL [1m,24h]"},
 		{Name: "MCP_OIDC_STRICT", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, fail config load if oidc selected without MCP_OIDC_AUDIENCE or MCP_RESOURCE_URI; reject tokens missing exp claim"},
+		{Name: "MCP_OIDC_REQUIRE_KID", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject OIDC JWTs without a kid header; hosted profiles default to 1"},
 		{Name: "MCP_REQUIRE_TENANT_CLAIM", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, oidc tokens missing the tenant claim are rejected (no fallback to MCP_DEFAULT_TENANT_ID)"},
 		{Name: "MCP_RESOURCE_URI", Group: "Auth", Help: "RFC 8707 resource indicator"},
 		{Name: "MCP_TENANT_CLAIM", Group: "Auth", Default: "tenant_id", Help: "OIDC claim name for tenant"},
@@ -90,7 +96,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_FORWARD_TENANT_HEADER", Group: "Auth", Default: "X-Forwarded-Tenant", Help: "forward_auth tenant header"},
 		{Name: "MCP_FORWARD_SUBJECT_HEADER", Group: "Auth", Default: "X-Forwarded-User", Help: "forward_auth subject header"},
 		{Name: "MCP_REQUIRE_FORWARD_TENANT_CLAIM", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, forward_auth requests missing the tenant header are rejected (no fallback to MCP_DEFAULT_TENANT_ID). Hosted profiles default to 1."},
-		{Name: "MCP_FORWARD_AUTH_TRUSTED_PROXIES", Group: "Auth", AppliesTo: []string{"streamable_http", "http", "grpc"}, Help: "Comma-separated CIDR list of source addresses permitted to send X-Forwarded-User / X-Forwarded-Tenant. Empty list trusts every source — only safe behind a reverse proxy that strips client-supplied copies of those headers. Non-loopback forward_auth binds refuse empty lists."},
+		{Name: "MCP_FORWARD_AUTH_TRUSTED_PROXIES", Group: "Auth", AppliesTo: []string{"streamable_http", "http", "grpc"}, Help: "Comma-separated CIDR list of source addresses permitted to send X-Forwarded-User / X-Forwarded-Tenant. Empty list is only accepted on loopback binds and is narrowed to loopback CIDRs; non-loopback forward_auth binds refuse empty lists."},
 		{Name: "MCP_BEHIND_HTTPS_PROXY", Group: "Transport", AppliesTo: []string{"streamable_http", "http"}, Enum: []string{"0", "1"}, Default: "0", Help: "When 1, baseline-header middleware emits Strict-Transport-Security on plaintext responses because a trusted upstream proxy is terminating TLS. Default 0 skips HSTS on plain HTTP so honest http:// URLs stay reachable on misconfigured dev installs."},
 		{Name: "MCP_MTLS_TENANT_HEADER", Group: "Auth", Default: "X-Tenant-ID", Help: "mTLS tenant header override (only consulted when MCP_MTLS_TENANT_SOURCE selects header)"},
 		{Name: "MCP_MTLS_TENANT_SOURCE", Group: "Auth", Enum: []string{"cert", "header", "header_or_cert"}, Default: "cert", Help: "Where the mtls authenticator reads the tenant from: cert SAN/Org (default; safe for direct mTLS), header (only behind a trusted proxy), header_or_cert (migration window)"},
@@ -103,6 +109,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_DISABLE_INLINE_SECRETS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, reject credential refs with backend=inline (hosted-service hardening; prefer env/file/external vault backends)"},
 		{Name: "MCP_EXPOSE_AUTH_ERRORS", Group: "Auth", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, expose detailed auth failure reasons to clients (development only); default 0 returns 'authentication failed' to clients while logging the underlying reason server-side."},
 		{Name: "MCP_GRPC_REAUTH_INTERVAL", Group: "Auth", Default: "0", AppliesTo: []string{"grpc"}, Help: "gRPC stream reauth interval (0=disabled)"},
+		{Name: "MCP_GRPC_PEER_CIDR_ALLOW", Group: "Auth", AppliesTo: []string{"grpc"}, Help: "Optional comma-separated CIDR allowlist for gRPC peer source addresses; peers outside the list are rejected before authentication"},
 
 		// --- Metrics ---
 		{Name: "MCP_METRICS_BIND", Group: "Metrics", Help: "Dedicated metrics listener (optional; recommended for streamable_http)", EssentialDoc: true},
@@ -118,7 +125,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "MCP_CONTROL_PLANE_AUDIT_RETENTION", Group: "ControlPlane", Default: "720h", Help: "Audit retention [1h,8760h]; 0=off", EssentialDoc: true},
 		{Name: "MCP_SESSION_TTL", Group: "ControlPlane", Default: "30m", AppliesTo: []string{"streamable_http"}, Help: "Session TTL [1m,24h]"},
 		{Name: "MCP_ALLOW_DEV_BACKEND", Group: "ControlPlane", Enum: []string{"0", "1"}, Help: "Permit memory/file backends for streamable_http or grpc (single-process only)", EssentialDoc: true},
-		{Name: "MCP_AUDIT_DURABILITY", Group: "Audit", Enum: []string{"best_effort", "fail_closed"}, Default: "best_effort", Help: "Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod)", EssentialDoc: true},
+		{Name: "MCP_AUDIT_DURABILITY", Group: "Audit", Enum: []string{"best_effort", "fail_closed", "fail_closed_strict"}, Default: "best_effort", Help: "Audit persist-failure behaviour (defaults to fail_closed when ENVIRONMENT=prod); fail_closed_strict also surfaces post-mutation outcome persistence failures", EssentialDoc: true},
 
 		// --- Logging / Deploy ---
 		{Name: "MCP_LOG_LEVEL", Group: "Logging", Enum: []string{"debug", "info", "warn", "error"}, Default: "info", Help: "Log level"},

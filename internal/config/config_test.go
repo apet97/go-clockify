@@ -2,6 +2,7 @@ package config
 
 import (
 	"maps"
+	"net"
 	"os"
 	"slices"
 	"strings"
@@ -104,9 +105,13 @@ func setEnvs(t *testing.T, envs map[string]string) {
 // non-hosted tests.
 var profileLeakedEnvs = []string{
 	"MCP_OIDC_STRICT",
+	"MCP_OIDC_REQUIRE_KID",
 	"MCP_REQUIRE_TENANT_CLAIM",
 	"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 	"MCP_DISABLE_INLINE_SECRETS",
+	"MCP_HTTP_RATELIMIT_PER_IP",
+	"MCP_HTTP_RATELIMIT_PER_PRINCIPAL",
+	"MCP_HTTP_RATELIMIT_GET_PER_SESSION",
 	"MCP_HTTP_LEGACY_POLICY",
 	"MCP_AUDIT_DURABILITY",
 	"CLOCKIFY_POLICY",
@@ -408,6 +413,76 @@ func TestLoadMaxMessageSizeLegacyFallback(t *testing.T) {
 	}
 }
 
+func TestLoadHTTPAdmissionLimits(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":                   "test-key",
+		"MCP_HTTP_RATELIMIT_PER_IP":          "25",
+		"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "10",
+		"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "2",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPRateLimitPerIP != 25 {
+		t.Fatalf("HTTPRateLimitPerIP = %d, want 25", cfg.HTTPRateLimitPerIP)
+	}
+	if cfg.HTTPRateLimitPerPrincipal != 10 {
+		t.Fatalf("HTTPRateLimitPerPrincipal = %d, want 10", cfg.HTTPRateLimitPerPrincipal)
+	}
+	if cfg.HTTPRateLimitGETPerSession != 2 {
+		t.Fatalf("HTTPRateLimitGETPerSession = %d, want 2", cfg.HTTPRateLimitGETPerSession)
+	}
+}
+
+func TestLoadHTTPRequireProtocolVersion(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":                  "test-key",
+		"MCP_HTTP_REQUIRE_PROTOCOL_VERSION": "1",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.HTTPRequireProtocolVersion {
+		t.Fatal("HTTPRequireProtocolVersion = false, want true")
+	}
+}
+
+func TestLoadDefaultProtocolVersion(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":             "test-key",
+		"MCP_DEFAULT_PROTOCOL_VERSION": "2025-03-26",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DefaultProtocolVersion != "2025-03-26" {
+		t.Fatalf("DefaultProtocolVersion = %q, want 2025-03-26", cfg.DefaultProtocolVersion)
+	}
+}
+
+func TestLoadDefaultProtocolVersionRejectsUnsupported(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":             "test-key",
+		"MCP_DEFAULT_PROTOCOL_VERSION": "2099-01-01",
+	})
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "invalid MCP_DEFAULT_PROTOCOL_VERSION") {
+		t.Fatalf("Load error = %v, want invalid MCP_DEFAULT_PROTOCOL_VERSION", err)
+	}
+}
+
+func TestLoadHTTPAdmissionLimitRejectsNegative(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_HTTP_RATELIMIT_PER_IP": "-1",
+	})
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "MCP_HTTP_RATELIMIT_PER_IP must be >= 0") {
+		t.Fatalf("expected negative rate-limit error, got %v", err)
+	}
+}
+
 // TestLoadSingleTenantHTTPRequiresAPIKey verifies that the
 // single-tenant-http profile fails Load() when CLOCKIFY_API_KEY
 // is empty: the profile bootstraps the only tenant from the env
@@ -652,6 +727,8 @@ func TestLoadTransportGRPCDefaultBind(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_TLS_CERT":     "/dev/null",
+		"MCP_GRPC_TLS_KEY":      "/dev/null",
 		"MCP_ALLOW_DEV_BACKEND": "1",
 	})
 	os.Unsetenv("MCP_GRPC_BIND")
@@ -664,6 +741,22 @@ func TestLoadTransportGRPCDefaultBind(t *testing.T) {
 	}
 }
 
+func TestLoadTransportGRPCPlaintextNonLoopbackRefused(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":      "test-key",
+		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_BIND":         ":9090",
+		"MCP_ALLOW_DEV_BACKEND": "1",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected plaintext non-loopback gRPC bind to be refused")
+	}
+	if !strings.Contains(err.Error(), "MCP_GRPC_TLS_CERT") {
+		t.Fatalf("error should name TLS cert remediation, got: %v", err)
+	}
+}
+
 // TestLoadTransportGRPCStaticBearer verifies the W4-03 auth amendment:
 // gRPC + static_bearer is accepted when MCP_BEARER_TOKEN is set, matching
 // the legacy HTTP transport's shape so operators get a consistent knob.
@@ -671,6 +764,7 @@ func TestLoadTransportGRPCStaticBearer(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_BIND":         "127.0.0.1:9090",
 		"MCP_AUTH_MODE":         "static_bearer",
 		"MCP_BEARER_TOKEN":      "1234567890abcdef",
 		"MCP_ALLOW_DEV_BACKEND": "1",
@@ -692,6 +786,7 @@ func TestLoadTransportGRPCOIDC(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":      "test-key",
 		"MCP_TRANSPORT":         "grpc",
+		"MCP_GRPC_BIND":         "127.0.0.1:9090",
 		"MCP_AUTH_MODE":         "oidc",
 		"MCP_OIDC_ISSUER":       "https://idp.example.com",
 		"MCP_ALLOW_DEV_BACKEND": "1",
@@ -712,6 +807,8 @@ func TestLoadTransportGRPCForwardAuthAccepted(t *testing.T) {
 		"CLOCKIFY_API_KEY":                 "test-key",
 		"MCP_TRANSPORT":                    "grpc",
 		"MCP_AUTH_MODE":                    "forward_auth",
+		"MCP_GRPC_TLS_CERT":                "/dev/null",
+		"MCP_GRPC_TLS_KEY":                 "/dev/null",
 		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 		"MCP_ALLOW_DEV_BACKEND":            "1",
 	})
@@ -834,6 +931,7 @@ func TestLoadGRPCReauthInterval(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":         "test-key",
 		"MCP_TRANSPORT":            "grpc",
+		"MCP_GRPC_BIND":            "127.0.0.1:9090",
 		"MCP_GRPC_REAUTH_INTERVAL": "60s",
 		"MCP_ALLOW_DEV_BACKEND":    "1",
 	})
@@ -843,6 +941,46 @@ func TestLoadGRPCReauthInterval(t *testing.T) {
 	}
 	if cfg.GRPCReauthInterval.Seconds() != 60 {
 		t.Fatalf("expected 60s, got %v", cfg.GRPCReauthInterval)
+	}
+}
+
+func TestLoadGRPCPeerCIDRAllow(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":         "test-key",
+		"MCP_TRANSPORT":            "grpc",
+		"MCP_GRPC_BIND":            "127.0.0.1:9090",
+		"MCP_GRPC_PEER_CIDR_ALLOW": "10.0.0.0/8,2001:db8::/32",
+		"MCP_ALLOW_DEV_BACKEND":    "1",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("gRPC peer CIDR allowlist should be accepted: %v", err)
+	}
+	if len(cfg.GRPCPeerCIDRAllow) != 2 {
+		t.Fatalf("expected 2 CIDRs, got %d", len(cfg.GRPCPeerCIDRAllow))
+	}
+	if !cfg.GRPCPeerCIDRAllow[0].Contains(net.ParseIP("10.1.2.3")) {
+		t.Fatalf("first CIDR did not match expected IPv4 address: %v", cfg.GRPCPeerCIDRAllow[0])
+	}
+	if !cfg.GRPCPeerCIDRAllow[1].Contains(net.ParseIP("2001:db8::1")) {
+		t.Fatalf("second CIDR did not match expected IPv6 address: %v", cfg.GRPCPeerCIDRAllow[1])
+	}
+}
+
+func TestLoadGRPCPeerCIDRAllowInvalid(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":         "test-key",
+		"MCP_TRANSPORT":            "grpc",
+		"MCP_GRPC_BIND":            "127.0.0.1:9090",
+		"MCP_GRPC_PEER_CIDR_ALLOW": "not-cidr",
+		"MCP_ALLOW_DEV_BACKEND":    "1",
+	})
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected invalid gRPC peer CIDR allowlist to be rejected")
+	}
+	if !strings.Contains(err.Error(), "MCP_GRPC_PEER_CIDR_ALLOW") {
+		t.Fatalf("expected env name in error, got %v", err)
 	}
 }
 
@@ -1128,13 +1266,17 @@ func TestAuditDurabilityDefault(t *testing.T) {
 }
 
 func TestAuditDurabilityFailClosed(t *testing.T) {
-	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key", "MCP_AUDIT_DURABILITY": "fail_closed"})
-	cfg, err := Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.AuditDurabilityMode != "fail_closed" {
-		t.Fatalf("expected fail_closed, got %q", cfg.AuditDurabilityMode)
+	for _, mode := range []string{"fail_closed", "fail_closed_strict"} {
+		t.Run(mode, func(t *testing.T) {
+			setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key", "MCP_AUDIT_DURABILITY": mode})
+			cfg, err := Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.AuditDurabilityMode != mode {
+				t.Fatalf("expected %s, got %q", mode, cfg.AuditDurabilityMode)
+			}
+		})
 	}
 }
 
@@ -1349,6 +1491,23 @@ func TestOIDCVerifyCacheTTL_Custom(t *testing.T) {
 	}
 	if cfg.OIDCVerifyCacheTTL != 90*time.Second {
 		t.Fatalf("expected 90s, got %s", cfg.OIDCVerifyCacheTTL)
+	}
+}
+
+func TestOIDCVerifyCacheTTL_HostedProfileClampsAbove60s(t *testing.T) {
+	env := map[string]string{
+		"CLOCKIFY_API_KEY":          "test-key",
+		"MCP_PROFILE":               "shared-service",
+		"MCP_OIDC_VERIFY_CACHE_TTL": "2m",
+	}
+	maps.Copy(env, hostedProfileEnv)
+	setEnvs(t, env)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OIDCVerifyCacheTTL != time.Minute {
+		t.Fatalf("hosted verify cache TTL = %s, want 1m clamp", cfg.OIDCVerifyCacheTTL)
 	}
 }
 
@@ -1764,7 +1923,7 @@ func TestLoad_ForwardAuthRequiresTrustedProxiesOnNonLoopback(t *testing.T) {
 			want: "requires MCP_FORWARD_AUTH_TRUSTED_PROXIES",
 		},
 		{
-			name: "loopback_http_bind_allowed",
+			name: "loopback_http_bind_narrows_to_loopback_sources",
 			env: map[string]string{
 				"MCP_TRANSPORT":         "streamable_http",
 				"MCP_AUTH_MODE":         "forward_auth",
@@ -1801,7 +1960,7 @@ func TestLoad_ForwardAuthRequiresTrustedProxiesOnNonLoopback(t *testing.T) {
 			}
 			maps.Copy(env, c.env)
 			setEnvs(t, env)
-			_, err := Load()
+			cfg, err := Load()
 			if c.want != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q", c.want)
@@ -1813,6 +1972,15 @@ func TestLoad_ForwardAuthRequiresTrustedProxiesOnNonLoopback(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatalf("Load: %v", err)
+			}
+			if strings.Contains(c.name, "loopback_http_bind") {
+				if len(cfg.ForwardAuthTrustedProxies) != 2 {
+					t.Fatalf("loopback forward_auth proxies = %d, want 2", len(cfg.ForwardAuthTrustedProxies))
+				}
+				if !cfg.ForwardAuthTrustedProxies[0].Contains(net.ParseIP("127.0.0.1")) ||
+					!cfg.ForwardAuthTrustedProxies[1].Contains(net.ParseIP("::1")) {
+					t.Fatalf("loopback forward_auth proxies = %v, want IPv4 and IPv6 loopback", cfg.ForwardAuthTrustedProxies)
+				}
 			}
 		})
 	}

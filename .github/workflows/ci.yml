@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Check formatting
         run: |
           unformatted=$(gofmt -l .)
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - run: go vet ./...
 
   lint:
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           version: v2.5.0
@@ -70,19 +70,15 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run govulncheck
-        # Pin to a specific golang.org/x/vuln commit so supply-chain
-        # auditors can point at what actually ran. The last tagged
-        # release (v1.1.4) was built with go1.24 and refuses to
-        # parse go1.25 code; pinning @master is too volatile for a
-        # production CI gate. Revisit once a tagged release supports
-        # go1.25 — tracked as a Wave L follow-up issue.
-        #
-        # SHA resolved 2026-04-22 against
-        # https://github.com/golang/vuln/commits/master.
+        # Pin to a tagged golang.org/x/vuln release so supply-chain
+        # auditors can point at what actually ran. The version is
+        # managed in tools/govulncheck/go.mod so Dependabot can open
+        # PRs for subsequent scanner releases.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@5499630db5f896778f084a8b3720910426de5c53
+          (cd tools/govulncheck && GOWORK=off go install golang.org/x/vuln/cmd/govulncheck)
+          govulncheck -version
           govulncheck ./...
 
   build:
@@ -95,7 +91,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Verify build-tag wiring (default + otel/grpc/pprof/fips)
         # Extracted to scripts/check-build-tags.sh so `make verify-core` and CI
         # exercise the same symbol and go.mod parity checks.
@@ -113,7 +109,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - run: go test -race -count=1 -timeout 120s ./...
 
   test-grpc:
@@ -127,7 +123,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run cross-transport tests under -tags=grpc
         # Mirrors the "full E2E" line in `make release-check`:
         #   go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
@@ -155,7 +151,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run tests and enforce coverage floors
         # Global + per-package floors are defined in scripts/check-coverage.sh
         # (COVERAGE_GLOBAL_FLOOR, COVERAGE_FLOORS). `make cover-check` calls
@@ -172,7 +168,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run fuzz targets
         # Count-based budget (-fuzztime=Nx) instead of duration-based
         # (-fuzztime=Ns) to eliminate the "context deadline exceeded"
@@ -206,7 +202,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Verify help+README generated from internal/config/spec.go
         # Re-renders cmd/clockify-mcp/help_generated.go and the
         # CONFIG-TABLE block in README.md, then fails if either has
@@ -354,7 +350,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run actionlint
         # Static analysis for every .github/workflows/*.yml file.
         # Catches the silent-runtime-fail bug class CI itself can't
@@ -378,7 +374,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Install kubeconform
         run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
       - name: Render and validate Kustomize + Helm
@@ -397,7 +393,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Build and smoke-test HTTP transport
         # Extracted to scripts/smoke-http.sh so `make verify-core` runs the
         # same /health + /ready probe.
@@ -427,7 +423,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run gRPC auth/mTLS regression suite
         run: bash scripts/smoke-grpc-auth.sh
 
@@ -441,7 +437,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run strict doctor smoke
         # Offline synthetic env only: verifies strict-mode flag
         # parsing and posture findings without requiring Postgres.
@@ -478,7 +474,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run Postgres backend doctor smoke
         # Builds with -tags=postgres so the pgx-backed control-plane
         # store is linked in, then runs `doctor --strict
@@ -523,7 +519,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.10"
       - name: Run shared-service Postgres E2E
         # Drives mcp.ServeStreamableHTTP in-process against the
         # postgres service with two distinct forward_auth principals,

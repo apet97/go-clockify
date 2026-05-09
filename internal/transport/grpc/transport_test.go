@@ -3,6 +3,7 @@ package grpctransport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -240,6 +241,54 @@ func TestExchangeSendPumpPanicDoesNotDeadlock(t *testing.T) {
 	}
 }
 
+func TestStreamNotifierDropsSlowConsumer(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sends := make(chan []byte, 1)
+	sends <- []byte(`{"jsonrpc":"2.0","method":"already_queued"}`)
+	notifier := newStreamNotifier(ctx, sends)
+
+	before := metrics.GRPCNotificationDropsTotal.Get("slow_consumer")
+	started := time.Now()
+	err := notifier.Notify("notifications/tools/list_changed", nil)
+	if !errors.Is(err, errGRPCNotificationQueueFull) {
+		t.Fatalf("expected slow-consumer drop error, got %v", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("Notify blocked for %s on full send queue", elapsed)
+	}
+	if got := metrics.GRPCNotificationDropsTotal.Get("slow_consumer") - before; got != 1 {
+		t.Fatalf("notification drop metric delta=%d, want 1", got)
+	}
+}
+
+func TestPlaintextGRPCNonLoopbackDetection(t *testing.T) {
+	cases := []struct {
+		name string
+		addr net.Addr
+		want bool
+	}{
+		{name: "unspecified_ipv4", addr: &net.TCPAddr{IP: net.IPv4zero, Port: 9090}, want: true},
+		{name: "unspecified_ipv6", addr: &net.TCPAddr{IP: net.IPv6zero, Port: 9090}, want: true},
+		{name: "external", addr: &net.TCPAddr{IP: net.ParseIP("10.0.0.5"), Port: 9090}, want: true},
+		{name: "loopback", addr: &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 9090}, want: false},
+		{name: "non_tcp", addr: fakeAddr("bufconn"), want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := grpcPlaintextNonLoopback(tc.addr); got != tc.want {
+				t.Fatalf("grpcPlaintextNonLoopback(%v) = %v, want %v", tc.addr, got, tc.want)
+			}
+		})
+	}
+}
+
+type fakeAddr string
+
+func (a fakeAddr) Network() string { return string(a) }
+func (a fakeAddr) String() string  { return string(a) }
+
 // TestExchangeServeRealListener exercises the public Serve function against
 // a real TCP loopback listener to make sure context-driven shutdown works.
 // This test is the only one that binds to a local port; it uses :0 for OS
@@ -270,4 +319,71 @@ func TestExchangeServeRealListener(t *testing.T) {
 		t.Fatalf("Serve did not shut down within 12s after ctx cancel")
 	}
 	wg.Wait()
+}
+
+func TestServeMarksNotReadyBeforeGracefulDrain(t *testing.T) {
+	srv := newTestServer(t)
+	srv.SetReadyCached(true)
+	lis := bufconn.Listen(1024 * 1024)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Serve(ctx, Options{Listener: lis, Server: srv})
+	}()
+
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		bufconnDialer(lis),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(bytesCodec{})),
+	)
+	if err != nil {
+		t.Fatalf("dial bufconn: %v", err)
+	}
+
+	streamDesc := &grpc.StreamDesc{
+		StreamName:    ExchangeMethod,
+		ServerStreams: true,
+		ClientStreams: true,
+	}
+	streamCtx, streamCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer streamCancel()
+	stream, err := conn.NewStream(streamCtx, streamDesc, "/"+ServiceName+"/"+ExchangeMethod)
+	if err != nil {
+		_ = conn.Close()
+		t.Fatalf("open stream: %v", err)
+	}
+
+	cancel()
+	deadline := time.After(time.Second)
+	for srv.IsReadyCached() {
+		select {
+		case <-deadline:
+			_ = stream.CloseSend()
+			_ = conn.Close()
+			t.Fatal("server remained ready after shutdown started")
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	select {
+	case err := <-errCh:
+		_ = conn.Close()
+		t.Fatalf("Serve returned before active stream drained: %v", err)
+	default:
+	}
+
+	_ = stream.CloseSend()
+	_ = conn.Close()
+	select {
+	case err := <-errCh:
+		if err != nil && err != io.EOF {
+			t.Fatalf("Serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Serve did not exit after stream closed")
+	}
 }

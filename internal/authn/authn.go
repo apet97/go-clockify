@@ -123,6 +123,10 @@ type Config struct {
 	// quietly falling back to DefaultTenantID. Default false preserves
 	// self-hosted single-tenant behaviour.
 	RequireTenantClaim bool
+	// OIDCRequireKID rejects JWTs that omit the JOSE kid header instead of
+	// falling back to the lone key in a JWKS. Hosted profiles enable this to
+	// make key rotation and provenance explicit.
+	OIDCRequireKID bool
 	// OIDCVerifyCacheTTL is the hard ceiling on cached verify results.
 	// Zero selects the default (oidcVerifyCacheMaxTTL); values are
 	// clamped to [oidcVerifyCacheMinTTL, oidcVerifyCacheTTLCeiling].
@@ -663,6 +667,9 @@ func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (P
 	if err := validateClaims(claims, a.cfg); err != nil {
 		return Principal{}, err
 	}
+	if a.cfg.OIDCRequireKID && strings.TrimSpace(header.KID) == "" {
+		return Principal{}, fmt.Errorf("oidc token missing kid header")
+	}
 	key, err := a.cache.key(ctx, header.KID)
 	if err != nil {
 		return Principal{}, err
@@ -710,11 +717,12 @@ func (a oidcAuthenticator) Authenticate(ctx context.Context, r *http.Request) (P
 }
 
 func bearerToken(r *http.Request) (string, bool) {
-	auth := r.Header.Get("Authorization")
-	if !strings.HasPrefix(auth, "Bearer ") {
+	auth := strings.TrimSpace(r.Header.Get("Authorization"))
+	scheme, token, ok := strings.Cut(auth, " ")
+	if !ok || !strings.EqualFold(scheme, "Bearer") {
 		return "", false
 	}
-	token := strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
+	token = strings.TrimSpace(token)
 	return token, token != ""
 }
 
@@ -722,6 +730,11 @@ type jwtHeader struct {
 	Alg string `json:"alg"`
 	KID string `json:"kid"`
 }
+
+const (
+	maxJWTHeaderJSONBytes = 16 << 10
+	maxJWTClaimsJSONBytes = 128 << 10
+)
 
 type jwtClaims struct {
 	Issuer    string         `json:"iss"`
@@ -755,16 +768,16 @@ func decodeJWT(token string) (jwtHeader, jwtClaims, string, []byte, error) {
 		return jwtHeader{}, jwtClaims{}, "", nil, fmt.Errorf("invalid JWT")
 	}
 	var header jwtHeader
-	rawHeader, err := base64.RawURLEncoding.DecodeString(parts[0])
+	rawHeader, err := decodeJWTJSONSegment("header", parts[0], maxJWTHeaderJSONBytes)
 	if err != nil {
-		return jwtHeader{}, jwtClaims{}, "", nil, fmt.Errorf("decode JWT header: %w", err)
+		return jwtHeader{}, jwtClaims{}, "", nil, err
 	}
 	if err := json.Unmarshal(rawHeader, &header); err != nil {
 		return jwtHeader{}, jwtClaims{}, "", nil, fmt.Errorf("parse JWT header: %w", err)
 	}
-	rawClaims, err := base64.RawURLEncoding.DecodeString(parts[1])
+	rawClaims, err := decodeJWTJSONSegment("claims", parts[1], maxJWTClaimsJSONBytes)
 	if err != nil {
-		return jwtHeader{}, jwtClaims{}, "", nil, fmt.Errorf("decode JWT claims: %w", err)
+		return jwtHeader{}, jwtClaims{}, "", nil, err
 	}
 	var raw map[string]any
 	if err := json.Unmarshal(rawClaims, &raw); err != nil {
@@ -780,6 +793,20 @@ func decodeJWT(token string) (jwtHeader, jwtClaims, string, []byte, error) {
 		return jwtHeader{}, jwtClaims{}, "", nil, fmt.Errorf("decode JWT signature: %w", err)
 	}
 	return header, claims, parts[0] + "." + parts[1], sig, nil
+}
+
+func decodeJWTJSONSegment(name, encoded string, maxBytes int) ([]byte, error) {
+	if maxBytes > 0 && len(encoded) > base64.RawURLEncoding.EncodedLen(maxBytes) {
+		return nil, fmt.Errorf("JWT %s too large: > %d bytes", name, maxBytes)
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("decode JWT %s: %w", name, err)
+	}
+	if maxBytes > 0 && len(raw) > maxBytes {
+		return nil, fmt.Errorf("JWT %s too large: > %d bytes", name, maxBytes)
+	}
+	return raw, nil
 }
 
 func validateClaims(claims jwtClaims, cfg Config) error {

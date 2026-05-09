@@ -85,6 +85,48 @@ func TestRunToolsListUsesSerializedCache(t *testing.T) {
 	}
 }
 
+func TestDispatchToolsListSerializedCacheStillRequiresInitialize(t *testing.T) {
+	var schemaMarshals atomic.Int32
+	server := NewServer("test", []ToolDescriptor{
+		descriptorWithCountingSchema("a_tool", &schemaMarshals),
+	}, nil, nil)
+	initializeSerializedCacheTestServer(t, server)
+	dispatchToolsListForSerializedCacheTest(t, server, "populate-cache")
+
+	server.initialized.Store(false)
+
+	req, err := json.Marshal(Request{
+		JSONRPC: "2.0",
+		ID:      "pre-init",
+		Method:  "tools/list",
+		Params:  map[string]any{},
+	})
+	if err != nil {
+		t.Fatalf("marshal tools/list: %v", err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("dispatch tools/list: %v", err)
+	}
+
+	var resp Response
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal tools/list response: %v", err)
+	}
+	if resp.Error == nil {
+		t.Fatalf("tools/list returned cached success before initialize: %s", raw)
+	}
+	if resp.Error.Code != -32002 {
+		t.Fatalf("tools/list error code: got %d want -32002", resp.Error.Code)
+	}
+	if !strings.Contains(resp.Error.Message, "not initialized") {
+		t.Fatalf("tools/list error message = %q, want not initialized", resp.Error.Message)
+	}
+	if got := schemaMarshals.Load(); got != 1 {
+		t.Fatalf("pre-initialize rejection should not remarshal cached schema, got %d", got)
+	}
+}
+
 func TestDispatchToolsListSerializedCacheInvalidatesOnTier1Activation(t *testing.T) {
 	var visibleMarshals atomic.Int32
 	var hiddenMarshals atomic.Int32
@@ -165,6 +207,59 @@ func TestDispatchToolsListSerializedCacheHonorsFilteredList(t *testing.T) {
 	}
 	if got := hiddenMarshals.Load(); got != 0 {
 		t.Fatalf("filtered hidden tool should never be serialized, got %d", got)
+	}
+}
+
+func TestRepeatInitialize_InvalidatesToolsListCache(t *testing.T) {
+	var initialMarshals atomic.Int32
+	var addedMarshals atomic.Int32
+	server := NewServer("test", []ToolDescriptor{
+		descriptorWithCountingSchema("initial_tool", &initialMarshals),
+	}, nil, nil)
+	initializeSerializedCacheTestServer(t, server)
+
+	before := dispatchToolsListForSerializedCacheTest(t, server, 1)
+	if !reflect.DeepEqual(before.Names, []string{"initial_tool"}) {
+		t.Fatalf("before repeat initialize names: got %v", before.Names)
+	}
+	if got := initialMarshals.Load(); got != 1 {
+		t.Fatalf("initial tools/list should marshal initial tool once, got %d", got)
+	}
+
+	server.mu.Lock()
+	server.tools["added_tool"] = descriptorWithCountingSchema("added_tool", &addedMarshals)
+	server.mu.Unlock()
+
+	stale := dispatchToolsListForSerializedCacheTest(t, server, "stale-before-repeat")
+	if !reflect.DeepEqual(stale.Names, []string{"initial_tool"}) {
+		t.Fatalf("cached tools/list setup should still be stale before repeat initialize, got %v", stale.Names)
+	}
+	if got := addedMarshals.Load(); got != 0 {
+		t.Fatalf("added tool should not be marshaled before repeat initialize invalidates cache, got %d", got)
+	}
+
+	req, err := json.Marshal(Request{
+		JSONRPC: "2.0",
+		ID:      "repeat-init",
+		Method:  "initialize",
+		Params:  map[string]any{},
+	})
+	if err != nil {
+		t.Fatalf("marshal repeat initialize: %v", err)
+	}
+	if _, err := server.DispatchMessage(context.Background(), req); err != nil {
+		t.Fatalf("repeat initialize dispatch: %v", err)
+	}
+
+	after := dispatchToolsListForSerializedCacheTest(t, server, "after-repeat")
+	if !reflect.DeepEqual(after.Names, []string{"added_tool", "initial_tool"}) {
+		t.Fatalf("after repeat initialize names: got %v", after.Names)
+	}
+	if got := initialMarshals.Load(); got != 2 {
+		t.Fatalf("repeat initialize should force remarshal of initial tool, got %d", got)
+	}
+	if got := addedMarshals.Load(); got != 1 {
+		t.Fatalf("repeat initialize should expose and marshal added tool once, got %d", got)
 	}
 }
 

@@ -713,6 +713,7 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 	}
 	if listEntries == nil {
 		t.Fatalf("missing clockify_list_entries suggestion in %+v", suggestions)
+		return
 	}
 	if got := listEntries.Arguments["project"]; got != wantProject {
 		t.Fatalf("list_entries project argument = %v, want %s", got, wantProject)
@@ -726,6 +727,7 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 
 	if logTime == nil {
 		t.Fatalf("missing clockify_log_time suggestion in %+v", suggestions)
+		return
 	}
 	if got := logTime.Arguments["dry_run"]; got != true {
 		t.Fatalf("log_time dry_run argument = %v, want true", got)

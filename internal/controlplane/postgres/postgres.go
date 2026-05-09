@@ -62,8 +62,9 @@ const storeOpTimeout = 15 * time.Second
 // DoctorCheck is an explicit health probe for `clockify-mcp doctor
 // --check-backends`. Opening the store has already parsed the DSN,
 // connected to Postgres, and applied embedded migrations; this method
-// verifies those effects are visible and that the audit write path can
-// round-trip the 002_audit_phase column.
+// verifies those effects are visible, that the audit write path can
+// round-trip the 002_audit_phase column, and that removed schema
+// leftovers are actually gone.
 func (s *Store) DoctorCheck(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeOpTimeout)
 	defer cancel()
@@ -102,6 +103,15 @@ func (s *Store) DoctorCheck(ctx context.Context) error {
 	if !migration002Applied {
 		return fmt.Errorf("migration 002_audit_phase is not recorded in schema_migrations")
 	}
+	var migration003Applied bool
+	if err := s.pool.QueryRow(checkCtx,
+		`SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = 3)`,
+	).Scan(&migration003Applied); err != nil {
+		return fmt.Errorf("check migration 003_drop_session_affinity_id: %w", err)
+	}
+	if !migration003Applied {
+		return fmt.Errorf("migration 003_drop_session_affinity_id is not recorded in schema_migrations")
+	}
 
 	var hasAuditPhaseColumn bool
 	if err := s.pool.QueryRow(checkCtx, `
@@ -116,6 +126,20 @@ func (s *Store) DoctorCheck(ctx context.Context) error {
 	}
 	if !hasAuditPhaseColumn {
 		return fmt.Errorf("audit_events.phase column is missing")
+	}
+	var hasSessionAffinityColumn bool
+	if err := s.pool.QueryRow(checkCtx, `
+		SELECT EXISTS (
+			SELECT 1
+			  FROM information_schema.columns
+			 WHERE table_schema = current_schema()
+			   AND table_name = 'sessions'
+			   AND column_name = 'session_affinity_id'
+		)`).Scan(&hasSessionAffinityColumn); err != nil {
+		return fmt.Errorf("check sessions.session_affinity_id column: %w", err)
+	}
+	if hasSessionAffinityColumn {
+		return fmt.Errorf("sessions.session_affinity_id column is still present")
 	}
 
 	externalID := fmt.Sprintf("doctor-backend-%d", time.Now().UnixNano())
@@ -272,13 +296,13 @@ func (s *Store) Session(id string) (controlplane.SessionRecord, bool) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT id, tenant_id, subject, transport, protocol_version, client_name,
 		       client_version, created_at, expires_at, last_seen_at, workspace_id,
-		       clockify_base_url, session_affinity_id
+		       clockify_base_url
 		  FROM sessions WHERE id = $1`, id)
 	var rec controlplane.SessionRecord
 	if err := row.Scan(&rec.ID, &rec.TenantID, &rec.Subject, &rec.Transport,
 		&rec.ProtocolVersion, &rec.ClientName, &rec.ClientVersion, &rec.CreatedAt,
 		&rec.ExpiresAt, &rec.LastSeenAt, &rec.WorkspaceID, &rec.ClockifyBaseURL,
-		&rec.SessionAffinityID); err != nil {
+	); err != nil {
 		return controlplane.SessionRecord{}, false
 	}
 	rec.CreatedAt = rec.CreatedAt.UTC()
@@ -293,9 +317,8 @@ func (s *Store) PutSession(rec controlplane.SessionRecord) error {
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO sessions (id, tenant_id, subject, transport, protocol_version,
 		                     client_name, client_version, created_at, expires_at,
-		                     last_seen_at, workspace_id, clockify_base_url,
-		                     session_affinity_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		                     last_seen_at, workspace_id, clockify_base_url)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		ON CONFLICT (id) DO UPDATE SET
 			tenant_id           = EXCLUDED.tenant_id,
 			subject             = EXCLUDED.subject,
@@ -307,11 +330,10 @@ func (s *Store) PutSession(rec controlplane.SessionRecord) error {
 			expires_at          = EXCLUDED.expires_at,
 			last_seen_at        = EXCLUDED.last_seen_at,
 			workspace_id        = EXCLUDED.workspace_id,
-			clockify_base_url   = EXCLUDED.clockify_base_url,
-			session_affinity_id = EXCLUDED.session_affinity_id`,
+			clockify_base_url   = EXCLUDED.clockify_base_url`,
 		rec.ID, rec.TenantID, rec.Subject, rec.Transport, rec.ProtocolVersion,
 		rec.ClientName, rec.ClientVersion, rec.CreatedAt.UTC(), rec.ExpiresAt.UTC(),
-		rec.LastSeenAt.UTC(), rec.WorkspaceID, rec.ClockifyBaseURL, rec.SessionAffinityID)
+		rec.LastSeenAt.UTC(), rec.WorkspaceID, rec.ClockifyBaseURL)
 	return err
 }
 

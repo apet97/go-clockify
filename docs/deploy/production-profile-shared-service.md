@@ -27,6 +27,7 @@ MCP_CONTROL_PLANE_DSN=postgres://user:pass@db-host:5432/clockify_mcp?sslmode=ver
 MCP_OIDC_ISSUER=https://auth.example.com/
 MCP_OIDC_AUDIENCE=clockify-mcp-shared
 # MCP_RESOURCE_URI=https://mcp.example.com   # optional RFC 8707 resource indicator
+MCP_DEFAULT_TENANT_ID=shared-service-fallback-disabled
 
 # Pinned by the profile (override if you really know what you're doing):
 #   MCP_TRANSPORT=streamable_http
@@ -34,8 +35,12 @@ MCP_OIDC_AUDIENCE=clockify-mcp-shared
 #   MCP_AUDIT_DURABILITY=fail_closed
 #   MCP_HTTP_LEGACY_POLICY=deny
 #   MCP_OIDC_STRICT=1
+#   MCP_OIDC_REQUIRE_KID=1
 #   MCP_REQUIRE_TENANT_CLAIM=1
 #   MCP_DISABLE_INLINE_SECRETS=1
+#   MCP_HTTP_RATELIMIT_PER_IP=600
+#   MCP_HTTP_RATELIMIT_PER_PRINCIPAL=300
+#   MCP_HTTP_RATELIMIT_GET_PER_SESSION=4
 #   CLOCKIFY_POLICY=time_tracking_safe
 #
 # Profile-driven hosted-mode safety defaults (override with the matching
@@ -67,9 +72,12 @@ finding it was added to fix.
 | Flag | What it does | Footgun without it |
 |---|---|---|
 | `MCP_OIDC_STRICT=1` | Reject tokens without `aud` matching `MCP_OIDC_AUDIENCE` or `MCP_RESOURCE_URI`; reject tokens missing `exp`. | Any-audience tokens minted by the same issuer for a different relying party are accepted. |
+| `MCP_OIDC_REQUIRE_KID=1` | Reject OIDC JWTs without a `kid` header. | A single-key JWKS can accept kid-less tokens through compatibility fallback, making key provenance and rotation failures harder to reason about. |
 | `MCP_REQUIRE_TENANT_CLAIM=1` | Reject tokens whose tenant claim is empty. | Tokens omitting the claim collapse into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across every misconfigured caller. |
 | `MCP_REQUIRE_FORWARD_TENANT_CLAIM=1` | If this profile is explicitly switched to `forward_auth`, reject requests missing `X-Forwarded-Tenant` (or the configured tenant header). | Proxy header drift collapses requests into `MCP_DEFAULT_TENANT_ID`, sharing one tenant across affected callers. |
+| `MCP_DEFAULT_TENANT_ID=<deployment-specific sentinel>` | Keeps the hosted fallback tenant value unique to this deployment. Normal OIDC / `forward_auth` / mTLS paths should not use it because tenant-required gates fail closed first. | Leaving the literal `"default"` fallback in a hosted profile makes future auth-mode drift harder to spot; `doctor --strict` reports a non-fatal warning. |
 | `MCP_DISABLE_INLINE_SECRETS=1` | Reject credential refs with `backend=inline`. | Inline credentials sit in the control-plane DB and survive operator forgetfulness; vault-backed refs rotate on revoke. |
+| `MCP_HTTP_RATELIMIT_PER_IP=600`, `MCP_HTTP_RATELIMIT_PER_PRINCIPAL=300`, `MCP_HTTP_RATELIMIT_GET_PER_SESSION=4` | Reject per-process HTTP auth-probe floods, authenticated request floods, and streamable SSE hold abuse before JSON-RPC dispatch. | One source or client can burn handler/auth/session resources on every pod until the external gateway notices. |
 | `CLOCKIFY_POLICY=time_tracking_safe` | Permit time-entry CRUD + tags; deny workspace-level project / client / task create writes. | The default `standard` policy lets an AI agent create projects in the operator's workspace without explicit consent. |
 | `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` (profile default) | Tool-error responses to MCP clients omit upstream Clockify response bodies; full bodies still flow into server-side slog. | A 4xx body from Clockify can carry per-tenant identifiers; without sanitisation those leak across tenant boundaries via the MCP wire. |
 | `CLOCKIFY_WEBHOOK_VALIDATE_DNS=1` (profile default) | `CreateWebhook` / `UpdateWebhook` resolve the host and reject any reply containing a private, reserved, link-local, or loopback IP. | A hostname resolving to `169.254.169.254` (cloud metadata) or `10.0.0.x` turns the Clockify outbound webhook delivery into an SSRF probe across the hosted control plane. |
@@ -197,5 +205,7 @@ Two artefacts gate the shared-service profile:
     `.github/workflows/ci.yml` against a `postgres:16-alpine`
     service container.
 
-A green run of both artefacts is the launch-candidate gate for
-this profile (Group 2 of `docs/launch-candidate-checklist.md`).
+A green run of both artifacts closes the shared-service profile gate
+only (Group 2 of `docs/launch-candidate-checklist.md`). It does not
+make the repository launch-ready or replace the remaining Group 1,
+Group 6, or Group 7 external evidence gates.

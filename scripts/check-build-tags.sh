@@ -109,6 +109,13 @@ if [ -z "${FIPS_ONLY:-}" ]; then
     # fallback, and the adapter only shows up under -tags=otel.
     go build -tags=grpc,otel ./...
 
+    echo "== -tags=grpc,grpcreflection =="
+    # Development-only reflection is intentionally split from the
+    # release gRPC tag. This proves the local-debug tag compiles while
+    # keeping production artifacts on plain -tags=grpc.
+    go build -tags=grpc,grpcreflection ./...
+    (cd internal/transport/grpc && go build -tags=grpcreflection ./... && go test -tags=grpcreflection -count=1 ./...)
+
     echo "== -tags=postgres =="
     go build -tags=postgres ./...
     (cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...)

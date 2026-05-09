@@ -44,6 +44,7 @@ func TestPipelineClone(t *testing.T) {
 		cloned := original.Clone()
 		if cloned == nil {
 			t.Fatal("expected non-nil clone")
+			return
 		}
 		if cloned == original {
 			t.Fatal("Clone returned same pointer")
@@ -85,6 +86,7 @@ func TestGateClone(t *testing.T) {
 		cloned := original.Clone()
 		if cloned == nil {
 			t.Fatal("expected non-nil clone")
+			return
 		}
 		if cloned == original {
 			t.Fatal("Clone returned same pointer")

@@ -91,7 +91,7 @@ git diff "v$CURRENT" "v$TARGET" -- internal/config/spec.go
       `clockify_mcp_tool_calls_total` deltas; a cutover where
       deltas drop to zero for more than the rollout window
       means traffic is going to a broken pod.
-- [ ] Watch `clockify_mcp_audit_failures_total`. A spike here
+- [ ] Watch `clockify_mcp_audit_failures_total{reason,phase}`. A spike here
       during a rollout means the new pods can't reach the
       audit backend — halt the rollout.
 

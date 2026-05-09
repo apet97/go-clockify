@@ -83,10 +83,11 @@ Concrete success criteria:
 
 ## Verification Evidence
 
-Latest local verification on the dirty working tree:
+Local verification captured during the Opus implementation pass:
 
 - `make check` — passed.
-- `make release-check` — passed with `release-check: OK - shippable`.
+- `make release-check` — passed with
+  `release-check: OK — local pre-ship gate passed`.
 - `make config-doc-parity`, `make doc-parity`, `make catalog-drift`,
   and `git diff --check` — passed.
 - Load scenarios:
@@ -102,18 +103,23 @@ Latest local verification on the dirty working tree:
     no vulnerabilities found.
   - `semgrep scan --config auto --error --exclude go-clockify` —
     zero findings.
-  - current-tree gitleaks snapshot still reports two
+  - the then-current gitleaks snapshot reported two
     `curl-auth-header` findings in `.github/workflows/docker-image.yml`.
+    Current public-readiness evidence is tracked separately by
+    `make public-content-audit`.
 
 ## Remaining Blockers
 
 These are not local code/test implementation gaps:
 
-1. **CI workflow gitleaks findings.** The only current-tree gitleaks
-   findings are dummy curl `Authorization: Bearer ...` smoke-test
-   headers in `.github/workflows/docker-image.yml`. Fixing them
-   requires explicit maintainer permission because AGENTS.md says not
-   to change CI/CD unless asked.
+1. **Public-content artifact disposition.** This historical Opus note
+   is superseded by the May 8 public-content audit helper. As of the
+   current launch-readiness pass, `make public-content-audit` reports
+   `0 open, 0 unknown`: candidate branch content, public-history
+   review, and documented local ignored-artifact review are all closed
+   locally. Public visibility still depends on the external,
+   repository-state, release, and legal/product gates tracked in
+   `docs/launch-readiness-review-may-8.md`.
 2. **External launch evidence.** Group 1 needs two consecutive
    scheduled live-contract cron greens on the candidate SHA. Group 6
    needs candidate-tag security evidence. Group 7 needs candidate-tag
@@ -124,8 +130,9 @@ These are not local code/test implementation gaps:
 
 ## Completion Assessment
 
-The Opus implementation wave is locally shippable but not complete
-against the full objective. The MCP is materially safer for local
+The Opus implementation wave is locally green but not complete against
+the full objective. The MCP is materially safer for local
 owner-key testing across many workspaces/subjects, but launch-ready
 status still depends on the explicit external evidence gates above and
-on maintainer direction for the CI workflow gitleaks findings.
+on maintainer direction for the repo-state, release, and approval
+gates.

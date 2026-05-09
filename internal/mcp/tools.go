@@ -285,7 +285,14 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		// already reported its error and failing the call on audit here
 		// would only confuse the client.
 		if !d.ReadOnlyHint {
-			s.recordAuditOutcome(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
+			if auditErr := s.recordAuditOutcome(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints); auditErr != nil {
+				slog.Warn("tool_call_outcome_not_durable",
+					"tool", params.Name,
+					"error", auditErr.Error(),
+					"duration_ms", duration.Milliseconds(),
+					"req_id", reqID,
+				)
+			}
 		} else {
 			s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 		}
@@ -297,10 +304,20 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		// Successful mutation: pair the earlier intent with a
 		// succeeded outcome. Best-effort — the mutation has already
 		// committed, so failing the call on audit write here is
-		// pointless (the intent proved fail_closed wasn't going to
-		// block us). Persistence failures still emit slog
-		// audit_persist_failed + metrics.
-		s.recordAuditOutcome(params.Name, "tools/call", outcome, "", params.Arguments, hints)
+		// pointless for legacy fail_closed (the intent proved
+		// fail_closed wasn't going to block us). Persistence failures
+		// still emit slog audit_persist_failed + metrics. Operators
+		// that need the client to see outcome-row loss can opt into
+		// fail_closed_strict, where recordAuditOutcome returns an error.
+		if auditErr := s.recordAuditOutcome(params.Name, "tools/call", outcome, "", params.Arguments, hints); auditErr != nil {
+			slog.Warn("tool_call_outcome_not_durable",
+				"tool", params.Name,
+				"error", auditErr.Error(),
+				"duration_ms", duration.Milliseconds(),
+				"req_id", reqID,
+			)
+			return nil, auditErr
+		}
 		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
 	}
 

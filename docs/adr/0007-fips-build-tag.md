@@ -52,7 +52,7 @@ mandatory startup assertion:
   artifact filename is suffixed to make it impossible to confuse
   with the default binary.
 - **Toolchain limitation acknowledged.** `crypto/fips140.Version()`
-  and `crypto/fips140.Enforced()` are Go 1.26+ only. Go 1.25.9 (the
+  and `crypto/fips140.Enforced()` are Go 1.26+ only. Go 1.25.10 (the
   current pin per `CONTRIBUTING.md`) ships only `Enabled()`. The
   startup assertion uses what's available; operators who want the
   enforced flag can read it from `GODEBUG` or from

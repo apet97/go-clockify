@@ -30,7 +30,7 @@ func (s *Server) recordAuditBestEffort(tool, action, outcome, reason string, arg
 // is broken.
 func (s *Server) recordAuditIntent(tool, action string, args map[string]any, hints ToolHints) error {
 	intentErr := s.emitAudit(tool, action, "attempted", PhaseIntent, "", args, hints)
-	if intentErr != nil && s.AuditDurabilityMode == "fail_closed" {
+	if intentErr != nil && (s.AuditDurabilityMode == "fail_closed" || s.AuditDurabilityMode == "fail_closed_strict") {
 		return fmt.Errorf("audit intent persistence failed; refusing to execute mutation: %w", intentErr)
 	}
 	return nil
@@ -38,12 +38,17 @@ func (s *Server) recordAuditIntent(tool, action string, args map[string]any, hin
 
 // recordAuditOutcome writes the post-handler outcome (success/failure)
 // record paired with an earlier recordAuditIntent. Audit phase =
-// PhaseOutcome. The outcome record is best-effort even in fail_closed
-// mode: the mutation has already happened, so failing the call here
-// would only confuse the client. Operators rely on the slog
-// audit_persist_failed event to detect outcome-record loss.
-func (s *Server) recordAuditOutcome(tool, action, outcome, reason string, args map[string]any, hints ToolHints) {
-	_ = s.emitAudit(tool, action, outcome, PhaseOutcome, reason, args, hints)
+// PhaseOutcome. The outcome record is best-effort in fail_closed mode:
+// the mutation has already happened, so existing operators keep the
+// historical "log + metric" behaviour. In fail_closed_strict mode the
+// persistence failure is returned so the client can see that the mutation
+// completed but the outcome record is not durable.
+func (s *Server) recordAuditOutcome(tool, action, outcome, reason string, args map[string]any, hints ToolHints) error {
+	err := s.emitAudit(tool, action, outcome, PhaseOutcome, reason, args, hints)
+	if err != nil && s.AuditDurabilityMode == "fail_closed_strict" {
+		return fmt.Errorf("audit outcome persistence failed; mutation completed but audit outcome is not durable: %w", err)
+	}
+	return nil
 }
 
 // emitAudit is the shared core: increments the attempt counter, calls the
@@ -69,7 +74,7 @@ func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reaso
 		},
 	})
 	if err != nil {
-		metrics.AuditFailuresTotal.Inc("persist_error")
+		metrics.AuditFailuresTotal.Inc("persist_error", auditFailurePhaseLabel(phase))
 		// audit_outcome is the canonical field operators filter on:
 		//   "not_durable" → mutation happened, audit write failed (best_effort)
 		//                  or returned to caller (fail_closed). See
@@ -88,6 +93,17 @@ func (s *Server) emitAudit(tool, action, outcome string, phase AuditPhase, reaso
 		)
 	}
 	return err
+}
+
+func auditFailurePhaseLabel(phase AuditPhase) string {
+	switch phase {
+	case PhaseIntent:
+		return "intent"
+	case PhaseOutcome:
+		return "outcome"
+	default:
+		return "single"
+	}
 }
 
 // resourceIDs extracts resource identifiers from tool-call arguments

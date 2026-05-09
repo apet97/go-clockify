@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
@@ -49,6 +50,16 @@ type Config struct {
 	MetricsBind        string
 	MetricsAuthMode    string
 	MetricsBearerToken string
+	// HTTP admission limits are process-local app-layer guards for
+	// streamable_http and legacy http. Hosted profiles enable them by
+	// default to reject obvious auth-probe and SSE-hold abuse before
+	// JSON-RPC dispatch; cross-replica hosted quotas still belong at
+	// the gateway/load-balancer layer.
+	HTTPRateLimitPerIP         int
+	HTTPRateLimitPerPrincipal  int
+	HTTPRateLimitGETPerSession int
+	HTTPRequireProtocolVersion bool
+	DefaultProtocolVersion     string
 
 	// Enterprise shared-service
 	ControlPlaneDSN string
@@ -87,7 +98,9 @@ type Config struct {
 	// results. Larger values amortise the per-request verify cost but
 	// extend the window before a revoked token is re-checked. Zero
 	// selects the conservative 60s default baked into authn; values
-	// outside [1s, 5m] are clamped at the authn layer. Wired from
+	// outside [1s, 5m] are rejected at config load. Hosted profiles
+	// clamp explicit values above 60s back to 60s so revocation cannot
+	// drift past the hosted-service contract. Wired from
 	// MCP_OIDC_VERIFY_CACHE_TTL.
 	OIDCVerifyCacheTTL time.Duration
 	// OIDCJWKSCacheTTL is the lifetime of the in-memory JWKS document
@@ -103,7 +116,11 @@ type Config struct {
 	// rejects oidc + (no audience + no resource URI) and the OIDC
 	// authenticator rejects tokens missing an `exp` claim. Wired from
 	// MCP_OIDC_STRICT=1.
-	OIDCStrict           bool
+	OIDCStrict bool
+	// OIDCRequireKID rejects OIDC JWTs whose JOSE header omits kid.
+	// Hosted profiles enable it by default so a single-key JWKS cannot
+	// accept kid-less tokens through the compatibility fallback.
+	OIDCRequireKID       bool
 	DisableInlineSecrets bool
 	// ExposeAuthErrors controls whether HTTP transports include detailed
 	// authenticator failure reasons in unauthenticated client responses.
@@ -156,14 +173,11 @@ type Config struct {
 	// default so proxy header drift cannot collapse tenants.
 	RequireForwardTenantClaim bool
 	// ForwardAuthTrustedProxies is the parsed CIDR allow-list for
-	// the forward_auth authenticator. When non-empty, the
-	// authenticator rejects any request whose source address is not
-	// inside one of these networks before reading
-	// X-Forwarded-User / X-Forwarded-Tenant. Empty (default)
-	// preserves the historical "trust everything" posture for
-	// self-hosted single-tenant deployments where the operator owns
-	// the network boundary; doctor --strict refuses to start with
-	// forward_auth + empty allow-list to surface the misconfiguration.
+	// the forward_auth authenticator. The authenticator rejects any
+	// request whose source address is not inside one of these networks
+	// before reading X-Forwarded-User / X-Forwarded-Tenant. An empty
+	// MCP_FORWARD_AUTH_TRUSTED_PROXIES value is allowed only on a
+	// loopback bind and is narrowed to loopback CIDRs at config load.
 	// Wired from MCP_FORWARD_AUTH_TRUSTED_PROXIES (comma-separated).
 	ForwardAuthTrustedProxies []*net.IPNet
 	MTLSTenantHeader          string
@@ -197,13 +211,19 @@ type Config struct {
 	// GRPCReauthInterval is how often long-lived gRPC streams re-validate
 	// their auth token. 0 = disabled (per-stream validation only).
 	GRPCReauthInterval time.Duration
+	// GRPCPeerCIDRAllow optionally restricts gRPC calls to peers whose
+	// source IP is inside one of these CIDRs. Empty preserves the default
+	// behavior. Wired from MCP_GRPC_PEER_CIDR_ALLOW.
+	GRPCPeerCIDRAllow []*net.IPNet
 
 	// AuditDurabilityMode controls behavior when audit persistence fails for
 	// a successful non-read-only tool call.
 	// "best_effort" (default): log + metric; the call still reports success.
 	// "fail_closed": the call returns an error so the client knows the audit
 	// trail is incomplete. The mutation already happened; this prevents
-	// silent untracked mutations.
+	// silent untracked mutations when the intent record is not durable.
+	// "fail_closed_strict": also returns an error when the post-mutation
+	// outcome record cannot be persisted.
 	AuditDurabilityMode string
 
 	// HTTPInlineMetricsEnabled controls whether /metrics is mounted on the
@@ -470,6 +490,9 @@ func Load() (Config, error) {
 		}
 		cfg.OIDCVerifyCacheTTL = d
 	}
+	if isHostedProfile(profileName) && cfg.OIDCVerifyCacheTTL > time.Minute {
+		cfg.OIDCVerifyCacheTTL = time.Minute
+	}
 	if v := strings.TrimSpace(os.Getenv("MCP_OIDC_JWKS_CACHE_TTL")); v != "" {
 		d, err := time.ParseDuration(v)
 		if err != nil {
@@ -490,8 +513,11 @@ func Load() (Config, error) {
 		}
 		cfg.ForwardAuthTrustedProxies = nets
 	}
-	if cfg.AuthMode == "forward_auth" && len(cfg.ForwardAuthTrustedProxies) == 0 && !isLoopbackBind(bindForForwardAuth(cfg)) {
-		return Config{}, fmt.Errorf("MCP_AUTH_MODE=forward_auth with %s=%q requires MCP_FORWARD_AUTH_TRUSTED_PROXIES to be set (or bind to loopback)", bindEnvForForwardAuth(cfg), bindForForwardAuth(cfg))
+	if cfg.AuthMode == "forward_auth" && len(cfg.ForwardAuthTrustedProxies) == 0 {
+		if !isLoopbackBind(bindForForwardAuth(cfg)) {
+			return Config{}, fmt.Errorf("MCP_AUTH_MODE=forward_auth with %s=%q requires MCP_FORWARD_AUTH_TRUSTED_PROXIES to be set (or bind to loopback)", bindEnvForForwardAuth(cfg), bindForForwardAuth(cfg))
+		}
+		cfg.ForwardAuthTrustedProxies = loopbackTrustedProxies()
 	}
 	cfg.MTLSTenantHeader = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_HEADER"))
 	cfg.MTLSTenantSource = strings.TrimSpace(os.Getenv("MCP_MTLS_TENANT_SOURCE"))
@@ -505,6 +531,7 @@ func Load() (Config, error) {
 	}
 	cfg.RequireMTLSTenant = os.Getenv("MCP_REQUIRE_MTLS_TENANT") == "1"
 	cfg.OIDCStrict = os.Getenv("MCP_OIDC_STRICT") == "1"
+	cfg.OIDCRequireKID = os.Getenv("MCP_OIDC_REQUIRE_KID") == "1"
 	cfg.RequireTenantClaim = os.Getenv("MCP_REQUIRE_TENANT_CLAIM") == "1"
 	cfg.DisableInlineSecrets = os.Getenv("MCP_DISABLE_INLINE_SECRETS") == "1"
 	cfg.ExposeAuthErrors = os.Getenv("MCP_EXPOSE_AUTH_ERRORS") == "1"
@@ -626,6 +653,28 @@ func Load() (Config, error) {
 		}
 		cfg.MaxMessageSize = v
 	}
+	if n, err := nonNegativeInt("MCP_HTTP_RATELIMIT_PER_IP", os.Getenv("MCP_HTTP_RATELIMIT_PER_IP"), 1_000_000); err != nil {
+		return Config{}, err
+	} else {
+		cfg.HTTPRateLimitPerIP = n
+	}
+	if n, err := nonNegativeInt("MCP_HTTP_RATELIMIT_PER_PRINCIPAL", os.Getenv("MCP_HTTP_RATELIMIT_PER_PRINCIPAL"), 1_000_000); err != nil {
+		return Config{}, err
+	} else {
+		cfg.HTTPRateLimitPerPrincipal = n
+	}
+	if n, err := nonNegativeInt("MCP_HTTP_RATELIMIT_GET_PER_SESSION", os.Getenv("MCP_HTTP_RATELIMIT_GET_PER_SESSION"), 10_000); err != nil {
+		return Config{}, err
+	} else {
+		cfg.HTTPRateLimitGETPerSession = n
+	}
+	cfg.HTTPRequireProtocolVersion = os.Getenv("MCP_HTTP_REQUIRE_PROTOCOL_VERSION") == "1"
+	cfg.DefaultProtocolVersion = strings.TrimSpace(os.Getenv("MCP_DEFAULT_PROTOCOL_VERSION"))
+	if cfg.DefaultProtocolVersion != "" && !mcp.IsSupportedProtocolVersion(cfg.DefaultProtocolVersion) {
+		return Config{}, fmt.Errorf("invalid MCP_DEFAULT_PROTOCOL_VERSION %q: must be one of %s",
+			cfg.DefaultProtocolVersion,
+			strings.Join(mcp.SupportedProtocolVersions, ", "))
+	}
 
 	// Tool timeout
 	cfg.ToolTimeout = 45 * time.Second
@@ -724,6 +773,9 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("MCP_TRANSPORT=grpc with MCP_AUTH_MODE=mtls requires MCP_MTLS_CA_CERT_PATH")
 		}
 	}
+	if cfg.Transport == "grpc" && cfg.GRPCTLSCert == "" && !isLoopbackBind(cfg.GRPCBind) {
+		return Config{}, fmt.Errorf("MCP_TRANSPORT=grpc refuses plaintext MCP_GRPC_BIND=%q on non-loopback; set MCP_GRPC_TLS_CERT and MCP_GRPC_TLS_KEY, or bind to loopback for local development", cfg.GRPCBind)
+	}
 
 	if v := os.Getenv("MCP_GRPC_REAUTH_INTERVAL"); v != "" {
 		d, err := time.ParseDuration(v)
@@ -731,6 +783,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("invalid MCP_GRPC_REAUTH_INTERVAL %q: %w", v, err)
 		}
 		cfg.GRPCReauthInterval = d
+	}
+	if raw := strings.TrimSpace(os.Getenv("MCP_GRPC_PEER_CIDR_ALLOW")); raw != "" {
+		nets, err := parseCIDRList(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MCP_GRPC_PEER_CIDR_ALLOW: %w", err)
+		}
+		cfg.GRPCPeerCIDRAllow = nets
 	}
 
 	cfg.DeltaFormat = strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_DELTA_FORMAT")))
@@ -759,9 +818,9 @@ func Load() (Config, error) {
 		}
 	}
 	switch cfg.AuditDurabilityMode {
-	case "best_effort", "fail_closed":
+	case "best_effort", "fail_closed", "fail_closed_strict":
 	default:
-		return Config{}, fmt.Errorf("invalid MCP_AUDIT_DURABILITY %q: must be \"best_effort\" or \"fail_closed\"", cfg.AuditDurabilityMode)
+		return Config{}, fmt.Errorf("invalid MCP_AUDIT_DURABILITY %q: must be \"best_effort\", \"fail_closed\", or \"fail_closed_strict\"", cfg.AuditDurabilityMode)
 	}
 
 	// Inline /metrics on the main HTTP listener (MCP_TRANSPORT=http only)
@@ -928,7 +987,7 @@ func validateBaseURL(raw string, insecure bool) error {
 // Empty input yields an empty slice. Whitespace around commas is
 // trimmed; bare IPs without a prefix length are not accepted —
 // operators must be explicit ("10.0.0.5/32"). Used by
-// MCP_FORWARD_AUTH_TRUSTED_PROXIES.
+// MCP_FORWARD_AUTH_TRUSTED_PROXIES and MCP_GRPC_PEER_CIDR_ALLOW.
 func parseCIDRList(raw string) ([]*net.IPNet, error) {
 	parts := strings.Split(raw, ",")
 	out := make([]*net.IPNet, 0, len(parts))
@@ -944,6 +1003,14 @@ func parseCIDRList(raw string) ([]*net.IPNet, error) {
 		out = append(out, ipNet)
 	}
 	return out, nil
+}
+
+func loopbackTrustedProxies() []*net.IPNet {
+	nets, err := parseCIDRList("127.0.0.0/8,::1/128")
+	if err != nil {
+		panic(err)
+	}
+	return nets
 }
 
 func isLoopbackHost(host string) bool {
@@ -995,6 +1062,24 @@ func optionalBoolEnv(key string) (bool, error) {
 	value, err := strconv.ParseBool(raw)
 	if err != nil {
 		return false, fmt.Errorf("invalid %s %q: must be a boolean", key, raw)
+	}
+	return value, nil
+}
+
+func nonNegativeInt(key, raw string, max int) (int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: %w", key, raw, err)
+	}
+	if value < 0 {
+		return 0, fmt.Errorf("%s must be >= 0", key)
+	}
+	if max > 0 && value > max {
+		return 0, fmt.Errorf("%s must be <= %d", key, max)
 	}
 	return value, nil
 }

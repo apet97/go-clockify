@@ -16,10 +16,29 @@ also rate-limits, with its own quotas. Saturation usually means one
 of those three knobs is wrong, or a client is misbehaving in a way
 the knobs were not sized for.
 
+HTTP deployments also have a separate **admission** guard before
+JSON-RPC dispatch:
+
+- `MCP_HTTP_RATELIMIT_PER_IP` caps requests per source IP per minute
+  on this process. When `MCP_BEHIND_HTTPS_PROXY=1`, the first
+  `X-Forwarded-For` hop is used; otherwise the socket peer address is
+  used.
+- `MCP_HTTP_RATELIMIT_PER_PRINCIPAL` caps requests per authenticated
+  subject+tenant per minute on this process.
+- `MCP_HTTP_RATELIMIT_GET_PER_SESSION` caps concurrent streamable HTTP
+  `GET /mcp` SSE streams per session on this process.
+
+The hosted profiles and deployment manifests default these to
+`600`, `300`, and `4` respectively. They are intentionally
+process-local; public hosted deployments still need gateway or
+load-balancer limits for cross-replica quotas.
+
 ## 1. Symptoms
 
 - `clockify_mcp_rate_limit_rejections_total` rises sustained for >5
   minutes.
+- `clockify_mcp_http_admission_rejections_total` rises, labelled by
+  `reason="ip"`, `reason="principal"`, or `reason="sse_session"`.
 - `clockify_mcp_inflight_tool_calls` pinned near
   `MCP_MAX_INFLIGHT_TOOL_CALLS` for >5 minutes.
 - `clockify_mcp_tool_call_duration_seconds` p99 climbs by >2x baseline.
@@ -36,6 +55,10 @@ the knobs were not sized for.
 ```sh
 # Inflight + recent rejections
 curl -sf http://<host>:8080/metrics | grep -E '^clockify_mcp_(inflight|rate_limit_rejections)_'
+
+# HTTP admission rejections before JSON-RPC dispatch
+curl -sf http://<host>:8080/metrics \
+  | grep '^clockify_mcp_http_admission_rejections_total'
 
 # Per-tool call counts (which tools are hot?)
 curl -sf http://<host>:8080/metrics | grep '^clockify_mcp_tool_calls_total'
@@ -80,6 +103,26 @@ kubectl -n clockify-mcp set env deploy/clockify-mcp \
   CLOCKIFY_RATE_LIMIT=240
 ```
 
+### HTTP admission saturation (429 before JSON-RPC dispatch)
+
+If source-IP or principal admission is too tight for legitimate
+traffic, raise the relevant per-process budget:
+
+```sh
+kubectl -n clockify-mcp set env deploy/clockify-mcp \
+  MCP_HTTP_RATELIMIT_PER_IP=1200 \
+  MCP_HTTP_RATELIMIT_PER_PRINCIPAL=600
+```
+
+If `reason="sse_session"` rises, first confirm the client is not
+leaking SSE subscriptions. Raise the cap only when a known client
+legitimately needs more concurrent streams:
+
+```sh
+kubectl -n clockify-mcp set env deploy/clockify-mcp \
+  MCP_HTTP_RATELIMIT_GET_PER_SESSION=8
+```
+
 ### Upstream Clockify saturation (429s in logs)
 
 Lower the local budget to back off and protect the upstream quota:
@@ -102,6 +145,11 @@ Work this list top-to-bottom; the most common causes are first.
   read-heavy traffic, use ingress / reverse-proxy logs to identify
   the caller. If one client dominates, fix their polling / backoff
   loop rather than masking it in the server.
+- [ ] **HTTP auth-probe or SSE-hold pressure.** If
+  `clockify_mcp_http_admission_rejections_total{reason="ip"}` rises,
+  inspect ingress logs for auth probing or a missing gateway limit. If
+  `reason="sse_session"` rises, look for a client that opens new
+  `GET /mcp` streams without closing old ones.
 - [ ] **Resolution cache miss storm.** A schema change or an ID
   rotation can invalidate the resolve-cache, causing every tool
   call to issue extra Clockify lookups. Symptoms: spike in
@@ -150,6 +198,8 @@ After the incident, write a postmortem covering:
 
 - `internal/ratelimit/` — where the throughput + concurrency limits
   are enforced.
+- `internal/mcp/http_admission.go` — process-local HTTP admission
+  guard for pre-dispatch request floods and SSE stream holds.
 - `internal/metrics/metrics.go` — full list of exported metrics
   (search for `clockify_mcp_rate_limit`).
 - `docs/performance.md` — published safe operating envelope.

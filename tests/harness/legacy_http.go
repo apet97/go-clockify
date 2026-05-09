@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -100,11 +101,9 @@ func (h *legacyHTTPHarness) do(ctx context.Context, method string, params any) (
 		return Response{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusRequestEntityTooLarge {
-		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
-	}
 	if resp.StatusCode != http.StatusOK {
-		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d", resp.StatusCode)}}, nil
+		body, _ := io.ReadAll(resp.Body)
+		return decodeHTTPErrorResponse(resp.StatusCode, body), nil
 	}
 	var out Response
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -174,11 +173,9 @@ func (h *legacyHTTPHarness) SendRaw(ctx context.Context, frame []byte) (Response
 		return Response{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusRequestEntityTooLarge {
-		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
-	}
 	if resp.StatusCode != http.StatusOK {
-		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d", resp.StatusCode)}}, nil
+		body, _ := io.ReadAll(resp.Body)
+		return decodeHTTPErrorResponse(resp.StatusCode, body), nil
 	}
 	var out Response
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

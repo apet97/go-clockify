@@ -267,3 +267,37 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 		t.Fatalf("expected lazy init to recreate map, got %d", got)
 	}
 }
+
+func TestRepeatInitialize_CancelsInflight(t *testing.T) {
+	srv := NewServer("test", nil, nil, nil)
+	srv.handleInitialize(map[string]any{})
+
+	var cancelled atomic.Int32
+	srv.registerInflight("req-1", func() { cancelled.Add(1) })
+	srv.registerInflight("req-2", func() { cancelled.Add(1) })
+	if got := srv.InflightCount(); got != 2 {
+		t.Fatalf("expected 2 entries before repeat initialize, got %d", got)
+	}
+
+	result := srv.handleInitialize(map[string]any{
+		"protocolVersion": "2024-11-05",
+		"clientInfo": map[string]any{
+			"name":    "repeat-client",
+			"version": "2.0.0",
+		},
+	})
+
+	if got := cancelled.Load(); got != 2 {
+		t.Fatalf("repeat initialize should cancel 2 inflight requests, got %d", got)
+	}
+	if got := srv.InflightCount(); got != 0 {
+		t.Fatalf("repeat initialize should drain inflight map, got %d", got)
+	}
+	if got := result["protocolVersion"]; got != "2024-11-05" {
+		t.Fatalf("repeat initialize protocol: got %#v want 2024-11-05", got)
+	}
+	name, version := srv.ClientInfo()
+	if name != "repeat-client" || version != "2.0.0" {
+		t.Fatalf("repeat initialize client info: got %q/%q", name, version)
+	}
+}

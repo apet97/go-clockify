@@ -112,6 +112,8 @@ func extractDefault(cfg Config, name string) (string, bool) {
 		return boolInt(cfg.AllowAnyOrigin), true
 	case "MCP_STRICT_HOST_CHECK":
 		return boolInt(cfg.StrictHostCheck), true
+	case "MCP_HTTP_REQUIRE_PROTOCOL_VERSION":
+		return boolInt(cfg.HTTPRequireProtocolVersion), true
 	case "MCP_HTTP_LEGACY_POLICY":
 		return cfg.HTTPLegacyPolicy, true
 	case "MCP_HTTP_INLINE_METRICS_ENABLED":

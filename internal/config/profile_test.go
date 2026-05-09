@@ -31,10 +31,14 @@ func setProfileEnv(t *testing.T, profile string, overrides map[string]string) {
 		// prod-postgres profiles. TestProfile_HelperCoversAllProfileKeys
 		// keeps this list in lockstep with profile.go.
 		"MCP_OIDC_STRICT",
+		"MCP_OIDC_REQUIRE_KID",
 		"MCP_REQUIRE_TENANT_CLAIM",
 		"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 		"MCP_REQUIRE_MTLS_TENANT",
 		"MCP_DISABLE_INLINE_SECRETS",
+		"MCP_HTTP_RATELIMIT_PER_IP",
+		"MCP_HTTP_RATELIMIT_PER_PRINCIPAL",
+		"MCP_HTTP_RATELIMIT_GET_PER_SESSION",
 		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
 	}
 	for _, k := range profileControlled {
@@ -428,7 +432,7 @@ func TestProfile_KeysAreSpecced(t *testing.T) {
 // TestProfile_SharedServiceIsStrict locks the hosted-service
 // strict flags (MCP_OIDC_STRICT, MCP_REQUIRE_TENANT_CLAIM,
 // MCP_REQUIRE_FORWARD_TENANT_CLAIM, MCP_DISABLE_INLINE_SECRETS,
-// CLOCKIFY_POLICY=time_tracking_safe)
+// MCP_HTTP_RATELIMIT_*, CLOCKIFY_POLICY=time_tracking_safe)
 // onto the shared-service profile. Drift here re-introduces the C1
 // finding from the 2026-04-25 audit: a hosted-service profile that
 // silently accepts any-audience tokens, falls back to a default tenant
@@ -448,6 +452,9 @@ func TestProfile_SharedServiceIsStrict(t *testing.T) {
 	if !cfg.OIDCStrict {
 		t.Errorf("OIDCStrict = false, want true (shared-service must reject any-audience tokens)")
 	}
+	if !cfg.OIDCRequireKID {
+		t.Errorf("OIDCRequireKID = false, want true (shared-service must reject kid-less tokens)")
+	}
 	if !cfg.RequireTenantClaim {
 		t.Errorf("RequireTenantClaim = false, want true (multi-tenant must reject missing claim)")
 	}
@@ -456,6 +463,15 @@ func TestProfile_SharedServiceIsStrict(t *testing.T) {
 	}
 	if !cfg.DisableInlineSecrets {
 		t.Errorf("DisableInlineSecrets = false, want true (hosted service must reject inline secrets)")
+	}
+	if cfg.HTTPRateLimitPerIP != 600 {
+		t.Errorf("HTTPRateLimitPerIP = %d, want 600", cfg.HTTPRateLimitPerIP)
+	}
+	if cfg.HTTPRateLimitPerPrincipal != 300 {
+		t.Errorf("HTTPRateLimitPerPrincipal = %d, want 300", cfg.HTTPRateLimitPerPrincipal)
+	}
+	if cfg.HTTPRateLimitGETPerSession != 4 {
+		t.Errorf("HTTPRateLimitGETPerSession = %d, want 4", cfg.HTTPRateLimitGETPerSession)
 	}
 	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
 		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe (broader policies require explicit operator opt-in)", got)
@@ -494,6 +510,9 @@ func TestProfile_ProdPostgresIsStrict(t *testing.T) {
 	if !cfg.OIDCStrict {
 		t.Errorf("OIDCStrict = false, want true (prod-postgres)")
 	}
+	if !cfg.OIDCRequireKID {
+		t.Errorf("OIDCRequireKID = false, want true (prod-postgres)")
+	}
 	if !cfg.RequireTenantClaim {
 		t.Errorf("RequireTenantClaim = false, want true (prod-postgres)")
 	}
@@ -502,6 +521,15 @@ func TestProfile_ProdPostgresIsStrict(t *testing.T) {
 	}
 	if !cfg.DisableInlineSecrets {
 		t.Errorf("DisableInlineSecrets = false, want true (prod-postgres)")
+	}
+	if cfg.HTTPRateLimitPerIP != 600 {
+		t.Errorf("HTTPRateLimitPerIP = %d, want 600", cfg.HTTPRateLimitPerIP)
+	}
+	if cfg.HTTPRateLimitPerPrincipal != 300 {
+		t.Errorf("HTTPRateLimitPerPrincipal = %d, want 300", cfg.HTTPRateLimitPerPrincipal)
+	}
+	if cfg.HTTPRateLimitGETPerSession != 4 {
+		t.Errorf("HTTPRateLimitGETPerSession = %d, want 4", cfg.HTTPRateLimitGETPerSession)
 	}
 	if got := os.Getenv("ENVIRONMENT"); got != "prod" {
 		t.Errorf("ENVIRONMENT = %q, want prod", got)

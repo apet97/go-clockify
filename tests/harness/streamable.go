@@ -149,13 +149,14 @@ func (h *streamableHarness) Initialize(ctx context.Context) (Response, error) {
 		return Response{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return decodeHTTPErrorResponse(resp.StatusCode, body), nil
+	}
 	if sid := resp.Header.Get(mcp.MCPSessionIDHeader); sid != "" {
 		h.sessionID = sid
 	} else {
 		return Response{}, fmt.Errorf("initialize: no %s header", mcp.MCPSessionIDHeader)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d", resp.StatusCode)}}, nil
 	}
 	var out Response
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -284,13 +285,12 @@ func (h *streamableHarness) sendRequest(ctx context.Context, id int, method stri
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusRequestEntityTooLarge {
-		h.deliver(id, Response{ID: id, Error: &RPCError{Code: -32001, Message: "request body too large"}})
-		return nil
-	}
 	if resp.StatusCode >= 400 {
-		_, _ = io.ReadAll(resp.Body)
-		return fmt.Errorf("http status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		out := decodeHTTPErrorResponse(resp.StatusCode, body)
+		out.ID = id
+		h.deliver(id, out)
+		return nil
 	}
 	// Decode the POST response body. Some streamable deployments return
 	// 202 Accepted with the response routed through SSE instead; in that
@@ -429,12 +429,9 @@ func (h *streamableHarness) SendRaw(ctx context.Context, frame []byte) (Response
 		return Response{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusRequestEntityTooLarge {
-		return Response{Error: &RPCError{Code: -32001, Message: "request body too large"}}, nil
-	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return Response{Error: &RPCError{Code: -32603, Message: fmt.Sprintf("http status %d body=%s", resp.StatusCode, string(body))}}, nil
+		return decodeHTTPErrorResponse(resp.StatusCode, body), nil
 	}
 	var out Response
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

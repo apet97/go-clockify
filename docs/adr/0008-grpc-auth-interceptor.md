@@ -98,9 +98,12 @@ an explicit "rebuild with -tags=grpc" error. ADR 0001 and the
 
 ### Neutral
 
-- The `streamNotifier` uses a mutex around `SendMsg` because gRPC
-  server streams require single-writer semantics. The mutex is
-  per-stream and therefore not a global contention point.
+- The `Exchange` implementation funnels all outbound frames through
+  one per-stream send pump because gRPC server streams require
+  single-writer semantics. A full per-stream queue drops the
+  server-initiated notification after a bounded wait and records
+  `clockify_mcp_grpc_notification_drops_total{reason="slow_consumer"}`
+  so one slow reader cannot stall the process-wide notifier hub.
 - The interceptor uses a `Stream` interceptor rather than a
   `Unary` interceptor because the gRPC transport exposes exactly
   one bidirectional streaming method (`Exchange`) — there are no

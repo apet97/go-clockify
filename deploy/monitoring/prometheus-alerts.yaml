@@ -52,15 +52,35 @@ groups:
           summary: "Rate limit saturation"
           description: "More than 10% of tool calls are being rejected by the rate limiter."
 
+      - alert: ClockifyMCPHTTPAdmissionRejections
+        expr: |
+          sum by (path, reason) (rate(clockify_mcp_http_admission_rejections_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP admission limiter rejecting requests"
+          description: "The HTTP admission guard is rejecting {{ $labels.reason }} traffic on {{ $labels.path }}."
+
       # --- Audit & Security ---
       - alert: ClockifyMCPAuditFailure
-        expr: rate(clockify_mcp_audit_failures_total[5m]) > 0
+        expr: sum by (reason, phase) (rate(clockify_mcp_audit_failures_total[5m])) > 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "Audit persistence failure"
-          description: "The server is unable to persist audit logs. This may violate compliance requirements."
+          description: "The server is unable to persist {{ $labels.phase }} audit logs for {{ $labels.reason }}. This may violate compliance requirements."
+
+      - alert: ClockifyMCPAuditOutcomeNotDurable
+        expr: |
+          sum(rate(clockify_mcp_audit_failures_total{reason="persist_error",phase="outcome"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Audit outcome row not durable"
+          description: "A mutation completed but the post-handler audit outcome row was not durable. Inspect docs/runbooks/audit-durability.md before continuing hosted traffic."
 
       - alert: ClockifyMCPAuthFailures
         expr: |
@@ -91,6 +111,15 @@ groups:
         annotations:
           summary: "SSE subscribers being dropped"
           description: "SSE subscribers are being dropped due to slow consumption (buffer full)."
+
+      - alert: ClockifyMCPStreamableEventsAliasUse
+        expr: sum(increase(clockify_mcp_streamable_events_alias_requests_total[30m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Legacy /mcp/events streamable HTTP alias is in use"
+          description: "Clients are still using GET /mcp/events. Migrate them to the canonical GET /mcp SSE stream before retiring the alias."
 
       - alert: ClockifyMCPSessionAnomalies
         expr: |

@@ -63,7 +63,7 @@ following within the first five minutes:
 "Green dashboard" means:
 - `clockify_mcp_tool_calls_total{outcome="tool_error"}` is
   back within 10% of baseline over the last 5 minutes.
-- `clockify_mcp_audit_failures_total{reason="persist_error"}`
+- `clockify_mcp_audit_failures_total{reason="persist_error",phase=~"intent|outcome|single"}`
   has stopped rising.
 - No `audit_outcome=not_durable` log entries in the last
   5 minutes.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
@@ -54,37 +55,48 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 	// long-standing default for self-hosted single-tenant use.
 	var tlsConfig *tls.Config
 	if r.cfg.HTTPTLSCert != "" {
+		minTLSVersion := streamableHTTPMinTLSVersion(r.cfg.Profile)
 		tlsConfig, err = buildServerTLSConfig(
 			r.cfg.HTTPTLSCert,
 			r.cfg.HTTPTLSKey,
 			r.cfg.MTLSCACertPath,
 			r.cfg.AuthMode == "mtls",
-			tls.VersionTLS12,
+			minTLSVersion,
 		)
 		if err != nil {
 			return err
 		}
 	}
 	return mcp.ServeStreamableHTTP(ctx, mcp.StreamableHTTPOptions{
-		Version:                r.version,
-		Bind:                   r.cfg.HTTPBind,
-		MaxBodySize:            r.cfg.MaxMessageSize,
-		AllowedOrigins:         r.cfg.AllowedOrigins,
-		AllowAnyOrigin:         r.cfg.AllowAnyOrigin,
-		StrictHostCheck:        r.cfg.StrictHostCheck,
-		BehindHTTPSProxy:       r.cfg.BehindHTTPSProxy,
-		ExposeAuthErrors:       r.cfg.ExposeAuthErrors,
-		SanitizeUpstreamErrors: r.cfg.SanitizeUpstreamErrors,
-		SessionTTL:             r.cfg.SessionTTL,
-		ReadyChecker:           readyChecker,
-		Authenticator:          authenticator,
-		ControlPlane:           store,
-		ProtectedResource:      protectedResource,
-		ExtraHandlers:          r.extraHandlers,
-		TLSConfig:              tlsConfig,
-		POSTWriteTimeout:       r.cfg.ToolTimeout + 10*time.Second,
+		Version:                      r.version,
+		Bind:                         r.cfg.HTTPBind,
+		MaxBodySize:                  r.cfg.MaxMessageSize,
+		AllowedOrigins:               r.cfg.AllowedOrigins,
+		AllowAnyOrigin:               r.cfg.AllowAnyOrigin,
+		StrictHostCheck:              r.cfg.StrictHostCheck,
+		BehindHTTPSProxy:             r.cfg.BehindHTTPSProxy,
+		ExposeAuthErrors:             r.cfg.ExposeAuthErrors,
+		SanitizeUpstreamErrors:       r.cfg.SanitizeUpstreamErrors,
+		SessionTTL:                   r.cfg.SessionTTL,
+		ReadyChecker:                 readyChecker,
+		Authenticator:                authenticator,
+		ControlPlane:                 store,
+		ProtectedResource:            protectedResource,
+		ExtraHandlers:                r.extraHandlers,
+		TLSConfig:                    tlsConfig,
+		AdmissionLimits:              httpAdmissionLimits(r.cfg),
+		RequireProtocolVersionHeader: r.cfg.HTTPRequireProtocolVersion,
+		DefaultProtocolVersion:       r.cfg.DefaultProtocolVersion,
+		POSTWriteTimeout:             r.cfg.ToolTimeout + 10*time.Second,
 		Factory: func(ctx context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 			return tenantRuntime(ctx, principal.TenantID, deps, store)
 		},
 	})
+}
+
+func streamableHTTPMinTLSVersion(profile string) uint16 {
+	if config.IsHostedProfile(profile) {
+		return tls.VersionTLS13
+	}
+	return tls.VersionTLS12
 }

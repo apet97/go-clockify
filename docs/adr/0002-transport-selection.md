@@ -48,6 +48,12 @@ default binary — it lives behind the `grpc` build tag in
 default-build stub at the gRPC dispatch site returns a clear error
 explaining the build-tag requirement.
 
+The gRPC release artifacts intentionally do not register server
+reflection. Local protocol exploration can use the extra
+`grpcreflection` build tag together with `grpc`; that tag is
+development-only and is not part of the production profile or release
+matrix.
+
 ## Consequences
 
 ### Positive

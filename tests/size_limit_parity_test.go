@@ -63,7 +63,7 @@ func TestSizeLimit_ParityAcrossTransports(t *testing.T) {
 			//      code=ResourceExhausted); harness wraps as err != nil.
 			//   2. RPC error envelope (HTTP transports: ReadAll on a
 			//      MaxBytesReader returns an error, server writes a 413
-			//      which the adapter maps to code=-32001).
+			//      with a JSON-RPC transport error body).
 			//   3. JSON-RPC parse error (-32700) if the server read the
 			//      body, hit the limit, and mis-parsed the truncated
 			//      payload.

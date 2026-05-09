@@ -2,10 +2,11 @@
 
 ## Status
 
-Proposed — spawned out of the "deeper-read" review that closed Wave A
-and landed most of Wave B. No code change yet; this ADR captures the
-decision surface so the next operator-facing metrics change is
-deliberate rather than accumulated.
+Accepted — this ADR began as the "deeper-read" metrics decision note,
+but the v1.x line has now repeatedly shipped on the homegrown metrics
+facade. The May 8 launch-readiness review asked whether proposed ADRs
+were carrying implicit architecture; this one was, so the status now
+matches the shipped decision.
 
 ## Context
 
@@ -40,12 +41,11 @@ change it" trap.
 
 ## Decision
 
-**Keep homegrown for v0.x, revisit at v1.0.** (Status update:
-v1.0.0 shipped 2026-04-12 and v1.1 / v1.2 followed without an
-OTel-metrics revisit; the homegrown facade still meets the
-ADR-0001 stdlib-only contract and no operator request has
-forced the question. Treat this as an implicit "still keep
-homegrown through v1.x" until a follow-up ADR supersedes.)
+**Keep homegrown through v1.x unless a follow-up ADR supersedes this
+decision.** v1.0.0 shipped 2026-04-12 and v1.1 / v1.2 followed without
+an OTel-metrics revisit; the homegrown facade still meets the
+ADR-0001 stdlib-only contract and no operator request has forced the
+question.
 
 The current facade is small, debuggable, and carries no dependency
 cost. Migrating to OTel now would:

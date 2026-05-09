@@ -73,11 +73,49 @@ func TestProtocolVersion_NegotiationTable(t *testing.T) {
 	}
 }
 
+func TestProtocolVersion_ConfiguredDefaultOnlyAppliesWhenOmitted(t *testing.T) {
+	if len(SupportedProtocolVersions) < 3 {
+		t.Fatal("test requires at least three supported protocol versions")
+	}
+
+	configuredDefault := SupportedProtocolVersions[2]
+	explicitSupported := SupportedProtocolVersions[1]
+
+	cases := []struct {
+		name      string
+		requested string
+		want      string
+	}{
+		{"omitted_uses_configured_default", "", configuredDefault},
+		{"explicit_supported_still_wins", explicitSupported, explicitSupported},
+		{"unsupported_still_returns_newest", "2099-01-01", SupportedProtocolVersions[0]},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := NewServer("test", nil, nil, nil)
+			server.DefaultProtocolVersion = configuredDefault
+
+			params := map[string]any{}
+			if tc.requested != "" {
+				params["protocolVersion"] = tc.requested
+			}
+			result := server.handleInitialize(params)
+			got, _ := result["protocolVersion"].(string)
+			if got != tc.want {
+				t.Fatalf("requested=%q negotiated=%q want %q", tc.requested, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestProtocolVersion_CapabilitiesShape asserts the initialize response
-// shape is stable across every supported version — the client sees
-// `capabilities.tools` with a listChanged flag plus `prompts` with
-// listChanged. A silent regression that dropped listChanged would
-// break MCP 2025-03-26+ clients that rely on it.
+// shape is stable across every supported version. The server advertises
+// only capabilities it implements: tools/prompts listChanged, resources
+// subscribe/listChanged when a ResourceProvider is installed, and no
+// 2025-11-25 task capability until task-augmented requests are implemented.
+// A silent regression here would either break MCP 2025-03-26+ clients that
+// rely on listChanged, or overclaim support for newer optional capabilities.
 func TestProtocolVersion_CapabilitiesShape(t *testing.T) {
 	for _, version := range SupportedProtocolVersions {
 		t.Run(version, func(t *testing.T) {
@@ -87,6 +125,7 @@ func TestProtocolVersion_CapabilitiesShape(t *testing.T) {
 					return map[string]any{"ok": true, "action": "t"}, nil
 				},
 			}}, nil, nil)
+			server.ResourceProvider = &stubResourceProvider{}
 
 			req := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":%q}}`, version)
 			var out strings.Builder
@@ -106,12 +145,25 @@ func TestProtocolVersion_CapabilitiesShape(t *testing.T) {
 			if tools == nil {
 				t.Fatalf("capabilities.tools missing")
 			}
+			if tools["listChanged"] != true {
+				t.Fatalf("capabilities.tools.listChanged missing for version %s: %+v", version, tools)
+			}
 			prompts, _ := caps["prompts"].(map[string]any)
 			if prompts == nil {
 				t.Fatalf("capabilities.prompts missing")
 			}
 			if prompts["listChanged"] == nil {
 				t.Fatalf("capabilities.prompts.listChanged missing for version %s", version)
+			}
+			resources, _ := caps["resources"].(map[string]any)
+			if resources == nil {
+				t.Fatalf("capabilities.resources missing for version %s", version)
+			}
+			if resources["subscribe"] != true || resources["listChanged"] != true {
+				t.Fatalf("capabilities.resources shape mismatch for version %s: %+v", version, resources)
+			}
+			if _, ok := caps["tasks"]; ok {
+				t.Fatalf("capabilities.tasks advertised for version %s before task support exists: %+v", version, caps["tasks"])
 			}
 		})
 	}

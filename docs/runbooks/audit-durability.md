@@ -14,10 +14,11 @@ This runbook is for the moment the `mcp_audit_durability_failures_total`
 counter starts rising, or operators have to explain to a customer
 why a mutation shows up in Clockify but not in the audit ledger.
 
-## 1. What the two modes mean
+## 1. What the modes mean
 
 `MCP_AUDIT_DURABILITY` (config field `AuditDurabilityMode`) has two
-legal values. Since the 2026-04-25 H5 refactor, audit emits two
+primary production values, plus a strict hosted/compliance mode. Since
+the 2026-04-25 H5 refactor, audit emits two
 records per non-read-only call: an **intent** record before the
 handler runs, and an **outcome** record after.
 
@@ -25,30 +26,33 @@ handler runs, and an **outcome** record after.
 |------|----------------------------|----------------------------|----------------------------------|
 | `best_effort` (default) | Logged + counted; handler runs anyway. | Logged + counted; client sees success. | **Executed.** Upstream Clockify state changed; intent record is missing. |
 | `fail_closed` | Caller receives `audit intent persistence failed; refusing to execute mutation`; **handler is skipped**. | Logged + counted; client still sees success (mutation already committed by definition). | **Not executed.** Upstream Clockify state is unchanged. |
+| `fail_closed_strict` | Same as `fail_closed`. | Logged + counted; client receives `audit outcome persistence failed; mutation completed but audit outcome is not durable`. | **Not executed.** Upstream Clockify state is unchanged. |
 
 Read-only tool calls are never affected — they produce no intent
 or outcome records regardless of the mode. The mode only governs
 mutating (write/destructive) calls.
 
 **The critical invariant to communicate internally:** in
-`fail_closed`, an intent persistence failure is a hard
+`fail_closed` and `fail_closed_strict`, an intent persistence failure is a hard
 pre-mutation gate — the upstream Clockify state has NOT changed,
 the client gets an error, and there is no orphaned mutation to
 reconcile. An *outcome* persistence failure is post-hoc: by then
 the mutation has already committed upstream, so the outcome
-record is best-effort even in `fail_closed`. The distinction
-matters for incident response — see §3 for which counter
-disambiguates them.
+record is best-effort in `fail_closed` and client-visible in
+`fail_closed_strict`. The distinction matters for incident response —
+see §3 for which counter disambiguates them.
 
 ## 2. Symptoms
 
-- `clockify_mcp_audit_failures_total{reason="persist_error"}` is
-  rising (any non-zero value is actionable).
+- `clockify_mcp_audit_failures_total{reason="persist_error",phase="intent|outcome|single"}`
+  is rising (any non-zero value is actionable). `phase="outcome"` is the
+  highest-priority hosted alert because the mutation already committed
+  and the post-handler audit row is missing.
 - Structured logs show:
   ```
   level=ERROR msg=audit_persist_failed
     audit_outcome=not_durable
-    durability_mode=best_effort|fail_closed
+    durability_mode=best_effort|fail_closed|fail_closed_strict
     phase=intent|outcome
     tool=<name> outcome=<success|failure> error=<...>
     tenant_id=<id> subject=<sub> session_id=<sid> transport=<t>
@@ -56,6 +60,8 @@ disambiguates them.
   Filter on `phase=intent` to find the pre-mutation failures
   (the ones `fail_closed` blocked); `phase=outcome` for the
   post-mutation failures that were always best-effort. The
+  metric's `phase="single"` bucket is reserved for unphased
+  best-effort error-outcome audit writes. The
   `tenant_id` / `subject` / `session_id` / `transport` fields
   carry the same attribution metadata as the persisted
   `AuditEvent.Metadata` so an incident responder can identify
@@ -63,11 +69,12 @@ disambiguates them.
   streamable_http (one tenant per session); empty strings on
   stdio and pre-authn gRPC where the runtime hasn't wired them
   yet.
-- On `fail_closed`, clients see tool-call errors with the
+- On `fail_closed` and `fail_closed_strict`, clients see tool-call errors with the
   substring `audit intent persistence failed; refusing to
   execute mutation` for blocked-mutation events. (Outcome
-  failures still reach the client as success — the mutation
-  committed.)
+  failures still reach the client as success under `fail_closed`;
+  `fail_closed_strict` returns a tool error after the mutation has
+  committed so clients know the outcome row is missing.)
 - On `best_effort`, clients see no change — the operator is the
   only one who notices, via the counter and the log.
 
@@ -141,6 +148,14 @@ kubectl -n clockify-mcp set env deploy/clockify-mcp \
   MCP_AUDIT_DURABILITY=fail_closed
 ```
 
+If the contractual bar requires clients to see post-mutation outcome-row
+loss as well, use:
+
+```sh
+kubectl -n clockify-mcp set env deploy/clockify-mcp \
+  MCP_AUDIT_DURABILITY=fail_closed_strict
+```
+
 Flipping the mode does not replay missed audit events. Mutations
 committed during the outage remain in Clockify; only a
 reconstruction from Clockify's own activity log can fill the gap.
@@ -148,9 +163,9 @@ reconstruction from Clockify's own activity log can fill the gap.
 ## 5. Recovery checklist
 
 - [ ] **Confirm the backend is healthy again** before considering
-  the incident over — the `clockify_mcp_audit_failures_total`
-  counter must stop rising. If it keeps rising after a restart,
-  the problem is still present.
+  the incident over — every `clockify_mcp_audit_failures_total`
+  phase series must stop rising. If any series keeps rising after a
+  restart, the problem is still present.
 - [ ] **Catalogue the outage window.** Note the earliest and
   latest `audit_outcome=not_durable` log lines. Every mutation
   between those timestamps may be missing from the audit ledger.
@@ -211,7 +226,7 @@ reconstruction from Clockify's own activity log can fill the gap.
 - `internal/controlplane/postgres/` — Postgres backend and retention.
 - `internal/metrics/metrics.go` — `AuditEventsTotal`
   (`clockify_mcp_audit_events_total`) and `AuditFailuresTotal`
-  (`clockify_mcp_audit_failures_total`).
+  (`clockify_mcp_audit_failures_total{reason,phase}`).
 - `docs/production-readiness.md` — when to choose which durability
   mode per deployment profile.
 - `postgres-restore-drill.md` — full DB recovery from snapshot if

@@ -11,8 +11,9 @@ A production-grade [Model Context Protocol](https://modelcontextprotocol.io)
 server for [Clockify](https://clockify.me), written in Go. Three
 transports (stdio, streamable HTTP 2025-03-26, opt-in gRPC behind
 `-tags=grpc`), five policy modes, signed releases. v1.2.0 is the
-current stable line. The active workstream is the **official
-Clockify launch candidate** promotion.
+current stable line. The active workstream is the Clockify
+launch-candidate evidence pass; any official-product promotion remains
+gated on the external evidence and legal/product approval below.
 
 ## Read first (in this order)
 
@@ -23,16 +24,20 @@ Clockify launch candidate** promotion.
    implementation order.
 2. [`docs/launch-candidate-checklist.md`](docs/launch-candidate-checklist.md)
    — bound checklist with per-group definitions of done.
-3. [`docs/official-clockify-mcp-gap-analysis.md`](docs/official-clockify-mcp-gap-analysis.md)
+3. [`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md)
+   — May 8 review disposition ledger and
+   objective-to-artifact completion audit. Do not mark launch-ready
+   while that audit says external evidence or approval gates remain open.
+4. [`docs/official-clockify-mcp-gap-analysis.md`](docs/official-clockify-mcp-gap-analysis.md)
    — narrative readiness ladder (community / internal alpha /
    official launch).
-4. [`docs/adr/0017-streamable-http-session-rehydration.md`](docs/adr/0017-streamable-http-session-rehydration.md)
+5. [`docs/adr/0017-streamable-http-session-rehydration.md`](docs/adr/0017-streamable-http-session-rehydration.md)
    — Accepted; Path A landed. Read this before touching session
    state.
-5. [`docs/live-tests.md`](docs/live-tests.md) — how the
+6. [`docs/live-tests.md`](docs/live-tests.md) — how the
    live-contract nightly works and how the **sacrificial
    workspace** is wired. Read this before any live Clockify call.
-6. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
+7. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
    — historical continuation packet for Claude Code after PR #51
    merged. Use `docs/agent-handoff.md` for the current post-PR #63
    launch state.
@@ -44,13 +49,13 @@ rules live in this file and the docs above.
 
 ## Launch-state baseline
 
-- **Current main baseline:** `0960bfa03db143778deb59f9b9522012116c9c9b`
-  (`chore(review): harden MCP server readiness`). This records the
-  post-PR #63 local/CI remediation wave for review-found performance,
-  security, tests, stale-context, generated catalog/schema, and
-  operator/agent documentation gaps. It does **not** add live Clockify
-  evidence and does **not** close Group 1, Group 6, or Group 7 launch
-  blockers.
+- **Current pushed main baseline:** `4fe957547f9e6aea749a85f87823d17a0ccc2928`
+  (`fix(streamable): preserve session negotiation on touch`). This is
+  the current `main` / `origin/main` tip before the uncommitted May 8
+  remediation tree. It includes the post-PR #63 local/CI remediation
+  wave plus later review-readiness fixes, but it does **not** represent
+  the dirty local remediation tree and does **not** close Group 1,
+  Group 6, or Group 7 launch blockers.
 - **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
   (`test(livee2e): pin user invite validation`). This records the
   full sacrificial-workspace live API campaign refresh: the documented
@@ -59,7 +64,9 @@ rules live in this file and the docs above.
   overrides now fail if they target ghost descriptor names. This is
   manual campaign coverage only; it does **not** close Group 1,
   Group 6, or Group 7 launch blockers.
-- **Historical baselines, not current candidate SHAs:** PR #60 docs
+- **Historical baselines, not current candidate SHAs:** post-PR #63
+  remediation `0960bfa03db143778deb59f9b9522012116c9c9b`
+  (`chore(review): harden MCP server readiness`), PR #60 docs
   stabilization `4e69c7a1db8011055187cf9892426ed48fc8e572`
   (`docs(handoff): update post-PR59 launch state`) and PR #51 merge
   tip `adce316d60644fe51365086aba186227c9ae3977`
@@ -125,18 +132,25 @@ Listed in priority order; full detail in
    Two consecutive *scheduled* (cron) green runs of
    `live-contract.yml` are required, including the
    `TestLiveReadSideSchemaDiff` evidence. The rolling
-   `live-test-failure` issue is currently closed; two manual-dispatch
-   runs are green; cron is calendar-bound.
+   `live-test-failure` issue is currently closed. Scheduled runs
+   25593042387 and 25538247771 are green on pushed commit
+   `4fe957547f9e6aea749a85f87823d17a0ccc2928` and include the required
+   mutating, audit-phase, and schema-diff log markers, but that commit
+   is not this dirty local remediation tree. Group 1 remains open until
+   the final remediation SHA has two consecutive scheduled greens with
+   the same evidence.
 2. **Group 6 — security walk-through on the candidate tag.**
    Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
    semgrep on the final candidate tag and file findings or
    "no findings" evidence in `SECURITY.md`. The same suite was
-   last green as local preflight on 2026-05-02, but candidate-tag
-   evidence is still required.
+   refreshed as local preflight on 2026-05-09 after the Go 1.25.10 and
+   `govulncheck@v1.3.0` hardening, but candidate-tag evidence is still
+   required.
 3. **Group 7 — release/sigstore/SLSA evidence on the candidate tag.**
    Cut `vX.Y.Z-rc.N`, watch `release-smoke.yml`, verify
    sigstore + SLSA artefact attestation, and archive the
-   `doctor --strict` output alongside the release notes.
+   `release-smoke-doctor-output` artifact containing the reference
+   `doctor --strict` outputs alongside the release notes.
 
 ## Safety constraints (non-negotiable)
 

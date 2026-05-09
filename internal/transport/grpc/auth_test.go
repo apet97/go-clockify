@@ -88,6 +88,19 @@ func callInterceptor(t *testing.T, auth authn.Authenticator, md metadata.MD) (er
 	return err, seen
 }
 
+func mustCIDRs(t *testing.T, raws ...string) []*net.IPNet {
+	t.Helper()
+	nets := make([]*net.IPNet, 0, len(raws))
+	for _, raw := range raws {
+		_, ipNet, err := net.ParseCIDR(raw)
+		if err != nil {
+			t.Fatalf("parse CIDR %q: %v", raw, err)
+		}
+		nets = append(nets, ipNet)
+	}
+	return nets
+}
+
 func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	auth := fakeAuthenticator{wantToken: "correct"}
 	before := metrics.GRPCAuthRejectionsTotal.Get("missing_metadata")
@@ -130,6 +143,92 @@ func TestAuthInterceptor_EmptyAuthorizationValue(t *testing.T) {
 	}
 	if got := metrics.GRPCAuthRejectionsTotal.Get("empty_authorization"); got != before+1 {
 		t.Fatalf("expected empty_authorization counter to increment, got %d (before=%d)", got, before)
+	}
+}
+
+func TestAuthInterceptor_PeerCIDRAllowRejectsDisallowedPeer(t *testing.T) {
+	want := authn.Principal{Subject: "alice", TenantID: "acme", AuthMode: authn.ModeStaticBearer}
+	auth := fakeAuthenticator{wantToken: "correct", principal: want}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer correct"))
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		Addr: &net.TCPAddr{IP: net.ParseIP("203.0.113.10"), Port: 443},
+	})
+	stream := &mockServerStream{ctx: ctx}
+	before := metrics.GRPCAuthRejectionsTotal.Get("peer_addr_disallowed")
+	var ran bool
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{
+		peerCIDRAllow: mustCIDRs(t, "10.0.0.0/8", "2001:db8::/32"),
+	})
+	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, func(any, grpc.ServerStream) error {
+		ran = true
+		return nil
+	})
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated for disallowed peer, got %v", err)
+	}
+	if st.Message() != "peer address not allowed" {
+		t.Fatalf("expected generic peer rejection, got %q", st.Message())
+	}
+	if ran {
+		t.Fatal("handler ran for disallowed peer")
+	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("peer_addr_disallowed"); got != before+1 {
+		t.Fatalf("expected peer_addr_disallowed counter to increment, got %d (before=%d)", got, before)
+	}
+}
+
+func TestAuthInterceptor_PeerCIDRAllowAcceptsAllowedPeer(t *testing.T) {
+	want := authn.Principal{Subject: "alice", TenantID: "acme", AuthMode: authn.ModeStaticBearer}
+	auth := fakeAuthenticator{wantToken: "correct", principal: want}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer correct"))
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		Addr: &net.TCPAddr{IP: net.ParseIP("10.1.2.3"), Port: 443},
+	})
+	stream := &mockServerStream{ctx: ctx}
+	var seen *authn.Principal
+	interceptor := authStreamInterceptor(auth, authInterceptorConfig{
+		peerCIDRAllow: mustCIDRs(t, "10.0.0.0/8", "2001:db8::/32"),
+	})
+	err := interceptor(nil, stream, &grpc.StreamServerInfo{FullMethod: "/test/Method"}, func(_ any, ss grpc.ServerStream) error {
+		if p, ok := authn.PrincipalFromContext(ss.Context()); ok {
+			seen = p
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error for allowed peer: %v", err)
+	}
+	if seen == nil {
+		t.Fatal("handler saw no principal for allowed peer")
+	}
+	if seen.Subject != want.Subject || seen.TenantID != want.TenantID || seen.AuthMode != want.AuthMode {
+		t.Fatalf("principal mismatch: want %+v, got %+v", want, *seen)
+	}
+}
+
+func TestAuthUnaryInterceptor_PeerCIDRAllowRejectsMissingPeer(t *testing.T) {
+	want := authn.Principal{Subject: "alice", TenantID: "acme", AuthMode: authn.ModeStaticBearer}
+	auth := fakeAuthenticator{wantToken: "correct", principal: want}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer correct"))
+	interceptor := authUnaryInterceptor(auth, authInterceptorConfig{
+		peerCIDRAllow: mustCIDRs(t, "10.0.0.0/8"),
+	})
+	before := metrics.GRPCAuthRejectionsTotal.Get("peer_addr_disallowed")
+	var ran bool
+	_, err := interceptor(ctx, "request", &grpc.UnaryServerInfo{FullMethod: "/test/Unary"}, func(context.Context, any) (any, error) {
+		ran = true
+		return "response", nil
+	})
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated for missing peer, got %v", err)
+	}
+	if ran {
+		t.Fatal("handler ran without peer address")
+	}
+	if got := metrics.GRPCAuthRejectionsTotal.Get("peer_addr_disallowed"); got != before+1 {
+		t.Fatalf("expected peer_addr_disallowed counter to increment, got %d (before=%d)", got, before)
 	}
 }
 

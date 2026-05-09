@@ -49,6 +49,10 @@ spec:
             - name: MCP_GRPC_REAUTH_INTERVAL
               value: {{ . | quote }}
             {{- end }}
+            {{- with $.Values.transport.grpcPeerCIDRAllow }}
+            - name: MCP_GRPC_PEER_CIDR_ALLOW
+              value: {{ . | quote }}
+            {{- end }}
             {{- with $.Values.transport.grpcTlsCert }}
             - name: MCP_GRPC_TLS_CERT
               value: {{ . | quote }}
@@ -144,6 +148,10 @@ spec:
             {{- end }}
             {{- with .Values.auth.oidcStrict }}
             - name: MCP_OIDC_STRICT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.auth.oidcRequireKid }}
+            - name: MCP_OIDC_REQUIRE_KID
               value: {{ . | quote }}
             {{- end }}
             {{- with .Values.auth.requireTenantClaim }}

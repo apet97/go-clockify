@@ -5,6 +5,28 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+  # Build-tag submodules carry the real third-party Go dependency
+  # surface; the root module stays stdlib-only by design.
+  - package-ecosystem: gomod
+    directory: /internal/controlplane/postgres
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: gomod
+    directory: /internal/transport/grpc
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: gomod
+    directory: /internal/tracing/otel
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: gomod
+    directory: /tools/govulncheck
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
     schedule:

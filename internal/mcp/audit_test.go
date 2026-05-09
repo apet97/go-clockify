@@ -25,6 +25,16 @@ func (a *successAuditor) RecordAudit(e AuditEvent) error {
 	return nil
 }
 
+type outcomeFailAuditor struct{ calls int }
+
+func (a *outcomeFailAuditor) RecordAudit(e AuditEvent) error {
+	a.calls++
+	if e.Phase == PhaseOutcome {
+		return errors.New("simulated outcome persist failure")
+	}
+	return nil
+}
+
 func newAuditServer(auditor Auditor, mode string) *Server {
 	s := NewServer("test", []ToolDescriptor{
 		{
@@ -95,6 +105,48 @@ func TestAuditDurability_FailClosed_RejectsOnPersistError(t *testing.T) {
 	}
 }
 
+func TestAuditDurability_FailClosedStrict_RejectsOutcomePersistError(t *testing.T) {
+	aud := &outcomeFailAuditor{}
+	s := newAuditServer(aud, "fail_closed_strict")
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !strings.Contains(out.String(), `"isError":true`) {
+		t.Fatalf("fail_closed_strict: expected isError response when audit outcome fails, got: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "audit outcome persistence failed") {
+		t.Fatalf("fail_closed_strict: expected outcome-audit failure message, got: %s", out.String())
+	}
+	if aud.calls != 2 {
+		t.Fatalf("fail_closed_strict: expected intent + outcome audit calls, got %d", aud.calls)
+	}
+}
+
+func TestAuditFailurePhaseLabel(t *testing.T) {
+	tests := []struct {
+		name  string
+		phase AuditPhase
+		want  string
+	}{
+		{name: "intent", phase: PhaseIntent, want: "intent"},
+		{name: "outcome", phase: PhaseOutcome, want: "outcome"},
+		{name: "unphased", phase: "", want: "single"},
+		{name: "future value", phase: AuditPhase("future"), want: "single"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := auditFailurePhaseLabel(tt.phase); got != tt.want {
+				t.Fatalf("auditFailurePhaseLabel(%q) = %q, want %q", tt.phase, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestAuditDurability_ReadOnly_Unaffected verifies that read-only tools never
 // trigger the auditor and are unaffected by AuditDurabilityMode.
 func TestAuditDurability_ReadOnly_Unaffected(t *testing.T) {
@@ -125,7 +177,7 @@ func TestAuditDurability_LogsCanonicalOutcomeField(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelError})))
 	defer slog.SetDefault(prev)
 
-	for _, mode := range []string{"best_effort", "fail_closed"} {
+	for _, mode := range []string{"best_effort", "fail_closed", "fail_closed_strict"} {
 		t.Run(mode, func(t *testing.T) {
 			buf.Reset()
 			aud := &failAuditor{}
@@ -162,7 +214,7 @@ func TestAuditDurability_LogsTenantAttribution(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	defer slog.SetDefault(prev)
 
-	for _, mode := range []string{"best_effort", "fail_closed"} {
+	for _, mode := range []string{"best_effort", "fail_closed", "fail_closed_strict"} {
 		t.Run(mode, func(t *testing.T) {
 			buf.Reset()
 			aud := &failAuditor{}
@@ -402,10 +454,10 @@ func TestAuditPhase_ReadOnlyToolsSkipBothPhases(t *testing.T) {
 
 // TestAuditDurability_SuccessAuditor_AlwaysPasses verifies that a succeeding
 // auditor does not interfere with tool call results in either durability mode.
-// Both modes now emit an intent AND outcome record on a successful mutation,
+// Every durability mode emits an intent AND outcome record on a successful mutation,
 // so the auditor should see 2 calls regardless of mode.
 func TestAuditDurability_SuccessAuditor_AlwaysPasses(t *testing.T) {
-	for _, mode := range []string{"best_effort", "fail_closed"} {
+	for _, mode := range []string{"best_effort", "fail_closed", "fail_closed_strict"} {
 		t.Run(mode, func(t *testing.T) {
 			aud := &successAuditor{}
 			s := newAuditServer(aud, mode)

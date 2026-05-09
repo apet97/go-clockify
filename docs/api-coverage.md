@@ -70,7 +70,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_policy_info` | local (no API call) | unit |
 | `clockify_quick_report` | `GET /workspaces/{ws}/reports/summary` (wrapped) | unit |
 | `clockify_resolve_debug` | compatibility alias over name resolution lookup | unit, live-read-only (TestLiveTier1ReadOnly) |
-| `clockify_resolve_name` | name resolution lookup over project/client/tag/user list endpoints | unit |
+| `clockify_resolve_name` | name resolution lookup over project/client/tag/user list endpoints | unit, live-read-only (TestLiveTier1ReadOnly) |
 | `clockify_summary_report` | `GET /workspaces/{ws}/reports/summary` | unit |
 | `clockify_timer_status` | `GET /workspaces/{ws}/user/{uid}/time-entries?in-progress=true` | unit |
 | `clockify_timesheet_review` | workflow wrapper over `GET /workspaces/{ws}/user/{uid}/time-entries` | unit, live-read-only (TestLiveTier1ReadOnly) |
@@ -388,7 +388,7 @@ surface and surface latent handler / upstream bugs.
 
 | Test | Tools / surface exercised | Outcome shape |
 |------|----------------------------|---------------|
-| `TestLiveTier1ReadOnly` | 14 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `quick_report`, `timesheet_review`, `timer_status`, `detailed_report`, `resolve_debug`, `policy_info` | success path |
+| `TestLiveTier1ReadOnly` | 15 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `quick_report`, `timesheet_review`, `timer_status`, `detailed_report`, `resolve_name`, `resolve_debug`, `policy_info` | success path |
 | `TestLiveTier2ReadOnlySweep` | 22 Tier-2 read-only and report tools across 11 groups | success path for the current list/report surface |
 | `TestLiveT2SchedulingRecurringCRUD` | `create_assignment`, `get_assignment` via list scan, `update_assignment`, `delete_assignment` on recurring-assignment routes | success path |
 | `TestLiveT2ExpensesCRUD` | `create_expense_category`, `update_expense_category`, `create_expense`, `get_expense` bogus-id handling; delete-category archive constraint remains pinned | mixed success / documented upstream constraint |
@@ -409,8 +409,12 @@ surface and surface latent handler / upstream bugs.
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
 current 128-tool catalog is 40 Tier 1 tools + 88 Tier 2 tools, with
-five local discovery/activation/name-resolution helpers covered by unit tests instead
-of live Clockify calls. PR #59 manually exercised the then-current
+four local discovery/activation helpers covered by unit tests instead
+of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
+static guard for this inventory: it fails when a Tier-2 catalog tool or
+API-backed Tier-1 tool is not named in the livee2e source bundle, while
+explicitly allowing local-only Tier-1 catalog/tool-surface helpers that
+should not pretend to call Clockify. PR #59 manually exercised the then-current
 121 generated catalog tools through the MCP path against the
 sacrificial workspace; PR #62 added the invite-user raw-route
 validation probe. The two later timesheet workflow helpers are covered

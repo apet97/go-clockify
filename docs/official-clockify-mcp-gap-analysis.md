@@ -1,8 +1,8 @@
-# Official Clockify MCP — Gap Analysis
+# Clockify MCP Official-Launch Gap Analysis
 
 A snapshot of where `clockify-mcp` sits on the path from
-"community-grade MCP server" to "officially-supported Clockify
-product." Written 2026-05-02; last updated 2026-05-03 after
+"community-grade MCP server" to a Clockify-supported product launch.
+Written 2026-05-02; last updated 2026-05-03 after
 PR #62's invite-user route probe and the current 128-tool catalog
 cleanup.
 
@@ -30,8 +30,9 @@ The repo cleared this bar at v1.0.0 and has stayed there:
 - Stable v1 wire format, tool names, and env-var surface.
 - Three transports (stdio, streamable HTTP, opt-in gRPC).
 - Five policy modes with a load-time guard against misuse.
-- Signed releases (cosign + SLSA), SBOMs, FIPS variant,
-  reproducibility workflow.
+- Signed releases (cosign mandatory, SLSA when GitHub artifact
+  attestations are available), SBOMs, FIPS variant, reproducibility
+  workflow.
 - Cross-transport parity matrix (`tests/parity_test.go` and
   siblings) that fails compilation on every adapter when the
   harness interface widens.
@@ -147,7 +148,7 @@ Caveats that the tier carries today:
   `internal/clockify` structs. It still needs a scheduled green run
   on the candidate SHA before the launch checklist box can close.
 
-### Tier 3 — Official Clockify product launch (⛔ not yet)
+### Tier 3 — Clockify-supported product launch (⛔ not yet)
 
 Audience: any external customer, any deployment Clockify itself
 links to or supports through its support channels, any embedding
@@ -241,13 +242,14 @@ What is missing for tier 3 is intentionally narrow:
   a negative hosted-posture check, so operators do not mistake exit
   3 for a broken local or small-team install.
 - **Security-review local preflight is clean on the current tree.**
-  `govulncheck`, gitleaks, Semgrep (`p/default`, metrics off), and
-  the local FIPS build-tag check are green. The only Semgrep
-  suppressions are scoped to streamable-HTTP SSE frame writes and
-  are justified both in code and ADR 0017. The production
-  `MCP_ALLOW_DEV_BACKEND=1` rejection now has a dedicated regression
-  test. This is not candidate-tag evidence; the same walk-through
-  must be repeated after `vX.Y.Z-rc.N` is cut.
+  `govulncheck@v1.3.0` is now a tagged scanner release and is green
+  after the repo's Go pin moved to 1.25.10; gitleaks, Semgrep
+  (`p/default`, metrics off), and the local FIPS build-tag check are
+  also green. The only Semgrep suppressions are scoped to
+  streamable-HTTP SSE frame writes and are justified both in code and
+  ADR 0017. The production `MCP_ALLOW_DEV_BACKEND=1` rejection now
+  has a dedicated regression test. This is not candidate-tag evidence;
+  the same walk-through must be repeated after `vX.Y.Z-rc.N` is cut.
 - **API coverage matrix.** [`docs/api-coverage.md`](api-coverage.md)
   maps all 128 MCP tools to their Clockify API endpoints or workflow
   composition paths, classifies
@@ -286,18 +288,25 @@ What is missing for tier 3 is intentionally narrow:
 
 ---
 
-## Blockers for official Clockify product launch
+## Blockers for Clockify-supported product launch
 
 In priority order — closing the lower-numbered ones first
 unblocks the next.
 
-Only external evidence blockers remain after PR #63 merged to `main`
-at `0960bfa03db143778deb59f9b9522012116c9c9b`: scheduled
-live-contract cron greens, candidate-tag security walk-through
-evidence, and release/sigstore/SLSA evidence. The PR #59 through
-PR #62 manual live-probe work remains coverage evidence only; PR #63
-was a local/CI review-remediation wave and did not add live Clockify
-evidence.
+The remaining blockers are not local test failures. They are still
+launch blockers: Group 1 scheduled live-contract cron greens on the
+final candidate SHA, Group 6 candidate-tag security walk-through
+evidence, Group 7 release/sigstore/SLSA evidence, pushed workflow
+first-run evidence, repository-state cleanup, public-readiness
+disposition, hosted/platform evidence, and legal/product approval for
+any Clockify-supported product launch claim. Local checks are useful
+but not sufficient for a Clockify-supported product launch claim. The
+PR #59 through PR #62 manual live-probe work remains coverage evidence
+only; PR #63 and the May 8 local remediation wave did not add
+candidate-SHA live Clockify evidence. Rechecked on 2026-05-09: the
+repository description and issue #28 remain stale/open, and the
+locally added CodeQL, dependency-review, and Semgrep workflow files
+have not produced default-branch runs yet.
 
 1. **Scheduled live-contract cron evidence (current).**
    *Where:* `.github/workflows/live-contract.yml` and the rolling
@@ -306,6 +315,11 @@ evidence.
    consecutive scheduled green nightlies on the candidate SHA. The
    rolling issue is currently closed and manual dispatches are green,
    but manual runs do not start or close the candidate cron clock.
+   Rechecked on 2026-05-09: scheduled run 25538247771 also proves the
+   audit-phase DSN path (`CLOCKIFY_LIVE_AUDIT_REQUIRED=true`, redacted
+   `MCP_LIVE_CONTROL_PLANE_DSN`, and green
+   `TestLiveCreateUpdateDeleteEntryAuditPhases`), but it is on
+   `4fe9575`, not the newer local remediation tree.
 
 2. ~~**Shared-service Postgres E2E.**~~ **Closed 2026-05-02**
    (commits 42502cf + 79f0769 plus the local `make test-postgres`
@@ -339,10 +353,10 @@ evidence.
    intentionally platform-guarded on macOS/arm64 workstations.
 
 7. **Candidate-tag security walk-through.** `make verify-vuln`
-   (with `govulncheck` on PATH), gitleaks, Semgrep,
-   `make verify-fips`, and `make check` were green on the
-   2026-05-02 launch-review tree. The blocker closes only when the
-   same walk-through is repeated on the final candidate tag and any
+   (with tagged `govulncheck@v1.3.0` on Go 1.25.10), gitleaks,
+   Semgrep, `make verify-fips`, and `make check` were green on the
+   May 8 remediation tree. The blocker closes only when the same
+   walk-through is repeated on the final candidate tag and any
    findings are filed in `SECURITY.md`.
 
 8. **Release/sigstore/SLSA evidence.** Cut `vX.Y.Z-rc.N`, run

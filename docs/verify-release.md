@@ -4,16 +4,21 @@ Every tagged release of `clockify-mcp` ships 15 binaries across
 five tag combinations (per `scripts/check-release-assets.sh`): the
 five default platforms (`darwin-arm64`, `darwin-x64`, `linux-arm64`,
 `linux-x64`, `windows-x64.exe`) plus FIPS, Postgres, gRPC, and
-gRPC-Postgres variants. Each binary ships:
+gRPC-Postgres variants. Each binary always ships:
 
 - The raw binary (`clockify-mcp-<platform>`, e.g.
   `clockify-mcp-linux-x64`; no version in the filename, no
   archive wrapper).
 - A keyless cosign sigstore bundle (`<binary>.sigstore.json`).
 - An SPDX SBOM (`<binary>.spdx.json`).
-- A SLSA build-provenance attestation stored in the GitHub
-  attestation service (verified via `gh attestation verify`,
-  not as an `.intoto.jsonl` artifact alongside the binary).
+When GitHub artifact attestations are available for the repository
+account tier, the release workflow also stores SLSA build provenance
+in the GitHub attestation service (verified via
+`gh attestation verify`, not as an `.intoto.jsonl` artifact alongside
+the binary). On the current user-owned private repository, that
+service can return "Feature not available for user-owned private
+repositories", so the mandatory cryptographic gate is the cosign
+binary/image signature chain.
 
 Plus a single signed checksum file per release: `SHA256SUMS.txt`.
 

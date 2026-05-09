@@ -69,6 +69,7 @@ func (r *Runtime) runGRPC(ctx context.Context, client *clockify.Client, server *
 		ReauthInterval:       r.cfg.GRPCReauthInterval,
 		ForwardTenantHeader:  r.cfg.ForwardTenantHeader,
 		ForwardSubjectHeader: r.cfg.ForwardSubjectHeader,
+		PeerCIDRAllow:        r.cfg.GRPCPeerCIDRAllow,
 		TLSConfig:            grpcTLS,
 	})
 }

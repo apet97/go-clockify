@@ -1,11 +1,18 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+
+	logslog "github.com/apet97/go-clockify/internal/logging"
 )
 
 // TestRecoverDispatch_StableErrorEnvelope locks the contract that
@@ -83,6 +90,77 @@ func TestRecoverDispatch_NilSink(t *testing.T) {
 		defer RecoverDispatch("req-1", "test_site", "tool", nil)
 		panic("boom")
 	}()
+}
+
+func TestRecoverDispatch_RedactingLoggerMasksSecretShapedPanicValue(t *testing.T) {
+	const secret = "pk_abcdefghijklmnopqrstuvwxyz123456"
+
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(logslog.NewRedactingHandler(
+		slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelError}),
+	)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	func() {
+		defer RecoverDispatch("req-1", "test_site", "tool", func(Response) {})
+		panic("upstream failure containing " + secret)
+	}()
+
+	got := logs.String()
+	if !strings.Contains(got, "panic_recovered") {
+		t.Fatalf("expected panic recovery log, got %q", got)
+	}
+	if strings.Contains(got, secret) {
+		t.Fatalf("secret-shaped panic value leaked into operator log: %s", got)
+	}
+	if !strings.Contains(got, "[REDACTED]") {
+		t.Fatalf("expected redacted panic value in operator log, got %s", got)
+	}
+}
+
+func TestSanitizePanicStackScrubsPathsAndTruncates(t *testing.T) {
+	gopath := t.TempDir()
+	t.Setenv("GOPATH", gopath)
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	goroot := goRootForStackSanitization()
+	if goroot == "" {
+		t.Skip("go env GOROOT unavailable")
+	}
+
+	var stack strings.Builder
+	stack.WriteString("goroutine 123 [running]:\n")
+	for i := 0; i < maxLoggedPanicStackFrames+3; i++ {
+		stack.WriteString(fmt.Sprintf("example.com/project.frame%d()\n", i))
+		var path string
+		switch i {
+		case 0:
+			path = filepath.Join(goroot, "src", "runtime", "panic.go")
+		case 1:
+			path = filepath.Join(gopath, "pkg", "mod", "example.com", "dep.go")
+		default:
+			path = filepath.Join(wd, "internal", "mcp", "panic.go")
+		}
+		stack.WriteString("\t" + path + ":12 +0x1\n")
+	}
+
+	got := sanitizePanicStack(stack.String())
+	for _, raw := range []string{goroot, gopath, wd} {
+		if raw != "" && strings.Contains(got, raw) {
+			t.Fatalf("sanitized stack still contains raw path %q:\n%s", raw, got)
+		}
+	}
+	for _, marker := range []string{"$GOROOT", "$GOPATH", "$PWD", "... stack truncated ..."} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("sanitized stack missing marker %q:\n%s", marker, got)
+		}
+	}
+	if strings.Contains(got, "frame8") {
+		t.Fatalf("sanitized stack should include only %d frames:\n%s", maxLoggedPanicStackFrames, got)
+	}
 }
 
 // TestHandleWithRecover_ReturnsStableEnvelopeOnPanic locks the

@@ -123,15 +123,21 @@ func TestTransportAuthMatrix(t *testing.T) {
 		{"grpc", "static_bearer", map[string]string{
 			"MCP_BEARER_TOKEN":      bearer,
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
 			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"grpc", "oidc", map[string]string{
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
 			"MCP_ALLOW_DEV_BACKEND": "1",
 		}, "ok"},
 		{"grpc", "forward_auth", map[string]string{
 			"MCP_CONTROL_PLANE_DSN":            "memory",
 			"MCP_ALLOW_DEV_BACKEND":            "1",
+			"MCP_GRPC_TLS_CERT":                "/dev/null",
+			"MCP_GRPC_TLS_KEY":                 "/dev/null",
 			"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 		}, "ok"},
 		// gRPC + mtls also requires cert material now (matching the
@@ -164,15 +170,21 @@ func TestTransportAuthMatrix(t *testing.T) {
 		{"grpc", "static_bearer", map[string]string{
 			"MCP_BEARER_TOKEN":      bearer,
 			"MCP_CONTROL_PLANE_DSN": "memory",
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
 		}, "dev backend) is disallowed by default"},
 		{"grpc", "static_bearer", map[string]string{
-			"MCP_BEARER_TOKEN": bearer,
+			"MCP_BEARER_TOKEN":  bearer,
+			"MCP_GRPC_TLS_CERT": "/dev/null",
+			"MCP_GRPC_TLS_KEY":  "/dev/null",
 		}, "dev backend) is disallowed by default"},
 		// Production DSN (postgres://) always passes without the flag,
 		// matching the streamable_http rule above.
 		{"grpc", "static_bearer", map[string]string{
 			"MCP_BEARER_TOKEN":      bearer,
 			"MCP_CONTROL_PLANE_DSN": "postgres://user:pw@db.example:5432/mcp",
+			"MCP_GRPC_TLS_CERT":     "/dev/null",
+			"MCP_GRPC_TLS_KEY":      "/dev/null",
 		}, "ok"},
 
 		// --- legacy http rejects HTTP TLS cert -----------------------
@@ -205,12 +217,17 @@ func TestTransportAuthMatrix(t *testing.T) {
 				"MCP_BEARER_TOKEN", "MCP_CONTROL_PLANE_DSN", "MCP_OIDC_ISSUER",
 				"MCP_OIDC_AUDIENCE", "MCP_OIDC_JWKS_URL", "MCP_OIDC_JWKS_PATH",
 				"MCP_OIDC_JWKS_ALLOW_PRIVATE", "MCP_RESOURCE_URI", "MCP_OIDC_VERIFY_CACHE_TTL",
+				"MCP_OIDC_REQUIRE_KID",
 				"MCP_OIDC_JWKS_CACHE_TTL",
+				"MCP_HTTP_RATELIMIT_PER_IP",
+				"MCP_HTTP_RATELIMIT_PER_PRINCIPAL",
+				"MCP_HTTP_RATELIMIT_GET_PER_SESSION",
+				"MCP_HTTP_REQUIRE_PROTOCOL_VERSION",
 				"MCP_ALLOW_DEV_BACKEND",
 				"MCP_FORWARD_AUTH_TRUSTED_PROXIES",
 				"MCP_REQUIRE_FORWARD_TENANT_CLAIM",
 				"MCP_HTTP_TLS_CERT", "MCP_HTTP_TLS_KEY",
-				"MCP_GRPC_TLS_CERT", "MCP_GRPC_TLS_KEY",
+				"MCP_GRPC_TLS_CERT", "MCP_GRPC_TLS_KEY", "MCP_GRPC_PEER_CIDR_ALLOW",
 				"MCP_MTLS_CA_CERT_PATH",
 			} {
 				if _, present := envs[k]; !present {

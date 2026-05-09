@@ -50,8 +50,11 @@ shape (see [`docs/deploy/`](../deploy/) for full profile notes):
 - `clockify-mcp --profile=shared-service` — multi-tenant baseline.
   Sets `MCP_TRANSPORT=streamable_http`, `MCP_AUTH_MODE=oidc`,
   `MCP_AUDIT_DURABILITY=fail_closed`, `MCP_HTTP_LEGACY_POLICY=deny`,
-  `MCP_OIDC_STRICT=1`, `MCP_REQUIRE_TENANT_CLAIM=1`,
-  `MCP_DISABLE_INLINE_SECRETS=1`,
+  `MCP_OIDC_STRICT=1`, `MCP_OIDC_REQUIRE_KID=1`,
+  `MCP_REQUIRE_TENANT_CLAIM=1`, `MCP_DISABLE_INLINE_SECRETS=1`,
+  `MCP_HTTP_RATELIMIT_PER_IP=600`,
+  `MCP_HTTP_RATELIMIT_PER_PRINCIPAL=300`,
+  `MCP_HTTP_RATELIMIT_GET_PER_SESSION=4`,
   `CLOCKIFY_POLICY=time_tracking_safe`.
 - `clockify-mcp --profile=prod-postgres` — same posture plus
   `ENVIRONMENT=prod` so downstream prod-only assertions

@@ -13,6 +13,7 @@
 #   6. Fail: missing checklist file → exit 1
 #   7. Fail: Group 7 checked box without evidence → exit 1
 #   8. Fail: Group 6 checked box without evidence → exit 1
+#   9. Fail: Group 7 release-artifact box checked without evidence → exit 1
 
 set -euo pipefail
 
@@ -128,6 +129,19 @@ if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "Group 6 checked box without evidence should fail but exited 0"
 else
   pass "Group 6 checked box without evidence fails"
+fi
+
+# ── Test 9: Group 7 release-artifact box checked without evidence => FAIL ──
+
+echo "== Test 9: Group 7 release-artifact box checked without evidence => FAIL"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed 's/^- \[ \] Release artefacts: signed binaries (cosign, plus SLSA when/- [x] Release artefacts: signed binaries (cosign, plus SLSA when/' \
+  "$real_checklist" > "$tmp"
+if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
+  fail "Group 7 release-artifact box without evidence should fail but exited 0"
+else
+  pass "Group 7 release-artifact box without evidence fails"
 fi
 
 # ── Summary ────────────────────────────────────────────────────────
