@@ -464,8 +464,12 @@ checked.
       `completed/cancelled` on pushed commit
       4fe957547f9e6aea749a85f87823d17a0ccc2928. `gh run view` shows
       the `internal/tools` matrix leg was cancelled while the other
-      mutation legs succeeded. The local timeout increase still needs
-      pushed scheduled-run evidence on the final candidate SHA._
+      mutation legs succeeded. The `internal/tools` matrix-leg timeout
+      increase landed on `main` in `2e7b6bd` ("May 9 hardening")
+      ahead of `308c815` and the later docs-only commits, so the
+      workflow fix is on the default branch; the next scheduled
+      `mutation.yml` cron after that landing still needs to record a
+      green run on the final candidate SHA before this box can close._
 - [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.

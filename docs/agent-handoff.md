@@ -156,14 +156,17 @@ code/CI hardening backlog is tracked in
    `make launch-external-status` directly checks
    `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` and prints maintainer action
    hints for each open gate while staying read-only.
-4. **Mutation cron evidence.** The local workflow timeout was raised
-   for the slow `internal/tools` leg, but `make launch-external-status`
-   recheck on 2026-05-09 shows latest scheduled mutation run
+4. **Mutation cron evidence.** The `internal/tools` matrix-leg
+   timeout increase landed on `main` in `2e7b6bd` ("May 9 hardening")
+   ahead of `308c815` and the later docs-only commits, so the
+   workflow fix is on the default branch. `make launch-external-status`
+   recheck on 2026-05-09 still shows latest scheduled mutation run
    25592823559 is `completed/cancelled` on pushed commit
-   `4fe957547f9e6aea749a85f87823d17a0ccc2928`. `gh run view` shows the
+   `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled
+   cron fired before `2e7b6bd` landed; `gh run view` confirms only the
    `internal/tools` matrix leg was cancelled while the other mutation
-   legs succeeded. Wait for scheduled-run evidence on the final
-   candidate SHA after the workflow change lands.
+   legs succeeded. Wait for the next scheduled-run evidence on the
+   final candidate SHA now that the workflow fix is on `main`.
 5. **Paid-hosted external review and legal/commercial gates.** A paid
    hosted launch still needs the final plan's non-code evidence: the
    `Paid-hosted external security review`,
