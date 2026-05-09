@@ -4,6 +4,24 @@ Source of truth: `~/Downloads/review may 8/` as provided on
 2026-05-08. This file is a maintainer-facing disposition ledger, not a
 replacement for `docs/launch-candidate-checklist.md`.
 
+## ⚠️ Open risk callouts
+
+- **Branch-protection posture is the 2026-05-09 cleanup posture, not
+  the final hardening posture.** Classic protection on `main` is
+  currently restored with only the three D9 launch required-status
+  checks (`Doctor strict smoke`, `Doctor Postgres backend`,
+  `Shared-service Postgres E2E`). This recovers from a prior
+  `Branch not protected` state observed during the 2026-05-09 repo-state
+  cleanup pass and is **not** equivalent to the historical 19 PR-required
+  context profile documented in
+  [`docs/branch-protection.md`](branch-protection.md). Restoring the
+  remaining 16 contexts (the full PR-required list is enumerated in
+  the "Required status checks" section of
+  [`docs/branch-protection.md`](branch-protection.md)) is preserved as an
+  explicit maintainer follow-up. **Do not treat the 3-of-19 posture as
+  equivalent to the documented hardening profile, and do not change
+  branch protection again without explicit operator approval.**
+
 ## Closed in this remediation pass
 
 - **T-02 initialize protocol header mismatch.** `streamable_http`
