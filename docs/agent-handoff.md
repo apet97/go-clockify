@@ -71,15 +71,26 @@ work and commit it.
   probes are coverage evidence only and do not tick any external
   launch-evidence box.
 - **Open launch-evidence gates (not a complete blocker list):**
-  - **Candidate-tag security walk-through** — re-run
-    `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
-    on the final candidate tag. Local preflight was green on
-    2026-05-02, and Semgrep now has a recurring CI workflow artifact,
-    but candidate-tag evidence is still required.
+  - **Candidate-tag security walk-through** — _Closed 2026-05-10 by
+    `v1.2.1-rc.2` (peeled `d83f9f86d3b95594abef2ee035554510faa799c1`)
+    candidate-tag walk-through: `GOTOOLCHAIN=go1.25.10 make
+    {check,verify-vuln,secret-scan,verify-fips}` and `semgrep scan
+    --config p/default --metrics=off --error --exclude .git --exclude
+    .bench --exclude clockify-mcp .` (1155 tracked files, 0 findings)
+    all exit 0 from a clean worktree at the candidate-tag tree;
+    `nosemgrep` context still maps to ADR 0008 / ADR 0017. Evidence
+    block in [`SECURITY.md`](../SECURITY.md#candidate-tag-security-evidence);
+    Group 6 boxes 6.1–6.4 in
+    [`launch-candidate-checklist.md`](launch-candidate-checklist.md#6-security-and-policy-review)
+    are now ticked. Group 7 (release/sigstore/SLSA/npm publish) is
+    still open and has its own lane._
   - **Release/sigstore/SLSA evidence** — cut `vX.Y.Z-rc.N`, run
     `release-smoke.yml`, verify sigstore + SLSA artefact
     attestations, and archive the reference `doctor --strict`
-    outputs.
+    outputs. `v1.2.1-rc.2` was tagged 2026-05-09T22:18Z and its
+    Deploy / Release / Docker Image / release-smoke / npm-publish
+    evidence is being collected on a separate lane; do not re-run
+    Group 7 from this handoff.
 
 If a local-shell run of the live-contract suite reports `ok`
 suspiciously fast (≤ ~0.5s), the env-var gate
@@ -134,13 +145,20 @@ evidence and approval gates are closed. Additional non-blocking
 code/CI hardening backlog is tracked in
 [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md).
 
-1. **Candidate-tag security walk-through.** Local launch-review
-   preflight was green on 2026-05-09 after moving to Go 1.25.10 and
-   tagged `govulncheck@v1.3.0`; the final candidate tag still needs
-   `make verify-vuln`, `make verify-fips`, gitleaks, and Semgrep
-   evidence. The Semgrep workflow artifact still needs its first
-   pushed-run evidence and does not replace the candidate-tag scan.
-   File findings or explicit "no findings" evidence in `SECURITY.md`.
+1. **Candidate-tag security walk-through.** _Closed 2026-05-10 on
+   `v1.2.1-rc.2` (peeled `d83f9f86d3b95594abef2ee035554510faa799c1`):
+   `GOTOOLCHAIN=go1.25.10 make {check,verify-vuln,secret-scan,verify-fips}`
+   and `semgrep scan --config p/default --metrics=off --error --exclude
+   .git --exclude .bench --exclude clockify-mcp .` (1155 tracked files,
+   0 findings) all exit 0; gitleaks `8.30.1` reports `no leaks found` on
+   a clean worktree at the candidate-tag tree; `nosemgrep` context still
+   maps to ADR 0008 / ADR 0017; "no findings" evidence is recorded in
+   [`SECURITY.md`](../SECURITY.md#candidate-tag-security-evidence) and
+   the four candidate-tag-bounded boxes in
+   [`launch-candidate-checklist.md`](launch-candidate-checklist.md#6-security-and-policy-review)
+   are now ticked. The recurring CE Semgrep workflow artifact still
+   needs its first pushed-run evidence on the rc.2 SHA and does not
+   replace this candidate-tag scan._
 2. **Release/sigstore/SLSA evidence.** The candidate tag still
    needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
    archived `doctor --strict` outputs for the reference deployment.

@@ -154,3 +154,94 @@ builder's absolute paths.
 See [docs/verification.md](docs/verification.md) for step-by-step
 verification commands using `cosign verify-blob --bundle`,
 `cosign verify <image>`, and `gh attestation verify`.
+
+## Candidate-tag security evidence
+
+### v1.2.1-rc.2 — 2026-05-10 (Group 6 candidate-tag walk-through)
+
+This block is the candidate-tag security walk-through evidence collected
+on the local host that matches the `v1.2.1-rc.2` peeled commit. It is
+**not** a launch-ready declaration. Group 7 (release/sigstore/SLSA/npm
+publish), the mutation-cron evidence on the candidate SHA, repo-state
+restoration of the historical 19-context branch protection, and the
+hosted/legal/product gates remain open per
+[`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md).
+Group 1 evidence is unchanged and remains closed on canonical SHA
+`feef83c641ced93d2ab6ba07ef766d61c82cc703`.
+
+**Tag and SHA**
+
+- Annotated tag: `v1.2.1-rc.2` (tag SHA `681079e571bed0efbfd448129a3d9fa1de58cd15`)
+- Peeled commit: `d83f9f86d3b95594abef2ee035554510faa799c1`
+- Tagger: `apet97`
+
+**Host posture and toolchain**
+
+- `hostname -s`: `192`; platform: `darwin/arm64` (FIPS-capable Go host).
+- Working directory: a clean git worktree at the candidate-tag tree
+  (`opus/group6-security-rc2-20260510`, tracks `origin/main`, HEAD =
+  `d83f9f86d3b95594abef2ee035554510faa799c1`).
+- `go version`: host `go1.26.2 darwin/arm64`. All Go-driven evidence
+  was run under `GOTOOLCHAIN=go1.25.10` to honour the repo
+  `go 1.25.10` pin in `go.mod`/`go.work`. Vuln scan ran against the
+  Go vulnerability DB snapshot dated `2026-05-07 19:21:40 UTC`.
+- `gitleaks version`: `8.30.1`.
+- `semgrep --version`: `1.157.0` (`p/default` rule pack).
+
+**Six-command transcript (each command run from the candidate-tag tree)**
+
+1. `GOTOOLCHAIN=go1.25.10 make check` — exit `0`, started
+   `2026-05-09T22:24Z`. `go vet ./...` and `go test -race -count=1
+   -timeout 120s ./...` green across every package; no `FAIL`.
+2. `GOTOOLCHAIN=go1.25.10 make verify-vuln` — exit `0`,
+   `2026-05-09T22:25Z`. Pinned `tools/govulncheck` ran
+   `govulncheck@v1.3.0` under `Go: go1.25.10` against
+   `https://vuln.go.dev` (DB updated `2026-05-07 19:21:40 +0000 UTC`).
+   Output: `No vulnerabilities found.`
+3. `GOTOOLCHAIN=go1.25.10 make secret-scan` — exit `0`,
+   `2026-05-09T22:25Z`. `gitleaks detect --no-git --source . --redact
+   --config .gitleaks.toml` scanned ~4.97 MB in 649 ms;
+   `no leaks found`. (This worktree is a clean checkout of the
+   candidate-tag tree without the parent workstation's ignored
+   `.local/`, `.serena/`, or duplicate `go-clockify/` artifacts.)
+4. `semgrep scan --config p/default --metrics=off --error --exclude
+   .git --exclude .bench --exclude clockify-mcp .` — exit `0`,
+   `2026-05-09T22:26Z`. Scanned `1155` files tracked by git with
+   `558` Code rules from `p/default`; `Findings: 0 (0 blocking)`,
+   `~99.9%` parsed lines.
+5. `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` — exit `0`,
+   `2026-05-09T22:26Z`. Five `nosemgrep` directives in production
+   source plus their justifications; every directive maps back to a
+   project ADR or runbook:
+   - `internal/mcp/transport_streamable_http.go:541,563,565,568` —
+     SSE direct writes that are `text/event-stream` framing, not HTML;
+     suppressions are scoped to comment frames, server-generated
+     numeric event IDs, server-constant event names, and JSON-marshaled
+     `data:` payloads. Justified inline and recorded in
+     [`docs/adr/0017-streamable-http-session-rehydration.md`](docs/adr/0017-streamable-http-session-rehydration.md).
+   - `tests/harness/grpc.go:71` — `grpc.WithTransportCredentials(insecure.NewCredentials())`
+     is scoped to a `bufconn` in-memory test transport that never
+     leaves the process. Justified inline and recorded in
+     [`docs/adr/0008-grpc-auth-interceptor.md`](docs/adr/0008-grpc-auth-interceptor.md).
+   The matches in `docs/`, `scripts/`, and `docs/launch-*.md` are
+   the documented evidence trail (this block, the runbook, the
+   prepare-rc-evidence helper, and earlier disposition records);
+   no new `nosemgrep` directives appeared in non-runbook code paths.
+6. `GOTOOLCHAIN=go1.25.10 make verify-fips` — exit `0`,
+   `2026-05-09T22:26Z`. `-tags=fips` (`GOFIPS140=latest`) emitted
+   `INFO fips140_enabled` and ran the full unit suite green;
+   `-tags=fips,grpc` build combination also passed.
+
+**Disposition.** All six commands produced the expected clean output.
+This evidence supports ticking the four candidate-tag-bounded Group 6
+boxes (`make verify-vuln`, `make secret-scan`/gitleaks, `semgrep`
+review with `nosemgrep` directives accounted for, `make verify-fips`).
+The three Group 6 boxes that depend on profile-defaults / load-time
+guards (`time_tracking_safe`, `MCP_AUDIT_DURABILITY=fail_closed`,
+`MCP_ALLOW_DEV_BACKEND` rejection) were already closed before rc.2 by
+the test pins named on each box and are not re-evaluated here.
+
+**Evidence artifacts.** Local logs are preserved at
+`/tmp/lane2-rc2-evidence/{01-make-check,02-verify-vuln,03-secret-scan,04-semgrep,05-nosemgrep,06-verify-fips}.log`
+on the host that ran them. The PR body that ships this update
+re-prints the relevant transcript lines for reviewer inspection.

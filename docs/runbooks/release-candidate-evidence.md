@@ -248,3 +248,33 @@ Why these are **not** transient and require an rc.2:
 3. **release-smoke not firing.** Architectural — `GITHUB_TOKEN`-suppressed event chain. The release.yml fix adds an explicit `gh workflow run release-smoke.yml --ref main -f tag=$RELEASE_VERSION` step after the existing `Trigger reproducibility verification` step (mirrors the same pattern reproducibility.yml uses for the same reason).
 
 rc.2 cuts only after the fix PR for these three issues lands on `main`. This runbook is updated again with the rc.2 evidence pointers when rc.2's Release / Docker Image / Deploy / release-smoke / npm-publish all complete green and the Group 7 evidence is recordable.
+
+## Candidate-tag security evidence — v1.2.1-rc.2 (Group 6)
+
+`v1.2.1-rc.2` was cut on 2026-05-09T22:18Z (annotated tag SHA
+`681079e571bed0efbfd448129a3d9fa1de58cd15`, peeled commit
+`d83f9f86d3b95594abef2ee035554510faa799c1`, tagger `apet97`).
+Group 6 candidate-tag security walk-through evidence was captured on
+2026-05-09T22:24Z–22:26Z UTC from a clean worktree at the
+candidate-tag tree on a FIPS-capable darwin/arm64 host. All six
+required commands exited 0:
+
+| # | Command | Exit | Result |
+|---|---|---|---|
+| 1 | `GOTOOLCHAIN=go1.25.10 make check` | 0 | `go vet`/`go test -race -count=1 -timeout 120s ./...` green across all packages |
+| 2 | `GOTOOLCHAIN=go1.25.10 make verify-vuln` | 0 | pinned `govulncheck@v1.3.0` under `Go: go1.25.10` against vuln DB `2026-05-07 19:21:40 UTC` — `No vulnerabilities found.` |
+| 3 | `GOTOOLCHAIN=go1.25.10 make secret-scan` | 0 | gitleaks `8.30.1`, `gitleaks detect --no-git --source . --redact --config .gitleaks.toml` — `no leaks found` (~4.97 MB scanned in 649 ms) |
+| 4 | `semgrep scan --config p/default --metrics=off --error --exclude .git --exclude .bench --exclude clockify-mcp .` | 0 | semgrep `1.157.0`, 1155 tracked files, 558 active rules, `Findings: 0 (0 blocking)` |
+| 5 | `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` | 0 | five production directives — SSE direct writes (ADR 0017) + bufconn-only test transport (ADR 0008); no new directives elsewhere |
+| 6 | `GOTOOLCHAIN=go1.25.10 make verify-fips` | 0 | `-tags=fips` (`GOFIPS140=latest`) emitted `INFO fips140_enabled` and ran the full unit suite green; `-tags=fips,grpc` build combination also passed |
+
+The recorded evidence block is in
+[`SECURITY.md`](../../SECURITY.md#candidate-tag-security-evidence)
+and the four candidate-tag-bounded Group 6 boxes (verify-vuln,
+gitleaks, semgrep, verify-fips) in
+[`docs/launch-candidate-checklist.md`](../launch-candidate-checklist.md#6-security-and-policy-review)
+are now closed. Group 7 (release/sigstore/SLSA/npm publish) and the
+mutation-cron evidence on the candidate SHA are still being collected
+on separate lanes; this runbook section does not close them. Issue #78
+(restoring the historical 19-context branch protection profile) also
+remains open by operator instruction.
