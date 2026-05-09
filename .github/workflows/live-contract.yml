@@ -39,6 +39,10 @@ on:
     # 30 minutes after mutation.yml's nightly cron so the two jobs don't
     # fight for runner quota.
     - cron: "30 2 * * *"
+    # TEMPORARY launch-candidate evidence window. Remove immediately
+    # after two consecutive scheduled greens are archived on the final
+    # candidate SHA.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       enable_writes:
