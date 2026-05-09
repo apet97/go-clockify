@@ -6,7 +6,7 @@ replace github.com/apet97/go-clockify => ../../..
 
 require (
 	github.com/apet97/go-clockify v0.0.0
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 )
