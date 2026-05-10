@@ -71,32 +71,42 @@ work and commit it.
   probes are coverage evidence only and do not tick any external
   launch-evidence box.
 - **Open launch-evidence gates (not a complete blocker list):**
-  - **Candidate-tag security walk-through** — `v1.2.1-rc.3` (peeled
-    commit `ce56414ae012c4a49d21ae0a319b178619c5966a`) carries a
+  - **Candidate-tag security walk-through** — closed for
+    `v1.2.1-rc.3` (peeled commit
+    `ce56414ae012c4a49d21ae0a319b178619c5966a`) via PR #84. The
     fresh-worktree transcript of `make check`, `make verify-vuln`,
     `make secret-scan`, the canonical
     `semgrep scan --config p/default ...` invocation, the
-    `git grep -n -C 5 nosemgrep` enumeration, and `make verify-fips`,
-    captured on host short name `192` on 2026-05-10 between 01:55 UTC
-    and 01:59 UTC; full output is in [`SECURITY.md`](../SECURITY.md) §
-    "Candidate-tag security evidence" and the four candidate-tag-
-    dependent Group 6 boxes
+    `git grep -n -C 5 nosemgrep` enumeration, and `make verify-fips`
+    is captured on host short name `192` on 2026-05-10 between
+    01:55 UTC and 01:59 UTC; full output is in
+    [`SECURITY.md`](../SECURITY.md) § "Candidate-tag security
+    evidence" and the four candidate-tag-dependent Group 6 boxes
     (`make verify-vuln`, gitleaks, Semgrep, `make verify-fips`) in
     [`launch-candidate-checklist.md`](launch-candidate-checklist.md)
     are now ticked. Re-run the same suite on any future candidate tag.
-  - **Release/sigstore/SLSA evidence** — cut `vX.Y.Z-rc.N`, run
-    `release-smoke.yml`, verify sigstore + SLSA artefact
-    attestations, and archive the reference `doctor --strict`
-    outputs. `v1.2.1-rc.3` already published the GitHub Release
-    object with 47 assets and is_prerelease=true on 2026-05-10
-    01:47:39 UTC; tag-triggered Release run 25616879096, Docker
+  - **Release/sigstore/SLSA evidence** — partially closed
+    2026-05-10 for `v1.2.1-rc.3` (peeled commit `ce56414`). All
+    five tag-triggered + dispatched workflows on rc.3 completed
+    `success` in a single attempt: Release run 25616879096, Docker
     Image run 25616879055, Deploy run 25616879075, Reproducibility
     run 25616925376 (all 9 matrix jobs match released bytes), and
-    release-smoke run 25616925600 are green. Group 7 closure still
-    requires the per-host `release-check`, doctor-output
-    artifact archive, and the `check-launch-external-status`
-    `--expected-npm-version v1.2.1-rc.3 --fail-open` validator pass;
-    that work belongs to the separate Group 7 lane.
+    release-smoke run 25616925600. Manual cosign + SLSA + container
+    image verification passed against the documented certificate
+    identities (default linux-x64, postgres-linux-x64,
+    fips-linux-x64, darwin-arm64). The
+    `release-smoke-doctor-output` artifact is archived with all
+    three required `doctor --strict` files. The Group 7 release
+    artefact and doctor-strict checklist boxes are ticked. Two
+    Group 7 boxes remain open: `make release-check` from clean
+    checkouts on Linux x64 and macOS arm64 (this lane is
+    single-host darwin-arm64; macOS arm64 release-check itself
+    hit a transient TMPDIR script-tests race and reproduced
+    clean on re-run), and "All required workflows on `main`
+    green" (mutation.yml's next scheduled cron green on the
+    final candidate SHA is still pending). See
+    [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+    "v1.2.1-rc.3 evidence record".
 
 If a local-shell run of the live-contract suite reports `ok`
 suspiciously fast (≤ ~0.5s), the env-var gate
@@ -154,20 +164,43 @@ code/CI hardening backlog is tracked in
 1. **Candidate-tag security walk-through.** Local launch-review
    preflight was green on 2026-05-09 after moving to Go 1.25.10 and
    tagged `govulncheck@v1.3.0`. Closed for `v1.2.1-rc.3` on
-   2026-05-10: a fresh-worktree run on the rc.3 peeled commit
-   `ce56414ae012c4a49d21ae0a319b178619c5966a` (host short name `192`)
-   recorded `make check`, `make verify-vuln`, `make secret-scan`,
-   `semgrep scan --config p/default --metrics=off --error --exclude
-   .git --exclude .bench --exclude clockify-mcp .`,
+   2026-05-10 via PR #84: a fresh-worktree run on the rc.3 peeled
+   commit `ce56414ae012c4a49d21ae0a319b178619c5966a` (host short
+   name `192`) recorded `make check`, `make verify-vuln`,
+   `make secret-scan`, `semgrep scan --config p/default
+   --metrics=off --error --exclude .git --exclude .bench
+   --exclude clockify-mcp .`,
    `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'`, and
    `make verify-fips` with explicit "no findings" evidence in
    [`SECURITY.md`](../SECURITY.md) § "Candidate-tag security
    evidence". Future candidate tags must re-run the same suite. The
    Semgrep workflow artifact still needs its first pushed-run
    evidence and does not replace the candidate-tag scan.
-2. **Release/sigstore/SLSA evidence.** The candidate tag still
-   needs `release-smoke.yml`, sigstore/SLSA/SBOM verification, and
-   archived `doctor --strict` outputs for the reference deployment.
+2. **Release/sigstore/SLSA evidence.** Partially closed 2026-05-10
+   for `v1.2.1-rc.3` (peeled commit
+   `ce56414ae012c4a49d21ae0a319b178619c5966a`). All five
+   tag-triggered + dispatched workflows on rc.3 completed
+   `success` in a single attempt: Release ([25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096)),
+   Docker Image ([25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055)),
+   Deploy ([25616879075](https://github.com/apet97/go-clockify/actions/runs/25616879075)),
+   Reproducibility ([25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376)),
+   release-smoke ([25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600)).
+   Manual `cosign verify-blob` + `gh attestation verify` succeeded
+   on the default linux-x64, postgres-linux-x64, fips-linux-x64,
+   and darwin-arm64 binaries; `cosign verify
+   ghcr.io/apet97/go-clockify:1.2.1-rc.3` (manifest digest
+   `sha256:374fbfb4bc18fd14a2fcd39fcae6c8da4054df3c162596ad476c15947b8a351f`)
+   passed against the docker-image.yml certificate identity. The
+   `release-smoke-doctor-output` artifact contains
+   `release-doctor-strict-ok.txt`,
+   `release-doctor-strict-fail.txt`, and
+   `release-doctor-postgres-ok.txt`. The two Group 7 boxes that
+   remain open are `make release-check` on Linux x64 + macOS
+   arm64 hosts and "All required workflows on `main` green"
+   (the next scheduled `mutation.yml` cron on the final candidate
+   SHA is still pending). See
+   [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+   "v1.2.1-rc.3 evidence record" for the full evidence list.
 3. **Externally visible repo-state cleanup.** Rechecked on 2026-05-09
    after `a07443b` landed: CodeQL run 25609129989, Dependency Review
    run 25609129978, and Semgrep run 25609129983 are green on the

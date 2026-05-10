@@ -265,3 +265,49 @@ The Group 6 candidate-tag security walk-through ran on a clean fresh worktree of
 | `make verify-fips` | 0 | `-tags=fips` (GOFIPS140=latest) emitted `INFO fips140_enabled` before every package test passed; `-tags=fips,grpc` build combination green. |
 
 This evidence closed the four candidate-tag-dependent boxes in the Group 6 row of [`docs/launch-candidate-checklist.md`](../launch-candidate-checklist.md) (`make verify-vuln`, gitleaks, Semgrep, `make verify-fips`) for `v1.2.1-rc.3`. The full transcript is preserved in [`../../SECURITY.md`](../../SECURITY.md) § "Candidate-tag security evidence". This entry records Group 6 only; Group 7 (release/sigstore/SLSA per-host `release-check`, doctor-output artifact archive, and `check-launch-external-status --expected-npm-version v1.2.1-rc.3 --fail-open`) remains the separate Group 7 lane and is not closed by this record. The mutation cron evidence, the next-release npm expected-version proof, the paid-hosted external security review, the DPA / privacy / trademark gates, and issue #78 (19-context branch-protection restoration) are also unaffected by this record and remain open.
+## v1.2.1-rc.3 evidence record (2026-05-10)
+
+`v1.2.1-rc.3` was cut from peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a` (annotated tag SHA `8f245174ca3567104a05a65a66250f0a10e5d486`). Unlike rc.1 (preserved as failed-evidence-only because of the npm prerelease `--tag` bug, the Deploy cosign timing race, and release-smoke not auto-firing) and rc.2 (preserved as failed-Group-7-evidence-only because of the Deploy `gh release download` race and the Reproducibility `vcs.modified` mismatch), every tag-triggered and dispatched workflow on rc.3 completed `success` in a single attempt:
+
+| Workflow | Run ID | Result |
+|---|---|---|
+| Release (goreleaser) | [25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096) | ✅ success |
+| Docker Image | [25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055) | ✅ success |
+| Deploy | [25616879075](https://github.com/apet97/go-clockify/actions/runs/25616879075) | ✅ success |
+| Reproducibility (workflow_dispatch from release.yml) | [25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376) | ✅ success (9-job matrix; all jobs match released bytes) |
+| release-smoke (workflow_dispatch from release.yml) | [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600) | ✅ success |
+
+GitHub Release: <https://github.com/apet97/go-clockify/releases/tag/v1.2.1-rc.3> (`name=v1.2.1-rc.3`, `tagName=v1.2.1-rc.3`, `isPrerelease=true`, `isDraft=false`, `createdAt=2026-05-10T01:45:25Z`, `publishedAt=2026-05-10T01:47:39Z`, 47 release assets — 15 binaries + 15 SPDX SBOMs + 15 sigstore bundles + `SHA256SUMS.txt` + 1 goreleaser source-tree SBOM named `apet97-go-clockify_sha256_<source-archive-sha256>.spdx.json` (the `<source-archive-sha256>` for rc.3 is `374fbfb4bc18fd14a2fcd39fcae6c8da4054df3c162596ad476c15947b8a351f`, which also matches the `ghcr.io/apet97/go-clockify:1.2.1-rc.3` image manifest digest)). The 46-asset binary contract enforced by `scripts/check-release-assets.sh` covers everything except the source-tree SBOM, which is filtered out by the published-asset-name regex.
+
+Local evidence run from the rc.3 worktree (`scripts/prepare-rc-evidence.sh v1.2.1-rc.3` from `opus/group7-release-rc3-20260510` HEAD `ce56414`):
+
+- Evidence directory: `${TMPDIR:-/tmp}/go-clockify-rc-evidence/v1.2.1-rc.3/logs/darwin-arm64/`.
+- Group 6 commands captured: `make check`, `make verify-vuln` (`govulncheck@v1.3.0` on Go 1.25.10 — `No vulnerabilities found.`), `make secret-scan` (gitleaks — `no leaks found`), Semgrep `p/default` scan, `git grep nosemgrep`, `make verify-fips` (`-tags=fips` and `-tags=fips,grpc` both green on a FIPS-capable Go 1.25.10 toolchain). These logs are Group 6 inputs and remain authoritative only for the Group 6 lane.
+- Group 7 `make release-check` log captured for the macOS arm64 host; the script-tests subroutine hit a transient TMPDIR concurrency failure on first invocation (parallel `mktemp` under `${TMPDIR}/test-public-content-audit-*`) and reproduced clean on re-run (`make script-tests` exits 0 with all per-test counts at `0 failed`). Re-running on a host with no concurrent TMPDIR consumers is the documented workaround; no script change is required.
+
+Group 7 release-evidence verifications run with the documented commands from [`docs/verification.md`](../verification.md) against the released asset bundle (default `clockify-mcp-linux-x64`, `clockify-mcp-postgres-linux-x64`, `clockify-mcp-fips-linux-x64`, `clockify-mcp-darwin-arm64`):
+
+- `cosign verify-blob --bundle <binary>.sigstore.json --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/.*$' --certificate-oidc-issuer https://token.actions.githubusercontent.com <binary>` reported `Verified OK` for all four binaries.
+- `gh attestation verify <binary> --owner apet97` reported `✓ Verification succeeded!` for all four binaries; the single SLSA in-toto statement covers all 15 binaries with their SHA256 digests; the predicate's `sourceRepositoryDigest` is `ce56414ae012c4a49d21ae0a319b178619c5966a` and the builder ID is `https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/v1.2.1-rc.3`.
+- `cosign verify ghcr.io/apet97/go-clockify:1.2.1-rc.3 --certificate-identity-regexp '^https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/.*$' --certificate-oidc-issuer https://token.actions.githubusercontent.com` passed against image manifest digest `sha256:374fbfb4bc18fd14a2fcd39fcae6c8da4054df3c162596ad476c15947b8a351f`. The published container image tag is bare semver (`ghcr.io/apet97/go-clockify:1.2.1-rc.3`), not v-prefixed; the `docker-image.yml` `metadata-action` config uses `type=semver,pattern={{version}}`.
+- `shasum -a 256 -c SHA256SUMS.txt --ignore-missing` confirmed every downloaded binary and SBOM matched the release-staged hashes.
+- `release-smoke-doctor-output` artifact downloaded from run 25616925600: `release-doctor-strict-ok.txt` exits 0 with `Strict posture: OK no fatal findings; 1 warning(s)` (default linux-x64 binary, prod-postgres profile); `release-doctor-strict-fail.txt` exits 3 with the documented `Strict posture: ERROR ... CLOCKIFY_POLICY` finding when `CLOCKIFY_POLICY=standard` is set; `release-doctor-postgres-ok.txt` exits 0 with `Strict posture: OK` from the postgres-tagged linux-x64 binary running `doctor --strict --check-backends` against a `postgres:16-alpine` service container.
+- Local re-verification of `clockify-mcp-darwin-arm64` from the released asset bundle reproduced both expected doctor strict exits (0 with the documented `prod-postgres` env shape; 3 with `CLOCKIFY_POLICY=standard`).
+
+External-status snapshot (read-only) on the candidate SHA:
+
+```sh
+scripts/check-launch-external-status.sh \
+  --candidate-sha ce56414ae012c4a49d21ae0a319b178619c5966a \
+  --expected-npm-version v1.2.1-rc.3 \
+  --fail-open
+```
+
+Reports `4 open, 0 unknown` against `ce56414`:
+
+- `local branch cleanup`: 14 non-main local branches require maintainer disposition (worktree-active branches plus the historical `docs/document-f3897b2-bypass` and `fwbranch` holds; outside Group 7 scope).
+- `Group 1`: latest scheduled live-contract evidence is bound to the Group 1 SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703` rather than the rc.3 SHA `ce56414`. Group 1 closure stays archived on `feef83c` per the May 9 evidence record; the verifier's per-SHA Group 1 check is a separate workstream.
+- `mutation.yml`: latest scheduled run 25592823559 still `completed/cancelled` on pushed commit `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled cron fired before the `internal/tools` matrix-leg timeout fix (`2e7b6bd`) landed. The Group 7 "All required workflows on `main` green" box stays open until the next scheduled `mutation.yml` cron records green on the final candidate SHA.
+- `npm publish path: registry does not prove expected release version 1.2.1-rc.3`: the verifier's check matches `dist-tags.latest` (designed for stable releases) and ignores `dist-tags.rc`. `npm view @apet97/clockify-mcp-go --json` shows `dist-tags = {"latest":"1.2.0","rc":"1.2.1-rc.3"}` — the expected prerelease shape (`rc` dist-tag bumped, `latest` unchanged because the publish path correctly used `--tag rc` for the prerelease per the rc.2 fix in PR #80). The npm prerelease publish path is therefore proven; closing the verifier's recognition of prerelease dist-tags is a follow-up outside this lane's allow-list.
+
+Group 7 boxes that closed on this evidence: the **Release artefacts** box (sigstore + SLSA + SBOMs + container image) and the **`clockify-mcp doctor --strict`** box (release-smoke-doctor-output artifact + local re-verification). Group 7 boxes that remain open: **`make release-check` from clean checkouts on Linux x64 + macOS arm64** (this lane is single-host darwin-arm64 only and the macOS arm64 release-check itself transient-failed on the first invocation), and **All required workflows on `main` green** (mutation.yml's next scheduled cron green on the final candidate SHA is still pending).

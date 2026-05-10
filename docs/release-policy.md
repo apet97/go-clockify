@@ -134,9 +134,14 @@ All binaries are built with `-trimpath`. Every binary ships:
 Plus, per release tag:
 
 - A multi-arch container image at
-  `ghcr.io/apet97/go-clockify:v<version>` carrying a cosign signature,
-  SPDX SBOM attestation, and SLSA build provenance attestation when
-  GitHub's attestation service is available.
+  `ghcr.io/apet97/go-clockify:<version>` (bare semver, no `v`
+  prefix — e.g. `:1.2.1-rc.3` for tag `v1.2.1-rc.3`), plus a
+  `:v<major>.<minor>` minor-line alias and a `:sha-<long-sha>` tag,
+  carrying a cosign signature, SPDX SBOM attestation, and SLSA build
+  provenance attestation when GitHub's attestation service is
+  available. The published-tag shape comes from `docker-image.yml`'s
+  `docker/metadata-action` config (`type=semver,pattern={{version}}`
+  plus `type=semver,pattern=v{{major}}.{{minor}}`).
 - An npm wrapper package (publish gated on `NPM_TOKEN` being set).
 - An unsigned `SHA256SUMS.txt` listing every binary in the release.
   Each row lets `sha256sum -c` cross-check a downloaded binary
