@@ -132,14 +132,30 @@ jobs:
       - name: Induce goreleaser dirty-tree state
         run: |
           set -euo pipefail
-          # goreleaser creates dist/ and writes its own intermediate files
-          # before invoking `go build`, so Go's VCS stamping marks the tree
-          # dirty (vcs.modified=true, mod=v0.X.Y+dirty). Reproducing from a
-          # clean checkout would bake the opposite metadata into the binary
-          # and produce a different hash. Create a placeholder so `git
-          # status` reports the same dirty state.
+          # Goreleaser releases ship with `vcs.modified=true` and
+          # `mod=...+dirty` because the runner's tree is dirty when
+          # `go build` runs (verified live by `go version -m` on every
+          # released asset; same outcome reproducible across rc.1, rc.2,
+          # and historical tags). Go's VCS detection only flags the
+          # tree dirty when there is at least one *tracked* file with
+          # uncommitted changes — untracked files in gitignored paths
+          # (the previous `dist/.reproducibility-placeholder` approach)
+          # do not count, which is why the v1.2.1-rc.2 reproducibility
+          # run 25613269789 reported sha mismatch on every matrix entry
+          # even after GOWORK=off was added. The diagnostics artifact
+          # from run 25616401654 (linux-x64) made this concrete: local
+          # rebuild had `mod=v1.2.1-rc.2`, `vcs.modified=false`; the
+          # released binary had `mod=v1.2.1-rc.2+dirty`, `vcs.modified=true`.
+          # Append a single empty line to `.gitignore` (tracked, build-
+          # irrelevant) so Go records `vcs.modified=true` and the binary
+          # bytes match the released artifact. We also keep the original
+          # `dist/.reproducibility-placeholder` write to mirror
+          # goreleaser's dist/ shape; it is harmless because dist/ is
+          # gitignored, but it documents the intent for future readers.
           mkdir -p dist
           echo "reproducibility-workflow" > dist/.reproducibility-placeholder
+          printf '\n' >> .gitignore
+          git status --short
       - name: Rebuild asset
         env:
           GOOS: ${{ matrix.goos }}
