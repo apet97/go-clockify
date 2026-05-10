@@ -1193,16 +1193,22 @@ Lane 6 does not close them.
 | Trademark / "official Clockify" language + `clockify://` URI + gRPC service-name branding review | Recorded brand/legal/product reviewer decision per `docs/release/brand-legal-review.md`. |
 | P1-8 paid-commercial RLS decision | New ADR under `docs/adr/` with the recorded decision per the gate's owner/evidence/non-goal entry above. |
 | Cross-replica hosted HTTP quotas | Archived gateway/load-balancer quota policy + on-call metrics snapshot per the gate's owner/evidence/non-goal entry above. |
-| npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. See validator-quirk note below for the rc.3 nuance. |
+| npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. The validator now recognises prerelease dist-tags (Lane D, 2026-05-10), so a passing `--expected-npm-version v1.2.1-rc.3` invocation closes the npm proof against `dist-tags.rc` directly. |
 
 ### Validator quirks vs real blockers
 
 `scripts/check-launch-external-status.sh` is intentionally
 fail-closed: it reports gates as `[open]` when its evidence shape does
-not match the expected validator inputs. Two of those `[open]`
-reports for rc.3 are validator quirks rather than real launch
-blockers, and Lane 6 records them here so future audits do not
-mistake them for new regressions.
+not match the expected validator inputs. One such `[open]` report
+for rc.3 is a validator quirk rather than a real launch blocker, and
+Lane 6 records it here so future audits do not mistake it for a new
+regression. (The original Lane 6 audit also recorded an "npm
+prerelease dist-tag quirk"; Lane D closed that quirk on
+2026-05-10 by teaching the validator to derive the dist-tag from the
+expected prerelease identifier so the rc/beta/alpha/next channel
+maps correctly. Re-running `--expected-npm-version v1.2.1-rc.3
+--fail-open` now closes the npm proof against `dist-tags.rc`
+directly, matching the actual `publish-npm.sh` `--tag rc` behaviour.)
 
 - **Group 1 SHA-mismatch quirk.** Group 1 launch evidence is closed
   on the canonical SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703`
@@ -1214,24 +1220,6 @@ mistake them for new regressions.
   Group 1 audits must be invoked with `--candidate-sha
   feef83c641ced93d2ab6ba07ef766d61c82cc703` (Lane 6 verified this
   invocation reports Group 1 closed against the canonical SHA).
-- **npm prerelease dist-tag quirk.** The `--expected-npm-version`
-  comparator in `scripts/check-launch-external-status.sh` checks
-  the registry's `version` field and `dist-tags.latest` against the
-  expected version. For prerelease versions like `v1.2.1-rc.3`, the
-  publish path correctly publishes under `dist-tags.rc` (the rc.2
-  fix in PR #80) while leaving `dist-tags.latest=1.2.0` unchanged.
-  `npm view @apet97/clockify-mcp-go --json` shows `dist-tags = {
-  "latest": "1.2.0", "rc": "1.2.1-rc.3" }` — the rc dist-tag
-  matches the expected prerelease version, so the npm prerelease
-  publish path **is** proven for `v1.2.1-rc.3`. The validator
-  reports this as `[open]` because it does not yet recognise
-  prerelease dist-tags. Closing the validator's prerelease
-  recognition is a follow-up outside Lane 6's allow-list. Until
-  that fix lands, the validator's `[open]` for prereleases must be
-  read against the raw `npm view` output before treating it as a
-  real blocker. The runbook records this in
-  [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
-  "v1.2.1-rc.3 evidence record".
 
 The mutation cron `[open]` reported by the validator is **not** a
 quirk — it is a real launch blocker per the open-gate ledger above.
@@ -1258,10 +1246,12 @@ on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
   25608259477/25607242862 (Group 1 SHA-mismatch quirk does **not**
   apply when invoked with the canonical SHA)
 - `bash scripts/check-launch-external-status.sh --candidate-sha ce56414ae012c4a49d21ae0a319b178619c5966a --expected-npm-version v1.2.1-rc.3 --fail-open` →
-  reports `7 open, 0 unknown`; the npm prerelease dist-tag quirk
-  applies (see above), and Group 1 is bound to the rc.3 SHA rather
-  than the canonical Group 1 SHA which is the documented
-  per-SHA-Group-1 nuance
+  reports `7 open, 0 unknown` against rc.3 at the time of the Lane 6
+  audit; the npm prerelease dist-tag quirk no longer applies after
+  Lane D's fix (the npm proof now closes against `dist-tags.rc`
+  directly), and Group 1 is bound to the rc.3 SHA rather than the
+  canonical Group 1 SHA which is the documented per-SHA-Group-1
+  nuance
 - `git ls-remote --tags origin 'v1.2.1*'` → three rc tags exist
   (`v1.2.1-rc.1`, `v1.2.1-rc.2`, `v1.2.1-rc.3`); **no `v1.2.1`
   final tag**

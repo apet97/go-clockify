@@ -220,9 +220,26 @@ EOF
 #!/usr/bin/env bash
 set -euo pipefail
 if [ "$*" = "view @apet97/clockify-mcp-go version dist-tags --json" ]; then
-  cat <<'JSON'
-{"version":"1.2.0","dist-tags":{"latest":"1.2.0"}}
-JSON
+  case "${TEST_EXTERNAL_STATUS_NPM_FIXTURE:-stable}" in
+    rc-published)
+      # Mirror the post-rc.3 npm registry shape: latest unchanged, rc bumped.
+      printf '%s\n' '{"version":"1.2.0","dist-tags":{"latest":"1.2.0","rc":"1.2.1-rc.3"}}'
+      ;;
+    rc-missing)
+      # Prerelease never published; rc dist-tag absent.
+      printf '%s\n' '{"version":"1.2.0","dist-tags":{"latest":"1.2.0"}}'
+      ;;
+    beta-published)
+      printf '%s\n' '{"version":"1.2.0","dist-tags":{"latest":"1.2.0","beta":"2.0.0-beta.1"}}'
+      ;;
+    stable-stale)
+      # Stable expected but registry latest is older.
+      printf '%s\n' '{"version":"1.2.0","dist-tags":{"latest":"1.2.0"}}'
+      ;;
+    stable|*)
+      printf '%s\n' '{"version":"1.2.0","dist-tags":{"latest":"1.2.0"}}'
+      ;;
+  esac
   exit 0
 fi
 printf 'unexpected npm args: %s\n' "$*" >&2
@@ -620,6 +637,66 @@ else
   else
     fail "fail-open reports repo metadata and issue action details"
     printf '%s\n' "$repo_issue_output" >&2
+  fi
+fi
+rm -rf "$stub_dir"
+trap - EXIT
+
+tests_run=$((tests_run + 1))
+stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-launch-external-status-npm-rc-published.XXXXXX")"
+trap 'rm -rf "$stub_dir"' EXIT
+write_stub_tools "$stub_dir"
+rc_published_output="$(TEST_EXTERNAL_STATUS_NPM_FIXTURE=rc-published PATH="$stub_dir/bin:$PATH" bash "$script" --repo example/repo --candidate-sha deadbeef --expected-npm-version v1.2.1-rc.3 --fail-open)"
+assert_contains "$rc_published_output" "[closed] npm publish path: registry dist-tags.rc matches expected prerelease 1.2.1-rc.3" "rc prerelease closes against rc dist-tag"
+assert_contains "$rc_published_output" "Summary: 0 open, 0 unknown" "rc prerelease fixture exits clean"
+rm -rf "$stub_dir"
+trap - EXIT
+
+tests_run=$((tests_run + 1))
+stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-launch-external-status-npm-beta-published.XXXXXX")"
+trap 'rm -rf "$stub_dir"' EXIT
+write_stub_tools "$stub_dir"
+beta_published_output="$(TEST_EXTERNAL_STATUS_NPM_FIXTURE=beta-published PATH="$stub_dir/bin:$PATH" bash "$script" --repo example/repo --candidate-sha deadbeef --expected-npm-version v2.0.0-beta.1 --fail-open)"
+assert_contains "$beta_published_output" "[closed] npm publish path: registry dist-tags.beta matches expected prerelease 2.0.0-beta.1" "beta prerelease closes against beta dist-tag"
+assert_contains "$beta_published_output" "Summary: 0 open, 0 unknown" "beta prerelease fixture exits clean"
+rm -rf "$stub_dir"
+trap - EXIT
+
+tests_run=$((tests_run + 1))
+stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-launch-external-status-npm-rc-missing.XXXXXX")"
+trap 'rm -rf "$stub_dir"' EXIT
+write_stub_tools "$stub_dir"
+rc_missing_output=""
+if rc_missing_output="$(TEST_EXTERNAL_STATUS_NPM_FIXTURE=rc-missing PATH="$stub_dir/bin:$PATH" bash "$script" --repo example/repo --candidate-sha deadbeef --expected-npm-version v1.2.1-rc.3 --fail-open 2>&1)"; then
+  fail "fail-open returns non-zero when expected prerelease dist-tag is absent"
+else
+  if grep -q "npm publish path: registry does not prove expected prerelease version 1.2.1-rc.3 on dist-tags.rc" <<< "$rc_missing_output" &&
+     grep -q "action: verify the release workflow published @apet97/clockify-mcp-go@1.2.1-rc.3 with --tag rc" <<< "$rc_missing_output" &&
+     grep -q "Summary: 1 open, 0 unknown" <<< "$rc_missing_output"; then
+    pass "fail-open returns non-zero when expected prerelease dist-tag is absent"
+  else
+    fail "fail-open reports missing prerelease dist-tag details"
+    printf '%s\n' "$rc_missing_output" >&2
+  fi
+fi
+rm -rf "$stub_dir"
+trap - EXIT
+
+tests_run=$((tests_run + 1))
+stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/test-launch-external-status-npm-stable-stale.XXXXXX")"
+trap 'rm -rf "$stub_dir"' EXIT
+write_stub_tools "$stub_dir"
+stable_stale_output=""
+if stable_stale_output="$(TEST_EXTERNAL_STATUS_NPM_FIXTURE=stable-stale PATH="$stub_dir/bin:$PATH" bash "$script" --repo example/repo --candidate-sha deadbeef --expected-npm-version v1.2.1 --fail-open 2>&1)"; then
+  fail "fail-open returns non-zero when stable expected version is older than registry latest"
+else
+  if grep -q "npm publish path: registry does not prove expected release version 1.2.1" <<< "$stable_stale_output" &&
+     grep -q "action: verify the release workflow published @apet97/clockify-mcp-go@1.2.1 with NPM_TOKEN" <<< "$stable_stale_output" &&
+     grep -q "Summary: 1 open, 0 unknown" <<< "$stable_stale_output"; then
+    pass "fail-open returns non-zero when stable expected version is older than registry latest"
+  else
+    fail "fail-open reports stable stale registry details"
+    printf '%s\n' "$stable_stale_output" >&2
   fi
 fi
 rm -rf "$stub_dir"
