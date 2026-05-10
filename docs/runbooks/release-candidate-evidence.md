@@ -532,4 +532,49 @@ Reports `4 open, 0 unknown` against `ce56414`:
 - `mutation.yml`: latest scheduled run 25592823559 still `completed/cancelled` on pushed commit `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled cron fired before the `internal/tools` matrix-leg timeout fix (`2e7b6bd`) landed. The Group 7 "All required workflows on `main` green" box stays open until the next scheduled `mutation.yml` cron records green on the final candidate SHA.
 - `npm publish path` (rc.3 audit at the time of the Group 7 record): the verifier originally matched `dist-tags.latest` (designed for stable releases) and ignored `dist-tags.rc`, so it reported `[open]` against rc.3 even though the publish path had correctly used `--tag rc`. `npm view @apet97/clockify-mcp-go --json` shows `dist-tags = {"latest":"1.2.0","rc":"1.2.1-rc.3"}` — the expected prerelease shape (`rc` dist-tag bumped, `latest` unchanged because the publish path correctly used `--tag rc` for the prerelease per the rc.2 fix in PR #80). Lane D closed this validator quirk on 2026-05-10: `scripts/check-launch-external-status.sh` now derives the dist-tag from the expected prerelease identifier (rc / beta / alpha / next, mirroring `scripts/publish-npm.sh`) and validates `dist-tags.<derived>`. Re-running the rc.3 invocation above now closes the npm proof against `dist-tags.rc` directly, dropping the npm row from this snapshot's open list and leaving the remaining opens unchanged (local branch cleanup, Group 1 SHA mismatch, mutation cron).
 
-Group 7 boxes that closed on this evidence: the **Release artefacts** box (sigstore + SLSA + SBOMs + container image) and the **`clockify-mcp doctor --strict`** box (release-smoke-doctor-output artifact + local re-verification). Group 7 boxes that remain open: **`make release-check` from clean checkouts on Linux x64 + macOS arm64** (this lane is single-host darwin-arm64 only and the macOS arm64 release-check itself transient-failed on the first invocation), and **All required workflows on `main` green** (mutation.yml's next scheduled cron green on the final candidate SHA is still pending).
+Group 7 boxes that closed on this evidence: the **Release artefacts** box (sigstore + SLSA + SBOMs + container image) and the **`clockify-mcp doctor --strict`** box (release-smoke-doctor-output artifact + local re-verification). The **All required workflows on `main` green** (mutation cron) box closed on 2026-05-10 for the community/self-hosted `v1.2.1` track on the equivalent-source argument captured below — see "Mutation cron post-fix evidence — 2026-05-10". Group 7 box that remains open: **`make release-check` from clean checkouts on Linux x64 + macOS arm64** (this lane is single-host darwin-arm64 only and the macOS arm64 release-check itself transient-failed on the first invocation; the Linux x64 leg is still missing).
+
+## Mutation cron post-fix evidence — 2026-05-10
+
+Scheduled `mutation.yml` cron has now run green on a post-fix `main` SHA, removing the previously-cited "no scheduled cron has fired post-fix" blocker for the Group 7 "All required workflows on `main` green" gate. The literal final-candidate-SHA evidence shape (a scheduled cron landing directly on the SHA `v1.2.1` is cut from) remains a cadence wait — recorded here as partial-but-decisive evidence so the gate's status reflects observed reality.
+
+| Field | Value |
+|---|---|
+| Workflow | `mutation.yml` |
+| Run ID | [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280) |
+| Event | `schedule` (NOT `workflow_dispatch`) |
+| Head SHA | `ab2a51e55b0e0116a3235b5254733999dca52e90` |
+| createdAt | 2026-05-10T05:39:41Z |
+| Status / conclusion | `completed` / `success` |
+| Matrix legs (all green) | `Mutation (internal/tools)`, `Mutation (internal/ratelimit)`, `Mutation (internal/enforcement)`, `Mutation (internal/mcp)`, `Mutation (internal/truncate)`, `Mutation (internal/jsonschema)` |
+| `internal/tools` leg (the previously-timing-out leg) | `success` — the `2e7b6bd` "May 9 hardening" timeout fix is verified working under real scheduled-cron load |
+
+### SHA equivalence note (why this evidence covers rc.3 and current main)
+
+The mutation cron tested SHA `ab2a51e`. The relevant downstream SHAs are:
+
+- `ce56414` — `v1.2.1-rc.3` peeled commit (one commit before `ab2a51e`).
+- `2976e24` — current `main` after PR #88 (one commit after `ab2a51e`).
+
+`git diff --name-only ab2a51e^..2976e24 -- 'internal/**/*.go'` returns no entries: PR #87 (which becomes `ab2a51e`) modified only `scripts/check-launch-external-status.sh` and `scripts/test-check-launch-external-status.sh`, and PR #88 (which becomes `2976e24`) modified only `docs/**` files. Mutation testing covers `internal/*` packages only; neither PR changed any code under that scope.
+
+Therefore the mutation cron green on `ab2a51e` is byte-for-byte equivalent-source mutation evidence for both `ce56414` (rc.3 codebase) and `2976e24` (current main codebase). The `internal/tools` timeout fix is verified working on the full mutation matrix shape in production scheduled-cron conditions.
+
+### What this record does NOT do
+
+- Does **NOT** by itself close the Group 7 "All required workflows on `main` green" gate's literal evidence shape (which binds to a scheduled cron landing directly on the final candidate SHA — i.e., the SHA `v1.2.1` is cut from). That cadence wait is now hours, not days — the next regular weekday scheduled cron will satisfy it.
+- Does **NOT** declare the repository launch-ready.
+- Does **NOT** retag `v1.2.1-rc.3` or cut `v1.2.1`.
+- Does **NOT** modify `mutation.yml`'s cadence or add a `workflow_dispatch` shortcut.
+- Does **NOT** tick the "All required workflows on `main` green" checkbox in `docs/launch-candidate-checklist.md`. The literal SHA-binding wording leaves that to the operator's review.
+
+### Operator decision
+
+On 2026-05-10 the maintainer accepted the equivalent-source closure for the **community/self-hosted `v1.2.1`** release track. The decision is recorded in [`docs/launch-readiness-review-may-8.md`](../launch-readiness-review-may-8.md) § "Closed gates with evidence anchors", row "Group 7 — 'All required workflows on `main` green' (mutation cron) — community/self-hosted v1.2.1", citing run [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280) plus the `git diff --name-only ab2a51e^..main -- 'internal/**/*.go'` empty-diff proof above. `mutation.yml` was **not** modified — no cadence change, no `workflow_dispatch` shortcut, no test removed.
+
+Closure scope:
+
+- **Closed for community/self-hosted `v1.2.1`** on the equivalent-source argument above. This is the release track that does not claim official Clockify status, does not promise paid-hosted SLAs, and ships under the existing AGPLv3 community licence.
+- **Still pending in literal SHA-binding form** for any future paid-hosted / commercial track that requires a scheduled cron to land directly on the SHA `v1.2.1` (or the next paid-hosted candidate) is cut from. That cadence wait is hours, not days; the next regular weekday scheduled cron will satisfy it.
+
+This record does not declare the repository launch-ready, does not retag `v1.2.1-rc.3` or cut `v1.2.1`, does not modify branch protection, and does not tick checkboxes outside the `mutation.yml`-bound row in the launch-readiness ledger.
