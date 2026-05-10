@@ -203,6 +203,27 @@ json_string_field_matches() {
   grep -Eq "\"${field}\"[[:space:]]*:[[:space:]]*\"${value}\"" <<< "$json"
 }
 
+# Mirror scripts/publish-npm.sh's dist-tag mapping. A version is treated
+# as a prerelease only when a `-` follows the MAJOR.MINOR.PATCH triple
+# (npm semver style); the first dot-delimited prerelease identifier
+# selects the channel: rc / beta / alpha / next (catch-all). Stable
+# versions return empty so the caller falls back to dist-tags.latest.
+npm_dist_tag_for_version() {
+  local version="$1"
+  case "$version" in
+    *-*) ;;
+    *) printf ''; return 0 ;;
+  esac
+  local pre_first_id
+  pre_first_id="$(printf '%s' "${version#*-}" | sed 's/[.+].*$//' | tr '[:upper:]' '[:lower:]')"
+  case "$pre_first_id" in
+    rc)    printf 'rc' ;;
+    beta)  printf 'beta' ;;
+    alpha) printf 'alpha' ;;
+    *)     printf 'next' ;;
+  esac
+}
+
 iso8601_epoch() {
   local value="$1"
   date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$value" +%s 2>/dev/null ||
@@ -536,8 +557,16 @@ if command -v npm >/dev/null 2>&1; then
     printf '%s\n' "$npm_out" | sed 's/^/       npm: /'
     if [ -n "$expected_npm_version" ]; then
       normalized_npm_version="${expected_npm_version#v}"
-      if json_string_field_matches "$npm_out" "version" "$normalized_npm_version" &&
-         json_string_field_matches "$npm_out" "latest" "$normalized_npm_version"; then
+      expected_dist_tag="$(npm_dist_tag_for_version "$normalized_npm_version")"
+      if [ -n "$expected_dist_tag" ]; then
+        if json_string_field_matches "$npm_out" "$expected_dist_tag" "$normalized_npm_version"; then
+          record closed "npm publish path: registry dist-tags.${expected_dist_tag} matches expected prerelease ${normalized_npm_version}"
+        else
+          record open "npm publish path: registry does not prove expected prerelease version ${normalized_npm_version} on dist-tags.${expected_dist_tag}"
+          action "verify the release workflow published @apet97/clockify-mcp-go@${normalized_npm_version} with --tag ${expected_dist_tag} (NPM_TOKEN-backed), then rerun with --expected-npm-version ${normalized_npm_version}."
+        fi
+      elif json_string_field_matches "$npm_out" "version" "$normalized_npm_version" &&
+           json_string_field_matches "$npm_out" "latest" "$normalized_npm_version"; then
         record closed "npm publish path: registry version and latest dist-tag match expected ${normalized_npm_version}"
       else
         record open "npm publish path: registry does not prove expected release version ${normalized_npm_version}"
