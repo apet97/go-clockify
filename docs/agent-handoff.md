@@ -111,9 +111,20 @@ work and commit it.
     § "Final integration audit — rc.3 cycle ledger" for the
     consolidated rc.3 cycle PR ledger (#74, #75, #76, #77, #80,
     #83, #84, #85), validator-quirk classifications, and
-    next-step actions on the still-open gates. The repository is
-    not launch-ready and the final `v1.2.1` tag is post-Lane-6
-    and requires operator action.
+    next-step actions on the still-open gates. **`v1.2.1` is the
+    current stable community/self-hosted line**, cut from rc.3's
+    peeled commit `ce56414` and released 2026-05-10 (see
+    [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+    § "v1.2.1 release evidence record (2026-05-10)" for the
+    canonical evidence anchor — including the bounded
+    release-smoke SAN exception and the
+    `ghcr.io/apet97/go-clockify:1.2.1` container image identity).
+    Paid-hosted / commercial / "official Clockify" follow-ups
+    remain explicitly deferred per
+    [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+    § "Deferred paid-hosted/commercial follow-ups — not required
+    for community/self-hosted v1.2.1" and must not be re-promoted
+    into community/self-hosted blockers.
 
 If a local-shell run of the live-contract suite reports `ok`
 suspiciously fast (≤ ~0.5s), the env-var gate

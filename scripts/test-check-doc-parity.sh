@@ -1474,6 +1474,47 @@ MUTATOR=mut_docker_image_slsa_notice_missing
 run_case "Phase 7: docker-image SLSA feature-gate notice missing fails closed" \
     1 '\.github/workflows/docker-image\.yml must qualify image SLSA provenance availability'
 
+# --- Case 71: stale "while this repository is private" wording in README ---
+# The repo is public on GitHub. Pre-flip wording in user-onboarding
+# docs is now factually wrong; the banned-string guard must catch it.
+mut_stale_private_repo_install() {
+    printf '\nPrivate/internal installs: while this repository is private, configure GOPRIVATE.\n' \
+        >> "$1/README.md"
+}
+MUTATOR=mut_stale_private_repo_install
+run_case "Phase 3: stale 'while this repository is private' README wording fails closed" \
+    1 "banned stale public-surface string"
+
+# --- Case 72: stale "(requires repo access while private)" parenthetical ---
+mut_stale_requires_private_access() {
+    printf '\nReleases (requires repo access while private)\n' \
+        >> "$1/README.md"
+}
+MUTATOR=mut_stale_requires_private_access
+run_case "Phase 3: stale '(requires repo access while private)' parenthetical fails closed" \
+    1 "banned stale public-surface string"
+
+# --- Case 73: ghcr image tag uses v-prefix in user-onboarding doc ---
+# Released container tag is bare semver per goreleaser's
+# `pattern={{version}}` metadata-action; `:v1.2.1` would break
+# operator copy-paste.
+mut_ghcr_v_prefix_in_doc() {
+    printf '\nPin to ghcr.io/apet97/go-clockify:v1.2.1 in production.\n' \
+        >> "$1/docs/production-readiness.md"
+}
+MUTATOR=mut_ghcr_v_prefix_in_doc
+run_case "Phase 3: v-prefixed ghcr.io image tag fails closed" \
+    1 'banned v-prefixed ghcr\.io image tag'
+
+# --- Case 74: bare semver ghcr image tag is allowed (negative case) ---
+mut_ghcr_bare_semver_in_doc() {
+    printf '\nPin to ghcr.io/apet97/go-clockify:1.2.1 in production.\n' \
+        >> "$1/docs/production-readiness.md"
+}
+MUTATOR=mut_ghcr_bare_semver_in_doc
+run_case "Phase 3: bare semver ghcr.io image tag passes" \
+    0 'doc-parity: OK'
+
 # --- Final report ---
 echo
 if [ "$tests_failed" -gt 0 ]; then

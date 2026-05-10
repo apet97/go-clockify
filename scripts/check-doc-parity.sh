@@ -200,6 +200,13 @@ banned_strings=(
   "every binary and container image ships with cosign signatures, SPDX SBOM, and SLSA build provenance"
   "attested with SLSA build provenance, and scanned with"
   "A SLSA build-provenance attestation stored in the GitHub"
+  # The repository is public on GitHub. Pre-flip wording about the
+  # private-repo install path / private Releases / private Issues is
+  # now factually wrong on every public surface. Banned to prevent
+  # regression. (See README.md commit history for the public release
+  # state pin.)
+  "while this repository is private"
+  "(requires repo access while private)"
 )
 
 banned_scan_files=("${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" AGENTS.md .github/workflows/docker-image.yml .github/workflows/release.yml)
@@ -225,6 +232,18 @@ if [ -n "$multiline_brand_claim_hits" ]; then
   while IFS= read -r line; do
     err "banned premature official-product claim found: $line"
   done <<< "$multiline_brand_claim_hits"
+fi
+
+# Banned shape: ghcr.io image tags must be bare semver, not v-prefixed.
+# The goreleaser metadata-action emits `pattern={{version}}` so the
+# published container tag is `1.2.1`, not `v1.2.1`. release-smoke.yml
+# strips the `v` with `image_tag="${TAG#v}"`. Examples that show
+# `:v1.2.1` are dead documentation that breaks operator copy-paste.
+ghcr_v_prefix_hits=$(grep -rnE 'ghcr\.io/[^[:space:]]*:v[0-9]' "${banned_scan_files[@]}" 2>/dev/null || true)
+if [ -n "$ghcr_v_prefix_hits" ]; then
+  while IFS= read -r line; do
+    err "banned v-prefixed ghcr.io image tag (use bare semver, e.g. ghcr.io/apet97/go-clockify:1.2.1): $line"
+  done <<< "$ghcr_v_prefix_hits"
 fi
 
 if [ ! -f README.md ]; then

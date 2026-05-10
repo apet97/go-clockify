@@ -179,6 +179,15 @@ EOF
   Public visibility still depends on the external, repository-state,
   and legal/product gates above.
 
+## Deferred paid-hosted/commercial follow-ups — not required for community/self-hosted v1.2.1
+
+These are not release gates for community/self-hosted v1.2.1.
+They become gates only for a paid-hosted/commercial launch.
+They must not block final v1.2.1 if the release notes and public docs
+keep the project framed as community/self-hosted and do not claim
+official Clockify status.
+The PR #88 packet files remain future request templates only.
+
 ## Deferred low-risk follow-ups
 
 - Deferred section stays part of the checked disposition body.
@@ -488,6 +497,25 @@ mut_missing_public_local_scope() {
 }
 MUTATOR=mut_missing_public_local_scope
 run_case "missing public-content local scope fails closed" 1 'public-content audit disposition missing required text.*Local artifact/full-tree review'
+
+# --- Deferred paid-hosted/commercial section header guard ---
+# The ledger must keep the canonical "## Deferred paid-hosted/
+# commercial follow-ups — not required for community/self-hosted
+# v1.2.1" section header (PR #90 scope correction) so the deferral
+# cannot silently drift back to "active blocker" wording.
+mut_missing_deferred_section_header() {
+  perl -0pi -e 's/^## Deferred paid-hosted\/commercial follow-ups — not required for community\/self-hosted v1\.2\.1\n//m' "$1"
+}
+MUTATOR=mut_missing_deferred_section_header
+run_case "missing deferred paid-hosted section header fails closed" \
+  1 'deferred paid-hosted/commercial section missing required text.*Deferred paid-hosted'
+
+mut_missing_deferred_intro_sentence() {
+  perl -0pi -e 's/These are not release gates for community\/self-hosted v1\.2\.1\.\n//' "$1"
+}
+MUTATOR=mut_missing_deferred_intro_sentence
+run_case "missing deferred paid-hosted intro sentence fails closed" \
+  1 'deferred paid-hosted/commercial section missing required text.*not release gates for community/self-hosted'
 
 if [ "$tests_failed" -ne 0 ]; then
   printf 'check-launch-review-ledger tests: %d/%d FAILED\n' "$tests_failed" "$tests_run" >&2

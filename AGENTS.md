@@ -10,10 +10,17 @@
 A production-grade [Model Context Protocol](https://modelcontextprotocol.io)
 server for [Clockify](https://clockify.me), written in Go. Three
 transports (stdio, streamable HTTP 2025-03-26, opt-in gRPC behind
-`-tags=grpc`), five policy modes, signed releases. v1.2.0 is the
-current stable line. The active workstream is the Clockify
-launch-candidate evidence pass; any official-product promotion remains
-gated on the external evidence and legal/product approval below.
+`-tags=grpc`), five policy modes, signed releases. **`v1.2.1` is the
+current stable community/self-hosted line** (released 2026-05-10 from
+rc.3 peeled commit `ce56414`; see
+[`docs/runbooks/release-candidate-evidence.md`](docs/runbooks/release-candidate-evidence.md)
+§ "v1.2.1 release evidence record (2026-05-10)" for the canonical
+evidence anchor). The repository is unofficial and **not affiliated
+with or endorsed by Clockify**; any paid-hosted / commercial /
+"official Clockify" promotion remains explicitly deferred — see the
+external evidence and legal/product gates summarised below and the
+"Deferred paid-hosted/commercial follow-ups" section of
+[`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md).
 
 ## Read first (in this order)
 

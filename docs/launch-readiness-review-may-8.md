@@ -6,21 +6,22 @@ replacement for `docs/launch-candidate-checklist.md`.
 
 ## ⚠️ Open risk callouts
 
-- **Branch-protection posture is the 2026-05-09 cleanup posture, not
-  the final hardening posture.** Classic protection on `main` is
-  currently restored with only the three D9 launch required-status
-  checks (`Doctor strict smoke`, `Doctor Postgres backend`,
-  `Shared-service Postgres E2E`). This recovers from a prior
-  `Branch not protected` state observed during the 2026-05-09 repo-state
-  cleanup pass and is **not** equivalent to the historical 19 PR-required
-  context profile documented in
-  [`docs/branch-protection.md`](branch-protection.md). Restoring the
-  remaining 16 contexts (the full PR-required list is enumerated in
-  the "Required status checks" section of
-  [`docs/branch-protection.md`](branch-protection.md)) is preserved as an
-  explicit maintainer follow-up. **Do not treat the 3-of-19 posture as
-  equivalent to the documented hardening profile, and do not change
-  branch protection again without explicit operator approval.**
+- **Branch-protection posture: 21-context restoration landed
+  2026-05-10; do not change without operator approval.** Classic
+  protection on `main` was re-applied 2026-05-09 with the three D9
+  launch required-status checks (`Doctor strict smoke`, `Doctor
+  Postgres backend`, `Shared-service Postgres E2E`) after a prior
+  `Branch not protected` state was observed during the 2026-05-09
+  repo-state cleanup pass. On 2026-05-10 the historical 18-context
+  PR-required list (per
+  [`docs/branch-protection.md`](branch-protection.md) § "Required
+  status checks") was added back via additive PUT against
+  `repos/apet97/go-clockify/branches/main/protection`, bringing the
+  live enforcement to **21 required contexts** (historical 18 + the
+  three D9 launch checks). Issue #78 closed as part of that
+  restoration; `scripts/audit-branch-protection.sh` confirms the live
+  state matches the documented snapshot. **Do not change branch
+  protection without explicit operator approval.**
 
 ## Closed in this remediation pass
 

@@ -24,7 +24,7 @@ At the moment of deploy, take one of two paths:
 
 ```sh
 # 1. Resolve the digest for the tag you want to ship.
-docker buildx imagetools inspect ghcr.io/apet97/go-clockify:v1.2.0 \
+docker buildx imagetools inspect ghcr.io/apet97/go-clockify:1.2.1 \
   --format '{{json .Manifest.Digest}}'
 # -> "sha256:abc123…"
 
@@ -58,7 +58,7 @@ spec:
   source:
     kustomize:
       images:
-        - ghcr.io/apet97/go-clockify:v1.2.0
+        - ghcr.io/apet97/go-clockify:1.2.1
 ```
 
 Flux example:

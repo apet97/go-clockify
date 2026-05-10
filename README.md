@@ -1,6 +1,8 @@
 # clockify-mcp-go
 
 > A [Model Context Protocol][mcp] server for [Clockify][clockify] — plug any MCP client into your time-tracking workspace and let it log time, run reports, and manage projects on your behalf.
+>
+> **Unofficial community project. Not affiliated with or endorsed by Clockify.** Single-maintainer, public source under MIT, see [SUPPORT.md](SUPPORT.md) and [GOVERNANCE.md](GOVERNANCE.md) for adoption posture.
 
 [![Go version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](go.mod)
 [![Release](https://img.shields.io/github/v/release/apet97/go-clockify?color=7e57c2)](https://github.com/apet97/go-clockify/releases)
@@ -56,18 +58,28 @@ npx @apet97/clockify-mcp-go
 # https://github.com/apet97/go-clockify/releases
 ```
 
-Private/internal installs: while this repository is private, configure
-Go to bypass the public module proxy for this module and make sure your
-GitHub credentials can read the repo before running `go install`:
-`go env -w GOPRIVATE=github.com/apet97/go-clockify`. SSH auth, GitHub
-CLI auth, or an HTTPS credential/PAT with repo access are all valid.
-GitHub Releases and Issues also require access to the private repository.
-
 Verify:
 
 ```sh
 clockify-mcp --version
 ```
+
+### Current release status
+
+`v1.2.1` is the current stable community/self-hosted line, cut from the
+rc.3 peeled commit and released on 2026-05-10
+([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.1) ·
+46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.1`
+· container image `ghcr.io/apet97/go-clockify:1.2.1`). Operators
+verifying signatures should follow [docs/verification.md](docs/verification.md);
+paid-hosted / commercial / "official Clockify" framing is explicitly
+out of scope per [docs/launch-readiness-review-may-8.md](docs/launch-readiness-review-may-8.md)
+§ "Deferred paid-hosted/commercial follow-ups …".
+
+If your environment routes Go module fetches through a custom proxy or
+VCS resolver and you want to skip the public proxy for this module,
+`go env -w GOPRIVATE=github.com/apet97/go-clockify` is supported but
+not required for a standard `go install` against the public repo.
 
 Get a Clockify API key from [Profile → Advanced](https://app.clockify.me/user/preferences) and export it:
 
@@ -452,8 +464,8 @@ is retained as the historical post-PR #51 handoff.
 - Adoption expectations, response-time posture, `v1.x` wire-format stability guarantee: [SUPPORT.md](SUPPORT.md)
 - Governance (single-maintainer, merge gate, sensitive-area self-review): [GOVERNANCE.md](GOVERNANCE.md)
 - Security vulnerabilities: [SECURITY.md](SECURITY.md) (private disclosure channel)
-- Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues) (requires repo access while private)
-- Release history: [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/apet97/go-clockify/releases) (requires repo access while private)
+- Bug reports and feature requests: [GitHub Issues](https://github.com/apet97/go-clockify/issues)
+- Release history: [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/apet97/go-clockify/releases)
 - Versioning, support window, breaking-change policy: [docs/release-policy.md](docs/release-policy.md)
 - Documentation map: [docs/README.md](docs/README.md)
 

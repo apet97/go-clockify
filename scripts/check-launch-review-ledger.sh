@@ -392,6 +392,33 @@ for pattern in "${required_public_content_patterns[@]}"; do
   fi
 done
 
+# Deferred paid-hosted/commercial section header pin.
+#
+# The ledger's "## Deferred paid-hosted/commercial follow-ups — not
+# required for community/self-hosted v1.2.1" section is the canonical
+# scope-correction anchor: it lists the five paid-hosted gates that
+# moved out of the community/self-hosted blocker list (per PR #90) and
+# carries their full owner / evidence / non-goal disposition. Without
+# this section header in the ledger, the deferral can drift back to
+# "active blocker" wording elsewhere in the ledger and start
+# re-blocking community/self-hosted releases.
+#
+# NOTE: the literal source file uses an em-dash (U+2014); we grep
+# against `$normalized`, which `perl -CSDA -pe 's/[\x{2010}…\x{2014}]/-/g'`
+# folded into ASCII hyphen-minus. The pinned strings here MUST be the
+# ASCII-normalized form, not the source spelling.
+required_deferred_paid_hosted_section_patterns=(
+  "## Deferred paid-hosted/commercial follow-ups - not required for community/self-hosted v1.2.1"
+  "These are not release gates for community/self-hosted v1.2.1."
+  "They become gates only for a paid-hosted/commercial launch."
+)
+
+for pattern in "${required_deferred_paid_hosted_section_patterns[@]}"; do
+  if ! grep -qF "$pattern" "$normalized"; then
+    err "deferred paid-hosted/commercial section missing required text: $pattern"
+  fi
+done
+
 if [ "$fail" != "0" ]; then
   echo "launch-review-ledger: FAIL" >&2
   exit 1
