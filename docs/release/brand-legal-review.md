@@ -154,6 +154,137 @@ the gRPC service-name gate:
     evidence only, not license-clearance evidence.
 - Release candidate notes before publishing or public promotion.
 
+## Decision Checklist (for the reviewer)
+
+<!-- BEGIN external-review decision checklist (Lane F packet) -->
+
+This subsection is the reviewer-facing decision-record template. It
+is additive to the reviewer questions above and to the Approval
+Evidence Format; it does not replace either. The maintainer may
+hand the reviewer this section as a structured form to fill out,
+mirror it into a ticket / signed document, or extract it into a
+separate review report — the only contract is that the recorded
+decision must answer every row before the trademark gate, the
+`clockify://` URI gate, and the gRPC service-name gate can close.
+
+### Reviewer engagement record
+
+The maintainer fills in the engagement metadata before sending the
+packet; the reviewer fills in the rest.
+
+| Field | Value |
+|---|---|
+| Reviewer (full name, role, CAKE.com / Clockify team) | `<filled by reviewer>` |
+| Maintainer routing the request | `@apet97` |
+| Engagement reference (ticket / contract / email thread, redacted of private contact details) | `<filled by maintainer or reviewer>` |
+| ISO 8601 decision date | `<filled by reviewer>` |
+| Candidate tag this decision binds to (annotated tag SHA + peeled commit) | `<filled by maintainer at hand-off>` |
+
+### Per-question decision record
+
+For each row, the reviewer records one of: `approve`,
+`approve-with-changes` (specify the exact wording approved),
+`rebrand` (specify the replacement names / schemes / timelines),
+or `refuse`. A row left blank leaves the corresponding gate open.
+
+| Question (numbered against "Questions for Reviewers" above) | Decision | Approved wording / rebrand instruction |
+|---|---|---|
+| Q1 — Repository name `go-clockify` | | |
+| Q2 — npm package name `@apet97/clockify-mcp-go` | | |
+| Q3 — Binary / container image name `clockify-mcp` | | |
+| Q4 — `clockify_*` MCP tool names as descriptive identifiers | | |
+| Q5 — `clockify://` resource URI scheme | | |
+| Q6 — `clockify.mcp.v1.MCP` opt-in gRPC service name | | |
+| Q7 — Disclaimer requirement when linking to `clockify.me`, `app.clockify.me`, or Clockify API docs | | |
+| Q8 — Approved public launch wording after Group 1, Group 6, and Group 7 close | | |
+| Q9 — Replacement language if no approval is granted | | |
+| Q10 — MIT license posture across the Go module, GitHub Actions, container, and npm wrapper dependency set | | |
+| Q11 — Artifact archived as the closure evidence (legal ticket, product sign-off, partnership note, approved copy deck, or written no-approval / rebrand decision) | | |
+
+### Branded-surface coverage record
+
+Per the Approval Evidence Format above, the recorded decision must
+also list the exact wording approved (or the rebrand instruction)
+for **every** branded surface below. A row left blank means the
+gate stays open for that surface even when Q1–Q11 are answered.
+
+- [ ] Repository name (`go-clockify`).
+- [ ] npm package name (`@apet97/clockify-mcp-go`).
+- [ ] Binary name (`clockify-mcp`) and container image name
+      (`ghcr.io/apet97/go-clockify`).
+- [ ] MCP tool prefix (`clockify_*`).
+- [ ] `clockify://` resource URI scheme used by `resources/list`
+      and `resources/templates/list`.
+- [ ] Opt-in gRPC service name (`clockify.mcp.v1.MCP`) at
+      `internal/transport/grpc/service.go`; reviewer notes whether
+      the decision applies before clients depend on the descriptor.
+- [ ] README marketing copy and disclaimers (the project frames
+      itself as a community MCP server; reviewer confirms whether
+      that framing must change either way the decision lands).
+- [ ] npm package metadata (`description`, `keywords`,
+      `repository`, `homepage`).
+- [ ] Container labels (OCI `org.opencontainers.image.*` fields
+      in `.github/workflows/docker-image.yml` and
+      `deploy/Dockerfile`).
+- [ ] GitHub repository description.
+- [ ] GitHub release notes templating.
+- [ ] Public launch / promotion wording for blog posts, social
+      announcements, or partner copy.
+
+### Question-to-gate mapping (do not skip)
+
+The May 8 ledger keeps three transport-identifier gates open under
+one reviewer engagement:
+
+- **Trademark / "official Clockify" language gate (`L-10`).** Closes
+  only when Q1–Q4, Q7–Q9, and Q11 are answered AND the branded-
+  surface coverage record is complete for repository name, npm
+  package, binary, container, README, package metadata, container
+  labels, repository description, and release notes.
+- **`clockify://` URI scheme gate.** Closes only when Q5 is
+  answered AND the URI-scheme row in the branded-surface coverage
+  record is complete.
+- **gRPC service-name gate.** Closes only when Q6 is answered AND
+  the gRPC-service-name row in the branded-surface coverage record
+  is complete.
+
+If the reviewer's decision answers Q1–Q4 only (the "is the project
+allowed to use Clockify naming at all" surface) and does not name
+Q5 or Q6, the URI-scheme and gRPC-service-name gates stay open
+until a follow-up decision lands per the Approval Evidence Format.
+
+### Reviewer non-goals
+
+The reviewer is **not** asked to:
+
+- Sign off on the DPA / terms / privacy posture (separate gate;
+  see [`dpa-privacy-evidence-checklist.md`](dpa-privacy-evidence-checklist.md)).
+- Sign off on the paid-hosted external security review (separate
+  gate; see [`external-security-review-request.md`](external-security-review-request.md)).
+- Sign off on the paid-commercial RLS decision (separate ADR
+  template under `docs/adr/`).
+- Sign off on cross-replica hosted HTTP quota evidence (separate
+  checklist in [`../runbooks/release-candidate-evidence.md`](../runbooks/release-candidate-evidence.md)).
+- Approve any release. The reviewer's decision is one input among
+  several to a launch-readiness call; it does not by itself
+  authorize a `vX.Y.Z` tag, a public visibility flip, or any other
+  release action.
+
+### What this checklist does not do
+
+This checklist is a request packet. It does not:
+
+- Perform the review.
+- Record the decision (the launch-readiness ledger does, per the
+  Approval Evidence Format above).
+- Replace the Approval Evidence Format. The Format is the
+  contract; this checklist is one way to organize the data the
+  Format requires.
+- Grant any official-product status, endorsement, or partnership
+  claim.
+
+<!-- END external-review decision checklist (Lane F packet) -->
+
 ## Closure Rule
 
 This gate closes only when a maintainer links written approval or a
