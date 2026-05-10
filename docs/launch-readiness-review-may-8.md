@@ -1226,13 +1226,13 @@ Lane 6 does not close them.
 | Branch protection on `main` carries the three D9 launch checks | Re-applied 2026-05-09 with `Doctor strict smoke`, `Doctor Postgres backend`, and `Shared-service Postgres E2E` required (strict up-to-date, linear history, conversation resolution, no force push, no deletion). |
 | Issue #78 — restore the historical 19-context required-status list on `main` | Closed 2026-05-10 after the 21-context branch-protection restoration landed (additive PUT against `repos/apet97/go-clockify/branches/main/protection`). The classic `required_status_checks.contexts` array now carries the historical 18 plus the three D9 launch checks (`Doctor strict smoke`, `Doctor Postgres backend`, `Shared-service Postgres E2E`); `scripts/audit-branch-protection.sh` confirms the live state matches the documented snapshot in [`branch-protection.md`](branch-protection.md). |
 | Group 7 — "All required workflows on `main` green" (mutation cron) — community/self-hosted v1.2.1 | Closed 2026-05-10 on the equivalent-source argument: scheduled `mutation.yml` cron run [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280) (event=`schedule`, headSha `ab2a51e55b0e0116a3235b5254733999dca52e90`, completed/success at 2026-05-10T05:39:41Z) went green across all 6 matrix legs including `Mutation (internal/tools)` — the leg that previously timed out and cancelled every cron since the `2e7b6bd` "May 9 hardening" timeout fix landed. PR #87 (`ab2a51e`) and PR #88 (`2976e24`) modified only `scripts/**` and `docs/**`; `git diff --name-only ab2a51e^..main -- 'internal/**/*.go'` returns no entries. Mutation testing covers `internal/*` packages only, so the green cron on `ab2a51e` is byte-for-byte equivalent-source mutation evidence for both rc.3 (`ce56414`) and current main. This closure applies to the community/self-hosted `v1.2.1` release track only; the literal final-candidate-SHA evidence shape (a scheduled cron landing directly on the final `v1.2.1` SHA) remains a cadence wait that the next regular weekday cron will satisfy. Full evidence record: [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Mutation cron post-fix evidence — 2026-05-10". |
+| Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Closed 2026-05-10 once both host legs landed for `v1.2.1-rc.3` (peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a`). The macOS arm64 leg comes from the rc.3 `opus/group7-release-rc3-20260510` worktree (re-run after the transient TMPDIR concurrency failure cleared on its second invocation, evidence in the rc.3 record above). The Linux x64 leg comes from a Lane B Docker `linux/amd64` `golang:1.25-bookworm` clean-clone run between `2026-05-10T17:05:40Z` and `2026-05-10T17:21:48Z`: container kernel `Linux 04187e400898 6.10.14-linuxkit #1 SMP Sat May 17 08:28:57 UTC 2025 x86_64`, toolchain `go version go1.25.10 linux/amd64`, `make release-check` exit `0` with final line `release-check: OK — local pre-ship gate passed`. Full Linux x64 evidence shape (host info, command transcript, per-phase summary, log artefact paths) is in [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Linux x64 release-check evidence — v1.2.1-rc.3". |
 | Repository description + issue #28 | Both closed during the 2026-05-09 repo-state cleanup pass landed via PR #77 (`a5d5f75`). |
 
 ### Open gates with exact next-step action
 
 | Gate | Next-step action |
 |---|---|
-| Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Re-run `scripts/prepare-rc-evidence.sh v1.2.1-rc.3` from a clean tag checkout on a Linux x64 host (this lane is single-host darwin-arm64); attach the per-host log alongside the existing macOS arm64 log. The macOS arm64 leg already reproduced clean on re-run; only the Linux x64 leg is missing. |
 | npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. The validator now recognises prerelease dist-tags (Lane D, PR #87, 2026-05-10), so a passing `--expected-npm-version v1.2.1-rc.3` invocation closes the npm proof against `dist-tags.rc` directly. This is forward-looking on the next publish; it does not block the current rc.3 → final v1.2.1 cut. |
 
 The five paid-hosted / commercial dispositions previously occupying
@@ -1251,7 +1251,14 @@ evidence anchors" table above. The Group 7 "All required workflows on
 `main` green" (mutation cron) gate closed on 2026-05-10 for the
 community/self-hosted `v1.2.1` track on the equivalent-source
 argument captured in the "Closed gates with evidence anchors" table
-above.
+above. The Group 7 two-host `make release-check` gate also closed on
+2026-05-10 once the Linux x64 leg landed alongside the existing
+macOS arm64 leg — see the "Closed gates with evidence anchors" row
+and the "Linux x64 release-check evidence — v1.2.1-rc.3" subsection
+in the runbook. With those three closures the `Open gates` table
+carries only the forward-looking npm publish-path row, which is
+informational on the next publish and does not block the current
+rc.3 → final v1.2.1 cut.
 
 ### Validator quirks vs real blockers
 
@@ -1322,25 +1329,27 @@ on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
 ### Non-claim
 
 This audit does not declare the repository launch-ready. Final
-`v1.2.1` tag is post-Lane-6 and requires operator action. The single
-remaining active community/self-hosted release blocker (Group 7
-two-host `make release-check` Linux x64 evidence) must close on real
-evidence before any agent or human reports "launch candidate ready" —
-let alone "launch-ready". The Group 7 "All required workflows on
-`main` green" (mutation cron) gate closed on 2026-05-10 for the
-community/self-hosted track on the equivalent-source argument
-recorded in the "Closed gates with evidence anchors" table above. The
-forward-looking npm publish path row is informational on the next
-publish, not a blocker for the current rc.3 → final v1.2.1 cut. The
-five paid-hosted / commercial follow-ups (paid-hosted external
-security review, DPA / privacy / trademark approval, paid-commercial
-RLS, cross-replica hosted HTTP quotas, plus the trademark-coupled
-`clockify://` URI / gRPC service-name branding review) are now
-explicitly **deferred** under "## Deferred paid-hosted/commercial
-follow-ups — not required for community/self-hosted v1.2.1" and do
-**not** block the community/self-hosted `v1.2.1` cut so long as the
-release notes and public docs keep the project framed as
-community/self-hosted and do not claim official Clockify status.
+`v1.2.1` tag is post-Lane-6 and requires operator action. As of
+2026-05-10 there are **zero** active community/self-hosted release
+blockers in this ledger: the Group 7 two-host `make release-check`
+gate closed once the Linux x64 leg landed (see the rc.3 evidence
+record and the new "Linux x64 release-check evidence — v1.2.1-rc.3"
+subsection in the runbook), and the Group 7 "All required workflows
+on `main` green" (mutation cron) gate closed on the equivalent-source
+argument also captured above. The forward-looking npm publish path
+row is informational on the next publish, not a blocker for the
+current rc.3 → final v1.2.1 cut. The five paid-hosted / commercial
+follow-ups (paid-hosted external security review, DPA / privacy /
+trademark approval, paid-commercial RLS, cross-replica hosted HTTP
+quotas, plus the trademark-coupled `clockify://` URI / gRPC
+service-name branding review) are explicitly **deferred** under
+"## Deferred paid-hosted/commercial follow-ups — not required for
+community/self-hosted v1.2.1" and do **not** block the
+community/self-hosted `v1.2.1` cut so long as the release notes and
+public docs keep the project framed as community/self-hosted and do
+not claim official Clockify status. Cutting `v1.2.1` is still a
+maintainer action; this audit only records that the active
+community/self-hosted blocker list is empty.
 
 ## Verification used for this pass
 

@@ -532,7 +532,74 @@ Reports `4 open, 0 unknown` against `ce56414`:
 - `mutation.yml`: latest scheduled run 25592823559 still `completed/cancelled` on pushed commit `4fe957547f9e6aea749a85f87823d17a0ccc2928` because that scheduled cron fired before the `internal/tools` matrix-leg timeout fix (`2e7b6bd`) landed. The Group 7 "All required workflows on `main` green" box stays open until the next scheduled `mutation.yml` cron records green on the final candidate SHA.
 - `npm publish path` (rc.3 audit at the time of the Group 7 record): the verifier originally matched `dist-tags.latest` (designed for stable releases) and ignored `dist-tags.rc`, so it reported `[open]` against rc.3 even though the publish path had correctly used `--tag rc`. `npm view @apet97/clockify-mcp-go --json` shows `dist-tags = {"latest":"1.2.0","rc":"1.2.1-rc.3"}` — the expected prerelease shape (`rc` dist-tag bumped, `latest` unchanged because the publish path correctly used `--tag rc` for the prerelease per the rc.2 fix in PR #80). Lane D closed this validator quirk on 2026-05-10: `scripts/check-launch-external-status.sh` now derives the dist-tag from the expected prerelease identifier (rc / beta / alpha / next, mirroring `scripts/publish-npm.sh`) and validates `dist-tags.<derived>`. Re-running the rc.3 invocation above now closes the npm proof against `dist-tags.rc` directly, dropping the npm row from this snapshot's open list and leaving the remaining opens unchanged (local branch cleanup, Group 1 SHA mismatch, mutation cron).
 
-Group 7 boxes that closed on this evidence: the **Release artefacts** box (sigstore + SLSA + SBOMs + container image) and the **`clockify-mcp doctor --strict`** box (release-smoke-doctor-output artifact + local re-verification). The **All required workflows on `main` green** (mutation cron) box closed on 2026-05-10 for the community/self-hosted `v1.2.1` track on the equivalent-source argument captured below — see "Mutation cron post-fix evidence — 2026-05-10". Group 7 box that remains open: **`make release-check` from clean checkouts on Linux x64 + macOS arm64** (this lane is single-host darwin-arm64 only and the macOS arm64 release-check itself transient-failed on the first invocation; the Linux x64 leg is still missing).
+Group 7 boxes that closed on this evidence: the **Release artefacts** box (sigstore + SLSA + SBOMs + container image) and the **`clockify-mcp doctor --strict`** box (release-smoke-doctor-output artifact + local re-verification). The **All required workflows on `main` green** (mutation cron) box closed on 2026-05-10 for the community/self-hosted `v1.2.1` track on the equivalent-source argument captured below — see "Mutation cron post-fix evidence — 2026-05-10". The **`make release-check` from clean checkouts on Linux x64 + macOS arm64** box closed on 2026-05-10 once both legs landed: the macOS arm64 leg from the Lane 3 worktree (re-run after the transient TMPDIR concurrency failure cleared on its second invocation) and the Linux x64 leg from the Lane B Docker `linux/amd64` `golang:1.25-bookworm` clean-clone evidence captured 2026-05-10T17:05:40Z–17:21:48Z — see "Linux x64 release-check evidence — v1.2.1-rc.3" below.
+
+### Linux x64 release-check evidence — v1.2.1-rc.3
+
+Captured 2026-05-10 by Lane B (Docker `linux/amd64` on Apple Silicon coordinator host; QEMU-emulated x86_64 build, ~16 minutes wall time). The macOS arm64 leg already lives in the rc.3 evidence section above; this subsection is the missing Linux x64 leg.
+
+| Field | Value |
+|---|---|
+| Host / runner | Docker container `golang:1.25-bookworm` on Docker Desktop, `--platform linux/amd64` (QEMU emulation under macOS arm64 coordinator) |
+| Container kernel | `Linux 04187e400898 6.10.14-linuxkit #1 SMP Sat May 17 08:28:57 UTC 2025 x86_64 GNU/Linux` |
+| Image | `golang:1.25-bookworm` (digest `sha256:e3a54b77385b4f8a31c1db4d12429ffb3718ea76865731a787c497755d409547`) |
+| Toolchain | `go version go1.25.10 linux/amd64` (matches the repo Go pin) |
+| Candidate tag | `v1.2.1-rc.3` |
+| Peeled commit | `ce56414ae012c4a49d21ae0a319b178619c5966a` |
+| Worktree state | clean (`git status --short` empty after `git checkout v1.2.1-rc.3`) |
+| Start (UTC) | `2026-05-10T17:05:40Z` |
+| End (UTC) | `2026-05-10T17:21:48Z` |
+| `make release-check` exit | `0` |
+| Final line | `release-check: OK — local pre-ship gate passed` |
+| `scripts/prepare-rc-evidence.sh v1.2.1-rc.3` | exit `1` — fails closed with `ERROR: govulncheck is required for candidate evidence`. The bundled `tools/govulncheck` module was intentionally not pre-installed in the Lane B container; this is **outside** the Group 7 `make release-check` evidence shape and is captured here as informational only. |
+
+Command transcript (run from a clean clone inside the container):
+
+```sh
+docker run --rm --platform linux/amd64 \
+  -v "${EVIDENCE_HOST}:/evidence" \
+  -w /work \
+  golang:1.25-bookworm \
+  bash -c '
+    set -euo pipefail
+    export PATH="/usr/local/go/bin:${PATH}"
+    apt-get update -qq && apt-get install -y -qq make jq curl git ca-certificates ripgrep
+    git config --global --add safe.directory /work/repo
+    git clone --quiet https://github.com/apet97/go-clockify.git /work/repo
+    cd /work/repo
+    git fetch --quiet --tags origin
+    git checkout --quiet v1.2.1-rc.3
+    uname -a
+    go version
+    git rev-parse HEAD
+    git rev-parse v1.2.1-rc.3^{commit}
+    make release-check 2>&1 | tee /evidence/release-check.linux-x64.log
+  '
+```
+
+`make release-check` walked the documented lane on Linux x64:
+
+- formatting/vet/lint (golangci-lint not installed in the minimal container — release-check noted "golangci-lint not installed, skipping (CI enforces)" and continued; CI's `Lint` job remains the authoritative lint gate)
+- tests + coverage floors (cover-check passed against the documented per-package floors)
+- config + doc parity (`check-config-parity`, `check-doc-parity`, `check-launch-review-ledger`, `check-launch-checklist-parity`, `check-launch-evidence-gate`, `check-config-doc-parity`, `check-grpc-release-parity` all OK)
+- hygiene + build-tag wiring (`check-repo-hygiene` plus 18 script-tests suites green: `filter-bench-output`, `check-bench-baseline 11/11`, `check-coverage 10/10`, `check-doc-parity 70/70`, `check-repo-hygiene 9/9`, `check-governance-parity 12/12`, `check-release-assets 10/10`, `check-launch-checklist-parity 14/14`, `check-launch-review-ledger 39/39`, `check-launch-external-status 24 run, 0 failed`, `audit-branch-protection 2 run, 0 failed`, `check-public-content-audit 6 run, 0 failed`, `check-go-version-parity 9/9`, `check-live-tool-coverage 6 run, 0 failed`, `collect-license-evidence 3/3`, `prepare-rc-evidence 4 run, 0 failed`, `publish-npm 7 run, 0 failed`, `claude-campaign 4 run, 0 failed`)
+- HTTP + stdio smoke (`smoke-http.sh` and `smoke-stdio.sh` both OK; `tools/list returned 40 tools`)
+- strict doctor smoke (`doctor --strict positive and negative smokes passed`)
+- full E2E including gRPC under `-tags=grpc` (`go test -tags=grpc -race -count=1 -timeout 180s ./tests/...` reported `ok github.com/apet97/go-clockify/tests 6.550s` and `ok github.com/apet97/go-clockify/tests/harness 1.272s`)
+- deploy render — auto-skipped per the documented Makefile contract (`[release-check] kubectl/kubeconform/helm missing — skipping k8s render (CI runs the full check).`); CI's k8s render is the authoritative check
+
+Local log artefacts (gitignored, not committed; preserved on the coordinator host for review):
+
+- `${REPO}/.linux-x64-evidence/release-check.linux-x64.log` — full `make release-check` transcript (601 lines, exit `0`)
+- `${REPO}/.linux-x64-evidence/host.txt` — `uname -a`, `go version`, ISO 8601 start, candidate-tag SHA, peeled-commit SHA
+- `${REPO}/.linux-x64-evidence/run.out` — combined runner stdout/stderr from the wrapper
+- `${REPO}/.linux-x64-evidence/run.sh` — exact wrapper command for reproducibility
+- `${REPO}/.linux-x64-evidence/release-check.linux-x64.log.attempt1` — first attempt failure record (`scripts/test-check-live-tool-coverage.sh` failed with `[fail] rg is required for live tool coverage checks` because the minimal Debian container lacked `ripgrep`; resolved in attempt 2 by adding `ripgrep` to the apt-install list)
+- `${REPO}/.linux-x64-evidence/release-check.linux-x64.log.attempt2` — second attempt failure record (`cover-check Error 1` cascading from a transient host-disk-pressure event that put the Docker Desktop VM into read-only mode mid-run; resolved by freeing host disk space and restarting Docker Desktop)
+
+This Linux x64 evidence pairs with the rc.3 macOS arm64 `make release-check` log already captured in the section above to satisfy the Group 7 two-host evidence shape. With both legs present, the Group 7 "make release-check from clean checkouts on Linux x64 + macOS arm64" box is closed for `v1.2.1-rc.3`.
+
+This record does **not** declare the repository launch-ready, does **not** retag `v1.2.1-rc.3`, does **not** cut `v1.2.1`, does **not** modify branch protection, and does **not** re-promote any of the deferred paid-hosted/commercial follow-ups. The `prepare-rc-evidence.sh` Linux x64 invocation is informational only; closure of the Group 7 row depends on `make release-check`, not on `prepare-rc-evidence.sh`.
 
 ## Mutation cron post-fix evidence — 2026-05-10
 
