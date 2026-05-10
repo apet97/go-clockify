@@ -106,7 +106,14 @@ work and commit it.
     green" (mutation.yml's next scheduled cron green on the
     final candidate SHA is still pending). See
     [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
-    "v1.2.1-rc.3 evidence record".
+    "v1.2.1-rc.3 evidence record" and
+    [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+    § "Final integration audit — rc.3 cycle ledger" for the
+    consolidated rc.3 cycle PR ledger (#74, #75, #76, #77, #80,
+    #83, #84, #85), validator-quirk classifications, and
+    next-step actions on the still-open gates. The repository is
+    not launch-ready and the final `v1.2.1` tag is post-Lane-6
+    and requires operator action.
 
 If a local-shell run of the live-contract suite reports `ok`
 suspiciously fast (≤ ~0.5s), the env-var gate
