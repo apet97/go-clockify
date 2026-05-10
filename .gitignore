@@ -36,6 +36,10 @@ desktop.ini
 .review/
 # Local duplicate clone sometimes created during agent handoffs.
 /go-clockify/
+# Lane B Linux x64 release-check Docker evidence (Lane B 2026-05-10).
+# Logs land here on the host but are referenced from
+# docs/runbooks/release-candidate-evidence.md, not committed.
+.linux-x64-evidence/
 # Per-workstation Claude Code context. Contributors may keep their
 # own CLAUDE.md at the repo root; it carries machine-specific
 # preferences and is not part of the shipped project. AGENTS.md, by
