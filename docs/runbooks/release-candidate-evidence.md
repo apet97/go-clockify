@@ -645,3 +645,115 @@ Closure scope:
 - **Still pending in literal SHA-binding form** for any future paid-hosted / commercial track that requires a scheduled cron to land directly on the SHA `v1.2.1` (or the next paid-hosted candidate) is cut from. That cadence wait is hours, not days; the next regular weekday scheduled cron will satisfy it.
 
 This record does not declare the repository launch-ready, does not retag `v1.2.1-rc.3` or cut `v1.2.1`, does not modify branch protection, and does not tick checkboxes outside the `mutation.yml`-bound row in the launch-readiness ledger.
+
+## v1.2.1 release evidence record (2026-05-10)
+
+Scope: **community/self-hosted v1.2.1 only.** This record captures the maintainer-approved final cut from the rc.3 peeled commit. It does not claim paid-hosted/commercial readiness and does not assert official Clockify status. The five paid-hosted / commercial follow-ups remain deferred per "## Deferred paid-hosted/commercial follow-ups — not required for community/self-hosted v1.2.1" in [`docs/launch-readiness-review-may-8.md`](../launch-readiness-review-may-8.md).
+
+### Tag and commit
+
+| Field | Value |
+|---|---|
+| Final tag | `v1.2.1` |
+| Annotated tag SHA | `6dd3b78e3900a01a31b1c5d5325173d72c5cf319` |
+| Peeled commit | `ce56414ae012c4a49d21ae0a319b178619c5966a` (= `v1.2.1-rc.3` peeled commit) |
+| Tag-cut command | `git tag -a v1.2.1 ce56414ae012c4a49d21ae0a319b178619c5966a -m "v1.2.1"` |
+| Tag-push timestamp | 2026-05-10T17:45 (operator host) |
+| `v1.2.1-rc.3` retagged? | **No.** Pre-existing rc.3 release with 47 prerelease assets is intact and untouched. |
+
+### Workflow runs that produced v1.2.1
+
+| Workflow | Run | Trigger | Conclusion | Note |
+|---|---|---|---|---|
+| Release | [25635476567](https://github.com/apet97/go-clockify/actions/runs/25635476567) | `push` (tag v1.2.1) | ❌ failure | GoReleaser tag-detection bug: resolved tag as `v1.2.1-rc.3` and 422'd against the existing rc.3 release shell. No assets reached GitHub. v1.2.1 GitHub Release was never created by this run. |
+| Release (retry) | [25635880549](https://github.com/apet97/go-clockify/actions/runs/25635880549) | `workflow_dispatch` (`tag=v1.2.1`, `--ref main`) | ✅ success | Ran with PR #92 (`2766b39`) on `main` so `GORELEASER_CURRENT_TAG=v1.2.1` was pinned and the resolve/validate step pinned the peeled commit to `ce56414`. Created the v1.2.1 GitHub Release and uploaded all 46 release assets. |
+| Docker Image | [25635476543](https://github.com/apet97/go-clockify/actions/runs/25635476543) | `push` (tag v1.2.1) | ✅ success | `ghcr.io/apet97/go-clockify:1.2.1` image signed with cosign keyless under SAN `release.yml@refs/tags/v1.2.1`. |
+| Reproducibility | [25635947473](https://github.com/apet97/go-clockify/actions/runs/25635947473) | `workflow_dispatch` (auto-fired by Release) | ✅ success | 9-leg matrix (5 default + 4 FIPS targets) all match released bytes. |
+| Deploy | [25635476552](https://github.com/apet97/go-clockify/actions/runs/25635476552) (rerun) | `push` (tag v1.2.1) | ✅ success | All four jobs green: Verify Release Assets / Deploy to Staging / Verify Live Contract / Deploy to Production. |
+| Release smoke | [25635948010](https://github.com/apet97/go-clockify/actions/runs/25635948010) | `workflow_dispatch` (auto-fired by Release retry) | ❌ failure | cosign-verify SAN regex pinned to `^…release.yml@refs/tags/.*$` rejects the manual-retry signature SAN of `release.yml@refs/heads/main`. Documented exception below; not treated as a v1.2.1 launch blocker. |
+
+### GitHub Release artefacts
+
+| Field | Value |
+|---|---|
+| URL | <https://github.com/apet97/go-clockify/releases/tag/v1.2.1> |
+| `tagName` | `v1.2.1` |
+| `name` | `v1.2.1` |
+| `isDraft` | `false` |
+| `isPrerelease` | `false` |
+| `publishedAt` | 2026-05-10T18:06:33Z |
+| Asset count | **46** (matches the structural contract: 15 binaries + 15 SPDX SBOMs + 15 sigstore bundles + `SHA256SUMS.txt`) |
+| Asset-count check | `gh release view v1.2.1 --json assets --jq '.assets | length'` → `46`. The Release retry's in-workflow `Verify release asset count` step (`bash scripts/check-release-assets.sh` against the goreleaser `dist/` directory) passed; the workflow only reaches the upload phase if that count matches. |
+
+### npm wrapper package
+
+| Field | Value |
+|---|---|
+| Package | `@apet97/clockify-mcp-go` |
+| `version` | `1.2.1` |
+| `dist-tags.latest` | `1.2.1` |
+| `dist-tags.rc` | `1.2.1-rc.3` (preserved from the rc.3 publish) |
+| Verifier | `bash scripts/check-launch-external-status.sh --candidate-sha ce56414… --expected-npm-version v1.2.1 --fail-open` reports `[closed] npm publish path: registry version and latest dist-tag match expected 1.2.1`. |
+
+### Container image
+
+| Field | Value |
+|---|---|
+| Image | `ghcr.io/apet97/go-clockify:1.2.1` |
+| Cosign certificate identity | `https://github.com/apet97/go-clockify/.github/workflows/docker-image.yml@refs/tags/v1.2.1` |
+| OIDC issuer | `https://token.actions.githubusercontent.com` |
+| Note | The Docker Image workflow ran on the original tag-push event (not the manual retry), so its OIDC SAN is the canonical `refs/tags/v1.2.1`. |
+
+### Reproducibility evidence
+
+Run [25635947473](https://github.com/apet97/go-clockify/actions/runs/25635947473) (workflow_dispatch on `v1.2.1`) reports all 9 matrix legs `success`. Each leg rebuilds a binary from the v1.2.1 source tree under `GOTOOLCHAIN=go1.25.10`, applies the goreleaser `mod_timestamp` setting, and SHA256-compares the bytes against the released asset of the same name. Operators reproducing locally must reuse the exact toolchain pin; see `docs/verification.md`.
+
+### Deploy chain
+
+Run 25635476552 (rerun via `gh run rerun 25635476552 --failed` after PR #92 fixed the upstream Release): `Verify Release Assets` → `Deploy to Staging` → `Verify Live Contract` → `Deploy to Production` all green, end-to-end. The Deploy workflow's verification path accepted the manual-retry SAN.
+
+### release-smoke manual-dispatch SAN exception
+
+**Accepted exception for v1.2.1 only.** The `release-smoke.yml` cosign-verify step pins the certificate identity regex to `^https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/.*$`. Because the v1.2.1 Release ran via `workflow_dispatch` from `--ref main` (the only path that does not require forbidden tag movement after the v1.2.1 tag was already pushed), Fulcio issued the OIDC certificate with SAN `release.yml@refs/heads/main`. The signatures on the v1.2.1 release assets are valid Fulcio-issued sigstore identities — they simply identify the workflow context as `refs/heads/main` instead of `refs/tags/v1.2.1`.
+
+This exception is accepted **only for v1.2.1**, and only on the strict precondition that:
+
+- the `Resolve and validate release tag` step (PR #92) executed inside run [25635880549](https://github.com/apet97/go-clockify/actions/runs/25635880549) and pinned `GORELEASER_CURRENT_TAG=v1.2.1`;
+- the same step re-fetched tags, ran `git rev-parse v1.2.1^{commit}`, and confirmed the peeled commit equals `ce56414ae012c4a49d21ae0a319b178619c5966a`;
+- the v1.2.1 GitHub Release name and tag both equal `v1.2.1`;
+- the rc.3 release was not modified (still 47 prerelease assets, `isPrerelease=true`).
+
+Operators verifying the v1.2.1 binaries should use:
+
+```sh
+cosign verify-blob \
+  --bundle <binary>.sigstore.json \
+  --certificate-identity 'https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/heads/main' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  <binary>
+```
+
+Note the **literal `--certificate-identity`** (not `--certificate-identity-regexp`) so the SAN exception does not silently widen to any other branch identity. Future releases that follow a clean tag-push path will revert to the canonical `refs/tags/<tag>` SAN; this exception applies only to the v1.2.1 retry artefacts.
+
+The cascading `Validate doctor strict evidence files` failure in run 25635948010 (`release-doctor-postgres-ok.txt is missing or empty`) is downstream of the cosign-verify failure — release-smoke aborts evidence collection on the verify step. The Group 6 doctor-strict evidence captured during rc.3 ([release-smoke run 25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600)) remains the canonical doctor-strict reference for the v1.2.1 codebase, since rc.3 (`ce56414`) and v1.2.1 (`ce56414`) peel to the same commit.
+
+### Hard-rule compliance
+
+- ❌ Did **NOT** delete or move `v1.2.1` (annotated SHA `6dd3b78e`).
+- ❌ Did **NOT** delete or move `v1.2.1-rc.3` (rc.3 release with 47 prerelease assets remains intact).
+- ❌ Did **NOT** retag rc.3.
+- ❌ Did **NOT** force-push.
+- ❌ Did **NOT** modify branch protection.
+- ❌ Did **NOT** reopen issue #78.
+- ❌ Did **NOT** modify or remove any of the PR #88 packet docs.
+- ❌ Did **NOT** declare paid-hosted/commercial readiness.
+- ❌ Did **NOT** claim official Clockify status.
+- ❌ Did **NOT** modify the v1.2.1 release artefacts; the SAN exception is documentation about how to verify them, not a re-publish.
+
+### What this record does not do
+
+- Does not declare the repository launch-ready for any track other than community/self-hosted v1.2.1.
+- Does not authorise a public-visibility flip beyond the existing public posture; the repo was already public.
+- Does not retag, recreate, or move any tag (final or rc).
+- Does not re-promote any of the five deferred paid-hosted/commercial follow-ups to active blockers.
+- Does not absolve the next release of the canonical `refs/tags/<tag>` SAN expectation; the exception above is bounded to v1.2.1 only.
