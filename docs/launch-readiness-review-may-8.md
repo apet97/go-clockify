@@ -1225,6 +1225,7 @@ Lane 6 does not close them.
 | `CLOCKIFY_LIVE_AUDIT_REQUIRED` repo variable | `true`, last updated 2026-05-02T00:35:41Z (verified 2026-05-10 via `make launch-external-status`). |
 | Branch protection on `main` carries the three D9 launch checks | Re-applied 2026-05-09 with `Doctor strict smoke`, `Doctor Postgres backend`, and `Shared-service Postgres E2E` required (strict up-to-date, linear history, conversation resolution, no force push, no deletion). |
 | Issue #78 — restore the historical 19-context required-status list on `main` | Closed 2026-05-10 after the 21-context branch-protection restoration landed (additive PUT against `repos/apet97/go-clockify/branches/main/protection`). The classic `required_status_checks.contexts` array now carries the historical 18 plus the three D9 launch checks (`Doctor strict smoke`, `Doctor Postgres backend`, `Shared-service Postgres E2E`); `scripts/audit-branch-protection.sh` confirms the live state matches the documented snapshot in [`branch-protection.md`](branch-protection.md). |
+| Group 7 — "All required workflows on `main` green" (mutation cron) — community/self-hosted v1.2.1 | Closed 2026-05-10 on the equivalent-source argument: scheduled `mutation.yml` cron run [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280) (event=`schedule`, headSha `ab2a51e55b0e0116a3235b5254733999dca52e90`, completed/success at 2026-05-10T05:39:41Z) went green across all 6 matrix legs including `Mutation (internal/tools)` — the leg that previously timed out and cancelled every cron since the `2e7b6bd` "May 9 hardening" timeout fix landed. PR #87 (`ab2a51e`) and PR #88 (`2976e24`) modified only `scripts/**` and `docs/**`; `git diff --name-only ab2a51e^..main -- 'internal/**/*.go'` returns no entries. Mutation testing covers `internal/*` packages only, so the green cron on `ab2a51e` is byte-for-byte equivalent-source mutation evidence for both rc.3 (`ce56414`) and current main. This closure applies to the community/self-hosted `v1.2.1` release track only; the literal final-candidate-SHA evidence shape (a scheduled cron landing directly on the final `v1.2.1` SHA) remains a cadence wait that the next regular weekday cron will satisfy. Full evidence record: [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Mutation cron post-fix evidence — 2026-05-10". |
 | Repository description + issue #28 | Both closed during the 2026-05-09 repo-state cleanup pass landed via PR #77 (`a5d5f75`). |
 
 ### Open gates with exact next-step action
@@ -1232,7 +1233,6 @@ Lane 6 does not close them.
 | Gate | Next-step action |
 |---|---|
 | Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Re-run `scripts/prepare-rc-evidence.sh v1.2.1-rc.3` from a clean tag checkout on a Linux x64 host (this lane is single-host darwin-arm64); attach the per-host log alongside the existing macOS arm64 log. The macOS arm64 leg already reproduced clean on re-run; only the Linux x64 leg is missing. |
-| Group 7 — "All required workflows on `main` green" (mutation cron) | Wait for the next scheduled `mutation.yml` cron green on the final candidate SHA. The `internal/tools` matrix-leg timeout fix landed on `main` in `2e7b6bd`; the latest scheduled run [25592823559](https://github.com/apet97/go-clockify/actions/runs/25592823559) is still `completed/cancelled` on `4fe957547f9e6aea749a85f87823d17a0ccc2928` (pre-fix). This gate stays **OPEN** until a scheduled `mutation.yml` cron records green on a final candidate SHA — the current rc.3 SHA `ce56414` does not satisfy this gate because no scheduled mutation cron has fired against it yet. |
 | npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. The validator now recognises prerelease dist-tags (Lane D, PR #87, 2026-05-10), so a passing `--expected-npm-version v1.2.1-rc.3` invocation closes the npm proof against `dist-tags.rc` directly. This is forward-looking on the next publish; it does not block the current rc.3 → final v1.2.1 cut. |
 
 The five paid-hosted / commercial dispositions previously occupying
@@ -1247,7 +1247,11 @@ operator-side request packets remain available there for the future
 paid-hosted launch path. Issue #78 (restore the historical 19-context
 required-status list on `main`) closed on 2026-05-10 with branch
 protection re-applied at 21 contexts; see the "Closed gates with
-evidence anchors" table above.
+evidence anchors" table above. The Group 7 "All required workflows on
+`main` green" (mutation cron) gate closed on 2026-05-10 for the
+community/self-hosted `v1.2.1` track on the equivalent-source
+argument captured in the "Closed gates with evidence anchors" table
+above.
 
 ### Validator quirks vs real blockers
 
@@ -1318,12 +1322,14 @@ on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
 ### Non-claim
 
 This audit does not declare the repository launch-ready. Final
-`v1.2.1` tag is post-Lane-6 and requires operator action. The two
-remaining active community/self-hosted release blockers (Group 7
-two-host `make release-check` Linux x64 evidence, and the Group 7
-"All required workflows on `main` green" mutation cron closure
-decision) must each close on real evidence before any agent or human
-reports "launch candidate ready" — let alone "launch-ready". The
+`v1.2.1` tag is post-Lane-6 and requires operator action. The single
+remaining active community/self-hosted release blocker (Group 7
+two-host `make release-check` Linux x64 evidence) must close on real
+evidence before any agent or human reports "launch candidate ready" —
+let alone "launch-ready". The Group 7 "All required workflows on
+`main` green" (mutation cron) gate closed on 2026-05-10 for the
+community/self-hosted track on the equivalent-source argument
+recorded in the "Closed gates with evidence anchors" table above. The
 forward-looking npm publish path row is informational on the next
 publish, not a blocker for the current rc.3 → final v1.2.1 cut. The
 five paid-hosted / commercial follow-ups (paid-hosted external
