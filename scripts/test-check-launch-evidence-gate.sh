@@ -111,12 +111,34 @@ else
 fi
 
 # ── Test 7: Group 7 box checked without evidence => FAIL ────────────
+#
+# After the post-v1.2.1 closure-annotation pass, the real Group 7
+# "All required workflows on `main` green" row in
+# launch-candidate-checklist.md carries an inline `_Closed
+# YYYY-MM-DD …_` annotation (the row stays unchecked per the
+# operator's "do not tick" rule, but it has the proper evidence
+# annotation alongside). The historical `[ ]` -> `[x]` substitution
+# against the real checklist no longer reproduces the
+# "checked-without-evidence" anti-pattern because the gate sees the
+# annotation and passes. Construct a minimal synthetic checklist
+# instead — a checked Group 7 box with no evidence URL or `_Closed_`
+# annotation within 8 lines — so the negative test's invariant
+# ("checked Group 7 box without evidence must fail the gate") stays
+# load-bearing regardless of the real checklist's state. Mirrors the
+# Test 8 / Test 9 synthetic-fixture pattern.
 
 echo "== Test 7: Group 7 box checked without evidence => FAIL"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] All required workflows on .main. green: .ci.yml./- [x] All required workflows on .main. green: .ci.yml./' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+# Launch candidate checklist — synthetic fixture for evidence-gate test 7
+
+## 7. CI / release readiness
+
+- [x] All required workflows on `main` green: `ci.yml`, `codeql.yml`,
+      `dependency-review.yml`, `mutation.yml`, `reproducibility.yml`.
+- [ ] Other gates not exercised by this test.
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "Group 7 checked box without evidence should fail but exited 0"
 else

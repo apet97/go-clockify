@@ -490,22 +490,32 @@ checked.
 
 - [ ] `make release-check` green from a clean checkout on at
       least one Linux x64 and one macOS arm64 host.
+      _Closed 2026-05-10 for community/self-hosted v1.2.1 by PR #91
+      merge `5206477`: macOS arm64 leg from the rc.3
+      `opus/group7-release-rc3-20260510` worktree, Linux x64 leg from
+      a Lane B Docker `linux/amd64` `golang:1.25-bookworm` clean-clone
+      run (2026-05-10T17:05:40Z–17:21:48Z, exit 0,
+      `release-check: OK — local pre-ship gate passed`). Full evidence
+      record in
+      [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+      § "Linux x64 release-check evidence — v1.2.1-rc.3"._
 - [ ] All required workflows on `main` green: `ci.yml`,
       `build-matrix.yml`, `live-contract.yml` (latest scheduled
       run), `release-smoke.yml` (latest tag), `link-check.yml`,
       `chaos.yml`, `mutation.yml`, `reproducibility.yml`,
       `bench.yml`. No skipped-but-required steps.
-      _Tracking 2026-05-09: `make launch-external-status` reports the
-      latest `mutation.yml` scheduled run 25592823559 is
-      `completed/cancelled` on pushed commit
-      4fe957547f9e6aea749a85f87823d17a0ccc2928. `gh run view` shows
-      the `internal/tools` matrix leg was cancelled while the other
-      mutation legs succeeded. The `internal/tools` matrix-leg timeout
-      increase landed on `main` in `2e7b6bd` ("May 9 hardening")
-      ahead of `308c815` and the later docs-only commits, so the
-      workflow fix is on the default branch; the next scheduled
-      `mutation.yml` cron after that landing still needs to record a
-      green run on the final candidate SHA before this box can close._
+      _Closed 2026-05-10 for community/self-hosted v1.2.1 by PR #89
+      merge `637157d`: scheduled `mutation.yml` cron run
+      [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280)
+      went green across all 6 matrix legs on `ab2a51e`; PR #87 + PR
+      #88 added no `internal/*` Go source so the green cron is
+      byte-for-byte equivalent-source mutation evidence for both rc.3
+      (`ce56414`) and current main. The literal final-candidate-SHA
+      cadence-wait remains a paid-hosted/commercial follow-up
+      tracked under
+      [`docs/launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+      § "Deferred paid-hosted/commercial follow-ups — not required
+      for community/self-hosted v1.2.1"._
 - [x] `make verify-bench` and `make bench-baseline-check` green;
       no regression > the documented threshold versus the
       baseline.

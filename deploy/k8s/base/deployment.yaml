@@ -36,7 +36,9 @@ spec:
       containers:
         - name: clockify-mcp
           # Pin to an immutable tag. Bump on release; never use :latest in production.
-          image: ghcr.io/apet97/go-clockify:v1.2.0
+          # Tag is bare semver (no `v` prefix) — goreleaser metadata-action emits
+          # pattern={{version}}, so the published tag is `1.2.1`, not `v1.2.1`.
+          image: ghcr.io/apet97/go-clockify:1.2.1
           imagePullPolicy: IfNotPresent
           args: []
           env:

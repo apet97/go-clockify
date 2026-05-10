@@ -293,8 +293,26 @@ What is missing for tier 3 is intentionally narrow:
 In priority order — closing the lower-numbered ones first
 unblocks the next.
 
+> **Scope note (2026-05-10).** The blockers in this section gate the
+> hypothetical **Clockify-supported / paid-hosted / "official Clockify"**
+> launch path only. The community/self-hosted track is closed at
+> `v1.2.1` (released 2026-05-10 from rc.3 peeled commit `ce56414`; see
+> [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+> § "v1.2.1 release evidence record (2026-05-10)" for the canonical
+> evidence anchor). The Tier-3 / "Clockify-supported product launch"
+> blockers itemised below are the same five paid-hosted / commercial
+> follow-ups deferred per
+> [`docs/launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+> § "Deferred paid-hosted/commercial follow-ups — not required for
+> community/self-hosted v1.2.1": paid-hosted external security review,
+> DPA / terms / privacy posture, trademark / "official Clockify"
+> language plus `clockify://` URI / gRPC service-name branding,
+> P1-8 paid-commercial RLS decision, and cross-replica hosted HTTP
+> quotas. They do **not** block the community/self-hosted release.
+
 The remaining blockers are not local test failures. They are still
-launch blockers: Group 6 candidate-tag security walk-through evidence,
+launch blockers for the paid-hosted / commercial / "official
+Clockify" track: Group 6 candidate-tag security walk-through evidence,
 Group 7 release/sigstore/SLSA evidence, pushed workflow first-run
 evidence where still missing, repository-state cleanup,
 public-readiness disposition, hosted/platform evidence, and
@@ -303,9 +321,11 @@ Local checks are useful but not sufficient for a Clockify-supported
 product launch claim. Group 1 scheduled live-contract cron greens are
 now archived on `feef83c641ced93d2ab6ba07ef766d61c82cc703`; the PR #59
 through PR #62 manual live-probe work remains coverage evidence only.
-Rechecked on 2026-05-09: the repository description and issue #28
-remain stale/open, and candidate-tag security plus release evidence are
-still missing.
+Group 6/7 candidate-tag evidence + repository description + issue #28
+all closed during the rc.3 cycle (PRs #84, #85, #77, #88) and the
+v1.2.1 final release on 2026-05-10; the items still outstanding
+are the five paid-hosted/commercial gates listed in the scope note
+above.
 
 1. ~~**Scheduled live-contract cron evidence.**~~ **Closed 2026-05-09.**
    *Where:* `.github/workflows/live-contract.yml` and the rolling

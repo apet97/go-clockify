@@ -56,14 +56,36 @@ The manual live-campaign baseline remains
 post-PR #51 local readiness gates, PR #59's manual
 sacrificial-workspace MCP-path probes, PR #62's invite-user validation
 probe, and later live-test hooks or local coverage for the current
-128-tool catalog. The remaining
-blockers are not local test failures, but they are still launch
-blockers: Group 6 candidate-tag security evidence, Group 7
-release/sigstore/SLSA evidence, repository-state cleanup,
-public-readiness disposition, and legal/product approval for any
-official-product claim. Local `release-check`, PR CI greens, and manual
-exhaustive live probes are necessary context but not sufficient for an
-official/product launch-ready claim.
+128-tool catalog. The community/self-hosted track is closed at
+**`v1.2.1`** (released 2026-05-10 from rc.3 peeled commit `ce56414`;
+46 signed assets, npm `dist-tags.latest=1.2.1`, container image
+`ghcr.io/apet97/go-clockify:1.2.1`, Reproducibility 9-leg matrix
+green, Deploy chain end-to-end green; full evidence in
+[`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+§ "v1.2.1 release evidence record (2026-05-10)").
+
+For any paid-hosted / commercial / "official Clockify" launch claim,
+the remaining blockers are not local test failures: Group 6
+candidate-tag security evidence and Group 7 release/sigstore/SLSA
+evidence are closed for the v1.2.1 cycle (see the evidence record
+above), but a Clockify-supported / official-product launch additionally
+requires repository-state cleanup beyond what community/self-hosted
+needs, pushed workflow first-run evidence on the relevant pushed
+SHAs, the public-readiness disposition, and legal/product approval —
+none of which the community/self-hosted release decides. Local
+`release-check`, PR CI greens, and manual exhaustive live probes are
+necessary context but **not sufficient** for an
+official/product launch-ready claim. The five paid-hosted gates that block such a
+claim are explicitly **deferred** per
+[`docs/launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+§ "Deferred paid-hosted/commercial follow-ups — not required for
+community/self-hosted v1.2.1": paid-hosted external security review,
+DPA / terms / privacy posture, trademark / "official Clockify"
+language plus `clockify://` URI / gRPC service-name branding review,
+P1-8 paid-commercial RLS decision, and cross-replica hosted HTTP
+quotas. They do not block the community/self-hosted v1.2.1 release;
+they are necessary inputs only for a future paid-hosted /
+official-product launch.
 pushed workflow evidence for CI, CodeQL, Dependency Review, Semgrep,
 Build matrix, Docker Image, and Link check is now green on `308c815`;
 future workflow drift still belongs in the evidence set, not in local
@@ -93,7 +115,7 @@ reviewer summary). Auth-failure triage lives in
 |--------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------|
 | Kustomize          | Reference manifests with base + dev/prod overlays, NetworkPolicy, PDB, ServiceMonitor, PrometheusRule with burn-rate alerts. | [`deploy/k8s/`](../deploy/k8s/) and [`deploy/k8s/README.md`](../deploy/k8s/README.md) |
 | Helm               | Same surface as Kustomize, packaged as a chart for clusters that prefer Helm.            | [`deploy/helm/`](../deploy/helm/) and `deploy/helm/README.md` |
-| Container image    | Multi-arch, distroless, non-root, read-only root FS, dropped capabilities, Trivy-scanned, cosign-signed. | `ghcr.io/apet97/go-clockify:v1.2.0` (see [`docs/verification.md`](verification.md); [`SUPPORT.md`](../SUPPORT.md) names the current supported line) |
+| Container image    | Multi-arch, distroless, non-root, read-only root FS, dropped capabilities, Trivy-scanned, cosign-signed. | `ghcr.io/apet97/go-clockify:1.2.1` (see [`docs/verification.md`](verification.md); [`SUPPORT.md`](../SUPPORT.md) names the current supported line) |
 | Raw binary         | Single static binary, no runtime dependencies. Suitable for systemd or container-less hosts. | `go install github.com/apet97/go-clockify/cmd/clockify-mcp@latest` or download from the Releases page. |
 
 Image tags are not pinned in the `prod` Kustomize overlay by design —

@@ -177,6 +177,7 @@ script-tests:
 	bash scripts/test-prepare-rc-evidence.sh
 	bash scripts/test-publish-npm.sh
 	bash scripts/test-claude-campaign.sh
+	bash scripts/test-release-workflow-structure.sh
 
 claude-campaign-plan:
 	bash scripts/claude-campaign.sh --dry-run
