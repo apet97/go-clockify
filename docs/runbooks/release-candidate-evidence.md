@@ -215,6 +215,224 @@ themselves. Use `scripts/check-launch-external-status.sh --fail-open`
 with the final candidate SHA and expected npm version as the
 fail-closed validator before treating workflow-backed boxes as closed.
 
+## Cross-replica hosted HTTP quota proof checklist
+
+<!-- BEGIN cross-replica hosted HTTP quota proof checklist (Lane F packet) -->
+
+This subsection is the operator-side evidence-collection checklist
+for the `Cross-replica hosted HTTP quotas` external gate in
+[`../launch-readiness-review-may-8.md`](../launch-readiness-review-may-8.md).
+It is additive to [`rate-limit.md`](rate-limit.md) § "Launch
+Evidence" — that section names *what* must be archived; this
+checklist names *how* the operator proves it for the
+launch-readiness ledger row, and what the verification commands
+are.
+
+This checklist does not perform the cross-replica enforcement,
+does not close the gate, and does not declare any deployment
+launch-ready. The gate's evidence artifact is "archived
+gateway/load-balancer quota policy (config snippet or signed
+change record) plus a metrics snapshot showing the global quota
+counter is visible to on-call dashboards." The launch-readiness
+ledger row must quote the archived policy reference and the
+metrics-snapshot identifier per the gate's evidence-artifact line
+before the row can close.
+
+### Owner / reviewer role
+
+Per the gate's "Owner role" line:
+
+- **Reviewer:** hosted-platform / SRE owner of the production
+  gateway, ingress, or load balancer enforcing global quotas.
+  The repository maintainer cannot satisfy this gate from the
+  MCP process alone — process-local
+  `MCP_HTTP_RATELIMIT_PER_IP`, `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`,
+  and `MCP_HTTP_RATELIMIT_GET_PER_SESSION` are admission limits
+  on each pod, not cross-replica enforcement.
+- **Maintainer (request driver):** `@apet97`. Drives the request,
+  packages the per-process posture and process-local metrics so
+  the SRE can correlate, archives the response in the
+  launch-readiness ledger row.
+
+Until an SRE owner accepts the engagement, the row in
+`docs/launch-readiness-review-may-8.md` § "Cross-replica hosted
+HTTP quotas" stays open. Record the assigned owner identity and
+the engagement date in that row before any evidence iteration
+begins.
+
+### Required artifacts
+
+For the row to close, all four artifact classes must be archived
+and referenced from the launch-readiness ledger row.
+
+#### 1. Gateway / load-balancer quota policy (config snippet or signed change record)
+
+The archived artifact must:
+
+- [ ] Name the gateway / ingress / load-balancer product (e.g.,
+      cloud LB, nginx ingress, Envoy, Traefik, Caddy, dedicated
+      WAF) actually enforcing the cross-replica quota in the
+      paid-hosted deployment.
+- [ ] Include the literal configuration snippet (or signed
+      change record / IaC diff) that defines the per-source and
+      per-principal global quota and its time window. Pseudo-
+      code or "we have it configured" prose is insufficient.
+- [ ] Name the principal-derivation header / claim the gateway
+      reads (matching what the MCP process consumes for
+      `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`); without alignment,
+      gateway counters and process counters key different
+      dimensions and cannot be cross-checked.
+- [ ] Name the source-derivation field (client IP, X-Forwarded-
+      For trust boundary, or a CIDR map) and the trust posture
+      (matching `MCP_FORWARD_AUTH_TRUSTED_PROXIES` for the
+      `forward_auth` deployments).
+- [ ] Document what the gateway returns when the quota trips
+      (HTTP status, Retry-After hint, body shape) so on-call can
+      distinguish gateway 429s from upstream Clockify 429s and
+      from process-local
+      `clockify_mcp_http_admission_rejections_total{reason="ip"|"principal"}`
+      rejections.
+- [ ] Include a change-tracking pointer (PR / signed change
+      record / IaC commit SHA) so the launch-readiness ledger
+      can quote a stable identifier rather than a snapshot.
+
+#### 2. Cross-replica metrics snapshot visible to on-call
+
+The archived snapshot must:
+
+- [ ] Show the **global** quota counter (gateway-side, summed
+      across replicas) for at least one full quota window, not
+      just the per-process
+      `clockify_mcp_http_admission_rejections_total`. The
+      starter Prometheus alert `ClockifyMCPHTTPAdmissionRejections`
+      and the rate-limit panel in
+      `deploy/monitoring/grafana-mcp-dashboard.json` cover the
+      per-process surface — the cross-replica surface lives at
+      the gateway and must be wired in separately.
+- [ ] Include the panel / dashboard URL or screenshot identifier
+      that on-call actually watches; "the metric exists in the
+      gateway's data plane" is insufficient unless on-call has a
+      view into it.
+- [ ] Cross-reference the per-process panel for the same time
+      window so an SRE can verify gateway counters lead the
+      per-process counters (the cross-replica quota should trip
+      *before* the per-process limits, otherwise the gateway
+      quota is mis-sized).
+- [ ] Document the alert routing: who pages, on what threshold,
+      with what runbook link (the natural target is
+      [`rate-limit-saturation.md`](rate-limit-saturation.md)).
+
+#### 3. Per-process posture inputs the gateway depends on
+
+For correlation, the archived bundle must include the per-process
+configuration the cross-replica quota was sized against:
+
+- [ ] The deployment manifest's
+      `MCP_HTTP_RATELIMIT_PER_IP`,
+      `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`, and
+      `MCP_HTTP_RATELIMIT_GET_PER_SESSION` values.
+- [ ] The replica count the cross-replica quota assumes (without
+      a pinned replica count, "global" is undefined).
+- [ ] The auth mode (`MCP_AUTH_MODE`) and, for
+      `MCP_AUTH_MODE=forward_auth`, the
+      `MCP_FORWARD_AUTH_TRUSTED_PROXIES` allow-list — so the
+      principal-derivation alignment in artifact 1 is auditable.
+
+#### 4. Verification commands (read-only, archivable output)
+
+Each verification command produces an output the launch-readiness
+ledger can quote.
+
+- [ ] **Gateway-side dry-run.** Drive a load run that
+      deliberately exceeds the gateway quota from a single
+      source / principal, against a non-production replica set
+      that mirrors the paid-hosted topology. Archive the
+      gateway's 429 response and the global quota counter delta
+      for the run window.
+- [ ] **Process-local cross-check.** Run
+      `.github/workflows/load.yml` (or the equivalent k6
+      harness) at a rate that should trip the gateway quota
+      *before* the per-process admission limits; archive
+      `clockify_mcp_http_admission_rejections_total{path,reason}`
+      for the same window. Per-process rejections should be
+      strictly less than gateway rejections on a correctly sized
+      cross-replica policy; otherwise the gateway quota is
+      mis-sized and the artifact in 1 must change.
+- [ ] **Distinguish-from-upstream check.** Confirm
+      `clockify_upstream_retries_total{reason="rate_limited"}`
+      and `clockify_upstream_requests_total{status="4xx"}` did
+      not spike in the same window — that distinguishes gateway-
+      cap saturation from a Clockify upstream 429 storm. The
+      [`clockify-upstream-outage.md`](clockify-upstream-outage.md)
+      runbook has the upstream-side triage; archive the metrics
+      pointer here so the ledger row is self-explanatory.
+- [ ] **Operator-facing alert dry-run.** Confirm the gateway-
+      side alert for the global quota pages on-call when tripped
+      (test fire), not just when the per-process
+      `ClockifyMCPHTTPAdmissionRejections` alert fires. Archive
+      the page-routing record (PagerDuty / Opsgenie / on-call
+      channel ID).
+
+### How the launch-readiness ledger row references this evidence
+
+For each iteration, the maintainer updates the ledger row for
+"Cross-replica hosted HTTP quotas" to quote:
+
+- The archived gateway-quota artifact reference (PR / signed
+  change record / IaC commit SHA).
+- The metrics-snapshot identifier (panel / dashboard URL /
+  screenshot ID) showing the global quota counter is visible to
+  on-call.
+- The verification-command output identifiers (workflow run IDs
+  for the load runs, archive paths for the gateway-side
+  responses).
+- The hosted-platform / SRE owner's identity and the ISO 8601
+  date of the evidence iteration.
+
+A row that quotes process-local counters only — even if every
+process-local counter is green — does **not** close the gate. The
+process-local artifacts are inputs the SRE must correlate against;
+only the cross-replica evidence above closes the row.
+
+### Closure rule
+
+This gate closes only when the launch-readiness ledger row for
+"Cross-replica hosted HTTP quotas" quotes:
+
+1. The gateway / load-balancer quota policy reference per
+   artifact 1.
+2. The metrics-snapshot identifier per artifact 2.
+3. The per-process posture inputs per artifact 3.
+4. The verification-command output identifiers per artifact 4.
+5. The SRE owner identity and ISO 8601 evidence date.
+
+`MCP_HTTP_RATELIMIT_PER_IP`, `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`,
+and `MCP_HTTP_RATELIMIT_GET_PER_SESSION` defaults in deployment
+manifests, the
+`clockify_mcp_http_admission_rejections_total{path,reason}`
+metric, and the `ClockifyMCPHTTPAdmissionRejections` alert do
+**not** close the gate. They enforce per-process admission only;
+cross-replica enforcement still depends on the external gateway
+evidence above.
+
+### Non-goal of this checklist
+
+This checklist is a packaging guide. It does not:
+
+- Configure the gateway / load-balancer quota.
+- Replace the per-process admission limits (they remain
+  defense-in-depth).
+- Approve a release.
+- Close any other external gate (DPA / privacy, trademark, RLS,
+  or external security review).
+
+Update this checklist only when the artifact shape itself changes
+(new gateway product, changed principal derivation, changed
+per-process metric names). Each evidence iteration's identifiers
+live in the launch-readiness ledger, not here.
+
+<!-- END cross-replica hosted HTTP quota proof checklist (Lane F packet) -->
+
 ## Related Files
 
 - `scripts/prepare-rc-evidence.sh`
@@ -222,6 +440,10 @@ fail-closed validator before treating workflow-backed boxes as closed.
 - `docs/launch-candidate-checklist.md`
 - `docs/release-policy.md`
 - `docs/verification.md`
+- `docs/release/external-security-review-request.md`
+- `docs/release/dpa-privacy-evidence-checklist.md`
+- `docs/release/brand-legal-review.md`
+- `docs/adr/0019-paid-commercial-rls-decision.md`
 - `.github/workflows/release-smoke.yml`
 
 ## Failed-evidence record — v1.2.1-rc.1 (2026-05-09)

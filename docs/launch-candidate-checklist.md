@@ -610,7 +610,9 @@ satisfied:
 4. Link the closed `docs/release/brand-legal-review.md` decision if
    any public copy will claim official-product status; otherwise use
    the approved rebrand/community framing in release notes and public
-   metadata.
+   metadata. The reviewer-facing decision template lives at
+   [`docs/release/brand-legal-review.md`](release/brand-legal-review.md)
+   § "Decision Checklist (for the reviewer)".
 5. Open a tracking issue titled `Launch candidate vX.Y.Z-rc.N`
    that links to the green workflow runs and the archived
    `doctor --strict` output, including the
@@ -618,3 +620,31 @@ satisfied:
 
 Only at that point may any agent or human report **"launch
 candidate ready"**.
+
+---
+
+## External evidence packets (out-of-process)
+
+The five gates below are tracked in
+[`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
+§ "Open gates with exact next-step action", **not** here. They
+require external owner action (signed counsel review, brand /
+product approval, paid-hosted SOC review, RLS decision-maker, SRE
+gateway-quota owner) and the launch-candidate checklist above does
+**not** cover them. The packets / checklists / ADR template below
+are operator-side request templates the maintainer hands to the
+right reviewer; they do **not** close the gates by themselves and
+no checkbox in this file ticks until the launch-readiness ledger
+row also updates.
+
+| External gate | Operator-side packet template | Closure artifact |
+|---|---|---|
+| Paid-hosted external security review | [`docs/release/external-security-review-request.md`](release/external-security-review-request.md) | Reviewer attestation in [`SECURITY.md`](../SECURITY.md) (or linked report under `docs/security/`) + ledger row update with reviewer identity, ISO 8601 date, recommendation. |
+| DPA / terms / privacy posture | [`docs/release/dpa-privacy-evidence-checklist.md`](release/dpa-privacy-evidence-checklist.md) | Executed DPA (or counsel-signed confirmation) + counsel-acknowledged data-flow review + ledger row update with counsel identity, document reference, ISO 8601 date. |
+| Trademark / "official Clockify" language + `clockify://` URI + gRPC service-name branding review | [`docs/release/brand-legal-review.md`](release/brand-legal-review.md) § "Decision Checklist (for the reviewer)" | Reviewer-recorded per-question + per-surface decision per the Approval Evidence Format + ledger row update. |
+| P1-8 paid-commercial RLS decision | [`docs/adr/0019-paid-commercial-rls-decision.md`](adr/0019-paid-commercial-rls-decision.md) (Status: **Proposed**) | Recorded ADR (Adopt / Defer / Refuse) + decision-maker identity + ISO 8601 date + ledger row update; if Adopt, landed migration + cross-tenant store-API test. |
+| Cross-replica hosted HTTP quotas | [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Cross-replica hosted HTTP quota proof checklist" | Archived gateway/load-balancer quota policy + cross-replica metrics snapshot + verification-command outputs + ledger row update with SRE owner, ISO 8601 date. |
+
+These templates do **not** authorize a `vX.Y.Z` tag, a public
+visibility flip, or any other release action. They are operator-
+side request packets only.
