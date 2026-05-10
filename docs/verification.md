@@ -131,7 +131,12 @@ by `release.yml`. The certificate identity differs accordingly.
 TAG=v1.2.0
 OWNER=apet97
 REPO="${OWNER}/go-clockify"
-IMAGE_REF="ghcr.io/${REPO}:${TAG}"
+# Container tags use bare semver (no `v` prefix). For tag `vX.Y.Z`,
+# the published image is at `ghcr.io/${REPO}:X.Y.Z`. The release
+# pipeline also publishes a `:v<major>.<minor>` alias and a
+# `:sha-<long-sha>` tag (see `docker-image.yml` metadata-action).
+IMAGE_TAG="${TAG#v}"
+IMAGE_REF="ghcr.io/${REPO}:${IMAGE_TAG}"
 
 cosign verify "$IMAGE_REF" \
   --certificate-identity-regexp "^https://github.com/${REPO}/.github/workflows/docker-image.yml@refs/tags/.*$" \

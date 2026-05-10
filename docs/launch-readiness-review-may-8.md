@@ -778,7 +778,7 @@ prints a specific maintainer action beside each open gate.
   pass documents the operator coordination rule but does not change
   branch protection, push permissions, or any remote settings.
 - **Group 6 candidate-tag security walk-through.** Closed for
-  `v1.2.1-rc.3` on 2026-05-10. The annotated tag SHA is
+  `v1.2.1-rc.3` on 2026-05-10 via PR #84. The annotated tag SHA is
   `8f245174ca3567104a05a65a66250f0a10e5d486` and the peeled commit is
   `ce56414ae012c4a49d21ae0a319b178619c5966a`; tag-triggered Release
   run 25616879096, Docker Image run 25616879055, Deploy run
@@ -806,14 +806,41 @@ prints a specific maintainer action beside each open gate.
   (`make verify-vuln`, gitleaks, Semgrep, `make verify-fips`) carry
   matching `_Closed 2026-05-10 for v1.2.1-rc.3_` annotations. This is
   `L-04`. This closure does **not** declare the repository
-  launch-ready and does **not** close Group 7 release/sigstore/SLSA
-  evidence (separate lane), the mutation cron evidence, the npm
+  launch-ready and does **not** close the Group 7 two-host
+  release-check evidence, the mutation cron evidence, the npm
   expected-version proof, the paid-hosted external security review,
   the DPA / privacy / trademark gates, or issue #78 (19-context
   branch-protection restoration), all of which remain open.
-- **Group 7 release/sigstore/SLSA evidence.** Still requires an
-  actual `vX.Y.Z-rc.N` tag (`L-01`), release smoke, cosign/SLSA
-  verification, and archived `doctor --strict` output.
+- **Group 7 release/sigstore/SLSA evidence.** Partially closed
+  2026-05-10 for `v1.2.1-rc.3` (peeled commit
+  `ce56414ae012c4a49d21ae0a319b178619c5966a`): release.yml
+  ([25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096)),
+  docker-image.yml
+  ([25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055)),
+  deploy.yml
+  ([25616879075](https://github.com/apet97/go-clockify/actions/runs/25616879075)),
+  reproducibility.yml
+  ([25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376)),
+  and release-smoke.yml
+  ([25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600))
+  all completed `success` in a single attempt; manual
+  `cosign verify-blob` + `gh attestation verify` passed against
+  the documented `release.yml@refs/tags/v1.2.1-rc.3` certificate
+  identity for the default linux-x64, postgres-linux-x64,
+  fips-linux-x64, and darwin-arm64 binaries; `cosign verify
+  ghcr.io/apet97/go-clockify:1.2.1-rc.3` passed against the
+  docker-image.yml certificate identity (manifest digest
+  `sha256:374fbfb4bc18fd14a2fcd39fcae6c8da4054df3c162596ad476c15947b8a351f`);
+  the `release-smoke-doctor-output` artifact contains the three
+  required `doctor --strict` files. The Group 7 release-artefacts
+  and doctor-strict checklist boxes are ticked. The remaining
+  open Group 7 boxes are `make release-check` from clean
+  checkouts on Linux x64 + macOS arm64 hosts (`L-01` two-host
+  evidence) and "All required workflows on `main` green"
+  (`G-04` mutation.yml's next scheduled cron green on the final
+  candidate SHA is still pending). Full evidence list is in
+  [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+  "v1.2.1-rc.3 evidence record".
 - **Launch-candidate tracking issue.** The coordinator's Day 2 plan
   requires opening `Launch candidate vX.Y.Z-rc.N` after the rc exists
   and linking every green workflow run, archived `doctor --strict`

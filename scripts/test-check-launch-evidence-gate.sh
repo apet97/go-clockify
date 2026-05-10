@@ -124,12 +124,30 @@ else
 fi
 
 # ── Test 8: Group 6 box checked without evidence => FAIL ────────────
+#
+# After v1.2.1-rc.3 closures, the real Group 6 verify-vuln box is
+# already `[x]` with evidence on main, so the historical
+# `[ ]` -> `[x]` substitution against the real checklist became a
+# no-op. Construct a minimal synthetic checklist instead — a checked
+# Group 6 box with no evidence text within 8 lines — so the negative
+# test's invariant ("checked Group 6 box without evidence URL or
+# _Closed_ annotation must fail the gate") stays load-bearing
+# regardless of the real checklist's state.
 
 echo "== Test 8: Group 6 box checked without evidence => FAIL"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] `make verify-vuln` green for the candidate tag/- [x] `make verify-vuln` green for the candidate tag/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+# Launch candidate checklist — synthetic fixture for evidence-gate test 8
+
+## 6. Security and policy review
+
+- [x] `make verify-vuln` green for the candidate tag (govulncheck).
+
+## 7. CI / release readiness
+
+- [ ] All required workflows on `main` green: `ci.yml`, `codeql.yml`,
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "Group 6 checked box without evidence should fail but exited 0"
 else
@@ -137,12 +155,25 @@ else
 fi
 
 # ── Test 9: Group 7 release-artifact box checked without evidence => FAIL ──
+#
+# Same pattern as Test 8: the real Release-artefacts box is now `[x]`
+# with evidence after Lane 3's rc.3 closure, so the historical
+# `[ ]` -> `[x]` substitution is a no-op. Use a synthetic minimal
+# fixture so the gate's "release-artifact checked without evidence"
+# negative test stays meaningful.
 
 echo "== Test 9: Group 7 release-artifact box checked without evidence => FAIL"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-sed 's/^- \[ \] Release artefacts: signed binaries (cosign, plus SLSA when/- [x] Release artefacts: signed binaries (cosign, plus SLSA when/' \
-  "$real_checklist" > "$tmp"
+cat > "$tmp" <<'EOF'
+# Launch candidate checklist — synthetic fixture for evidence-gate test 9
+
+## 7. CI / release readiness
+
+- [x] Release artefacts: signed binaries (cosign, plus SLSA when GitHub artifact attestations are available), SBOMs, container image, and SHA256SUMS.txt are all present on the GitHub Release.
+
+- [ ] All required workflows on `main` green: `ci.yml`, `codeql.yml`,
+EOF
 if LAUNCH_CHECKLIST="$tmp" bash "$script" >/dev/null 2>&1; then
   fail "Group 7 release-artifact box without evidence should fail but exited 0"
 else

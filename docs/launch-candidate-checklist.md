@@ -514,14 +514,52 @@ checked.
       25255062599, validated locally with `make bench-baseline-check`,
       then passed linux/amd64 comparison in
       https://github.com/apet97/go-clockify/actions/runs/25255216987._
-- [ ] Release artefacts: signed binaries (cosign, plus SLSA when
+- [x] Release artefacts: signed binaries (cosign, plus SLSA when
       GitHub artifact attestations are available), SBOMs,
       Docker images, FIPS variant. Verified by `release-smoke.yml`
       on the candidate tag for its sampled default/Postgres
       linux-x64 artifacts, plus manual `docs/verification.md`
       evidence for any required variant not sampled by
       `release-smoke.yml`.
-- [ ] `clockify-mcp doctor --strict` and
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`):
+      release.yml workflow_run_id: 25616879096,
+      https://github.com/apet97/go-clockify/actions/runs/25616879096;
+      docker-image.yml workflow_run_id: 25616879055,
+      https://github.com/apet97/go-clockify/actions/runs/25616879055;
+      reproducibility.yml workflow_run_id: 25616925376,
+      https://github.com/apet97/go-clockify/actions/runs/25616925376;
+      release-smoke.yml workflow_run_id: 25616925600,
+      https://github.com/apet97/go-clockify/actions/runs/25616925600
+      (all `success` in a single attempt). GitHub Release object:
+      https://github.com/apet97/go-clockify/releases/tag/v1.2.1-rc.3
+      (`isPrerelease=true`, `isDraft=false`, 47 assets — 15 binaries,
+      15 `.spdx.json` SBOMs, 15 `.sigstore.json` cosign bundles,
+      `SHA256SUMS.txt`, plus a goreleaser source-tree SBOM that the
+      published-asset regex in `scripts/check-release-assets.sh`
+      filters out of the 46-asset binary contract). Manual
+      verification with the documented commands from
+      [`docs/verification.md`](verification.md) reported
+      `Verified OK` (`cosign verify-blob` against the
+      `release.yml@refs/tags/v1.2.1-rc.3` certificate identity)
+      and `✓ Verification succeeded!`
+      (`gh attestation verify --owner apet97`) on the default
+      `clockify-mcp-linux-x64`, `clockify-mcp-postgres-linux-x64`,
+      `clockify-mcp-fips-linux-x64`, and the FIPS-non-sampled
+      `clockify-mcp-darwin-arm64` binaries. The single SLSA
+      in-toto statement covers all 15 binaries with their SHA256
+      digests; `predicate.buildDefinition.resolvedDependencies`
+      pins git commit `ce56414ae012c4a49d21ae0a319b178619c5966a`
+      and the builder ID is
+      `https://github.com/apet97/go-clockify/.github/workflows/release.yml@refs/tags/v1.2.1-rc.3`.
+      `cosign verify ghcr.io/apet97/go-clockify:1.2.1-rc.3`
+      (manifest digest
+      `sha256:374fbfb4bc18fd14a2fcd39fcae6c8da4054df3c162596ad476c15947b8a351f`)
+      passed against the `docker-image.yml@refs/tags/.*`
+      certificate identity. `shasum -a 256 -c SHA256SUMS.txt
+      --ignore-missing` confirmed every downloaded binary and SBOM
+      matched the release-staged hashes._
+- [x] `clockify-mcp doctor --strict` and
       `clockify-mcp-postgres doctor --strict --check-backends`
       both exit 0 against the candidate's reference deployment.
       For `release-smoke.yml`, archive or link the
@@ -529,6 +567,25 @@ checked.
       `release-doctor-strict-ok.txt`,
       `release-doctor-strict-fail.txt`, and
       `release-doctor-postgres-ok.txt`.
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`):
+      release-smoke.yml workflow_run_id: 25616925600,
+      https://github.com/apet97/go-clockify/actions/runs/25616925600.
+      The `release-smoke-doctor-output` artifact contains all three
+      required files: `release-doctor-strict-ok.txt` exits 0 with
+      `Strict posture: OK no fatal findings; 1 warning(s)` for the
+      default `clockify-mcp-linux-x64` binary in the prod-postgres
+      profile; `release-doctor-strict-fail.txt` exits 3 with
+      `Strict posture: ERROR ... CLOCKIFY_POLICY` finding when
+      `CLOCKIFY_POLICY=standard` is set (the documented expected
+      fail); `release-doctor-postgres-ok.txt` exits 0 with
+      `Strict posture: OK` from the postgres-tagged
+      `clockify-mcp-postgres-linux-x64` binary running
+      `doctor --strict --check-backends` against a
+      `postgres:16-alpine` service container. Local re-verification
+      of the released `clockify-mcp-darwin-arm64` binary reproduced
+      both expected exits (0 with the documented `prod-postgres`
+      env shape; 3 with `CLOCKIFY_POLICY=standard`)._
 
 **Definition of done.** A clean checkout of the candidate tag
 produces a green `release-check`, every required workflow on
