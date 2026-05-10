@@ -63,6 +63,43 @@ on:
         description: "Release tag to verify (e.g. v1.2.0). Defaults to latest if empty."
         required: false
         default: ""
+      verification_mode:
+        description: |
+          Cosign certificate-identity verification mode.
+
+          - canonical (default): expect signatures from a clean
+            tag-push run of release.yml — i.e. SAN
+            `release.yml@refs/tags/<tag>`, matched via
+            `--certificate-identity-regexp`. Use this for every
+            normal release.
+          - manual-retry-exception: explicit, narrow opt-in for an
+            already-released tag whose binaries were signed under a
+            non-tag SAN because the release.yml retry had to run via
+            `workflow_dispatch` from a branch (the only path that
+            does not require forbidden tag movement once a tag
+            exists). The exception is bounded by
+            `expected_workflow_ref` below; the workflow uses literal
+            `--certificate-identity` (NOT regex) so the SAN cannot
+            silently widen to any other branch identity. Selecting
+            this mode emits a loud `::notice::` annotation in the
+            run log and is documented in
+            `docs/runbooks/release-candidate-evidence.md`.
+        required: false
+        default: canonical
+        type: choice
+        options:
+          - canonical
+          - manual-retry-exception
+      expected_workflow_ref:
+        description: |
+          Required iff verification_mode=manual-retry-exception.
+          Must be a fully-qualified git ref the SAN should equal,
+          e.g. `refs/heads/main` or `refs/tags/v1.2.1`. Used to
+          construct the literal cosign --certificate-identity:
+          `https://github.com/<repo>/.github/workflows/release.yml@<expected_workflow_ref>`.
+          Empty / shape-invalid fails closed.
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -162,6 +199,88 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Verifying release artifacts for ${tag}"
 
+      - name: Resolve cosign verification identity
+        id: ident
+        # Two explicit modes:
+        #
+        #   1. canonical — release/schedule events and the default
+        #      workflow_dispatch path. Verifies the release-asset
+        #      signatures came from a clean tag-push run of
+        #      release.yml, by matching SAN against the regex
+        #      `release.yml@refs/tags/.*`. This is the strict default
+        #      and the only path automated triggers ever take.
+        #
+        #   2. manual-retry-exception — explicit, narrow opt-in only
+        #      available on workflow_dispatch. Verifies a known
+        #      already-released tag whose binaries were signed under
+        #      `release.yml@refs/heads/<branch>` because the
+        #      release.yml retry had to run via workflow_dispatch
+        #      from a branch (the only path that does not require
+        #      forbidden tag movement once a tag exists). Uses
+        #      literal `--certificate-identity` (NOT regex) so the
+        #      SAN cannot silently widen to any other branch.
+        #
+        # Mode is captured as `mode` (`regex` | `literal`) and the
+        # SAN value as `value`. Consumers (the cosign verify-blob
+        # steps below) branch on `mode` and pass `value` as either
+        # `--certificate-identity-regexp` or `--certificate-identity`.
+        # The mode difference must be loud and traceable in the run
+        # log; the `manual-retry-exception` path emits a `::notice::`
+        # annotation that names the exception preconditions.
+        env:
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.verification_mode }}
+          INPUT_REF: ${{ github.event.inputs.expected_workflow_ref }}
+        run: |
+          set -euo pipefail
+
+          canonical_regex="^https://github.com/${REPO}/.github/workflows/release.yml@refs/tags/.*\$"
+
+          # Default: canonical. Only workflow_dispatch can flip to
+          # manual-retry-exception, and only with an explicit
+          # `verification_mode=manual-retry-exception` AND a non-empty
+          # `expected_workflow_ref`. Empty/missing input or the
+          # canonical sentinel both stay on canonical.
+          mode="regex"
+          value="${canonical_regex}"
+          chosen="canonical"
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ "${INPUT_MODE:-canonical}" = "manual-retry-exception" ]; then
+            if [ -z "${INPUT_REF:-}" ]; then
+              echo "::error::manual-retry-exception requires expected_workflow_ref to be set"
+              exit 1
+            fi
+            # Shape guard: must be a fully-qualified git ref under
+            # refs/heads/ or refs/tags/, with the ref name itself
+            # restricted to a simple character set so the value can
+            # be embedded in a cosign literal --certificate-identity
+            # without re-escaping. Refuses absolute URLs, wildcards,
+            # regex metacharacters, and short ref names.
+            #
+            # Whitelist match against:
+            #     refs/(heads|tags)/[A-Za-z0-9._/-]+
+            # via grep -E (case glob bracket expressions cannot
+            # express character classes that strictly enough across
+            # shells).
+            if ! printf '%s' "${INPUT_REF}" | grep -Eq '^refs/(heads|tags)/[A-Za-z0-9._/-]+$'; then
+              echo "::error::expected_workflow_ref must match refs/(heads|tags)/[A-Za-z0-9._/-]+ (no spaces, no shell or regex metacharacters), got: ${INPUT_REF}"
+              exit 1
+            fi
+            mode="literal"
+            value="https://github.com/${REPO}/.github/workflows/release.yml@${INPUT_REF}"
+            chosen="manual-retry-exception"
+            echo "::notice title=Manual-retry SAN exception in effect::release-smoke is verifying signatures with literal --certificate-identity '${value}'. This is an explicit opt-in (verification_mode=manual-retry-exception, expected_workflow_ref=${INPUT_REF}); see docs/runbooks/release-candidate-evidence.md for the bounded preconditions. Future tag-push releases revert to canonical regex automatically."
+          fi
+
+          {
+            echo "mode=${mode}"
+            echo "value=${value}"
+            echo "chosen=${chosen}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Verification mode: ${chosen} (cosign ${mode})"
+          echo "Verification SAN:  ${value}"
+
       - name: Download linux-x64 binary + sigstore bundle
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -248,18 +367,40 @@ jobs:
       - name: Verify cosign keyless signature on binary
         env:
           TAG: ${{ steps.tag.outputs.tag }}
+          IDENT_MODE: ${{ steps.ident.outputs.mode }}
+          IDENT_VALUE: ${{ steps.ident.outputs.value }}
         run: |
           set -euo pipefail
-          # The certificate identity is the goreleaser signing step
-          # running inside .github/workflows/release.yml at the tag.
-          # Pin the issuer to GitHub's OIDC endpoint and use a regex
-          # that matches any tag so the same workflow tracks future
-          # releases without edit.
-          cosign verify-blob \
-            --bundle artifacts/clockify-mcp-linux-x64.sigstore.json \
-            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            artifacts/clockify-mcp-linux-x64
+          # Identity comes from the `Resolve cosign verification
+          # identity` step:
+          #   - canonical mode    → IDENT_MODE=regex, IDENT_VALUE is the
+          #     `release.yml@refs/tags/.*` regex.
+          #   - manual-retry mode → IDENT_MODE=literal, IDENT_VALUE is
+          #     the explicit non-tag SAN documented for the bounded
+          #     exception (see runbook).
+          # Branching on IDENT_MODE keeps the two modes traceable in
+          # the verifier output without papering over the regex/literal
+          # difference in cosign's CLI.
+          case "$IDENT_MODE" in
+            regex)
+              cosign verify-blob \
+                --bundle artifacts/clockify-mcp-linux-x64.sigstore.json \
+                --certificate-identity-regexp "$IDENT_VALUE" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                artifacts/clockify-mcp-linux-x64
+              ;;
+            literal)
+              cosign verify-blob \
+                --bundle artifacts/clockify-mcp-linux-x64.sigstore.json \
+                --certificate-identity "$IDENT_VALUE" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                artifacts/clockify-mcp-linux-x64
+              ;;
+            *)
+              echo "::error::unexpected IDENT_MODE=${IDENT_MODE}"
+              exit 1
+              ;;
+          esac
 
       - name: Smoke-test doctor --strict --check-backends on Postgres release binary
         env:
@@ -318,19 +459,38 @@ jobs:
       - name: Verify cosign keyless signature on Postgres binary
         env:
           TAG: ${{ steps.tag.outputs.tag }}
+          IDENT_MODE: ${{ steps.ident.outputs.mode }}
+          IDENT_VALUE: ${{ steps.ident.outputs.value }}
         run: |
           set -euo pipefail
           # Postgres-tagged binaries are signed by the same goreleaser
           # cosign-keyless step in release.yml that signs the default
-          # and FIPS matrices, so the certificate identity regex is
-          # identical. A signature mismatch here would indicate the
-          # postgres archive was added without flowing through the
-          # signs.cosign-keyless block in .goreleaser.yaml.
-          cosign verify-blob \
-            --bundle artifacts/clockify-mcp-postgres-linux-x64.sigstore.json \
-            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/.*$" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            artifacts/clockify-mcp-postgres-linux-x64
+          # and FIPS matrices, so the certificate identity is identical
+          # to the default-binary check above. A signature mismatch
+          # here would indicate the postgres archive was added without
+          # flowing through the signs.cosign-keyless block in
+          # .goreleaser.yaml. Branches on IDENT_MODE for the same
+          # canonical-vs-manual-retry reason as the default-binary step.
+          case "$IDENT_MODE" in
+            regex)
+              cosign verify-blob \
+                --bundle artifacts/clockify-mcp-postgres-linux-x64.sigstore.json \
+                --certificate-identity-regexp "$IDENT_VALUE" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                artifacts/clockify-mcp-postgres-linux-x64
+              ;;
+            literal)
+              cosign verify-blob \
+                --bundle artifacts/clockify-mcp-postgres-linux-x64.sigstore.json \
+                --certificate-identity "$IDENT_VALUE" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                artifacts/clockify-mcp-postgres-linux-x64
+              ;;
+            *)
+              echo "::error::unexpected IDENT_MODE=${IDENT_MODE}"
+              exit 1
+              ;;
+          esac
 
       - name: Validate doctor strict evidence files
         if: always()

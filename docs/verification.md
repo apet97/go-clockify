@@ -224,6 +224,44 @@ stays open until the next green run closes it automatically. There is
 no Slack, no email, no polling dashboard — the open issue is the
 exclusive failure signal.
 
+## Two cosign-verify modes (canonical vs manual-retry exception)
+
+The release-smoke workflow uses two explicit verification modes, set
+via the `verification_mode` `workflow_dispatch` input:
+
+1. **canonical** (default for every event including
+   `workflow_dispatch`). The cosign certificate-identity check uses
+   the regex
+   `^https://github.com/<owner>/<repo>/.github/workflows/release.yml@refs/tags/.*$`
+   so it tracks every future tag-push release without edit. This is
+   the only mode `release` and `schedule` events ever take.
+
+2. **manual-retry-exception** (workflow_dispatch only, opt-in,
+   bounded). For an already-released tag whose binaries were signed
+   under a non-tag SAN because the `release.yml` retry had to run via
+   `workflow_dispatch` from a branch (the only path that does not
+   require forbidden tag movement once a tag exists), this mode
+   accepts the literal SAN supplied via `expected_workflow_ref`
+   (e.g. `refs/heads/main`). The workflow uses cosign's literal
+   `--certificate-identity` (NOT `--certificate-identity-regexp`) so
+   the SAN cannot silently widen to any other branch identity. The
+   mode emits a loud `::notice::` annotation in the run log naming
+   the exception and pointing at the runbook record.
+
+   `expected_workflow_ref` is shape-guarded against
+   `refs/(heads|tags)/[A-Za-z0-9._/-]+` and the workflow fails closed
+   if it is empty or contains shell/regex metacharacters.
+
+A clean tag-push release reverts to **canonical** automatically; the
+exception mode is opt-in per dispatch and never persists. The
+historical `v1.2.1` exception (signed under `refs/heads/main` because
+the GoReleaser tag-detection bug forced a workflow_dispatch retry
+after the v1.2.1 tag was already pushed) is recorded as a frozen
+historical entry in
+[`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+§ "v1.2.1 release evidence record (2026-05-10)" and is unaffected by
+this two-mode framing.
+
 ## Related documents
 
 - [`SECURITY.md`](../SECURITY.md) — full list of release artifacts
