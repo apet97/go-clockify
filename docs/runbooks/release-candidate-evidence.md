@@ -248,3 +248,20 @@ Why these are **not** transient and require an rc.2:
 3. **release-smoke not firing.** Architectural — `GITHUB_TOKEN`-suppressed event chain. The release.yml fix adds an explicit `gh workflow run release-smoke.yml --ref main -f tag=$RELEASE_VERSION` step after the existing `Trigger reproducibility verification` step (mirrors the same pattern reproducibility.yml uses for the same reason).
 
 rc.2 cuts only after the fix PR for these three issues lands on `main`. This runbook is updated again with the rc.2 evidence pointers when rc.2's Release / Docker Image / Deploy / release-smoke / npm-publish all complete green and the Group 7 evidence is recordable.
+
+## Group 6 success record — v1.2.1-rc.3 (2026-05-10)
+
+`v1.2.1-rc.3` was cut on the rc.3 readiness fix bundle (annotated tag SHA `8f245174ca3567104a05a65a66250f0a10e5d486`, peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a`). All tag-triggered and dispatched workflows are green on rc.3: Release run [25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096), Docker Image run [25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055), Deploy run [25616879075](https://github.com/apet97/go-clockify/actions/runs/25616879075), Reproducibility run [25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376) (all 9 matrix jobs match released bytes), and release-smoke run [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600). The GitHub Release object carries 47 assets, `isPrerelease=true`, `isDraft=false`, `publishedAt=2026-05-10T01:47:39Z`.
+
+The Group 6 candidate-tag security walk-through ran on a clean fresh worktree off the rc.3 peeled commit (host short name `192`, macOS arm64, no `.local/`, `.serena/`, or duplicate `go-clockify/` checkouts):
+
+| Command | Exit | Result |
+|---|---|---|
+| `make check` | 0 | `go vet ./...` plus `go test -race -count=1 -timeout 120s ./...` green across every package and test binary. |
+| `make verify-vuln` | 0 | `govulncheck@v1.3.0` (built from `tools/govulncheck`) under `GOTOOLCHAIN=go1.25.10` against the `vuln.go.dev` DB snapshot updated `2026-05-07 19:21:40 +0000 UTC` reported `No vulnerabilities found.` |
+| `make secret-scan` | 0 | `gitleaks 8.30.1 detect --no-git --source . --redact --config .gitleaks.toml` scanned ~4.97 MB in 667 ms; `no leaks found`. |
+| `semgrep scan --config p/default --metrics=off --error --exclude .git --exclude .bench --exclude clockify-mcp .` | 0 | `semgrep 1.157.0` ran 558 rules across 1155 git-tracked files; `Findings: 0 (0 blocking)`. |
+| `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` | enumeration | Five in-source directives, each justified inline within five lines: `tests/harness/grpc.go:71` (ADR 0008 — bufconn-only in-memory test transport) and `internal/mcp/transport_streamable_http.go:541,563,565,568` (ADR 0017 — server-controlled SSE `text/event-stream` framing). |
+| `make verify-fips` | 0 | `-tags=fips` (GOFIPS140=latest) emitted `INFO fips140_enabled` before every package test passed; `-tags=fips,grpc` build combination green. |
+
+This evidence closed the four candidate-tag-dependent boxes in the Group 6 row of [`docs/launch-candidate-checklist.md`](../launch-candidate-checklist.md) (`make verify-vuln`, gitleaks, Semgrep, `make verify-fips`) for `v1.2.1-rc.3`. The full transcript is preserved in [`../../SECURITY.md`](../../SECURITY.md) § "Candidate-tag security evidence". This entry records Group 6 only; Group 7 (release/sigstore/SLSA per-host `release-check`, doctor-output artifact archive, and `check-launch-external-status --expected-npm-version v1.2.1-rc.3 --fail-open`) remains the separate Group 7 lane and is not closed by this record. The mutation cron evidence, the next-release npm expected-version proof, the paid-hosted external security review, the DPA / privacy / trademark gates, and issue #78 (19-context branch-protection restoration) are also unaffected by this record and remain open.

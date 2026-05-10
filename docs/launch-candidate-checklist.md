@@ -361,54 +361,90 @@ Runbook and automation:
 and `make rc-evidence-plan TAG=vX.Y.Z-rc.N`. Use them only after
 Group 1 scheduled-cron evidence closes.
 
-- [ ] `make verify-vuln` green for the candidate tag (govulncheck
+- [x] `make verify-vuln` green for the candidate tag (govulncheck
       across the build-tag matrix).
-      _Local preflight 2026-05-09 on the May 8 remediation tree:
-      `govulncheck@v1.3.0` failed against Go 1.25.9 with
-      GO-2026-4971 and GO-2026-4918, then passed after the repo pin
-      moved to Go 1.25.10. Rechecked on 2026-05-09 with
-      pinned `govulncheck@v1.3.0` and `GOTOOLCHAIN=go1.25.10`;
-      no vulnerabilities found. A host-toolchain scan with Go 1.26.2
-      reports standard-library issues GO-2026-4971 and GO-2026-4918
-      fixed in Go 1.26.3, so the public support docs now state the
-      exact Go 1.25.10 launch-candidate pin instead of a broad
-      `1.25.10+` claim. Do not tick this box until the same pinned
-      scan is re-run on the final candidate tag._
-- [ ] `gitleaks` scan green (config in `.gitleaks.toml`).
-      _Local preflight 2026-05-02: `make secret-scan` ran
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`, host short name
+      `192`, fresh worktree): `make verify-vuln` built
+      `govulncheck@v1.3.0` from `tools/govulncheck` under
+      `GOTOOLCHAIN=go1.25.10` and reported `No vulnerabilities found.`
+      against the `vuln.go.dev` DB updated `2026-05-07 19:21:40 +0000
+      UTC`; full transcript in [`SECURITY.md`](../SECURITY.md) §
+      "Candidate-tag security evidence". Tag-triggered Release run
+      [25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096)
+      and Reproducibility run
+      [25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376)
+      (all 9 matrix jobs match released bytes) are green on rc.3, so
+      the pinned scanner ran against the same tree the released
+      binaries were built from._
+      _Earlier preflight context — local preflight 2026-05-09 on the
+      May 8 remediation tree: `govulncheck@v1.3.0` failed against Go
+      1.25.9 with GO-2026-4971 and GO-2026-4918, then passed after
+      the repo pin moved to Go 1.25.10. A host-toolchain scan with
+      Go 1.26.2 reports standard-library issues GO-2026-4971 and
+      GO-2026-4918 fixed in Go 1.26.3, so the public support docs
+      now state the exact Go 1.25.10 launch-candidate pin instead of
+      a broad `1.25.10+` claim._
+- [x] `gitleaks` scan green (config in `.gitleaks.toml`).
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`, host short name
+      `192`, fresh worktree with no `.local/`, `.serena/`, or
+      duplicate `go-clockify/` checkouts): `make secret-scan` ran
+      `gitleaks 8.30.1 detect --no-git --source . --redact --config
+      .gitleaks.toml`, scanned ~4.97 MB in 667 ms, and reported `no
+      leaks found`; full transcript in
+      [`SECURITY.md`](../SECURITY.md) § "Candidate-tag security
+      evidence"._
+      _Earlier preflight context — 2026-05-02: `make secret-scan` ran
       `gitleaks detect --no-git --source . --redact --config
       .gitleaks.toml`; no leaks found. Rechecked on 2026-05-09:
       the candidate branch-content gitleaks scan in
       `make public-content-audit` returned no findings, but
-      `make secret-scan` on this dirty workstation failed on ignored
+      `make secret-scan` on a dirty workstation failed on ignored
       local artifacts (`.local/`, `.serena/`, and the duplicate
-      `go-clockify/` checkout). Do not tick this box until
-      `make secret-scan` is re-run from a clean checkout of the final
-      candidate tag._
-- [ ] `semgrep` review green; any `// nosemgrep` directive has a
+      `go-clockify/` checkout)._
+- [x] `semgrep` review green; any `// nosemgrep` directive has a
       justification comment within five lines and is referenced
       from the relevant ADR or runbook.
-      _Local preflight 2026-05-02: `semgrep scan --config p/default
-      --metrics=off --error --exclude .git --exclude .bench
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`, host short name
+      `192`, fresh worktree): `semgrep 1.157.0 scan --config p/default
+      --metrics=off --error --exclude .git --exclude .bench --exclude
+      clockify-mcp .` executed 558 rules across 1155 git-tracked
+      files and reported `Findings: 0 (0 blocking)`.
+      `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` enumerated
+      five in-source directives, each with inline justification
+      within five lines: `tests/harness/grpc.go:71` (ADR 0008 —
+      bufconn-only in-memory test transport) and
+      `internal/mcp/transport_streamable_http.go:541,563,565,568`
+      (ADR 0017 — server-controlled SSE `text/event-stream` framing).
+      Full transcript in [`SECURITY.md`](../SECURITY.md) §
+      "Candidate-tag security evidence"._
+      _Earlier preflight context — 2026-05-02: `semgrep scan --config
+      p/default --metrics=off --error --exclude .git --exclude .bench
       --exclude clockify-mcp .` scanned 1094 tracked files and
-      returned 0 findings. The SSE `text/event-stream` suppressions
-      in `internal/mcp/transport_streamable_http.go` have inline
-      justification comments and are recorded in ADR 0017. 2026-05-08
-      adds `.github/workflows/semgrep.yml` as a recurring CE scan using
-      the same `p/default` rule pack. Rechecked on 2026-05-09 against
-      the current tree; Semgrep scanned 1153 tracked files and returned
-      0 findings. Do not tick this box until the scan is re-run on the
-      final candidate tag._
-- [ ] `make verify-fips` green when the FIPS-aware tooling is
+      returned 0 findings. 2026-05-08 added
+      `.github/workflows/semgrep.yml` as a recurring CE scan using the
+      same `p/default` rule pack. Rechecked on 2026-05-09 against the
+      then-current tree; Semgrep scanned 1153 tracked files and
+      returned 0 findings._
+- [x] `make verify-fips` green when the FIPS-aware tooling is
       installed (auto-skips otherwise — record the run on a host
       that has it).
-      _Local preflight 2026-05-02 on macOS arm64 with a FIPS-capable Go
-      toolchain: `make verify-fips` built and tested `-tags=fips`
-      plus the `-tags=fips,grpc` build combination. Rechecked on
-      2026-05-09 with `GOTOOLCHAIN=go1.25.10 make verify-fips`;
-      default FIPS tests and the `-tags=fips,grpc` build combination
-      passed. Do not tick this box until the same gate is re-run on the
-      final candidate tag._
+      _Closed 2026-05-10 for `v1.2.1-rc.3` (peeled commit
+      `ce56414ae012c4a49d21ae0a319b178619c5966a`, FIPS-capable host
+      short name `192`, macOS arm64, fresh worktree): `make
+      verify-fips` ran the `-tags=fips` (GOFIPS140=latest) step which
+      emitted `INFO fips140_enabled` before every package test
+      passed, and the `-tags=fips,grpc` build combination completed
+      green. Full transcript in [`SECURITY.md`](../SECURITY.md) §
+      "Candidate-tag security evidence"._
+      _Earlier preflight context — 2026-05-02 on macOS arm64 with a
+      FIPS-capable Go toolchain: `make verify-fips` built and tested
+      `-tags=fips` plus the `-tags=fips,grpc` build combination.
+      Rechecked on 2026-05-09 with `GOTOOLCHAIN=go1.25.10 make
+      verify-fips`; default FIPS tests and the `-tags=fips,grpc`
+      build combination passed._
 - [x] No public AI-facing deployment can boot with a policy
       weaker than `time_tracking_safe`; the load-time guard
       remains in place.
