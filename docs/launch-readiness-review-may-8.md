@@ -1136,6 +1136,152 @@ prints a specific maintainer action beside each open gate.
   public-content bucket only; public visibility still depends on the
   external, repository-state, and legal/product gates above.
 
+## Final integration audit — rc.3 cycle ledger
+
+This section consolidates the rc.3 cycle PR ledger and the
+post-rc.3-cycle closed/open gate state observed from
+`opus/lane6-final-integration-20260510` HEAD `3ee4847` (the merge of
+PR #85). It is written as a Lane 6 final integration audit on
+2026-05-10 and is the canonical pointer for what the rc.3 cycle did
+and did not close. **This audit does not declare the repository
+launch-ready. Final `v1.2.1` tag is post-Lane-6 and requires operator
+action.**
+
+### rc.3 cycle PR ledger (landed on `main`)
+
+| PR | Merge SHA | Title |
+|---|---|---|
+| #74 | `56a2939` | docs(launch): add Opus 4.7 prompt packet for remaining work |
+| #75 | `6c3c097` | docs(launch): clarify mutation cron workflow fix has landed |
+| #76 | `adad3c3` | docs(launch): pin owners, evidence, and non-goals on legal/hosted gates |
+| #77 | `a5d5f75` | docs(launch): record 2026-05-09 repo-state cleanup mutations |
+| #80 | `d83f9f8` | fix(release): rc.2 readiness — npm prerelease tag, deploy verify race, release-smoke trigger |
+| #83 | `ce56414` | fix(release): rc.3 readiness — release-download race + reproducibility GOWORK mismatch |
+| #84 | `8798a0d` | docs(launch): record Group 6 candidate-tag security evidence for v1.2.1-rc.3 |
+| #85 | `3ee4847` | docs(launch): record Group 7 evidence for v1.2.1-rc.3 |
+
+Three preserved-as-history rc-cycle draft PRs remain **open and
+held by the operator**: #79 (rc.1 Group 6 evidence), #81 (rc.2 Group 6
+evidence), and #82 (rc.2 Group 7 evidence). Lane 6 recommends closing
+them as superseded by PR #84 (rc.3 Group 6) and PR #85 (rc.3 Group 7);
+operator confirmation is required because these draft PRs carry the
+failed-evidence audit trail referenced from
+[`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md).
+Lane 6 does not close them.
+
+### Closed gates with evidence anchors
+
+| Gate | Evidence anchor |
+|---|---|
+| Group 1 — scheduled live-contract evidence | Canonical SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703`; scheduled `live-contract.yml` runs [25608259477](https://github.com/apet97/go-clockify/actions/runs/25608259477) and [25607242862](https://github.com/apet97/go-clockify/actions/runs/25607242862). |
+| Group 6 — candidate-tag security walk-through (`make verify-vuln`, gitleaks, Semgrep, `make verify-fips`) | `v1.2.1-rc.3` peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a`; PR #84 merge `8798a0d`; full transcript in [`SECURITY.md`](../SECURITY.md) § "Candidate-tag security evidence". |
+| Group 7 — release artefacts (cosign + SLSA + SBOMs + container image) | `v1.2.1-rc.3` peeled commit `ce56414`; PR #85 merge `3ee4847`; release.yml run [25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096), docker-image.yml run [25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055), reproducibility.yml run [25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376), release-smoke.yml run [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600). |
+| Group 7 — `clockify-mcp doctor --strict` + `clockify-mcp-postgres doctor --strict --check-backends` | `v1.2.1-rc.3` peeled commit `ce56414`; PR #85 merge `3ee4847`; `release-smoke-doctor-output` artifact from release-smoke.yml run [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600) contains `release-doctor-strict-ok.txt`, `release-doctor-strict-fail.txt`, and `release-doctor-postgres-ok.txt`. |
+| `CLOCKIFY_LIVE_AUDIT_REQUIRED` repo variable | `true`, last updated 2026-05-02T00:35:41Z (verified 2026-05-10 via `make launch-external-status`). |
+| Branch protection on `main` carries the three D9 launch checks | Re-applied 2026-05-09 with `Doctor strict smoke`, `Doctor Postgres backend`, and `Shared-service Postgres E2E` required (strict up-to-date, linear history, conversation resolution, no force push, no deletion). The historical 19-context restoration remains tracked separately by issue #78 and is **NOT** closed by Lane 6. |
+| Repository description + issue #28 | Both closed during the 2026-05-09 repo-state cleanup pass landed via PR #77 (`a5d5f75`). |
+
+### Open gates with exact next-step action
+
+| Gate | Next-step action |
+|---|---|
+| Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Re-run `scripts/prepare-rc-evidence.sh v1.2.1-rc.3` from a clean tag checkout on a Linux x64 host (this lane is single-host darwin-arm64); attach the per-host log alongside the existing macOS arm64 log. The macOS arm64 leg already reproduced clean on re-run; only the Linux x64 leg is missing. |
+| Group 7 — "All required workflows on `main` green" (mutation cron) | Wait for the next scheduled `mutation.yml` cron green on the final candidate SHA. The `internal/tools` matrix-leg timeout fix landed on `main` in `2e7b6bd`; the latest scheduled run [25592823559](https://github.com/apet97/go-clockify/actions/runs/25592823559) is still `completed/cancelled` on `4fe957547f9e6aea749a85f87823d17a0ccc2928` (pre-fix). This gate stays **OPEN** until a scheduled `mutation.yml` cron records green on a final candidate SHA — the current rc.3 SHA `ce56414` does not satisfy this gate because no scheduled mutation cron has fired against it yet. |
+| Issue #78 — restore the historical 19-context required-status list on `main` | Re-add the remaining 16 required-status checks documented in [`branch-protection.md`](branch-protection.md). Lane 6 is **NOT** approved to change branch protection or close this issue. |
+| Paid-hosted external security review | External reviewer engagement; recorded per `SECURITY.md` per the gate's owner/evidence/non-goal entry above. |
+| DPA / terms / privacy posture | Counsel-signed evidence per the gate's owner/evidence/non-goal entry above. |
+| Trademark / "official Clockify" language + `clockify://` URI + gRPC service-name branding review | Recorded brand/legal/product reviewer decision per `docs/release/brand-legal-review.md`. |
+| P1-8 paid-commercial RLS decision | New ADR under `docs/adr/` with the recorded decision per the gate's owner/evidence/non-goal entry above. |
+| Cross-replica hosted HTTP quotas | Archived gateway/load-balancer quota policy + on-call metrics snapshot per the gate's owner/evidence/non-goal entry above. |
+| npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. See validator-quirk note below for the rc.3 nuance. |
+
+### Validator quirks vs real blockers
+
+`scripts/check-launch-external-status.sh` is intentionally
+fail-closed: it reports gates as `[open]` when its evidence shape does
+not match the expected validator inputs. Two of those `[open]`
+reports for rc.3 are validator quirks rather than real launch
+blockers, and Lane 6 records them here so future audits do not
+mistake them for new regressions.
+
+- **Group 1 SHA-mismatch quirk.** Group 1 launch evidence is closed
+  on the canonical SHA `feef83c641ced93d2ab6ba07ef766d61c82cc703`
+  via scheduled live-contract runs 25608259477 + 25607242862 (see
+  evidence anchor above). When `make launch-external-status` is
+  invoked without `--candidate-sha`, the validator binds Group 1 to
+  default HEAD (currently `3ee4847`) and reports a SHA mismatch.
+  This is a current-HEAD nuance, **not** a re-opening of Group 1.
+  Group 1 audits must be invoked with `--candidate-sha
+  feef83c641ced93d2ab6ba07ef766d61c82cc703` (Lane 6 verified this
+  invocation reports Group 1 closed against the canonical SHA).
+- **npm prerelease dist-tag quirk.** The `--expected-npm-version`
+  comparator in `scripts/check-launch-external-status.sh` checks
+  the registry's `version` field and `dist-tags.latest` against the
+  expected version. For prerelease versions like `v1.2.1-rc.3`, the
+  publish path correctly publishes under `dist-tags.rc` (the rc.2
+  fix in PR #80) while leaving `dist-tags.latest=1.2.0` unchanged.
+  `npm view @apet97/clockify-mcp-go --json` shows `dist-tags = {
+  "latest": "1.2.0", "rc": "1.2.1-rc.3" }` — the rc dist-tag
+  matches the expected prerelease version, so the npm prerelease
+  publish path **is** proven for `v1.2.1-rc.3`. The validator
+  reports this as `[open]` because it does not yet recognise
+  prerelease dist-tags. Closing the validator's prerelease
+  recognition is a follow-up outside Lane 6's allow-list. Until
+  that fix lands, the validator's `[open]` for prereleases must be
+  read against the raw `npm view` output before treating it as a
+  real blocker. The runbook records this in
+  [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+  "v1.2.1-rc.3 evidence record".
+
+The mutation cron `[open]` reported by the validator is **not** a
+quirk — it is a real launch blocker per the open-gate ledger above.
+
+### Lane 6 verification (read-only)
+
+These commands were run from
+`/Users/15x/Downloads/WORKING/addons-me/GOCLMCP-worktrees/opus-lane6-final-integration-20260510`
+on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
+
+- `git rev-parse HEAD` → `3ee4847a49fa053506aacb9c318557ac6d358040`
+- `make doc-parity` → `doc-parity: OK`, `launch-review-ledger: OK`,
+  `launch-checklist-parity: OK`, `launch-evidence-gate: OK`
+- `make launch-checklist-parity` → `launch-checklist-parity: OK`,
+  `launch-evidence-gate: OK`
+- `make script-tests` → all suites pass (doc-parity 70/70,
+  launch-review ledger 39/39, launch-external-status 20/20,
+  public-content audit, Go-version parity, live-tool coverage,
+  license evidence, RC evidence, prepare-rc-evidence, publish-npm,
+  claude-campaign suites all green)
+- `git diff --check` → exit 0 before any Lane 6 edits
+- `bash scripts/check-launch-external-status.sh --candidate-sha feef83c641ced93d2ab6ba07ef766d61c82cc703 --fail-open` →
+  Group 1 reports `[closed]` against the canonical SHA + runs
+  25608259477/25607242862 (Group 1 SHA-mismatch quirk does **not**
+  apply when invoked with the canonical SHA)
+- `bash scripts/check-launch-external-status.sh --candidate-sha ce56414ae012c4a49d21ae0a319b178619c5966a --expected-npm-version v1.2.1-rc.3 --fail-open` →
+  reports `7 open, 0 unknown`; the npm prerelease dist-tag quirk
+  applies (see above), and Group 1 is bound to the rc.3 SHA rather
+  than the canonical Group 1 SHA which is the documented
+  per-SHA-Group-1 nuance
+- `git ls-remote --tags origin 'v1.2.1*'` → three rc tags exist
+  (`v1.2.1-rc.1`, `v1.2.1-rc.2`, `v1.2.1-rc.3`); **no `v1.2.1`
+  final tag**
+- `gh release list --repo apet97/go-clockify --limit 5` → all three
+  rc tags `isPrerelease=true`
+- `gh pr list --repo apet97/go-clockify --state open` → only the
+  three preserved-as-history draft rc-cycle PRs remain open (#79,
+  #81, #82)
+
+### Non-claim
+
+This audit does not declare the repository launch-ready. Final
+`v1.2.1` tag is post-Lane-6 and requires operator action. The
+remaining open gates above (mutation cron, two-host
+`make release-check`, issue #78, paid-hosted external security
+review, DPA / privacy / trademark approval, paid-commercial RLS,
+cross-replica hosted HTTP quotas, npm next-rc/release proof) must
+each close on real evidence before any agent or human reports
+"launch candidate ready" — let alone "launch-ready".
+
 ## Verification used for this pass
 
 - `bash -n scripts/check-doc-parity.sh
