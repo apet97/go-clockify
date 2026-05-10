@@ -141,7 +141,35 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh release download "$REF" --repo "$REPO" -p clockify-mcp-linux-x64
+          # Deploy fires on the same tag-push event as Release, so the
+          # GitHub Release object's createdAt lands quickly but its
+          # publishedAt (the moment gh release download accepts the
+          # tag) trails by the asset-upload window. Observed live in
+          # v1.2.1-rc.2 Deploy run 25613215498: download attempted at
+          # 22:20:29Z, release publishedAt was 22:20:38Z - a 9-second
+          # gap that single-shot gh release download reported as
+          # "release not found". Retry on a 12x10s budget (~2 minutes):
+          # wider than the observed race, narrow enough that a real
+          # missing-release failure surfaces within minutes rather
+          # than after a full 24x30s budget.
+          LAST_LOG="$(mktemp)"
+          for i in $(seq 1 12); do
+            if gh release download "$REF" \
+              --repo "$REPO" \
+              -p clockify-mcp-linux-x64 \
+              --clobber \
+              >"$LAST_LOG" 2>&1; then
+              cat "$LAST_LOG"
+              echo "Release binary download succeeded on attempt $i."
+              exit 0
+            fi
+            echo "Attempt $i: release asset not yet visible. Sleeping 10s..."
+            cat "$LAST_LOG" || true
+            sleep 10
+          done
+          echo "::error::release download failed after 12 attempts (~2 minutes)."
+          cat "$LAST_LOG"
+          exit 1
 
       - name: Verify SLSA build provenance (linux-x64 binary)
         env:

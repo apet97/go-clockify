@@ -132,20 +132,50 @@ jobs:
       - name: Induce goreleaser dirty-tree state
         run: |
           set -euo pipefail
-          # goreleaser creates dist/ and writes its own intermediate files
-          # before invoking `go build`, so Go's VCS stamping marks the tree
-          # dirty (vcs.modified=true, mod=v0.X.Y+dirty). Reproducing from a
-          # clean checkout would bake the opposite metadata into the binary
-          # and produce a different hash. Create a placeholder so `git
-          # status` reports the same dirty state.
+          # Goreleaser releases ship with `vcs.modified=true` and
+          # `mod=...+dirty` because the runner's tree is dirty when
+          # `go build` runs (verified live by `go version -m` on every
+          # released asset; same outcome reproducible across rc.1, rc.2,
+          # and historical tags). Go's VCS detection only flags the
+          # tree dirty when there is at least one *tracked* file with
+          # uncommitted changes — untracked files in gitignored paths
+          # (the previous `dist/.reproducibility-placeholder` approach)
+          # do not count, which is why the v1.2.1-rc.2 reproducibility
+          # run 25613269789 reported sha mismatch on every matrix entry
+          # even after GOWORK=off was added. The diagnostics artifact
+          # from run 25616401654 (linux-x64) made this concrete: local
+          # rebuild had `mod=v1.2.1-rc.2`, `vcs.modified=false`; the
+          # released binary had `mod=v1.2.1-rc.2+dirty`, `vcs.modified=true`.
+          # Append a single empty line to `.gitignore` (tracked, build-
+          # irrelevant) so Go records `vcs.modified=true` and the binary
+          # bytes match the released artifact. We also keep the original
+          # `dist/.reproducibility-placeholder` write to mirror
+          # goreleaser's dist/ shape; it is harmless because dist/ is
+          # gitignored, but it documents the intent for future readers.
           mkdir -p dist
           echo "reproducibility-workflow" > dist/.reproducibility-placeholder
+          printf '\n' >> .gitignore
+          git status --short
       - name: Rebuild asset
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
           GOFIPS140: ${{ matrix.fips }}
+          # GoReleaser v2 builds with workspace mode disabled (its build
+          # pipeline sets GOWORK=off so cross-module go.work `use`
+          # directives do not change dependency resolution at release
+          # time). Reproducibility must mirror that, otherwise
+          # `go build ./cmd/clockify-mcp` resolves modules through
+          # go.work (which `use`s ./internal/controlplane/postgres,
+          # ./internal/tracing/otel, ./internal/transport/grpc, and `.`)
+          # and Go's debug.BuildInfo records workspace mode, producing
+          # different bytes from goreleaser's release artifact even when
+          # ldflags, trimpath, CGO, tags, and dirty VCS metadata all
+          # match. Observed live: v1.2.1-rc.2 Reproducibility run
+          # 25613269789 — every one of the 9 matrix jobs reported sha
+          # mismatch while the rebuild recipe was otherwise identical.
+          GOWORK: off
           SHA: ${{ steps.ldflags.outputs.sha }}
           BUILD_DATE: ${{ steps.ldflags.outputs.build_date }}
           TAGS: ${{ matrix.tags }}
@@ -183,8 +213,31 @@ jobs:
           if [ "${local_sha}" != "${released_sha}" ]; then
             echo "::error::sha256 mismatch for ${ASSET}"
             echo "Local rebuild does not match the published asset for ${ASSET}."
-            echo "Investigate with: cmp /tmp/${ASSET}.local /tmp/released/${ASSET}"
-            echo "And: diff <(go version -m /tmp/${ASSET}.local) <(go version -m /tmp/released/${ASSET})"
+            # On mismatch, capture diagnostics directly into the runner
+            # workspace so a follow-up upload-artifact step can package
+            # them. Without these, the only signal a maintainer has is
+            # the two opaque sha256 strings, which forced manual
+            # `go version -m` + `cmp` reproduction during the
+            # v1.2.1-rc.2 reproducibility-failure investigation.
+            go version -m "/tmp/${ASSET}.local"     > "/tmp/${ASSET}.local.version.txt"     || true
+            go version -m "/tmp/released/${ASSET}"  > "/tmp/${ASSET}.released.version.txt"  || true
+            echo "--- /tmp/${ASSET}.local.version.txt vs /tmp/${ASSET}.released.version.txt (unified diff) ---"
+            diff -u "/tmp/${ASSET}.local.version.txt" "/tmp/${ASSET}.released.version.txt" || true
+            echo "--- first 50 byte differences (cmp -l) ---"
+            cmp -l "/tmp/${ASSET}.local" "/tmp/released/${ASSET}" | head -n 50 > "/tmp/${ASSET}.cmp.txt" || true
+            cat "/tmp/${ASSET}.cmp.txt" || true
+            echo "Investigate via the upload-artifact attached to this job (reproducibility-diagnostics-${ASSET})."
             exit 1
           fi
           echo "| ${ASSET} | ${local_sha} | match |" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload reproducibility diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reproducibility-diagnostics-${{ matrix.asset }}
+          path: |
+            /tmp/${{ matrix.asset }}.local.version.txt
+            /tmp/${{ matrix.asset }}.released.version.txt
+            /tmp/${{ matrix.asset }}.cmp.txt
+          if-no-files-found: ignore
+          retention-days: 14
