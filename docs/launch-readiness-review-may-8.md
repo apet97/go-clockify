@@ -963,6 +963,59 @@ prints a specific maintainer action beside each open gate.
   `gh run list --workflow=semgrep.yml` still returns `HTTP 404:
   workflow semgrep.yml not found on the default branch`, which is
   expected until this remediation tree is pushed.
+- **Paid-hosted / commercial gates — deferred for community/self-hosted
+  v1.2.1.** The six paid-hosted / commercial external-reviewer
+  dispositions previously kept here — P1-8 paid-commercial RLS
+  decision, cross-replica hosted HTTP quotas, paid-hosted external
+  security review, DPA / terms / privacy posture, trademark /
+  "official Clockify" language, and the Clockify URI scheme and gRPC
+  service-name branding review — are out of scope for the
+  community/self-hosted `v1.2.1` release. As of 2026-05-10 the full
+  owner / evidence / non-goal disposition for each lives under
+  "## Deferred paid-hosted/commercial follow-ups — not required for
+  community/self-hosted v1.2.1" below; the PR #88 request packets and
+  the `docs/release/external-security-review-request.md`,
+  `docs/release/dpa-privacy-evidence-checklist.md`,
+  `docs/release/brand-legal-review.md`, and
+  `docs/adr/0019-paid-commercial-rls-decision.md` templates remain
+  future request templates only.
+- **Public repo content audit before visibility flip.** `make
+  public-content-audit` is now the read-only local snapshot for the
+  final integrated plan's public-flip content audit. Rechecked on
+  2026-05-09 after neutralizing tracked workstation scratch references,
+  documenting benign public-history keyword matches, and documenting
+  ignored local artifacts: it reports `0 open, 0 unknown`.
+  `Candidate branch file content: 0 open, 0 unknown`.
+  `Public history review: 0 open, 0 unknown`.
+  `Local artifact/full-tree review: 0 open, 0 unknown`.
+  The candidate branch-content gitleaks scan is closed. The candidate branch-content TLS verification bypass marker check is closed. The candidate branch-content MIT LICENSE check is closed. The candidate branch-content .gitignore coverage check is closed. The candidate branch-content .gitleaks.toml allowlist description check is closed. The candidate branch-content CLAUDE.md workstation context check is closed. The candidate branch-content live Clockify secret assignment check is closed. The candidate branch-content env-like file check is closed.
+  The tracked personal/scratch grep and tracked Go/Markdown
+  internal/private task-marker check are closed. The recent commit
+  message sensitive-word matches are documented in
+  `docs/release/public-history-review.md` as false positives, and the
+  ignored full-tree findings are documented in
+  `docs/release/local-artifact-review.md`. This closes the local
+  public-content bucket only; public visibility still depends on the
+  external, repository-state, and legal/product gates above.
+
+## Deferred paid-hosted/commercial follow-ups — not required for community/self-hosted v1.2.1
+
+These are not release gates for community/self-hosted v1.2.1.
+They become gates only for a paid-hosted/commercial launch.
+They must not block final v1.2.1 if the release notes and public docs
+keep the project framed as community/self-hosted and do not claim
+official Clockify status.
+The PR #88 packet files remain future request templates only.
+
+The six dispositions below carry the full owner / evidence / non-goal
+shape for each deferred follow-up. They are recorded here so the
+verifier-required phrasing and the reviewer-facing operator packets
+remain discoverable, **without** putting the items back on the active
+v1.2.1 critical path. The `make launch-external-status` validator
+treats these gates as informational under this scope correction;
+re-promoting any of them to an active blocker requires an explicit
+maintainer decision in a later release plan, not a silent re-add.
+
 - **P1-8 paid-commercial RLS decision.** The v1.x app-layer scoping
   posture is documented, but implementing database-enforced RLS still
   requires a product/commercial design decision and tenant-context
@@ -981,7 +1034,9 @@ prints a specific maintainer action beside each open gate.
     cross-tenant store-API test that exercises `SET LOCAL
     app.current_tenant`. The launch-readiness ledger must quote the
     ADR number, decision text, and decision date before this gate can
-    close.
+    close. The Lane F template
+    [`adr/0019-paid-commercial-rls-decision.md`](adr/0019-paid-commercial-rls-decision.md)
+    (Status: **Proposed**) is the operator-side starting point.
   - Non-goal: `docs/auth-model.md` documenting the v1.x app-layer
     scoping, `docs/runbooks/postgres-restore.md` carrying the
     RLS-aware restore checks, `make test-postgres` Testcontainers
@@ -1001,9 +1056,12 @@ prints a specific maintainer action beside each open gate.
     (config snippet or signed change record) plus a metrics snapshot
     showing the global quota counter is visible to on-call dashboards.
     `docs/runbooks/rate-limit.md` § "Launch Evidence" lists the
-    expected items; the launch-readiness ledger must quote the
-    archived policy reference and metrics-snapshot identifier before
-    this gate can close.
+    expected items, and
+    [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
+    § "Cross-replica hosted HTTP quota proof checklist" frames the
+    four artifact classes a paid-hosted operator must record. The
+    launch-readiness ledger must quote the archived policy reference
+    and metrics-snapshot identifier before this gate can close.
   - Non-goal: `MCP_HTTP_RATELIMIT_PER_IP`,
     `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`, and
     `MCP_HTTP_RATELIMIT_GET_PER_SESSION` defaults in deployment
@@ -1030,7 +1088,9 @@ prints a specific maintainer action beside each open gate.
     ISO 8601 review date, the candidate tag reviewed, scope statement
     (auth modes, audit, tenant isolation, transport surfaces, supply
     chain), findings list (or explicit "no findings"), and the
-    reviewer's release-status recommendation. The launch-readiness
+    reviewer's release-status recommendation. The Lane F packet
+    [`release/external-security-review-request.md`](release/external-security-review-request.md)
+    is the operator-side request template. The launch-readiness
     ledger must quote the reviewer identity and review date before
     this gate can close.
   - Non-goal: `make verify-vuln`, `make verify-fips`,
@@ -1058,9 +1118,12 @@ prints a specific maintainer action beside each open gate.
     posture in `docs/runbooks/credential-leak-response.md`, OIDC
     token decode and verify-cache behavior, slog redaction posture,
     and audit retention behind `MCP_CONTROL_PLANE_AUDIT_RETENTION`.
-    The launch-readiness ledger must reference the executed
-    document (ticket / contract reference, redacted of private contact
-    details) and counsel identity before this gate can close.
+    The Lane F checklist
+    [`release/dpa-privacy-evidence-checklist.md`](release/dpa-privacy-evidence-checklist.md)
+    is the operator-side request template. The launch-readiness
+    ledger must reference the executed document (ticket / contract
+    reference, redacted of private contact details) and counsel
+    identity before this gate can close.
   - Non-goal: `docs/auth-model.md`, `docs/runbooks/credential-leak-response.md`,
     `SECURITY.md` scope sections, the `RedactingHandler` slog tests,
     and any local doc-parity guard about privacy wording do NOT close
@@ -1117,24 +1180,6 @@ prints a specific maintainer action beside each open gate.
     resources, and any local rename of one identifier in isolation do
     NOT close this gate. The closure artifact is the written reviewer
     decision covering both identifiers.
-- **Public repo content audit before visibility flip.** `make
-  public-content-audit` is now the read-only local snapshot for the
-  final integrated plan's public-flip content audit. Rechecked on
-  2026-05-09 after neutralizing tracked workstation scratch references,
-  documenting benign public-history keyword matches, and documenting
-  ignored local artifacts: it reports `0 open, 0 unknown`.
-  `Candidate branch file content: 0 open, 0 unknown`.
-  `Public history review: 0 open, 0 unknown`.
-  `Local artifact/full-tree review: 0 open, 0 unknown`.
-  The candidate branch-content gitleaks scan is closed. The candidate branch-content TLS verification bypass marker check is closed. The candidate branch-content MIT LICENSE check is closed. The candidate branch-content .gitignore coverage check is closed. The candidate branch-content .gitleaks.toml allowlist description check is closed. The candidate branch-content CLAUDE.md workstation context check is closed. The candidate branch-content live Clockify secret assignment check is closed. The candidate branch-content env-like file check is closed.
-  The tracked personal/scratch grep and tracked Go/Markdown
-  internal/private task-marker check are closed. The recent commit
-  message sensitive-word matches are documented in
-  `docs/release/public-history-review.md` as false positives, and the
-  ignored full-tree findings are documented in
-  `docs/release/local-artifact-review.md`. This closes the local
-  public-content bucket only; public visibility still depends on the
-  external, repository-state, and legal/product gates above.
 
 ## Final integration audit — rc.3 cycle ledger
 
@@ -1178,7 +1223,8 @@ Lane 6 does not close them.
 | Group 7 — release artefacts (cosign + SLSA + SBOMs + container image) | `v1.2.1-rc.3` peeled commit `ce56414`; PR #85 merge `3ee4847`; release.yml run [25616879096](https://github.com/apet97/go-clockify/actions/runs/25616879096), docker-image.yml run [25616879055](https://github.com/apet97/go-clockify/actions/runs/25616879055), reproducibility.yml run [25616925376](https://github.com/apet97/go-clockify/actions/runs/25616925376), release-smoke.yml run [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600). |
 | Group 7 — `clockify-mcp doctor --strict` + `clockify-mcp-postgres doctor --strict --check-backends` | `v1.2.1-rc.3` peeled commit `ce56414`; PR #85 merge `3ee4847`; `release-smoke-doctor-output` artifact from release-smoke.yml run [25616925600](https://github.com/apet97/go-clockify/actions/runs/25616925600) contains `release-doctor-strict-ok.txt`, `release-doctor-strict-fail.txt`, and `release-doctor-postgres-ok.txt`. |
 | `CLOCKIFY_LIVE_AUDIT_REQUIRED` repo variable | `true`, last updated 2026-05-02T00:35:41Z (verified 2026-05-10 via `make launch-external-status`). |
-| Branch protection on `main` carries the three D9 launch checks | Re-applied 2026-05-09 with `Doctor strict smoke`, `Doctor Postgres backend`, and `Shared-service Postgres E2E` required (strict up-to-date, linear history, conversation resolution, no force push, no deletion). The historical 19-context restoration remains tracked separately by issue #78 and is **NOT** closed by Lane 6. |
+| Branch protection on `main` carries the three D9 launch checks | Re-applied 2026-05-09 with `Doctor strict smoke`, `Doctor Postgres backend`, and `Shared-service Postgres E2E` required (strict up-to-date, linear history, conversation resolution, no force push, no deletion). |
+| Issue #78 — restore the historical 19-context required-status list on `main` | Closed 2026-05-10 after the 21-context branch-protection restoration landed (additive PUT against `repos/apet97/go-clockify/branches/main/protection`). The classic `required_status_checks.contexts` array now carries the historical 18 plus the three D9 launch checks (`Doctor strict smoke`, `Doctor Postgres backend`, `Shared-service Postgres E2E`); `scripts/audit-branch-protection.sh` confirms the live state matches the documented snapshot in [`branch-protection.md`](branch-protection.md). |
 | Repository description + issue #28 | Both closed during the 2026-05-09 repo-state cleanup pass landed via PR #77 (`a5d5f75`). |
 
 ### Open gates with exact next-step action
@@ -1187,13 +1233,21 @@ Lane 6 does not close them.
 |---|---|
 | Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Re-run `scripts/prepare-rc-evidence.sh v1.2.1-rc.3` from a clean tag checkout on a Linux x64 host (this lane is single-host darwin-arm64); attach the per-host log alongside the existing macOS arm64 log. The macOS arm64 leg already reproduced clean on re-run; only the Linux x64 leg is missing. |
 | Group 7 — "All required workflows on `main` green" (mutation cron) | Wait for the next scheduled `mutation.yml` cron green on the final candidate SHA. The `internal/tools` matrix-leg timeout fix landed on `main` in `2e7b6bd`; the latest scheduled run [25592823559](https://github.com/apet97/go-clockify/actions/runs/25592823559) is still `completed/cancelled` on `4fe957547f9e6aea749a85f87823d17a0ccc2928` (pre-fix). This gate stays **OPEN** until a scheduled `mutation.yml` cron records green on a final candidate SHA — the current rc.3 SHA `ce56414` does not satisfy this gate because no scheduled mutation cron has fired against it yet. |
-| Issue #78 — restore the historical 19-context required-status list on `main` | Re-add the remaining 16 required-status checks documented in [`branch-protection.md`](branch-protection.md). Lane 6 is **NOT** approved to change branch protection or close this issue. |
-| Paid-hosted external security review | External reviewer engagement; recorded per `SECURITY.md` per the gate's owner/evidence/non-goal entry above. **Request packet template:** [`release/external-security-review-request.md`](release/external-security-review-request.md) frames scope, in-scope tags, threat-model summary, prior internal-review pointers, contact channel, and the expected deliverable shape. The packet does **NOT** close the gate. |
-| DPA / terms / privacy posture | Counsel-signed evidence per the gate's owner/evidence/non-goal entry above. **Evidence checklist template:** [`release/dpa-privacy-evidence-checklist.md`](release/dpa-privacy-evidence-checklist.md) lists the personal-data inventory, counsel-acknowledgement criteria, operator obligations, and the executed-document fields counsel must record. The checklist does **NOT** close the gate. |
-| Trademark / "official Clockify" language + `clockify://` URI + gRPC service-name branding review | Recorded brand/legal/product reviewer decision per `docs/release/brand-legal-review.md`. **Decision checklist template:** [`release/brand-legal-review.md`](release/brand-legal-review.md) § "Decision Checklist (for the reviewer)" gives the reviewer the structured per-question, per-surface form to fill in (mapping the 11 questions to the trademark, URI, and gRPC-service-name gates). The checklist does **NOT** close the gate. |
-| P1-8 paid-commercial RLS decision | New ADR under `docs/adr/` with the recorded decision per the gate's owner/evidence/non-goal entry above. **ADR template:** [`adr/0019-paid-commercial-rls-decision.md`](adr/0019-paid-commercial-rls-decision.md) (Status: **Proposed**) frames the five context questions, the adopt/defer/refuse decision shape, the GUC contract, and the migration ordering. The template does **NOT** close the gate; the ADR moves to Accepted only when the recorded decision lands. |
-| Cross-replica hosted HTTP quotas | Archived gateway/load-balancer quota policy + on-call metrics snapshot per the gate's owner/evidence/non-goal entry above. **Evidence checklist template:** [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Cross-replica hosted HTTP quota proof checklist" lists the four required artifact classes (gateway-policy artifact, on-call metrics snapshot, per-process posture inputs, verification-command outputs) and the SRE-owner / ISO 8601 fields the ledger row must quote. The checklist does **NOT** close the gate. |
-| npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. The validator now recognises prerelease dist-tags (Lane D, PR #87, 2026-05-10), so a passing `--expected-npm-version v1.2.1-rc.3` invocation closes the npm proof against `dist-tags.rc` directly. |
+| npm publish path on next rc/release | On the next rc/release publish, re-run `scripts/check-launch-external-status.sh --candidate-sha <sha> --expected-npm-version vX.Y.Z[-rc.N] --fail-open`. The validator now recognises prerelease dist-tags (Lane D, PR #87, 2026-05-10), so a passing `--expected-npm-version v1.2.1-rc.3` invocation closes the npm proof against `dist-tags.rc` directly. This is forward-looking on the next publish; it does not block the current rc.3 → final v1.2.1 cut. |
+
+The five paid-hosted / commercial dispositions previously occupying
+this table — Paid-hosted external security review, DPA / terms /
+privacy posture, Trademark / "official Clockify" language +
+`clockify://` URI + gRPC service-name branding review, P1-8
+paid-commercial RLS decision, and Cross-replica hosted HTTP quotas —
+moved to "## Deferred paid-hosted/commercial follow-ups — not required
+for community/self-hosted v1.2.1" on 2026-05-10. They are no longer
+treated as active community/self-hosted release blockers; their
+operator-side request packets remain available there for the future
+paid-hosted launch path. Issue #78 (restore the historical 19-context
+required-status list on `main`) closed on 2026-05-10 with branch
+protection re-applied at 21 contexts; see the "Closed gates with
+evidence anchors" table above.
 
 ### Validator quirks vs real blockers
 
@@ -1264,13 +1318,23 @@ on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
 ### Non-claim
 
 This audit does not declare the repository launch-ready. Final
-`v1.2.1` tag is post-Lane-6 and requires operator action. The
-remaining open gates above (mutation cron, two-host
-`make release-check`, issue #78, paid-hosted external security
-review, DPA / privacy / trademark approval, paid-commercial RLS,
-cross-replica hosted HTTP quotas, npm next-rc/release proof) must
-each close on real evidence before any agent or human reports
-"launch candidate ready" — let alone "launch-ready".
+`v1.2.1` tag is post-Lane-6 and requires operator action. The two
+remaining active community/self-hosted release blockers (Group 7
+two-host `make release-check` Linux x64 evidence, and the Group 7
+"All required workflows on `main` green" mutation cron closure
+decision) must each close on real evidence before any agent or human
+reports "launch candidate ready" — let alone "launch-ready". The
+forward-looking npm publish path row is informational on the next
+publish, not a blocker for the current rc.3 → final v1.2.1 cut. The
+five paid-hosted / commercial follow-ups (paid-hosted external
+security review, DPA / privacy / trademark approval, paid-commercial
+RLS, cross-replica hosted HTTP quotas, plus the trademark-coupled
+`clockify://` URI / gRPC service-name branding review) are now
+explicitly **deferred** under "## Deferred paid-hosted/commercial
+follow-ups — not required for community/self-hosted v1.2.1" and do
+**not** block the community/self-hosted `v1.2.1` cut so long as the
+release notes and public docs keep the project framed as
+community/self-hosted and do not claim official Clockify status.
 
 ## Verification used for this pass
 
