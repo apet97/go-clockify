@@ -623,19 +623,25 @@ candidate ready"**.
 
 ---
 
-## External evidence packets (out-of-process)
+## External evidence packets (out-of-process) — deferred for community/self-hosted v1.2.1
 
 The five gates below are tracked in
 [`launch-readiness-review-may-8.md`](launch-readiness-review-may-8.md)
-§ "Open gates with exact next-step action", **not** here. They
-require external owner action (signed counsel review, brand /
+§ "Deferred paid-hosted/commercial follow-ups — not required for
+community/self-hosted v1.2.1", **not** here. As of 2026-05-10 they
+are explicitly scoped out of the community/self-hosted `v1.2.1`
+release: they become release gates only for a paid-hosted /
+commercial launch and must not block final `v1.2.1` so long as the
+release notes and public docs keep the project framed as
+community/self-hosted and do not claim official Clockify status.
+They require external owner action (signed counsel review, brand /
 product approval, paid-hosted SOC review, RLS decision-maker, SRE
 gateway-quota owner) and the launch-candidate checklist above does
 **not** cover them. The packets / checklists / ADR template below
 are operator-side request templates the maintainer hands to the
-right reviewer; they do **not** close the gates by themselves and
-no checkbox in this file ticks until the launch-readiness ledger
-row also updates.
+right reviewer when the paid-hosted launch path opens; they do
+**not** close the gates by themselves and no checkbox in this file
+ticks until the launch-readiness ledger row also updates.
 
 | External gate | Operator-side packet template | Closure artifact |
 |---|---|---|
