@@ -1188,9 +1188,15 @@ post-rc.3-cycle closed/open gate state observed from
 `opus/lane6-final-integration-20260510` HEAD `3ee4847` (the merge of
 PR #85). It is written as a Lane 6 final integration audit on
 2026-05-10 and is the canonical pointer for what the rc.3 cycle did
-and did not close. **This audit does not declare the repository
-launch-ready. Final `v1.2.1` tag is post-Lane-6 and requires operator
-action.**
+and did not close. The maintainer cut `v1.2.1` from rc.3's peeled
+commit on 2026-05-10 for the community/self-hosted track; the
+canonical evidence is recorded in the "Closed gates with evidence
+anchors" row "v1.2.1 final tag cut and release published —
+community/self-hosted scope only" below and in the runbook §
+"v1.2.1 release evidence record (2026-05-10)". The paid-hosted /
+commercial track is **not** released; its five deferred follow-ups
+remain unmoved per "## Deferred paid-hosted/commercial follow-ups —
+not required for community/self-hosted v1.2.1" above.
 
 ### rc.3 cycle PR ledger (landed on `main`)
 
@@ -1228,6 +1234,7 @@ Lane 6 does not close them.
 | Group 7 — "All required workflows on `main` green" (mutation cron) — community/self-hosted v1.2.1 | Closed 2026-05-10 on the equivalent-source argument: scheduled `mutation.yml` cron run [25620978280](https://github.com/apet97/go-clockify/actions/runs/25620978280) (event=`schedule`, headSha `ab2a51e55b0e0116a3235b5254733999dca52e90`, completed/success at 2026-05-10T05:39:41Z) went green across all 6 matrix legs including `Mutation (internal/tools)` — the leg that previously timed out and cancelled every cron since the `2e7b6bd` "May 9 hardening" timeout fix landed. PR #87 (`ab2a51e`) and PR #88 (`2976e24`) modified only `scripts/**` and `docs/**`; `git diff --name-only ab2a51e^..main -- 'internal/**/*.go'` returns no entries. Mutation testing covers `internal/*` packages only, so the green cron on `ab2a51e` is byte-for-byte equivalent-source mutation evidence for both rc.3 (`ce56414`) and current main. This closure applies to the community/self-hosted `v1.2.1` release track only; the literal final-candidate-SHA evidence shape (a scheduled cron landing directly on the final `v1.2.1` SHA) remains a cadence wait that the next regular weekday cron will satisfy. Full evidence record: [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Mutation cron post-fix evidence — 2026-05-10". |
 | Group 7 — `make release-check` from clean checkouts on **Linux x64 + macOS arm64** | Closed 2026-05-10 once both host legs landed for `v1.2.1-rc.3` (peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a`). The macOS arm64 leg comes from the rc.3 `opus/group7-release-rc3-20260510` worktree (re-run after the transient TMPDIR concurrency failure cleared on its second invocation, evidence in the rc.3 record above). The Linux x64 leg comes from a Lane B Docker `linux/amd64` `golang:1.25-bookworm` clean-clone run between `2026-05-10T17:05:40Z` and `2026-05-10T17:21:48Z`: container kernel `Linux 04187e400898 6.10.14-linuxkit #1 SMP Sat May 17 08:28:57 UTC 2025 x86_64`, toolchain `go version go1.25.10 linux/amd64`, `make release-check` exit `0` with final line `release-check: OK — local pre-ship gate passed`. Full Linux x64 evidence shape (host info, command transcript, per-phase summary, log artefact paths) is in [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "Linux x64 release-check evidence — v1.2.1-rc.3". |
 | Repository description + issue #28 | Both closed during the 2026-05-09 repo-state cleanup pass landed via PR #77 (`a5d5f75`). |
+| **v1.2.1 final tag cut and release published — community/self-hosted scope only** | Cut 2026-05-10 from rc.3 peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a`. Annotated tag SHA `6dd3b78e3900a01a31b1c5d5325173d72c5cf319`. GitHub Release published 2026-05-10T18:06:33Z (`name=v1.2.1`, `tagName=v1.2.1`, `isDraft=false`, `isPrerelease=false`, 46 assets). npm `@apet97/clockify-mcp-go` `version=1.2.1`, `dist-tags.latest=1.2.1`. Container image `ghcr.io/apet97/go-clockify:1.2.1` signed under SAN `release.yml@refs/tags/v1.2.1`. Reproducibility 9-leg matrix [25635947473](https://github.com/apet97/go-clockify/actions/runs/25635947473) match released bytes. Deploy [25635476552](https://github.com/apet97/go-clockify/actions/runs/25635476552) green end-to-end (Verify Release Assets / Staging / Verify Live Contract / Production). The release.yml run that produced the v1.2.1 GitHub Release was a maintainer-approved `workflow_dispatch` retry ([25635880549](https://github.com/apet97/go-clockify/actions/runs/25635880549)) with `tag=v1.2.1` after PR #92 (`2766b39`) pinned `GORELEASER_CURRENT_TAG`; the original tag-push run failed because GoReleaser misread the tag as `v1.2.1-rc.3`. **Accepted release-smoke SAN exception**: v1.2.1 release-asset cosign signatures carry SAN `release.yml@refs/heads/main` (the manual-retry path) instead of `release.yml@refs/tags/v1.2.1`; signatures are valid Fulcio identities, full operator-side verification command and exception preconditions are recorded in [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md) § "v1.2.1 release evidence record (2026-05-10)". This closure is for the **community/self-hosted v1.2.1** track only; paid-hosted/commercial follow-ups remain deferred. |
 
 ### Open gates with exact next-step action
 
@@ -1328,28 +1335,33 @@ on 2026-05-10 against HEAD `3ee4847` (= `main` post-PR #85):
 
 ### Non-claim
 
-This audit does not declare the repository launch-ready. Final
-`v1.2.1` tag is post-Lane-6 and requires operator action. As of
-2026-05-10 there are **zero** active community/self-hosted release
-blockers in this ledger: the Group 7 two-host `make release-check`
-gate closed once the Linux x64 leg landed (see the rc.3 evidence
-record and the new "Linux x64 release-check evidence — v1.2.1-rc.3"
-subsection in the runbook), and the Group 7 "All required workflows
-on `main` green" (mutation cron) gate closed on the equivalent-source
-argument also captured above. The forward-looking npm publish path
-row is informational on the next publish, not a blocker for the
-current rc.3 → final v1.2.1 cut. The five paid-hosted / commercial
-follow-ups (paid-hosted external security review, DPA / privacy /
-trademark approval, paid-commercial RLS, cross-replica hosted HTTP
-quotas, plus the trademark-coupled `clockify://` URI / gRPC
-service-name branding review) are explicitly **deferred** under
-"## Deferred paid-hosted/commercial follow-ups — not required for
-community/self-hosted v1.2.1" and do **not** block the
-community/self-hosted `v1.2.1` cut so long as the release notes and
-public docs keep the project framed as community/self-hosted and do
-not claim official Clockify status. Cutting `v1.2.1` is still a
-maintainer action; this audit only records that the active
-community/self-hosted blocker list is empty.
+This audit does not declare paid-hosted/commercial readiness and
+does not claim official Clockify status. As of 2026-05-10 there are
+**zero** active community/self-hosted release blockers in this
+ledger: the Group 7 two-host `make release-check` gate closed once
+the Linux x64 leg landed (see the rc.3 evidence record and the
+"Linux x64 release-check evidence — v1.2.1-rc.3" subsection in the
+runbook), the Group 7 "All required workflows on `main` green"
+(mutation cron) gate closed on the equivalent-source argument also
+captured above, and `v1.2.1` itself was cut and published from rc.3's
+peeled commit `ce56414ae012c4a49d21ae0a319b178619c5966a` later that
+same day (annotated tag SHA `6dd3b78e3900a01a31b1c5d5325173d72c5cf319`,
+GitHub Release `isDraft=false`, `isPrerelease=false`, 46 assets, npm
+`dist-tags.latest=1.2.1`, Reproducibility 9-leg green, Deploy
+end-to-end green). The release.yml SAN exception covering the
+maintainer-approved manual-dispatch retry is documented in the
+runbook record. The forward-looking npm publish path row is
+informational on the next publish, not a blocker. The five
+paid-hosted / commercial follow-ups (paid-hosted external security
+review, DPA / privacy / trademark approval, paid-commercial RLS,
+cross-replica hosted HTTP quotas, plus the trademark-coupled
+`clockify://` URI / gRPC service-name branding review) remain
+explicitly **deferred** under "## Deferred paid-hosted/commercial
+follow-ups — not required for community/self-hosted v1.2.1" and do
+**not** block the community/self-hosted `v1.2.1` release that just
+shipped, so long as the release notes and public docs keep the
+project framed as community/self-hosted and do not claim official
+Clockify status.
 
 ## Verification used for this pass
 
