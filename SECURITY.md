@@ -154,3 +154,50 @@ builder's absolute paths.
 See [docs/verification.md](docs/verification.md) for step-by-step
 verification commands using `cosign verify-blob --bundle`,
 `cosign verify <image>`, and `gh attestation verify`.
+
+## Candidate-tag security evidence
+
+Per [`docs/launch-candidate-checklist.md`](docs/launch-candidate-checklist.md)
+Group 6 and the
+[`docs/runbooks/release-candidate-evidence.md`](docs/runbooks/release-candidate-evidence.md)
+runbook, every release-candidate tag carries a transcript of the local
+security walk-through executed against the candidate-tag tree. Each
+entry below is a fresh run on the tag's peeled commit, captured on a
+clean checkout; nothing here grants official-product status, closes
+Group 7 (release/sigstore/SLSA), the mutation cron evidence, or any
+external/legal/product gate.
+
+### v1.2.1-rc.3 (2026-05-10)
+
+- Tag: `v1.2.1-rc.3` (annotated tag SHA
+  `8f245174ca3567104a05a65a66250f0a10e5d486`, peeled commit
+  `ce56414ae012c4a49d21ae0a319b178619c5966a`).
+- Host: short name `192` (macOS arm64).
+- Date: 2026-05-10, evidence captured between 01:55 UTC and 01:59 UTC.
+- Working directory:
+  `/Users/15x/Downloads/WORKING/addons-me/GOCLMCP-worktrees/opus-group6-security-rc3-20260510`
+  (clean fresh worktree off the tag's peeled commit; no `.local/`,
+  `.serena/`, or duplicate `go-clockify/` checkouts).
+- Toolchain: host Go `go1.26.2 darwin/arm64`; pinned scanner toolchain
+  `GOTOOLCHAIN=go1.25.10` resolved from `go.mod`; `govulncheck@v1.3.0`
+  built from `tools/govulncheck`; `gitleaks 8.30.1`; `semgrep 1.157.0`;
+  `GNU Make 3.81`; `git 2.39.5`.
+
+| Command | Exit | Result |
+|---|---|---|
+| `make check` | 0 | `go vet ./...` plus `go test -race -count=1 -timeout 120s ./...` green across every package and test binary. |
+| `make verify-vuln` | 0 | `govulncheck@v1.3.0` under `GOTOOLCHAIN=go1.25.10` against the `vuln.go.dev` DB snapshot updated `2026-05-07 19:21:40 +0000 UTC` reported `No vulnerabilities found.` |
+| `make secret-scan` | 0 | `gitleaks detect --no-git --source . --redact --config .gitleaks.toml` scanned ~4.97 MB in 667 ms; `no leaks found`. |
+| `semgrep scan --config p/default --metrics=off --error --exclude .git --exclude .bench --exclude clockify-mcp .` | 0 | 558 rules executed across 1155 git-tracked files; `Findings: 0 (0 blocking)`. |
+| `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` | enumeration | Five in-source directives, each with inline justification within five lines: `tests/harness/grpc.go:71` (ADR 0008 — bufconn-only in-memory test transport) and `internal/mcp/transport_streamable_http.go:541,563,565,568` (ADR 0017 — server-controlled SSE `text/event-stream` framing). |
+| `make verify-fips` | 0 | `-tags=fips` (GOFIPS140=latest) built and emitted `INFO fips140_enabled` before every package test passed; `-tags=fips,grpc` build combination green. |
+
+This evidence closes the four candidate-tag-dependent boxes in the
+Group 6 row of the launch-candidate checklist
+(`make verify-vuln`, gitleaks, semgrep, `make verify-fips`) for
+`v1.2.1-rc.3`. It does **not** declare the repository launch-ready and
+does **not** close Group 7 release/sigstore/SLSA evidence, the
+mutation cron, the next-release npm expected-version proof, the
+paid-hosted external security review, the DPA / privacy / trademark
+gates, or issue #78 (19-context branch-protection restoration), all of
+which remain open.
