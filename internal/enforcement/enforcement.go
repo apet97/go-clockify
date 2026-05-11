@@ -17,6 +17,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/jsonschema"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -26,6 +27,14 @@ import (
 	"github.com/apet97/go-clockify/internal/truncate"
 )
 
+// ErrConfirmationRequired is returned by BeforeCall when a high-risk
+// tool call (per mcp.RiskClass.IsHighRisk()) arrives without a
+// confirmation token. It is the "you should preview first" signal —
+// not a bug, not a policy denial, just a request for the operator's
+// agent to round-trip through dry_run:true to obtain a token. See
+// docs/adr/0018-risk-class-confirmation-tokens.md.
+var ErrConfirmationRequired = errors.New("confirmation token required")
+
 // Pipeline implements mcp.Enforcement by composing the safety subsystems.
 type Pipeline struct {
 	Policy     *policy.Policy
@@ -33,6 +42,13 @@ type Pipeline struct {
 	RateLimit  *ratelimit.RateLimiter
 	DryRun     dryrun.Config
 	Truncation truncate.Config
+	// Confirmation gates non-dry-run high-risk tool calls behind an
+	// HMAC token minted on the dry-run preview. nil disables the
+	// gate entirely (development / opted-out deployments); the
+	// runtime is responsible for emitting the deprecation/risk
+	// warning when nil is observed under a hosted profile. See
+	// docs/adr/0018-risk-class-confirmation-tokens.md.
+	Confirmation *confirmation.Signer
 }
 
 func (p *Pipeline) Clone() *Pipeline {
