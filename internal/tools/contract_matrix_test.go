@@ -36,8 +36,8 @@ func TestToolContractMatrix(t *testing.T) {
 			}
 		}
 	}
-	if len(all) != 133 {
-		t.Fatalf("expected 133 tools, got %d", len(all))
+	if len(all) != 134 {
+		t.Fatalf("expected 134 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
@@ -58,8 +58,8 @@ func TestToolContractMatrix(t *testing.T) {
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
 		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
 		"clockify_find_and_update_entry": true, "clockify_timesheet_fill_gap": true, "clockify_create_project": true, "clockify_create_client": true,
-		"clockify_create_tag": true, "clockify_create_task": true, "clockify_delete_client": true, "clockify_update_client": true,
-		"clockify_update_task": true,
+		"clockify_create_tag": true, "clockify_create_task": true, "clockify_delete_client": true, "clockify_delete_task": true,
+		"clockify_update_client": true, "clockify_update_task": true,
 	}
 	// D1: drift guard for the contract-matrix policy lists. Every name
 	// here must resolve to a real registered tool; a rename in the

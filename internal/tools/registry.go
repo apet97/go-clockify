@@ -242,6 +242,13 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateTask(ctx, args)
 		}},
+		{Tool: toolDestructive("clockify_delete_task", "Delete a task by project+task reference. Clockify supports direct DELETE without an archive step for tasks.", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
+			"project": map[string]any{"type": "string", "description": "Project name or ID"},
+			"task":    map[string]any{"type": "string", "description": "Task ID or exact name"},
+			"dry_run": map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.DeleteTask(ctx, args)
+		}},
 
 		// --- Wave 2 additions ---
 		{Tool: toolRO("clockify_timer_status", "Check if a timer is currently running and show elapsed time", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {

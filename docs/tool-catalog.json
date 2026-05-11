@@ -991,6 +991,67 @@
       }
     },
     {
+      "name": "clockify_delete_task",
+      "description": "Delete a task by project+task reference. Clockify supports direct DELETE without an archive step for tasks.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": true,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "destructive"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          },
+          "task": {
+            "description": "Task ID or exact name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "task"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_delete_task",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
+        "title": "Delete Task"
+      }
+    },
+    {
       "name": "clockify_detailed_report",
       "description": "Detailed time entry report with filtering by project and date range",
       "group": "tier1",

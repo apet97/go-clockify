@@ -57,6 +57,7 @@ func tier1OutputSchemas() map[string]map[string]any {
 		"clockify_switch_project":   envelopeOpaque("clockify_switch_project"),
 		"clockify_delete_entry":     envelopeOpaque("clockify_delete_entry"),
 		"clockify_delete_client":    envelopeOpaque("clockify_delete_client"),
+		"clockify_delete_task":      envelopeOpaque("clockify_delete_task"),
 		"clockify_resolve_name":     envelopeOpaque("clockify_resolve_name"),
 		"clockify_resolve_debug":    envelopeOpaque("clockify_resolve_debug"),
 		"clockify_policy_info":      envelopeOpaque("clockify_policy_info"),

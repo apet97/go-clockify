@@ -20,10 +20,10 @@ safety classification, and test coverage. Generated from
 |----------------|--------|--------|-------|
 | Read-only | 25 | 33 | 58 |
 | Mutating (non-destructive) | 18 | 42 | 60 |
-| Destructive | 2 | 13 | 15 |
+| Destructive | 3 | 13 | 16 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **45** | **88** | **133** |
+| **Total tools** | **46** | **88** | **134** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (45)
+## Tier 1 — Core tools (46)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -104,12 +104,13 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
 | `clockify_update_task` | `GET` + `PUT /workspaces/{ws}/projects/{id}/tasks/{tid}` (fetch-then-merge) | unit |
 
-### Destructive (2 tools)
+### Destructive (3 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
 | `clockify_delete_client` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/clients/{id}` | unit, dry-run |
 | `clockify_delete_entry` | `DELETE /workspaces/{ws}/time-entries/{id}` | unit, dry-run (TestLiveDryRunDoesNotMutate), sacrificial-mutating (TestE2EMutating) |
+| `clockify_delete_task` | `GET` + `DELETE /workspaces/{ws}/projects/{id}/tasks/{tid}` | unit, dry-run |
 
 ---
 

@@ -46,6 +46,7 @@ var validDestructiveArgs = map[string]map[string]any{
 	"clockify_create_tag":            {"name": "t"},
 	"clockify_create_task":           {"project_id": "123456789012345678901234", "name": "t"},
 	"clockify_delete_client":         {"client": "123456789012345678901234"},
+	"clockify_delete_task":           {"project": "123456789012345678901234", "task": "6a00f6bc2568d3d293061e2a"},
 	"clockify_update_client":         {"client": "123456789012345678901234"},
 	"clockify_update_task":           {"project": "123456789012345678901234", "task": "6a00f6bc2568d3d293061e2a"},
 	"clockify_switch_project":        {"project": "p"},
