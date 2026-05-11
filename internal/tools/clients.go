@@ -71,6 +71,15 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	payload := map[string]any{"name": name}
+	if v := strings.TrimSpace(stringArg(args, "address")); v != "" {
+		payload["address"] = v
+	}
+	if v := strings.TrimSpace(stringArg(args, "email")); v != "" {
+		payload["email"] = v
+	}
+	if v := strings.TrimSpace(stringArg(args, "note")); v != "" {
+		payload["note"] = v
+	}
 	if boolArg(args, "dry_run") {
 		return ok("clockify_create_client", dryrunPreviewPayload("clockify_create_client", payload), map[string]any{"workspaceId": wsID}), nil
 	}

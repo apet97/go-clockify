@@ -48,7 +48,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_activate_group` | `tier1` | no | no | yes | no | `write` | Activate every tool in the named Tier-2 group. The response puts only currently visible/callable names in activated_tools and reports unavailable names under activated_tools_hidden_by_bootstrap or activated_tools_blocked_by_policy. |
 | `clockify_activate_tool` | `tier1` | no | no | yes | no | `write` | Activate a hidden Tier-1 tool by name, or activate the full Tier-2 group that contains the named Tier-2 tool. The side effect can bring sibling tools online; inspect activated_tools after the call. |
 | `clockify_add_entry` | `tier1` | no | no | no | yes | `write` | Lower-level helper for creating a time entry with flexible start/end parsing. Prefer clockify_log_time for finished past work; when end is present this validates overlaps unless allow_overlap:true is passed. |
-| `clockify_create_client` | `tier1` | no | no | no | yes | `write` | Create a new client |
+| `clockify_create_client` | `tier1` | no | no | no | yes | `write` | Create a new client. Accepts optional address, email, and note alongside the required name. |
 | `clockify_create_project` | `tier1` | no | no | no | yes | `write` | Create a new project |
 | `clockify_create_tag` | `tier1` | no | no | no | yes | `write` | Create a new tag |
 | `clockify_create_task` | `tier1` | no | no | no | yes | `write` | Create a new task in a project |

@@ -179,8 +179,11 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateProject(ctx, args)
 		}},
-		{Tool: toolRW("clockify_create_client", "Create a new client", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
+		{Tool: toolRW("clockify_create_client", "Create a new client. Accepts optional address, email, and note alongside the required name.", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 			"name":    map[string]any{"type": "string"},
+			"address": map[string]any{"type": "string"},
+			"email":   map[string]any{"type": "string"},
+			"note":    map[string]any{"type": "string"},
 			"dry_run": map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateClient(ctx, args)

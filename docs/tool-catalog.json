@@ -278,7 +278,7 @@
     },
     {
       "name": "clockify_create_client",
-      "description": "Create a new client",
+      "description": "Create a new client. Accepts optional address, email, and note alongside the required name.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
@@ -291,10 +291,19 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "address": {
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
+          "email": {
+            "type": "string"
+          },
           "name": {
+            "type": "string"
+          },
+          "note": {
             "type": "string"
           }
         },

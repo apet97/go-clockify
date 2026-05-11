@@ -380,3 +380,69 @@ func TestUpdateClientRequiresClientArg(t *testing.T) {
 		t.Fatal("expected error when client arg is missing")
 	}
 }
+
+func TestCreateClientForwardsAddressEmailNote(t *testing.T) {
+	var body map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/clients" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, clockify.ClientEntity{
+				ID:      testClientID,
+				Name:    "Acme",
+				Address: "123 Foo St",
+				Email:   "ops@acme.example",
+				Note:    "preferred net30",
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.CreateClient(context.Background(), map[string]any{
+		"name":    "Acme",
+		"address": "123 Foo St",
+		"email":   "ops@acme.example",
+		"note":    "preferred net30",
+	}); err != nil {
+		t.Fatalf("create client failed: %v", err)
+	}
+	if body["name"] != "Acme" || body["address"] != "123 Foo St" || body["email"] != "ops@acme.example" || body["note"] != "preferred net30" {
+		t.Fatalf("POST body missing fields: %+v", body)
+	}
+}
+
+func TestCreateClientOmitsBlankOptionalFields(t *testing.T) {
+	var body map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/clients" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.CreateClient(context.Background(), map[string]any{
+		"name":    "Acme",
+		"address": "   ",
+		"email":   "",
+	}); err != nil {
+		t.Fatalf("create client failed: %v", err)
+	}
+	if _, hasAddr := body["address"]; hasAddr {
+		t.Fatalf("whitespace-only address must not be forwarded, got %+v", body)
+	}
+	if _, hasEmail := body["email"]; hasEmail {
+		t.Fatalf("empty email must not be forwarded, got %+v", body)
+	}
+}
