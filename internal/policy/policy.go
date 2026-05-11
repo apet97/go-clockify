@@ -19,11 +19,20 @@ const (
 )
 
 type Policy struct {
-	Mode           Mode
+	Mode Mode
+	// Ceiling is the maximum mode a control-plane tenant record may
+	// select via TenantRecord.PolicyMode. Empty = implicit ceiling
+	// (= process Mode itself; see EffectiveTenantMode). See ADR 0021.
+	Ceiling        Mode
 	DeniedTools    map[string]bool
 	DeniedGroups   map[string]bool
 	AllowedGroups  map[string]bool // nil = not set (all allowed per mode)
 	Tier1ToolNames map[string]bool // populated after registry construction
+	// TenantAllowGroupsIgnored is set on per-tenant clones when the
+	// tenant carried AllowGroups under a group-blocking effective mode
+	// (read_only / time_tracking_safe / safe_core) and the list was
+	// silently dropped. Surfaced via Describe() for clockify_policy_info.
+	TenantAllowGroupsIgnored bool
 }
 
 func (p *Policy) Clone() *Policy {
@@ -32,10 +41,13 @@ func (p *Policy) Clone() *Policy {
 	}
 	return &Policy{
 		Mode:           p.Mode,
+		Ceiling:        p.Ceiling,
 		DeniedTools:    cloneBoolMap(p.DeniedTools),
 		DeniedGroups:   cloneBoolMap(p.DeniedGroups),
 		AllowedGroups:  cloneBoolMap(p.AllowedGroups),
 		Tier1ToolNames: cloneBoolMap(p.Tier1ToolNames),
+		// TenantAllowGroupsIgnored is a per-clone marker; cleared on
+		// Clone so a fresh tenant runtime starts from a clean slate.
 	}
 }
 
@@ -48,6 +60,21 @@ func FromEnv() (*Policy, error) {
 	case ReadOnly, TimeTrackingSafe, SafeCore, Standard, Full:
 	default:
 		return nil, fmt.Errorf("invalid CLOCKIFY_POLICY: %s", mode)
+	}
+
+	// MCP_TENANT_POLICY_CEILING constrains the maximum mode a
+	// control-plane tenant record may select. Empty = no explicit
+	// constraint (process mode acts as the implicit ceiling via
+	// EffectiveTenantMode). See ADR 0021.
+	var ceiling Mode
+	if raw := strings.TrimSpace(strings.ToLower(os.Getenv("MCP_TENANT_POLICY_CEILING"))); raw != "" {
+		c := Mode(raw)
+		switch c {
+		case ReadOnly, TimeTrackingSafe, SafeCore, Standard, Full:
+			ceiling = c
+		default:
+			return nil, fmt.Errorf("invalid MCP_TENANT_POLICY_CEILING: %s", raw)
+		}
 	}
 
 	denied := map[string]bool{}
@@ -79,6 +106,7 @@ func FromEnv() (*Policy, error) {
 
 	return &Policy{
 		Mode:          mode,
+		Ceiling:       ceiling,
 		DeniedTools:   denied,
 		DeniedGroups:  deniedGroups,
 		AllowedGroups: allowedGroups,
@@ -158,18 +186,113 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 // Describe returns a map describing the current policy configuration.
 func (p *Policy) Describe() map[string]any {
 	m := map[string]any{
-		"mode":                      string(p.Mode),
-		"denied_tools":              sortedKeys(p.DeniedTools),
-		"denied_groups":             sortedKeys(p.DeniedGroups),
-		"allowed_groups":            nil,
-		"introspection_tools":       introspectionList(),
-		"safe_core_writes":          safeCoreWriteList(),
-		"time_tracking_safe_writes": timeTrackingSafeWriteList(),
+		"mode":                        string(p.Mode),
+		"ceiling":                     string(p.Ceiling),
+		"tenant_allow_groups_ignored": p.TenantAllowGroupsIgnored,
+		"denied_tools":                sortedKeys(p.DeniedTools),
+		"denied_groups":               sortedKeys(p.DeniedGroups),
+		"allowed_groups":              nil,
+		"introspection_tools":         introspectionList(),
+		"safe_core_writes":            safeCoreWriteList(),
+		"time_tracking_safe_writes":   timeTrackingSafeWriteList(),
 	}
 	if p.AllowedGroups != nil {
 		m["allowed_groups"] = sortedKeys(p.AllowedGroups)
 	}
 	return m
+}
+
+// Rank reflects posture breadth, not current IsAllowed equivalence.
+// The ceiling contract surface (see ADR 0021) lives on this total
+// ordering; standard and full are deliberately split so future
+// divergence between them cannot silently widen deployments whose
+// ceiling is pinned at standard.
+//
+//	read_only         = 0  (narrowest)
+//	time_tracking_safe = 1
+//	safe_core         = 2
+//	standard          = 3
+//	full              = 4  (broadest)
+//
+// Unknown modes return -1 so every comparison against a real
+// ceiling rejects them (fail closed).
+func Rank(m Mode) int {
+	switch m {
+	case ReadOnly:
+		return 0
+	case TimeTrackingSafe:
+		return 1
+	case SafeCore:
+		return 2
+	case Standard:
+		return 3
+	case Full:
+		return 4
+	}
+	return -1
+}
+
+// IsAtMost reports whether candidate is at most as broad as ceiling.
+// An empty ceiling means "no explicit constraint" (the helper still
+// rejects unknown candidates). EffectiveTenantMode layers the
+// implicit "process mode as ceiling" semantics on top.
+func IsAtMost(candidate, ceiling Mode) bool {
+	cr := Rank(candidate)
+	if cr < 0 {
+		return false
+	}
+	if ceiling == "" {
+		return true
+	}
+	return cr <= Rank(ceiling)
+}
+
+// EffectiveTenantMode returns the effective per-tenant policy mode
+// given the process mode, the tenant's requested mode (may be empty
+// to inherit), and an optional explicit ceiling from
+// MCP_TENANT_POLICY_CEILING.
+//
+// Invariants (see ADR 0021):
+//
+//   - Empty tenantMode inherits processMode.
+//   - Unknown tenantMode fails closed.
+//   - Effective ceiling is min(processMode, ceiling-if-set). Process
+//     mode is an implicit ceiling even when no explicit ceiling is
+//     configured, so a hosted operator who forgets to set
+//     MCP_TENANT_POLICY_CEILING still cannot have tenants broaden
+//     past the process posture.
+//   - tenantMode > effective ceiling fails closed with an explicit
+//     error rather than silent clamp.
+func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
+	if tenantMode == "" {
+		return processMode, nil
+	}
+	if Rank(tenantMode) < 0 {
+		return "", fmt.Errorf("invalid tenant policyMode %q", string(tenantMode))
+	}
+	effectiveCeiling := processMode
+	if ceiling != "" && Rank(ceiling) >= 0 && Rank(ceiling) < Rank(effectiveCeiling) {
+		effectiveCeiling = ceiling
+	}
+	if Rank(tenantMode) > Rank(effectiveCeiling) {
+		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(effectiveCeiling))
+	}
+	return tenantMode, nil
+}
+
+// isGroupBlockingMode reports whether the given mode nullifies
+// AllowedGroups (i.e. IsGroupAllowed returns false before consulting
+// the allowlist). tenantRuntime uses this to decide whether to honour
+// or silently drop tenant AllowGroups. Unknown / empty modes fail
+// closed and are treated as blocking.
+func isGroupBlockingMode(m Mode) bool {
+	switch m {
+	case Standard, Full:
+		return false
+	case ReadOnly, TimeTrackingSafe, SafeCore:
+		return true
+	}
+	return true
 }
 
 func sortedKeys(m map[string]bool) []string {
