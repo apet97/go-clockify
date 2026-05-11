@@ -191,6 +191,25 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateProject(ctx, args)
 		}},
+		{Tool: toolRWIdem("clockify_update_project", "Update a project by ID or exact name using a fetch-then-merge strategy. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'. Use the dedicated archived boolean to flip archival state.", map[string]any{"type": "object", "required": []string{"project"}, "properties": map[string]any{
+			"project":   map[string]any{"type": "string", "description": "Project name or ID"},
+			"name":      map[string]any{"type": "string"},
+			"client":    map[string]any{"type": "string", "description": "Client name or ID"},
+			"color":     map[string]any{"type": "string", "description": "Hex color code"},
+			"note":      map[string]any{"type": "string"},
+			"billable":  map[string]any{"type": "boolean"},
+			"is_public": map[string]any{"type": "boolean"},
+			"archived":  map[string]any{"type": "boolean"},
+			"dry_run":   map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UpdateProject(ctx, args)
+		}},
+		{Tool: toolDestructive("clockify_delete_project", "Delete a project by ID or exact name. Archives the project first if it is still active (Clockify rejects DELETE on active projects).", map[string]any{"type": "object", "required": []string{"project"}, "properties": map[string]any{
+			"project": map[string]any{"type": "string", "description": "Project name or ID"},
+			"dry_run": map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.DeleteProject(ctx, args)
+		}},
 		{Tool: toolRW("clockify_create_client", "Create a new client. Accepts optional address, email, and note alongside the required name.", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 			"name":    map[string]any{"type": "string"},
 			"address": map[string]any{"type": "string"},

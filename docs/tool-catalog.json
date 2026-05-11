@@ -992,6 +992,62 @@
       }
     },
     {
+      "name": "clockify_delete_project",
+      "description": "Delete a project by ID or exact name. Archives the project first if it is still active (Clockify rejects DELETE on active projects).",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": true,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "destructive"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_delete_project",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
+        "title": "Delete Project"
+      }
+    },
+    {
       "name": "clockify_delete_tag",
       "description": "Delete a tag by ID or exact name. Clockify supports direct DELETE without an archive step for tags.",
       "group": "tier1",
@@ -5347,6 +5403,146 @@
           "write"
         ],
         "title": "Update Entry"
+      }
+    },
+    {
+      "name": "clockify_update_project",
+      "description": "Update a project by ID or exact name using a fetch-then-merge strategy. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'. Use the dedicated archived boolean to flip archival state.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "client": {
+            "description": "Client name or ID",
+            "type": "string"
+          },
+          "color": {
+            "description": "Hex color code",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "is_public": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_update_project",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "archived": {
+                "type": "boolean"
+              },
+              "billable": {
+                "type": "boolean"
+              },
+              "budgetEstimate": {},
+              "clientId": {
+                "type": "string"
+              },
+              "clientName": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "costRate": {},
+              "duration": {
+                "type": "string"
+              },
+              "estimate": {},
+              "estimateReset": {},
+              "hourlyRate": {},
+              "id": {
+                "type": "string"
+              },
+              "memberships": {},
+              "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "public": {
+                "type": "boolean"
+              },
+              "template": {
+                "type": "boolean"
+              },
+              "timeEstimate": {},
+              "workspaceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "archived"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Update Project"
       }
     },
     {

@@ -19,11 +19,11 @@ safety classification, and test coverage. Generated from
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
 | Read-only | 26 | 33 | 59 |
-| Mutating (non-destructive) | 19 | 42 | 61 |
-| Destructive | 4 | 13 | 17 |
+| Mutating (non-destructive) | 20 | 42 | 62 |
+| Destructive | 5 | 13 | 18 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **49** | **88** | **137** |
+| **Total tools** | **51** | **88** | **139** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (49)
+## Tier 1 — Core tools (51)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -81,7 +81,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_weekly_summary` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries` by day + project) | unit |
 | `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
 
-### Mutating — non-destructive (20 tools)
+### Mutating — non-destructive (21 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
@@ -103,15 +103,17 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_timesheet_fill_gap` | `GET` overlap validation + `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestLiveTier1RemainingCRUD) |
 | `clockify_update_client` | `GET` + `PUT /workspaces/{ws}/clients/{id}` (fetch-then-merge) | unit |
 | `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
+| `clockify_update_project` | `GET` + `PUT /workspaces/{ws}/projects/{id}` (fetch-then-merge) | unit |
 | `clockify_update_tag` | `GET` + `PUT /workspaces/{ws}/tags/{id}` (fetch-then-merge) | unit |
 | `clockify_update_task` | `GET` + `PUT /workspaces/{ws}/projects/{id}/tasks/{tid}` (fetch-then-merge) | unit |
 
-### Destructive (4 tools)
+### Destructive (5 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
 | `clockify_delete_client` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/clients/{id}` | unit, dry-run |
 | `clockify_delete_entry` | `DELETE /workspaces/{ws}/time-entries/{id}` | unit, dry-run (TestLiveDryRunDoesNotMutate), sacrificial-mutating (TestE2EMutating) |
+| `clockify_delete_project` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/projects/{id}` | unit, dry-run |
 | `clockify_delete_tag` | `GET` + `DELETE /workspaces/{ws}/tags/{id}` | unit, dry-run |
 | `clockify_delete_task` | `GET` + `DELETE /workspaces/{ws}/projects/{id}/tasks/{tid}` | unit, dry-run |
 
