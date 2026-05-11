@@ -57,6 +57,17 @@ func New(cfg config.Config, opts NewOpts) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Transport-scoped ceiling gate. MCP_TENANT_POLICY_CEILING is
+	// only load-bearing on streamable_http (the only transport that
+	// consumes control-plane TenantRecord overrides). Other
+	// transports may inherit the env var from a misconfigured
+	// shell / container env without it actually doing anything;
+	// failing startup for "policy > ceiling" there would reject a
+	// configuration that has no effect. See ADR 0021 and
+	// policy.ValidateForTransport.
+	if err := policy.ValidateForTransport(pol, cfg.Transport); err != nil {
+		return nil, err
+	}
 	rl := ratelimit.FromEnvWithAcquireTimeout(cfg.ConcurrencyAcquireTimeout)
 	tc := truncate.ConfigFromEnv(config.IsHostedProfile(cfg.Profile))
 	dc := dryrun.ConfigFromEnv()

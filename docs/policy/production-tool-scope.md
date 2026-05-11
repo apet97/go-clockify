@@ -122,11 +122,14 @@ narrow but cannot exceed. Three behaviours:
    `PolicyMode` strictly broader than `min(CLOCKIFY_POLICY,
    MCP_TENANT_POLICY_CEILING)`, session creation fails with an
    "exceeds" error. Operators see misconfigured rows at
-   session-create time, not at first tool call. The same gate
-   fires at config load when `CLOCKIFY_POLICY` itself is broader
-   than `MCP_TENANT_POLICY_CEILING` — the binary refuses to start
-   rather than running with a process posture that would silently
-   bypass the hosted ceiling for every tenant.
+   session-create time, not at first tool call. A streamable-HTTP
+   binary also refuses to start when `CLOCKIFY_POLICY` itself is
+   broader than `MCP_TENANT_POLICY_CEILING` — the
+   `policy.ValidateForTransport` gate runs in `runtime.New` and
+   surfaces the same Load error from `clockify-mcp doctor`. Other
+   transports (stdio, gRPC, legacy http) do not consume
+   control-plane tenant records, so the env var is informational
+   on those transports and the startup gate does not fire there.
 2. **Tenant deny lists narrow only.** `tenant.DenyTools` and
    `tenant.DenyGroups` union with the process deny lists. A
    tenant record can add denies; it cannot erase a

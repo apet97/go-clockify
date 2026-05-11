@@ -305,9 +305,14 @@ Hosted operators who today carry tenant records with
 
 - `internal/policy/policy.go` — `Mode` constants and `Policy`
   struct, `IsAllowed`, `IsGroupAllowed`. New helpers (`Rank`,
-  `IsAtMost`, `EffectiveTenantMode`, `IsGroupBlockingMode`) and
-  fields (`Policy.Ceiling`, `Policy.TenantAllowGroupsIgnored`)
-  land here.
+  `IsAtMost`, `EffectiveTenantMode`, `IsGroupBlockingMode`,
+  `ValidateForTransport`) and fields (`Policy.Ceiling`,
+  `Policy.TenantAllowGroupsIgnored`) land here.
+  `ValidateForTransport` is the streamable-HTTP-only startup gate
+  for `processMode <= ceiling`; called from `runtime.New` and
+  `cmd/clockify-mcp/doctor.go` so the binary refuses to boot and
+  doctor reports a Load error when the pair is misaligned under
+  streamable_http. Other transports skip the gate.
 - `internal/tenantpolicy/tenantpolicy.go` — `Derive` is the
   shared per-tenant policy derivation entry point. Used by both
   `internal/runtime/service.go::tenantRuntime` and

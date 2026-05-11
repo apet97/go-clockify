@@ -237,27 +237,29 @@ func TestEffectiveTenantMode(t *testing.T) {
 	}
 }
 
-// TestFromEnv_RejectsProcessExceedingCeiling pins the config-load
-// fail-closed shape. An operator who explicitly overrides
-// CLOCKIFY_POLICY to standard while leaving MCP_TENANT_POLICY_CEILING
-// at the hosted default time_tracking_safe gets a clear startup
-// error rather than silently broadening every tenant past the
-// hosted ceiling. ADR 0021.
-func TestFromEnv_RejectsProcessExceedingCeiling(t *testing.T) {
+// TestFromEnv_AcceptsProcessExceedingCeilingParse pins that FromEnv
+// parses and populates Policy.Ceiling without rejecting a process
+// mode broader than the ceiling. The cross-check now lives in
+// policy.ValidateForTransport so transports that do not consume
+// control-plane tenant records (stdio, grpc, legacy http) are not
+// penalised for inheriting MCP_TENANT_POLICY_CEILING from a shell
+// or container env. ADR 0021 + PR #99 review final blocker.
+func TestFromEnv_AcceptsProcessExceedingCeilingParse(t *testing.T) {
 	t.Setenv("CLOCKIFY_POLICY", "standard")
 	t.Setenv("CLOCKIFY_DENY_TOOLS", "")
 	t.Setenv("CLOCKIFY_DENY_GROUPS", "")
 	t.Setenv("CLOCKIFY_ALLOW_GROUPS", "")
 	t.Setenv("MCP_TENANT_POLICY_CEILING", "time_tracking_safe")
 
-	_, err := FromEnv()
-	if err == nil {
-		t.Fatal("expected error when CLOCKIFY_POLICY exceeds MCP_TENANT_POLICY_CEILING")
+	p, err := FromEnv()
+	if err != nil {
+		t.Fatalf("FromEnv must not reject the pair on its own (transport-scoped gate lives elsewhere): %v", err)
 	}
-	for _, want := range []string{"CLOCKIFY_POLICY", "MCP_TENANT_POLICY_CEILING", "standard", "time_tracking_safe"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("error message should name %q so the operator can act on it; got: %v", want, err)
-		}
+	if p.Mode != Standard {
+		t.Errorf("Mode = %q, want standard", p.Mode)
+	}
+	if p.Ceiling != TimeTrackingSafe {
+		t.Errorf("Ceiling = %q, want time_tracking_safe", p.Ceiling)
 	}
 }
 
@@ -302,6 +304,53 @@ func TestFromEnv_AcceptsCeilingBroaderThanProcess(t *testing.T) {
 	}
 	if p.Ceiling != Standard {
 		t.Errorf("Ceiling = %q, want standard", p.Ceiling)
+	}
+}
+
+// TestValidateForTransport pins the transport-scoped ceiling gate
+// introduced as the PR #99 review final-blocker fix. Only
+// streamable_http consumes control-plane TenantRecord overrides, so
+// the env-level "process > ceiling" mismatch is only load-bearing on
+// that transport; stdio / grpc / legacy http inherit the env var
+// without honoring it, and a startup gate there would reject a
+// configuration that has no effect.
+func TestValidateForTransport(t *testing.T) {
+	cases := []struct {
+		name      string
+		mode      Mode
+		ceiling   Mode
+		transport string
+		wantErr   string // substring; "" = expect success
+	}{
+		{"nil policy returns nil", "", "", "streamable_http", ""},
+		{"empty ceiling returns nil", Standard, "", "streamable_http", ""},
+		{"process<=ceiling under streamable_http", TimeTrackingSafe, TimeTrackingSafe, "streamable_http", ""},
+		{"process>ceiling under streamable_http fails closed", Standard, TimeTrackingSafe, "streamable_http", "CLOCKIFY_POLICY \"standard\" exceeds MCP_TENANT_POLICY_CEILING \"time_tracking_safe\""},
+		{"process>ceiling under stdio accepted", Standard, TimeTrackingSafe, "stdio", ""},
+		{"process>ceiling under grpc accepted", Standard, TimeTrackingSafe, "grpc", ""},
+		{"process>ceiling under legacy http accepted", Standard, TimeTrackingSafe, "http", ""},
+		{"process>ceiling under empty transport accepted (test scaffolding)", Standard, TimeTrackingSafe, "", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var p *Policy
+			if c.name != "nil policy returns nil" {
+				p = &Policy{Mode: c.mode, Ceiling: c.ceiling}
+			}
+			err := ValidateForTransport(p, c.transport)
+			if c.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", c.wantErr)
+				}
+				if !strings.Contains(err.Error(), c.wantErr) {
+					t.Fatalf("expected error containing %q, got: %v", c.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 

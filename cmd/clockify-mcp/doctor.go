@@ -65,7 +65,16 @@ func runDoctorReport(args []string, out io.Writer) int {
 	// the server still refuses to start. The errors carry the variable
 	// name + actionable hint, so we surface them verbatim.
 	if cfgErr == nil {
-		if _, err := policy.FromEnv(); err != nil {
+		pol, err := policy.FromEnv()
+		if err != nil {
+			cfgErr = err
+		} else if err := policy.ValidateForTransport(pol, cfg.Transport); err != nil {
+			// Transport-scoped ceiling gate. Mirrors what runtime.New
+			// would refuse — surface it from doctor too so an operator
+			// running `clockify-mcp doctor` against a streamable_http
+			// configuration sees the same Load-error shape the binary
+			// would emit at boot. See ADR 0021 and
+			// policy.ValidateForTransport.
 			cfgErr = err
 		}
 	}

@@ -66,6 +66,13 @@ func FromEnv() (*Policy, error) {
 	// control-plane tenant record may select. Empty = no explicit
 	// constraint (process mode acts as the implicit ceiling via
 	// EffectiveTenantMode). See ADR 0021.
+	//
+	// FromEnv only parses and validates the enum here. The
+	// "process mode broader than ceiling" cross-check lives in
+	// ValidateForTransport so transports that do not consume
+	// control-plane tenant records (stdio, grpc, legacy http) are
+	// not penalised for inheriting the env var from a misconfigured
+	// shell / container env.
 	var ceiling Mode
 	if raw := strings.TrimSpace(strings.ToLower(os.Getenv("MCP_TENANT_POLICY_CEILING"))); raw != "" {
 		c := Mode(raw)
@@ -74,14 +81,6 @@ func FromEnv() (*Policy, error) {
 			ceiling = c
 		default:
 			return nil, fmt.Errorf("invalid MCP_TENANT_POLICY_CEILING: %s", raw)
-		}
-		// Fail fast at config load when an operator pinned a process
-		// mode broader than the explicit ceiling — the binary cannot
-		// honour both. Hosted profiles default both to
-		// time_tracking_safe, so this only fires when an operator
-		// explicitly overrode one of them. See ADR 0021.
-		if Rank(mode) > Rank(ceiling) {
-			return nil, fmt.Errorf("CLOCKIFY_POLICY %q exceeds MCP_TENANT_POLICY_CEILING %q; lower one to match", string(mode), string(ceiling))
 		}
 	}
 
@@ -326,6 +325,31 @@ func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
 		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(processMode))
 	}
 	return tenantMode, nil
+}
+
+// ValidateForTransport returns an error when the policy's process
+// mode exceeds the explicit ceiling under a transport that consumes
+// control-plane tenant records (currently only streamable_http).
+//
+// The MCP_TENANT_POLICY_CEILING env var is documented as
+// streamable-HTTP only (internal/config/spec.go AppliesTo). Transports
+// that do not consume control-plane TenantRecord overrides — stdio,
+// legacy http, grpc — would treat the ceiling as a no-op at runtime,
+// so failing startup for "policy > ceiling" on those transports would
+// reject a configuration that has no actual effect. ValidateForTransport
+// scopes the cross-check to where it is load-bearing.
+//
+// EffectiveTenantMode / tenantpolicy.Derive keep their independent
+// defense-in-depth checks for actual per-session derivation. See ADR
+// 0021.
+func ValidateForTransport(p *Policy, transport string) error {
+	if p == nil || p.Ceiling == "" || transport != "streamable_http" {
+		return nil
+	}
+	if Rank(p.Mode) > Rank(p.Ceiling) {
+		return fmt.Errorf("CLOCKIFY_POLICY %q exceeds MCP_TENANT_POLICY_CEILING %q; lower one to match", string(p.Mode), string(p.Ceiling))
+	}
+	return nil
 }
 
 // IsGroupBlockingMode reports whether the given mode nullifies
