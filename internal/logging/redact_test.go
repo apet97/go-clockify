@@ -324,6 +324,19 @@ func TestRedactingHandlerScrubsSecretShapedStringValues(t *testing.T) {
 	}
 }
 
+func TestRedactingHandlerScrubsXAddonToken(t *testing.T) {
+	record := renderRecord(t,
+		slog.String("x-addon-token", "secret-addon-token"),
+		slog.String("user-agent", "clockify-mcp-go/dev"),
+	)
+	if got := record["x-addon-token"]; got != "[REDACTED]" {
+		t.Fatalf("expected x-addon-token redacted, got %v", got)
+	}
+	if got := record["user-agent"]; got != "clockify-mcp-go/dev" {
+		t.Fatalf("expected non-sensitive attr unchanged, got %v", got)
+	}
+}
+
 func renderRecord(t *testing.T, attrs ...slog.Attr) map[string]any {
 	t.Helper()
 	return renderRecordWithHandler(t, NewRedactingHandler, attrs...)

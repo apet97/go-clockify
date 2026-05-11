@@ -179,6 +179,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	if !ok {
 		outcome = "tool_error"
 		s.recordAuditBestEffort(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
+		slog.Warn("tool_call", "tool", params.Name, "error", "unknown_tool", "req_id", reqID)
 		return nil, &UnknownToolError{Name: params.Name}
 	}
 

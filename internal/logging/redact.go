@@ -47,6 +47,7 @@ var DefaultSensitiveKeys = []string{
 	"refresh_token",
 	"access_token",
 	"id_token",
+	"x-addon-token",
 }
 
 const minSecretShapeScanLen = 20
