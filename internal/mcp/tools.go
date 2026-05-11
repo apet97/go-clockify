@@ -265,6 +265,12 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 				outcome = "rate_limited"
 			case strings.Contains(err.Error(), "blocked by policy"):
 				outcome = "policy_denied"
+			case strings.Contains(err.Error(), "confirmation token required"):
+				outcome = "confirmation_required"
+			case strings.Contains(err.Error(), "confirmation token expired"):
+				outcome = "confirmation_expired"
+			case strings.Contains(err.Error(), "confirmation token"):
+				outcome = "confirmation_invalid"
 			default:
 				outcome = "tool_error"
 			}
