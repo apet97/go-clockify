@@ -91,6 +91,54 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 	}
 }
 
+// TestUpdateUserRoleREGULARReturnsAccurateError verifies that calling
+// UpdateUserRole with role=REGULAR returns a clear error explaining that
+// REGULAR strips elevated grants (not removes the user), why the MCP cannot
+// do it yet, and that clockify_deactivate_user is NOT a substitute.
+// No HTTP call should be made.
+func TestUpdateUserRoleREGULARReturnsAccurateError(t *testing.T) {
+	const userID = "u1"
+	const wsID = "w1"
+
+	called := false
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		http.Error(w, "should not be called", http.StatusInternalServerError)
+	})
+	defer cleanup()
+
+	svc := New(client, wsID)
+
+	_, err := svc.UpdateUserRole(context.Background(), map[string]any{
+		"user_id": userID,
+		"role":    "REGULAR",
+	})
+	if err == nil {
+		t.Fatal("expected an error for role=REGULAR, got nil")
+	}
+	msg := err.Error()
+
+	// Must describe what REGULAR actually does (strips elevated grants).
+	if !strings.Contains(msg, "strips") && !strings.Contains(msg, "elevated") {
+		t.Errorf("error message must mention 'strips' or 'elevated'; got: %q", msg)
+	}
+
+	// Must explicitly state clockify_deactivate_user is NOT a substitute.
+	if !strings.Contains(msg, "NOT a substitute") {
+		t.Errorf("error message must contain 'NOT a substitute'; got: %q", msg)
+	}
+
+	// Must NOT recommend clockify_deactivate_user as the right tool.
+	if strings.Contains(msg, "use clockify_deactivate_user") {
+		t.Errorf("error message must not recommend 'use clockify_deactivate_user'; got: %q", msg)
+	}
+
+	// No HTTP call should have been made.
+	if called {
+		t.Error("no upstream HTTP call should be made for role=REGULAR")
+	}
+}
+
 // TestDeactivateUserEmitsUserURI mirrors the above for the
 // DeactivateUser mutation path: after the INACTIVE PUT succeeds, the
 // user URI is emitted with format=none on a cold cache.

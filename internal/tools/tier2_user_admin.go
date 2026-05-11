@@ -375,6 +375,19 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	if !validRoles[role] {
 		return ResultEnvelope{}, fmt.Errorf("role must be one of WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, REGULAR; got %q", role)
 	}
+	if role == "REGULAR" {
+		return ResultEnvelope{}, fmt.Errorf(
+			"setting role to REGULAR strips the user's elevated grants " +
+				"(WORKSPACE_ADMIN/PROJECT_MANAGER/TEAM_MANAGER) while keeping them " +
+				"in the workspace as an active member; " +
+				"the MCP does not yet expose a role-strip helper because the live API " +
+				"requires DELETE on /v1/workspaces/{ws}/users/{userId}/roles with a " +
+				"JSON body, which the internal Clockify client's Delete method does not " +
+				"support today — manage this via the Clockify web UI or a direct API call; " +
+				"clockify_deactivate_user is NOT a substitute: it removes the user from " +
+				"the workspace entirely",
+		)
+	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -384,13 +397,8 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	// The live Clockify API rejects PUT on this path with code 3000
 	// ("Request method 'PUT' is not supported"). The contract is POST
 	// with a body containing both entityId (the workspace ID) and role.
-	// Setting a user back to REGULAR uses a different verb (DELETE on
-	// the role) which is not currently wired through the client, so
-	// reject it with a clear message rather than send a request the
-	// server will refuse.
-	if role == "REGULAR" {
-		return ResultEnvelope{}, fmt.Errorf("setting role to REGULAR is not yet supported; use clockify_deactivate_user to remove a user from the workspace")
-	}
+	// The REGULAR case is handled by the early-return guard above
+	// (DELETE-with-body wire contract; see ADR 0020).
 	payload := map[string]any{"entityId": wsID, "role": role}
 	if dryrun.Enabled(args) {
 		return ok("clockify_update_user_role", dryrunPreviewPayload("clockify_update_user_role", payload), map[string]any{
