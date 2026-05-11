@@ -470,7 +470,15 @@ func TestSharedServicePostgresE2E(t *testing.T) {
 			CredentialRefID: sharedSvcCredA,
 			WorkspaceID:     sharedSvcWSA,
 			BaseURL:         clockifyBaseURL,
-			PolicyMode:      string(policy.Standard),
+			// Both tenants are pinned to time_tracking_safe to match
+			// the shared-service profile's MCP_TENANT_POLICY_CEILING
+			// default introduced in ADR 0021. Tenant A operator role
+			// is still distinguished by subject/tenant identity in
+			// audit assertions; the per-mode contrast moved to
+			// internal/runtime unit tests with the tenantRuntimeStore
+			// fixture (see TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling
+			// and TestDeriveTenantPolicy_* in service_test.go).
+			PolicyMode: string(policy.TimeTrackingSafe),
 		},
 		{
 			ID:              sharedSvcTenantB,
@@ -548,7 +556,8 @@ func TestSharedServicePostgresE2E(t *testing.T) {
 	// Call 1: tenant A operator reads projects (read-only, no audit).
 	clientA.callTool(traffCtx, "clockify_list_projects", map[string]any{})
 	// Call 2: tenant A operator writes a time entry (allowed under
-	// standard policy → 1 intent + 1 outcome).
+	// time_tracking_safe — clockify_add_entry is in the
+	// time-tracking write allowlist; same row count as before).
 	clientA.callTool(traffCtx, "clockify_add_entry", map[string]any{
 		"start":       time.Now().UTC().Add(-2 * time.Hour).Format(time.RFC3339),
 		"end":         time.Now().UTC().Add(-1 * time.Hour).Format(time.RFC3339),
