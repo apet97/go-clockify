@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"strings"
 	"time"
@@ -249,14 +250,20 @@ func (p *Pipeline) mintConfirmationEnvelope(ctx context.Context, preview any, na
 // top level. Non-map previews (rare — executeDryRun always returns a
 // map[string]any today) are nested under a `preview` key so the
 // envelope shape stays stable for client consumers.
+//
+// Capacity hint: we deliberately size at len(m) rather than len(m)+N
+// for the 5 confirmation_* fields we will add. Go map growth handles
+// the small overflow cheaply, and CodeQL's "size computation for
+// allocation may overflow" rule flags the +N pattern as a defensive
+// best practice; an upstream caller mutating len(m) into a near-
+// MaxInt boundary is implausible here but we get the same outcome
+// without the arithmetic.
 func normalizeConfirmationEnvelope(preview any) map[string]any {
 	if m, ok := preview.(map[string]any); ok {
 		// Caller owns preview; copy to avoid mutating the original
 		// when the caller cached it.
-		out := make(map[string]any, len(m)+5)
-		for k, v := range m {
-			out[k] = v
-		}
+		out := make(map[string]any, len(m))
+		maps.Copy(out, m)
 		return out
 	}
 	return map[string]any{"preview": preview}

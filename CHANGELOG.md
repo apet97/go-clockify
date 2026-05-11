@@ -34,8 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `annotations.confirmationRiskClass: [...]` — plus an optional
   `confirmation_token` string in the high-risk tool input schema.
 
-### Security
-
 - **`safe_core` policy mode no longer permits any `clockify_delete_*`
   tool.** `safeCoreWriteList()` and `isSafeCoreWrite()` in
   `internal/policy/policy.go` previously allowed

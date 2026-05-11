@@ -331,7 +331,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 |----------|---------|---------|
 | `CLOCKIFY_API_KEY` | `—` | API key (required for stdio/http/grpc and MCP_PROFILE=single-tenant-http; optional for shared-service / prod-postgres streamable_http where tenant credentials come from the control plane) |
 | `CLOCKIFY_BOOTSTRAP_MODE` | `full_tier1` | Initial tool surface |
-| `CLOCKIFY_CONFIRMATION_TOKENS` | `enabled` | Require an HMAC confirmation token (minted on dry_run:true) for high-risk tool calls per docs/adr/0018-risk-class-confirmation-tokens.md; high-risk = RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive. Set to disabled only for break-glass single-operator deployments. |
+| `CLOCKIFY_CONFIRMATION_TOKENS` | `enabled` | Require an HMAC confirmation token (minted on dry_run:true) for high-risk tool calls per docs/adr/0018-risk-class-confirmation-tokens.md; high-risk covers RiskBilling, RiskAdmin, RiskPermissionChange, RiskExternalSideEffect, and RiskDestructive. Set to disabled only for break-glass single-operator deployments. |
 | `CLOCKIFY_DEDUPE_MODE` | `warn` | Duplicate entry detection |
 | `CLOCKIFY_DRY_RUN` | `enabled` | Enable dry-run preview support for tools that expose dry_run:true |
 | `CLOCKIFY_POLICY` | `standard` | Tool-access policy tier |
