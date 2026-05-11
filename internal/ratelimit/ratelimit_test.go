@@ -271,7 +271,12 @@ func TestConcurrentStress(t *testing.T) {
 }
 
 func TestAcquireRespectsContextCancellation(t *testing.T) {
-	rl := New(1, 100, 60000) // 1 concurrent slot
+	// Use a generous semaphore timeout so the context cancellation
+	// (20ms) always wins the race regardless of -race-detector
+	// scheduling latency. The default DefaultAcquireTimeout of
+	// 100ms left only a 60ms scheduling budget after cancel, which
+	// is tight on busy CI runners under `go test -race`.
+	rl := NewWithAcquireTimeout(1, 100, 60000, 500*time.Millisecond)
 
 	// Occupy the single slot.
 	rel, err := rl.Acquire(context.Background())
@@ -297,9 +302,12 @@ func TestAcquireRespectsContextCancellation(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected wrapped context deadline exceeded, got %v", err)
 	}
-	// Should return before the 100ms semaphore timeout.
-	if elapsed >= 80*time.Millisecond {
-		t.Errorf("expected cancellation before 80ms, took %v", elapsed)
+	// Must return well before the 500ms semaphore timeout to prove
+	// the context cancellation path won, not the timer path. 200ms
+	// gives enough headroom for -race scheduling latency while
+	// still failing loudly if a real regression flips the path.
+	if elapsed >= 200*time.Millisecond {
+		t.Errorf("expected cancellation before 200ms, took %v", elapsed)
 	}
 }
 
