@@ -899,6 +899,10 @@
             "description": "Client name or ID",
             "type": "string"
           },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           }
@@ -925,11 +929,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -951,6 +959,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -980,11 +992,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -1006,6 +1022,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -1036,11 +1056,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -1062,6 +1086,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -1092,11 +1120,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -1118,6 +1150,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -1153,11 +1189,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -6600,6 +6640,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without deleting",
             "type": "boolean"
@@ -6630,11 +6674,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -7030,6 +7078,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -7059,11 +7111,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -7086,6 +7142,10 @@
         "additionalProperties": false,
         "properties": {
           "category_id": {
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "dry_run": {
@@ -7114,11 +7174,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -7718,6 +7782,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without deleting",
             "type": "boolean"
@@ -7748,11 +7816,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -7774,6 +7846,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without deleting",
             "type": "boolean"
@@ -7804,11 +7880,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -8063,6 +8143,10 @@
             ],
             "type": "string"
           },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -8104,11 +8188,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing"
@@ -8141,6 +8230,10 @@
         "properties": {
           "client_id": {
             "description": "Client ID (required)",
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "currency": {
@@ -8193,11 +8286,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing"
@@ -8224,6 +8322,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -8253,11 +8355,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "billing",
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "billing",
           "destructive"
@@ -8286,6 +8393,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -8323,11 +8434,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "billing",
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "billing",
           "destructive"
@@ -8603,6 +8719,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview only; returns the current invoice without updating status",
             "type": "boolean"
@@ -8633,11 +8753,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing"
@@ -8665,6 +8790,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "type": "boolean"
           },
@@ -8694,11 +8823,17 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing",
+          "external_side_effect"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing",
@@ -8729,6 +8864,10 @@
         "additionalProperties": false,
         "properties": {
           "client_id": {
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "currency": {
@@ -8782,11 +8921,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing"
@@ -8827,6 +8971,10 @@
               "TAX1TAX2",
               "NONE"
             ],
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "description": {
@@ -8878,11 +9026,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "billing"
@@ -9368,6 +9521,10 @@
           "assignment_id": {
             "type": "string"
           },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview deletion without making changes",
             "type": "boolean"
@@ -9404,11 +9561,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -9980,6 +10141,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "If true, preview the deletion without executing it",
             "type": "boolean"
@@ -10010,11 +10175,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -10501,6 +10670,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview deletion without making changes",
             "type": "boolean"
@@ -10535,11 +10708,15 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "destructive"
         ],
@@ -11105,6 +11282,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "group_id": {
             "description": "User group ID",
             "type": "string"
@@ -11137,11 +11318,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "admin"
@@ -11168,6 +11354,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the user group payload without creating it",
             "type": "boolean"
@@ -11199,11 +11389,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "admin"
@@ -11230,6 +11425,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without making changes",
             "type": "boolean"
@@ -11261,11 +11460,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "admin"
@@ -11292,6 +11496,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without making changes",
             "type": "boolean"
@@ -11323,11 +11531,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "admin",
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "admin",
           "destructive"
@@ -11412,6 +11625,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview without making changes",
             "type": "boolean"
@@ -11448,11 +11665,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "admin",
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "admin",
           "destructive"
@@ -11480,6 +11702,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "group_id": {
             "description": "User group ID",
             "type": "string"
@@ -11512,11 +11738,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "admin"
@@ -11545,6 +11776,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the role change without applying it",
             "type": "boolean"
@@ -11587,11 +11822,17 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "admin",
@@ -11625,6 +11866,10 @@
         "properties": {
           "auth_token": {
             "description": "Optional HMAC signing secret for webhook delivery; sent upstream as authToken and never returned unmasked",
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "dry_run": {
@@ -11690,11 +11935,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "external_side_effect"
@@ -11721,6 +11971,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the webhook without deleting",
             "type": "boolean"
@@ -11752,11 +12006,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "external_side_effect",
+          "destructive"
+        ],
         "destructiveHint": true,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "external_side_effect",
           "destructive"
@@ -11937,6 +12196,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview only; returns the webhook record without sending the test delivery",
             "type": "boolean"
@@ -11968,11 +12231,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "external_side_effect"
@@ -12006,6 +12274,10 @@
         "properties": {
           "auth_token": {
             "description": "Optional replacement HMAC signing secret; sent upstream as authToken and never returned unmasked",
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
           },
           "dry_run": {
@@ -12073,11 +12345,16 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "external_side_effect"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
           "write",
           "external_side_effect"

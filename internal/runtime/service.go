@@ -11,6 +11,7 @@ import (
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/controlplane"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -30,15 +31,16 @@ import (
 // value so tenantRuntime can set a per-client User-Agent without
 // reaching back into package main.
 type runtimeDeps struct {
-	cfg       config.Config
-	dd        dedupe.Config
-	dc        dryrun.Config
-	tc        truncate.Config
-	rl        *ratelimit.RateLimiter
-	policy    *policy.Policy
-	bootstrap bootstrap.Config
-	auditor   mcp.Auditor
-	version   string
+	cfg          config.Config
+	dd           dedupe.Config
+	dc           dryrun.Config
+	tc           truncate.Config
+	rl           *ratelimit.RateLimiter
+	policy       *policy.Policy
+	bootstrap    bootstrap.Config
+	confirmation *confirmation.Signer
+	auditor      mcp.Auditor
+	version      string
 }
 
 type controlPlaneAuditor struct {
@@ -82,11 +84,12 @@ func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *
 	bc.SetTier1Tools(tier1Names)
 	service.Bootstrap = bc
 	pipeline := &enforcement.Pipeline{
-		Policy:     pol,
-		Bootstrap:  bc,
-		RateLimit:  deps.rl,
-		DryRun:     deps.dc,
-		Truncation: deps.tc,
+		Policy:       pol,
+		Bootstrap:    bc,
+		RateLimit:    deps.rl,
+		DryRun:       deps.dc,
+		Truncation:   deps.tc,
+		Confirmation: deps.confirmation,
 	}
 	gate := &enforcement.Gate{
 		Policy:    pol,

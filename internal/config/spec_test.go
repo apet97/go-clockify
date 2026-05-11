@@ -34,6 +34,9 @@ func TestEnvSpec_CoversEveryGetenv(t *testing.T) {
 		"CLOCKIFY_SUBJECT_SWEEP_INTERVAL": true, // main.go (subject reaper)
 		"CLOCKIFY_POLICY":                 true, // internal/enforcement
 		"CLOCKIFY_DRY_RUN":                true, // internal/enforcement
+		"CLOCKIFY_CONFIRMATION_TOKENS":    true, // internal/confirmation (loader)
+		"CLOCKIFY_CONFIRMATION_TOKEN_SECRET": true, // internal/confirmation (loader)
+		"CLOCKIFY_CONFIRMATION_TOKEN_TTL": true, // internal/confirmation (loader)
 		"CLOCKIFY_DEDUPE_MODE":            true, // internal/enforcement
 		"CLOCKIFY_DEDUPE_LOOKBACK":        true, // internal/enforcement
 		"CLOCKIFY_OVERLAP_CHECK":          true, // internal/enforcement

@@ -10,10 +10,12 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -65,17 +67,33 @@ func New(cfg config.Config, opts NewOpts) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
+	confResult, err := confirmation.ConfigFromEnv(config.IsHostedProfile(cfg.Profile))
+	if err != nil {
+		return nil, err
+	}
+	var confSigner *confirmation.Signer
+	if confResult.Config.Enabled {
+		signer, err := confirmation.NewSigner(confResult.Config)
+		if err != nil {
+			return nil, err
+		}
+		confSigner = signer
+	}
+	for _, note := range confResult.Notes {
+		slog.Warn("confirmation_config", "note", note)
+	}
 	return &Runtime{
 		cfg: cfg,
 		deps: runtimeDeps{
-			cfg:       cfg,
-			dd:        dd,
-			dc:        dc,
-			tc:        tc,
-			rl:        rl,
-			policy:    pol,
-			bootstrap: bc,
-			version:   opts.Version,
+			cfg:          cfg,
+			dd:           dd,
+			dc:           dc,
+			tc:           tc,
+			rl:           rl,
+			policy:       pol,
+			bootstrap:    bc,
+			confirmation: confSigner,
+			version:      opts.Version,
 		},
 		version:       opts.Version,
 		extraHandlers: opts.ExtraHandlers,
