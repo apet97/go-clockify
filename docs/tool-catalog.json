@@ -8544,6 +8544,10 @@
           "task_id": {
             "type": "string"
           },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
           "user_id": {
             "description": "User ID or name/email",
             "type": "string"
@@ -8689,6 +8693,10 @@
             "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
           "user_id": {
             "description": "User ID, name, or email",
             "type": "string"
@@ -8770,6 +8778,10 @@
           "start": {
             "description": "Optional range start used to locate the assignment. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Defaults to now minus 1 year",
             "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
           }
         },
         "required": [
@@ -8846,6 +8858,10 @@
           },
           "start": {
             "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -8932,6 +8948,10 @@
           },
           "start": {
             "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
           "user_id": {
@@ -9038,6 +9058,10 @@
             "type": "string"
           },
           "task_id": {
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },
@@ -9663,6 +9687,10 @@
           },
           "start": {
             "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           }
         },

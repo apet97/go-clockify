@@ -74,6 +74,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
 					"note":      map[string]any{"type": "string", "description": "Required note/reason"},
 					"half_day":  map[string]any{"type": "boolean", "description": "Request half day"},
+					"timezone":  timezoneInputProperty(),
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -317,7 +318,8 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	if note == "" {
 		return ResultEnvelope{}, fmt.Errorf("note is required")
 	}
-	days, err := timeOffRequestDays(startRaw, endRaw)
+	loc, _ := s.locationFromArgs(args)
+	days, err := timeOffRequestDays(startRaw, endRaw, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -357,17 +359,25 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	}), nil
 }
 
-func timeOffRequestDays(startRaw, endRaw string) (int, error) {
-	start, err := parseFlexibleDateTime(startRaw, time.UTC)
+// timeOffRequestDays computes the inclusive day span between two
+// flexible date inputs interpreted in loc. Bucketing both endpoints in
+// the caller's location prevents a request from a non-UTC user from
+// collapsing or expanding by one day because midnight local maps to a
+// different UTC date. Nil loc falls back to time.UTC.
+func timeOffRequestDays(startRaw, endRaw string, loc *time.Location) (int, error) {
+	if loc == nil {
+		loc = time.UTC
+	}
+	start, err := parseFlexibleDateTime(startRaw, loc)
 	if err != nil {
 		return 0, fmt.Errorf("start: %w", err)
 	}
-	end, err := parseFlexibleDateTime(endRaw, time.UTC)
+	end, err := parseFlexibleDateTime(endRaw, loc)
 	if err != nil {
 		return 0, fmt.Errorf("end: %w", err)
 	}
-	startDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
-	endDay := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, time.UTC)
+	startDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, loc)
+	endDay := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, loc)
 	if endDay.Before(startDay) {
 		return 0, fmt.Errorf("end must be on or after start")
 	}

@@ -120,12 +120,39 @@ func TestSchedulingRangeArgsNormalizesFlexibleDatetimes(t *testing.T) {
 	start, end, err := schedulingRangeArgs(map[string]any{
 		"start": "2026-04-01 09:00",
 		"end":   "2026-04-02T17:30",
-	})
+	}, time.UTC)
 	if err != nil {
 		t.Fatalf("schedulingRangeArgs failed: %v", err)
 	}
 	if start != "2026-04-01T09:00:00Z" || end != "2026-04-02T17:30:00Z" {
 		t.Fatalf("normalized range = %q..%q", start, end)
+	}
+}
+
+// TestSchedulingRangeArgsHonoursCallerLocation pins the QA-agent-24
+// fix: a naked timestamp like "2026-04-01 09:00" must be interpreted
+// in the caller's location, not silently bucketed in UTC. Before the
+// fix a user in America/Los_Angeles asking for a 9am assignment got
+// the slot recorded as 9am UTC (2am local), which is a four-hour
+// drift across all scheduling/time-off tools.
+func TestSchedulingRangeArgsHonoursCallerLocation(t *testing.T) {
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("load LA timezone: %v", err)
+	}
+	start, end, err := schedulingRangeArgs(map[string]any{
+		"start": "2026-04-01 09:00",
+		"end":   "2026-04-01 17:00",
+	}, la)
+	if err != nil {
+		t.Fatalf("schedulingRangeArgs failed: %v", err)
+	}
+	// PDT is UTC-7 on 2026-04-01 (DST in effect).
+	if start != "2026-04-01T16:00:00Z" {
+		t.Fatalf("start = %q, want 2026-04-01T16:00:00Z (9am PDT)", start)
+	}
+	if end != "2026-04-02T00:00:00Z" {
+		t.Fatalf("end = %q, want 2026-04-02T00:00:00Z (5pm PDT)", end)
 	}
 }
 
@@ -147,6 +174,7 @@ func TestListAssignmentsNormalizesFlexibleRange(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.DefaultTimezone = time.UTC
 	if _, err := svc.listAssignments(context.Background(), map[string]any{
 		"start": "2026-04-01 09:00",
 		"end":   "2026-04-02T17:30",
@@ -175,6 +203,7 @@ func TestCreateAssignmentNormalizesFlexibleRange(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.DefaultTimezone = time.UTC
 	if _, err := svc.createAssignment(context.Background(), map[string]any{
 		"user_id":       "aaaaaaaaaaaaaaaaaaaaaaaa",
 		"project_id":    "bbbbbbbbbbbbbbbbbbbbbbbb",
@@ -401,7 +430,7 @@ func TestTimeOffRequestDaysBoundaryCases(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := timeOffRequestDays(tt.start, tt.end)
+			got, err := timeOffRequestDays(tt.start, tt.end, time.UTC)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)

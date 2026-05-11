@@ -46,6 +46,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 						"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
 						"page":       map[string]any{"type": "integer", "description": "Page number (default 1)"},
 						"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+						"timezone":   timezoneInputProperty(),
 					},
 				}), envelopeOpenMapSlice("clockify_list_assignments")),
 			ReadOnlyHint: true, IdempotentHint: true,
@@ -62,6 +63,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"start":         map[string]any{"type": "string", "description": "Optional range start used to locate the assignment. " + flexibleDatetimeDescription + ". Defaults to now minus 1 year"},
 					"end":           map[string]any{"type": "string", "description": "Optional range end used to locate the assignment. " + flexibleDatetimeDescription + ". Defaults to now plus 1 year"},
 					"page_size":     map[string]any{"type": "integer", "description": "Upstream page size to scan per request (default 200); response meta includes pagesFetched and entriesScanned"},
+					"timezone":      timezoneInputProperty(),
 				}}), envelopeOpenMap("clockify_get_assignment")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -85,6 +87,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"note":                     map[string]any{"type": "string"},
 					"repeat":                   map[string]any{"type": "boolean", "description": "Whether to repeat the assignment"},
 					"weeks":                    map[string]any{"type": "integer", "description": "Repeat interval in weeks when repeat is true (1-99)"},
+					"timezone":                 timezoneInputProperty(),
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -106,6 +109,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"task_id":                  map[string]any{"type": "string"},
 					"note":                     map[string]any{"type": "string"},
 					"series_update_option":     map[string]any{"type": "string", "enum": []string{"THIS_ONE", "THIS_AND_FOLLOWING", "ALL"}, "description": "Recurring series update scope"},
+					"timezone":                 timezoneInputProperty(),
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -139,6 +143,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 						"end":        map[string]any{"type": "string", "description": "Range end. " + flexibleDatetimeDescription},
 						"project_id": map[string]any{"type": "string", "description": "Filter by project ID or name"},
 						"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+						"timezone":   timezoneInputProperty(),
 					},
 				}), envelopeOpenMapSlice("clockify_get_project_schedule_totals")),
 			ReadOnlyHint: true, IdempotentHint: true,
@@ -159,6 +164,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 						"end":       map[string]any{"type": "string", "description": "Range end. " + flexibleDatetimeDescription},
 						"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
 						"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+						"timezone":  timezoneInputProperty(),
 					},
 				}), envelopeOpenMap("clockify_filter_schedule_capacity")),
 			ReadOnlyHint: true, IdempotentHint: true,
@@ -193,7 +199,8 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 }
 
 func (s *Service) listAssignmentsRaw(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, int, int, error) {
-	start, end, err := schedulingRangeArgs(args)
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -309,17 +316,26 @@ func defaultAssignmentScanRange(now time.Time) (string, string) {
 	return now.AddDate(-1, 0, 0).Format(time.RFC3339), now.AddDate(1, 0, 0).Format(time.RFC3339)
 }
 
-func schedulingRangeArgs(args map[string]any) (string, string, error) {
+// schedulingRangeArgs parses the start/end pair from args using loc as
+// the default location for naked timestamps (e.g. "2026-04-01 09:00").
+// Pass a non-UTC location when the caller has supplied a `timezone`
+// argument or the service has a non-UTC DefaultTimezone — otherwise
+// "9:00" on the same day across the date line gets recorded as the
+// wrong wall-clock hour. Nil loc falls back to time.UTC.
+func schedulingRangeArgs(args map[string]any, loc *time.Location) (string, string, error) {
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
 	if startRaw == "" || endRaw == "" {
 		return "", "", fmt.Errorf("start and end are required")
 	}
-	start, err := timeparse.ParseDatetime(startRaw, time.UTC)
+	if loc == nil {
+		loc = time.UTC
+	}
+	start, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid start: %w", err)
 	}
-	end, err := timeparse.ParseDatetime(endRaw, time.UTC)
+	end, err := timeparse.ParseDatetime(endRaw, loc)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid end: %w", err)
 	}
@@ -350,7 +366,8 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	start, end, err := schedulingRangeArgs(args)
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -400,7 +417,8 @@ func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	start, end, err := schedulingRangeArgs(args)
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -518,7 +536,8 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 		return ResultEnvelope{}, err
 	}
 
-	start, end, err := schedulingRangeArgs(args)
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -568,7 +587,8 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 		return ResultEnvelope{}, err
 	}
 
-	start, end, err := schedulingRangeArgs(args)
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
