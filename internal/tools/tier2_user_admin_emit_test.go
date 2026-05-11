@@ -42,6 +42,12 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			// Self lookup used by the self-modification guard in
+			// UpdateUserRole. Returning a different ID than the
+			// modification target ensures the guard passes and we
+			// reach the role-change POST below.
+			respondJSON(t, w, map[string]any{"id": "self-admin", "name": "Admin"})
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/users/"+userID+"/roles"):
 			// Live API requires `entityId` (the workspace ID) alongside
 			// `role`. Without it the upstream rejects with code 3000
@@ -148,6 +154,11 @@ func TestDeactivateUserEmitsUserURI(t *testing.T) {
 
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			// Self lookup used by the self-deactivation guard in
+			// DeactivateUser. ID differs from the target so the
+			// guard passes and the test exercises the real path.
+			respondJSON(t, w, map[string]any{"id": "self-admin", "name": "Admin"})
 		case r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/users/"+userID):
 			respondJSON(t, w, map[string]any{"id": userID, "status": "INACTIVE"})
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/users/"+userID):
@@ -177,5 +188,82 @@ func TestDeactivateUserEmitsUserURI(t *testing.T) {
 	want := "clockify://workspace/" + wsID + "/user/" + userID
 	if calls[0].URI != want {
 		t.Fatalf("URI = %q, want %q", calls[0].URI, want)
+	}
+}
+
+// TestUpdateUserRoleRefusesSelfModification pins the new self-guard.
+// When the API key owner targets their own user ID, the call must
+// short-circuit before issuing the POST so the operator cannot
+// accidentally strip their own access. The stub intentionally
+// returns the same self.ID as the modification target.
+func TestUpdateUserRoleRefusesSelfModification(t *testing.T) {
+	const selfID = "u-self"
+	const wsID = "w1"
+
+	postCalls := 0
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": selfID, "name": "Owner"})
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/users/"+selfID+"/roles"):
+			postCalls++
+			respondJSON(t, w, map[string]any{"id": selfID})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, wsID)
+	_, err := svc.UpdateUserRole(context.Background(), map[string]any{
+		"user_id": selfID,
+		"role":    "TEAM_MANAGER",
+	})
+	if err == nil {
+		t.Fatal("expected error from self-modification guard, got nil")
+	}
+	if !strings.Contains(err.Error(), "refusing to change the API key owner") {
+		t.Fatalf("error message does not mention self-modification guard: %v", err)
+	}
+	if postCalls != 0 {
+		t.Fatalf("self-modification guard fired too late: %d role POSTs reached upstream", postCalls)
+	}
+}
+
+// TestDeactivateUserRefusesSelf pins the equivalent guard on the
+// deactivate path. A successful upstream PUT here would lock the
+// operator out of the workspace; the guard must short-circuit
+// before the PUT issues.
+func TestDeactivateUserRefusesSelf(t *testing.T) {
+	const selfID = "u-self"
+	const wsID = "w1"
+
+	putCalls := 0
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": selfID, "name": "Owner"})
+		case r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/users/"+selfID):
+			putCalls++
+			respondJSON(t, w, map[string]any{"id": selfID, "status": "INACTIVE"})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, wsID)
+	_, err := svc.DeactivateUser(context.Background(), map[string]any{
+		"user_id": selfID,
+		"dry_run": false,
+	})
+	if err == nil {
+		t.Fatal("expected error from self-deactivation guard, got nil")
+	}
+	if !strings.Contains(err.Error(), "refusing to deactivate the API key owner") {
+		t.Fatalf("error message does not mention self-deactivation guard: %v", err)
+	}
+	if putCalls != 0 {
+		t.Fatalf("self-deactivation guard fired too late: %d deactivate PUTs reached upstream", putCalls)
 	}
 }

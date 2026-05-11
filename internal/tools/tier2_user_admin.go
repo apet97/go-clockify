@@ -407,6 +407,21 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 			"role":        role,
 		}), nil
 	}
+
+	// Self-modification guard: defense in depth on top of the upstream
+	// 403. The Clockify web UI is the right surface for an operator to
+	// change their own role; doing it via an API key risks the operator
+	// stranding themselves (e.g. demoting from WORKSPACE_ADMIN to
+	// TEAM_MANAGER and losing the surface to undo). Run only on the
+	// real-action path so dry-run previews stay HTTP-free; the audit
+	// trail records the reject before any role POST issues.
+	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
+		return ResultEnvelope{}, fmt.Errorf(
+			"refusing to change the API key owner's own workspace role at " +
+				"the MCP layer; use the Clockify web UI if this is intentional " +
+				"(self-modification can strip the operator's ability to undo)",
+		)
+	}
 	path, err := paths.Workspace(wsID, "users", userID, "roles")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -448,6 +463,20 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 			},
 			Meta: map[string]any{"workspaceId": wsID, "userId": userID},
 		}, nil
+	}
+
+	// Self-deactivation guard: defense in depth on top of the upstream
+	// 403. Deactivating the API key owner is a fast path to a workspace
+	// lockout — the web UI undo requires a still-active admin login.
+	// Skip the lookup on the dry-run preview path so previews remain
+	// HTTP-free; the real action path always checks before issuing
+	// the PUT.
+	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
+		return ResultEnvelope{}, fmt.Errorf(
+			"refusing to deactivate the API key owner at the MCP layer; " +
+				"use the Clockify web UI if this is intentional " +
+				"(self-deactivation can lock the operator out of the workspace)",
+		)
 	}
 
 	payload := map[string]any{"status": "INACTIVE"}
