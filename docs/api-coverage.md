@@ -69,10 +69,10 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_list_users` | `GET /workspaces/{ws}/users` | unit |
 | `clockify_list_workspaces` | `GET /workspaces` | unit |
 | `clockify_policy_info` | local (no API call) | unit |
-| `clockify_quick_report` | `GET /workspaces/{ws}/reports/summary` (wrapped) | unit |
+| `clockify_quick_report` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries`) | unit |
 | `clockify_resolve_debug` | compatibility alias over name resolution lookup | unit, live-read-only (TestLiveTier1ReadOnly) |
 | `clockify_resolve_name` | name resolution lookup over project/client/tag/user list endpoints | unit, live-read-only (TestLiveTier1ReadOnly) |
-| `clockify_summary_report` | `GET /workspaces/{ws}/reports/summary` | unit |
+| `clockify_summary_report` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries`) | unit |
 | `clockify_timer_status` | `GET /workspaces/{ws}/user/{uid}/time-entries?in-progress=true` | unit |
 | `clockify_timesheet_review` | workflow wrapper over `GET /workspaces/{ws}/user/{uid}/time-entries` | unit, live-read-only (TestLiveTier1ReadOnly) |
 | `clockify_today_entries` | `GET /workspaces/{ws}/user/{uid}/time-entries` (filtered) | unit |
