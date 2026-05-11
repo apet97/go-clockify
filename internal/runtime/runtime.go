@@ -10,10 +10,13 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -65,17 +68,42 @@ func New(cfg config.Config, opts NewOpts) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
+	confResult, err := confirmation.ConfigFromEnv(config.IsHostedProfile(cfg.Profile))
+	if err != nil {
+		return nil, err
+	}
+	// Confirmation tokens are minted on the dry-run preview path; with
+	// CLOCKIFY_DRY_RUN disabled the pipeline has no mint hook, so a
+	// high-risk tool would be permanently unexecutable. Refuse to boot
+	// rather than silently degrading every high-risk call to
+	// confirmation_required. Operators who genuinely want the gate
+	// inert should set CLOCKIFY_CONFIRMATION_TOKENS=disabled.
+	if confResult.Config.Enabled && !dc.Enabled {
+		return nil, fmt.Errorf("CLOCKIFY_CONFIRMATION_TOKENS=enabled requires CLOCKIFY_DRY_RUN=enabled (high-risk tokens are minted on the dry-run preview path)")
+	}
+	var confSigner *confirmation.Signer
+	if confResult.Config.Enabled {
+		signer, err := confirmation.NewSigner(confResult.Config)
+		if err != nil {
+			return nil, err
+		}
+		confSigner = signer
+	}
+	for _, note := range confResult.Notes {
+		slog.Warn("confirmation_config", "note", note)
+	}
 	return &Runtime{
 		cfg: cfg,
 		deps: runtimeDeps{
-			cfg:       cfg,
-			dd:        dd,
-			dc:        dc,
-			tc:        tc,
-			rl:        rl,
-			policy:    pol,
-			bootstrap: bc,
-			version:   opts.Version,
+			cfg:          cfg,
+			dd:           dd,
+			dc:           dc,
+			tc:           tc,
+			rl:           rl,
+			policy:       pol,
+			bootstrap:    bc,
+			confirmation: confSigner,
+			version:      opts.Version,
 		},
 		version:       opts.Version,
 		extraHandlers: opts.ExtraHandlers,

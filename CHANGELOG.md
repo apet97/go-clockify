@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Confirmation-token gate now enforced for every high-risk tool
+  call** (ADR 0018). A high-risk call (any RiskBilling, RiskAdmin,
+  RiskPermissionChange, RiskExternalSideEffect, or RiskDestructive
+  bit) must be previewed via `dry_run:true` to obtain a stateless
+  HMAC token bound to (tool, args fingerprint, risk class, tenant,
+  subject, session, exp); the non-dry-run execution call must echo
+  the token back in a new optional `confirmation_token` argument. A
+  tampered, expired, mis-bound, or missing token returns one of
+  three new audit outcomes — `confirmation_required`,
+  `confirmation_expired`, or `confirmation_invalid` — before the
+  handler runs and before any rate-limit slot is consumed. The gate
+  is uniform across policy modes (standard, full); ordinary
+  RiskWrite tools (time-tracking surface) are unaffected. Operators
+  configure the gate via three new env vars in the Safety group:
+  `CLOCKIFY_CONFIRMATION_TOKENS` (enabled by default),
+  `CLOCKIFY_CONFIRMATION_TOKEN_SECRET` (hex/base64, >=32 bytes;
+  required for hosted profiles, optional for self-hosted where the
+  fallback is a process-local random secret with a startup
+  warning), and `CLOCKIFY_CONFIRMATION_TOKEN_TTL` (default 10m,
+  clamped to [1m,1h]). Hosted profiles refuse to boot without an
+  explicit secret. Clients discover the gate via two new tool
+  annotations — `annotations.requiresConfirmationToken: true` and
+  `annotations.confirmationRiskClass: [...]` — plus an optional
+  `confirmation_token` string in the high-risk tool input schema.
+
 - **`safe_core` policy mode no longer permits any `clockify_delete_*`
   tool.** `safeCoreWriteList()` and `isSafeCoreWrite()` in
   `internal/policy/policy.go` previously allowed

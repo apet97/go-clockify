@@ -50,6 +50,18 @@ func TestServerInstructionsPublicContract(t *testing.T) {
 	if strings.Contains(ServerInstructions, "dry-run interceptor by default") {
 		t.Fatalf("ServerInstructions contains stale dry-run-default wording: %q", ServerInstructions)
 	}
+	// ADR 0018 confirmation-token gate. Agentic clients reading
+	// instructions as system prompt need both the "high-risk" keyword
+	// (so they recognise the gated class) and the confirmation_token
+	// argument name (so they can echo the dry-run-issued token back).
+	// Case-insensitive on "high-risk" so a sentence-leading "High-risk"
+	// (the natural English rendering) still passes the contract test.
+	lowered := strings.ToLower(ServerInstructions)
+	for _, marker := range []string{"high-risk", "confirmation_token"} {
+		if !strings.Contains(lowered, marker) {
+			t.Fatalf("ServerInstructions missing %q (ADR 0018 confirmation-token guidance): %q", marker, ServerInstructions)
+		}
+	}
 	// Policy-mode count must match the policy.Mode constants in
 	// internal/policy. Stale "four policy modes" wording omits
 	// time_tracking_safe — the recommended AI-facing default — and

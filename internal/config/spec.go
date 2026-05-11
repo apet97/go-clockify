@@ -36,6 +36,9 @@ func AllSpecs() []EnvSpec {
 		// --- Safety ---
 		{Name: "CLOCKIFY_POLICY", Group: "Safety", Enum: []string{"read_only", "time_tracking_safe", "safe_core", "standard", "full"}, Default: "standard", Help: "Tool-access policy tier", EssentialDoc: true},
 		{Name: "CLOCKIFY_DRY_RUN", Group: "Safety", Default: "enabled", Help: "Enable dry-run preview support for tools that expose dry_run:true", EssentialDoc: true},
+		{Name: "CLOCKIFY_CONFIRMATION_TOKENS", Group: "Safety", Enum: []string{"enabled", "disabled"}, Default: "enabled", Help: "Require an HMAC confirmation token (minted on dry_run:true) for high-risk tool calls per docs/adr/0018-risk-class-confirmation-tokens.md; high-risk covers RiskBilling, RiskAdmin, RiskPermissionChange, RiskExternalSideEffect, and RiskDestructive. Set to disabled only for break-glass single-operator deployments.", EssentialDoc: true},
+		{Name: "CLOCKIFY_CONFIRMATION_TOKEN_SECRET", Group: "Safety", Help: "HMAC-SHA256 secret for confirmation tokens, hex- or base64-encoded, >=32 bytes after decode. Required for hosted/multi-replica profiles; self-hosted profiles fall back to a process-local random secret with a startup warning. Tokens minted by one process do not verify against another unless the secret is shared.", Sensitive: true},
+		{Name: "CLOCKIFY_CONFIRMATION_TOKEN_TTL", Group: "Safety", Default: "10m", Help: "Confirmation token lifetime [1m,1h]. The dry-run preview returns confirmation_expires_at; clients must execute within this window."},
 		{Name: "CLOCKIFY_DEDUPE_MODE", Group: "Safety", Enum: []string{"warn", "block", "off"}, Default: "warn", Help: "Duplicate entry detection", EssentialDoc: true},
 		{Name: "CLOCKIFY_DEDUPE_LOOKBACK", Group: "Safety", Default: "25", Help: "Recent entries to scan for duplicates"},
 		{Name: "CLOCKIFY_OVERLAP_CHECK", Group: "Safety", Default: "true", Help: "Overlapping entry detection"},

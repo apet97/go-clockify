@@ -418,6 +418,56 @@ func applyRiskMetadata(d *mcp.ToolDescriptor) {
 		d.Tool.Annotations["riskClass"] = names
 	}
 	d.Tool.Annotations["dryRun"] = schemaHasDryRun(d.Tool.InputSchema)
+
+	// Confirmation-token discoverability surface (ADR 0018 Q4):
+	//   - annotations.requiresConfirmationToken signals to MCP clients
+	//     that the tool's execution path requires a server-issued
+	//     token obtained via dry_run:true first.
+	//   - annotations.confirmationRiskClass repeats the lower-case
+	//     risk-class names so clients can render which class
+	//     triggered the gate without re-deriving from the bitmask.
+	//   - InputSchema.properties.confirmation_token is added as an
+	//     optional string so spec-strict clients can pass the token
+	//     back without tripping additionalProperties:false. Adding
+	//     to properties (not required) means the schema gate accepts
+	//     both the dry-run preview call (no token) and the execution
+	//     call (token present).
+	// Read-only tools skip the schema injection because they can never
+	// be high-risk and never execute side effects worth gating.
+	if d.RiskClass.IsHighRisk() {
+		d.Tool.Annotations["requiresConfirmationToken"] = true
+		d.Tool.Annotations["confirmationRiskClass"] = riskClassAnnotationNames(d.RiskClass)
+		if !d.ReadOnlyHint {
+			ensureConfirmationTokenSchemaProperty(d.Tool.InputSchema)
+		}
+	}
+}
+
+// ensureConfirmationTokenSchemaProperty adds an optional
+// confirmation_token string property to the tool's InputSchema so
+// spec-strict clients can echo a minted token back through the
+// execution call without tripping additionalProperties:false. The
+// helper is idempotent — a descriptor that already declares the
+// property keeps the caller's metadata.
+func ensureConfirmationTokenSchemaProperty(schema map[string]any) {
+	if schema == nil {
+		return
+	}
+	if typ, _ := schema["type"].(string); typ != "" && typ != "object" {
+		return
+	}
+	props, _ := schema["properties"].(map[string]any)
+	if props == nil {
+		props = map[string]any{}
+		schema["properties"] = props
+	}
+	if _, exists := props["confirmation_token"]; exists {
+		return
+	}
+	props["confirmation_token"] = map[string]any{
+		"type":        "string",
+		"description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+	}
 }
 
 func riskClassAnnotationNames(rc mcp.RiskClass) []string {
