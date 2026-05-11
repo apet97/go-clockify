@@ -39,6 +39,9 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_list_clients", "List clients in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListClients(ctx, args)
 		}},
+		{Tool: toolRO("clockify_get_client", "Get a client by ID or exact name", requiredSchema("client")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.GetClient(ctx, stringArg(args, "client"))
+		}},
 		{Tool: toolRO("clockify_list_tags", "List tags in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTags(ctx, args)
 		}},

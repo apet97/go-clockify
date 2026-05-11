@@ -37,6 +37,29 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 	return ok("clockify_list_clients", out, meta), nil
 }
 
+func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelope, error) {
+	if clientRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("client is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "clients", clientID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var out clockify.ClientEntity
+	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_get_client", out, map[string]any{"workspaceId": wsID, "clientId": clientID}), nil
+}
+
 func (s *Service) CreateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {

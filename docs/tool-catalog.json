@@ -1397,6 +1397,42 @@
       }
     },
     {
+      "name": "clockify_get_client",
+      "description": "Get a client by ID or exact name",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Get Client"
+      }
+    },
+    {
       "name": "clockify_get_entry",
       "description": "Get a single time entry by ID",
       "group": "tier1",

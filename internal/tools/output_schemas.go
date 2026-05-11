@@ -25,6 +25,7 @@ func tier1OutputSchemas() map[string]map[string]any {
 		"clockify_list_users":            envelopeSchemaFor[[]clockify.User]("clockify_list_users"),
 		"clockify_list_projects":         envelopeSchemaFor[[]clockify.Project]("clockify_list_projects"),
 		"clockify_get_project":           envelopeSchemaFor[clockify.Project]("clockify_get_project"),
+		"clockify_get_client":            envelopeSchemaFor[clockify.ClientEntity]("clockify_get_client"),
 		"clockify_list_clients":          envelopeSchemaFor[[]clockify.ClientEntity]("clockify_list_clients"),
 		"clockify_list_tags":             envelopeSchemaFor[[]clockify.Tag]("clockify_list_tags"),
 		"clockify_list_tasks":            envelopeSchemaFor[[]clockify.Task]("clockify_list_tasks"),
