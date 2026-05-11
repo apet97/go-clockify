@@ -78,7 +78,7 @@ type Task struct {
 	ProjectID      string   `json:"projectId"`
 	AssigneeID     string   `json:"assigneeId,omitempty"`
 	AssigneeIDs    []string `json:"assigneeIds,omitempty"`
-	Billable       bool     `json:"billable,omitempty"`
+	Billable       bool     `json:"billable"`
 	BudgetEstimate int64    `json:"budgetEstimate,omitempty"`
 	CostRate       any      `json:"costRate,omitempty"`
 	Duration       string   `json:"duration,omitempty"`

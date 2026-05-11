@@ -51,6 +51,12 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTasks(ctx, args)
 		}},
+		{Tool: toolRO("clockify_get_task", "Get a task by ID or exact name within a project", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
+			"project": map[string]any{"type": "string", "description": "Project name or ID"},
+			"task":    map[string]any{"type": "string", "description": "Task ID or exact name"},
+		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.GetTask(ctx, args)
+		}},
 		{Tool: toolRO("clockify_list_entries", "List recent time entries for the current user with optional date range, project filter, and pagination", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
