@@ -280,12 +280,12 @@ func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
 	return tenantMode, nil
 }
 
-// isGroupBlockingMode reports whether the given mode nullifies
+// IsGroupBlockingMode reports whether the given mode nullifies
 // AllowedGroups (i.e. IsGroupAllowed returns false before consulting
 // the allowlist). tenantRuntime uses this to decide whether to honour
 // or silently drop tenant AllowGroups. Unknown / empty modes fail
 // closed and are treated as blocking.
-func isGroupBlockingMode(m Mode) bool {
+func IsGroupBlockingMode(m Mode) bool {
 	switch m {
 	case Standard, Full:
 		return false

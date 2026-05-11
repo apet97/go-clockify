@@ -240,8 +240,8 @@ func TestIsGroupBlockingMode(t *testing.T) {
 		{Mode("bogus"), true},
 	}
 	for _, c := range cases {
-		if got := isGroupBlockingMode(c.mode); got != c.want {
-			t.Errorf("isGroupBlockingMode(%q) = %v, want %v", c.mode, got, c.want)
+		if got := IsGroupBlockingMode(c.mode); got != c.want {
+			t.Errorf("IsGroupBlockingMode(%q) = %v, want %v", c.mode, got, c.want)
 		}
 	}
 }

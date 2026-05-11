@@ -281,6 +281,80 @@ func depsafePolicyMode() policy.Mode {
 	return mode
 }
 
+// deriveTenantPolicy clones the process policy and applies the
+// tenant record's overrides under the ADR 0021 narrowing contract:
+//
+//   - Mode is set via policy.EffectiveTenantMode so the tenant
+//     cannot broaden past the explicit MCP_TENANT_POLICY_CEILING
+//     or the implicit "process mode as ceiling".
+//   - DenyTools and DenyGroups UNION with the process lists. A
+//     tenant record can only add denies; it can never erase a
+//     process-level deny.
+//   - AllowGroups under a group-blocking effective mode is silently
+//     dropped and TenantAllowGroupsIgnored is set so policy_info
+//     surfaces the diagnostic. Under a non-blocking mode, the
+//     tenant list INTERSECTS with the process AllowedGroups when
+//     both are set, or defines the whitelist when the process did
+//     not set one.
+func deriveTenantPolicy(processPolicy *policy.Policy, tenant controlplane.TenantRecord) (*policy.Policy, error) {
+	pol := processPolicy.Clone()
+
+	effectiveMode, err := policy.EffectiveTenantMode(
+		pol.Mode,
+		policy.Mode(tenant.PolicyMode),
+		pol.Ceiling,
+	)
+	if err != nil {
+		return nil, err
+	}
+	pol.Mode = effectiveMode
+
+	for _, item := range tenant.DenyTools {
+		if item == "" {
+			continue
+		}
+		if pol.DeniedTools == nil {
+			pol.DeniedTools = map[string]bool{}
+		}
+		pol.DeniedTools[item] = true
+	}
+	for _, item := range tenant.DenyGroups {
+		if item == "" {
+			continue
+		}
+		if pol.DeniedGroups == nil {
+			pol.DeniedGroups = map[string]bool{}
+		}
+		pol.DeniedGroups[item] = true
+	}
+
+	if len(tenant.AllowGroups) > 0 {
+		if policy.IsGroupBlockingMode(effectiveMode) {
+			pol.TenantAllowGroupsIgnored = true
+		} else {
+			tenantAllow := map[string]bool{}
+			for _, item := range tenant.AllowGroups {
+				if item != "" {
+					tenantAllow[item] = true
+				}
+			}
+			if pol.AllowedGroups == nil {
+				pol.AllowedGroups = tenantAllow
+			} else {
+				intersected := map[string]bool{}
+				for k := range pol.AllowedGroups {
+					if tenantAllow[k] {
+						intersected[k] = true
+					}
+				}
+				pol.AllowedGroups = intersected
+			}
+		}
+	}
+
+	return pol, nil
+}
+
 func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, store controlplane.Store) (*mcp.StreamableSessionRuntime, error) {
 	tenant, ok := store.Tenant(principalTenant)
 	if !ok {
@@ -324,27 +398,9 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	client := clockify.NewClient(material.APIKey, baseURL, deps.cfg.RequestTimeout, deps.cfg.MaxRetries)
 	client.SetUserAgent("clockify-mcp-go/" + deps.version)
 
-	pol := deps.policy.Clone()
-	if tenant.PolicyMode != "" {
-		pol.Mode = policy.Mode(tenant.PolicyMode)
-	}
-	if len(tenant.DenyTools) > 0 {
-		pol.DeniedTools = map[string]bool{}
-		for _, item := range tenant.DenyTools {
-			pol.DeniedTools[item] = true
-		}
-	}
-	if len(tenant.DenyGroups) > 0 {
-		pol.DeniedGroups = map[string]bool{}
-		for _, item := range tenant.DenyGroups {
-			pol.DeniedGroups[item] = true
-		}
-	}
-	if len(tenant.AllowGroups) > 0 {
-		pol.AllowedGroups = map[string]bool{}
-		for _, item := range tenant.AllowGroups {
-			pol.AllowedGroups[item] = true
-		}
+	pol, err := deriveTenantPolicy(deps.policy, tenant)
+	if err != nil {
+		return nil, fmt.Errorf("tenant %q: %w", tenant.ID, err)
 	}
 	bc := deps.bootstrap.Clone()
 	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries, deps.cfg.WebhookValidateDNS, deps.cfg.WebhookAllowedDomains)
