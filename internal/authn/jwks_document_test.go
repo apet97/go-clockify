@@ -318,7 +318,9 @@ func TestJWKSCache_KidMissRateLimited(t *testing.T) {
 	// First kid-miss: rate-limit window crossed (since c.lastReload
 	// was set during priming and we set the window to 200ms — the
 	// prime is ~immediate, so we sleep just past the window first).
-	time.Sleep(window + 25*time.Millisecond)
+	// The buffer is generous (100ms) so the test survives the
+	// scheduler latency the -race detector adds on slow runners.
+	time.Sleep(window + 100*time.Millisecond)
 	if _, err := authenticate(t, auth, mkUnknown(1)); err == nil {
 		t.Fatal("kid-miss for kB must fail (kB not in JWKS)")
 	}
@@ -339,7 +341,9 @@ func TestJWKSCache_KidMissRateLimited(t *testing.T) {
 	}
 
 	// Past the window, a fresh kid-miss must trigger another refresh.
-	time.Sleep(window + 25*time.Millisecond)
+	// Same generous buffer as above so a -race run never lands inside
+	// the window by accident.
+	time.Sleep(window + 100*time.Millisecond)
 	if _, err := authenticate(t, auth, mkUnknown(99)); err == nil {
 		t.Fatal("kid-miss for kB must fail (kB not in JWKS)")
 	}
