@@ -386,6 +386,7 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_METRICS_BIND` | `—` | Dedicated metrics listener (optional; recommended for streamable_http) |
 | `MCP_OIDC_VERIFY_CACHE_TTL` | `60s` | OIDC verify cache TTL [1s,5m]; hosted profiles clamp values above 60s |
 | `MCP_PROFILE` | `—` | Apply a bundle of pinned defaults for a named deployment shape; explicit env overrides still win |
+| `MCP_TENANT_POLICY_CEILING` | `—` | Maximum policy mode a control-plane tenant record may select via TenantRecord.PolicyMode. Hosted profiles (shared-service, prod-postgres) default this to time_tracking_safe so a corrupted tenant row cannot broaden the process posture. Empty = no explicit ceiling; the process mode acts as the implicit ceiling. Streamable-HTTP only — the gRPC transport does not consume control-plane tenant records. Ignored on stdio (no tenants). See docs/adr/0021-hosted-tenant-policy-ceiling.md. |
 | `MCP_TRANSPORT` | `stdio` | Transport mode; http is legacy POST-only (deprecated) |
 <!-- CONFIG-TABLE END -->
 

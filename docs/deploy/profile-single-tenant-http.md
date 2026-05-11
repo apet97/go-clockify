@@ -136,6 +136,16 @@ server {
   choice when project/client/tag/task creation is part of the workflow.
   `standard` and `full` are trusted operator/admin modes, not public
   AI defaults.
+- `MCP_TENANT_POLICY_CEILING` is intentionally **unset** on this
+  profile. The auto-registered single tenant carries
+  `PolicyMode = CLOCKIFY_POLICY`, and the implicit "process mode as
+  ceiling" defined by `policy.EffectiveTenantMode` is the right
+  floor — a hard `time_tracking_safe` default would surprise
+  operators who legitimately switched `CLOCKIFY_POLICY` to
+  `safe_core` or higher. Operators running multi-tenant setups
+  through this profile (rare, but supported via additional
+  `PutTenant` calls) can set `MCP_TENANT_POLICY_CEILING` explicitly
+  to constrain any custom tenant records. See [ADR 0021](../adr/0021-hosted-tenant-policy-ceiling.md).
 
 ## Operational checklist
 

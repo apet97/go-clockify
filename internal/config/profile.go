@@ -114,6 +114,12 @@ var allProfilesSlice = []Profile{
 			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
 			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
 			"CLOCKIFY_POLICY":                    "time_tracking_safe",
+			// MCP_TENANT_POLICY_CEILING=time_tracking_safe — hosted
+			// multi-tenant ceiling. Tenant records may NARROW their
+			// PolicyMode below this but cannot BROADEN past it, even
+			// if the Postgres row is corrupted or an operator pushes
+			// PolicyMode=standard for a single tenant. See ADR 0021.
+			"MCP_TENANT_POLICY_CEILING": "time_tracking_safe",
 		},
 	},
 	{
@@ -144,6 +150,11 @@ var allProfilesSlice = []Profile{
 			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
 			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
 			"CLOCKIFY_POLICY":                    "time_tracking_safe",
+			// Hosted multi-tenant ceiling — see ADR 0021 and the
+			// shared-service profile above. prod-postgres inherits
+			// the same default because it is the strict variant of
+			// shared-service.
+			"MCP_TENANT_POLICY_CEILING": "time_tracking_safe",
 		},
 	},
 }

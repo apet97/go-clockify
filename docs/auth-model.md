@@ -103,6 +103,16 @@ separate `tenant` package. The flow is:
    [`authn.PrincipalFromContext`](../internal/authn/context.go)
    and operates within `principal.TenantID`'s scope (audit row
    keying, session pinning, control-plane reads).
+5. The per-session policy is derived from the control-plane
+   `TenantRecord` via `internal/runtime.deriveTenantPolicy`, which
+   applies the **tenant policy ceiling** (ADR 0021): the tenant's
+   `PolicyMode` must be at most `min(process CLOCKIFY_POLICY,
+   MCP_TENANT_POLICY_CEILING)`. Hosted profiles default the
+   ceiling to `time_tracking_safe`. Tenant deny lists union with
+   process denies; tenant allow lists intersect. A tenant trying
+   to broaden past the ceiling fails session-create with an
+   "exceeds" error rather than silently downgrading the gate.
+   See [`docs/policy/production-tool-scope.md` § Tenant policy ceiling](policy/production-tool-scope.md#tenant-policy-ceiling-multi-tenant-hosted-deployments).
 
 The streamable-HTTP session manager pins
 `principal.TenantID` into the persisted `SessionRecord` at

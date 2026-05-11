@@ -439,3 +439,191 @@ func TestBuildServer_DeactivateGroupRemovesTier2Tools(t *testing.T) {
 		t.Fatal("expected invoice tool hidden after deactivation")
 	}
 }
+
+// --------------------------------------------------------------------
+// ADR 0021 hosted tenant policy ceiling tests
+// --------------------------------------------------------------------
+
+// hostedCeilingStore builds a tenantRuntimeStore for ceiling tests
+// with a default-secure inline credential pointing at https upstream
+// (so URL-safety gates do not interfere with the ceiling assertion).
+func hostedCeilingStore(tenantID string, tenantMode policy.Mode, denyTools, denyGroups, allowGroups []string) *tenantRuntimeStore {
+	return &tenantRuntimeStore{
+		tenant: controlplane.TenantRecord{
+			ID:              tenantID,
+			CredentialRefID: "cred-1",
+			BaseURL:         "https://upstream.example.com/api/v1",
+			PolicyMode:      string(tenantMode),
+			DenyTools:       denyTools,
+			DenyGroups:      denyGroups,
+			AllowGroups:     allowGroups,
+		},
+		credential: controlplane.CredentialRef{
+			ID:        "cred-1",
+			Backend:   "inline",
+			Reference: "secret-key",
+			Workspace: "ws-1",
+		},
+	}
+}
+
+// TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling pins the
+// core ADR 0021 invariant: a hosted profile with an explicit
+// time_tracking_safe ceiling refuses a tenant that requests
+// `standard`. The error must be operator-actionable so misconfigured
+// rows show up at session-create time, not at first tool call.
+func TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.Standard, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for tenant broadening past ceiling")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'exceeds' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_BroadeningRejectedUnderImplicitCeiling pins the
+// implicit-ceiling case: no explicit MCP_TENANT_POLICY_CEILING set,
+// process mode still acts as the ceiling. A hosted operator who
+// forgets to set the env var still cannot have tenants broaden past
+// the process posture.
+func TestTenantRuntime_BroadeningRejectedUnderImplicitCeiling(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.SafeCore, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe}, // no explicit Ceiling
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for tenant broadening past implicit process ceiling")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'exceeds' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_NarrowingAllowed verifies a tenant pinned to a
+// stricter mode than the process builds successfully. Mirrors the
+// vanilla hosted-profile shape where CLOCKIFY_POLICY and the ceiling
+// are both pinned to time_tracking_safe.
+func TestTenantRuntime_NarrowingAllowed(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.ReadOnly, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err != nil {
+		t.Fatalf("expected narrowing tenant to be accepted, got: %v", err)
+	}
+	if rt == nil || rt.Server == nil {
+		t.Fatal("expected non-nil runtime + server")
+	}
+	if rt.Close != nil {
+		rt.Close()
+	}
+}
+
+// TestTenantRuntime_ProcessExceedsCeilingFailsClosed pins the
+// fail-closed shape for the misconfiguration where an operator
+// overrode CLOCKIFY_POLICY to standard while leaving the hosted
+// MCP_TENANT_POLICY_CEILING=time_tracking_safe default in place.
+// The error must fire even when the tenant record carries no
+// PolicyMode override — the implicit-inherit path must not bypass
+// the ceiling check. ADR 0021.
+func TestTenantRuntime_ProcessExceedsCeilingFailsClosed(t *testing.T) {
+	store := hostedCeilingStore("acme", "", nil, nil, nil) // empty tenant PolicyMode
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.Standard, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for process mode broader than explicit ceiling")
+	}
+	if !strings.Contains(err.Error(), "process mode") || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'process mode ... exceeds ceiling' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_EmptyTenantModeInheritsProcess pins the
+// inheritance path. An empty tenant mode must not trigger ceiling
+// enforcement; the session takes the process mode.
+func TestTenantRuntime_EmptyTenantModeInheritsProcess(t *testing.T) {
+	store := hostedCeilingStore("acme", "", nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err != nil {
+		t.Fatalf("expected empty tenant mode to inherit process mode, got: %v", err)
+	}
+	if rt == nil {
+		t.Fatal("expected non-nil runtime")
+	}
+	if rt.Close != nil {
+		rt.Close()
+	}
+}
+
+// TestTenantRuntime_UnknownTenantModeFailsClosed pins the unknown-
+// enum fail-closed shape. A corrupted Postgres row carrying
+// "tenant-admin" must not silently sail through as Standard or Full.
+func TestTenantRuntime_UnknownTenantModeFailsClosed(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.Mode("tenant-admin"), nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for unknown tenant policyMode")
+	}
+	if !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("expected 'invalid' error, got: %v", err)
+	}
+}
+
+// Helper-level deny-union, allow-intersect, and ceiling-propagation
+// tests now live in internal/tenantpolicy alongside the Derive helper
+// so the same test surface covers both the production runtime and
+// the shared-service Postgres E2E factory closure that imports the
+// package directly. See internal/tenantpolicy/tenantpolicy_test.go.
+
+// TestTenantRuntime_SelfRegisteredBootstrapSatisfiesImplicitCeiling
+// verifies the single-tenant-http bootstrap path: the auto-registered
+// tenant carries PolicyMode = process mode, so under the implicit
+// ceiling (process mode itself) the tenant always satisfies it.
+// Exercises both time_tracking_safe and standard process modes.
+func TestTenantRuntime_SelfRegisteredBootstrapSatisfiesImplicitCeiling(t *testing.T) {
+	for _, mode := range []policy.Mode{policy.TimeTrackingSafe, policy.Standard} {
+		t.Run(string(mode), func(t *testing.T) {
+			// Mirror bootstrapDefaultTenant's seed shape: PolicyMode = process mode.
+			store := hostedCeilingStore("self", mode, nil, nil, nil)
+			deps := runtimeDeps{
+				cfg:       config.Config{Profile: "single-tenant-http"},
+				policy:    &policy.Policy{Mode: mode}, // no explicit Ceiling for single-tenant-http
+				bootstrap: bootstrap.Config{},
+			}
+			rt, err := tenantRuntime(context.Background(), "self", deps, store)
+			if err != nil {
+				t.Fatalf("bootstrap tenant under %s must satisfy implicit ceiling: %v", mode, err)
+			}
+			if rt != nil && rt.Close != nil {
+				rt.Close()
+			}
+		})
+	}
+}

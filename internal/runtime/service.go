@@ -19,6 +19,7 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
+	"github.com/apet97/go-clockify/internal/tenantpolicy"
 	"github.com/apet97/go-clockify/internal/tools"
 	"github.com/apet97/go-clockify/internal/truncate"
 	"github.com/apet97/go-clockify/internal/vault"
@@ -324,27 +325,9 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 	client := clockify.NewClient(material.APIKey, baseURL, deps.cfg.RequestTimeout, deps.cfg.MaxRetries)
 	client.SetUserAgent("clockify-mcp-go/" + deps.version)
 
-	pol := deps.policy.Clone()
-	if tenant.PolicyMode != "" {
-		pol.Mode = policy.Mode(tenant.PolicyMode)
-	}
-	if len(tenant.DenyTools) > 0 {
-		pol.DeniedTools = map[string]bool{}
-		for _, item := range tenant.DenyTools {
-			pol.DeniedTools[item] = true
-		}
-	}
-	if len(tenant.DenyGroups) > 0 {
-		pol.DeniedGroups = map[string]bool{}
-		for _, item := range tenant.DenyGroups {
-			pol.DeniedGroups[item] = true
-		}
-	}
-	if len(tenant.AllowGroups) > 0 {
-		pol.AllowedGroups = map[string]bool{}
-		for _, item := range tenant.AllowGroups {
-			pol.AllowedGroups[item] = true
-		}
+	pol, err := tenantpolicy.Derive(deps.policy, tenant)
+	if err != nil {
+		return nil, fmt.Errorf("tenant %q: %w", tenant.ID, err)
 	}
 	bc := deps.bootstrap.Clone()
 	service := newService(client, workspaceID, firstNonEmpty(tenant.Timezone, deps.cfg.Timezone), deps.dd, pol, deps.cfg.ReportMaxEntries, deps.cfg.WebhookValidateDNS, deps.cfg.WebhookAllowedDomains)

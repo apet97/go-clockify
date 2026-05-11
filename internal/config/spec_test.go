@@ -43,6 +43,7 @@ func TestEnvSpec_CoversEveryGetenv(t *testing.T) {
 		"CLOCKIFY_DENY_TOOLS":                true, // internal/enforcement
 		"CLOCKIFY_DENY_GROUPS":               true, // internal/enforcement
 		"CLOCKIFY_ALLOW_GROUPS":              true, // internal/enforcement
+		"MCP_TENANT_POLICY_CEILING":          true, // internal/policy (FromEnv reads it); ADR 0021
 		"CLOCKIFY_MAX_CONCURRENT":            true, // main.go
 		"CLOCKIFY_RATE_LIMIT":                true, // internal/ratelimit
 		"CLOCKIFY_PER_TOKEN_CONCURRENCY":     true, // internal/ratelimit

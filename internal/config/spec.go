@@ -45,6 +45,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_DENY_TOOLS", Group: "Safety", Help: "Comma-separated tool names to block"},
 		{Name: "CLOCKIFY_DENY_GROUPS", Group: "Safety", Help: "Comma-separated groups to block"},
 		{Name: "CLOCKIFY_ALLOW_GROUPS", Group: "Safety", Help: "Comma-separated groups to allow"},
+		{Name: "MCP_TENANT_POLICY_CEILING", Group: "Safety", Enum: []string{"", "read_only", "time_tracking_safe", "safe_core", "standard", "full"}, AppliesTo: []string{"streamable_http"}, EssentialDoc: true, Help: "Maximum policy mode a control-plane tenant record may select via TenantRecord.PolicyMode. Hosted profiles (shared-service, prod-postgres) default this to time_tracking_safe so a corrupted tenant row cannot broaden the process posture. Empty = no explicit ceiling; the process mode acts as the implicit ceiling. Streamable-HTTP only — the gRPC transport does not consume control-plane tenant records. Ignored on stdio (no tenants). See docs/adr/0021-hosted-tenant-policy-ceiling.md."},
 
 		// --- Performance ---
 		{Name: "CLOCKIFY_MAX_CONCURRENT", Group: "Performance", Default: "10", Help: "Concurrent tool-call limit (0=disabled)"},

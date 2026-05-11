@@ -19,11 +19,20 @@ const (
 )
 
 type Policy struct {
-	Mode           Mode
+	Mode Mode
+	// Ceiling is the maximum mode a control-plane tenant record may
+	// select via TenantRecord.PolicyMode. Empty = implicit ceiling
+	// (= process Mode itself; see EffectiveTenantMode). See ADR 0021.
+	Ceiling        Mode
 	DeniedTools    map[string]bool
 	DeniedGroups   map[string]bool
 	AllowedGroups  map[string]bool // nil = not set (all allowed per mode)
 	Tier1ToolNames map[string]bool // populated after registry construction
+	// TenantAllowGroupsIgnored is set on per-tenant clones when the
+	// tenant carried AllowGroups under a group-blocking effective mode
+	// (read_only / time_tracking_safe / safe_core) and the list was
+	// silently dropped. Surfaced via Describe() for clockify_policy_info.
+	TenantAllowGroupsIgnored bool
 }
 
 func (p *Policy) Clone() *Policy {
@@ -32,10 +41,13 @@ func (p *Policy) Clone() *Policy {
 	}
 	return &Policy{
 		Mode:           p.Mode,
+		Ceiling:        p.Ceiling,
 		DeniedTools:    cloneBoolMap(p.DeniedTools),
 		DeniedGroups:   cloneBoolMap(p.DeniedGroups),
 		AllowedGroups:  cloneBoolMap(p.AllowedGroups),
 		Tier1ToolNames: cloneBoolMap(p.Tier1ToolNames),
+		// TenantAllowGroupsIgnored is a per-clone marker; cleared on
+		// Clone so a fresh tenant runtime starts from a clean slate.
 	}
 }
 
@@ -48,6 +60,28 @@ func FromEnv() (*Policy, error) {
 	case ReadOnly, TimeTrackingSafe, SafeCore, Standard, Full:
 	default:
 		return nil, fmt.Errorf("invalid CLOCKIFY_POLICY: %s", mode)
+	}
+
+	// MCP_TENANT_POLICY_CEILING constrains the maximum mode a
+	// control-plane tenant record may select. Empty = no explicit
+	// constraint (process mode acts as the implicit ceiling via
+	// EffectiveTenantMode). See ADR 0021.
+	//
+	// FromEnv only parses and validates the enum here. The
+	// "process mode broader than ceiling" cross-check lives in
+	// ValidateForTransport so transports that do not consume
+	// control-plane tenant records (stdio, grpc, legacy http) are
+	// not penalised for inheriting the env var from a misconfigured
+	// shell / container env.
+	var ceiling Mode
+	if raw := strings.TrimSpace(strings.ToLower(os.Getenv("MCP_TENANT_POLICY_CEILING"))); raw != "" {
+		c := Mode(raw)
+		switch c {
+		case ReadOnly, TimeTrackingSafe, SafeCore, Standard, Full:
+			ceiling = c
+		default:
+			return nil, fmt.Errorf("invalid MCP_TENANT_POLICY_CEILING: %s", raw)
+		}
 	}
 
 	denied := map[string]bool{}
@@ -79,6 +113,7 @@ func FromEnv() (*Policy, error) {
 
 	return &Policy{
 		Mode:          mode,
+		Ceiling:       ceiling,
 		DeniedTools:   denied,
 		DeniedGroups:  deniedGroups,
 		AllowedGroups: allowedGroups,
@@ -156,20 +191,217 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 }
 
 // Describe returns a map describing the current policy configuration.
+//
+// Ceiling fields (ADR 0021):
+//
+//   - configured_ceiling: literal MCP_TENANT_POLICY_CEILING value, or
+//     "" if unset.
+//   - effective_ceiling: the actual per-tenant cap the runtime
+//     enforces — `min(processMode, configured_ceiling)` per
+//     EffectiveCeiling. When configured_ceiling is empty, the
+//     process mode acts as the implicit ceiling so this equals the
+//     process mode. When configured_ceiling is broader than the
+//     process mode (a legitimate "I want headroom in this profile
+//     but the process is narrower today" shape), the process mode
+//     is what gets reported because EffectiveTenantMode caps tenants
+//     at min(processMode, ceiling) — see PR #99 review final
+//     diagnostic fix.
+//   - ceiling_source: "explicit" when configured_ceiling is set;
+//     "implicit_process_mode" when the process mode is acting as
+//     the ceiling.
+//
+// The deprecated single "ceiling" key is removed — it conflated
+// configured-vs-effective and silently hid the implicit-ceiling
+// case (PR #99 review).
 func (p *Policy) Describe() map[string]any {
+	configured := string(p.Ceiling)
+	effective := string(EffectiveCeiling(p.Mode, p.Ceiling))
+	source := "explicit"
+	if p.Ceiling == "" {
+		source = "implicit_process_mode"
+	}
 	m := map[string]any{
-		"mode":                      string(p.Mode),
-		"denied_tools":              sortedKeys(p.DeniedTools),
-		"denied_groups":             sortedKeys(p.DeniedGroups),
-		"allowed_groups":            nil,
-		"introspection_tools":       introspectionList(),
-		"safe_core_writes":          safeCoreWriteList(),
-		"time_tracking_safe_writes": timeTrackingSafeWriteList(),
+		"mode":                        string(p.Mode),
+		"configured_ceiling":          configured,
+		"effective_ceiling":           effective,
+		"ceiling_source":              source,
+		"tenant_allow_groups_ignored": p.TenantAllowGroupsIgnored,
+		"denied_tools":                sortedKeys(p.DeniedTools),
+		"denied_groups":               sortedKeys(p.DeniedGroups),
+		"allowed_groups":              nil,
+		"introspection_tools":         introspectionList(),
+		"safe_core_writes":            safeCoreWriteList(),
+		"time_tracking_safe_writes":   timeTrackingSafeWriteList(),
 	}
 	if p.AllowedGroups != nil {
 		m["allowed_groups"] = sortedKeys(p.AllowedGroups)
 	}
 	return m
+}
+
+// Rank reflects posture breadth, not current IsAllowed equivalence.
+// The ceiling contract surface (see ADR 0021) lives on this total
+// ordering; standard and full are deliberately split so future
+// divergence between them cannot silently widen deployments whose
+// ceiling is pinned at standard.
+//
+//	read_only         = 0  (narrowest)
+//	time_tracking_safe = 1
+//	safe_core         = 2
+//	standard          = 3
+//	full              = 4  (broadest)
+//
+// Unknown modes return -1 so every comparison against a real
+// ceiling rejects them (fail closed).
+func Rank(m Mode) int {
+	switch m {
+	case ReadOnly:
+		return 0
+	case TimeTrackingSafe:
+		return 1
+	case SafeCore:
+		return 2
+	case Standard:
+		return 3
+	case Full:
+		return 4
+	}
+	return -1
+}
+
+// IsAtMost reports whether candidate is at most as broad as ceiling.
+// An empty ceiling means "no explicit constraint" (the helper still
+// rejects unknown candidates). EffectiveTenantMode layers the
+// implicit "process mode as ceiling" semantics on top.
+func IsAtMost(candidate, ceiling Mode) bool {
+	cr := Rank(candidate)
+	if cr < 0 {
+		return false
+	}
+	if ceiling == "" {
+		return true
+	}
+	return cr <= Rank(ceiling)
+}
+
+// EffectiveTenantMode returns the effective per-tenant policy mode
+// given the process mode, the tenant's requested mode (may be empty
+// to inherit), and an optional explicit ceiling from
+// MCP_TENANT_POLICY_CEILING.
+//
+// Invariants (see ADR 0021):
+//
+//   - processMode must be a known mode (read_only / time_tracking_safe /
+//     safe_core / standard / full). Unknown processMode fails closed.
+//   - When ceiling is set, ceiling must be a known mode AND processMode
+//     must satisfy processMode <= ceiling. A processMode broader than
+//     the explicit ceiling is a configuration error and fails closed
+//     before the tenant override is considered. This catches the
+//     hosted-profile misconfiguration where an operator overrode
+//     CLOCKIFY_POLICY=standard while the profile pinned
+//     MCP_TENANT_POLICY_CEILING=time_tracking_safe.
+//   - Empty tenantMode inherits processMode (subject to the
+//     processMode<=ceiling invariant above).
+//   - Unknown tenantMode fails closed.
+//   - After the processMode<=ceiling invariant, the effective ceiling
+//     for the tenant override is processMode itself (it is the tighter
+//     of the two). tenantMode > processMode fails closed with an
+//     explicit error rather than silent clamp.
+func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
+	if Rank(processMode) < 0 {
+		return "", fmt.Errorf("invalid process mode %q", string(processMode))
+	}
+	if ceiling != "" {
+		if Rank(ceiling) < 0 {
+			return "", fmt.Errorf("invalid ceiling %q", string(ceiling))
+		}
+		if Rank(processMode) > Rank(ceiling) {
+			return "", fmt.Errorf("process mode %q exceeds ceiling %q", string(processMode), string(ceiling))
+		}
+	}
+	if tenantMode == "" {
+		return processMode, nil
+	}
+	if Rank(tenantMode) < 0 {
+		return "", fmt.Errorf("invalid tenant policyMode %q", string(tenantMode))
+	}
+	if Rank(tenantMode) > Rank(processMode) {
+		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(processMode))
+	}
+	return tenantMode, nil
+}
+
+// EffectiveCeiling returns the actual per-tenant ceiling the runtime
+// enforces, which is the narrower of the process mode and the
+// configured ceiling (when both are known). EffectiveTenantMode caps
+// tenant overrides at this value, so it is what operators should see
+// in clockify_policy_info's effective_ceiling field.
+//
+// Behaviour:
+//
+//   - Unknown mode → "" (defensive; signals "no usable cap").
+//   - Empty ceiling → mode (implicit ceiling = process mode).
+//   - Unknown ceiling → "" (defensive).
+//   - Otherwise → min(mode, ceiling) by Rank.
+//
+// PR #99 review final diagnostic fix: previously Describe reported
+// the configured ceiling verbatim, which hid the case
+// CLOCKIFY_POLICY=time_tracking_safe + MCP_TENANT_POLICY_CEILING=
+// standard (live cap = time_tracking_safe, not standard).
+func EffectiveCeiling(mode, ceiling Mode) Mode {
+	if Rank(mode) < 0 {
+		return ""
+	}
+	if ceiling == "" {
+		return mode
+	}
+	if Rank(ceiling) < 0 {
+		return ""
+	}
+	if Rank(mode) < Rank(ceiling) {
+		return mode
+	}
+	return ceiling
+}
+
+// ValidateForTransport returns an error when the policy's process
+// mode exceeds the explicit ceiling under a transport that consumes
+// control-plane tenant records (currently only streamable_http).
+//
+// The MCP_TENANT_POLICY_CEILING env var is documented as
+// streamable-HTTP only (internal/config/spec.go AppliesTo). Transports
+// that do not consume control-plane TenantRecord overrides — stdio,
+// legacy http, grpc — would treat the ceiling as a no-op at runtime,
+// so failing startup for "policy > ceiling" on those transports would
+// reject a configuration that has no actual effect. ValidateForTransport
+// scopes the cross-check to where it is load-bearing.
+//
+// EffectiveTenantMode / tenantpolicy.Derive keep their independent
+// defense-in-depth checks for actual per-session derivation. See ADR
+// 0021.
+func ValidateForTransport(p *Policy, transport string) error {
+	if p == nil || p.Ceiling == "" || transport != "streamable_http" {
+		return nil
+	}
+	if Rank(p.Mode) > Rank(p.Ceiling) {
+		return fmt.Errorf("CLOCKIFY_POLICY %q exceeds MCP_TENANT_POLICY_CEILING %q; lower one to match", string(p.Mode), string(p.Ceiling))
+	}
+	return nil
+}
+
+// IsGroupBlockingMode reports whether the given mode nullifies
+// AllowedGroups (i.e. IsGroupAllowed returns false before consulting
+// the allowlist). tenantRuntime uses this to decide whether to honour
+// or silently drop tenant AllowGroups. Unknown / empty modes fail
+// closed and are treated as blocking.
+func IsGroupBlockingMode(m Mode) bool {
+	switch m {
+	case Standard, Full:
+		return false
+	case ReadOnly, TimeTrackingSafe, SafeCore:
+		return true
+	}
+	return true
 }
 
 func sortedKeys(m map[string]bool) []string {
