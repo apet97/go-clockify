@@ -122,7 +122,11 @@ narrow but cannot exceed. Three behaviours:
    `PolicyMode` strictly broader than `min(CLOCKIFY_POLICY,
    MCP_TENANT_POLICY_CEILING)`, session creation fails with an
    "exceeds" error. Operators see misconfigured rows at
-   session-create time, not at first tool call.
+   session-create time, not at first tool call. The same gate
+   fires at config load when `CLOCKIFY_POLICY` itself is broader
+   than `MCP_TENANT_POLICY_CEILING` — the binary refuses to start
+   rather than running with a process posture that would silently
+   bypass the hosted ceiling for every tenant.
 2. **Tenant deny lists narrow only.** `tenant.DenyTools` and
    `tenant.DenyGroups` union with the process deny lists. A
    tenant record can add denies; it cannot erase a
@@ -134,6 +138,19 @@ narrow but cannot exceed. Three behaviours:
    `time_tracking_safe`, `safe_core`) it is silently dropped
    and surfaced via `clockify_policy_info` as
    `tenant_allow_groups_ignored: true`.
+
+`clockify_policy_info` also exposes three ceiling fields for
+operator triage:
+
+- `configured_ceiling` — the literal `MCP_TENANT_POLICY_CEILING`
+  value (or empty if unset).
+- `effective_ceiling` — the value the runtime actually caps
+  tenant overrides against. Equals `configured_ceiling` when
+  set; falls back to the process mode when no explicit ceiling
+  is configured.
+- `ceiling_source` — `"explicit"` when an env override or
+  profile default supplied the ceiling, `"implicit_process_mode"`
+  when the process mode is doing the work.
 
 Ranking (see `policy.Rank` in `internal/policy/policy.go`):
 

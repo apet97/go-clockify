@@ -15,11 +15,20 @@ Implemented on the `hosted-tenant-policy-ceiling` branch:
 - Hosted profiles (`shared-service`, `prod-postgres`) default the
   ceiling to `time_tracking_safe`. Other profiles leave it unset
   (process mode acts as the implicit ceiling).
-- `clockify-mcp doctor` displays the effective ceiling and whether it
-  is explicit (env / profile) or implicit (= process mode).
+- `clockify-mcp doctor` surfaces the configured value of
+  `MCP_TENANT_POLICY_CEILING` and its source (explicit / profile /
+  default) through the standard env-var table that is built from
+  `config.AllSpecs()`. The effective per-tenant ceiling (after
+  `min(process, ceiling)` resolution) is exposed via the
+  `clockify_policy_info` tool's `effective_ceiling` and
+  `ceiling_source` fields rather than through a dedicated doctor
+  display line.
 - `internal/controlplane/postgres/e2e_shared_service_test.go` tenant
   A seed updated from `Standard` to `time_tracking_safe` to remain
-  consistent with the new hosted default.
+  consistent with the new hosted default. The factory closure now
+  derives its per-tenant policy via the shared
+  `internal/tenantpolicy.Derive` helper so the E2E exercises the
+  ceiling/union/intersect contract instead of bypassing it.
 
 ## Context
 
@@ -175,13 +184,20 @@ escape hatch when they want one.
      `AllowedGroups` when both are set; when the process did not
      set an allowlist, the tenant list defines the whitelist.
 
-### Doctor surface
+### Operator visibility
 
-`cmd/clockify-mcp/doctor.go` adds a line to the policy section
-showing the effective ceiling and whether it is explicit (env /
-profile) or implicit (= process mode). This is the single best
-place for operators to detect misconfiguration before it hits a
-real tenant.
+The configured `MCP_TENANT_POLICY_CEILING` value (and whether it
+came from an explicit env override, a profile default, or is unset)
+appears in `clockify-mcp doctor`'s standard env-var table, which
+is built from `config.AllSpecs()` and reports source attribution
+for every spec'd variable. The per-tenant *effective* ceiling
+(after `min(processMode, ceiling)` and the implicit-process-mode
+fallback) is exposed through the `clockify_policy_info` tool as
+the `configured_ceiling`, `effective_ceiling`, and
+`ceiling_source` fields. Operators triaging a session-create
+rejection ("tenant X: tenant policyMode 'Y' exceeds ceiling 'Z'")
+can verify the live policy view by calling that tool — no
+dedicated doctor-display line is needed.
 
 ### E2E seed update
 
@@ -242,10 +258,13 @@ here.
   to them but cannot erase them.
 - Process-level allowlists are now load-bearing in the same way:
   tenant `AllowGroups` can narrow further but cannot widen.
-- `clockify_policy_info` exposes the effective ceiling and the
-  tenant-allow-groups-ignored diagnostic, so operators can verify
-  the live posture without reading audit logs.
-- `clockify-mcp doctor` surfaces the ceiling in its policy section.
+- `clockify_policy_info` exposes the `configured_ceiling`,
+  `effective_ceiling`, `ceiling_source`, and
+  `tenant_allow_groups_ignored` diagnostics, so operators can
+  verify the live posture without reading audit logs.
+- `clockify-mcp doctor`'s standard env-var table reports the
+  configured `MCP_TENANT_POLICY_CEILING` and its source (explicit
+  / profile / default).
 
 **Negative — accept these.**
 

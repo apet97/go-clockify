@@ -305,6 +305,67 @@ func TestFromEnv_AcceptsCeilingBroaderThanProcess(t *testing.T) {
 	}
 }
 
+// TestDescribe_CeilingFields pins the three ceiling-related keys
+// surfaced through clockify_policy_info (PR #99 review). The
+// effective_ceiling key must reflect the implicit-process-mode
+// fallback when MCP_TENANT_POLICY_CEILING is unset, so operators
+// can tell from policy_info what the live cap actually is. ADR 0021.
+func TestDescribe_CeilingFields(t *testing.T) {
+	t.Run("explicit ceiling", func(t *testing.T) {
+		p := &Policy{Mode: TimeTrackingSafe, Ceiling: TimeTrackingSafe}
+		d := p.Describe()
+		if got := d["configured_ceiling"]; got != "time_tracking_safe" {
+			t.Errorf("configured_ceiling = %v, want time_tracking_safe", got)
+		}
+		if got := d["effective_ceiling"]; got != "time_tracking_safe" {
+			t.Errorf("effective_ceiling = %v, want time_tracking_safe", got)
+		}
+		if got := d["ceiling_source"]; got != "explicit" {
+			t.Errorf("ceiling_source = %v, want explicit", got)
+		}
+	})
+
+	t.Run("implicit ceiling = process mode", func(t *testing.T) {
+		p := &Policy{Mode: SafeCore, Ceiling: ""}
+		d := p.Describe()
+		if got := d["configured_ceiling"]; got != "" {
+			t.Errorf("configured_ceiling = %v, want empty", got)
+		}
+		if got := d["effective_ceiling"]; got != "safe_core" {
+			t.Errorf("effective_ceiling = %v, want safe_core (process mode fallback)", got)
+		}
+		if got := d["ceiling_source"]; got != "implicit_process_mode" {
+			t.Errorf("ceiling_source = %v, want implicit_process_mode", got)
+		}
+	})
+
+	t.Run("explicit ceiling broader than process still distinct", func(t *testing.T) {
+		p := &Policy{Mode: TimeTrackingSafe, Ceiling: Standard}
+		d := p.Describe()
+		if got := d["configured_ceiling"]; got != "standard" {
+			t.Errorf("configured_ceiling = %v, want standard", got)
+		}
+		// effective_ceiling reports the operator-set value; the
+		// runtime-effective tenant cap is min(process, ceiling) but
+		// that's a tenant-scoped derivation. policy_info exposes the
+		// process-level configured/effective ceiling pair.
+		if got := d["effective_ceiling"]; got != "standard" {
+			t.Errorf("effective_ceiling = %v, want standard", got)
+		}
+		if got := d["ceiling_source"]; got != "explicit" {
+			t.Errorf("ceiling_source = %v, want explicit", got)
+		}
+	})
+
+	t.Run("deprecated ceiling key no longer present", func(t *testing.T) {
+		p := &Policy{Mode: TimeTrackingSafe, Ceiling: TimeTrackingSafe}
+		d := p.Describe()
+		if _, ok := d["ceiling"]; ok {
+			t.Error("deprecated 'ceiling' key must be replaced by configured_ceiling/effective_ceiling/ceiling_source")
+		}
+	})
+}
+
 // TestIsGroupBlockingMode pins which modes nullify AllowGroups.
 // tenantRuntime relies on this to decide whether to honour or
 // silently drop the tenant AllowGroups list.

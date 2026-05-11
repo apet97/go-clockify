@@ -192,10 +192,36 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 }
 
 // Describe returns a map describing the current policy configuration.
+//
+// Ceiling fields (ADR 0021):
+//
+//   - configured_ceiling: literal MCP_TENANT_POLICY_CEILING value, or
+//     "" if unset.
+//   - effective_ceiling: the actual ceiling the runtime enforces.
+//     Equals configured_ceiling when set; falls back to the process
+//     mode (Mode field) when configured_ceiling is empty, because
+//     EffectiveTenantMode treats the process mode as the implicit
+//     ceiling.
+//   - ceiling_source: "explicit" when configured_ceiling is set;
+//     "implicit_process_mode" when the process mode is acting as
+//     the ceiling.
+//
+// The deprecated single "ceiling" key is removed — it conflated
+// configured-vs-effective and silently hid the implicit-ceiling
+// case (PR #99 review).
 func (p *Policy) Describe() map[string]any {
+	configured := string(p.Ceiling)
+	effective := configured
+	source := "explicit"
+	if p.Ceiling == "" {
+		effective = string(p.Mode)
+		source = "implicit_process_mode"
+	}
 	m := map[string]any{
 		"mode":                        string(p.Mode),
-		"ceiling":                     string(p.Ceiling),
+		"configured_ceiling":          configured,
+		"effective_ceiling":           effective,
+		"ceiling_source":              source,
 		"tenant_allow_groups_ignored": p.TenantAllowGroupsIgnored,
 		"denied_tools":                sortedKeys(p.DeniedTools),
 		"denied_groups":               sortedKeys(p.DeniedGroups),
