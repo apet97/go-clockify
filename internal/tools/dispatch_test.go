@@ -5,8 +5,9 @@ package tools_test
 //
 //   1. Every ReadOnlyHint:false tool is rejected under read_only policy
 //      BEFORE the handler runs (UpstreamHit == false).
-//   2. SafeCore policy allows the whitelisted writes and blocks only the
-//      tools outside the whitelist (currently: clockify_delete_entry).
+//   2. SafeCore policy allows the whitelisted non-destructive writes and
+//      blocks every delete_* tool (docs/policy/production-tool-scope.md
+//      lists safe_core as ❌ for "Delete access (any kind)").
 //   3. Schema validation runs BEFORE the policy gate, so malformed calls
 //      never consume a rate-limit slot — critical for abuse prevention.
 //   4. Upstream 4xx/5xx errors surface as MCP tool errors with IsError:true
@@ -169,13 +170,17 @@ func TestReadOnlyPolicy_BlocksAllDestructiveTools(t *testing.T) {
 	}
 }
 
-// TestSafeCorePolicy_BlocksOnlyDeleteEntry asserts the SafeCore whitelist
-// at policy.go:184-198: every Tier 1 write tool is allowed EXCEPT
-// clockify_delete_entry (the only one tagged toolDestructive). A change to
-// the whitelist that adds or removes a tool will break this test, which
-// is the intended behavior — safe-write policy is a security boundary and
-// changes to it should be deliberate.
-func TestSafeCorePolicy_BlocksOnlyDeleteEntry(t *testing.T) {
+// TestSafeCorePolicy_BlocksEveryDelete asserts the SafeCore whitelist
+// at policy.go: every delete_* tool is rejected at the policy gate
+// (UpstreamHit == false), and every non-destructive write on the
+// whitelist is permitted. docs/policy/production-tool-scope.md row
+// "Delete access (any kind)" lists safe_core as ❌; this test plus the
+// policy-package TestSafeCoreBlocksDestructiveDeletes pin both halves
+// of that contract from the dispatcher and policy layers respectively.
+// A whitelist change that re-admits a delete tool will break this test,
+// which is the intended behavior — safe-write policy is a security
+// boundary and changes to it should be deliberate.
+func TestSafeCorePolicy_BlocksEveryDelete(t *testing.T) {
 	for _, name := range destructiveToolNames(t) {
 		t.Run(name, func(t *testing.T) {
 			upstream := fakeClockifyEmptyJSON(t)
@@ -186,13 +191,13 @@ func TestSafeCorePolicy_BlocksOnlyDeleteEntry(t *testing.T) {
 				Upstream:   upstream,
 			})
 
-			if name == "clockify_delete_entry" {
+			if strings.HasPrefix(name, "clockify_delete_") {
 				if result.Outcome != testharness.OutcomePolicyDenied {
-					t.Fatalf("delete_entry allowed under safe_core (outcome=%q) — whitelist regression",
-						result.Outcome)
+					t.Fatalf("%s allowed under safe_core (outcome=%q) — whitelist regression",
+						name, result.Outcome)
 				}
 				if result.UpstreamHit {
-					t.Fatalf("delete_entry reached upstream under safe_core")
+					t.Fatalf("%s reached upstream under safe_core", name)
 				}
 				return
 			}

@@ -197,6 +197,14 @@ func introspectionList() []string {
 	}
 }
 
+// safeCoreWriteList enumerates the writes that `safe_core` permits.
+// It deliberately excludes every delete_* tool: docs/policy/
+// production-tool-scope.md states safe_core "still blocks all delete
+// operations and Tier 2 admin surface", and the policy/test pin in
+// TestSafeCoreBlocksDestructiveDeletes enforces that contract.
+// Adding a destructive tool here without also flipping
+// docs/policy/production-tool-scope.md and the contract pins is a
+// regression of the documented safe_core posture.
 func safeCoreWriteList() []string {
 	return []string{
 		"clockify_add_entry",
@@ -204,10 +212,6 @@ func safeCoreWriteList() []string {
 		"clockify_create_project",
 		"clockify_create_tag",
 		"clockify_create_task",
-		"clockify_delete_client",
-		"clockify_delete_project",
-		"clockify_delete_tag",
-		"clockify_delete_task",
 		"clockify_find_and_update_entry",
 		"clockify_update_client",
 		"clockify_update_project",
@@ -260,6 +264,9 @@ func isIntrospection(name string) bool {
 	return false
 }
 
+// isSafeCoreWrite mirrors safeCoreWriteList; keep the two in lockstep.
+// Delete tools are intentionally absent — see the comment on
+// safeCoreWriteList.
 func isSafeCoreWrite(name string) bool {
 	switch name {
 	case "clockify_start_timer", "clockify_stop_timer",
@@ -268,8 +275,6 @@ func isSafeCoreWrite(name string) bool {
 		"clockify_find_and_update_entry", "clockify_timesheet_fill_gap",
 		"clockify_create_project", "clockify_create_client",
 		"clockify_create_tag", "clockify_create_task",
-		"clockify_delete_client", "clockify_delete_project",
-		"clockify_delete_tag", "clockify_delete_task",
 		"clockify_update_client", "clockify_update_project",
 		"clockify_update_tag", "clockify_update_task":
 		return true

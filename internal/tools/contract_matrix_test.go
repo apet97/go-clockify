@@ -54,12 +54,14 @@ func TestToolContractMatrix(t *testing.T) {
 		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
 		"clockify_find_and_update_entry": true, "clockify_timesheet_fill_gap": true,
 	}
+	// safe_core deliberately excludes every delete_* tool — see the
+	// comment on policy.safeCoreWriteList and the pin in
+	// internal/policy/policy_test.go TestSafeCoreBlocksDestructiveDeletes.
 	safeCoreWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,
 		"clockify_update_entry": true, "clockify_log_time": true, "clockify_switch_project": true,
 		"clockify_find_and_update_entry": true, "clockify_timesheet_fill_gap": true, "clockify_create_project": true, "clockify_create_client": true,
 		"clockify_create_tag": true, "clockify_create_task": true,
-		"clockify_delete_client": true, "clockify_delete_project": true, "clockify_delete_tag": true, "clockify_delete_task": true,
 		"clockify_update_client": true, "clockify_update_project": true, "clockify_update_tag": true, "clockify_update_task": true,
 	}
 	// D1: drift guard for the contract-matrix policy lists. Every name
