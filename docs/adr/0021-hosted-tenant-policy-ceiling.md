@@ -32,7 +32,7 @@ Implemented on the `hosted-tenant-policy-ceiling` branch:
 
 ## Context
 
-`tenantRuntime` (`internal/runtime/service.go:284-360`) clones the
+`tenantRuntime` (`internal/runtime/service.go`) clones the
 process policy and then **unconditionally overwrites** the policy
 mode from the control-plane `TenantRecord.PolicyMode` field, with no
 validation against the process / profile posture. In hosted
@@ -90,8 +90,7 @@ three places in the same code path.
 Unknown modes return `-1` and fail closed at every comparison.
 
 **Standard < Full despite current `IsAllowed` equivalence.**
-`IsAllowed` (`internal/policy/policy.go:104-122`) treats `standard`
-and `full` identically. Conflating them in `Rank` would couple the
+`policy.go::IsAllowed` treats `standard` and `full` identically. Conflating them in `Rank` would couple the
 ceiling contract to that accident: a future feature that distinguishes
 the two — e.g. unlocking workspace-admin tools only under `full` —
 would silently widen any deployment whose ceiling is pinned at
@@ -169,7 +168,8 @@ escape hatch when they want one.
 
 ### `tenantRuntime` enforcement
 
-`internal/runtime/service.go:327-348` is rewritten:
+`internal/runtime/service.go::tenantRuntime` is rewritten to route
+through the shared `internal/tenantpolicy.Derive` helper:
 
 1. Compute `effectiveMode` via `EffectiveTenantMode`. Fail closed
    on broadening.
@@ -201,15 +201,18 @@ dedicated doctor-display line is needed.
 
 ### E2E seed update
 
-`internal/controlplane/postgres/e2e_shared_service_test.go` seeds
-tenant A with `Standard` (line 473). Under the new
+`internal/controlplane/postgres/e2e_shared_service_test.go`
+historically seeded tenant A with `Standard`. Under the new
 `shared-service` ceiling default (`time_tracking_safe`), tenant A
-would be rejected at session creation. The seed is updated to
-`time_tracking_safe` to remain consistent with the new hosted
+would be rejected at session creation by the same
+`tenantpolicy.Derive` path that guards production. Both seeds in
+the shared-service E2E and the session-rehydration E2E
+(`e2e_session_rehydration_test.go`) are now pinned to
+`time_tracking_safe` so they remain consistent with the hosted
 default. The `Standard`-versus-group-blocking nuance previously
-exercised by tenant A is fully covered by new unit tests using the
-`tenantRuntimeStore` fixture
-(`internal/runtime/service_test.go:197-220`).
+exercised at the E2E layer is fully covered by the unit tests in
+`internal/tenantpolicy` and the runtime-level cases that use the
+`tenantRuntimeStore` fixture in `internal/runtime/service_test.go`.
 
 ## Alternatives considered
 
@@ -221,7 +224,8 @@ session-create time, not discover months later that their
 
 **Fail-closed on `AllowGroups` under a group-blocking mode.**
 Rejected because legacy tenants today harmlessly carry `AllowGroups`
-entries that the mode-level block (line 129) already nullifies.
+entries that `policy.go::IsGroupAllowed` already nullifies under
+group-blocking modes.
 Failing every session for a harmless misconfiguration is a
 production-incident shape. Skip-and-mark is the safer migration.
 Reconsider after a deprecation window when operators have had time
@@ -299,22 +303,33 @@ Hosted operators who today carry tenant records with
 
 ## References
 
-- `internal/policy/policy.go` — `Mode` constants (lines 13-19),
-  `Policy` struct (21-27), `IsAllowed` (104-122),
-  `IsGroupAllowed` (125-139). New helpers and field land here.
-- `internal/runtime/service.go:284-360` — `tenantRuntime`. The
-  rewrite target.
-- `internal/controlplane/store.go:15-26` — `TenantRecord` shape.
+- `internal/policy/policy.go` — `Mode` constants and `Policy`
+  struct, `IsAllowed`, `IsGroupAllowed`. New helpers (`Rank`,
+  `IsAtMost`, `EffectiveTenantMode`, `IsGroupBlockingMode`) and
+  fields (`Policy.Ceiling`, `Policy.TenantAllowGroupsIgnored`)
+  land here.
+- `internal/tenantpolicy/tenantpolicy.go` — `Derive` is the
+  shared per-tenant policy derivation entry point. Used by both
+  `internal/runtime/service.go::tenantRuntime` and
+  `internal/controlplane/postgres/e2e_shared_service_test.go::sharedSvcFactory`
+  so the production runtime and the shared-service E2E exercise
+  the same code path.
+- `internal/runtime/service.go::tenantRuntime` — clones the
+  process policy, runs `tenantpolicy.Derive`, builds the
+  per-session server.
+- `internal/controlplane/store.go` — `TenantRecord` shape.
   Unchanged by this ADR; the ceiling lives on the process policy,
   not the tenant record.
-- `internal/config/profile.go:40-149` — profile definitions.
-  Hosted profiles gain the new default here.
+- `internal/config/profile.go` — profile definitions. Hosted
+  profiles (`shared-service`, `prod-postgres`) gain the
+  `MCP_TENANT_POLICY_CEILING=time_tracking_safe` default here.
 - `internal/config/spec.go` — `EnvSpec` for
   `MCP_TENANT_POLICY_CEILING`.
-- `internal/controlplane/postgres/e2e_shared_service_test.go:473` —
-  tenant A seed; updated to `time_tracking_safe`.
-- `internal/runtime/service_test.go:197-220` — `tenantRuntimeStore`
-  fixture; reused by the new unit tests.
+- `internal/controlplane/postgres/e2e_shared_service_test.go` —
+  shared-service E2E factory `sharedSvcFactory`; tenant seeds
+  pinned to `time_tracking_safe` to match the new ceiling default.
+- `internal/runtime/service_test.go::tenantRuntimeStore` —
+  fixture reused by the runtime-level ceiling tests.
 - ADR 0004 — Policy enforcement architecture. The ceiling slots in
   alongside the existing policy-mode gate.
 - ADR 0015 — Profile-centric configuration. Hosted profiles are the

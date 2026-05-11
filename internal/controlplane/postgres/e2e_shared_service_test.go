@@ -464,9 +464,16 @@ func TestSharedServicePostgresE2E(t *testing.T) {
 		t.Fatalf("fake clockify must bind to loopback, got %q", clockifyBaseURL)
 	}
 
-	// Seed credentials and tenants. Per-tenant policy_mode = standard
-	// for the operator persona, time_tracking_safe for the AI-facing
-	// persona; the gate must honor the tenant's setting per-session.
+	// Seed credentials and tenants. Both tenants are pinned to
+	// time_tracking_safe so the seed matches the shared-service
+	// profile's MCP_TENANT_POLICY_CEILING default (ADR 0021) — the
+	// sharedSvcFactory routes per-session policy through
+	// tenantpolicy.Derive, which would reject any tenant whose
+	// PolicyMode exceeded the process ceiling. This E2E focuses on
+	// audit-row partitioning and session isolation across tenants;
+	// per-mode ceiling and narrowing semantics are pinned by the
+	// internal/tenantpolicy and internal/runtime unit tests, not
+	// here.
 	for _, ref := range []controlplane.CredentialRef{
 		{ID: sharedSvcCredA, Backend: "inline", Reference: "svc-e2e-key", Workspace: sharedSvcWSA, BaseURL: clockifyBaseURL},
 		{ID: sharedSvcCredB, Backend: "inline", Reference: "svc-e2e-key", Workspace: sharedSvcWSB, BaseURL: clockifyBaseURL},
@@ -481,14 +488,13 @@ func TestSharedServicePostgresE2E(t *testing.T) {
 			CredentialRefID: sharedSvcCredA,
 			WorkspaceID:     sharedSvcWSA,
 			BaseURL:         clockifyBaseURL,
-			// Both tenants are pinned to time_tracking_safe to match
-			// the shared-service profile's MCP_TENANT_POLICY_CEILING
-			// default introduced in ADR 0021. Tenant A operator role
-			// is still distinguished by subject/tenant identity in
-			// audit assertions; the per-mode contrast moved to
-			// internal/runtime unit tests with the tenantRuntimeStore
-			// fixture (see TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling
-			// and TestDeriveTenantPolicy_* in service_test.go).
+			// time_tracking_safe to match the shared-service ceiling
+			// default (ADR 0021). Tenant identity (subject + tenant
+			// ID) is still distinct from tenant B in the audit/session
+			// assertions below; per-mode ceiling/narrowing behaviour
+			// is covered by internal/tenantpolicy unit tests (see
+			// TestDerive_*) and internal/runtime tests (see
+			// TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling).
 			PolicyMode: string(policy.TimeTrackingSafe),
 		},
 		{
@@ -564,11 +570,11 @@ func TestSharedServicePostgresE2E(t *testing.T) {
 		t.Fatalf("expected distinct session ids per tenant, got duplicate %q", clientA.sessID)
 	}
 
-	// Call 1: tenant A operator reads projects (read-only, no audit).
+	// Call 1: tenant A reads projects (read-only, no audit).
 	clientA.callTool(traffCtx, "clockify_list_projects", map[string]any{})
-	// Call 2: tenant A operator writes a time entry (allowed under
-	// time_tracking_safe — clockify_add_entry is in the
-	// time-tracking write allowlist; same row count as before).
+	// Call 2: tenant A writes a time entry. clockify_add_entry is in
+	// the time_tracking_safe write allowlist, so it executes and
+	// emits the intent + outcome audit pair counted below.
 	clientA.callTool(traffCtx, "clockify_add_entry", map[string]any{
 		"start":       time.Now().UTC().Add(-2 * time.Hour).Format(time.RFC3339),
 		"end":         time.Now().UTC().Add(-1 * time.Hour).Format(time.RFC3339),
