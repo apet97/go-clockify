@@ -39,6 +39,12 @@ MCP_OIDC_JWKS_CACHE_TTL            — advanced tuning; default 5m is safe.
                                      pattern as MCP_OIDC_VERIFY_CACHE_TTL
                                      above).
 CLOCKIFY_TOOL_TIMEOUT              — advanced tuning; default is safe.
+CLOCKIFY_MAX_RETRIES               — advanced tuning; default 3 is safe.
+                                     Operators tuning retry budget during
+                                     upstream Clockify saturation add it via
+                                     values.extraEnv (same pattern as
+                                     CLOCKIFY_TOOL_TIMEOUT above; see
+                                     docs/runbooks/clockify-upstream-outage.md).
 MCP_HTTP_MAX_BODY                  — deprecated legacy fallback for MCP_MAX_MESSAGE_SIZE
 CLOCKIFY_DELTA_FORMAT              — advanced tuning; default "merge" is safe.
 MCP_PROFILE                        — invocation-time selector for the five
