@@ -225,9 +225,22 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"project_id": map[string]any{"type": "string"},
 			"name":       map[string]any{"type": "string"},
 			"billable":   map[string]any{"type": "boolean"},
+			"estimate":   map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
+			"status":     map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}, "description": "Task status"},
 			"dry_run":    map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateTask(ctx, args)
+		}},
+		{Tool: toolRWIdem("clockify_update_task", "Update a task by project+task reference using fetch-then-merge. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'.", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
+			"project":  map[string]any{"type": "string", "description": "Project name or ID"},
+			"task":     map[string]any{"type": "string", "description": "Task ID or exact name"},
+			"name":     map[string]any{"type": "string"},
+			"status":   map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}, "description": "Task status"},
+			"estimate": map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
+			"billable": map[string]any{"type": "boolean"},
+			"dry_run":  map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UpdateTask(ctx, args)
 		}},
 
 		// --- Wave 2 additions ---

@@ -626,6 +626,10 @@
           "dry_run": {
             "type": "boolean"
           },
+          "estimate": {
+            "description": "ISO-8601 duration estimate, e.g. PT2H30M",
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -634,6 +638,14 @@
             "type": "string"
           },
           "project_id": {
+            "type": "string"
+          },
+          "status": {
+            "description": "Task status",
+            "enum": [
+              "ACTIVE",
+              "DONE"
+            ],
             "type": "string"
           }
         },
@@ -5135,6 +5147,144 @@
           "write"
         ],
         "title": "Update Entry"
+      }
+    },
+    {
+      "name": "clockify_update_task",
+      "description": "Update a task by project+task reference using fetch-then-merge. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "billable": {
+            "type": "boolean"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "estimate": {
+            "description": "ISO-8601 duration estimate, e.g. PT2H30M",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          },
+          "status": {
+            "description": "Task status",
+            "enum": [
+              "ACTIVE",
+              "DONE"
+            ],
+            "type": "string"
+          },
+          "task": {
+            "description": "Task ID or exact name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "task"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_update_task",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "assigneeId": {
+                "type": "string"
+              },
+              "assigneeIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "billable": {
+                "type": "boolean"
+              },
+              "budgetEstimate": {
+                "type": "integer"
+              },
+              "costRate": {},
+              "duration": {
+                "type": "string"
+              },
+              "estimate": {
+                "type": "string"
+              },
+              "hourlyRate": {},
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "userGroupIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "projectId",
+              "billable"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Update Task"
       }
     },
     {
