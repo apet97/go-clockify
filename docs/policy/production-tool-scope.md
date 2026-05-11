@@ -147,10 +147,15 @@ operator triage:
 
 - `configured_ceiling` — the literal `MCP_TENANT_POLICY_CEILING`
   value (or empty if unset).
-- `effective_ceiling` — the value the runtime actually caps
-  tenant overrides against. Equals `configured_ceiling` when
-  set; falls back to the process mode when no explicit ceiling
-  is configured.
+- `effective_ceiling` — the live cap the runtime actually
+  enforces against tenant overrides:
+  `min(CLOCKIFY_POLICY, configured_ceiling)` per
+  `policy.EffectiveCeiling`. Equals `configured_ceiling` when
+  the configured ceiling is at most as broad as the process
+  mode (the common case); equals the process mode when the
+  configured ceiling is broader (the operator wired headroom
+  but the process is narrower today) or when no ceiling is
+  configured at all.
 - `ceiling_source` — `"explicit"` when an env override or
   profile default supplied the ceiling, `"implicit_process_mode"`
   when the process mode is doing the work.

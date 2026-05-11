@@ -196,11 +196,16 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 //
 //   - configured_ceiling: literal MCP_TENANT_POLICY_CEILING value, or
 //     "" if unset.
-//   - effective_ceiling: the actual ceiling the runtime enforces.
-//     Equals configured_ceiling when set; falls back to the process
-//     mode (Mode field) when configured_ceiling is empty, because
-//     EffectiveTenantMode treats the process mode as the implicit
-//     ceiling.
+//   - effective_ceiling: the actual per-tenant cap the runtime
+//     enforces — `min(processMode, configured_ceiling)` per
+//     EffectiveCeiling. When configured_ceiling is empty, the
+//     process mode acts as the implicit ceiling so this equals the
+//     process mode. When configured_ceiling is broader than the
+//     process mode (a legitimate "I want headroom in this profile
+//     but the process is narrower today" shape), the process mode
+//     is what gets reported because EffectiveTenantMode caps tenants
+//     at min(processMode, ceiling) — see PR #99 review final
+//     diagnostic fix.
 //   - ceiling_source: "explicit" when configured_ceiling is set;
 //     "implicit_process_mode" when the process mode is acting as
 //     the ceiling.
@@ -210,10 +215,9 @@ func (p *Policy) BlockReason(name string, readOnly bool) string {
 // case (PR #99 review).
 func (p *Policy) Describe() map[string]any {
 	configured := string(p.Ceiling)
-	effective := configured
+	effective := string(EffectiveCeiling(p.Mode, p.Ceiling))
 	source := "explicit"
 	if p.Ceiling == "" {
-		effective = string(p.Mode)
 		source = "implicit_process_mode"
 	}
 	m := map[string]any{
@@ -325,6 +329,39 @@ func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
 		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(processMode))
 	}
 	return tenantMode, nil
+}
+
+// EffectiveCeiling returns the actual per-tenant ceiling the runtime
+// enforces, which is the narrower of the process mode and the
+// configured ceiling (when both are known). EffectiveTenantMode caps
+// tenant overrides at this value, so it is what operators should see
+// in clockify_policy_info's effective_ceiling field.
+//
+// Behaviour:
+//
+//   - Unknown mode → "" (defensive; signals "no usable cap").
+//   - Empty ceiling → mode (implicit ceiling = process mode).
+//   - Unknown ceiling → "" (defensive).
+//   - Otherwise → min(mode, ceiling) by Rank.
+//
+// PR #99 review final diagnostic fix: previously Describe reported
+// the configured ceiling verbatim, which hid the case
+// CLOCKIFY_POLICY=time_tracking_safe + MCP_TENANT_POLICY_CEILING=
+// standard (live cap = time_tracking_safe, not standard).
+func EffectiveCeiling(mode, ceiling Mode) Mode {
+	if Rank(mode) < 0 {
+		return ""
+	}
+	if ceiling == "" {
+		return mode
+	}
+	if Rank(ceiling) < 0 {
+		return ""
+	}
+	if Rank(mode) < Rank(ceiling) {
+		return mode
+	}
+	return ceiling
 }
 
 // ValidateForTransport returns an error when the policy's process

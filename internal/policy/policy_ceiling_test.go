@@ -307,6 +307,44 @@ func TestFromEnv_AcceptsCeilingBroaderThanProcess(t *testing.T) {
 	}
 }
 
+// TestEffectiveCeiling pins the min(processMode, configuredCeiling)
+// computation that Policy.Describe surfaces as `effective_ceiling`
+// in clockify_policy_info. Operators reading policy_info should
+// see the live cap, not the operator-supplied ceiling value, so
+// the "I configured headroom but the process is narrower today"
+// shape does not hide behind a misleading number. ADR 0021 + PR
+// #99 review final diagnostic fix.
+func TestEffectiveCeiling(t *testing.T) {
+	cases := []struct {
+		name    string
+		mode    Mode
+		ceiling Mode
+		want    Mode
+	}{
+		{"empty ceiling returns mode (implicit)", TimeTrackingSafe, "", TimeTrackingSafe},
+		{"empty ceiling returns standard mode", Standard, "", Standard},
+		{"empty ceiling + unknown mode returns empty", Mode("tenant-admin"), "", ""},
+		{"unknown mode with known ceiling returns empty", Mode("tenant-admin"), TimeTrackingSafe, ""},
+		{"known mode with unknown ceiling returns empty", TimeTrackingSafe, Mode("tenant-admin"), ""},
+		{"mode equal to ceiling returns either (deterministic: ceiling)", TimeTrackingSafe, TimeTrackingSafe, TimeTrackingSafe},
+		{"mode narrower than ceiling returns mode", TimeTrackingSafe, Standard, TimeTrackingSafe},
+		{"mode broader than ceiling returns ceiling", Standard, TimeTrackingSafe, TimeTrackingSafe},
+		{"read_only mode under standard ceiling returns read_only", ReadOnly, Standard, ReadOnly},
+		{"read_only mode under read_only ceiling returns read_only", ReadOnly, ReadOnly, ReadOnly},
+		{"full mode under standard ceiling returns standard", Full, Standard, Standard},
+		{"full mode under full ceiling returns full", Full, Full, Full},
+		{"safe_core mode under standard ceiling returns safe_core", SafeCore, Standard, SafeCore},
+		{"safe_core mode under read_only ceiling returns read_only", SafeCore, ReadOnly, ReadOnly},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := EffectiveCeiling(c.mode, c.ceiling); got != c.want {
+				t.Errorf("EffectiveCeiling(%q, %q) = %q, want %q", c.mode, c.ceiling, got, c.want)
+			}
+		})
+	}
+}
+
 // TestValidateForTransport pins the transport-scoped ceiling gate
 // introduced as the PR #99 review final-blocker fix. Only
 // streamable_http consumes control-plane TenantRecord overrides, so
@@ -388,18 +426,20 @@ func TestDescribe_CeilingFields(t *testing.T) {
 		}
 	})
 
-	t.Run("explicit ceiling broader than process still distinct", func(t *testing.T) {
+	t.Run("explicit ceiling broader than process reports process as effective", func(t *testing.T) {
 		p := &Policy{Mode: TimeTrackingSafe, Ceiling: Standard}
 		d := p.Describe()
 		if got := d["configured_ceiling"]; got != "standard" {
 			t.Errorf("configured_ceiling = %v, want standard", got)
 		}
-		// effective_ceiling reports the operator-set value; the
-		// runtime-effective tenant cap is min(process, ceiling) but
-		// that's a tenant-scoped derivation. policy_info exposes the
-		// process-level configured/effective ceiling pair.
-		if got := d["effective_ceiling"]; got != "standard" {
-			t.Errorf("effective_ceiling = %v, want standard", got)
+		// effective_ceiling reports the live cap the runtime
+		// actually enforces — min(processMode, configuredCeiling).
+		// Reporting the configured value here would mislead
+		// operators into thinking tenants could reach 'standard'
+		// when the process is still pinned at time_tracking_safe.
+		// See PR #99 review final diagnostic fix.
+		if got := d["effective_ceiling"]; got != "time_tracking_safe" {
+			t.Errorf("effective_ceiling = %v, want time_tracking_safe (min of process and configured)", got)
 		}
 		if got := d["ceiling_source"]; got != "explicit" {
 			t.Errorf("ceiling_source = %v, want explicit", got)

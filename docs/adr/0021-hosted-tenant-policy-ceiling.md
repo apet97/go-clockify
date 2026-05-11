@@ -190,14 +190,27 @@ The configured `MCP_TENANT_POLICY_CEILING` value (and whether it
 came from an explicit env override, a profile default, or is unset)
 appears in `clockify-mcp doctor`'s standard env-var table, which
 is built from `config.AllSpecs()` and reports source attribution
-for every spec'd variable. The per-tenant *effective* ceiling
-(after `min(processMode, ceiling)` and the implicit-process-mode
-fallback) is exposed through the `clockify_policy_info` tool as
-the `configured_ceiling`, `effective_ceiling`, and
-`ceiling_source` fields. Operators triaging a session-create
-rejection ("tenant X: tenant policyMode 'Y' exceeds ceiling 'Z'")
-can verify the live policy view by calling that tool — no
-dedicated doctor-display line is needed.
+for every spec'd variable. The per-tenant *effective* ceiling is
+exposed through the `clockify_policy_info` tool as the
+`configured_ceiling`, `effective_ceiling`, and `ceiling_source`
+fields, where:
+
+  - `configured_ceiling` is the literal `MCP_TENANT_POLICY_CEILING`
+    value (or empty if unset);
+  - `effective_ceiling` is the live cap the runtime actually
+    enforces — `policy.EffectiveCeiling(processMode, ceiling)` =
+    `min(processMode, configured_ceiling)`. When the configured
+    ceiling is broader than the process mode, `effective_ceiling`
+    reports the process mode (the tighter floor) so operators are
+    not misled into thinking tenants can reach the configured
+    value when they can't;
+  - `ceiling_source` is `"explicit"` when an env / profile default
+    supplied the ceiling, `"implicit_process_mode"` otherwise.
+
+Operators triaging a session-create rejection ("tenant X: tenant
+policyMode 'Y' exceeds ceiling 'Z'") can verify the live policy
+view by calling that tool — no dedicated doctor-display line is
+needed.
 
 ### E2E seed update
 
@@ -305,14 +318,18 @@ Hosted operators who today carry tenant records with
 
 - `internal/policy/policy.go` — `Mode` constants and `Policy`
   struct, `IsAllowed`, `IsGroupAllowed`. New helpers (`Rank`,
-  `IsAtMost`, `EffectiveTenantMode`, `IsGroupBlockingMode`,
-  `ValidateForTransport`) and fields (`Policy.Ceiling`,
-  `Policy.TenantAllowGroupsIgnored`) land here.
+  `IsAtMost`, `EffectiveTenantMode`, `EffectiveCeiling`,
+  `IsGroupBlockingMode`, `ValidateForTransport`) and fields
+  (`Policy.Ceiling`, `Policy.TenantAllowGroupsIgnored`) land here.
   `ValidateForTransport` is the streamable-HTTP-only startup gate
   for `processMode <= ceiling`; called from `runtime.New` and
   `cmd/clockify-mcp/doctor.go` so the binary refuses to boot and
   doctor reports a Load error when the pair is misaligned under
   streamable_http. Other transports skip the gate.
+  `EffectiveCeiling(mode, ceiling)` returns
+  `min(processMode, configured_ceiling)` and is what
+  `Policy.Describe` surfaces as `effective_ceiling` so operators
+  see the live cap, not the operator-supplied value.
 - `internal/tenantpolicy/tenantpolicy.go` — `Derive` is the
   shared per-tenant policy derivation entry point. Used by both
   `internal/runtime/service.go::tenantRuntime` and
