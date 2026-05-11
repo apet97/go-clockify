@@ -182,6 +182,7 @@ func (s *Service) listSharedReports(ctx context.Context, args map[string]any) (R
 		"count":       len(envelope.Reports),
 		"total":       envelope.Count,
 		"page":        page,
+		"pageSize":    pageSize,
 	}), nil
 }
 

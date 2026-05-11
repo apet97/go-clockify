@@ -118,6 +118,13 @@ func TestTier2Dispatch_SharedReports_List(t *testing.T) {
 	if !strings.Contains(res.ResultText, `"total":74`) {
 		t.Fatalf("list result missing meta.total=74: %q", res.ResultText)
 	}
+	// Meta must echo the applied pageSize so a caller can confirm what
+	// page size the upstream actually saw. Pinned 2026-05-11 after
+	// listSharedReports was missing this while every other list tool
+	// included it.
+	if !strings.Contains(res.ResultText, `"pageSize":25`) {
+		t.Fatalf("list result missing meta.pageSize=25: %q", res.ResultText)
+	}
 }
 
 func TestTier2Dispatch_SharedReports_Get(t *testing.T) {
