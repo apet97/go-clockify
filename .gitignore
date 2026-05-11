@@ -14,6 +14,13 @@ staging/
 *.swo
 *~
 
+# Environment files with secrets — never commit.
+# The docker-compose workflow instructs operators to run
+#   cp examples/docker-compose.env deploy/.env
+# These rules prevent secrets from landing in git history.
+.env
+deploy/.env
+
 # OS clutter. The repo-hygiene CI gate (scripts/check-repo-hygiene.sh)
 # fails on any of these slipping through; keep the ignore list in sync.
 .DS_Store
