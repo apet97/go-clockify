@@ -159,6 +159,49 @@ func (s *Server) invalidateToolListCacheLocked() {
 	s.toolListResultJSONValid = false
 }
 
+// invokeHandler runs the tool handler under a deferred panic-recovery
+// wrapper that pairs the pre-handler intent record with a
+// PhaseHandlerPanic outcome record before the panic propagates up to
+// RecoverDispatch. Without this layer, a panicking handler leaves the
+// intent row orphaned in the audit trail — the client sees the
+// "internal tool error" JSON-RPC envelope but the audit log has no
+// matching outcome, which breaks fail_closed-strict reconciliation
+// and any operator scan that pairs intent/outcome events.
+//
+// The wrapper re-panics so the existing RecoverDispatch deferred at
+// each transport's dispatch site still emits its metric, slog event,
+// and stable JSON-RPC tool-error envelope. The audit row is best-
+// effort: failing the panic itself on audit persistence would mask
+// the original crash and is no more useful than the regular
+// fail_closed paths.
+func (s *Server) invokeHandler(ctx context.Context, name string, d ToolDescriptor, args map[string]any, hints ToolHints, reqID int64) (result any, err error) {
+	if !hints.ReadOnly {
+		defer func() {
+			if rec := recover(); rec != nil {
+				reason := truncatePanicReason(fmt.Sprintf("%v", rec))
+				_ = s.emitAudit(name, "tools/call", "panic", PhaseHandlerPanic, reason, args, hints)
+				slog.Warn("tool_call_panic_audit_paired",
+					"tool", name,
+					"req_id", reqID,
+				)
+				panic(rec)
+			}
+		}()
+	}
+	return d.Handler(ctx, args)
+}
+
+// truncatePanicReason keeps the audit `reason` column at a sane size
+// even when a handler panics with a multi-KB string. The full panic
+// value remains in the slog `panic_recovered` event.
+func truncatePanicReason(s string) string {
+	const max = 256
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}
+
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
 	ctx, span := tracing.Default.Start(ctx, "mcp.tools/call")
 	span.SetAttribute("tool.name", params.Name)
@@ -267,7 +310,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	result, err := d.Handler(callCtx, params.Arguments)
+	result, err := s.invokeHandler(callCtx, params.Name, d, params.Arguments, hints, reqID)
 	duration := time.Since(start)
 
 	if err != nil {

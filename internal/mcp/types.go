@@ -143,6 +143,14 @@ type AuditPhase = string
 const (
 	PhaseIntent  AuditPhase = "intent"
 	PhaseOutcome AuditPhase = "outcome"
+
+	// PhaseHandlerPanic identifies an outcome record written from
+	// the deferred panic-recovery wrapper around the tool handler.
+	// The intent record (PhaseIntent) was already written; this
+	// outcome pairs with it so a crashing handler does not leave
+	// an orphaned intent. Reason carries a sanitized panic value;
+	// the full stack lives in the slog `panic_recovered` event.
+	PhaseHandlerPanic AuditPhase = "handler_panic"
 )
 
 type AuditEvent struct {

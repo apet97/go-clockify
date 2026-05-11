@@ -429,6 +429,54 @@ func TestAuditPhase_OutcomeMarksFailedOnHandlerError(t *testing.T) {
 	}
 }
 
+// TestAuditPhase_OutcomeWrittenOnHandlerPanic pins the panic-pairing
+// contract: when a non-read-only handler panics, the deferred recovery
+// inside invokeHandler must emit a PhaseHandlerPanic outcome record
+// before re-panicking. Without this, the intent record sits orphaned
+// in the audit log while the client sees the stable "internal tool
+// error" envelope from RecoverDispatch — a reconciliation gap that
+// agent-32 F1 (P3) flagged.
+func TestAuditPhase_OutcomeWrittenOnHandlerPanic(t *testing.T) {
+	rec := &recordingAuditor{}
+	s := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "write_tool"},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			panic("simulated handler crash")
+		},
+		ReadOnlyHint: false,
+	}}, nil, nil)
+	s.Auditor = rec
+	s.AuditDurabilityMode = "best_effort"
+	s.initialized.Store(true)
+
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"write_tool","arguments":{}}}`
+	var out strings.Builder
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(rec.events) != 2 {
+		t.Fatalf("expected 2 events (intent + handler_panic), got %d: %+v", len(rec.events), rec.events)
+	}
+	if rec.events[0].Phase != PhaseIntent {
+		t.Errorf("event[0].Phase = %q, want %q", rec.events[0].Phase, PhaseIntent)
+	}
+	if rec.events[1].Phase != PhaseHandlerPanic {
+		t.Errorf("event[1].Phase = %q, want %q", rec.events[1].Phase, PhaseHandlerPanic)
+	}
+	if rec.events[1].Outcome != "panic" {
+		t.Errorf("event[1].Outcome = %q, want \"panic\"", rec.events[1].Outcome)
+	}
+	if !strings.Contains(rec.events[1].Reason, "simulated handler crash") {
+		t.Errorf("event[1].Reason missing panic value: %q", rec.events[1].Reason)
+	}
+	// Client must still see the stable JSON-RPC tool-error envelope
+	// emitted by RecoverDispatch — the audit pairing must not change
+	// the client-facing surface.
+	if !strings.Contains(out.String(), "internal tool error") {
+		t.Errorf("client response missing stable tool-error envelope: %q", out.String())
+	}
+}
+
 // TestAuditPhase_ReadOnlyToolsSkipBothPhases confirms read-only calls
 // never emit intent or outcome records — nothing to audit.
 func TestAuditPhase_ReadOnlyToolsSkipBothPhases(t *testing.T) {
