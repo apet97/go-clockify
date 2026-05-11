@@ -20,8 +20,8 @@ func TestTimerStatusRunning(t *testing.T) {
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case "/workspaces/ws1/user/u1/time-entries":
-			if r.URL.Query().Get("page-size") != "1" {
-				t.Fatalf("expected page-size=1, got %s", r.URL.Query().Get("page-size"))
+			if r.URL.Query().Get("in-progress") != "true" {
+				t.Fatalf("expected in-progress=true, got %s", r.URL.Query().Get("in-progress"))
 			}
 			respondJSON(t, w, []clockify.TimeEntry{
 				{ID: "e1", Description: "Working", TimeInterval: clockify.TimeInterval{Start: now.Format(time.RFC3339)}},
@@ -82,6 +82,60 @@ func TestTimerStatusNotRunning(t *testing.T) {
 	}
 	if data["entry"] != nil {
 		t.Fatalf("expected entry to be nil, got %v", data["entry"])
+	}
+}
+
+// TestTimerStatusRunningAfterRecentFinished pins the contract that
+// TimerStatus must filter by `in-progress=true` rather than relying on
+// `page-size=1` ordering. The bug it locks out: a recently finished
+// entry (later start than the still-running one) bubbled to the top of
+// a `page-size=1` read and TimerStatus reported `running:false` while
+// a timer was in fact running.
+func TestTimerStatusRunningAfterRecentFinished(t *testing.T) {
+	runningStart := time.Now().UTC().Add(-90 * time.Minute)
+	finishedStart := time.Now().UTC().Add(-30 * time.Minute)
+	finishedEnd := finishedStart.Add(5 * time.Minute)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			if r.URL.Query().Get("in-progress") == "true" {
+				respondJSON(t, w, []clockify.TimeEntry{
+					{ID: "running", Description: "Working", TimeInterval: clockify.TimeInterval{Start: runningStart.Format(time.RFC3339)}},
+				})
+				return
+			}
+			// Any other query (notably a stale page-size=1) would surface
+			// the finished entry first and lead callers to report
+			// running:false. Mock that drift explicitly.
+			respondJSON(t, w, []clockify.TimeEntry{
+				{ID: "finished", Description: "Done", TimeInterval: clockify.TimeInterval{Start: finishedStart.Format(time.RFC3339), End: finishedEnd.Format(time.RFC3339)}},
+			})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimerStatus(context.Background())
+	if err != nil {
+		t.Fatalf("timer status failed: %v", err)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	if data["running"] != true {
+		t.Fatalf("expected running=true (in-progress filter must take precedence over recency), got %v", data["running"])
+	}
+	entry, ok := data["entry"].(clockify.TimeEntry)
+	if !ok {
+		t.Fatalf("expected entry to be a TimeEntry, got %T", data["entry"])
+	}
+	if entry.ID != "running" {
+		t.Fatalf("expected running entry id=running, got %q", entry.ID)
 	}
 }
 

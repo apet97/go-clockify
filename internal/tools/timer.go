@@ -87,7 +87,7 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 }
 
 func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
-	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"page-size": "1"})
+	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true"})
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
