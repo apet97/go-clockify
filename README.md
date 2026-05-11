@@ -87,6 +87,13 @@ Get a Clockify API key from [Profile → Advanced](https://app.clockify.me/user/
 export CLOCKIFY_API_KEY=your-key
 ```
 
+The key inherits its owner's Clockify workspace role (Regular / Team
+Manager / Workspace Admin / Owner). The MCP layer's `CLOCKIFY_POLICY`
+controls which tools are exposed; the Clockify role controls whether
+those tools succeed at the API. See
+[`docs/policy/production-tool-scope.md`](docs/policy/production-tool-scope.md)
+for the minimum role per tool family.
+
 For personal testing against one real workspace, pin the local stdio
 profile and workspace before connecting an AI client:
 

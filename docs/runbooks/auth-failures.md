@@ -135,6 +135,14 @@ If `msg=tool_call` errors consistently include `401 Unauthorized`
 from Clockify across multiple tools, the upstream API key has been
 rotated, revoked, or expired. Mitigation:
 
+> If the failures are `403 Forbidden` or `400 Entity id must be
+> present` instead of `401`, the key is valid but its Clockify
+> workspace role is too narrow for the tool. See
+> [`docs/policy/production-tool-scope.md`](../policy/production-tool-scope.md)
+> for the minimum role per tool family — `update_user_role`,
+> webhooks, shared reports, and most Tier 2 admin tools need a key
+> owned by a Workspace Admin.
+
 ```sh
 # Generate a new key in the Clockify dashboard
 # (https://app.clockify.me/user/preferences#advanced)

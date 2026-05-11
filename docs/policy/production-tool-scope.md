@@ -99,6 +99,55 @@ start with `read_only` for dashboard-only checks,
 structure. Avoid `standard` and `full` for exploratory testing on a
 real workspace with valuable data.
 
+## Clockify API key role requirements
+
+`CLOCKIFY_POLICY` controls what the MCP layer is willing to expose,
+but a tool can still fail upstream if the API key's owning user
+lacks the Clockify workspace role the underlying endpoint demands.
+Two layers, two gates: the policy gate is enforced by this repo;
+the role gate is enforced by Clockify. Both must pass.
+
+The table below documents the **minimum** Clockify workspace role a
+key needs for each tool family. "Owner" is strictly broader than
+"Workspace Admin" → "Team Manager" → "Project Manager" → "Regular";
+a key with a stronger role works wherever a weaker one is listed.
+
+| Tool family | Minimum role | Notes |
+|---|---|---|
+| Personal time tracking (`clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_list_entries`, `clockify_update_entry`, `clockify_delete_entry`, `clockify_get_timesheet`) | Regular | Mutations are constrained to the API key owner's own entries. |
+| Personal context (`clockify_whoami`, `clockify_get_workspace`, `clockify_list_tools`, `clockify_policy_info`, `clockify_search_tools`) | Regular | No workspace data exposed beyond the caller's membership. |
+| Project / client / tag / task **reads** (`clockify_list_projects`, `clockify_list_clients`, `clockify_list_tags`, `clockify_list_tasks`, `clockify_get_*`) | Regular | List/get reads are visible to all members. |
+| Project / client / tag / task **writes** (`clockify_create_*`, `clockify_update_*`, `clockify_archive_*`, `clockify_delete_*`) | Workspace Admin | Project Managers may also have write access on projects they manage; the upstream API enforces this on a per-resource basis. |
+| Reports (`clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`) | Team Manager | Cross-user roll-ups require Team Manager or higher. A Regular key sees only its own entries even if a report tool is invoked. |
+| Approvals (`clockify_list_approval_requests`, `clockify_approve_request`, `clockify_withdraw_approval_request`) | Team Manager | Approvers must have the role for the workspace's approval policy; Regulars can submit their own requests only. |
+| Webhooks (`clockify_create_webhook`, `clockify_delete_webhook`, `clockify_test_webhook`) | Workspace Admin | Webhook surface is admin-only. |
+| Shared reports (`clockify_create_shared_report`, `clockify_list_shared_reports`, `clockify_delete_shared_report`) | Workspace Admin | Share targets bypass per-user permissions, so the upstream API requires admin scope. |
+| Scheduling (`clockify_*_assignment`, `clockify_*_scheduled_time_off`, `clockify_publish_period`) | Workspace Admin | Scheduling and time-off rosters cross multiple users. |
+| Custom fields (`clockify_list_custom_fields`, `clockify_set_custom_field_value`) | Workspace Admin (manage) / Regular (set on own entries) | Reading values is wide open; defining or assigning fields is admin-only. |
+| User and group admin (`clockify_invite_user`, `clockify_remove_user`, `clockify_update_user_role`, `clockify_deactivate_user`, `clockify_create_user_group`, `clockify_add_user_to_group`, `clockify_remove_user_from_group`) | Workspace Admin (some Owner-only) | `clockify_update_user_role` requires Workspace Admin or Owner; promoting to/from Owner requires Owner. See the API endpoint shape in `internal/tools/tier2_user_admin.go`. |
+| Billing — invoices (`clockify_create_invoice`, `clockify_send_invoice`, `clockify_delete_invoice`) | Workspace Admin | Some plans gate invoice features behind the paid tier; the API key still needs admin role even on a free plan. |
+| Holidays and expenses (`clockify_create_holiday`, `clockify_create_expense`) | Workspace Admin (create) / Regular (read own) | |
+| Working with Owner-only surface (workspace settings, billing plan changes, ownership transfer) | Owner | Not exposed as MCP tools; covered here for completeness. |
+
+Operator checklist when provisioning a key:
+
+1. Pick the **lowest** role that covers every tool family you plan to
+   activate. Start with Regular for a personal time-tracking
+   deployment; escalate one tier at a time as you enable broader
+   tool groups.
+2. Cross-reference the chosen role with `CLOCKIFY_POLICY` —
+   `time_tracking_safe` paired with a Regular key is the safest
+   posture for an untrusted AI agent; `safe_core` requires
+   Workspace Admin to actually exercise its create-write surface.
+3. If a tool returns `403 Forbidden` or `400 Entity id must be
+   present`, the key likely lacks the role the endpoint demands.
+   Check the table above before raising the policy.
+
+When in doubt, mirror the layout in `docs/auth-model.md` (MCP auth)
+and `docs/runbooks/auth-failures.md` (debug flow): the MCP auth
+errors are local; the Clockify role errors are upstream — fix them
+at the API key, not at this repo's policy gate.
+
 ## Policy Enforcement
 
 Set the policy using the `CLOCKIFY_POLICY` environment variable.
