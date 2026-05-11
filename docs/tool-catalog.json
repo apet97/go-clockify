@@ -850,6 +850,62 @@
       }
     },
     {
+      "name": "clockify_delete_client",
+      "description": "Delete a client by ID or exact name. Archives the client first if it is still active (Clockify rejects DELETE on active clients).",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": true,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "destructive"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "description": "Client name or ID",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "client"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_delete_client",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
+        "title": "Delete Client"
+      }
+    },
+    {
       "name": "clockify_delete_entry",
       "description": "Delete a time entry by ID",
       "group": "tier1",
@@ -1417,6 +1473,66 @@
         },
         "required": [
           "client"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_get_client",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "archived": {
+                "type": "boolean"
+              },
+              "ccEmails": {},
+              "currencyCode": {
+                "type": "string"
+              },
+              "currencyId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
         ],
         "type": "object"
       },

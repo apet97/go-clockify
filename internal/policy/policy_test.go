@@ -57,6 +57,7 @@ func TestTimeTrackingSafePolicy(t *testing.T) {
 		"clockify_create_client",
 		"clockify_create_tag",
 		"clockify_create_task",
+		"clockify_delete_client",
 	} {
 		if p.IsAllowed(tool, false) {
 			t.Errorf("%s is workspace-wide; must be blocked in time_tracking_safe", tool)
@@ -198,8 +199,8 @@ func TestDescribe(t *testing.T) {
 	}
 
 	scWrites := desc["safe_core_writes"].([]string)
-	if len(scWrites) != 12 {
-		t.Fatalf("expected 12 safe_core_writes, got %d", len(scWrites))
+	if len(scWrites) != 13 {
+		t.Fatalf("expected 13 safe_core_writes, got %d", len(scWrites))
 	}
 
 	// Describe with nil AllowedGroups
@@ -224,14 +225,15 @@ func TestSafeCoreExpandedAllowlist(t *testing.T) {
 		"clockify_timesheet_fill_gap",
 		"clockify_create_project", "clockify_create_client",
 		"clockify_create_tag", "clockify_create_task",
+		"clockify_delete_client",
 	}
 	for _, name := range safeCoreTools {
 		if !p.IsAllowed(name, false) {
 			t.Fatalf("safe core write tool %q should be allowed in safe_core mode", name)
 		}
 	}
-	if len(safeCoreTools) != 12 {
-		t.Fatalf("expected 12 safe core write tools, got %d", len(safeCoreTools))
+	if len(safeCoreTools) != 13 {
+		t.Fatalf("expected 13 safe core write tools, got %d", len(safeCoreTools))
 	}
 }
 

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -86,5 +87,132 @@ func TestGetClientRequiresClientRef(t *testing.T) {
 		t.Fatal("expected error when client ref is empty")
 	} else if !strings.Contains(err.Error(), "client") {
 		t.Fatalf("expected error to mention client, got %v", err)
+	}
+}
+
+func TestDeleteClientArchivesActiveClient(t *testing.T) {
+	var (
+		archiveBody    map[string]any
+		archived       bool
+		deleted        bool
+		archiveBefore  bool
+		deletedAfterFn bool
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: false})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&archiveBody); err != nil {
+				t.Fatalf("decode archive body: %v", err)
+			}
+			archived = true
+			archiveBefore = !deleted
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		case r.URL.Path == path && r.Method == http.MethodDelete:
+			deleted = true
+			deletedAfterFn = archived
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.DeleteClient(context.Background(), map[string]any{"client": testClientID})
+	if err != nil {
+		t.Fatalf("delete client failed: %v", err)
+	}
+
+	if !archived {
+		t.Fatal("expected PUT archive call on active client")
+	}
+	if !archiveBefore {
+		t.Fatal("archive must happen before delete")
+	}
+	if !deleted {
+		t.Fatal("expected DELETE call after archive")
+	}
+	if !deletedAfterFn {
+		t.Fatal("DELETE must occur after PUT archived=true")
+	}
+	if archiveBody["name"] != "Acme" {
+		t.Fatalf("archive PUT must include existing name, got %v", archiveBody["name"])
+	}
+	if archiveBody["archived"] != true {
+		t.Fatalf("archive PUT must set archived=true, got %v", archiveBody["archived"])
+	}
+
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	if data["deleted"] != true || data["clientId"] != testClientID {
+		t.Fatalf("unexpected response data: %+v", data)
+	}
+}
+
+func TestDeleteClientSkipsArchiveWhenAlreadyArchived(t *testing.T) {
+	var putCalls int
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			putCalls++
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		case r.URL.Path == path && r.Method == http.MethodDelete:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.DeleteClient(context.Background(), map[string]any{"client": testClientID}); err != nil {
+		t.Fatalf("delete client failed: %v", err)
+	}
+	if putCalls != 0 {
+		t.Fatalf("expected no PUT calls on already-archived client, got %d", putCalls)
+	}
+}
+
+func TestDeleteClientDryRunDoesNotMutate(t *testing.T) {
+	var mutated bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: false})
+		case r.URL.Path == path && (r.Method == http.MethodPut || r.Method == http.MethodDelete):
+			mutated = true
+			respondJSON(t, w, map[string]any{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.DeleteClient(context.Background(), map[string]any{"client": testClientID, "dry_run": true})
+	if err != nil {
+		t.Fatalf("delete client dry-run failed: %v", err)
+	}
+	if mutated {
+		t.Fatal("dry-run must not issue PUT or DELETE")
+	}
+	if result.Action != "clockify_delete_client" {
+		t.Fatalf("unexpected action: %q", result.Action)
+	}
+}
+
+func TestDeleteClientRequiresClientArg(t *testing.T) {
+	svc := New(nil, "ws1")
+	if _, err := svc.DeleteClient(context.Background(), map[string]any{}); err == nil {
+		t.Fatal("expected error when client arg is missing")
 	}
 }

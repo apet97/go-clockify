@@ -204,6 +204,7 @@ func safeCoreWriteList() []string {
 		"clockify_create_project",
 		"clockify_create_tag",
 		"clockify_create_task",
+		"clockify_delete_client",
 		"clockify_find_and_update_entry",
 		"clockify_log_time",
 		"clockify_start_timer",
@@ -259,7 +260,8 @@ func isSafeCoreWrite(name string) bool {
 		"clockify_log_time", "clockify_switch_project",
 		"clockify_find_and_update_entry", "clockify_timesheet_fill_gap",
 		"clockify_create_project", "clockify_create_client",
-		"clockify_create_tag", "clockify_create_task":
+		"clockify_create_tag", "clockify_create_task",
+		"clockify_delete_client":
 		return true
 	}
 	return false

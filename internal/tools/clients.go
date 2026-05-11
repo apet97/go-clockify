@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -83,4 +84,55 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_client", client, map[string]any{"workspaceId": wsID}), nil
+}
+
+// DeleteClient archives the client if it is still active, then deletes
+// it. Clockify rejects DELETE on active clients (the active rule is the
+// same as for projects), and the PUT archive validator additionally
+// requires the existing name in the body. The implementation mirrors
+// the rawArchiveAndDeleteClient cleanup helper in tests/.
+func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	clientRef := stringArg(args, "client")
+	if clientRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("client is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	clientPath, err := paths.Workspace(wsID, "clients", clientID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	var existing clockify.ClientEntity
+	if err := s.Client.Get(ctx, clientPath, nil, &existing); err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	if dryrun.Enabled(args) {
+		return ResultEnvelope{
+			OK:     true,
+			Action: "clockify_delete_client",
+			Data:   dryrun.WrapResult(existing, "clockify_delete_client"),
+			Meta:   map[string]any{"workspaceId": wsID, "clientId": clientID},
+		}, nil
+	}
+
+	if !existing.Archived {
+		archivePayload := map[string]any{"name": existing.Name, "archived": true}
+		var archived clockify.ClientEntity
+		if err := s.Client.Put(ctx, clientPath, archivePayload, &archived); err != nil {
+			return ResultEnvelope{}, fmt.Errorf("archive client %s before delete: %w", clientID, err)
+		}
+	}
+
+	if err := s.Client.Delete(ctx, clientPath); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_delete_client", map[string]any{"deleted": true, "clientId": clientID}, map[string]any{"workspaceId": wsID}), nil
 }
