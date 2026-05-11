@@ -2,7 +2,35 @@
 
 ## Status
 
-Proposed — recorded as a placeholder for the long-standing local
+Accepted (Implemented). The Q1+Q2+Q4 decisions have all been
+implemented as of the
+`adr0018-confirmation-tokens` branch (commits `97b2e51` through
+`1ec3099`):
+
+  - **Q1**: Option B — server-issued HMAC preview tokens. Stateless,
+    stdlib-only. Implementation in `internal/confirmation/`.
+  - **Q2**: Dedicated layer between policy gate and rate limit.
+    Implementation in `internal/enforcement/enforcement.go`
+    `Pipeline.BeforeCall` step 2 (the new step) plus the mint hook
+    in step 4.
+  - **Q3**: Prerequisite plumbing landed previously in commit
+    `a4b9740` (mcp.ToolHints carries RiskClass).
+  - **Q4**: Both surfaces ship — `annotations.requiresConfirmationToken`,
+    `annotations.confirmationRiskClass`, and an optional
+    `confirmation_token` property in InputSchema. Implementation in
+    `internal/tools/common.go` `applyRiskMetadata` plus
+    `ensureConfirmationTokenSchemaProperty`.
+  - **Q5**: Independent of ADR 0017; landed as a standalone wave.
+
+The original "Proposed" framing and the design-question narrative
+below are retained so future readers can see the trade-off
+analysis the implementation followed. New questions or follow-ups
+should append a "Follow-ups" section rather than mutating the
+existing text.
+
+### Original framing (Proposed, 2026-04-19)
+
+Recorded as a placeholder for the long-standing local
 planning queue items "Risk-class-driven
 enforcement" and "Confirmation-token enforcement for minimal-fallback
 destructive tools." Both have been deferred multiple times because

@@ -74,8 +74,15 @@ in addition to logging time:
 At runtime, `standard` and `full` have the same policy allow rules:
 any non-denied tool or group can run after the bootstrap/activation
 surface exposes it. Treat `full` as an explicit operator/admin label,
-not as an additional code-level gate. RiskClass-driven restrictions for
-`standard` remain a proposed design in ADR-0018, not current behaviour.
+not as an additional code-level gate. A separate confirmation-token
+gate (per ADR-0018, landed on `adr0018-confirmation-tokens`) sits
+alongside the policy mode: every high-risk tool call
+(`RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect |
+RiskDestructive`) requires a server-minted HMAC token obtained via a
+`dry_run:true` preview. The gate runs uniformly across all policy
+modes including `standard` and `full`; it is configurable via
+`CLOCKIFY_CONFIRMATION_TOKENS=disabled` (break-glass only) and via
+`CLOCKIFY_CONFIRMATION_TOKEN_SECRET` for shared-service replicas.
 
 `full` is intentionally omitted from recommended production defaults:
 it represents an intentionally unrestricted policy posture and is for
