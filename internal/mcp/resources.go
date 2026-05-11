@@ -42,16 +42,141 @@ type ResourceProvider interface {
 	ReadResource(ctx context.Context, uri string) ([]ResourceContents, error)
 }
 
-// resourceSubscriptions is a lightweight subscription set used by Server to
-// gate notifications/resources/updated emission — only subscribed URIs are
-// broadcast. Concurrent-safe via an internal sync.Map.
+// resourceSubscriptions tracks resources/subscribe state per (Notifier, URI)
+// so notifications/resources/updated fan out only to streams that asked for
+// a given URI. Earlier implementations stored a flat URI set on the Server
+// and relied on the notifierHub broadcast, which leaked updates across
+// concurrent gRPC streams sharing one *mcp.Server. See ADR 0009 ("Resource
+// Delta Sync") for the wire contract; this struct owns the in-memory side
+// of the per-notifier guarantee.
+//
+// hasAnyURI / refcount keep the cheap "is anyone interested in this URI?"
+// shortcut the tools layer relies on for the emitResourceUpdate skip-fetch
+// gate (HasResourceSubscription); the per-stream filter only happens at
+// delivery time in NotifyResourceUpdated.
 type resourceSubscriptions struct {
-	m sync.Map // key: string uri, value: struct{}
+	mu         sync.RWMutex
+	byNotifier map[Notifier]map[string]struct{}
+	refcount   map[string]int
 }
 
-func (r *resourceSubscriptions) add(uri string)      { r.m.Store(uri, struct{}{}) }
-func (r *resourceSubscriptions) remove(uri string)   { r.m.Delete(uri) }
-func (r *resourceSubscriptions) has(uri string) bool { _, ok := r.m.Load(uri); return ok }
+// broadcastSubscriber is the sentinel used when a subscribe call arrives
+// without a Notifier in context (test code that exercises the handler
+// directly without going through a transport). Recording the subscription
+// against this sentinel restores the pre-fix server-wide behaviour for
+// those callers: NotifyResourceUpdated will fan out to every currently
+// registered notifier. Production transports always thread a real Notifier,
+// so this sentinel never hits in those paths.
+var broadcastSubscriber Notifier = broadcastSentinel{}
+
+type broadcastSentinel struct{}
+
+func (broadcastSentinel) Notify(string, any) error { return nil }
+
+func (r *resourceSubscriptions) add(n Notifier, uri string) {
+	if n == nil {
+		n = broadcastSubscriber
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.byNotifier == nil {
+		r.byNotifier = make(map[Notifier]map[string]struct{})
+	}
+	if r.refcount == nil {
+		r.refcount = make(map[string]int)
+	}
+	set, ok := r.byNotifier[n]
+	if !ok {
+		set = make(map[string]struct{})
+		r.byNotifier[n] = set
+	}
+	if _, dup := set[uri]; dup {
+		return
+	}
+	set[uri] = struct{}{}
+	r.refcount[uri]++
+}
+
+func (r *resourceSubscriptions) remove(n Notifier, uri string) {
+	if n == nil {
+		n = broadcastSubscriber
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	set, ok := r.byNotifier[n]
+	if !ok {
+		return
+	}
+	if _, present := set[uri]; !present {
+		return
+	}
+	delete(set, uri)
+	if len(set) == 0 {
+		delete(r.byNotifier, n)
+	}
+	if r.refcount[uri] > 0 {
+		r.refcount[uri]--
+		if r.refcount[uri] == 0 {
+			delete(r.refcount, uri)
+		}
+	}
+}
+
+// dropNotifier removes every subscription owned by n, decrementing per-URI
+// refcounts. Called from the notifierHub remove closure when a stream
+// closes so HasResourceSubscription stops lying about active subscribers.
+func (r *resourceSubscriptions) dropNotifier(n Notifier) {
+	if n == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	set, ok := r.byNotifier[n]
+	if !ok {
+		return
+	}
+	for uri := range set {
+		if r.refcount[uri] > 0 {
+			r.refcount[uri]--
+			if r.refcount[uri] == 0 {
+				delete(r.refcount, uri)
+			}
+		}
+	}
+	delete(r.byNotifier, n)
+}
+
+// hasAnyURI reports whether any notifier is currently subscribed to uri.
+// Used by HasResourceSubscription to gate the tools-layer skip-fetch path
+// without paying the per-notifier filter cost.
+func (r *resourceSubscriptions) hasAnyURI(uri string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.refcount[uri] > 0
+}
+
+// targetsFor returns the notifiers subscribed to uri. The broadcast
+// sentinel, when present, expands to "deliver to every currently registered
+// notifier" via the broadcastFanout bool. Returns (nil, false) when no
+// subscription exists so callers can skip param construction.
+func (r *resourceSubscriptions) targetsFor(uri string) (targets []Notifier, broadcastFanout bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.refcount[uri] == 0 {
+		return nil, false
+	}
+	for n, set := range r.byNotifier {
+		if _, ok := set[uri]; !ok {
+			continue
+		}
+		if n == broadcastSubscriber {
+			broadcastFanout = true
+			continue
+		}
+		targets = append(targets, n)
+	}
+	return targets, broadcastFanout
+}
 
 // resourcesListParams is the decoded body of a resources/* request that
 // targets a specific URI (resources/read, resources/subscribe,
@@ -106,7 +231,7 @@ func (s *Server) handleResourcesRead(ctx context.Context, raw any) (any, *RPCErr
 	return map[string]any{"contents": contents}, nil
 }
 
-func (s *Server) handleResourcesSubscribe(raw any) (any, *RPCError) {
+func (s *Server) handleResourcesSubscribe(ctx context.Context, raw any) (any, *RPCError) {
 	if s.ResourceProvider == nil {
 		return nil, &RPCError{Code: -32601, Message: "resources capability disabled"}
 	}
@@ -114,11 +239,12 @@ func (s *Server) handleResourcesSubscribe(raw any) (any, *RPCError) {
 	if err := decodeParams(raw, &params); err != nil || params.URI == "" {
 		return nil, &RPCError{Code: -32602, Message: "invalid resources/subscribe params: missing uri"}
 	}
-	s.resourceSubs.add(params.URI)
+	n, _ := notifierFromContext(ctx)
+	s.resourceSubs.add(n, params.URI)
 	return map[string]any{}, nil
 }
 
-func (s *Server) handleResourcesUnsubscribe(raw any) (any, *RPCError) {
+func (s *Server) handleResourcesUnsubscribe(ctx context.Context, raw any) (any, *RPCError) {
 	if s.ResourceProvider == nil {
 		return nil, &RPCError{Code: -32601, Message: "resources capability disabled"}
 	}
@@ -126,7 +252,8 @@ func (s *Server) handleResourcesUnsubscribe(raw any) (any, *RPCError) {
 	if err := decodeParams(raw, &params); err != nil || params.URI == "" {
 		return nil, &RPCError{Code: -32602, Message: "invalid resources/unsubscribe params: missing uri"}
 	}
-	s.resourceSubs.remove(params.URI)
+	n, _ := notifierFromContext(ctx)
+	s.resourceSubs.remove(n, params.URI)
 	return map[string]any{}, nil
 }
 
@@ -160,16 +287,25 @@ type ResourceUpdateDelta struct {
 // HasResourceSubscription reports whether any client is currently subscribed
 // to uri. The tool layer calls this before re-reading a resource in
 // emitResourceUpdate so unsubscribed mutations don't pay for a redundant
-// ReadResource round-trip. Concurrent-safe (delegates to the internal
-// sync.Map).
+// ReadResource round-trip. Coarse by design — it answers "does anyone want
+// this URI?" so the read is skipped when nobody does; the per-stream filter
+// that prevents cross-talk happens inside NotifyResourceUpdated.
 func (s *Server) HasResourceSubscription(uri string) bool {
-	return uri != "" && s.resourceSubs.has(uri)
+	return uri != "" && s.resourceSubs.hasAnyURI(uri)
 }
 
-// NotifyResourceUpdated publishes notifications/resources/updated if the URI
-// has an active subscription. Transports/tool handlers call this after a
-// mutation that invalidates a cached resource view. Safe to call before the
-// notifier is wired — the call silently no-ops.
+// NotifyResourceUpdated publishes notifications/resources/updated to every
+// notifier that called resources/subscribe for uri. Transports/tool
+// handlers call this after a mutation that invalidates a cached resource
+// view. Safe to call before any notifier is wired — the call silently
+// no-ops when nothing is subscribed.
+//
+// Subscription scope is per-notifier (per gRPC Exchange stream / per
+// streamable-HTTP session / the single stdio peer). A stream that did NOT
+// subscribe to uri never receives the notification, even when another
+// stream sharing the same *mcp.Server did. tools/list_changed continues to
+// fan out broadcast through Server.Notify; only resources/updated takes
+// this per-URI path.
 //
 // When delta.Format is non-empty the notification params include the
 // envelope:
@@ -183,7 +319,11 @@ func (s *Server) HasResourceSubscription(uri string) bool {
 // Empty delta preserves the legacy payload shape {"uri": "..."} so
 // existing clients and tests remain unchanged.
 func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
-	if uri == "" || !s.resourceSubs.has(uri) {
+	if uri == "" {
+		return
+	}
+	targets, broadcast := s.resourceSubs.targetsFor(uri)
+	if len(targets) == 0 && !broadcast {
 		return
 	}
 	params := map[string]any{"uri": uri}
@@ -193,5 +333,10 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 			params["patch"] = delta.Patch
 		}
 	}
-	_ = s.Notify("notifications/resources/updated", params)
+	for _, n := range targets {
+		_ = n.Notify("notifications/resources/updated", params)
+	}
+	if broadcast {
+		_ = s.Notify("notifications/resources/updated", params)
+	}
 }

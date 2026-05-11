@@ -9,6 +9,12 @@ type notifierHub struct {
 	mu        sync.RWMutex
 	notifiers map[uint64]Notifier
 	nextID    uint64
+	// onRemove fires after a notifier is removed from the hub (stream
+	// close, SetNotifier eviction). Server uses this to drop any
+	// resources/subscribe state the notifier accumulated, so the
+	// HasResourceSubscription shortcut and per-URI fan-out stop
+	// counting disconnected streams.
+	onRemove func(Notifier)
 }
 
 func (h *notifierHub) add(n Notifier) func() {
@@ -22,8 +28,13 @@ func (h *notifierHub) add(n Notifier) func() {
 	h.mu.Unlock()
 	return func() {
 		h.mu.Lock()
+		_, present := h.notifiers[id]
 		delete(h.notifiers, id)
+		cb := h.onRemove
 		h.mu.Unlock()
+		if present && cb != nil {
+			cb(n)
+		}
 	}
 }
 

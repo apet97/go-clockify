@@ -35,11 +35,15 @@ and emitted only when a subscription is active.
 
 Design elements:
 
-- **Subscription gate.** `resourceSubscriptions` (a `sync.Map`-backed
-  set in `internal/mcp/resources.go:48-54`) tracks which URIs have
-  active subscribers. `NotifyResourceUpdated` no-ops on URIs with
-  no subscribers, so unsubscribed mutations do not pay for a
-  redundant `ReadResource` round trip (W4-04c).
+- **Subscription gate.** `resourceSubscriptions` (per-notifier set in
+  `internal/mcp/resources.go`) tracks which URIs each connected stream
+  has subscribed to. The coarse `HasResourceSubscription` answers
+  "does any stream want this URI?" so unsubscribed mutations do not
+  pay for a redundant `ReadResource` round trip (W4-04c); the
+  fine-grained per-notifier filter happens at delivery time in
+  `NotifyResourceUpdated` so updates only reach the streams that
+  actually subscribed. See the "Subscription scope" subsection below
+  for the post-fix contract.
 - **State cache.** `tools.Service` keeps a per-URI cache of the most
   recently emitted resource state. On a mutation the tool layer
   reads the new state, diffs it against the cache, and emits the
@@ -132,15 +136,72 @@ Design elements:
   works with every existing client and a mandatory bump would
   break older clients for no benefit.
 
+## Subscription scope (addendum, 2026-05-12)
+
+The original implementation stored resource subscriptions on a flat,
+server-wide `sync.Map` keyed only by URI and delivered updates through
+`notifierHub.notify`. With one shared `*mcp.Server` across multiple gRPC
+`Exchange` streams (the production gRPC topology), this meant a stream
+that never called `resources/subscribe` still received
+`notifications/resources/updated` frames for URIs another stream
+subscribed to. Streamable HTTP escaped the bug because every session
+gets its own `*mcp.Server` (per the streamable-HTTP `Factory`); stdio
+trivially has one notifier.
+
+Fix (see `internal/mcp/resources.go`):
+
+- Subscriptions are tracked per-(Notifier, URI). `Server` carries the
+  calling stream's `Notifier` through `context.Context` via
+  `mcp.WithNotifier`; every transport's dispatch path wraps the ctx
+  after `AddNotifier` / `SetNotifier`.
+- `NotifyResourceUpdated` iterates the notifiers subscribed to the
+  affected URI and invokes each one directly, bypassing
+  `Server.Notify` for the per-URI fan-out.
+- `Server.Notify` (and therefore `notifierHub.notify`) is untouched,
+  so `notifications/tools/list_changed` and any other server-initiated
+  broadcast continues to reach every active notifier.
+- `notifierHub.add` calls `Server.resourceSubs.dropNotifier` on the
+  remove closure, garbage-collecting subscription state when a stream
+  disconnects. Without this the coarse `HasResourceSubscription`
+  shortcut would lie about active subscribers after every gRPC
+  disconnect.
+- `HasResourceSubscription` keeps its OR-over-all-streams semantics
+  (URI refcount > 0) so the tools-layer skip-fetch gate stays
+  zero-allocation on the hot path.
+- A subscribe call that arrives without a `Notifier` in ctx (direct
+  in-package unit tests) falls back to a `broadcastSubscriber`
+  sentinel that restores the pre-fix server-wide fan-out for that
+  call. Production transports always thread a real `Notifier`, so the
+  sentinel never hits in those paths.
+
+Tests pinning the contract:
+
+- `internal/mcp/resource_subscription_scope_test.go`
+  (`TestResourceSubscription_PerNotifier_Isolation`,
+  `_DifferentURIs_NoCrossTalk`, `_Unsubscribe_PerNotifier`,
+  `_NotifierRemoval_GCs`, `TestToolsListChanged_RemainsBroadcast`,
+  `TestResourceSubscription_BroadcastSentinel`).
+- `internal/transport/grpc/resource_scope_test.go`
+  (`TestExchange_ResourceSubscription_PerStream`) — pins the real
+  wire path through two `Exchange` streams sharing one `*mcp.Server`.
+
+No protocol version bump, no wire-format change.
+
 ## References
 
 - Previously referred to as "ADR 013" — find via
   `git grep -n 'ADR 013'`. Today's hits include
   `internal/tools/common.go` (`EmitResourceUpdate` field doc) and
   `docs/adr/README.md`.
-- Subscription set: `internal/mcp/resources.go:48-54`.
-- Wire format: `internal/mcp/resources.go:148-198`
+- Subscription state: `internal/mcp/resources.go`
+  (`resourceSubscriptions`).
+- Wire format: `internal/mcp/resources.go`
   (`ResourceUpdateDelta`, `NotifyResourceUpdated`).
+- Notifier context propagation:
+  `mcp.WithNotifier` / `notifierFromContext` in
+  `internal/mcp/server.go` and the per-transport wrap sites in
+  `internal/mcp/server.go` (stdio), `internal/transport/grpc/transport.go`,
+  `internal/mcp/transport_streamable_http.go`.
 - Diff implementation: `internal/jsonmergepatch/merge_patch.go`
   (RFC 7396), and the RFC 6902 alternative landed in W5-04d.
 - Mutation wiring: `internal/tools/common.go` (`EmitResourceUpdate`)

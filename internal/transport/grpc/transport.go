@@ -216,6 +216,13 @@ func (e *exchangeServer) Exchange(stream grpc.ServerStream) error {
 	notifier := newStreamNotifier(ctx, sends)
 	removeNotifier := e.srv.AddNotifier(notifier)
 	defer removeNotifier()
+	// Carry the per-stream notifier through dispatch context so the
+	// resources/subscribe handler records subscriptions against THIS
+	// stream rather than against the shared *mcp.Server. Without this
+	// wrap, NotifyResourceUpdated would fan out updates to every active
+	// Exchange stream regardless of subscription state — see
+	// docs/runbooks/resource-subscription-scope.md.
+	ctx = mcp.WithNotifier(ctx, notifier)
 
 	var wg sync.WaitGroup
 	defer func() {

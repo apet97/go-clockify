@@ -89,6 +89,38 @@ type Notifier interface {
 	Notify(method string, params any) error
 }
 
+// notifierCtxKey carries the calling stream's Notifier through the
+// request context so resources/subscribe and resources/unsubscribe can
+// record per-notifier subscription state. Transports that multiplex
+// streams over one *mcp.Server (currently gRPC) MUST wrap their dispatch
+// context with WithNotifier so notifications/resources/updated does not
+// leak to streams that never subscribed.
+type notifierCtxKey struct{}
+
+// WithNotifier returns a child context carrying n as the calling stream's
+// Notifier. Transports call this once per stream after AddNotifier so the
+// resources/subscribe handler can attribute the subscription to the right
+// stream. Passing a nil Notifier yields the parent context unchanged.
+func WithNotifier(ctx context.Context, n Notifier) context.Context {
+	if n == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, notifierCtxKey{}, n)
+}
+
+// notifierFromContext returns the Notifier wrapped into ctx by WithNotifier,
+// or (nil, false) when no notifier is present. Direct-handler tests that
+// skip the transport path land in the false branch and the subscribe
+// handlers fall back to the broadcast sentinel so legacy test behaviour
+// stays intact.
+func notifierFromContext(ctx context.Context) (Notifier, bool) {
+	if ctx == nil {
+		return nil, false
+	}
+	n, ok := ctx.Value(notifierCtxKey{}).(Notifier)
+	return n, ok && n != nil
+}
+
 // droppingNotifier is installed by the legacy HTTP transport. It records
 // every drop so operators can measure the gap until Streamable HTTP ships.
 type droppingNotifier struct{}
@@ -425,7 +457,7 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 	for _, d := range descriptors {
 		toolMap[d.Tool.Name] = d
 	}
-	return &Server{
+	s := &Server{
 		Version:      version,
 		Enforcement:  enforcement,
 		Activator:    activator,
@@ -434,6 +466,8 @@ func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforce
 		inflight:     make(map[any]context.CancelFunc),
 		prompts:      newPromptRegistry(),
 	}
+	s.hub.onRemove = s.resourceSubs.dropNotifier
+	return s
 }
 
 // registerInflight stores a cancel func keyed by JSON-RPC request ID so
@@ -532,10 +566,17 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.encoderMu.Unlock()
 	// Install the stdio notifier so activation events (tools/list_changed)
 	// flow back through the same thread-safe encoder the responses use.
+	stdioNotifier := encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
 	if s.hub.len() == 0 {
-		s.SetNotifier(encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder})
+		s.SetNotifier(stdioNotifier)
 	}
 	s.advertiseListChanged.Store(true)
+	// Thread the stdio peer's Notifier into every dispatched request so
+	// resources/subscribe records subscriptions against this peer. Stdio
+	// only has one peer so the practical effect is identical to the
+	// pre-fix server-wide subscription, but wiring it the same way as
+	// gRPC keeps the per-notifier contract uniform across transports.
+	ctx = WithNotifier(ctx, stdioNotifier)
 
 	// Channel-based approach: scan lines in a goroutine so we can
 	// select on ctx.Done() in the main loop.
@@ -850,13 +891,13 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			resp.Result = result
 		}
 	case "resources/subscribe":
-		if result, rpcErr := s.handleResourcesSubscribe(req.Params); rpcErr != nil {
+		if result, rpcErr := s.handleResourcesSubscribe(ctx, req.Params); rpcErr != nil {
 			resp.Error = rpcErr
 		} else {
 			resp.Result = result
 		}
 	case "resources/unsubscribe":
-		if result, rpcErr := s.handleResourcesUnsubscribe(req.Params); rpcErr != nil {
+		if result, rpcErr := s.handleResourcesUnsubscribe(ctx, req.Params); rpcErr != nil {
 			resp.Error = rpcErr
 		} else {
 			resp.Result = result

@@ -399,7 +399,16 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager,
 		// JSON-RPC tool-error envelope instead of taking the
 		// connection down at the http.Server boundary. Same shape
 		// emitted by stdio + gRPC for cross-transport parity.
-		resp := session.server.HandleWithRecover(r.Context(), req, "streamable_http_dispatch")
+		//
+		// Wrap the request ctx with the session's Notifier so
+		// resources/subscribe attributes the subscription to this
+		// session. Each streamable HTTP session owns its own
+		// *mcp.Server (opts.Factory) so cross-session leaks are
+		// already impossible, but the wrap keeps the per-notifier
+		// contract uniform across transports and makes the parity
+		// tests exercise the same code path the gRPC fix relies on.
+		dispatchCtx := WithNotifier(r.Context(), session.events)
+		resp := session.server.HandleWithRecover(dispatchCtx, req, "streamable_http_dispatch")
 		if req.ID == nil {
 			w.WriteHeader(http.StatusAccepted)
 			return
