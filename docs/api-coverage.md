@@ -95,7 +95,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_log_time` | `POST /workspaces/{ws}/time-entries` | unit |
 | `clockify_search_tools` | local (deprecated catalog/activation shim) | unit |
 | `clockify_start_timer` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
-| `clockify_stop_timer` | `PATCH /workspaces/{ws}/user/{uid}/time-entries/{id}` | unit, sacrificial-mutating (TestE2EMutating) |
+| `clockify_stop_timer` | `PATCH /workspaces/{ws}/user/{uid}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_switch_project` | `PATCH` + `POST /workspaces/{ws}/time-entries` | unit |
 | `clockify_timesheet_fill_gap` | `GET` overlap validation + `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestLiveTier1RemainingCRUD) |
 | `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
