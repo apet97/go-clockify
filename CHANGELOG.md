@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`safe_core` policy mode no longer permits any `clockify_delete_*`
+  tool.** `safeCoreWriteList()` and `isSafeCoreWrite()` in
+  `internal/policy/policy.go` previously allowed
+  `clockify_delete_client`, `clockify_delete_project`,
+  `clockify_delete_tag`, and `clockify_delete_task` even though
+  `docs/policy/production-tool-scope.md` row "Delete access (any kind)"
+  has always listed `safe_core` as `❌` and the prose says safe_core
+  "still blocks all delete operations and Tier 2 admin surface". A
+  shared-service deployment that promoted an agent from
+  `time_tracking_safe` to `safe_core` to let it register projects
+  could therefore one-shot a workspace-shaping bot into a
+  workspace-deleting bot. The narrower allowlist is pinned by
+  `internal/policy/policy_test.go::TestSafeCoreBlocksDestructiveDeletes`
+  (per-tool policy denial) and
+  `internal/tools/risk_class_test.go::TestSafeCoreAllowlistExcludesDestructiveTools`
+  (registry-level "no `RiskDestructive` in the allowlist"). The
+  `internal/tools/contract_matrix_test.go` policy matrix and
+  `internal/tools/dispatch_test.go::TestSafeCorePolicy_BlocksEveryDelete`
+  exercise the change end-to-end against the registered tool surface.
+  Operators that need this surface should set
+  `CLOCKIFY_POLICY=standard` (or `full`) explicitly; no operator can
+  rely on the old behaviour since the documentation never advertised
+  it.
+
+- **Personal time-entry mutations are now pinned to the API key
+  owner's own entries.** `UpdateEntry` and `DeleteEntry` in
+  `internal/tools/entries.go` and the `entry_id` branch of
+  `findEntryByID` in `internal/tools/workflows.go` (the route used by
+  `clockify_find_and_update_entry` when called with an explicit
+  `entry_id`) all fetched the target via the admin path
+  `/workspaces/{ws}/time-entries/{id}` without comparing the
+  returned `userId` to the current user. An API key with Workspace
+  Admin role or higher could therefore mutate or delete any user's
+  time entry through these tools, even under `time_tracking_safe`.
+  Each handler now resolves `getCurrentUser` when the fetched entry
+  has a non-empty `userId` and returns
+  `permission denied: time entry <id> is not owned by current user`
+  on mismatch — no PUT or DELETE is issued. The contract is pinned
+  by `internal/tools/entries_test.go::TestUpdateEntryRejectsOtherUserEntry`,
+  `TestDeleteEntryRejectsOtherUserEntry`, and
+  `internal/tools/workflows_test.go::TestFindAndUpdateEntryByIDRejectsOtherUserEntry`.
+  This restores the contract
+  `docs/policy/production-tool-scope.md` already promised under
+  "Personal time tracking": "Mutations are constrained to the API
+  key owner's own entries."
+
+### Changed
+
+- **`mcp.ToolHints` now carries `RiskClass`.** Adds the
+  `RiskClass RiskClass` field documented as the Q3 prerequisite in
+  `docs/adr/0018-risk-class-confirmation-tokens.md`. The two
+  construction sites in `internal/mcp/tools.go`
+  (`buildToolListLocked` and `callTool`) copy
+  `ToolDescriptor.RiskClass` into the literal handed to
+  `Enforcement.FilterTool` and `Enforcement.BeforeCall`, so a future
+  risk-aware policy gate or confirmation-token enforcer can consult
+  the bitmask without re-deriving it from the tool name. No
+  behaviour change today — `Pipeline.BeforeCall` still gates only
+  on `ReadOnly` and `Destructive`. Pinned by
+  `internal/mcp/risk_class_propagation_test.go::TestCallToolPropagatesRiskClassIntoHints`.
+  ADR 0018 was updated in the same wave with a "Status (landed
+  <SHA>)" note so the next implementer knows the plumbing is done.
+
 ### Added
 
 - **Claude Code multi-agent campaign harness.** Added

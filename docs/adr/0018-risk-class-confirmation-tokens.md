@@ -161,6 +161,22 @@ files, no behaviour change, ships separately as a tooling commit
 that makes the future feature landable. Without it, any
 confirmation-token gate has no risk signal to consult.
 
+**Status (landed `a4b9740`):** `mcp.ToolHints` now carries a
+`RiskClass RiskClass` field, populated from
+`ToolDescriptor.RiskClass` at the two construction sites in
+`internal/mcp/tools.go` (`buildToolListLocked` for tools/list
+filtering and `callTool` for tools/call dispatch). The
+propagation is pinned by
+`internal/mcp/risk_class_propagation_test.go::TestCallToolPropagatesRiskClassIntoHints`,
+which uses a recording `Enforcement` fake to capture the hints
+forwarded to both `FilterTool` and `BeforeCall` and asserts
+they match the descriptor's RiskClass for one `RiskRead` and
+one `RiskDestructive` probe. `Pipeline.BeforeCall` still does
+**not** consult `RiskClass` — that is the next-wave design
+question (Q1 token format, Q2 gate placement, Q4 client
+discoverability). A confirmation-token implementation can now
+read `hints.RiskClass` directly; no further plumbing is required.
+
 ### Q4: Client-side discoverability
 
 How does Claude Code (or any MCP client) learn that a tool requires
