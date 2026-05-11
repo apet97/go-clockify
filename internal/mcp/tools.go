@@ -138,6 +138,7 @@ func (s *Server) buildToolListLocked() []Tool {
 			ReadOnly:    d.ReadOnlyHint,
 			Destructive: d.DestructiveHint,
 			Idempotent:  d.IdempotentHint,
+			RiskClass:   d.RiskClass,
 		}) {
 			continue
 		}
@@ -235,6 +236,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		Destructive: d.DestructiveHint,
 		Idempotent:  d.IdempotentHint,
 		AuditKeys:   d.AuditKeys,
+		RiskClass:   d.RiskClass,
 	}
 
 	// Enforcement: policy gate, rate limit, dry-run intercept

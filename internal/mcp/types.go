@@ -123,6 +123,18 @@ type ToolHints struct {
 	// resourceIDs. Empty for tools whose argument shape is fully
 	// described by *_id keys.
 	AuditKeys []string
+	// RiskClass is the bitmask risk taxonomy populated on every
+	// ToolDescriptor by internal/tools/applyRiskMetadata. It is forwarded
+	// here so Enforcement.FilterTool / BeforeCall can make policy
+	// decisions on bits (RiskBilling, RiskAdmin, RiskPermissionChange,
+	// RiskExternalSideEffect, RiskDestructive) rather than re-deriving
+	// the class from the tool name string. This is the Q3 prerequisite
+	// from docs/adr/0018-risk-class-confirmation-tokens.md — it adds
+	// no behaviour today, just the surface that future
+	// confirmation-token or risk-bit-aware gates will consume. Zero
+	// means "no risk classification available" (legacy callers that
+	// build the literal without a descriptor).
+	RiskClass RiskClass
 }
 
 // AuditPhase identifies which side of a non-read-only tool call an
