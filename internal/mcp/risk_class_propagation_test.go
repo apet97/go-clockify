@@ -54,9 +54,9 @@ func (e *recordingEnforcement) AfterCall(result any) (any, error) {
 // RiskDestructive — registers them on a Server with a recording
 // Enforcement, then exercises both code paths:
 //
-//   1. tools/list goes through buildToolListLocked → FilterTool.
-//   2. tools/call goes through callTool → BeforeCall (and onward to
-//      AuditKeys / invokeHandler).
+//  1. tools/list goes through buildToolListLocked → FilterTool.
+//  2. tools/call goes through callTool → BeforeCall (and onward to
+//     AuditKeys / invokeHandler).
 //
 // Both paths must surface the descriptor's RiskClass verbatim.
 func TestCallToolPropagatesRiskClassIntoHints(t *testing.T) {
