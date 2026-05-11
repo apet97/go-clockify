@@ -265,11 +265,26 @@ their Kustomize overlay or Helm values:
 | ~100 active users          | 1200/min              | 256                           |
 | >200 active users          | Run multiple replicas behind a load balancer; do not stretch one process beyond 256 inflight. |
 
-The `MCP_MAX_INFLIGHT_TOOL_CALLS` cap is a goroutine cap on the stdio
-dispatch loop and a connection cap on the HTTP transport. Raising it
-above ~256 on a single process risks tail latency from goroutine
+`MCP_MAX_INFLIGHT_TOOL_CALLS` is a goroutine cap on the **stdio**
+dispatch loop only. Streamable HTTP and gRPC do **not** honour it —
+each transport uses its own backpressure layer:
+
+- **Streamable HTTP** uses the in-process `httpAdmissionLimiter`
+  (`MCP_HTTP_RATELIMIT_PER_IP`,
+  `MCP_HTTP_RATELIMIT_PER_PRINCIPAL`,
+  `MCP_HTTP_RATELIMIT_GET_PER_SESSION`); see
+  [`docs/runbooks/rate-limit.md`](runbooks/rate-limit.md).
+- **gRPC** relies on the stream's built-in flow-control window plus
+  the per-frame dispatch goroutines in
+  `internal/transport/grpc/transport.go`. Tune capacity by setting
+  `MaxRecvSize` and the gRPC client-side stream window if needed; no
+  process-wide tool-call semaphore is applied.
+
+Raising the stdio cap above ~256 risks tail latency from goroutine
 scheduling pressure; horizontal scaling is the right answer at that
-point.
+point. Operators sizing a hosted (streamable HTTP / gRPC) deployment
+should focus on the transport-native limits above instead of this
+knob.
 
 ### Load Harness vs. Capacity Planning
 

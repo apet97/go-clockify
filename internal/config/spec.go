@@ -57,7 +57,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_TRUNCATION_FAIL_CLOSED", Group: "Performance", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, response truncation marshal/unmarshal errors fail the tool call instead of returning the original payload. Hosted profiles force this on."},
 		{Name: "CLOCKIFY_TOOL_TIMEOUT", Group: "Performance", Default: "45s", Help: "Per-tool deadline [5s,10m]"},
 		{Name: "CLOCKIFY_MAX_RETRIES", Group: "Performance", Default: "3", Help: "Upstream Clockify API retry budget per request [0,10]; 0 disables retries"},
-		{Name: "MCP_MAX_INFLIGHT_TOOL_CALLS", Group: "Performance", Default: "64", Help: "Stdio dispatch goroutine cap (0=disabled)"},
+		{Name: "MCP_MAX_INFLIGHT_TOOL_CALLS", Group: "Performance", Default: "64", AppliesTo: []string{"stdio"}, Help: "Stdio dispatch goroutine cap (0=disabled). Has no effect on streamable_http or grpc transports — those use admission rate limits (MCP_HTTP_RATELIMIT_*) and gRPC flow control respectively."},
 		{Name: "CLOCKIFY_REPORT_MAX_ENTRIES", Group: "Performance", Default: "10000", Help: "Hard cap on aggregated report entries (0=unbounded)"},
 		{Name: "CLOCKIFY_SUBJECT_IDLE_TTL", Group: "Performance", Default: "1h", Help: "Idle cutoff for per-subject rate limiter reap"},
 		{Name: "CLOCKIFY_SUBJECT_SWEEP_INTERVAL", Group: "Performance", Default: "5m", Help: "Reaper sweep frequency"},
