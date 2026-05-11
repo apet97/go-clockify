@@ -439,3 +439,302 @@ func TestBuildServer_DeactivateGroupRemovesTier2Tools(t *testing.T) {
 		t.Fatal("expected invoice tool hidden after deactivation")
 	}
 }
+
+// --------------------------------------------------------------------
+// ADR 0021 hosted tenant policy ceiling tests
+// --------------------------------------------------------------------
+
+// hostedCeilingStore builds a tenantRuntimeStore for ceiling tests
+// with a default-secure inline credential pointing at https upstream
+// (so URL-safety gates do not interfere with the ceiling assertion).
+func hostedCeilingStore(tenantID string, tenantMode policy.Mode, denyTools, denyGroups, allowGroups []string) *tenantRuntimeStore {
+	return &tenantRuntimeStore{
+		tenant: controlplane.TenantRecord{
+			ID:              tenantID,
+			CredentialRefID: "cred-1",
+			BaseURL:         "https://upstream.example.com/api/v1",
+			PolicyMode:      string(tenantMode),
+			DenyTools:       denyTools,
+			DenyGroups:      denyGroups,
+			AllowGroups:     allowGroups,
+		},
+		credential: controlplane.CredentialRef{
+			ID:        "cred-1",
+			Backend:   "inline",
+			Reference: "secret-key",
+			Workspace: "ws-1",
+		},
+	}
+}
+
+// TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling pins the
+// core ADR 0021 invariant: a hosted profile with an explicit
+// time_tracking_safe ceiling refuses a tenant that requests
+// `standard`. The error must be operator-actionable so misconfigured
+// rows show up at session-create time, not at first tool call.
+func TestTenantRuntime_BroadeningRejectedUnderExplicitCeiling(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.Standard, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for tenant broadening past ceiling")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'exceeds' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_BroadeningRejectedUnderImplicitCeiling pins the
+// implicit-ceiling case: no explicit MCP_TENANT_POLICY_CEILING set,
+// process mode still acts as the ceiling. A hosted operator who
+// forgets to set the env var still cannot have tenants broaden past
+// the process posture.
+func TestTenantRuntime_BroadeningRejectedUnderImplicitCeiling(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.SafeCore, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe}, // no explicit Ceiling
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for tenant broadening past implicit process ceiling")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'exceeds' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_NarrowingAllowed verifies a tenant pinned to a
+// stricter mode than the ceiling builds successfully.
+func TestTenantRuntime_NarrowingAllowed(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.ReadOnly, nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.Standard, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err != nil {
+		t.Fatalf("expected narrowing tenant to be accepted, got: %v", err)
+	}
+	if rt == nil || rt.Server == nil {
+		t.Fatal("expected non-nil runtime + server")
+	}
+	if rt.Close != nil {
+		rt.Close()
+	}
+}
+
+// TestTenantRuntime_EmptyTenantModeInheritsProcess pins the
+// inheritance path. An empty tenant mode must not trigger ceiling
+// enforcement; the session takes the process mode.
+func TestTenantRuntime_EmptyTenantModeInheritsProcess(t *testing.T) {
+	store := hostedCeilingStore("acme", "", nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err != nil {
+		t.Fatalf("expected empty tenant mode to inherit process mode, got: %v", err)
+	}
+	if rt == nil {
+		t.Fatal("expected non-nil runtime")
+	}
+	if rt.Close != nil {
+		rt.Close()
+	}
+}
+
+// TestTenantRuntime_UnknownTenantModeFailsClosed pins the unknown-
+// enum fail-closed shape. A corrupted Postgres row carrying
+// "tenant-admin" must not silently sail through as Standard or Full.
+func TestTenantRuntime_UnknownTenantModeFailsClosed(t *testing.T) {
+	store := hostedCeilingStore("acme", policy.Mode("tenant-admin"), nil, nil, nil)
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for unknown tenant policyMode")
+	}
+	if !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("expected 'invalid' error, got: %v", err)
+	}
+}
+
+// TestDeriveTenantPolicy_DenyToolsUnioned pins the narrowing-only
+// merge contract for tenant DenyTools. Tenant entries are added on
+// top of the process deny list; the process list is never erased.
+func TestDeriveTenantPolicy_DenyToolsUnioned(t *testing.T) {
+	process := &policy.Policy{
+		Mode:        policy.Standard,
+		DeniedTools: map[string]bool{"clockify_send_invoice": true},
+	}
+	tenant := controlplane.TenantRecord{
+		ID:        "acme",
+		DenyTools: []string{"clockify_delete_entry"},
+	}
+	pol, err := deriveTenantPolicy(process, tenant)
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if !pol.DeniedTools["clockify_send_invoice"] {
+		t.Error("expected process-level deny to survive (clockify_send_invoice)")
+	}
+	if !pol.DeniedTools["clockify_delete_entry"] {
+		t.Error("expected tenant-level deny to be added (clockify_delete_entry)")
+	}
+}
+
+// TestDeriveTenantPolicy_DenyGroupsUnioned pins the same shape for
+// DenyGroups.
+func TestDeriveTenantPolicy_DenyGroupsUnioned(t *testing.T) {
+	process := &policy.Policy{
+		Mode:         policy.Standard,
+		DeniedGroups: map[string]bool{"invoices": true},
+	}
+	tenant := controlplane.TenantRecord{
+		ID:         "acme",
+		DenyGroups: []string{"user_management"},
+	}
+	pol, err := deriveTenantPolicy(process, tenant)
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if !pol.DeniedGroups["invoices"] {
+		t.Error("expected process-level group deny to survive (invoices)")
+	}
+	if !pol.DeniedGroups["user_management"] {
+		t.Error("expected tenant-level group deny to be added (user_management)")
+	}
+}
+
+// TestDeriveTenantPolicy_AllowGroupsIgnoredUnderBlockingMode pins
+// the silent-skip behaviour for AllowGroups under a group-blocking
+// effective mode. The list is dropped (would be a no-op via
+// IsGroupAllowed anyway) and TenantAllowGroupsIgnored is set so
+// clockify_policy_info can surface the diagnostic.
+func TestDeriveTenantPolicy_AllowGroupsIgnoredUnderBlockingMode(t *testing.T) {
+	process := &policy.Policy{Mode: policy.SafeCore}
+	tenant := controlplane.TenantRecord{
+		ID:          "acme",
+		AllowGroups: []string{"invoices"},
+	}
+	pol, err := deriveTenantPolicy(process, tenant)
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if pol.AllowedGroups != nil && pol.AllowedGroups["invoices"] {
+		t.Error("expected AllowGroups to be silently dropped under safe_core mode")
+	}
+	if !pol.TenantAllowGroupsIgnored {
+		t.Error("expected TenantAllowGroupsIgnored marker to be set")
+	}
+}
+
+// TestDeriveTenantPolicy_AllowGroupsIntersect pins the
+// intersection narrowing for AllowGroups under a non-blocking mode.
+// Tenant cannot widen the process allowlist; it can only narrow.
+func TestDeriveTenantPolicy_AllowGroupsIntersect(t *testing.T) {
+	process := &policy.Policy{
+		Mode:          policy.Standard,
+		AllowedGroups: map[string]bool{"invoices": true, "user_management": true},
+	}
+	tenant := controlplane.TenantRecord{
+		ID:          "acme",
+		AllowGroups: []string{"invoices", "scheduling"}, // "scheduling" must not be added; only "invoices" survives
+	}
+	pol, err := deriveTenantPolicy(process, tenant)
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if !pol.AllowedGroups["invoices"] {
+		t.Error("expected invoices to remain in intersected allowlist")
+	}
+	if pol.AllowedGroups["user_management"] {
+		t.Error("expected user_management to be removed by tenant intersection")
+	}
+	if pol.AllowedGroups["scheduling"] {
+		t.Error("expected scheduling to be rejected (not in process allowlist)")
+	}
+	if pol.TenantAllowGroupsIgnored {
+		t.Error("ignored marker must not be set under standard mode")
+	}
+}
+
+// TestDeriveTenantPolicy_AllowGroupsAppliesWhenProcessUnset covers
+// the carve-out: when the process did not set an allowlist, the
+// tenant list defines the whitelist (which is still narrowing
+// relative to "everything allowed").
+func TestDeriveTenantPolicy_AllowGroupsAppliesWhenProcessUnset(t *testing.T) {
+	process := &policy.Policy{Mode: policy.Standard} // AllowedGroups nil
+	tenant := controlplane.TenantRecord{
+		ID:          "acme",
+		AllowGroups: []string{"invoices"},
+	}
+	pol, err := deriveTenantPolicy(process, tenant)
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if !pol.AllowedGroups["invoices"] {
+		t.Error("expected tenant AllowGroups to define the whitelist when process had none")
+	}
+	if pol.AllowedGroups["scheduling"] {
+		t.Error("tenant AllowGroups must only contain its declared entries")
+	}
+}
+
+// TestDeriveTenantPolicy_CeilingErrorPropagates confirms the helper
+// surfaces the EffectiveTenantMode error verbatim. This is the
+// boundary tested end-to-end via tenantRuntime; the helper-level
+// test keeps the error shape pinned even if tenantRuntime grows
+// new wrapping layers.
+func TestDeriveTenantPolicy_CeilingErrorPropagates(t *testing.T) {
+	process := &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe}
+	tenant := controlplane.TenantRecord{
+		ID:         "acme",
+		PolicyMode: string(policy.Standard),
+	}
+	_, err := deriveTenantPolicy(process, tenant)
+	if err == nil {
+		t.Fatal("expected error for tenant broadening past ceiling")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'exceeds' error, got: %v", err)
+	}
+}
+
+// TestTenantRuntime_SelfRegisteredBootstrapSatisfiesImplicitCeiling
+// verifies the single-tenant-http bootstrap path: the auto-registered
+// tenant carries PolicyMode = process mode, so under the implicit
+// ceiling (process mode itself) the tenant always satisfies it.
+// Exercises both time_tracking_safe and standard process modes.
+func TestTenantRuntime_SelfRegisteredBootstrapSatisfiesImplicitCeiling(t *testing.T) {
+	for _, mode := range []policy.Mode{policy.TimeTrackingSafe, policy.Standard} {
+		t.Run(string(mode), func(t *testing.T) {
+			// Mirror bootstrapDefaultTenant's seed shape: PolicyMode = process mode.
+			store := hostedCeilingStore("self", mode, nil, nil, nil)
+			deps := runtimeDeps{
+				cfg:       config.Config{Profile: "single-tenant-http"},
+				policy:    &policy.Policy{Mode: mode}, // no explicit Ceiling for single-tenant-http
+				bootstrap: bootstrap.Config{},
+			}
+			rt, err := tenantRuntime(context.Background(), "self", deps, store)
+			if err != nil {
+				t.Fatalf("bootstrap tenant under %s must satisfy implicit ceiling: %v", mode, err)
+			}
+			if rt != nil && rt.Close != nil {
+				rt.Close()
+			}
+		})
+	}
+}
