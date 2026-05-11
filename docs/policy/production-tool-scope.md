@@ -106,6 +106,64 @@ start with `read_only` for dashboard-only checks,
 structure. Avoid `standard` and `full` for exploratory testing on a
 real workspace with valuable data.
 
+## Tenant policy ceiling (multi-tenant hosted deployments)
+
+`CLOCKIFY_POLICY` sets the process posture, but in a multi-tenant
+deployment the control plane carries per-tenant overrides
+(`TenantRecord.PolicyMode`). Without a guardrail, a corrupted or
+overly broad tenant row could silently broaden the live posture
+past whatever the operator pinned at the profile level. The
+**tenant policy ceiling** closes that gap.
+
+The ceiling is a per-process maximum that tenant records may
+narrow but cannot exceed. Three behaviours:
+
+1. **Mode broadening is rejected.** If a tenant record sets
+   `PolicyMode` strictly broader than `min(CLOCKIFY_POLICY,
+   MCP_TENANT_POLICY_CEILING)`, session creation fails with an
+   "exceeds" error. Operators see misconfigured rows at
+   session-create time, not at first tool call.
+2. **Tenant deny lists narrow only.** `tenant.DenyTools` and
+   `tenant.DenyGroups` union with the process deny lists. A
+   tenant record can add denies; it cannot erase a
+   process-level deny.
+3. **Tenant allow lists narrow only.** `tenant.AllowGroups` is
+   intersected with the process `CLOCKIFY_ALLOW_GROUPS` when
+   both are set, or defines the whitelist when the process did
+   not set one. Under a group-blocking mode (`read_only`,
+   `time_tracking_safe`, `safe_core`) it is silently dropped
+   and surfaced via `clockify_policy_info` as
+   `tenant_allow_groups_ignored: true`.
+
+Ranking (see `policy.Rank` in `internal/policy/policy.go`):
+
+```
+read_only < time_tracking_safe < safe_core < standard < full
+```
+
+`standard` and `full` are explicitly split despite their current
+`IsAllowed` equivalence — see ADR-0021 for rationale.
+
+Profile defaults:
+
+| Profile | Default `MCP_TENANT_POLICY_CEILING` |
+|---------|-------------------------------------|
+| `shared-service` | `time_tracking_safe` |
+| `prod-postgres` | `time_tracking_safe` |
+| `single-tenant-http` | *(unset; process mode is the implicit ceiling)* |
+| `local-stdio` | *(unset; no tenants)* |
+| `private-network-grpc` | *(unset; mTLS callers trusted)* |
+
+Empty / unset means "no explicit ceiling" — the process mode
+acts as the implicit ceiling so even a hosted operator who forgets
+to set the env var still cannot have tenants broaden past
+`CLOCKIFY_POLICY`. Operators who explicitly want to expose more
+surface than the hosted default set `MCP_TENANT_POLICY_CEILING`
+to `safe_core`, `standard`, or `full`.
+
+See [ADR 0021 — Hosted tenant policy ceiling](../adr/0021-hosted-tenant-policy-ceiling.md)
+for the full design rationale.
+
 ## Clockify API key role requirements
 
 `CLOCKIFY_POLICY` controls what the MCP layer is willing to expose,
