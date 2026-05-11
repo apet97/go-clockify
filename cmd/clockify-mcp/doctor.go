@@ -8,7 +8,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/policy"
 )
 
 // runDoctor is the `clockify-mcp doctor` subcommand. It audits the
@@ -55,6 +57,22 @@ func runDoctorReport(args []string, out io.Writer) int {
 	cfg, cfgErr := config.Load()
 	if cfgErr == nil {
 		cfgErr = validateBuildCapabilities(cfg)
+	}
+	// Load() validates the Core/Transport/Auth surface but does not invoke
+	// the bootstrap or policy validators (those run inside runtime.New()).
+	// Doing it here closes the false-positive gap where doctor returns OK
+	// for CLOCKIFY_POLICY=garbage or CLOCKIFY_BOOTSTRAP_MODE=garbage but
+	// the server still refuses to start. The errors carry the variable
+	// name + actionable hint, so we surface them verbatim.
+	if cfgErr == nil {
+		if _, err := policy.FromEnv(); err != nil {
+			cfgErr = err
+		}
+	}
+	if cfgErr == nil {
+		if _, err := bootstrap.ConfigFromEnv(); err != nil {
+			cfgErr = err
+		}
 	}
 	var strictFindings []doctorFinding
 	if opts.strict {
