@@ -61,6 +61,7 @@ import (
 	"github.com/apet97/go-clockify/internal/enforcement"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/policy"
+	"github.com/apet97/go-clockify/internal/tenantpolicy"
 	"github.com/apet97/go-clockify/internal/tools"
 	"github.com/apet97/go-clockify/internal/truncate"
 )
@@ -199,13 +200,20 @@ func writeJSON(w http.ResponseWriter, v any) {
 // vault layer (there are no secrets to resolve in the test) and
 // uses a fixed-string API key the fake accepts unconditionally.
 //
-// If tenantRuntime in production grows behaviour this closure
-// does not mirror, the test silently asserts the wrong contract.
-// Keep them in sync; consider extracting a shared
-// internal/runtime/factory helper if drift becomes a recurring
-// pain.
+// Per-tenant policy derivation now flows through
+// internal/tenantpolicy.Derive — the same helper the production
+// internal/runtime/service.go::tenantRuntime calls — so the
+// hosted-ceiling, deny-union, and allow-intersect contracts
+// documented in ADR 0021 are exercised by this E2E rather than
+// silently bypassed. The process-level Policy below mirrors the
+// shared-service profile defaults (CLOCKIFY_POLICY=time_tracking_safe,
+// MCP_TENANT_POLICY_CEILING=time_tracking_safe).
 func sharedSvcFactory(store controlplane.Store) mcp.StreamableSessionFactory {
 	auditor := sharedSvcAuditor{store: store}
+	processPolicy := &policy.Policy{
+		Mode:    policy.TimeTrackingSafe,
+		Ceiling: policy.TimeTrackingSafe,
+	}
 	return func(_ context.Context, principal authn.Principal, _ string) (*mcp.StreamableSessionRuntime, error) {
 		tenant, ok := store.Tenant(principal.TenantID)
 		if !ok {
@@ -214,7 +222,10 @@ func sharedSvcFactory(store controlplane.Store) mcp.StreamableSessionFactory {
 		client := clockify.NewClient("svc-e2e-key", tenant.BaseURL, 30*time.Second, 0)
 		client.SetUserAgent("clockify-mcp-svc-e2e/test")
 
-		pol := &policy.Policy{Mode: policy.Mode(tenant.PolicyMode)}
+		pol, err := tenantpolicy.Derive(processPolicy, tenant)
+		if err != nil {
+			return nil, fmt.Errorf("tenant %q: %w", tenant.ID, err)
+		}
 		bc := &bootstrap.Config{Mode: bootstrap.FullTier1}
 		service := tools.New(client, tenant.WorkspaceID)
 		registry := service.Registry()
