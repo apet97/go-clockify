@@ -41,7 +41,7 @@ func schemaFor[T any]() map[string]any {
 // schemaForType is the reflection workhorse. Exported only for tests in
 // the same package; not part of the public API.
 func schemaForType(t reflect.Type) map[string]any {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 

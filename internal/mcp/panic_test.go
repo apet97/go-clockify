@@ -134,7 +134,7 @@ func TestSanitizePanicStackScrubsPathsAndTruncates(t *testing.T) {
 	var stack strings.Builder
 	stack.WriteString("goroutine 123 [running]:\n")
 	for i := 0; i < maxLoggedPanicStackFrames+3; i++ {
-		stack.WriteString(fmt.Sprintf("example.com/project.frame%d()\n", i))
+		fmt.Fprintf(&stack, "example.com/project.frame%d()\n", i)
 		var path string
 		switch i {
 		case 0:
