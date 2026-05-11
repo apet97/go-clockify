@@ -404,6 +404,21 @@ func (s *Service) findEntryByID(ctx context.Context, args findAndUpdateArgs) (cl
 	if err := s.Client.Get(ctx, path, nil, &entry); err != nil {
 		return clockify.TimeEntry{}, nil, err
 	}
+	// Ownership guard — see UpdateEntry/DeleteEntry. The non-entry_id
+	// branch of clockify_find_and_update_entry already routes through
+	// the user-scoped /workspaces/{ws}/user/{userID}/time-entries
+	// path; this branch fetches by ID on the admin path, so it needs
+	// the same constraint to keep the contract uniform across both
+	// paths.
+	if entry.UserID != "" {
+		currentUser, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return clockify.TimeEntry{}, nil, err
+		}
+		if entry.UserID != currentUser.ID {
+			return clockify.TimeEntry{}, nil, fmt.Errorf("permission denied: time entry %s is not owned by current user", entry.ID)
+		}
+	}
 	if !entryMatchesFindArgs(entry, args) {
 		return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found")
 	}

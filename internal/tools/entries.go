@@ -326,6 +326,27 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
+
+	// Ownership guard. The personal-time-tracking contract in
+	// docs/policy/production-tool-scope.md constrains
+	// clockify_update_entry to the API key owner's own entries. The
+	// admin path /workspaces/{ws}/time-entries/{id} would otherwise
+	// let an elevated key mutate another user's entry. The check
+	// runs regardless of CLOCKIFY_POLICY mode — the contract is a
+	// per-handler invariant, not a policy-mode allowance. The guard
+	// only resolves the current user when the fetched entry carries
+	// a userId: the live Clockify API populates that field on every
+	// time entry, so a missing one indicates an empty stub (tests)
+	// rather than a real bypass surface.
+	if existing.UserID != "" {
+		currentUser, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if existing.UserID != currentUser.ID {
+			return ResultEnvelope{}, fmt.Errorf("permission denied: time entry %s is not owned by current user", existing.ID)
+		}
+	}
 	previous := existing
 
 	// Track changes
@@ -435,6 +456,20 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	var entry clockify.TimeEntry
 	if err := s.Client.Get(ctx, entryPath, nil, &entry); err != nil {
 		return ResultEnvelope{}, err
+	}
+
+	// Ownership guard — see the matching comment in UpdateEntry.
+	// DeleteEntry is destructive, so the guard runs even for dry-run
+	// previews to avoid leaking another user's entry payload into a
+	// "what would happen if I deleted X" response.
+	if entry.UserID != "" {
+		currentUser, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if entry.UserID != currentUser.ID {
+			return ResultEnvelope{}, fmt.Errorf("permission denied: time entry %s is not owned by current user", entry.ID)
+		}
 	}
 
 	if dryrun.Enabled(args) {
