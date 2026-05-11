@@ -28,16 +28,18 @@ from `git log` and inline code comments.
 | 0015 | Profile-centric configuration model | [0015-profile-centric-configuration.md](0015-profile-centric-configuration.md) |
 | 0016 | Single-maintainer governance reality | [0016-single-maintainer-governance.md](0016-single-maintainer-governance.md) |
 | 0017 | Streamable-HTTP session rehydration | [0017-streamable-http-session-rehydration.md](0017-streamable-http-session-rehydration.md) |
-| 0018 | Risk-class enforcement and confirmation tokens (proposed) | [0018-risk-class-confirmation-tokens.md](0018-risk-class-confirmation-tokens.md) |
+| 0018 | Risk-class enforcement and confirmation tokens | [0018-risk-class-confirmation-tokens.md](0018-risk-class-confirmation-tokens.md) |
 | 0019 | Postgres row-level security for the paid-hosted plane (proposed) | [0019-paid-commercial-rls-decision.md](0019-paid-commercial-rls-decision.md) |
 
-ADRs 0001–0017 are **Accepted**. ADR 0010 was promoted from Proposed
+ADRs 0001–0018 are **Accepted**. ADR 0010 was promoted from Proposed
 during the May 8 launch-readiness remediation because the v1.x line has
-already shipped on its homegrown-metrics decision. ADRs 0018 and 0019
-remain **Proposed**: 0018 records the risk-class-driven enforcement +
-confirmation-token follow-up that needs an MCP-client-coordinated
-token-format decision before it can land, and 0019 is the template for
-the paid-commercial Postgres row-level-security decision tracked in
+already shipped on its homegrown-metrics decision. ADR 0018 was
+implemented on the `adr0018-confirmation-tokens` branch: the gate now
+runs in `enforcement.Pipeline.BeforeCall` for every high-risk tool
+call, with HMAC tokens issued during dry-run preview and the
+implementation documented in the ADR's "Status" section. ADR 0019
+remains **Proposed**: it is the template for the paid-commercial
+Postgres row-level-security decision tracked in
 [`../launch-readiness-review-may-8.md`](../launch-readiness-review-may-8.md)
 § "P1-8 paid-commercial RLS decision" — its decision-maker, GUC name,
 and migration ordering land before it moves to Accepted.
