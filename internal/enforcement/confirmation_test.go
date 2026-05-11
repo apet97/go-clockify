@@ -395,4 +395,3 @@ func TestBeforeCall_HighRiskNonDestructiveDryRun_StillMintsToken(t *testing.T) {
 		t.Fatal("non-destructive high-risk dry-run did not produce a token")
 	}
 }
-

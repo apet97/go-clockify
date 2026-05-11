@@ -28,29 +28,29 @@ func TestEnvSpec_CoversEveryGetenv(t *testing.T) {
 	// declared in AllSpecs so help/README still document them, but they
 	// wouldn't be matched by a grep on config.go. Keep tight.
 	outOfConfigGo := map[string]bool{
-		"MCP_LOG_LEVEL":                   true, // main.go
-		"MCP_LOG_FORMAT":                  true, // main.go
-		"CLOCKIFY_SUBJECT_IDLE_TTL":       true, // main.go (subject reaper)
-		"CLOCKIFY_SUBJECT_SWEEP_INTERVAL": true, // main.go (subject reaper)
-		"CLOCKIFY_POLICY":                 true, // internal/enforcement
-		"CLOCKIFY_DRY_RUN":                true, // internal/enforcement
-		"CLOCKIFY_CONFIRMATION_TOKENS":    true, // internal/confirmation (loader)
+		"MCP_LOG_LEVEL":                      true, // main.go
+		"MCP_LOG_FORMAT":                     true, // main.go
+		"CLOCKIFY_SUBJECT_IDLE_TTL":          true, // main.go (subject reaper)
+		"CLOCKIFY_SUBJECT_SWEEP_INTERVAL":    true, // main.go (subject reaper)
+		"CLOCKIFY_POLICY":                    true, // internal/enforcement
+		"CLOCKIFY_DRY_RUN":                   true, // internal/enforcement
+		"CLOCKIFY_CONFIRMATION_TOKENS":       true, // internal/confirmation (loader)
 		"CLOCKIFY_CONFIRMATION_TOKEN_SECRET": true, // internal/confirmation (loader)
-		"CLOCKIFY_CONFIRMATION_TOKEN_TTL": true, // internal/confirmation (loader)
-		"CLOCKIFY_DEDUPE_MODE":            true, // internal/enforcement
-		"CLOCKIFY_DEDUPE_LOOKBACK":        true, // internal/enforcement
-		"CLOCKIFY_OVERLAP_CHECK":          true, // internal/enforcement
-		"CLOCKIFY_DENY_TOOLS":             true, // internal/enforcement
-		"CLOCKIFY_DENY_GROUPS":            true, // internal/enforcement
-		"CLOCKIFY_ALLOW_GROUPS":           true, // internal/enforcement
-		"CLOCKIFY_MAX_CONCURRENT":         true, // main.go
-		"CLOCKIFY_RATE_LIMIT":             true, // internal/ratelimit
-		"CLOCKIFY_PER_TOKEN_CONCURRENCY":  true, // internal/ratelimit
-		"CLOCKIFY_PER_TOKEN_RATE_LIMIT":   true, // internal/ratelimit
-		"CLOCKIFY_TOKEN_BUDGET":           true, // internal/truncate
-		"CLOCKIFY_TRUNCATION_FAIL_CLOSED": true, // internal/truncate
-		"CLOCKIFY_BOOTSTRAP_MODE":         true, // internal/tools
-		"CLOCKIFY_BOOTSTRAP_TOOLS":        true, // internal/tools
+		"CLOCKIFY_CONFIRMATION_TOKEN_TTL":    true, // internal/confirmation (loader)
+		"CLOCKIFY_DEDUPE_MODE":               true, // internal/enforcement
+		"CLOCKIFY_DEDUPE_LOOKBACK":           true, // internal/enforcement
+		"CLOCKIFY_OVERLAP_CHECK":             true, // internal/enforcement
+		"CLOCKIFY_DENY_TOOLS":                true, // internal/enforcement
+		"CLOCKIFY_DENY_GROUPS":               true, // internal/enforcement
+		"CLOCKIFY_ALLOW_GROUPS":              true, // internal/enforcement
+		"CLOCKIFY_MAX_CONCURRENT":            true, // main.go
+		"CLOCKIFY_RATE_LIMIT":                true, // internal/ratelimit
+		"CLOCKIFY_PER_TOKEN_CONCURRENCY":     true, // internal/ratelimit
+		"CLOCKIFY_PER_TOKEN_RATE_LIMIT":      true, // internal/ratelimit
+		"CLOCKIFY_TOKEN_BUDGET":              true, // internal/truncate
+		"CLOCKIFY_TRUNCATION_FAIL_CLOSED":    true, // internal/truncate
+		"CLOCKIFY_BOOTSTRAP_MODE":            true, // internal/tools
+		"CLOCKIFY_BOOTSTRAP_TOOLS":           true, // internal/tools
 	}
 
 	spec := map[string]bool{}
