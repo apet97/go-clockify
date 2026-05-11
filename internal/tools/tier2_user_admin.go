@@ -381,7 +381,17 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	payload := map[string]any{"role": role}
+	// The live Clockify API rejects PUT on this path with code 3000
+	// ("Request method 'PUT' is not supported"). The contract is POST
+	// with a body containing both entityId (the workspace ID) and role.
+	// Setting a user back to REGULAR uses a different verb (DELETE on
+	// the role) which is not currently wired through the client, so
+	// reject it with a clear message rather than send a request the
+	// server will refuse.
+	if role == "REGULAR" {
+		return ResultEnvelope{}, fmt.Errorf("setting role to REGULAR is not yet supported; use clockify_deactivate_user to remove a user from the workspace")
+	}
+	payload := map[string]any{"entityId": wsID, "role": role}
 	if dryrun.Enabled(args) {
 		return ok("clockify_update_user_role", dryrunPreviewPayload("clockify_update_user_role", payload), map[string]any{
 			"workspaceId": wsID,
@@ -394,7 +404,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 	var result map[string]any
-	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
+	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
 

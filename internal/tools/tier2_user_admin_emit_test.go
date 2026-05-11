@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -41,7 +42,21 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/users/"+userID+"/roles"):
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/users/"+userID+"/roles"):
+			// Live API requires `entityId` (the workspace ID) alongside
+			// `role`. Without it the upstream rejects with code 3000
+			// even on POST. Pinned 2026-05-11 after QA agent 29 found
+			// the missing field by probing the live endpoint.
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode role POST body: %v", err)
+			}
+			if body["entityId"] != wsID {
+				t.Fatalf("role POST body missing entityId=%q, got %#v", wsID, body)
+			}
+			if body["role"] != "PROJECT_MANAGER" {
+				t.Fatalf("role POST body role=%v, want PROJECT_MANAGER", body["role"])
+			}
 			respondJSON(t, w, map[string]any{"id": userID, "role": "PROJECT_MANAGER"})
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/users/"+userID):
 			respondJSON(t, w, map[string]any{"id": userID, "role": "PROJECT_MANAGER", "status": "ACTIVE"})
