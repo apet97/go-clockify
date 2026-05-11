@@ -18,6 +18,7 @@
         "properties": {
           "name": {
             "description": "Tier-2 group name to activate, e.g. invoices",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -71,6 +72,7 @@
         "properties": {
           "name": {
             "description": "Tool name to activate, e.g. clockify_send_invoice",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -130,6 +132,7 @@
             "type": "boolean"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -300,18 +303,22 @@
         "additionalProperties": false,
         "properties": {
           "address": {
+            "maxLength": 256,
             "type": "string"
           },
           "dry_run": {
             "type": "boolean"
           },
           "email": {
+            "maxLength": 254,
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           }
         },
@@ -426,6 +433,7 @@
             "type": "boolean"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -541,6 +549,7 @@
             "type": "boolean"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -632,6 +641,7 @@
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "project": {
@@ -844,6 +854,7 @@
         "properties": {
           "name": {
             "description": "Tier-2 group name to deactivate, e.g. invoices",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -1488,6 +1499,7 @@
             "type": "boolean"
           },
           "description_contains": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -1501,9 +1513,11 @@
             "type": "string"
           },
           "exact_description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "new_description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "project": {
@@ -3133,6 +3147,7 @@
             "type": "boolean"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -3878,6 +3893,7 @@
         "additionalProperties": false,
         "properties": {
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -4336,6 +4352,7 @@
             "type": "boolean"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -4449,6 +4466,7 @@
             "type": "boolean"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -5181,6 +5199,7 @@
         "additionalProperties": false,
         "properties": {
           "address": {
+            "maxLength": 256,
             "type": "string"
           },
           "archived": {
@@ -5194,12 +5213,15 @@
             "type": "boolean"
           },
           "email": {
+            "maxLength": 254,
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           }
         },
@@ -5299,6 +5321,7 @@
             "type": "boolean"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
@@ -5482,9 +5505,11 @@
             "type": "boolean"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "project": {
@@ -5607,6 +5632,7 @@
             "type": "boolean"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "tag": {
@@ -5702,6 +5728,7 @@
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "project": {
@@ -6584,6 +6611,7 @@
           },
           "name": {
             "description": "Field name",
+            "maxLength": 150,
             "type": "string"
           },
           "required": {
@@ -6888,6 +6916,7 @@
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "required": {
@@ -7027,6 +7056,7 @@
         "properties": {
           "name": {
             "description": "Category name",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -7577,6 +7607,7 @@
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -7646,6 +7677,7 @@
           },
           "name": {
             "description": "Holiday name (2–100 chars)",
+            "maxLength": 150,
             "type": "string"
           },
           "occurs_annually": {
@@ -7724,6 +7756,7 @@
         "properties": {
           "name": {
             "description": "Group name",
+            "maxLength": 150,
             "type": "string"
           },
           "user_ids": {
@@ -8067,6 +8100,7 @@
             "type": "string"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "user_ids": {
@@ -8148,6 +8182,7 @@
             "type": "string"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "invoice_id": {
@@ -8254,6 +8289,7 @@
           },
           "note": {
             "description": "Invoice note",
+            "maxLength": 500,
             "type": "string"
           },
           "number": {
@@ -8889,6 +8925,7 @@
             "type": "string"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "number": {
@@ -8978,6 +9015,7 @@
             "type": "string"
           },
           "description": {
+            "maxLength": 2000,
             "type": "string"
           },
           "invoice_id": {
@@ -9131,6 +9169,7 @@
           },
           "name": {
             "description": "Template project name",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -9432,6 +9471,7 @@
             "type": "boolean"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "project_id": {
@@ -9955,6 +9995,7 @@
             "type": "boolean"
           },
           "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "series_update_option": {
@@ -10063,6 +10104,7 @@
           },
           "name": {
             "description": "Report name",
+            "maxLength": 150,
             "type": "string"
           },
           "report_type": {
@@ -10383,6 +10425,7 @@
             "type": "object"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "report_id": {
@@ -10463,6 +10506,7 @@
         "properties": {
           "note": {
             "description": "Optional approval note",
+            "maxLength": 500,
             "type": "string"
           },
           "policy_id": {
@@ -10533,6 +10577,7 @@
             "type": "number"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "negative_balance": {
@@ -10605,6 +10650,7 @@
           },
           "note": {
             "description": "Required note/reason",
+            "maxLength": 500,
             "type": "string"
           },
           "policy_id": {
@@ -10740,6 +10786,7 @@
         "properties": {
           "note": {
             "description": "Optional denial reason",
+            "maxLength": 500,
             "type": "string"
           },
           "policy_id": {
@@ -11147,6 +11194,7 @@
             "type": "number"
           },
           "name": {
+            "maxLength": 150,
             "type": "string"
           },
           "negative_balance": {
@@ -11211,6 +11259,7 @@
         "additionalProperties": false,
         "properties": {
           "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "policy_id": {
@@ -11364,6 +11413,7 @@
           },
           "name": {
             "description": "Name for the new user group",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -11712,6 +11762,7 @@
           },
           "name": {
             "description": "New name for the user group",
+            "maxLength": 150,
             "type": "string"
           }
         },
@@ -11904,6 +11955,7 @@
           },
           "url": {
             "description": "HTTPS callback URL for webhook delivery",
+            "maxLength": 2048,
             "type": "string"
           },
           "webhook_event": {
@@ -12312,6 +12364,7 @@
           },
           "url": {
             "description": "New HTTPS callback URL",
+            "maxLength": 2048,
             "type": "string"
           },
           "webhook_event": {

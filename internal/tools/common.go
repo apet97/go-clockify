@@ -606,6 +606,45 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 			}
 		}
 	}
+	// Generic maxLength bounds on common free-text fields. Centralised
+	// here so every Tier 1 + Tier 2 descriptor inherits the same ceiling
+	// without each handler hand-declaring it. Bounds chosen from observed
+	// Clockify-API limits and RFC defaults; an explicit handler-side
+	// maxLength always wins.
+	//
+	// Skipped on purpose:
+	//   - project/client/tag lookup identifiers (Clockify accepts UUIDs);
+	//   - the free-form `query` field on clockify_list_tools (multi-word
+	//     search queries must stay flexible);
+	//   - flexible-time string fields (handled separately above).
+	if ceil, ok := freeTextMaxLength[name]; ok {
+		if typ, _ := prop["type"].(string); typ == "string" {
+			if _, set := prop["maxLength"]; !set {
+				prop["maxLength"] = ceil
+			}
+		}
+	}
+}
+
+// freeTextMaxLength is the central table of conservative ceilings on
+// common free-text property names. The values must NEVER be relaxed in
+// place — TestRegistryFreeTextFieldsHaveMaxLength enforces them, and a
+// future reviewer who needs a higher ceiling on a specific tool should
+// declare maxLength explicitly on that tool's descriptor (which is
+// honoured here because applyPropertyConstraints never overwrites an
+// existing key).
+var freeTextMaxLength = map[string]int{
+	"description":          2000, // entry/log descriptions etc.
+	"description_contains": 2000, // filter form of description
+	"exact_description":    2000, // exact-match variant
+	"new_description":      2000, // update form
+	"name":                 150,
+	"note":                 500,
+	"address":              256,
+	"email":                254, // RFC 5321 max localpart+domain
+	"url":                  2048,
+	"webhook_url":          2048,
+	"redirect_url":         2048,
 }
 
 // descriptionAdvertisesFlexibleTime reports whether a property's
