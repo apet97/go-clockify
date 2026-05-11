@@ -475,19 +475,14 @@ func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (Resu
 
 	totals := totalsFromAgg(agg)
 	projects := projectSummariesFromAgg(agg)
-	var filteredEntries []clockify.TimeEntry
-	if includeEntries {
-		filteredEntries = agg.Entries
-	}
-
-	data := map[string]any{
-		"range":            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
-		"totals":           totals,
-		"byProject":        projects,
-		"suggestedActions": reportSuggestedActions(projects, totals, start, end),
+	data := SummaryData{
+		Range:            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
+		Totals:           totals,
+		ByProject:        projects,
+		SuggestedActions: reportSuggestedActions(projects, totals, start, end),
 	}
 	if includeEntries {
-		data["entries"] = filteredEntries
+		data.Entries = agg.Entries
 	}
 
 	meta := mergeMeta(map[string]any{

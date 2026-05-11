@@ -325,32 +325,21 @@ func TestDetailedReport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("detailed report failed: %v", err)
 	}
-	data, ok := result.Data.(map[string]any)
+	data, ok := result.Data.(SummaryData)
 	if !ok {
-		t.Fatalf("expected map data, got %T", result.Data)
+		t.Fatalf("expected SummaryData, got %T", result.Data)
 	}
 	// include_entries defaults to true
-	gotEntries, ok := data["entries"].([]clockify.TimeEntry)
-	if !ok {
-		t.Fatalf("expected entries slice by default, got %T", data["entries"])
+	if len(data.Entries) != 3 {
+		t.Fatalf("expected 3 unfiltered entries, got %d", len(data.Entries))
 	}
-	if len(gotEntries) != 3 {
-		t.Fatalf("expected 3 unfiltered entries, got %d", len(gotEntries))
+	if len(data.ByProject) != 2 || data.ByProject[0].ProjectID != "p2" {
+		t.Fatalf("expected top detailed project p2, got %+v", data.ByProject)
 	}
-	projects, ok := data["byProject"].([]ProjectSummary)
-	if !ok {
-		t.Fatalf("expected byProject slice, got %T", data["byProject"])
-	}
-	if len(projects) != 2 || projects[0].ProjectID != "p2" {
-		t.Fatalf("expected top detailed project p2, got %+v", projects)
-	}
-	suggestions, ok := data["suggestedActions"].([]ToolSuggestion)
-	if !ok {
-		t.Fatalf("expected suggestedActions slice, got %T", data["suggestedActions"])
-	}
-	assertReportSuggestedActions(t, suggestions, "p2")
+	assertReportSuggestedActions(t, data.SuggestedActions, "p2")
 
-	// With include_entries=false, "entries" is omitted.
+	// With include_entries=false, the SummaryData.Entries slice stays empty
+	// and the field is omitted from the JSON encoding (omitempty).
 	resultNoEntries, err := svc.DetailedReport(context.Background(), map[string]any{
 		"start":           "2026-04-01T00:00:00Z",
 		"end":             "2026-04-08T00:00:00Z",
@@ -359,11 +348,11 @@ func TestDetailedReport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("detailed report (no entries) failed: %v", err)
 	}
-	dataNoEntries := resultNoEntries.Data.(map[string]any)
-	if _, exists := dataNoEntries["entries"]; exists {
-		t.Fatalf("expected entries omitted when include_entries=false")
+	dataNoEntries := resultNoEntries.Data.(SummaryData)
+	if len(dataNoEntries.Entries) != 0 {
+		t.Fatalf("expected entries omitted when include_entries=false, got %d", len(dataNoEntries.Entries))
 	}
-	if _, exists := dataNoEntries["suggestedActions"]; !exists {
+	if len(dataNoEntries.SuggestedActions) == 0 {
 		t.Fatalf("expected suggestedActions when include_entries=false")
 	}
 }
@@ -401,16 +390,12 @@ func TestDetailedReportProjectFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("detailed report with project filter failed: %v", err)
 	}
-	data := result.Data.(map[string]any)
-	filtered, ok := data["entries"].([]clockify.TimeEntry)
-	if !ok {
-		t.Fatalf("expected entries slice, got %T", data["entries"])
+	data := result.Data.(SummaryData)
+	if len(data.Entries) != 1 {
+		t.Fatalf("expected 1 filtered entry, got %d", len(data.Entries))
 	}
-	if len(filtered) != 1 {
-		t.Fatalf("expected 1 filtered entry, got %d", len(filtered))
-	}
-	if filtered[0].ID != "a" {
-		t.Fatalf("expected entry a, got %s", filtered[0].ID)
+	if data.Entries[0].ID != "a" {
+		t.Fatalf("expected entry a, got %s", data.Entries[0].ID)
 	}
 	pagination := result.Meta["pagination"].(map[string]any)
 	if pagination["project_filter_resolved_id"] != "p1" {
@@ -631,11 +616,11 @@ func TestDetailedReport_CapExceeded_IncludeFalse_Succeeds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success when include_entries=false, got: %v", err)
 	}
-	data := result.Data.(map[string]any)
-	if _, exists := data["entries"]; exists {
-		t.Fatalf("expected entries omitted")
+	data := result.Data.(SummaryData)
+	if len(data.Entries) != 0 {
+		t.Fatalf("expected entries omitted, got %d", len(data.Entries))
 	}
-	totals := data["totals"].(SummaryTotals)
+	totals := data.Totals
 	if totals.Entries != 150 {
 		t.Fatalf("Totals.Entries = %d, want 150", totals.Entries)
 	}
