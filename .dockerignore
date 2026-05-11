@@ -1,0 +1,91 @@
+# Build context scoping for deploy/Dockerfile.
+#
+# The image only needs: go.mod / go.work / go.work.sum, the three
+# workspace sub-module manifests, cmd/, and internal/. Everything
+# else is either irrelevant (docs, examples, tests/, .git/) or
+# actively hostile to image hygiene (secrets in .env files, local
+# planning notes, editor state). Excluding them cuts the build
+# context from hundreds of MB to a handful and keeps stray secrets
+# from ever touching the Docker daemon, even transiently.
+#
+# Keep this in step with .gitignore; the two files have overlapping
+# but distinct goals (gitignore = history; dockerignore = build
+# context). When in doubt, prefer exclusion — if a Dockerfile COPY
+# later needs a path that lives here, add a negation rather than
+# loosening the rules globally.
+
+# VCS metadata — never needed inside the image, large on busy repos.
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Build outputs and local binaries.
+/clockify-mcp
+bin/
+dist/
+staging/
+coverage.out
+coverage/
+.bench/
+
+# Editor / tool / OS clutter.
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment files — defence in depth. The Dockerfile never COPYs
+# them, but a stray .env in the build context can still leak via
+# inadvertent `COPY . .` regressions in operator-customised images.
+.env
+.env.*
+deploy/.env
+deploy/.env.*
+examples/*.env
+
+# Planning, agent, and local assistant state. Never part of a build.
+.planning/
+.claude/
+.claude-campaign/
+.claude-campaign-worktrees/
+.agent-campaign/
+.agent-campaign-worktrees/
+.serena/
+.remember/
+
+# QA-swarm session infra (gitignored already; mirror here so a fresh
+# clone with leftover worktrees still produces a small context).
+qa-agents.tsv
+qa-findings/
+qa-logs/
+qa-prompts/
+qa-worktrees/
+run-all-agents.sh
+run-one-agent.sh
+summarize-findings.sh
+normal-user-master-prompt.txt
+scripts/qa-swarm/
+
+# Docs and examples — useful in the repo, not needed by the runtime
+# binary. The OCI image labels reference these via URLs, not file
+# bundling.
+docs/
+examples/
+README.md
+CHANGELOG.md
+SECURITY.md
+AGENTS.md
+CONTRIBUTING.md
+CLAUDE.md
+LICENSE
+
+# Test data and harness assets that never enter the binary.
+tests/
+*.test
+*.out
+*.prof
