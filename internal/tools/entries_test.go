@@ -67,6 +67,102 @@ func TestUpdateEntryRejectsOtherUserEntry(t *testing.T) {
 	}
 }
 
+// TestUpdateEntryRejectsEntryWithoutUserID pins the fail-closed
+// posture of requireCurrentUserEntry: an entry returned by GET
+// without a userId is anomalous (the live Clockify API populates the
+// field on every entry) and the handler must refuse to mutate rather
+// than silently allow it. The previous shape — "skip ownership
+// check when userId is empty" — would have left a quiet bypass surface
+// if an upstream regression, malicious proxy, or future API change
+// ever stripped the field.
+func TestUpdateEntryRejectsEntryWithoutUserID(t *testing.T) {
+	var putCalls atomic.Int32
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				Description:  "no userId on this stub",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodPut:
+			putCalls.Add(1)
+			respondJSON(t, w, map[string]any{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.UpdateEntry(context.Background(), map[string]any{
+		"entry_id":    otherUserEntryID,
+		"description": "should not apply",
+	})
+	if err == nil {
+		t.Fatal("expected ownership error; UpdateEntry permitted mutation on entry with empty userId")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "no userid") &&
+		!strings.Contains(strings.ToLower(err.Error()), "ambiguous ownership") {
+		t.Fatalf("expected ambiguous-ownership error, got %q", err.Error())
+	}
+	if got := putCalls.Load(); got != 0 {
+		t.Fatalf("guard must short-circuit before PUT on missing userId; saw %d PUT call(s)", got)
+	}
+}
+
+// TestUpdateEntryPermitsOwnEntryAndIssuesPUT is the positive path
+// for the ownership guard: when the fetched entry's userId matches
+// the current user, the guard must not interfere and the mutation
+// must reach upstream. Without this test, a future "tighten
+// everything" patch could break the guard into a permanent denial.
+func TestUpdateEntryPermitsOwnEntryAndIssuesPUT(t *testing.T) {
+	var putCalls atomic.Int32
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				Description:  "mine",
+				ProjectID:    "p1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z", End: "2026-05-01T10:00:00Z"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodPut:
+			putCalls.Add(1)
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				Description:  "renamed",
+				ProjectID:    "p1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z", End: "2026-05-01T10:00:00Z"},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateEntry(context.Background(), map[string]any{
+		"entry_id":    otherUserEntryID,
+		"description": "renamed",
+	})
+	if err != nil {
+		t.Fatalf("UpdateEntry on own entry must succeed, got %v", err)
+	}
+	if result.Action != "clockify_update_entry" {
+		t.Fatalf("unexpected action %q", result.Action)
+	}
+	if got := putCalls.Load(); got != 1 {
+		t.Fatalf("expected exactly 1 PUT on own entry, got %d", got)
+	}
+}
+
 // TestDeleteEntryRejectsOtherUserEntry mirrors UpdateEntry's pin for
 // the destructive sibling. The DELETE must not be issued when the
 // fetched entry belongs to a different user.
@@ -105,5 +201,82 @@ func TestDeleteEntryRejectsOtherUserEntry(t *testing.T) {
 	}
 	if got := deleteCalls.Load(); got != 0 {
 		t.Fatalf("ownership guard must short-circuit before DELETE; saw %d DELETE call(s)", got)
+	}
+}
+
+// TestDeleteEntryRejectsEntryWithoutUserID mirrors UpdateEntry's
+// fail-closed pin for the destructive sibling. The DELETE must not
+// reach upstream when the fetched entry has no userId.
+func TestDeleteEntryRejectsEntryWithoutUserID(t *testing.T) {
+	var deleteCalls atomic.Int32
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				Description:  "no userId on this stub",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodDelete:
+			deleteCalls.Add(1)
+			respondJSON(t, w, map[string]any{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.DeleteEntry(context.Background(), map[string]any{
+		"entry_id": otherUserEntryID,
+	})
+	if err == nil {
+		t.Fatal("expected ownership error; DeleteEntry permitted mutation on entry with empty userId")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "no userid") &&
+		!strings.Contains(strings.ToLower(err.Error()), "ambiguous ownership") {
+		t.Fatalf("expected ambiguous-ownership error, got %q", err.Error())
+	}
+	if got := deleteCalls.Load(); got != 0 {
+		t.Fatalf("guard must short-circuit before DELETE on missing userId; saw %d DELETE call(s)", got)
+	}
+}
+
+// TestDeleteEntryPermitsOwnEntryAndIssuesDELETE is the positive path
+// for the destructive guard: matching userId must allow the DELETE
+// to reach upstream.
+func TestDeleteEntryPermitsOwnEntryAndIssuesDELETE(t *testing.T) {
+	var deleteCalls atomic.Int32
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				Description:  "mine to delete",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodDelete:
+			deleteCalls.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.DeleteEntry(context.Background(), map[string]any{
+		"entry_id": otherUserEntryID,
+	})
+	if err != nil {
+		t.Fatalf("DeleteEntry on own entry must succeed, got %v", err)
+	}
+	if got := deleteCalls.Load(); got != 1 {
+		t.Fatalf("expected exactly 1 DELETE on own entry, got %d", got)
 	}
 }

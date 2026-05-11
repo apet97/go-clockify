@@ -337,10 +337,18 @@ func TestHappyPath_CreateTag(t *testing.T) {
 // TestHappyPath_DeleteEntry exercises the one toolDestructive tool through
 // the real pipeline. delete_entry pre-fetches the target via GET (for
 // audit logging and to surface 404 as a handler error rather than a
-// silent no-op) before issuing the DELETE, so the fake must respond to
-// both methods on the same path.
+// silent no-op) and then resolves the current user for the ownership
+// guard (entries.go::DeleteEntry) before issuing the DELETE, so the
+// fake responds to both /workspaces/.../time-entries/e-123 (GET +
+// DELETE) and /user (GET).
 func TestHappyPath_DeleteEntry(t *testing.T) {
+	const callerUserID = "u-self"
 	upstream := testharness.NewFakeClockify(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" && r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":"` + callerUserID + `","name":"Self"}`))
+			return
+		}
 		if !strings.HasSuffix(r.URL.Path, "/time-entries/e-123") {
 			t.Errorf("unexpected upstream path: %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
@@ -349,7 +357,7 @@ func TestHappyPath_DeleteEntry(t *testing.T) {
 		switch r.Method {
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"id":"e-123","description":"lunch","workspaceId":"test-workspace"}`))
+			_, _ = w.Write([]byte(`{"id":"e-123","userId":"` + callerUserID + `","description":"lunch","workspaceId":"test-workspace"}`))
 		case http.MethodDelete:
 			w.WriteHeader(http.StatusNoContent)
 		default:

@@ -17,10 +17,19 @@ import (
 func fakeClockifyAllOK(t *testing.T) *testharness.FakeClockify {
 	return testharness.NewFakeClockify(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Minimal stub: every GET returns an empty JSON object; DELETE
-		// returns 204. Good enough to exercise the "reached upstream"
-		// signal without baking real response shapes into the harness test.
-		switch r.Method {
-		case http.MethodDelete:
+		// returns 204. The exceptions exist because the ownership
+		// guard on personal-time-entry mutations
+		// (internal/tools/users.go::requireCurrentUserEntry) fetches
+		// /user and inspects userId on the targeted entry — empty
+		// strings would otherwise trip the fail-closed gate.
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":"u-self","name":"Harness Self"}`))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/time-entries/"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":"e-harness","userId":"u-self"}`))
+		case r.Method == http.MethodDelete:
 			w.WriteHeader(http.StatusNoContent)
 		default:
 			w.Header().Set("Content-Type", "application/json")

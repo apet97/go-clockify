@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
@@ -141,6 +142,7 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/time-entries/"+entryID) {
 			respondJSON(t, w, map[string]any{
 				"id":          entryID,
+				"userId":      "u-self",
 				"description": "after",
 				"billable":    true,
 				"projectId":   "p1",
@@ -159,6 +161,9 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 	svc := New(client, wsID)
 	emit := &recordingEmit{}
 	svc.EmitResourceUpdate = emit.hook()
+	// Pre-prime the current-user cache so UpdateEntry's ownership
+	// guard does not HTTP-fetch /user.
+	svc.cachedUser = &clockify.User{ID: "u-self"}
 
 	// Seed the cache with a "before" snapshot — this is what a prior
 	// subscription would have captured.
@@ -227,7 +232,7 @@ func TestDeleteEntryEmitsFormatDeleted(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/time-entries/"+entryID) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"id":"e3","timeInterval":{"start":"2026-04-07T09:00:00Z","end":"2026-04-07T17:00:00Z"}}`))
+			_, _ = w.Write([]byte(`{"id":"e3","userId":"u-self","timeInterval":{"start":"2026-04-07T09:00:00Z","end":"2026-04-07T17:00:00Z"}}`))
 			return
 		}
 		if r.Method == http.MethodDelete && strings.HasSuffix(r.URL.Path, "/time-entries/"+entryID) {
@@ -241,6 +246,9 @@ func TestDeleteEntryEmitsFormatDeleted(t *testing.T) {
 	svc := New(client, wsID)
 	emit := &recordingEmit{}
 	svc.EmitResourceUpdate = emit.hook()
+	// Pre-prime the current-user cache so DeleteEntry's ownership
+	// guard does not HTTP-fetch /user.
+	svc.cachedUser = &clockify.User{ID: "u-self"}
 
 	uri := "clockify://workspace/" + wsID + "/entry/" + entryID
 	svc.resourceCache.put(uri, []byte(`{"id":"e3"}`))

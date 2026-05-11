@@ -127,9 +127,13 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 			})
 		case r.Method == http.MethodGet && strings.HasSuffix(path, "/time-entries/"+entryID):
 			// Fetched by UpdateEntry's pre-update GET step — returns
-			// the post-create state.
+			// the post-create state. userId is populated so the
+			// ownership guard sees a match against the pre-primed
+			// cachedUser below; the live Clockify API always returns
+			// userId on GET.
 			respondJSON(t, w, map[string]any{
 				"id":          entryID,
+				"userId":      "u-self",
 				"description": "initial",
 				"billable":    false,
 				"timeInterval": map[string]any{
@@ -159,9 +163,10 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	emit := &recordingEmit{}
 	svc.EmitResourceUpdate = emit.hook()
 	svc.SubscriptionGate = func(_ string) bool { return true }
-
-	// Step 1: create the entry. Write-through primes the cache with
-	// billable=false, emits format=none (no prior state).
+	// Pre-prime the current-user cache so UpdateEntry's ownership
+	// guard does not HTTP-fetch /user. The test focuses on the
+	// merge-patch cache-priming behaviour, not auth resolution.
+	svc.cachedUser = &clockify.User{ID: "u-self"}
 	if _, err := svc.AddEntry(context.Background(), map[string]any{
 		"start":         "2026-04-11T10:00:00Z",
 		"end":           "2026-04-11T11:00:00Z",

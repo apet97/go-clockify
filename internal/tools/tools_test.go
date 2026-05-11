@@ -141,9 +141,12 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 	var putCount int
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u-self"})
 		case r.URL.Path == "/workspaces/ws1/time-entries/entry-1" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.TimeEntry{
 				ID:          "entry-1",
+				UserID:      "u-self",
 				Description: "Old description",
 				ProjectID:   "p-old",
 				Billable:    false,
@@ -858,9 +861,12 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	var gotPutBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u-self"})
 		case r.URL.Path == "/workspaces/ws1/time-entries/abc123def456789012345678" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.TimeEntry{
 				ID:          "abc123def456789012345678",
+				UserID:      "u-self",
 				Description: "Old description",
 				ProjectID:   "p1",
 				TaskID:      "task1",
@@ -943,9 +949,12 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 func TestUpdateEntryProjectResolutionGuidesResolveName(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u-self"})
 		case r.URL.Path == "/workspaces/ws1/time-entries/abc123def456789012345678" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.TimeEntry{
 				ID:          "abc123def456789012345678",
+				UserID:      "u-self",
 				Description: "Old description",
 				ProjectID:   "p1",
 				TimeInterval: clockify.TimeInterval{
@@ -983,9 +992,12 @@ func TestDeleteEntryDryRun(t *testing.T) {
 	var deleteCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u-self"})
 		case r.URL.Path == "/workspaces/ws1/time-entries/abc123def456789012345678" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.TimeEntry{
 				ID:          "abc123def456789012345678",
+				UserID:      "u-self",
 				Description: "Entry to delete",
 				TimeInterval: clockify.TimeInterval{
 					Start: "2026-04-01T09:00:00Z",
@@ -1801,6 +1813,7 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 	entryID := "abc123def456789012345678"
 	entry := clockify.TimeEntry{
 		ID:          entryID,
+		UserID:      "u-self",
 		Description: "direct target",
 		ProjectID:   "p1",
 		TimeInterval: clockify.TimeInterval{
@@ -1819,8 +1832,8 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 			updated := entry
 			updated.Description = "direct update"
 			respondJSON(t, w, updated)
-		case r.URL.Path == "/user" || strings.Contains(r.URL.Path, "/user/"):
-			t.Fatalf("entry_id lookup should not scan current-user pages: %s", r.URL.Path)
+		case strings.Contains(r.URL.Path, "/user/"):
+			t.Fatalf("entry_id lookup should not scan current-user list pages: %s", r.URL.Path)
 		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.String())
 		}
@@ -1828,6 +1841,12 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	// Pre-prime the current-user cache so the ownership guard does not
+	// HTTP-fetch /user (which is allowed but unnecessary here). The
+	// test's intent is that the entry_id branch must not paginate
+	// /workspaces/{ws}/user/{userID}/time-entries — the bare /user
+	// lookup is orthogonal.
+	svc.cachedUser = &clockify.User{ID: "u-self"}
 	result, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
 		"entry_id":        entryID,
 		"new_description": "direct update",

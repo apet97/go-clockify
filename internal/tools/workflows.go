@@ -410,14 +410,8 @@ func (s *Service) findEntryByID(ctx context.Context, args findAndUpdateArgs) (cl
 	// path; this branch fetches by ID on the admin path, so it needs
 	// the same constraint to keep the contract uniform across both
 	// paths.
-	if entry.UserID != "" {
-		currentUser, err := s.getCurrentUser(ctx)
-		if err != nil {
-			return clockify.TimeEntry{}, nil, err
-		}
-		if entry.UserID != currentUser.ID {
-			return clockify.TimeEntry{}, nil, fmt.Errorf("permission denied: time entry %s is not owned by current user", entry.ID)
-		}
+	if err := s.requireCurrentUserEntry(ctx, entry); err != nil {
+		return clockify.TimeEntry{}, nil, err
 	}
 	if !entryMatchesFindArgs(entry, args) {
 		return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found")
