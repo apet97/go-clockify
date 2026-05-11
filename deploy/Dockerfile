@@ -58,7 +58,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build \
     -o clockify-mcp \
     ./cmd/clockify-mcp
 
-# Stage 2: Minimal runtime image (~10MB)
+# Stage 2: Minimal runtime image (~18 MB)
 #
 # Runtime base is pinned by digest for the same reasons as the builder. The
 # `nonroot` tag is a moving pointer that Google retags on every distroless

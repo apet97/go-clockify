@@ -1,3 +1,7 @@
+# Env vars referenced below (CLOCKIFY_API_KEY, MCP_BEARER_TOKEN, etc.) are
+# loaded from a sibling `.env` file. Copy `examples/docker-compose.env`
+# to `.env` and fill in real values before `docker compose up`; the file
+# is gitignored so secrets stay local.
 services:
   clockify-mcp:
     build:

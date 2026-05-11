@@ -1,3 +1,7 @@
+# REPLACE-ME: swap `your-domain.example.com` for the real public host
+# you've pointed at this Caddy instance. The same value must appear in
+# MCP_ALLOWED_ORIGINS (see docker-compose.yml) so the server's strict
+# Host check accepts forwarded requests.
 your-domain.example.com {
     # Streamable HTTP needs Host and forwarded scheme preserved so the
     # server's strict Host check (MCP_STRICT_HOST_CHECK) and any future
