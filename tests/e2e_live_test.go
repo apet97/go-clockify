@@ -122,6 +122,9 @@ func TestE2EMutating(t *testing.T) {
 			}
 		}
 		if client.ID != "" {
+			// Clockify rejects DELETE on active clients; archive first.
+			// The PUT validator also requires `name` in the body.
+			_ = svc.Client.Put(cleanupCtx, "/workspaces/"+wsID+"/clients/"+client.ID, map[string]any{"name": client.Name, "archived": true}, nil)
 			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/clients/"+client.ID); err != nil {
 				t.Logf("cleanup delete client %s failed: %v", client.ID, err)
 			}
