@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 23 | 33 | 56 |
-| Mutating (non-destructive) | 16 | 42 | 58 |
-| Destructive | 1 | 13 | 14 |
+| Read-only | 24 | 33 | 57 |
+| Mutating (non-destructive) | 17 | 42 | 59 |
+| Destructive | 2 | 13 | 15 |
 | Billing | 0 | 8 | 8 |
 | Admin | 0 | 7 | 7 |
-| **Total tools** | **40** | **88** | **128** |
+| **Total tools** | **43** | **88** | **131** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (35)
+## Tier 1 — Core tools (43)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -51,12 +51,13 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 `/workspaces/{ws}/users`, `/workspaces/{ws}/reports/*`,
 `/user`, `/workspaces`.
 
-### Read-only (21 tools)
+### Read-only (23 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
 | `clockify_current_user` | `GET /user` | unit, live-read-only (TestE2EReadOnly) |
 | `clockify_detailed_report` | `GET /workspaces/{ws}/reports/detailed` | unit |
+| `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |
 | `clockify_get_entry` | `GET /workspaces/{ws}/time-entries/{id}` | unit |
 | `clockify_get_project` | `GET /workspaces/{ws}/projects/{id}` | unit |
 | `clockify_get_workspace` | `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
@@ -78,7 +79,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_weekly_summary` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries` by day + project) | unit |
 | `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
 
-### Mutating — non-destructive (13 tools)
+### Mutating — non-destructive (18 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
@@ -98,12 +99,14 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_stop_timer` | `PATCH /workspaces/{ws}/user/{uid}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_switch_project` | `PATCH` + `POST /workspaces/{ws}/time-entries` | unit |
 | `clockify_timesheet_fill_gap` | `GET` overlap validation + `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestLiveTier1RemainingCRUD) |
+| `clockify_update_client` | `GET` + `PUT /workspaces/{ws}/clients/{id}` (fetch-then-merge) | unit |
 | `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
 
-### Destructive (1 tool)
+### Destructive (2 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
+| `clockify_delete_client` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/clients/{id}` | unit, dry-run |
 | `clockify_delete_entry` | `DELETE /workspaces/{ws}/time-entries/{id}` | unit, dry-run (TestLiveDryRunDoesNotMutate), sacrificial-mutating (TestE2EMutating) |
 
 ---
