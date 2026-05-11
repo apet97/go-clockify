@@ -35,12 +35,14 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_deactivate_group",
 		"clockify_delete_client",
 		"clockify_delete_entry",
+		"clockify_delete_tag",
 		"clockify_delete_task",
 		"clockify_detailed_report",
 		"clockify_find_and_update_entry",
 		"clockify_get_client",
 		"clockify_get_entry",
 		"clockify_get_project",
+		"clockify_get_tag",
 		"clockify_get_task",
 		"clockify_get_workspace",
 		"clockify_list_clients",
@@ -67,6 +69,7 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_today_entries",
 		"clockify_update_client",
 		"clockify_update_entry",
+		"clockify_update_tag",
 		"clockify_update_task",
 		"clockify_weekly_summary",
 		"clockify_whoami",
@@ -497,13 +500,13 @@ func TestTier2GroupsHaveMetadata(t *testing.T) {
 func TestTier1CatalogGoldenCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	reg := svc.Registry()
-	if len(reg) != 46 {
-		t.Fatalf("expected 46 Tier 1 tools, got %d", len(reg))
+	if len(reg) != 49 {
+		t.Fatalf("expected 49 Tier 1 tools, got %d", len(reg))
 	}
 }
 
 // ---------------------------------------------------------------------------
-// 10. Total tool count (Tier 1 + Tier 2 = 131)
+// 10. Total tool count (Tier 1 + Tier 2 = 137)
 // ---------------------------------------------------------------------------
 
 func TestTotalToolCount(t *testing.T) {
@@ -514,7 +517,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 134 {
-		t.Fatalf("expected 134 total tools (46 Tier1 + 88 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 137 {
+		t.Fatalf("expected 137 total tools (49 Tier1 + 88 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }

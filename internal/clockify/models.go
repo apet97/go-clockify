@@ -68,7 +68,7 @@ type ClientEntity struct {
 type Tag struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
-	Archived    bool   `json:"archived,omitempty"`
+	Archived    bool   `json:"archived"`
 	WorkspaceID string `json:"workspaceId,omitempty"`
 }
 

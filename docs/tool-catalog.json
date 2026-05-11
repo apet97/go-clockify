@@ -574,7 +574,8 @@
             },
             "required": [
               "id",
-              "name"
+              "name",
+              "archived"
             ],
             "type": "object"
           },
@@ -988,6 +989,62 @@
           "destructive"
         ],
         "title": "Delete Entry"
+      }
+    },
+    {
+      "name": "clockify_delete_tag",
+      "description": "Delete a tag by ID or exact name. Clockify supports direct DELETE without an archive step for tags.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": true,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "destructive"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "tag": {
+            "description": "Tag name or ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_delete_tag",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "destructive"
+        ],
+        "title": "Delete Tag"
       }
     },
     {
@@ -1882,6 +1939,87 @@
       }
     },
     {
+      "name": "clockify_get_tag",
+      "description": "Get a tag by ID or exact name",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "tag": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_get_tag",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "archived": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "archived"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Get Tag"
+      }
+    },
+    {
       "name": "clockify_get_task",
       "description": "Get a task by ID or exact name within a project",
       "group": "tier1",
@@ -2475,7 +2613,8 @@
               },
               "required": [
                 "id",
-                "name"
+                "name",
+                "archived"
               ],
               "type": "object"
             },
@@ -5208,6 +5347,97 @@
           "write"
         ],
         "title": "Update Entry"
+      }
+    },
+    {
+      "name": "clockify_update_tag",
+      "description": "Update a tag by ID or exact name using fetch-then-merge. Clockify's PUT is a full replacement; use the archived boolean to flip archival state.",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "description": "Tag name or ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_update_tag",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "archived": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "archived"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Update Tag"
       }
     },
     {

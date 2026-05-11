@@ -45,6 +45,9 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_list_tags", "List tags in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTags(ctx, args)
 		}},
+		{Tool: toolRO("clockify_get_tag", "Get a tag by ID or exact name", requiredSchema("tag")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.GetTag(ctx, args)
+		}},
 		{Tool: toolRO("clockify_list_tasks", "List tasks for a project", paginationSchema(map[string]any{
 			"required":   []string{"project"},
 			"properties": map[string]any{"project": map[string]any{"type": "string", "description": "Project name or ID"}},
@@ -219,6 +222,20 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"dry_run": map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateTag(ctx, args)
+		}},
+		{Tool: toolRWIdem("clockify_update_tag", "Update a tag by ID or exact name using fetch-then-merge. Clockify's PUT is a full replacement; use the archived boolean to flip archival state.", map[string]any{"type": "object", "required": []string{"tag"}, "properties": map[string]any{
+			"tag":      map[string]any{"type": "string", "description": "Tag name or ID"},
+			"name":     map[string]any{"type": "string"},
+			"archived": map[string]any{"type": "boolean"},
+			"dry_run":  map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UpdateTag(ctx, args)
+		}},
+		{Tool: toolDestructive("clockify_delete_tag", "Delete a tag by ID or exact name. Clockify supports direct DELETE without an archive step for tags.", map[string]any{"type": "object", "required": []string{"tag"}, "properties": map[string]any{
+			"tag":     map[string]any{"type": "string", "description": "Tag name or ID"},
+			"dry_run": map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.DeleteTag(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_task", "Create a new task in a project", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID"},
