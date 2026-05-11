@@ -85,7 +85,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs (default: current workspace ID)",
 					},
-					"name": map[string]any{"type": "string", "description": "Webhook name (required by live API)"},
+					"name": map[string]any{"type": "string", "description": "Webhook name (required by live API, length 2..30)", "minLength": 2, "maxLength": 30},
 					"auth_token": map[string]any{
 						"type":        "string",
 						"description": "Optional HMAC signing secret for webhook delivery; sent upstream as authToken and never returned unmasked",
@@ -120,7 +120,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 						"items":       map[string]any{"type": "string"},
 						"description": "Trigger source IDs",
 					},
-					"name": map[string]any{"type": "string", "description": "New name for the webhook"},
+					"name": map[string]any{"type": "string", "description": "New name for the webhook (length 2..30)", "minLength": 2, "maxLength": 30},
 					"auth_token": map[string]any{
 						"type":        "string",
 						"description": "Optional replacement HMAC signing secret; sent upstream as authToken and never returned unmasked",

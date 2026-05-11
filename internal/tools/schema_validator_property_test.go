@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
@@ -193,7 +194,13 @@ func synthesizeValue(prop map[string]any) (any, bool) {
 		} else if format == "date" {
 			return "2026-04-11", false
 		}
-		return "x", false
+		minLen := 1
+		if raw, ok := prop["minLength"]; ok {
+			if n, ok := asInt(raw); ok && n > minLen {
+				minLen = n
+			}
+		}
+		return strings.Repeat("x", minLen), false
 	case "integer":
 		if raw, ok := prop["minimum"]; ok {
 			if n, ok := asInt(raw); ok {

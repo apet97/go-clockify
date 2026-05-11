@@ -530,3 +530,50 @@ func TestUpdateWebhookLegacyEventsArrayFallback(t *testing.T) {
 		t.Fatalf("body must not send legacy events array: %#v", gotBody)
 	}
 }
+
+// TestWebhookNameSchemaBoundsMatchClockifySpec pins the create/update
+// webhook `name` property to the live API contract: length 2..30
+// (Clockify WEBHOOKDOC.md). Without the schema bounds an out-of-range
+// name would round-trip to the upstream and surface as a cryptic
+// upstream-side error; with the bounds the dispatcher's schema
+// validator rejects it before the handler runs.
+func TestWebhookNameSchemaBoundsMatchClockifySpec(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("schema-bounds test must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	descs := webhookHandlers(svc)
+
+	want := map[string]bool{
+		"clockify_create_webhook": false,
+		"clockify_update_webhook": false,
+	}
+	for _, d := range descs {
+		if _, wanted := want[d.Tool.Name]; !wanted {
+			continue
+		}
+		want[d.Tool.Name] = true
+		schema := d.Tool.InputSchema
+		props, ok := schema["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: schema.properties not a map", d.Tool.Name)
+		}
+		name, ok := props["name"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s: schema.properties.name not a map", d.Tool.Name)
+		}
+		if name["minLength"] != 2 {
+			t.Fatalf("%s: schema.properties.name.minLength must be 2, got %#v", d.Tool.Name, name["minLength"])
+		}
+		if name["maxLength"] != 30 {
+			t.Fatalf("%s: schema.properties.name.maxLength must be 30, got %#v", d.Tool.Name, name["maxLength"])
+		}
+	}
+	for tool, found := range want {
+		if !found {
+			t.Fatalf("descriptor %q not registered by webhookHandlers", tool)
+		}
+	}
+}

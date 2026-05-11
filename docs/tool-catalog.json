@@ -10808,7 +10808,9 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Webhook name (required by live API)",
+            "description": "Webhook name (required by live API, length 2..30)",
+            "maxLength": 30,
+            "minLength": 2,
             "type": "string"
           },
           "trigger_source": {
@@ -11187,7 +11189,9 @@
             "type": "boolean"
           },
           "name": {
-            "description": "New name for the webhook",
+            "description": "New name for the webhook (length 2..30)",
+            "maxLength": 30,
+            "minLength": 2,
             "type": "string"
           },
           "trigger_source": {
