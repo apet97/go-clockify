@@ -245,6 +245,33 @@ func TestSafeCoreExpandedAllowlist(t *testing.T) {
 	}
 }
 
+// TestSafeCoreBlocksDestructiveDeletes pins the documented contract for
+// safe_core: the "Delete access (any kind)" row in
+// docs/policy/production-tool-scope.md lists safe_core as ❌, and the
+// prose says "It still blocks all delete operations and Tier 2 admin
+// surface". A trusted-shared-service agent that can register projects
+// to log time against must not be one tool call away from deleting
+// workspace structure. read_only and time_tracking_safe already block
+// these by mode; this test pins the safe_core obligation explicitly so
+// a regression cannot silently re-promote a workspace-shaping bot into
+// a workspace-deleting bot.
+func TestSafeCoreBlocksDestructiveDeletes(t *testing.T) {
+	p := &Policy{Mode: SafeCore, DeniedTools: map[string]bool{}}
+	for _, tool := range []string{
+		"clockify_delete_client",
+		"clockify_delete_project",
+		"clockify_delete_tag",
+		"clockify_delete_task",
+	} {
+		if p.IsAllowed(tool, false) {
+			t.Errorf("safe_core must block destructive %s per docs/policy/production-tool-scope.md", tool)
+		}
+		if reason := p.BlockReason(tool, false); reason == "" {
+			t.Errorf("safe_core must surface a non-empty BlockReason for %s", tool)
+		}
+	}
+}
+
 func TestIntrospectionAlwaysAllowed(t *testing.T) {
 	p := &Policy{Mode: ReadOnly, DeniedTools: map[string]bool{}}
 	introTools := []string{

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/policy"
 )
 
 // TestEveryDescriptorHasRiskClass enforces that the post-normalize pass
@@ -167,4 +168,54 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestSafeCoreAllowlistExcludesDestructiveTools is the registry-level
+// pin matching the policy-level TestSafeCoreBlocksDestructiveDeletes:
+// every tool advertised in `policy.Describe()["safe_core_writes"]`
+// must have both `DestructiveHint == false` and `RiskClass` without
+// the `RiskDestructive` bit. The docs and the policy mode agree that
+// safe_core is non-destructive; this test prevents a future
+// contributor from adding a tool back to the allowlist whose
+// descriptor is destructive without also flipping the contract.
+func TestSafeCoreAllowlistExcludesDestructiveTools(t *testing.T) {
+	s := &Service{}
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, d := range s.Registry() {
+		descriptors[d.Tool.Name] = d
+	}
+	for groupName := range Tier2Groups {
+		ds, ok := s.Tier2Handlers(groupName)
+		if !ok {
+			t.Fatalf("Tier2Handlers(%q) returned ok=false", groupName)
+		}
+		for _, d := range ds {
+			descriptors[d.Tool.Name] = d
+		}
+	}
+
+	p := &policy.Policy{Mode: policy.SafeCore}
+	desc := p.Describe()
+	list, ok := desc["safe_core_writes"].([]string)
+	if !ok {
+		t.Fatalf("policy.Describe()[\"safe_core_writes\"] missing or wrong type: %T", desc["safe_core_writes"])
+	}
+	if len(list) == 0 {
+		t.Fatal("policy.Describe()[\"safe_core_writes\"] is empty; the allowlist must contain non-destructive writes")
+	}
+	for _, name := range list {
+		d, ok := descriptors[name]
+		if !ok {
+			// A name in the allowlist without a registered descriptor
+			// would be caught by TestRiskOverridesTargetRegisteredTools
+			// or contract-matrix drift; do not double-report here.
+			continue
+		}
+		if d.DestructiveHint {
+			t.Errorf("%s appears in safe_core_writes but DestructiveHint=true; safe_core must not include destructive tools", name)
+		}
+		if d.RiskClass.Has(mcp.RiskDestructive) {
+			t.Errorf("%s appears in safe_core_writes but RiskClass has RiskDestructive set", name)
+		}
+	}
 }
