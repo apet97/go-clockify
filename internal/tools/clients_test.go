@@ -216,3 +216,167 @@ func TestDeleteClientRequiresClientArg(t *testing.T) {
 		t.Fatal("expected error when client arg is missing")
 	}
 }
+
+func TestUpdateClientPreservesExistingFields(t *testing.T) {
+	// Existing client has name + address + email; caller only updates
+	// the note. PUT body must include name, address, and email
+	// verbatim so Clockify's full-replacement semantics do not null
+	// them out.
+	var putBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{
+				ID:      testClientID,
+				Name:    "Acme",
+				Address: "123 Foo St",
+				Email:   "ops@acme.example",
+			})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&putBody); err != nil {
+				t.Fatalf("decode put body: %v", err)
+			}
+			respondJSON(t, w, clockify.ClientEntity{
+				ID:      testClientID,
+				Name:    "Acme",
+				Address: "123 Foo St",
+				Email:   "ops@acme.example",
+				Note:    "new note",
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateClient(context.Background(), map[string]any{
+		"client": testClientID,
+		"note":   "new note",
+	})
+	if err != nil {
+		t.Fatalf("update client failed: %v", err)
+	}
+	if putBody["name"] != "Acme" {
+		t.Fatalf("PUT body must preserve name, got %v", putBody["name"])
+	}
+	if putBody["address"] != "123 Foo St" {
+		t.Fatalf("PUT body must preserve existing address, got %v", putBody["address"])
+	}
+	if putBody["email"] != "ops@acme.example" {
+		t.Fatalf("PUT body must preserve existing email, got %v", putBody["email"])
+	}
+	if putBody["note"] != "new note" {
+		t.Fatalf("PUT body must carry new note, got %v", putBody["note"])
+	}
+
+	changed, _ := result.Meta["changedFields"].([]string)
+	if len(changed) != 1 || changed[0] != "note" {
+		t.Fatalf("expected changedFields=[note], got %v", changed)
+	}
+}
+
+func TestUpdateClientChangesNameAndAddress(t *testing.T) {
+	var putBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Old", Address: "Old St"})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&putBody); err != nil {
+				t.Fatalf("decode put body: %v", err)
+			}
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "New", Address: "New St"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.UpdateClient(context.Background(), map[string]any{
+		"client":  testClientID,
+		"name":    "New",
+		"address": "New St",
+	}); err != nil {
+		t.Fatalf("update client failed: %v", err)
+	}
+	if putBody["name"] != "New" || putBody["address"] != "New St" {
+		t.Fatalf("PUT body must carry new name+address, got %v", putBody)
+	}
+}
+
+func TestUpdateClientArchivedFlagToggle(t *testing.T) {
+	var putBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: false})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&putBody); err != nil {
+				t.Fatalf("decode put body: %v", err)
+			}
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.UpdateClient(context.Background(), map[string]any{
+		"client":   testClientID,
+		"archived": true,
+	}); err != nil {
+		t.Fatalf("update client failed: %v", err)
+	}
+	if putBody["archived"] != true {
+		t.Fatalf("PUT body must set archived=true, got %v", putBody["archived"])
+	}
+	if putBody["name"] != "Acme" {
+		t.Fatalf("PUT body must preserve name when toggling archived, got %v", putBody["name"])
+	}
+}
+
+func TestUpdateClientDryRunDoesNotMutate(t *testing.T) {
+	var mutated bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme"})
+		case r.URL.Path == path && r.Method == http.MethodPut:
+			mutated = true
+			respondJSON(t, w, map[string]any{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateClient(context.Background(), map[string]any{
+		"client":  testClientID,
+		"name":    "Acme New",
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("update client dry-run failed: %v", err)
+	}
+	if mutated {
+		t.Fatal("dry-run must not issue PUT")
+	}
+	if result.Action != "clockify_update_client" {
+		t.Fatalf("unexpected action: %q", result.Action)
+	}
+}
+
+func TestUpdateClientRequiresClientArg(t *testing.T) {
+	svc := New(nil, "ws1")
+	if _, err := svc.UpdateClient(context.Background(), map[string]any{}); err == nil {
+		t.Fatal("expected error when client arg is missing")
+	}
+}

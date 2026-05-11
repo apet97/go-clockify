@@ -44,6 +44,7 @@ func tier1OutputSchemas() map[string]map[string]any {
 		"clockify_find_and_update_entry": envelopeSchemaFor[FindAndUpdateEntryData]("clockify_find_and_update_entry"),
 		"clockify_create_project":        envelopeSchemaFor[clockify.Project]("clockify_create_project"),
 		"clockify_create_client":         envelopeSchemaFor[clockify.ClientEntity]("clockify_create_client"),
+		"clockify_update_client":         envelopeSchemaFor[clockify.ClientEntity]("clockify_update_client"),
 		"clockify_create_tag":            envelopeSchemaFor[clockify.Tag]("clockify_create_tag"),
 		"clockify_create_task":           envelopeSchemaFor[clockify.Task]("clockify_create_task"),
 		"clockify_start_timer":           envelopeSchemaFor[clockify.TimeEntry]("clockify_start_timer"),

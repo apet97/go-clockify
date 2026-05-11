@@ -191,6 +191,17 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.DeleteClient(ctx, args)
 		}},
+		{Tool: toolRWIdem("clockify_update_client", "Update a client by ID or exact name using a fetch-then-merge strategy. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'. Use the dedicated archived boolean to flip archival state.", map[string]any{"type": "object", "required": []string{"client"}, "properties": map[string]any{
+			"client":   map[string]any{"type": "string", "description": "Client name or ID"},
+			"name":     map[string]any{"type": "string"},
+			"address":  map[string]any{"type": "string"},
+			"email":    map[string]any{"type": "string"},
+			"note":     map[string]any{"type": "string"},
+			"archived": map[string]any{"type": "boolean"},
+			"dry_run":  map[string]any{"type": "boolean"},
+		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UpdateClient(ctx, args)
+		}},
 		{Tool: toolRW("clockify_create_tag", "Create a new tag", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 			"name":    map[string]any{"type": "string"},
 			"dry_run": map[string]any{"type": "boolean"},
