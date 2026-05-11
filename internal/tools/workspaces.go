@@ -6,6 +6,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/paths"
+	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
@@ -18,6 +19,9 @@ func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
 
 func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	if s.WorkspaceID != "" {
+		if err := resolve.ValidateID(s.WorkspaceID, "workspace_id"); err != nil {
+			return "", err
+		}
 		return s.WorkspaceID, nil
 	}
 	s.mu.RLock()
