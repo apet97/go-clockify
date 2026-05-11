@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -71,8 +72,8 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
 	}
-	if boolArg(args, "dry_run") {
-		return ok("clockify_create_task", dryrunPreviewPayload("clockify_create_task", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_task", dryrun.Preview("clockify_create_task", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "projects", projectID, "tasks")

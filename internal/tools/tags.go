@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -47,8 +48,8 @@ func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnv
 		return ResultEnvelope{}, err
 	}
 	payload := map[string]any{"name": name}
-	if boolArg(args, "dry_run") {
-		return ok("clockify_create_tag", dryrunPreviewPayload("clockify_create_tag", payload), map[string]any{"workspaceId": wsID}), nil
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_tag", dryrun.Preview("clockify_create_tag", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 	path, err := paths.Workspace(wsID, "tags")
 	if err != nil {

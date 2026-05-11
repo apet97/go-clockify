@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -89,8 +90,8 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 	if isPublic, ok := args["is_public"].(bool); ok {
 		payload["isPublic"] = isPublic
 	}
-	if boolArg(args, "dry_run") {
-		return ok("clockify_create_project", dryrunPreviewPayload("clockify_create_project", payload), map[string]any{"workspaceId": wsID}), nil
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_project", dryrun.Preview("clockify_create_project", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "projects")

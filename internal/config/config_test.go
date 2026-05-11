@@ -497,6 +497,7 @@ func TestLoadSingleTenantHTTPRequiresAPIKey(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"MCP_PROFILE":      "single-tenant-http",
 		"MCP_BEARER_TOKEN": "single-tenant-bearer-token-1234",
+		"CLOCKIFY_API_KEY": "",
 	})
 	_, err := Load()
 	if err == nil {
