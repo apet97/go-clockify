@@ -333,10 +333,20 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 			params["patch"] = delta.Patch
 		}
 	}
-	for _, n := range targets {
-		_ = n.Notify("notifications/resources/updated", params)
-	}
+	// Broadcast and per-notifier paths are mutually exclusive. The
+	// broadcastSubscriber sentinel only appears when at least one
+	// subscribe call landed without a Notifier in ctx (legacy
+	// test-only path). Because s.Notify fans out to every registered
+	// notifier — which is a strict superset of the per-notifier
+	// targets — taking the broadcast branch alone delivers to every
+	// interested party at-most-once. Production transports always
+	// thread ctx so broadcast is always false; the branch exists for
+	// pre-fix test backwards-compat.
 	if broadcast {
 		_ = s.Notify("notifications/resources/updated", params)
+		return
+	}
+	for _, n := range targets {
+		_ = n.Notify("notifications/resources/updated", params)
 	}
 }

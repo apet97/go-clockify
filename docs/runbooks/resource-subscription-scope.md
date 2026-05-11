@@ -35,7 +35,11 @@ through the broadcast `notifierHub` path and reach every active notifier.
   subscription against it. A subscribe call without a notifier in
   context (only test code that drives the handler directly) falls back
   to a `broadcastSubscriber` sentinel that restores the pre-fix
-  server-wide fan-out for that one call.
+  server-wide fan-out for that one call. When both a per-notifier
+  subscriber and the broadcast sentinel are recorded for the same URI
+  (mixed-mode test setup, not reachable in production), `NotifyResourceUpdated`
+  takes the broadcast branch alone — the hub fan-out is the strict
+  superset, so every interested party is delivered to at most once.
 - `notifierHub.add` returns a remove closure. The closure calls
   `Server.resourceSubs.dropNotifier(n)` on stream close so subscriptions
   are GC'd. Without this the `HasResourceSubscription` shortcut would

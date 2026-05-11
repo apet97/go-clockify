@@ -253,6 +253,39 @@ func TestToolsListChanged_RemainsBroadcast(t *testing.T) {
 	}
 }
 
+// TestResourceSubscription_BroadcastAndPerNotifier_NoDoubleDelivery
+// guards the mixed mode where one subscribe call landed via the
+// broadcastSubscriber sentinel (no Notifier in ctx) and another via
+// the per-notifier path on the same URI. The broadcast branch is the
+// strict superset, so NotifyResourceUpdated must take it alone — a
+// future refactor that calls both s.Notify and the per-target loop
+// would double-deliver to the real notifier.
+func TestResourceSubscription_BroadcastAndPerNotifier_NoDoubleDelivery(t *testing.T) {
+	srv := newScopeTestServer(t)
+	a := &scopedRecordingNotifier{name: "A"}
+	removeA := srv.AddNotifier(a)
+	defer removeA()
+
+	const uri = "clockify://workspace/ws/entry/mixed"
+
+	// Per-notifier subscribe via WithNotifier(ctx, A).
+	subscribe(t, srv, a, uri)
+	// Legacy subscribe via bare ctx — lands on broadcastSubscriber.
+	resp := srv.handle(context.Background(), Request{
+		JSONRPC: "2.0", ID: 8, Method: "resources/subscribe",
+		Params: map[string]any{"uri": uri},
+	})
+	if resp.Error != nil {
+		t.Fatalf("legacy subscribe: %+v", resp.Error)
+	}
+
+	srv.NotifyResourceUpdated(uri, ResourceUpdateDelta{})
+
+	if got := a.updates(uri); got != 1 {
+		t.Fatalf("mixed mode must deliver exactly once to A; got %d (calls=%+v)", got, a.snapshot())
+	}
+}
+
 // TestResourceSubscription_BroadcastSentinel pins backwards compatibility
 // for handlers invoked without a Notifier in ctx (e.g. direct unit tests
 // against handle). The legacy behaviour was server-wide subscription
