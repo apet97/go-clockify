@@ -174,6 +174,21 @@ const (
 // Has reports whether the receiver carries every bit in mask.
 func (r RiskClass) Has(mask RiskClass) bool { return r&mask == mask }
 
+// RiskHighMask is the union of risk-class bits that gate a tool call
+// behind a confirmation token per docs/adr/0018-risk-class-confirmation-tokens.md.
+// The set is intentionally narrow: ordinary RiskWrite stays
+// confirmation-free so the time-tracking surface is not slowed down
+// by the dry-run-first flow. RiskDestructive, RiskBilling, RiskAdmin,
+// RiskPermissionChange, and RiskExternalSideEffect each represent a
+// "agent fires off the wrong call" failure mode that the dry-run
+// preview is uniquely positioned to catch.
+const RiskHighMask = RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive
+
+// IsHighRisk reports whether any high-risk bit is set on the receiver.
+// Used by the confirmation-token gate (internal/enforcement) and by
+// the schema/annotation enrichment in internal/tools/common.go.
+func (r RiskClass) IsHighRisk() bool { return r&RiskHighMask != 0 }
+
 type ToolDescriptor struct {
 	Tool            Tool
 	Handler         ToolHandler
