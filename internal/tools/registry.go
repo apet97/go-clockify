@@ -110,13 +110,13 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TimesheetReview(ctx, args)
 		}},
-		{Tool: toolRW("clockify_start_timer", "Start a new timer. Supports dry_run:true.", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRW("clockify_start_timer", "Start a new timer. Supports dry_run:true.", map[string]any{"type": "object", "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "type": map[string]any{"type": "string", "enum": []string{"REGULAR", "BREAK"}, "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled."}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.StartTimerArgs(ctx, args)
 		}},
 		{Tool: toolRWIdem("clockify_stop_timer", "Stop the current running timer", map[string]any{"type": "object", "properties": map[string]any{"dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.StopTimer(ctx, args)
 		}},
-		{Tool: toolRW("clockify_log_time", "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "timezone": timezoneInputProperty(), "tag_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional Clockify tag IDs to attach to the entry"}, "billable": map[string]any{"type": "boolean"}, "allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRW("clockify_log_time", "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{"project_id": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}, "description": map[string]any{"type": "string"}, "start": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "end": map[string]any{"type": "string", "description": flexibleDatetimeDescription}, "timezone": timezoneInputProperty(), "tag_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional Clockify tag IDs to attach to the entry"}, "billable": map[string]any{"type": "boolean"}, "type": map[string]any{"type": "string", "enum": []string{"REGULAR", "BREAK"}, "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled."}, "allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."}, "dry_run": map[string]any{"type": "boolean"}}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.LogTime(ctx, args)
 		}},
 		{Tool: toolRW("clockify_timesheet_fill_gap", "Create one finished time entry for a reviewed gap after validating that the requested interval does not overlap existing entries. Supports dry_run:true.", map[string]any{"type": "object", "required": []string{"start", "end", "description"}, "properties": map[string]any{
@@ -127,6 +127,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"project_id":    map[string]any{"type": "string"},
 			"description":   map[string]any{"type": "string"},
 			"billable":      map[string]any{"type": "boolean"},
+			"type":          map[string]any{"type": "string", "enum": []string{"REGULAR", "BREAK"}, "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled."},
 			"allow_overlap": map[string]any{"type": "boolean", "description": "Default false. Set true only after manually confirming the overlap is intentional."},
 			"dry_run":       map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -142,6 +143,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"task_id":       map[string]any{"type": "string"},
 			"tag_ids":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional Clockify tag IDs to attach to the entry"},
 			"billable":      map[string]any{"type": "boolean"},
+			"type":          map[string]any{"type": "string", "enum": []string{"REGULAR", "BREAK"}, "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled."},
 			"allow_overlap": map[string]any{"type": "boolean", "description": "Default false for finished entries with end set. Set true only after manually confirming the overlap is intentional."},
 			"dry_run":       map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -156,6 +158,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"timezone":    timezoneInputProperty(),
 			"billable":    map[string]any{"type": "boolean"},
+			"type":        map[string]any{"type": "string", "enum": []string{"REGULAR", "BREAK"}, "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled."},
 			"dry_run":     map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateEntry(ctx, args)

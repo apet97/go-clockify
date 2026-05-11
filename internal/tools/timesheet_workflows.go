@@ -202,6 +202,9 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 	if billablePtr != nil {
 		payload["billable"] = *billablePtr
 	}
+	if entryType := stringArg(args, "type"); entryType != "" {
+		payload["type"] = entryType
+	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
 		return ResultEnvelope{}, err

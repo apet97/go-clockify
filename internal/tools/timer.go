@@ -40,6 +40,9 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	if projectID != "" {
 		payload["projectId"] = projectID
 	}
+	if entryType := stringArg(args, "type"); entryType != "" {
+		payload["type"] = entryType
+	}
 	meta := map[string]any{"workspaceId": wsID}
 	if projectID != "" {
 		meta["projectId"] = projectID

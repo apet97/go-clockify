@@ -30,6 +30,14 @@ func timeEntryPutPayload(entry clockify.TimeEntry) map[string]any {
 	if entry.TaskID != "" {
 		payload["taskId"] = entry.TaskID
 	}
+	// type is REGULAR or BREAK; the live API leaves it untouched when
+	// omitted on PUT but explicitly preserving it makes the fetch-then-
+	// update flow round-trip identically. Empty strings are skipped so
+	// entries the API hadn't materialised a type for don't trip the
+	// "type required" validator on a regression-prone code path.
+	if entry.Type != "" {
+		payload["type"] = entry.Type
+	}
 	if len(entry.TagIDs) > 0 {
 		payload["tagIds"] = entry.TagIDs
 	}

@@ -187,6 +187,10 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 		payload["description"] = desc
 	}
 
+	if entryType := stringArg(args, "type"); entryType != "" {
+		payload["type"] = entryType
+	}
+
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -381,6 +385,14 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if billable, hasBillable := args["billable"].(bool); hasBillable && billable != existing.Billable {
 		existing.Billable = billable
 		changedFields = append(changedFields, "billable")
+	}
+
+	// Merge type (REGULAR or BREAK). Skip if unchanged so changedFields
+	// reflects an actual mutation, not a no-op echo of the existing
+	// value the API would silently re-accept anyway.
+	if entryType := stringArg(args, "type"); entryType != "" && entryType != existing.Type {
+		existing.Type = entryType
+		changedFields = append(changedFields, "type")
 	}
 
 	meta := map[string]any{

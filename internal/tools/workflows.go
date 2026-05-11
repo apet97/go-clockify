@@ -47,6 +47,9 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
 	}
+	if entryType := stringArg(args, "type"); entryType != "" {
+		payload["type"] = entryType
+	}
 	if tagIDs := stringSliceArg(args, "tag_ids"); len(tagIDs) > 0 {
 		payload["tagIds"] = tagIDs
 	}

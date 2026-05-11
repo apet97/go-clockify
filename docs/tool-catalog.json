@@ -163,6 +163,14 @@
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
+          },
+          "type": {
+            "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled.",
+            "enum": [
+              "REGULAR",
+              "BREAK"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -2727,6 +2735,14 @@
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
+          },
+          "type": {
+            "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled.",
+            "enum": [
+              "REGULAR",
+              "BREAK"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -3445,6 +3461,14 @@
           },
           "project_id": {
             "type": "string"
+          },
+          "type": {
+            "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled.",
+            "enum": [
+              "REGULAR",
+              "BREAK"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -4020,6 +4044,14 @@
           },
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled.",
+            "enum": [
+              "REGULAR",
+              "BREAK"
+            ],
             "type": "string"
           }
         },
@@ -4864,6 +4896,14 @@
           },
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Time entry type. REGULAR is the default; BREAK requires the workspace to have the Break feature enabled.",
+            "enum": [
+              "REGULAR",
+              "BREAK"
+            ],
             "type": "string"
           }
         },

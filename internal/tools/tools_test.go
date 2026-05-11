@@ -660,6 +660,44 @@ func TestAddEntry(t *testing.T) {
 	}
 }
 
+// TestAddEntryPassesType pins the QA-agent-18 fix: when `type` is
+// supplied (REGULAR or BREAK) the upstream POST body must carry it.
+// Without the wiring the parameter was silently ignored and the API
+// defaulted every entry to REGULAR, leaving callers unable to record
+// breaks. The fake upstream fails if the field is missing or if a
+// caller passes a value but the handler drops it on the floor.
+func TestAddEntryPassesType(t *testing.T) {
+	var gotType any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/time-entries" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		gotType = body["type"]
+		respondJSON(t, w, clockify.TimeEntry{ID: "br1", Type: "BREAK"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.AddEntry(context.Background(), map[string]any{
+		"start":         "2026-04-06T09:00:00Z",
+		"end":           "2026-04-06T09:15:00Z",
+		"description":   "Coffee",
+		"project_id":    "p1",
+		"type":          "BREAK",
+		"allow_overlap": true,
+	})
+	if err != nil {
+		t.Fatalf("add entry: %v", err)
+	}
+	if gotType != "BREAK" {
+		t.Fatalf("upstream POST body.type = %#v, want \"BREAK\"", gotType)
+	}
+}
+
 func TestAddEntryRejectsOverlapWhenFinishedEntry(t *testing.T) {
 	var postCount int
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
