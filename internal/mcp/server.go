@@ -69,9 +69,13 @@ Tool tiers:
 Safety:
   - The server supports five policy modes: read_only, time_tracking_safe, safe_core, standard (default), full.
   - time_tracking_safe is the recommended AI-facing default (used by the shared-service and prod-postgres profiles).
-  - Destructive tools support dry-run previews when you pass dry_run:true.
-  - Omit dry_run or pass dry_run:false to execute the mutation.
-  - Use 'clockify_policy_info' to inspect the active policy and dry-run configuration.
+  - Every write tool accepts dry_run:true to preview the effect without executing.
+  - High-risk tools (billing, admin, permission-change, external-side-effect, destructive) require a server-issued confirmation token before execution. Flow:
+      1. Call with dry_run:true. The response includes confirmation_token, confirmation_expires_at, confirmation_risk_class, and confirmation_note.
+      2. Re-submit the SAME arguments with dry_run:false and confirmation_token to execute.
+    The token binds to (tool, arguments, principal, expiry); any argument change invalidates it.
+  - Ordinary RiskWrite tools (the time-entry/timer surface) do not need a confirmation token; pass dry_run:false (or omit it) to execute directly.
+  - Use 'clockify_policy_info' to inspect the active policy, dry-run, and confirmation-token configuration.
   - Tool arguments that reference entities by name (project, client, tag, user) are resolved strictly; ambiguous matches are rejected rather than guessed.
 
 Errors are returned in the MCP tool-error envelope (result.content + isError:true) for tool failures, and as JSON-RPC errors only for protocol violations.`

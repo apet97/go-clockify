@@ -15,7 +15,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 - **139 tools** — 51 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 88 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
-- **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run preview support for every destructive tool.
+- **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run previews on every write tool and HMAC confirmation tokens for high-risk tool calls (ADR 0018).
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
 - **Signed releases** — every binary and container image ships with cosign signatures and SPDX SBOMs; SLSA build provenance is attached when GitHub artifact attestations are available for the repository account tier.
@@ -263,19 +263,41 @@ Deactivate the domain when the task is done:
 ← { "deactivated": "invoices", "tool_count": 12, "deactivated_tools": ["clockify_list_invoices", "..."], "total_visible_tools": 35 }
 ```
 
-Preview a destructive operation first:
+Preview a high-risk operation first to mint a confirmation token (ADR 0018):
 
 ```
 → clockify_delete_entry { "entry_id": "abc123", "dry_run": true }
-← { "dry_run": true, "preview": { "id": "abc123", "description": "Meeting" }, "note": "No changes were made." }
+← {
+    "dry_run": true,
+    "preview": { "id": "abc123", "description": "Meeting" },
+    "note": "No changes were made.",
+    "confirmation_required": true,
+    "confirmation_token": "eyJ...example",
+    "confirmation_expires_at": "2026-05-11T19:05:00Z",
+    "confirmation_risk_class": ["destructive"],
+    "confirmation_note": "Re-submit the same arguments with dry_run:false and confirmation_token to execute."
+  }
 ```
 
-Execute after preview:
+The dry-run envelope shape is "rich preview for destructive tools that
+have a read counterpart, minimal envelope otherwise" — high-risk
+non-destructive tools (e.g. `clockify_send_invoice`,
+`clockify_test_webhook`) return only the confirmation fields plus an
+`args` echo. The token binds to the tool name, the argument
+fingerprint, the principal (tenant + subject + session), and an
+`exp`; changing any of those between mint and execute invalidates it.
+
+Execute with the same arguments plus the minted token:
 
 ```
-→ clockify_delete_entry { "entry_id": "abc123", "dry_run": false }
+→ clockify_delete_entry { "entry_id": "abc123", "dry_run": false, "confirmation_token": "eyJ...example" }
 ← { "ok": true, "action": "clockify_delete_entry", "data": { "deleted": true, "entryId": "abc123" } }
 ```
+
+Ordinary RiskWrite tools (the time-entry / timer surface — e.g.
+`clockify_log_time`, `clockify_start_timer`) do not require a
+confirmation token. Pass `dry_run:false` or omit it to execute
+directly; `dry_run:true` still returns a preview envelope.
 
 Large workspace report hygiene:
 
@@ -314,13 +336,18 @@ Call `clockify_list_tools` to discover a Tier 2 group or specific tool, `clockif
 
 Introspection tools (`clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`, `clockify_activate_group`, `clockify_activate_tool`, `clockify_deactivate_group`, `clockify_search_tools`, `clockify_resolve_name`, `clockify_resolve_debug`) are always available regardless of policy. `clockify_resolve_debug` is a compatibility alias; new clients should call `clockify_resolve_name`.
 
-`standard` and `full` currently share the same enforcement semantics:
-any non-denied tool or group is policy-allowed. Their operational
-difference is convention plus bootstrap/activation posture, not a
-separate RiskClass gate. Use `time_tracking_safe` or `safe_core` for
-hosted AI-facing defaults, and use `CLOCKIFY_DENY_*`,
-`CLOCKIFY_ALLOW_GROUPS`, and `CLOCKIFY_BOOTSTRAP_MODE` to narrow a
-trusted operator deployment.
+`standard` and `full` share broad policy allow rules: any non-denied
+tool or group is policy-allowed. Their operational difference is
+convention plus bootstrap/activation posture. **A separate ADR 0018
+confirmation-token gate sits alongside the policy mode** — when
+`CLOCKIFY_CONFIRMATION_TOKENS=enabled` (the default), every
+high-risk tool call (billing, admin, permission-change,
+external-side-effect, or destructive) requires a server-minted HMAC
+token obtained via a `dry_run:true` preview, regardless of policy
+mode. `time_tracking_safe` and `safe_core` remain the recommended
+AI-facing modes for hosted deployments, and `CLOCKIFY_DENY_*`,
+`CLOCKIFY_ALLOW_GROUPS`, and `CLOCKIFY_BOOTSTRAP_MODE` narrow a
+trusted operator deployment further.
 
 ## Configuration
 
