@@ -5,6 +5,7 @@ package main
 import (
 	"log/slog"
 	"net/http"
+
 	// Side-import registers /debug/pprof/* handlers on http.DefaultServeMux.
 	// This is the ONLY file in the repo that imports net/http/pprof; the
 	// //go:build pprof tag ensures the default build has zero pprof symbols

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+
 	// Side-imported so /debug/pprof/* is registered on http.DefaultServeMux
 	// inside the test binary. Production builds never link this file; the
 	// //go:build pprof guard means it only participates in `go test -tags=pprof`.
