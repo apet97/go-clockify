@@ -103,11 +103,39 @@ func TestEffectiveTenantMode(t *testing.T) {
 			want:        TimeTrackingSafe,
 		},
 		{
-			name:        "empty tenant inherits even when ceiling is tighter",
-			processMode: SafeCore,
+			name:        "process broader than explicit ceiling fails before tenant is considered",
+			processMode: Standard,
 			tenantMode:  "",
-			ceiling:     ReadOnly,
-			want:        SafeCore, // process mode wins; the ceiling only constrains tenant overrides
+			ceiling:     TimeTrackingSafe,
+			wantErr:     "exceeds ceiling",
+		},
+		{
+			name:        "process equal to ceiling with empty tenant returns process mode",
+			processMode: TimeTrackingSafe,
+			tenantMode:  "",
+			ceiling:     TimeTrackingSafe,
+			want:        TimeTrackingSafe,
+		},
+		{
+			name:        "process narrower than ceiling with empty tenant returns process mode",
+			processMode: ReadOnly,
+			tenantMode:  "",
+			ceiling:     TimeTrackingSafe,
+			want:        ReadOnly,
+		},
+		{
+			name:        "invalid process mode fails closed",
+			processMode: Mode("tenant-admin"),
+			tenantMode:  "",
+			ceiling:     "",
+			wantErr:     "invalid process mode",
+		},
+		{
+			name:        "invalid ceiling fails closed",
+			processMode: TimeTrackingSafe,
+			tenantMode:  "",
+			ceiling:     Mode("tenant-admin"),
+			wantErr:     "invalid ceiling",
 		},
 		{
 			name:        "tenant narrowing under explicit ceiling succeeds",
@@ -117,18 +145,11 @@ func TestEffectiveTenantMode(t *testing.T) {
 			want:        TimeTrackingSafe,
 		},
 		{
-			name:        "tenant equal to explicit ceiling succeeds",
-			processMode: Standard,
+			name:        "tenant equal to process under matching ceiling succeeds",
+			processMode: TimeTrackingSafe,
 			tenantMode:  TimeTrackingSafe,
 			ceiling:     TimeTrackingSafe,
 			want:        TimeTrackingSafe,
-		},
-		{
-			name:        "tenant broadening past explicit ceiling fails closed",
-			processMode: Standard,
-			tenantMode:  Standard,
-			ceiling:     TimeTrackingSafe,
-			wantErr:     "exceeds",
 		},
 		{
 			name:        "tenant broadening past implicit process ceiling fails closed",
@@ -138,10 +159,10 @@ func TestEffectiveTenantMode(t *testing.T) {
 			wantErr:     "exceeds",
 		},
 		{
-			name:        "tenant broadening to full past standard ceiling fails closed",
-			processMode: Full,
-			tenantMode:  Full,
-			ceiling:     Standard,
+			name:        "tenant broadening past explicit process+ceiling fails closed",
+			processMode: TimeTrackingSafe,
+			tenantMode:  Standard,
+			ceiling:     TimeTrackingSafe,
 			wantErr:     "exceeds",
 		},
 		{
@@ -149,39 +170,32 @@ func TestEffectiveTenantMode(t *testing.T) {
 			processMode: Standard,
 			tenantMode:  Mode("tenant-admin"),
 			ceiling:     "",
-			wantErr:     "invalid",
+			wantErr:     "invalid tenant",
 		},
 		{
-			name:        "read_only ceiling rejects time_tracking_safe",
+			name:        "process standard + ceiling time_tracking_safe fails before tenant override",
 			processMode: Standard,
-			tenantMode:  TimeTrackingSafe,
-			ceiling:     ReadOnly,
-			wantErr:     "exceeds",
+			tenantMode:  ReadOnly, // tenant would have been valid but process check fires first
+			ceiling:     TimeTrackingSafe,
+			wantErr:     "process mode \"standard\" exceeds ceiling \"time_tracking_safe\"",
 		},
 		{
-			name:        "read_only ceiling accepts read_only",
-			processMode: Standard,
+			name:        "read_only process+ceiling accepts read_only tenant",
+			processMode: ReadOnly,
 			tenantMode:  ReadOnly,
 			ceiling:     ReadOnly,
 			want:        ReadOnly,
 		},
 		{
-			name:        "safe_core ceiling accepts safe_core",
-			processMode: Standard,
+			name:        "safe_core process+ceiling accepts safe_core tenant",
+			processMode: SafeCore,
 			tenantMode:  SafeCore,
 			ceiling:     SafeCore,
 			want:        SafeCore,
 		},
 		{
-			name:        "safe_core ceiling rejects standard",
+			name:        "standard ceiling rejects full tenant when process is standard",
 			processMode: Standard,
-			tenantMode:  Standard,
-			ceiling:     SafeCore,
-			wantErr:     "exceeds",
-		},
-		{
-			name:        "standard ceiling accepts standard but rejects full",
-			processMode: Full,
 			tenantMode:  Full,
 			ceiling:     Standard,
 			wantErr:     "exceeds",
@@ -194,7 +208,7 @@ func TestEffectiveTenantMode(t *testing.T) {
 			want:        Full,
 		},
 		{
-			name:        "ceiling cannot widen process mode (tenant matches process)",
+			name:        "tenant cannot widen past process mode even when ceiling is broader",
 			processMode: TimeTrackingSafe,
 			tenantMode:  SafeCore,
 			ceiling:     Full,
@@ -220,6 +234,74 @@ func TestEffectiveTenantMode(t *testing.T) {
 				t.Fatalf("EffectiveTenantMode = %q, want %q", got, c.want)
 			}
 		})
+	}
+}
+
+// TestFromEnv_RejectsProcessExceedingCeiling pins the config-load
+// fail-closed shape. An operator who explicitly overrides
+// CLOCKIFY_POLICY to standard while leaving MCP_TENANT_POLICY_CEILING
+// at the hosted default time_tracking_safe gets a clear startup
+// error rather than silently broadening every tenant past the
+// hosted ceiling. ADR 0021.
+func TestFromEnv_RejectsProcessExceedingCeiling(t *testing.T) {
+	t.Setenv("CLOCKIFY_POLICY", "standard")
+	t.Setenv("CLOCKIFY_DENY_TOOLS", "")
+	t.Setenv("CLOCKIFY_DENY_GROUPS", "")
+	t.Setenv("CLOCKIFY_ALLOW_GROUPS", "")
+	t.Setenv("MCP_TENANT_POLICY_CEILING", "time_tracking_safe")
+
+	_, err := FromEnv()
+	if err == nil {
+		t.Fatal("expected error when CLOCKIFY_POLICY exceeds MCP_TENANT_POLICY_CEILING")
+	}
+	for _, want := range []string{"CLOCKIFY_POLICY", "MCP_TENANT_POLICY_CEILING", "standard", "time_tracking_safe"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error message should name %q so the operator can act on it; got: %v", want, err)
+		}
+	}
+}
+
+// TestFromEnv_AcceptsProcessEqualToCeiling confirms the common
+// hosted shape (both pinned to time_tracking_safe) is accepted.
+func TestFromEnv_AcceptsProcessEqualToCeiling(t *testing.T) {
+	t.Setenv("CLOCKIFY_POLICY", "time_tracking_safe")
+	t.Setenv("CLOCKIFY_DENY_TOOLS", "")
+	t.Setenv("CLOCKIFY_DENY_GROUPS", "")
+	t.Setenv("CLOCKIFY_ALLOW_GROUPS", "")
+	t.Setenv("MCP_TENANT_POLICY_CEILING", "time_tracking_safe")
+
+	p, err := FromEnv()
+	if err != nil {
+		t.Fatalf("FromEnv: %v", err)
+	}
+	if p.Mode != TimeTrackingSafe {
+		t.Errorf("Mode = %q, want time_tracking_safe", p.Mode)
+	}
+	if p.Ceiling != TimeTrackingSafe {
+		t.Errorf("Ceiling = %q, want time_tracking_safe", p.Ceiling)
+	}
+}
+
+// TestFromEnv_AcceptsCeilingBroaderThanProcess confirms the
+// inverse — an operator pinning a broader ceiling than the
+// process is harmless because the tenant cannot exceed process
+// anyway (the process is its own implicit ceiling).
+func TestFromEnv_AcceptsCeilingBroaderThanProcess(t *testing.T) {
+	t.Setenv("CLOCKIFY_POLICY", "time_tracking_safe")
+	t.Setenv("CLOCKIFY_DENY_TOOLS", "")
+	t.Setenv("CLOCKIFY_DENY_GROUPS", "")
+	t.Setenv("CLOCKIFY_ALLOW_GROUPS", "")
+	t.Setenv("MCP_TENANT_POLICY_CEILING", "standard")
+
+	p, err := FromEnv()
+	if err != nil {
+		t.Fatalf("FromEnv: %v", err)
+	}
+	if p.Mode != TimeTrackingSafe {
+		t.Errorf("Mode = %q, want time_tracking_safe", p.Mode)
+	}
+	if p.Ceiling != Standard {
+		t.Errorf("Ceiling = %q, want standard", p.Ceiling)
 	}
 }
 

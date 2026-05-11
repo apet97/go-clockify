@@ -510,12 +510,14 @@ func TestTenantRuntime_BroadeningRejectedUnderImplicitCeiling(t *testing.T) {
 }
 
 // TestTenantRuntime_NarrowingAllowed verifies a tenant pinned to a
-// stricter mode than the ceiling builds successfully.
+// stricter mode than the process builds successfully. Mirrors the
+// vanilla hosted-profile shape where CLOCKIFY_POLICY and the ceiling
+// are both pinned to time_tracking_safe.
 func TestTenantRuntime_NarrowingAllowed(t *testing.T) {
 	store := hostedCeilingStore("acme", policy.ReadOnly, nil, nil, nil)
 	deps := runtimeDeps{
 		cfg:       config.Config{Profile: "shared-service"},
-		policy:    &policy.Policy{Mode: policy.Standard, Ceiling: policy.TimeTrackingSafe},
+		policy:    &policy.Policy{Mode: policy.TimeTrackingSafe, Ceiling: policy.TimeTrackingSafe},
 		bootstrap: bootstrap.Config{},
 	}
 	rt, err := tenantRuntime(context.Background(), "acme", deps, store)
@@ -527,6 +529,29 @@ func TestTenantRuntime_NarrowingAllowed(t *testing.T) {
 	}
 	if rt.Close != nil {
 		rt.Close()
+	}
+}
+
+// TestTenantRuntime_ProcessExceedsCeilingFailsClosed pins the
+// fail-closed shape for the misconfiguration where an operator
+// overrode CLOCKIFY_POLICY to standard while leaving the hosted
+// MCP_TENANT_POLICY_CEILING=time_tracking_safe default in place.
+// The error must fire even when the tenant record carries no
+// PolicyMode override — the implicit-inherit path must not bypass
+// the ceiling check. ADR 0021.
+func TestTenantRuntime_ProcessExceedsCeilingFailsClosed(t *testing.T) {
+	store := hostedCeilingStore("acme", "", nil, nil, nil) // empty tenant PolicyMode
+	deps := runtimeDeps{
+		cfg:       config.Config{Profile: "shared-service"},
+		policy:    &policy.Policy{Mode: policy.Standard, Ceiling: policy.TimeTrackingSafe},
+		bootstrap: bootstrap.Config{},
+	}
+	_, err := tenantRuntime(context.Background(), "acme", deps, store)
+	if err == nil {
+		t.Fatal("expected error for process mode broader than explicit ceiling")
+	}
+	if !strings.Contains(err.Error(), "process mode") || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected 'process mode ... exceeds ceiling' error, got: %v", err)
 	}
 }
 

@@ -75,6 +75,14 @@ func FromEnv() (*Policy, error) {
 		default:
 			return nil, fmt.Errorf("invalid MCP_TENANT_POLICY_CEILING: %s", raw)
 		}
+		// Fail fast at config load when an operator pinned a process
+		// mode broader than the explicit ceiling — the binary cannot
+		// honour both. Hosted profiles default both to
+		// time_tracking_safe, so this only fires when an operator
+		// explicitly overrode one of them. See ADR 0021.
+		if Rank(mode) > Rank(ceiling) {
+			return nil, fmt.Errorf("CLOCKIFY_POLICY %q exceeds MCP_TENANT_POLICY_CEILING %q; lower one to match", string(mode), string(ceiling))
+		}
 	}
 
 	denied := map[string]bool{}
@@ -254,28 +262,42 @@ func IsAtMost(candidate, ceiling Mode) bool {
 //
 // Invariants (see ADR 0021):
 //
-//   - Empty tenantMode inherits processMode.
+//   - processMode must be a known mode (read_only / time_tracking_safe /
+//     safe_core / standard / full). Unknown processMode fails closed.
+//   - When ceiling is set, ceiling must be a known mode AND processMode
+//     must satisfy processMode <= ceiling. A processMode broader than
+//     the explicit ceiling is a configuration error and fails closed
+//     before the tenant override is considered. This catches the
+//     hosted-profile misconfiguration where an operator overrode
+//     CLOCKIFY_POLICY=standard while the profile pinned
+//     MCP_TENANT_POLICY_CEILING=time_tracking_safe.
+//   - Empty tenantMode inherits processMode (subject to the
+//     processMode<=ceiling invariant above).
 //   - Unknown tenantMode fails closed.
-//   - Effective ceiling is min(processMode, ceiling-if-set). Process
-//     mode is an implicit ceiling even when no explicit ceiling is
-//     configured, so a hosted operator who forgets to set
-//     MCP_TENANT_POLICY_CEILING still cannot have tenants broaden
-//     past the process posture.
-//   - tenantMode > effective ceiling fails closed with an explicit
-//     error rather than silent clamp.
+//   - After the processMode<=ceiling invariant, the effective ceiling
+//     for the tenant override is processMode itself (it is the tighter
+//     of the two). tenantMode > processMode fails closed with an
+//     explicit error rather than silent clamp.
 func EffectiveTenantMode(processMode, tenantMode, ceiling Mode) (Mode, error) {
+	if Rank(processMode) < 0 {
+		return "", fmt.Errorf("invalid process mode %q", string(processMode))
+	}
+	if ceiling != "" {
+		if Rank(ceiling) < 0 {
+			return "", fmt.Errorf("invalid ceiling %q", string(ceiling))
+		}
+		if Rank(processMode) > Rank(ceiling) {
+			return "", fmt.Errorf("process mode %q exceeds ceiling %q", string(processMode), string(ceiling))
+		}
+	}
 	if tenantMode == "" {
 		return processMode, nil
 	}
 	if Rank(tenantMode) < 0 {
 		return "", fmt.Errorf("invalid tenant policyMode %q", string(tenantMode))
 	}
-	effectiveCeiling := processMode
-	if ceiling != "" && Rank(ceiling) >= 0 && Rank(ceiling) < Rank(effectiveCeiling) {
-		effectiveCeiling = ceiling
-	}
-	if Rank(tenantMode) > Rank(effectiveCeiling) {
-		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(effectiveCeiling))
+	if Rank(tenantMode) > Rank(processMode) {
+		return "", fmt.Errorf("tenant policyMode %q exceeds ceiling %q", string(tenantMode), string(processMode))
 	}
 	return tenantMode, nil
 }
