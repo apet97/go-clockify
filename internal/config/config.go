@@ -937,7 +937,7 @@ func (c Config) Fingerprint() map[string]any {
 		"policy_claim_tenant":           c.TenantClaim,
 		"policy_claim_subject":          c.SubjectClaim,
 		"default_tenant_id":             c.DefaultTenantID,
-		"control_plane_dsn":             c.ControlPlaneDSN,
+		"control_plane_dsn":             sanitizeDSNForFingerprint(c.ControlPlaneDSN),
 		"session_ttl":                   c.SessionTTL.String(),
 		"allow_any_origin":              c.AllowAnyOrigin,
 		"strict_host_check":             c.StrictHostCheck,
@@ -1101,4 +1101,29 @@ func nonNegativeInt(key, raw string, max int) (int, error) {
 		return 0, fmt.Errorf("%s must be <= %d", key, max)
 	}
 	return value, nil
+}
+
+// sanitizeDSNForFingerprint returns a copy of the control-plane DSN
+// safe for inclusion in the startup-log fingerprint. Postgres DSNs may
+// carry a password in the URL userinfo
+// (postgres://user:password@host/db); when present, the password is
+// replaced with [REDACTED]. Dev backends (memory, file://) are returned
+// unchanged because they carry no credential material.
+func sanitizeDSNForFingerprint(dsn string) string {
+	if dsn == "" {
+		return dsn
+	}
+	if IsDevControlPlaneDSN(dsn) {
+		return dsn
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+	if u.User != nil {
+		if _, hasPassword := u.User.Password(); hasPassword {
+			u.User = url.UserPassword(u.User.Username(), "[REDACTED]")
+		}
+	}
+	return u.String()
 }
