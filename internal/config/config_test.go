@@ -142,6 +142,60 @@ func TestLoadReportsURLRemoved(t *testing.T) {
 	}
 }
 
+func TestLoadMaxRetriesDefault(t *testing.T) {
+	setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key"})
+	os.Unsetenv("CLOCKIFY_MAX_RETRIES")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxRetries != 3 {
+		t.Fatalf("expected default MaxRetries=3, got %d", cfg.MaxRetries)
+	}
+}
+
+func TestLoadMaxRetriesHonorsEnv(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_MAX_RETRIES": "5",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxRetries != 5 {
+		t.Fatalf("expected MaxRetries=5, got %d", cfg.MaxRetries)
+	}
+}
+
+func TestLoadMaxRetriesZeroDisables(t *testing.T) {
+	setEnvs(t, map[string]string{
+		"CLOCKIFY_API_KEY":     "test-key",
+		"CLOCKIFY_MAX_RETRIES": "0",
+	})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxRetries != 0 {
+		t.Fatalf("expected MaxRetries=0, got %d", cfg.MaxRetries)
+	}
+}
+
+func TestLoadMaxRetriesRejectsInvalid(t *testing.T) {
+	for _, v := range []string{"-1", "11", "abc", "100"} {
+		t.Run(v, func(t *testing.T) {
+			setEnvs(t, map[string]string{
+				"CLOCKIFY_API_KEY":     "test-key",
+				"CLOCKIFY_MAX_RETRIES": v,
+			})
+			if _, err := Load(); err == nil {
+				t.Fatalf("expected error for CLOCKIFY_MAX_RETRIES=%q, got nil", v)
+			}
+		})
+	}
+}
+
 func TestLoadTimezone(t *testing.T) {
 	setEnvs(t, map[string]string{
 		"CLOCKIFY_API_KEY":  "test-key",

@@ -52,6 +52,7 @@ func AllSpecs() []EnvSpec {
 		{Name: "CLOCKIFY_TOKEN_BUDGET", Group: "Performance", Default: "8000", Help: "Response token budget (0=disabled)"},
 		{Name: "CLOCKIFY_TRUNCATION_FAIL_CLOSED", Group: "Performance", Enum: []string{"0", "1"}, Default: "0", Help: "When 1, response truncation marshal/unmarshal errors fail the tool call instead of returning the original payload. Hosted profiles force this on."},
 		{Name: "CLOCKIFY_TOOL_TIMEOUT", Group: "Performance", Default: "45s", Help: "Per-tool deadline [5s,10m]"},
+		{Name: "CLOCKIFY_MAX_RETRIES", Group: "Performance", Default: "3", Help: "Upstream Clockify API retry budget per request [0,10]; 0 disables retries"},
 		{Name: "MCP_MAX_INFLIGHT_TOOL_CALLS", Group: "Performance", Default: "64", Help: "Stdio dispatch goroutine cap (0=disabled)"},
 		{Name: "CLOCKIFY_REPORT_MAX_ENTRIES", Group: "Performance", Default: "10000", Help: "Hard cap on aggregated report entries (0=unbounded)"},
 		{Name: "CLOCKIFY_SUBJECT_IDLE_TTL", Group: "Performance", Default: "1h", Help: "Idle cutoff for per-subject rate limiter reap"},

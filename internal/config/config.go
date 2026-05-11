@@ -305,6 +305,13 @@ func Load() (Config, error) {
 
 	cfg.RequestTimeout = 30 * time.Second
 	cfg.MaxRetries = 3
+	if v := strings.TrimSpace(os.Getenv("CLOCKIFY_MAX_RETRIES")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 || n > 10 {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_MAX_RETRIES %q: must be an integer between 0 and 10", v)
+		}
+		cfg.MaxRetries = n
+	}
 
 	// Timezone
 	cfg.Timezone = os.Getenv("CLOCKIFY_TIMEZONE")
