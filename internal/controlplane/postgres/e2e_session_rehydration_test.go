@@ -134,14 +134,20 @@ func TestStreamableHTTPCrossInstanceRehydration(t *testing.T) {
 			CredentialRefID: rehydCred,
 			WorkspaceID:     rehydWS,
 			BaseURL:         clockifyBaseURL,
-			PolicyMode:      string(policy.Standard),
+			// time_tracking_safe matches the shared-service profile's
+			// MCP_TENANT_POLICY_CEILING default applied by sharedSvcFactory
+			// (ADR 0021). The factory now derives the per-tenant policy
+			// via tenantpolicy.Derive, which fails session-create when a
+			// tenant's PolicyMode exceeds the process ceiling — see
+			// PR #99 review fix-forward.
+			PolicyMode: string(policy.TimeTrackingSafe),
 		},
 		{
 			ID:              rehydTenantOther,
 			CredentialRefID: rehydCredOther,
 			WorkspaceID:     rehydWSOther,
 			BaseURL:         clockifyBaseURL,
-			PolicyMode:      string(policy.Standard),
+			PolicyMode:      string(policy.TimeTrackingSafe),
 		},
 	} {
 		if err := store.PutTenant(tenant); err != nil {
