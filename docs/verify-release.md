@@ -15,10 +15,11 @@ When GitHub artifact attestations are available for the repository
 account tier, the release workflow also stores SLSA build provenance
 in the GitHub attestation service (verified via
 `gh attestation verify`, not as an `.intoto.jsonl` artifact alongside
-the binary). On the current user-owned private repository, that
-service can return "Feature not available for user-owned private
-repositories", so the mandatory cryptographic gate is the cosign
-binary/image signature chain.
+the binary). The repository flipped public on 2026-04-22, so the
+attestation service is generally available; the v1.0.x-era "Feature
+not available for user-owned private repositories" workaround (ADR
+0013) is preserved as historical context only — the mandatory
+cryptographic gate remains the cosign binary/image signature chain.
 
 Plus a single signed checksum file per release: `SHA256SUMS.txt`.
 
@@ -102,11 +103,12 @@ The output ends with `Verification succeeded!`. A non-zero exit
 means either the binary was tampered with or the attestation has
 not yet propagated through the GitHub attestation service
 (eventually-consistent — retry in 10 minutes for a freshly
-published release). On the current user-owned private repository,
-GitHub may also return "Feature not available for user-owned private
-repositories"; in that case SLSA provenance is unavailable at this
-account tier and the mandatory cryptographic gate is the cosign
-binary/image signature chain.
+published release). Pre-2026-04-22 (when the repository was still
+private), GitHub returned "Feature not available for user-owned
+private repositories" and SLSA provenance was unavailable at that
+account tier; the mandatory cryptographic gate is the cosign
+binary/image signature chain (it remained mandatory through the
+public flip — SLSA provenance is additive evidence).
 
 ## 4. Inspect and scan the SBOM
 

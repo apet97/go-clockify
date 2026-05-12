@@ -253,10 +253,12 @@ you need a checklist for a third-party assessor, this is the list.
   release artifact.
 - **Signed releases** — every binary carries a cosign keyless
   signature (sigstore bundle), plus a SLSA build provenance
-  attestation when GitHub artifact attestations are available for the
-  repository account tier. ADR-0013 keeps SLSA best-effort on the
-  current user-owned private repository; the mandatory cryptographic
-  gate is the cosign binary/image chain. Verification flow:
+  attestation. ADR-0013 kept SLSA best-effort during the v1.0.x era
+  when the repository was still user-owned private and GitHub's
+  attestation service was unavailable; the repository flipped public
+  on 2026-04-22, attestation is generally available now, and the
+  mandatory cryptographic gate remains the cosign binary/image chain.
+  Verification flow:
   [`docs/verification.md`](verification.md). Continuous re-verification:
   [`.github/workflows/release-smoke.yml`](../.github/workflows/release-smoke.yml).
 - **SBOM** — every binary and image carries a SPDX SBOM.
