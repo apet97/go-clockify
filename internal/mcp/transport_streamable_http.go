@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
@@ -23,6 +24,60 @@ import (
 	"github.com/apet97/go-clockify/internal/controlplane"
 	"github.com/apet97/go-clockify/internal/metrics"
 )
+
+// sseFramePool reuses an outgoing-event buffer across SSE notifications.
+// Every event would otherwise allocate three string-concat results
+// ("id: "+digits, "event: "+method, "data: "+payload+"\n\n") plus one
+// copy from json.Marshal's []byte to a string for the data line. At a
+// 64-subscriber fan-out × 1 KB payload that is ~256 KB of garbage per
+// tools/list_changed fan-out before pooling. The pool keeps a small
+// number of buffers live and lets the marshaller write directly into
+// one of them.
+var sseFramePool = sync.Pool{
+	New: func() any { return new(bytes.Buffer) },
+}
+
+// sseNotificationFrame mirrors the JSON shape the SSE writer previously
+// emitted via a map[string]any literal. Using a struct (and the
+// `params` json tag without omitempty) keeps the wire bytes byte-
+// identical: encoding/json emits fields in declaration order, matching
+// the alphabetical order the map literal produced for these three
+// keys.
+type sseNotificationFrame struct {
+	JSONRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Params  any    `json:"params"`
+}
+
+// writeSSEFrame assembles an SSE event into a pooled buffer and writes
+// it to w in a single Write call. Caller is responsible for flushing w
+// (HTTP flusher) after the write returns so the frame reaches the
+// network promptly.
+func writeSSEFrame(w io.Writer, event sessionEvent) {
+	payload, _ := json.Marshal(sseNotificationFrame{
+		JSONRPC: "2.0",
+		Method:  event.method,
+		Params:  event.params,
+	})
+	buf, _ := sseFramePool.Get().(*bytes.Buffer)
+	if buf == nil {
+		buf = new(bytes.Buffer)
+	}
+	defer func() {
+		buf.Reset()
+		sseFramePool.Put(buf)
+	}()
+	// Grow to roughly id-prefix + method-prefix + payload + framing.
+	buf.Grow(len(payload) + len(event.method) + 32)
+	buf.WriteString("id: ")
+	buf.WriteString(strconv.FormatUint(event.id, 10))
+	buf.WriteString("\nevent: ")
+	buf.WriteString(event.method)
+	buf.WriteString("\ndata: ")
+	buf.Write(payload)
+	buf.WriteString("\n\n")
+	_, _ = w.Write(buf.Bytes())
+}
 
 // errSession* sentinels distinguish the three failure modes of
 // streamSessionManager.get so the HTTP handler can map each to the
@@ -607,19 +662,12 @@ func streamableEventsHandler(opts StreamableHTTPOptions, mgr *streamSessionManag
 				if !ok {
 					return
 				}
-				payload, _ := json.Marshal(map[string]any{
-					"jsonrpc": "2.0",
-					"method":  event.method,
-					"params":  event.params,
-				})
-				// SSE ID values are server-generated monotonically increasing
-				// integers written as text/event-stream framing, not HTML.
-				_, _ = io.WriteString(w, "id: "+strconv.FormatUint(event.id, 10)+"\n") // nosemgrep
-				// Event names are server constants in an SSE frame, never caller input.
-				_, _ = io.WriteString(w, "event: "+event.method+"\n") // nosemgrep
-				// Payload is JSON marshaled before SSE framing, so embedded
-				// newlines in values are escaped inside the JSON string.
-				_, _ = io.WriteString(w, "data: "+string(payload)+"\n\n") // nosemgrep
+				// Pooled buffer + struct-based marshal eliminates the
+				// per-event concat allocations the inlined writes used
+				// to incur. Wire output is byte-identical to the prior
+				// map-literal Marshal: struct field order matches the
+				// alphabetised keys encoding/json emitted before.
+				writeSSEFrame(w, event)
 				flusher.Flush()
 			}
 		}
