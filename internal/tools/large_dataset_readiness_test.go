@@ -32,17 +32,16 @@ func TestLargeWorkspaceReadiness_SingleOwnerSynthetic(t *testing.T) {
 		AuthMode: authn.ModeStaticBearer,
 	})
 
-	summary := harness.Call(ctx, "clockify_summary_report", map[string]any{
-		"start":           "2026-04-01T00:00:00Z",
-		"end":             "2026-05-01T00:00:00Z",
+	summary := harness.Call(ctx, "clockify_quick_report", map[string]any{
+		"days":            30,
 		"include_entries": false,
 	})
 	if summary.Outcome != testharness.OutcomeSuccess {
-		t.Fatalf("summary_report outcome=%s error=%q raw=%s", summary.Outcome, summary.ErrorMessage, string(summary.Raw))
+		t.Fatalf("quick_report outcome=%s error=%q raw=%s", summary.Outcome, summary.ErrorMessage, string(summary.Raw))
 	}
 	var summaryEnv largeSummaryEnvelope
 	decodeToolResult(t, summary.ResultText, &summaryEnv)
-	if !summaryEnv.OK || summaryEnv.Action != "clockify_summary_report" {
+	if !summaryEnv.OK || summaryEnv.Action != "clockify_quick_report" {
 		t.Fatalf("unexpected summary envelope: %+v", summaryEnv)
 	}
 	if summaryEnv.Data.Totals.Entries != len(entries) {
@@ -61,14 +60,13 @@ func TestLargeWorkspaceReadiness_SingleOwnerSynthetic(t *testing.T) {
 		t.Fatalf("unexpected pagination meta: %+v", summaryEnv.Meta.Pagination)
 	}
 
-	detailed := harness.Call(ctx, "clockify_detailed_report", map[string]any{
-		"start":           "2026-04-01T00:00:00Z",
-		"end":             "2026-05-01T00:00:00Z",
+	detailed := harness.Call(ctx, "clockify_quick_report", map[string]any{
+		"days":            30,
 		"include_entries": true,
 		"max_entries":     100,
 	})
 	if detailed.Outcome != testharness.OutcomeToolError {
-		t.Fatalf("detailed_report outcome=%s error=%q raw=%s", detailed.Outcome, detailed.ErrorMessage, string(detailed.Raw))
+		t.Fatalf("quick_report outcome=%s error=%q raw=%s", detailed.Outcome, detailed.ErrorMessage, string(detailed.Raw))
 	}
 	if detailed.ErrorMessage == "" || !strings.Contains(detailed.ErrorMessage, "entry cap of 100 exceeded") {
 		t.Fatalf("expected entry cap error, got %q", detailed.ErrorMessage)
@@ -87,13 +85,12 @@ func BenchmarkLargeWorkspaceReadiness_SummaryReport(b *testing.B) {
 
 	b.ReportAllocs()
 	for b.Loop() {
-		result := harness.Call(ctx, "clockify_summary_report", map[string]any{
-			"start":           "2026-04-01T00:00:00Z",
-			"end":             "2026-05-01T00:00:00Z",
+		result := harness.Call(ctx, "clockify_quick_report", map[string]any{
+			"days":            30,
 			"include_entries": false,
 		})
 		if result.Outcome != testharness.OutcomeSuccess {
-			b.Fatalf("summary_report outcome=%s error=%q", result.Outcome, result.ErrorMessage)
+			b.Fatalf("quick_report outcome=%s error=%q", result.Outcome, result.ErrorMessage)
 		}
 	}
 }

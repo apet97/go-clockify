@@ -62,7 +62,7 @@ first when the visible tool list is smaller than expected.
 1. Activate billing tools:
    `clockify_activate_group { "name": "invoices" }`
 2. Summarize billable time before creating anything:
-   `clockify_detailed_report { "start": "2026-04-01T00:00:00Z", "end": "2026-05-01T00:00:00Z", "project": "Client Project", "include_entries": false }`
+   `clockify_detailed_report { "start": "2026-04-01T00:00:00.000", "end": "2026-05-01T00:00:00.000", "detailed_filter": { "page": 1, "page_size": 50, "options": { "totals": "CALCULATE" } } }`
 3. Resolve the Clockify client ID:
    `clockify_resolve_name { "entity_type": "client", "name_or_id": "Acme" }`
 4. Ask the user to confirm invoice number, dates, currency, amount, and

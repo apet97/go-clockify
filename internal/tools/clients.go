@@ -25,6 +25,10 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
+	addStringQuery(query, args, "name", "name")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	addStringQuery(query, args, "archived", "archived")
 	var out []clockify.ClientEntity
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
@@ -142,6 +146,16 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 		existing.Note = v
 		changedFields = append(changedFields, "note")
 	}
+	if ccEmails, ok, err := strictStringSliceArg(args, "cc_emails"); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		existing.CCEmails = ccEmails
+		changedFields = append(changedFields, "cc_emails")
+	}
+	if v := stringArg(args, "currency_id"); v != "" && v != existing.CurrencyID {
+		existing.CurrencyID = v
+		changedFields = append(changedFields, "currency_id")
+	}
 	if v, ok := args["archived"].(bool); ok && v != existing.Archived {
 		existing.Archived = v
 		changedFields = append(changedFields, "archived")
@@ -164,7 +178,10 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 
 	payload := clientPutPayload(existing)
 	var updated clockify.ClientEntity
-	if err := s.Client.Put(ctx, clientPath, payload, &updated); err != nil {
+	query := map[string]string{}
+	addBoolQuery(query, args, "archive_projects", "archive-projects")
+	addBoolQuery(query, args, "mark_tasks_as_done", "mark-tasks-as-done")
+	if err := s.Client.PutWithQuery(ctx, clientPath, query, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_client", updated, meta), nil

@@ -130,7 +130,7 @@ func builtinPrompts() []Prompt {
 				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the Monday of the week to review.", Required: true},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for week_start={{week_start}} first. Report total hours, issues, and suggestedActions from that structured review. If you need top project totals or entry rows, call `clockify_weekly_summary` with the same week_start and include_entries as needed."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for week_start={{week_start}} first. Report total hours, issues, and suggestedActions from that structured review. If you need Reports API weekly totals, call `clockify_weekly_summary` with `week_start={{week_start}}` and `weekly_filter:{\"group\":\"PROJECT\",\"subgroup\":\"TIME\"}`."}},
 			},
 		},
 		{
@@ -162,7 +162,7 @@ func builtinPrompts() []Prompt {
 				{Name: "format", Description: "One of `pdf`, `csv`, `md`.", Required: true},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` for totals and rows, then use `clockify_timesheet_review` to flag gaps or overlaps before rendering every day of the week including zero-hour days."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` with `weekly_filter:{\"group\":\"PROJECT\",\"subgroup\":\"TIME\"}` for Reports API totals, then use `clockify_timesheet_review` to flag gaps or overlaps before rendering every day of the week including zero-hour days."}},
 			},
 		},
 	}

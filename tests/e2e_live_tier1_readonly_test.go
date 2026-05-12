@@ -113,12 +113,12 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		end := time.Now().UTC()
 		start := end.Add(-24 * time.Hour)
 		result := h.callOK(ctx, "clockify_summary_report", map[string]any{
-			"start": start.Format(time.RFC3339),
-			"end":   end.Format(time.RFC3339),
+			"start": start.Format("2006-01-02T15:04:05.000"),
+			"end":   end.Format("2006-01-02T15:04:05.000"),
+			"summary_filter": map[string]any{
+				"groups": []any{"CLIENT", "PROJECT", "DAY"},
+			},
 		})
-		// summary_report returns a struct under data — at minimum the
-		// report has a totals field, regardless of whether any entries
-		// fell in the window.
 		data := extractDataMap(t, result)
 		if _, ok := data["totals"]; !ok {
 			t.Fatalf("summary_report response missing totals field: %#v", data)
@@ -128,10 +128,36 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 	t.Run("weekly_summary", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_weekly_summary", nil)
+		result := h.callOK(ctx, "clockify_weekly_summary", map[string]any{
+			"week_start": time.Now().UTC().Format("2006-01-02"),
+			"weekly_filter": map[string]any{
+				"group":    "PROJECT",
+				"subgroup": "TIME",
+			},
+		})
 		data := extractDataMap(t, result)
 		if _, ok := data["totals"]; !ok {
 			t.Fatalf("weekly_summary response missing totals field: %#v", data)
+		}
+	})
+
+	t.Run("attendance_report", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		end := time.Now().UTC()
+		start := end.Add(-24 * time.Hour)
+		result := h.callOK(ctx, "clockify_attendance_report", map[string]any{
+			"start": start.Format("2006-01-02T15:04:05.000"),
+			"end":   end.Format("2006-01-02T15:04:05.000"),
+			"attendance_filter": map[string]any{
+				"page":        1,
+				"page_size":   10,
+				"sort_column": "USER",
+			},
+		})
+		data := extractDataMap(t, result)
+		if _, ok := data["entities"]; !ok {
+			t.Fatalf("attendance_report response missing entities field: %#v", data)
 		}
 	})
 
@@ -181,8 +207,14 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		end := time.Now().UTC()
 		start := end.Add(-24 * time.Hour)
 		result := h.callOK(ctx, "clockify_detailed_report", map[string]any{
-			"start": start.Format(time.RFC3339),
-			"end":   end.Format(time.RFC3339),
+			"start": start.Format("2006-01-02T15:04:05.000"),
+			"end":   end.Format("2006-01-02T15:04:05.000"),
+			"detailed_filter": map[string]any{
+				"page":        1,
+				"page_size":   10,
+				"sort_column": "ID",
+				"options":     map[string]any{"totals": "CALCULATE"},
+			},
 		})
 		data := extractDataMap(t, result)
 		if _, ok := data["totals"]; !ok {

@@ -47,6 +47,14 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		"end":     scheduleArgs["end"],
 		"user_id": c.OwnerUserID,
 	}
+	expenseReportArgs := map[string]any{
+		"start":       start.Format("2006-01-02T15:04:05.000"),
+		"end":         end.Format("2006-01-02T15:04:05.000"),
+		"page":        1,
+		"page_size":   10,
+		"sort_column": "ID",
+		"sort_order":  "ASCENDING",
+	}
 
 	type call struct {
 		tool string
@@ -71,7 +79,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		}},
 		{"expenses", []call{
 			{"clockify_list_expenses", nil, ""},
-			{"clockify_expense_report", nil, ""},
+			{"clockify_expense_report", expenseReportArgs, ""},
 			{"clockify_list_expense_categories", nil, ""},
 		}},
 		{"scheduling", []call{

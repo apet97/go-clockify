@@ -25,8 +25,34 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
+	addStringQuery(query, args, "name", "name")
+	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
+	addBoolQuery(query, args, "archived", "archived")
+	addBoolQuery(query, args, "billable", "billable")
+	addBoolQuery(query, args, "contains_client", "contains-client")
+	addStringQuery(query, args, "client_status", "client-status")
+	addBoolQuery(query, args, "contains_user", "contains-user")
+	addStringQuery(query, args, "user_status", "user-status")
+	addBoolQuery(query, args, "is_template", "is-template")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	addBoolQuery(query, args, "hydrated", "hydrated")
+	addStringQuery(query, args, "access", "access")
+	addIntQuery(query, args, "expense_limit", "expense-limit")
+	addStringQuery(query, args, "expense_date", "expense-date")
+	addBoolQuery(query, args, "contains_group", "contains-group")
 	var projects []clockify.Project
-	if err := s.Client.Get(ctx, path, query, &projects); err != nil {
+	values := valuesFromQueryMap(query)
+	if err := addRepeatedStringQuery(values, args, "clients", "clients"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := addRepeatedStringQuery(values, args, "users", "users"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := addRepeatedStringQuery(values, args, "user_groups", "userGroups"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
 	meta := addPaginationMeta(map[string]any{
@@ -73,22 +99,17 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 
 	payload := map[string]any{"name": name}
 
-	clientRef := stringArg(args, "client")
-	if clientRef != "" {
+	if clientID := strings.TrimSpace(stringArg(args, "client_id")); clientID != "" {
+		payload["clientId"] = clientID
+	} else if clientRef := stringArg(args, "client"); clientRef != "" {
 		clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
 		payload["clientId"] = clientID
 	}
-	if color := stringArg(args, "color"); color != "" {
-		payload["color"] = color
-	}
-	if billable, ok := args["billable"].(bool); ok {
-		payload["billable"] = billable
-	}
-	if isPublic, ok := args["is_public"].(bool); ok {
-		payload["isPublic"] = isPublic
+	if err := applyProjectRequestFields(payload, args); err != nil {
+		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_create_project", dryrun.Preview("clockify_create_project", payload), map[string]any{"workspaceId": wsID}), nil
@@ -150,7 +171,10 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 		existing.Note = v
 		changedFields = append(changedFields, "note")
 	}
-	if clientRef := strings.TrimSpace(stringArg(args, "client")); clientRef != "" {
+	if clientID := strings.TrimSpace(stringArg(args, "client_id")); clientID != "" && clientID != existing.ClientID {
+		existing.ClientID = clientID
+		changedFields = append(changedFields, "client_id")
+	} else if clientRef := strings.TrimSpace(stringArg(args, "client")); clientRef != "" {
 		clientID, resolveErr := s.resolveClientID(ctx, wsID, clientRef)
 		if resolveErr != nil {
 			return ResultEnvelope{}, resolveErr
@@ -189,6 +213,9 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 	}
 
 	payload := projectPutPayload(existing)
+	if err := applyProjectRequestFields(payload, args); err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated clockify.Project
 	if err := s.Client.Put(ctx, projectPath, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
@@ -219,6 +246,63 @@ func projectPutPayload(p clockify.Project) map[string]any {
 		out["note"] = p.Note
 	}
 	return out
+}
+
+func applyProjectRequestFields(payload map[string]any, args map[string]any) error {
+	setIfString(payload, args, "color", "color")
+	setIfString(payload, args, "note", "note")
+	setIfBool(payload, args, "billable", "billable")
+	setIfBool(payload, args, "is_public", "isPublic")
+	setIfBool(payload, args, "archived", "archived")
+	if rate, ok, err := mapArg(args, "cost_rate"); err != nil {
+		return err
+	} else if ok {
+		payload["costRate"] = normalizeRateRequest(rate)
+	}
+	if rate, ok, err := mapArg(args, "hourly_rate"); err != nil {
+		return err
+	} else if ok {
+		payload["hourlyRate"] = normalizeRateRequest(rate)
+	}
+	if estimate, ok, err := mapArg(args, "estimate"); err != nil {
+		return err
+	} else if ok {
+		payload["estimate"] = normalizeEstimateRequest(estimate)
+	}
+	if budgetEstimate, ok, err := mapArg(args, "budget_estimate"); err != nil {
+		return err
+	} else if ok {
+		payload["budgetEstimate"] = normalizeEstimateWithOptionsRequest(budgetEstimate)
+	}
+	if estimateReset, ok, err := mapArg(args, "estimate_reset"); err != nil {
+		return err
+	} else if ok {
+		payload["estimateReset"] = normalizeEstimateResetRequest(estimateReset)
+	}
+	if timeEstimate, ok, err := mapArg(args, "time_estimate"); err != nil {
+		return err
+	} else if ok {
+		payload["timeEstimate"] = normalizeTimeEstimateRequest(timeEstimate)
+	}
+	if memberships, ok, err := mapSliceArg(args, "memberships"); err != nil {
+		return err
+	} else if ok {
+		out := make([]map[string]any, 0, len(memberships))
+		for _, item := range memberships {
+			out = append(out, normalizeMembershipRequest(item))
+		}
+		payload["memberships"] = out
+	}
+	if tasks, ok, err := mapSliceArg(args, "tasks"); err != nil {
+		return err
+	} else if ok {
+		out := make([]map[string]any, 0, len(tasks))
+		for _, item := range tasks {
+			out = append(out, normalizeTaskRequest(item))
+		}
+		payload["tasks"] = out
+	}
+	return nil
 }
 
 // DeleteProject archives the project if still active, then deletes

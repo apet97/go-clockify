@@ -36,8 +36,8 @@ func TestToolContractMatrix(t *testing.T) {
 			}
 		}
 	}
-	if len(all) != 139 {
-		t.Fatalf("expected 139 tools, got %d", len(all))
+	if len(all) != 148 {
+		t.Fatalf("expected 148 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}

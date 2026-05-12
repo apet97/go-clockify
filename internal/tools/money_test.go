@@ -120,11 +120,11 @@ func TestResolveEffectiveRate_CostIndependent(t *testing.T) {
 
 func TestDerivedEarnings(t *testing.T) {
 	cases := []struct {
-		name             string
-		eff              EffectiveRate
-		seconds          int64
-		wantBillCents    int64
-		wantCostCents    int64
+		name          string
+		eff           EffectiveRate
+		seconds       int64
+		wantBillCents int64
+		wantCostCents int64
 	}{
 		{"one_hour_at_4321", EffectiveRate{Hourly: rate(4321, "EUR"), Cost: rate(876, "EUR")}, 3600, 4321, 876},
 		{"half_hour", EffectiveRate{Hourly: rate(4000, "USD")}, 1800, 2000, 0},

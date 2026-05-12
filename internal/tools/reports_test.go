@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -85,28 +86,21 @@ func chunkEntries(entries []clockify.TimeEntry, pageSize int) [][]clockify.TimeE
 	return pages
 }
 
-// TestWeeklySummary seeds entries across multiple days and verifies the
-// WeeklySummary aggregates correctly into ByDay and ByProject rollups.
-func TestWeeklySummary(t *testing.T) {
+func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case "/workspaces/ws1/user/u1/time-entries":
-			respondJSON(t, w, []clockify.TimeEntry{
-				// Monday
-				{ID: "e1", Description: "Sprint planning", ProjectID: "p1", ProjectName: "Project A", TimeInterval: clockify.TimeInterval{Start: "2026-04-06T09:00:00Z", End: "2026-04-06T11:00:00Z"}},
-				// Tuesday
-				{ID: "e2", Description: "Build feature", ProjectID: "p1", ProjectName: "Project A", TimeInterval: clockify.TimeInterval{Start: "2026-04-07T09:00:00Z", End: "2026-04-07T12:00:00Z"}},
-				// Wednesday — different project
-				{ID: "e3", Description: "Review PRs", ProjectID: "p2", ProjectName: "Project B", TimeInterval: clockify.TimeInterval{Start: "2026-04-08T10:00:00Z", End: "2026-04-08T11:30:00Z"}},
-				// Thursday
-				{ID: "e4", Description: "Ship", ProjectID: "p1", ProjectName: "Project A", TimeInterval: clockify.TimeInterval{Start: "2026-04-09T14:00:00Z", End: "2026-04-09T16:00:00Z"}},
-				// Friday
-				{ID: "e5", Description: "Retro", ProjectID: "p2", ProjectName: "Project B", TimeInterval: clockify.TimeInterval{Start: "2026-04-10T15:00:00Z", End: "2026-04-10T16:00:00Z"}},
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/weekly" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode weekly body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"totals":      []map[string]any{{"entriesCount": 5}},
+				"groupOne":    []map[string]any{{"id": "p1", "name": "Project A"}},
+				"totalsByDay": []map[string]any{{"date": "2026-04-06", "duration": 7200}},
 			})
 		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 	})
 	defer cleanup()
@@ -115,45 +109,34 @@ func TestWeeklySummary(t *testing.T) {
 	result, err := svc.WeeklySummary(context.Background(), map[string]any{
 		"week_start": "2026-04-06",
 		"timezone":   "UTC",
+		"weekly_filter": map[string]any{
+			"group":    "PROJECT",
+			"subgroup": "TIME",
+		},
 	})
 	if err != nil {
 		t.Fatalf("weekly summary failed: %v", err)
 	}
-	data, ok := result.Data.(WeeklySummaryData)
+	data, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
-
-	// Should have 5 days with entries
-	if len(data.ByDay) != 5 {
-		t.Fatalf("expected 5 days, got %d: %+v", len(data.ByDay), data.ByDay)
+	if _, ok := data["totals"]; !ok {
+		t.Fatalf("expected upstream totals in data, got %#v", data)
 	}
-	// ByDay is sorted ascending
-	if data.ByDay[0].Date != "2026-04-06" {
-		t.Fatalf("expected first day 2026-04-06, got %s", data.ByDay[0].Date)
+	if gotBody["dateRangeStart"] != "2026-04-06T00:00:00.000" || gotBody["dateRangeEnd"] != "2026-04-12T23:59:59.999" {
+		t.Fatalf("weekly range not derived as exact local week: %#v", gotBody)
 	}
-	if data.ByDay[4].Date != "2026-04-10" {
-		t.Fatalf("expected last day 2026-04-10, got %s", data.ByDay[4].Date)
+	filter, _ := gotBody["weeklyFilter"].(map[string]any)
+	if filter["group"] != "PROJECT" || filter["subgroup"] != "TIME" {
+		t.Fatalf("unexpected weeklyFilter body: %#v", filter)
 	}
-	// Tuesday has 3 hours
-	if data.ByDay[1].TotalSeconds != 3*3600 {
-		t.Fatalf("expected Tuesday = 10800s, got %d", data.ByDay[1].TotalSeconds)
+	if _, has := gotBody["summaryFilter"]; has {
+		t.Fatalf("weekly report must not send summaryFilter: %#v", gotBody)
 	}
-
-	// ByProject: Project A = 7h (2 + 3 + 2), Project B = 2.5h (1.5 + 1)
-	if len(data.ByProject) != 2 {
-		t.Fatalf("expected 2 projects, got %d", len(data.ByProject))
+	if result.Meta["source"] != "reports-api" {
+		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
 	}
-	if data.ByProject[0].ProjectName != "Project A" {
-		t.Fatalf("expected top project Project A, got %s", data.ByProject[0].ProjectName)
-	}
-	if data.ByProject[0].TotalSeconds != 7*3600 {
-		t.Fatalf("expected Project A = 25200s, got %d", data.ByProject[0].TotalSeconds)
-	}
-	if data.Totals.Entries != 5 {
-		t.Fatalf("expected 5 total entries, got %d", data.Totals.Entries)
-	}
-	assertReportSuggestedActions(t, data.SuggestedActions, "p1")
 }
 
 // TestQuickReport verifies TopProject selection, RunningEntries detection,
@@ -298,82 +281,128 @@ func TestQuickReportAllowsQuarterAndYearWindows(t *testing.T) {
 	}
 }
 
-// TestDetailedReport covers project filtering, the default include_entries=true
-// behavior, and the truncation warning when count equals the page size (100).
-func TestDetailedReport(t *testing.T) {
+func TestDetailedReportUsesReportsAPI(t *testing.T) {
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case "/workspaces/ws1/user/u1/time-entries":
-			respondJSON(t, w, []clockify.TimeEntry{
-				{ID: "a", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
-				{ID: "b", ProjectID: "p2", ProjectName: "Beta", TimeInterval: clockify.TimeInterval{Start: "2026-04-02T09:00:00Z", End: "2026-04-02T11:00:00Z"}},
-				{ID: "c", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-03T09:00:00Z", End: "2026-04-03T09:30:00Z"}},
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode detailed body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"totals":      []map[string]any{{"entriesCount": 3}},
+				"timeentries": []map[string]any{{"id": "e1", "description": "Build"}},
 			})
 		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
 	result, err := svc.DetailedReport(context.Background(), map[string]any{
-		"start": "2026-04-01T00:00:00Z",
-		"end":   "2026-04-08T00:00:00Z",
+		"date_range_start": "2026-04-01T00:00:00.000",
+		"date_range_end":   "2026-04-08T23:59:59.999",
+		"amount_shown":     "COST",
+		"amounts":          []any{"EARNED", "COST", "PROFIT"},
+		"detailed_filter": map[string]any{
+			"page":        1,
+			"page_size":   20,
+			"sort_column": "ID",
+			"options":     map[string]any{"totals": "CALCULATE"},
+			"audit_filter": map[string]any{
+				"duration":         2,
+				"duration_shorter": false,
+				"without_project":  false,
+				"without_task":     true,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("detailed report failed: %v", err)
 	}
-	data, ok := result.Data.(SummaryData)
+	data, ok := result.Data.(map[string]any)
 	if !ok {
-		t.Fatalf("expected SummaryData, got %T", result.Data)
+		t.Fatalf("expected map data, got %T", result.Data)
 	}
-	// include_entries defaults to true
-	if len(data.Entries) != 3 {
-		t.Fatalf("expected 3 unfiltered entries, got %d", len(data.Entries))
+	if _, ok := data["timeentries"]; !ok {
+		t.Fatalf("expected upstream timeentries in data, got %#v", data)
 	}
-	if len(data.ByProject) != 2 || data.ByProject[0].ProjectID != "p2" {
-		t.Fatalf("expected top detailed project p2, got %+v", data.ByProject)
+	filter, _ := gotBody["detailedFilter"].(map[string]any)
+	if filter["pageSize"] != float64(20) || filter["sortColumn"] != "ID" {
+		t.Fatalf("detailedFilter not normalized: %#v", filter)
 	}
-	assertReportSuggestedActions(t, data.SuggestedActions, "p2")
-
-	// With include_entries=false, the SummaryData.Entries slice stays empty
-	// and the field is omitted from the JSON encoding (omitempty).
-	resultNoEntries, err := svc.DetailedReport(context.Background(), map[string]any{
-		"start":           "2026-04-01T00:00:00Z",
-		"end":             "2026-04-08T00:00:00Z",
-		"include_entries": false,
-	})
-	if err != nil {
-		t.Fatalf("detailed report (no entries) failed: %v", err)
+	audit, _ := filter["auditFilter"].(map[string]any)
+	if audit["withoutTask"] != true {
+		t.Fatalf("auditFilter not normalized: %#v", audit)
 	}
-	dataNoEntries := resultNoEntries.Data.(SummaryData)
-	if len(dataNoEntries.Entries) != 0 {
-		t.Fatalf("expected entries omitted when include_entries=false, got %d", len(dataNoEntries.Entries))
+	if _, has := gotBody["summaryFilter"]; has {
+		t.Fatalf("detailed report must not send summaryFilter: %#v", gotBody)
 	}
-	if len(dataNoEntries.SuggestedActions) == 0 {
-		t.Fatalf("expected suggestedActions when include_entries=false")
+	if result.Meta["source"] != "reports-api" {
+		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
 	}
 }
 
-// TestDetailedReportProjectFilter resolves the project name and filters entries.
-func TestDetailedReportProjectFilter(t *testing.T) {
+func TestAttendanceReportUsesReportsAPI(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/attendance" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode attendance body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"entities": []map[string]any{{"userId": "u1"}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.AttendanceReport(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-08T00:00:00Z",
+		"attendance_filter": map[string]any{
+			"page":        1,
+			"page_size":   5,
+			"sort_column": "USER",
+			"start_filters": []any{
+				map[string]any{"filtration_type": "EXACTLY", "value": "09:00"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("attendance report failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	if _, ok := data["entities"]; !ok {
+		t.Fatalf("expected upstream entities in data, got %#v", data)
+	}
+	filter, _ := gotBody["attendanceFilter"].(map[string]any)
+	if filter["pageSize"] != float64(5) || filter["sortColumn"] != "USER" {
+		t.Fatalf("attendanceFilter not normalized: %#v", filter)
+	}
+	if _, has := gotBody["detailedFilter"]; has {
+		t.Fatalf("attendance report must not send detailedFilter: %#v", gotBody)
+	}
+}
+
+func TestQuickReportProjectFilterPushesDown(t *testing.T) {
+	var gotProject string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/workspaces/ws1/projects":
+			if got := r.URL.Query().Get("name"); got != "Alpha" {
+				t.Fatalf("expected project name lookup Alpha, got %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []map[string]any{{"id": "p1", "name": "Alpha"}})
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case "/workspaces/ws1/user/u1/time-entries":
-			if got := r.URL.Query().Get("project"); got != "p1" {
-				t.Fatalf("expected detailed report to push project=p1 upstream, got %s", r.URL.RawQuery)
-			}
+			gotProject = r.URL.Query().Get("project")
 			respondJSON(t, w, []clockify.TimeEntry{
 				{ID: "a", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
-			})
-		case "/workspaces/ws1/projects":
-			// Called by resolve.ResolveProjectID when the ref isn't a 24-char hex ID
-			respondJSON(t, w, []map[string]any{
-				{"id": "p1", "name": "Alpha"},
 			})
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
@@ -382,20 +411,15 @@ func TestDetailedReportProjectFilter(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.DetailedReport(context.Background(), map[string]any{
-		"start":   "2026-04-01T00:00:00Z",
-		"end":     "2026-04-08T00:00:00Z",
+	result, err := svc.QuickReport(context.Background(), map[string]any{
+		"days":    7,
 		"project": "Alpha",
 	})
 	if err != nil {
-		t.Fatalf("detailed report with project filter failed: %v", err)
+		t.Fatalf("quick report failed: %v", err)
 	}
-	data := result.Data.(SummaryData)
-	if len(data.Entries) != 1 {
-		t.Fatalf("expected 1 filtered entry, got %d", len(data.Entries))
-	}
-	if data.Entries[0].ID != "a" {
-		t.Fatalf("expected entry a, got %s", data.Entries[0].ID)
+	if gotProject != "p1" {
+		t.Fatalf("expected quick report to push project=p1 upstream, got %q", gotProject)
 	}
 	pagination := result.Meta["pagination"].(map[string]any)
 	if pagination["project_filter_resolved_id"] != "p1" {
@@ -403,280 +427,97 @@ func TestDetailedReportProjectFilter(t *testing.T) {
 	}
 }
 
-func TestReportProjectFiltersPushDown(t *testing.T) {
-	tests := []struct {
-		name string
-		run  func(context.Context, *Service) (ResultEnvelope, error)
-	}{
-		{
-			name: "summary",
-			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
-				return svc.SummaryReport(ctx, map[string]any{
-					"start":   "2026-04-01T00:00:00Z",
-					"end":     "2026-04-08T00:00:00Z",
-					"project": "Alpha",
-				})
-			},
-		},
-		{
-			name: "weekly",
-			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
-				return svc.WeeklySummary(ctx, map[string]any{
-					"week_start": "2026-04-06",
-					"timezone":   "UTC",
-					"project":    "Alpha",
-				})
-			},
-		},
-		{
-			name: "quick",
-			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
-				return svc.QuickReport(ctx, map[string]any{
-					"days":    7,
-					"project": "Alpha",
-				})
-			},
-		},
-		{
-			name: "detailed",
-			run: func(ctx context.Context, svc *Service) (ResultEnvelope, error) {
-				return svc.DetailedReport(ctx, map[string]any{
-					"start":           "2026-04-01T00:00:00Z",
-					"end":             "2026-04-08T00:00:00Z",
-					"project":         "Alpha",
-					"include_entries": false,
-				})
-			},
-		},
+func TestReportFilterValidation(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	_, err := svc.SummaryReport(context.Background(), map[string]any{
+		"start":          "2026-04-01T00:00:00Z",
+		"end":            "2026-04-08T00:00:00Z",
+		"summary_filter": map[string]any{"groups": []any{"CLIENT", "BOGUS"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsupported value") {
+		t.Fatalf("expected invalid summary group error, got %v", err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var gotProject string
-			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-				switch r.URL.Path {
-				case "/workspaces/ws1/projects":
-					if got := r.URL.Query().Get("name"); got != "Alpha" {
-						t.Fatalf("expected project name lookup Alpha, got %s", r.URL.RawQuery)
-					}
-					respondJSON(t, w, []map[string]any{{"id": "p1", "name": "Alpha"}})
-				case "/user":
-					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-				case "/workspaces/ws1/user/u1/time-entries":
-					gotProject = r.URL.Query().Get("project")
-					respondJSON(t, w, []clockify.TimeEntry{
-						{ID: "a", ProjectID: "p1", ProjectName: "Alpha", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T10:00:00Z"}},
-					})
-				default:
-					t.Fatalf("unexpected path: %s", r.URL.Path)
-				}
-			})
-			defer cleanup()
-
-			svc := New(client, "ws1")
-			result, err := tt.run(context.Background(), svc)
-			if err != nil {
-				t.Fatalf("%s report failed: %v", tt.name, err)
-			}
-			if gotProject != "p1" {
-				t.Fatalf("expected %s report to push project=p1 upstream, got %q", tt.name, gotProject)
-			}
-			pagination := result.Meta["pagination"].(map[string]any)
-			if pagination["project_filter_resolved_id"] != "p1" {
-				t.Fatalf("expected project_filter_resolved_id=p1, got %+v", pagination)
-			}
-		})
+	_, err = svc.WeeklySummary(context.Background(), map[string]any{
+		"week_start": "2026-04-06",
+		"weekly_filter": map[string]any{
+			"group":    "CLIENT",
+			"subgroup": "TIME",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "PROJECT or USER") {
+		t.Fatalf("expected invalid weekly group error, got %v", err)
 	}
 }
 
-// TestSummaryReport_MultiPage verifies the streaming paginator walks
-// multiple pages and the totals reflect every entry, not just the first page.
-func TestSummaryReport_MultiPage(t *testing.T) {
-	base := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
-	const durSec = 3600 // 1h per entry
-	entries := seedEntries(base, 600, durSec)
-	pages := chunkEntries(entries, reportPageSize) // 3 pages of 200
-
-	client, cleanup := newTestClient(t, newPaginatedHandler(t, pages))
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.SummaryReport(context.Background(), map[string]any{
+func TestSummaryReportGroupAliasBuilder(t *testing.T) {
+	body, err := buildReportsAPIBody(map[string]any{
 		"start": "2026-04-01T00:00:00Z",
 		"end":   "2026-04-30T00:00:00Z",
-	})
+		"summary_filter": map[string]any{
+			"groups": []any{"CLIENT", "PROJECT", "DAY"},
+		},
+	}, "summary_filter", false, time.UTC)
 	if err != nil {
-		t.Fatalf("summary report failed: %v", err)
+		t.Fatalf("build summary body: %v", err)
 	}
-	data, ok := result.Data.(SummaryData)
-	if !ok {
-		t.Fatalf("unexpected data type: %T", result.Data)
-	}
-	want := int64(600 * durSec)
-	if data.Totals.TotalSeconds != want {
-		t.Fatalf("TotalSeconds = %d, want %d (proof paginator walked all pages)", data.Totals.TotalSeconds, want)
-	}
-	if data.Totals.Entries != 600 {
-		t.Fatalf("Totals.Entries = %d, want 600", data.Totals.Entries)
-	}
-	// Two projects alternating -> both should appear.
-	if len(data.ByProject) != 2 {
-		t.Fatalf("ByProject len = %d, want 2", len(data.ByProject))
+	filter := body["summaryFilter"].(map[string]any)
+	groups := filter["groups"].([]string)
+	if len(groups) != 3 || groups[2] != "DATE" {
+		t.Fatalf("DAY alias should be sent upstream as DATE, got %#v", groups)
 	}
 }
 
-// TestWeeklySummary_MultiPage verifies day bucketing works across paginated
-// batches.
-func TestWeeklySummary_MultiPage(t *testing.T) {
-	// Build 3 pages of 200 entries, each 1-hour long, stepping by 4 minutes
-	// so they fit inside one week.
-	base := time.Date(2026, 4, 6, 9, 0, 0, 0, time.UTC) // Monday
-	entries := make([]clockify.TimeEntry, 600)
-	for i := 0; i < 600; i++ {
-		// Day 0, 1, 2 across the three pages.
-		day := i / 200
-		start := base.AddDate(0, 0, day).Add(time.Duration(i%200) * time.Minute)
-		end := start.Add(time.Hour)
-		entries[i] = clockify.TimeEntry{
-			ID:          fmt.Sprintf("e%d", i),
-			ProjectID:   "p1",
-			ProjectName: "Project A",
-			TimeInterval: clockify.TimeInterval{
-				Start: start.UTC().Format(time.RFC3339),
-				End:   end.UTC().Format(time.RFC3339),
-			},
-		}
-	}
-	pages := chunkEntries(entries, reportPageSize)
-
-	client, cleanup := newTestClient(t, newPaginatedHandler(t, pages))
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.WeeklySummary(context.Background(), map[string]any{
+func TestWeeklyReportRejectsInvalidSubgroup(t *testing.T) {
+	_, err := buildReportsAPIBody(map[string]any{
 		"week_start": "2026-04-06",
-		"timezone":   "UTC",
-	})
-	if err != nil {
-		t.Fatalf("weekly summary failed: %v", err)
-	}
-	data := result.Data.(WeeklySummaryData)
-	if len(data.ByDay) < 3 {
-		t.Fatalf("expected at least 3 day buckets across pages, got %d", len(data.ByDay))
-	}
-	if data.Totals.Entries != 600 {
-		t.Fatalf("Totals.Entries = %d, want 600", data.Totals.Entries)
+		"weekly_filter": map[string]any{
+			"group":    "PROJECT",
+			"subgroup": "USER",
+		},
+	}, "weekly_filter", true, time.UTC)
+	if err == nil || !strings.Contains(err.Error(), "subgroup must be TIME") {
+		t.Fatalf("expected invalid weekly subgroup error, got %v", err)
 	}
 }
 
-// TestDetailedReport_CapExceeded_IncludeTrue_Errors ensures the streaming
-// aggregator fails closed when include_entries=true and the hard cap is
-// exceeded, rather than silently truncating or OOMing.
-func TestDetailedReport_CapExceeded_IncludeTrue_Errors(t *testing.T) {
-	base := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
-	entries := seedEntries(base, 150, 3600)
-	pages := chunkEntries(entries, reportPageSize)
-
-	client, cleanup := newTestClient(t, newPaginatedHandler(t, pages))
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	svc.ReportMaxEntries = 100
-	_, err := svc.DetailedReport(context.Background(), map[string]any{
-		"start":           "2026-04-01T00:00:00Z",
-		"end":             "2026-04-30T00:00:00Z",
-		"include_entries": true,
+func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode summary body: %v", err)
+			}
+			w.Header().Set("Content-Type", "application/pdf")
+			w.Header().Set("Content-Disposition", `attachment; filename="summary.pdf"`)
+			_, _ = w.Write([]byte("pdf-bytes"))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
 	})
-	if err == nil {
-		t.Fatalf("expected error when entry cap exceeded, got nil")
-	}
-	if !strings.Contains(err.Error(), "entry cap") {
-		t.Fatalf("expected error to mention 'entry cap', got: %v", err)
-	}
-}
-
-// TestDetailedReport_CapExceeded_IncludeFalse_Succeeds verifies the cap is
-// not enforced when include_entries=false: totals should be correct for the
-// full range and memory is bounded by design.
-func TestDetailedReport_CapExceeded_IncludeFalse_Succeeds(t *testing.T) {
-	base := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
-	const durSec = 3600
-	entries := seedEntries(base, 150, durSec)
-	pages := chunkEntries(entries, reportPageSize)
-
-	client, cleanup := newTestClient(t, newPaginatedHandler(t, pages))
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	svc.ReportMaxEntries = 100
-	result, err := svc.DetailedReport(context.Background(), map[string]any{
-		"start":           "2026-04-01T00:00:00Z",
-		"end":             "2026-04-30T00:00:00Z",
-		"include_entries": false,
-	})
-	if err != nil {
-		t.Fatalf("expected success when include_entries=false, got: %v", err)
-	}
-	data := result.Data.(SummaryData)
-	if len(data.Entries) != 0 {
-		t.Fatalf("expected entries omitted, got %d", len(data.Entries))
-	}
-	totals := data.Totals
-	if totals.Entries != 150 {
-		t.Fatalf("Totals.Entries = %d, want 150", totals.Entries)
-	}
-	if totals.TotalSeconds != int64(150*durSec) {
-		t.Fatalf("Totals.TotalSeconds = %d, want %d", totals.TotalSeconds, 150*durSec)
-	}
-}
-
-// TestReports_PaginationMeta verifies the structured pagination/limits meta
-// replaces the old warning-string shape.
-func TestReports_PaginationMeta(t *testing.T) {
-	base := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
-	entries := seedEntries(base, 450, 3600)
-	pages := chunkEntries(entries, reportPageSize) // 3 pages (200, 200, 50)
-
-	client, cleanup := newTestClient(t, newPaginatedHandler(t, pages))
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	svc.ReportMaxEntries = 10000
 	result, err := svc.SummaryReport(context.Background(), map[string]any{
 		"start":       "2026-04-01T00:00:00Z",
 		"end":         "2026-04-30T00:00:00Z",
-		"max_entries": 20000,
+		"export_type": "PDF",
+		"summary_filter": map[string]any{
+			"groups": []any{"CLIENT", "PROJECT", "MONTH"},
+		},
 	})
 	if err != nil {
-		t.Fatalf("summary report failed: %v", err)
+		t.Fatalf("summary report PDF failed: %v", err)
 	}
-	pagination, ok := result.Meta["pagination"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected structured pagination meta, got %T", result.Meta["pagination"])
+	if gotBody["exportType"] != "PDF" {
+		t.Fatalf("exportType = %v, want PDF", gotBody["exportType"])
 	}
-	if pagination["pages_fetched"].(int) != 3 {
-		t.Fatalf("pages_fetched = %v, want 3", pagination["pages_fetched"])
+	data := result.Data.(map[string]any)
+	if data["filename"] != "summary.pdf" || data["bytes"] != float64(len("pdf-bytes")) && data["bytes"] != len("pdf-bytes") {
+		t.Fatalf("unexpected binary envelope: %#v", data)
 	}
-	if pagination["entries_total"].(int) != 450 {
-		t.Fatalf("entries_total = %v, want 450", pagination["entries_total"])
-	}
-	if pagination["page_size"].(int) != reportPageSize {
-		t.Fatalf("page_size = %v, want %d", pagination["page_size"], reportPageSize)
-	}
-	if pagination["applied_page_size"].(int) != reportPageSize {
-		t.Fatalf("applied_page_size = %v, want %d", pagination["applied_page_size"], reportPageSize)
-	}
-	limits, ok := result.Meta["limits"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected structured limits meta, got %T", result.Meta["limits"])
-	}
-	if limits["max_entries"].(int) != 10000 {
-		t.Fatalf("max_entries = %v, want 10000", limits["max_entries"])
-	}
-	if limits["requested_max_entries"].(int) != 20000 || limits["applied_max_entries"].(int) != 10000 || limits["clamped"] != true {
-		t.Fatalf("unexpected limit clamp meta: %+v", limits)
-	}
-	if _, exists := result.Meta["warning"]; exists {
-		t.Fatalf("legacy warning string must be removed from meta")
+	if result.Meta["binary"] != true || result.Meta["source"] != "reports-api" {
+		t.Fatalf("unexpected binary meta: %#v", result.Meta)
 	}
 }
 

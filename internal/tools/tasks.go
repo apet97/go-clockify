@@ -33,6 +33,11 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
+	addStringQuery(query, args, "name", "name")
+	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
+	addBoolQuery(query, args, "is_active", "is-active")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
 	var out []clockify.Task
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
@@ -103,14 +108,8 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 	}
 
 	payload := map[string]any{"name": name}
-	if billable, ok := args["billable"].(bool); ok {
-		payload["billable"] = billable
-	}
-	if estimate := strings.TrimSpace(stringArg(args, "estimate")); estimate != "" {
-		payload["estimate"] = estimate
-	}
-	if status := strings.TrimSpace(stringArg(args, "status")); status != "" {
-		payload["status"] = status
+	if err := applyTaskRequestFields(payload, args); err != nil {
+		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_create_task", dryrun.Preview("clockify_create_task", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
@@ -121,7 +120,9 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	var task clockify.Task
-	if err := s.Client.Post(ctx, path, payload, &task); err != nil {
+	query := map[string]string{}
+	addBoolQuery(query, args, "contains_assignee", "contains-assignee")
+	if err := s.Client.PostWithQuery(ctx, path, query, payload, &task); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_task", task, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
@@ -179,6 +180,26 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 		existing.Billable = v
 		changedFields = append(changedFields, "billable")
 	}
+	if v := stringArg(args, "assignee_id"); v != "" && v != existing.AssigneeID {
+		existing.AssigneeID = v
+		changedFields = append(changedFields, "assignee_id")
+	}
+	if assigneeIDs, ok, err := strictStringSliceArg(args, "assignee_ids"); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		existing.AssigneeIDs = assigneeIDs
+		changedFields = append(changedFields, "assignee_ids")
+	}
+	if budget, ok := int64Arg(args, "budget_estimate"); ok && budget != existing.BudgetEstimate {
+		existing.BudgetEstimate = budget
+		changedFields = append(changedFields, "budget_estimate")
+	}
+	if groupIDs, ok, err := strictStringSliceArg(args, "user_group_ids"); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		existing.UserGroupIDs = groupIDs
+		changedFields = append(changedFields, "user_group_ids")
+	}
 
 	meta := map[string]any{
 		"workspaceId":   wsID,
@@ -197,8 +218,14 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 	}
 
 	payload := taskPutPayload(existing)
+	if err := applyTaskRequestFields(payload, args); err != nil {
+		return ResultEnvelope{}, err
+	}
 	var updated clockify.Task
-	if err := s.Client.Put(ctx, taskPath, payload, &updated); err != nil {
+	query := map[string]string{}
+	addBoolQuery(query, args, "contains_assignee", "contains-assignee")
+	addStringQuery(query, args, "membership_status", "membership-status")
+	if err := s.Client.PutWithQuery(ctx, taskPath, query, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_update_task", updated, meta), nil
@@ -226,7 +253,25 @@ func taskPutPayload(t clockify.Task) map[string]any {
 	if len(t.UserGroupIDs) > 0 {
 		p["userGroupIds"] = t.UserGroupIDs
 	}
+	if t.BudgetEstimate > 0 {
+		p["budgetEstimate"] = t.BudgetEstimate
+	}
 	return p
+}
+
+func applyTaskRequestFields(payload map[string]any, args map[string]any) error {
+	setIfString(payload, args, "assignee_id", "assigneeId")
+	if err := setIfStringSlice(payload, args, "assignee_ids", "assigneeIds"); err != nil {
+		return err
+	}
+	setIfBool(payload, args, "billable", "billable")
+	setIfInt64(payload, args, "budget_estimate", "budgetEstimate")
+	setIfString(payload, args, "estimate", "estimate")
+	setIfString(payload, args, "status", "status")
+	if err := setIfStringSlice(payload, args, "user_group_ids", "userGroupIds"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteTask deletes a task by project + task reference (ID or name).

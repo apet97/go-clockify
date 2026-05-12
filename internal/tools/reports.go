@@ -286,48 +286,11 @@ func mergeMeta(base, extra map[string]any) map[string]any {
 const reportPageSize = 200
 
 func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	loc, err := s.locationFromArgs(args)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	start, end, err := parseRangeInLocation(args, loc)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	include := boolArg(args, "include_entries")
-	limits := s.reportLimitsForArgs(args)
-	effectiveMax := limits.AppliedMaxEntries
-	wsID, projectID, err := s.reportProjectFilterID(ctx, args, "")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, loc, aggregateOptions{
-		PageSize:       reportPageSize,
-		IncludeEntries: include,
-		MaxEntries:     effectiveMax,
-		ProjectID:      projectID,
+	return s.reportsAPIReport(ctx, args, reportEndpoint{
+		toolName:  "clockify_summary_report",
+		pathName:  "summary",
+		filterKey: "summary_filter",
 	})
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	totals := totalsFromAgg(agg)
-	projects := projectSummariesFromAgg(agg)
-	data := SummaryData{
-		Range:            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
-		Totals:           totals,
-		ByProject:        projects,
-		SuggestedActions: reportSuggestedActions(projects, totals, start, end),
-	}
-	if include {
-		data.Entries = agg.Entries
-	}
-	meta := mergeMeta(map[string]any{
-		"workspaceId": wsID,
-		"userId":      userID,
-		"timezone":    loc.String(),
-		"source":      "time-entries-wrapper",
-	}, paginationMeta(agg, reportPageSize, limits))
-	return ok("clockify_summary_report", data, meta), nil
 }
 
 func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -335,50 +298,19 @@ func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (Resul
 }
 
 func (s *Service) weeklySummary(ctx context.Context, args map[string]any, workspaceID string) (ResultEnvelope, error) {
-	loc, err := loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
-	if err != nil {
-		return ResultEnvelope{}, err
+	if workspaceID != "" {
+		withWorkspace := maps.Clone(args)
+		if withWorkspace == nil {
+			withWorkspace = map[string]any{}
+		}
+		withWorkspace["workspace_id"] = workspaceID
+		args = withWorkspace
 	}
-	start, end, err := weekBounds(stringArg(args, "week_start"), loc)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	include := boolArg(args, "include_entries")
-	limits := s.reportLimitsForArgs(args)
-	effectiveMax := limits.AppliedMaxEntries
-	wsID, projectID, err := s.reportProjectFilterID(ctx, args, workspaceID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, loc, aggregateOptions{
-		PageSize:       reportPageSize,
-		IncludeEntries: include,
-		MaxEntries:     effectiveMax,
-		ProjectID:      projectID,
+	return s.reportsAPIReport(ctx, args, reportEndpoint{
+		toolName:  "clockify_weekly_summary",
+		pathName:  "weekly",
+		filterKey: "weekly_filter",
 	})
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	totals := totalsFromAgg(agg)
-	projects := projectSummariesFromAgg(agg)
-	data := WeeklySummaryData{
-		Range:            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
-		Totals:           totals,
-		ByDay:            daySummariesFromAgg(agg),
-		ByProject:        projects,
-		SuggestedActions: reportSuggestedActions(projects, totals, start, end),
-		UnassignedKey:    "(no project)",
-	}
-	if include {
-		data.Entries = agg.Entries
-	}
-	meta := mergeMeta(map[string]any{
-		"workspaceId": wsID,
-		"userId":      userID,
-		"timezone":    loc.String(),
-		"source":      "time-entries-wrapper",
-	}, paginationMeta(agg, reportPageSize, limits))
-	return ok("clockify_weekly_summary", data, meta), nil
 }
 
 func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -440,58 +372,11 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 }
 
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	loc, err := s.locationFromArgs(args)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	start, end, err := parseRangeInLocation(args, loc)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	// include_entries defaults to true for DetailedReport.
-	includeEntries := true
-	if v, exists := args["include_entries"]; exists {
-		if b, isBool := v.(bool); isBool {
-			includeEntries = b
-		}
-	}
-
-	limits := s.reportLimitsForArgs(args)
-	effectiveMax := limits.AppliedMaxEntries
-	wsID, filterProjectID, err := s.reportProjectFilterID(ctx, args, "")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, start, end, loc, aggregateOptions{
-		PageSize:       reportPageSize,
-		IncludeEntries: includeEntries,
-		MaxEntries:     effectiveMax,
-		ProjectID:      filterProjectID,
+	return s.reportsAPIReport(ctx, args, reportEndpoint{
+		toolName:  "clockify_detailed_report",
+		pathName:  "detailed",
+		filterKey: "detailed_filter",
 	})
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	totals := totalsFromAgg(agg)
-	projects := projectSummariesFromAgg(agg)
-	data := SummaryData{
-		Range:            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
-		Totals:           totals,
-		ByProject:        projects,
-		SuggestedActions: reportSuggestedActions(projects, totals, start, end),
-	}
-	if includeEntries {
-		data.Entries = agg.Entries
-	}
-
-	meta := mergeMeta(map[string]any{
-		"workspaceId": wsID,
-		"userId":      userID,
-		"timezone":    loc.String(),
-		"source":      "time-entries-wrapper",
-	}, paginationMeta(agg, reportPageSize, limits))
-	return ok("clockify_detailed_report", data, meta), nil
 }
 
 func reportSuggestedActions(projects []ProjectSummary, totals SummaryTotals, start, end time.Time) []ToolSuggestion {

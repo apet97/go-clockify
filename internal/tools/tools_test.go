@@ -39,6 +39,7 @@ func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
 		"clockify_list_entries",
 		"clockify_get_entry",
 		"clockify_today_entries",
+		"clockify_attendance_report",
 		"clockify_summary_report",
 		"clockify_weekly_summary",
 		"clockify_quick_report",
@@ -60,52 +61,66 @@ func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
 	}
 }
 
-func TestSummaryReportAggregatesEntries(t *testing.T) {
+func TestSummaryReportUsesReportsAPI(t *testing.T) {
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case "/workspaces/ws1/user/u1/time-entries":
-			if got := r.URL.Query().Get("start"); got == "" {
-				t.Fatalf("expected start filter")
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode summary body: %v", err)
 			}
-			respondJSON(t, w, []clockify.TimeEntry{
-				{ID: "e1", Description: "Build", ProjectID: "p1", ProjectName: "Project A", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T11:00:00Z"}},
-				{ID: "e2", Description: "Review", ProjectID: "p1", ProjectName: "Project A", TimeInterval: clockify.TimeInterval{Start: "2026-04-02T09:00:00Z", End: "2026-04-02T10:30:00Z"}},
-				{ID: "e3", Description: "Ops", ProjectID: "p2", ProjectName: "Project B", TimeInterval: clockify.TimeInterval{Start: "2026-04-03T12:00:00Z", End: "2026-04-03T13:00:00Z"}},
+			respondJSON(t, w, map[string]any{
+				"totals": []map[string]any{{"entriesCount": 3}},
+				"groupOne": []map[string]any{
+					{"id": "p1", "name": "Project A", "duration": 12600},
+				},
 			})
 		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
 	result, err := svc.SummaryReport(context.Background(), map[string]any{
-		"start": "2026-04-01T00:00:00Z",
-		"end":   "2026-04-08T00:00:00Z",
+		"start":        "2026-04-01T00:00:00Z",
+		"end":          "2026-04-08T00:00:00Z",
+		"amount_shown": "PROFIT",
+		"amounts":      []any{"EARNED", "COST", "PROFIT"},
+		"summary_filter": map[string]any{
+			"groups":             []any{"CLIENT", "PROJECT", "DAY"},
+			"sort_column":        "PROFIT",
+			"summary_chart_type": "PROJECT",
+		},
 	})
 	if err != nil {
 		t.Fatalf("summary report failed: %v", err)
 	}
 
-	data, ok := result.Data.(SummaryData)
+	data, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected summary data type: %T", result.Data)
 	}
-	if data.Totals.Entries != 3 {
-		t.Fatalf("expected 3 entries, got %d", data.Totals.Entries)
+	if _, ok := data["totals"]; !ok {
+		t.Fatalf("expected upstream totals in data, got %#v", data)
 	}
-	if len(data.ByProject) != 2 {
-		t.Fatalf("expected 2 project groups, got %d", len(data.ByProject))
+	if gotBody["dateRangeStart"] != "2026-04-01T00:00:00Z" || gotBody["dateRangeEnd"] != "2026-04-08T00:00:00Z" {
+		t.Fatalf("date aliases not forwarded as dateRangeStart/dateRangeEnd: %#v", gotBody)
 	}
-	if data.ByProject[0].ProjectName != "Project A" {
-		t.Fatalf("expected top project Project A, got %+v", data.ByProject[0])
+	if gotBody["amountShown"] != "PROFIT" {
+		t.Fatalf("amountShown = %v, want PROFIT", gotBody["amountShown"])
 	}
-	if data.ByProject[0].TotalSeconds != 12600 {
-		t.Fatalf("expected 12600 seconds for Project A, got %d", data.ByProject[0].TotalSeconds)
+	filter, _ := gotBody["summaryFilter"].(map[string]any)
+	groups, _ := filter["groups"].([]any)
+	if len(groups) != 3 || groups[2] != "DATE" {
+		t.Fatalf("summary groups should map DAY to DATE, got %#v", filter["groups"])
 	}
-	assertReportSuggestedActions(t, data.SuggestedActions, "p1")
+	if _, has := gotBody["detailedFilter"]; has {
+		t.Fatalf("summary report must not send detailedFilter: %#v", gotBody)
+	}
+	if result.Meta["source"] != "reports-api" {
+		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
+	}
 }
 
 func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {

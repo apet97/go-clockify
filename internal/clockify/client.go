@@ -73,6 +73,16 @@ func putBodyBuf(b *bytes.Buffer) {
 	bodyBufPool.Put(b)
 }
 
+func valuesFromQueryMap(query map[string]string) url.Values {
+	values := url.Values{}
+	for k, v := range query {
+		if v != "" {
+			values.Add(k, v)
+		}
+	}
+	return values
+}
+
 type Client struct {
 	apiKey     string
 	baseURL    string
@@ -134,12 +144,24 @@ func (c *Client) Get(ctx context.Context, path string, query map[string]string, 
 	return c.doJSON(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
 }
 
+func (c *Client) GetValues(ctx context.Context, path string, query url.Values, out any) error {
+	return c.doJSONValues(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
+}
+
 func (c *Client) Post(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, nil, body, out)
 }
 
+func (c *Client) PostWithQuery(ctx context.Context, path string, query map[string]string, body any, out any) error {
+	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, query, body, out)
+}
+
 func (c *Client) Put(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, nil, body, out)
+}
+
+func (c *Client) PutWithQuery(ctx context.Context, path string, query map[string]string, body any, out any) error {
+	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, query, body, out)
 }
 
 func (c *Client) Patch(ctx context.Context, path string, body any, out any) error {
@@ -184,6 +206,17 @@ func (c *Client) GetReports(ctx context.Context, path string, query map[string]s
 // PostReports performs a POST against the reports host.
 func (c *Client) PostReports(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPost, path, nil, body, out)
+}
+
+// PostReportsRaw is the binary-aware sibling of PostReports. It is used for
+// report exportType values such as PDF/CSV/XLSX/ZIP where the reports API may
+// return a file body rather than JSON.
+func (c *Client) PostReportsRaw(ctx context.Context, path string, body any) (*RawResponse, error) {
+	raw := &RawResponse{}
+	if err := c.doJSON(ctx, c.ReportsBaseURL(), http.MethodPost, path, nil, body, raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 // PutReports performs a PUT against the reports host.
@@ -373,6 +406,10 @@ func ListAllFuncWithOptions[T any](ctx context.Context, c *Client, path string, 
 }
 
 func (c *Client) doJSON(ctx context.Context, baseURL, method, path string, query map[string]string, body any, out any) error {
+	return c.doJSONValues(ctx, baseURL, method, path, valuesFromQueryMap(query), body, out)
+}
+
+func (c *Client) doJSONValues(ctx context.Context, baseURL, method, path string, query url.Values, body any, out any) error {
 	var payload []byte
 	var contentType string
 	if body != nil {
@@ -392,13 +429,17 @@ func (c *Client) doJSON(ctx context.Context, baseURL, method, path string, query
 		}
 		contentType = "application/json"
 	}
-	return c.doRequest(ctx, baseURL, method, path, query, contentType, payload, out)
+	return c.doRequestValues(ctx, baseURL, method, path, query, contentType, payload, out)
 }
 
 // doRequest is the transport-level entry point used by both JSON and
 // multipart callers. Retry, metrics, and tracing all live here so the
 // content-type variants share a single hot path.
 func (c *Client) doRequest(ctx context.Context, baseURL, method, path string, query map[string]string, contentType string, payload []byte, out any) error {
+	return c.doRequestValues(ctx, baseURL, method, path, valuesFromQueryMap(query), contentType, payload, out)
+}
+
+func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path string, query url.Values, contentType string, payload []byte, out any) error {
 	endpoint := normalizeEndpoint(path)
 
 	var lastErr error
@@ -430,7 +471,7 @@ func (c *Client) doRequest(ctx context.Context, baseURL, method, path string, qu
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
 		}
 
-		err := c.doOnce(ctx, baseURL, method, path, endpoint, query, contentType, payload, out)
+		err := c.doOnceValues(ctx, baseURL, method, path, endpoint, query, contentType, payload, out)
 		if err == nil {
 			return nil
 		}
@@ -450,6 +491,10 @@ func (c *Client) doRequest(ctx context.Context, baseURL, method, path string, qu
 }
 
 func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint string, query map[string]string, contentType string, payload []byte, out any) error {
+	return c.doOnceValues(ctx, baseURL, method, path, endpoint, valuesFromQueryMap(query), contentType, payload, out)
+}
+
+func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoint string, query url.Values, contentType string, payload []byte, out any) error {
 	ctx, span := tracing.Default.Start(ctx, "clockify.http")
 	span.SetAttribute("upstream.endpoint", endpoint)
 	span.SetAttribute("http.method", method)
@@ -471,9 +516,11 @@ func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint str
 		return err
 	}
 	q := u.Query()
-	for k, v := range query {
-		if v != "" {
-			q.Set(k, v)
+	for k, vs := range query {
+		for _, v := range vs {
+			if v != "" {
+				q.Add(k, v)
+			}
 		}
 	}
 	u.RawQuery = q.Encode()

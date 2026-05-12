@@ -223,19 +223,19 @@ func TestSearchCatalogByKeyword(t *testing.T) {
 
 func TestSearchCatalogEmpty(t *testing.T) {
 	results := SearchCatalog("")
-	if len(results) != 40 {
-		t.Errorf("expected 40 catalog entries for empty query, got %d", len(results))
+	if len(results) != 41 {
+		t.Errorf("expected 41 catalog entries for empty query, got %d", len(results))
 	}
 }
 
 func TestVisibleCount(t *testing.T) {
 	tier1 := allTier1Names()
 
-	// FullTier1: all 40 visible.
+	// FullTier1: all catalogued Tier 1 tools visible.
 	cfg := Config{Mode: FullTier1}
 	cfg.SetTier1Tools(tier1)
-	if got := cfg.VisibleCount(); got != 40 {
-		t.Errorf("FullTier1 VisibleCount: expected 40, got %d", got)
+	if got := cfg.VisibleCount(); got != 41 {
+		t.Errorf("FullTier1 VisibleCount: expected 41, got %d", got)
 	}
 
 	// Minimal: only MinimalSet tools that are also in Tier1Names.

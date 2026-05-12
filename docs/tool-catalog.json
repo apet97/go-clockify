@@ -194,12 +194,46 @@
               "billable": {
                 "type": "boolean"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "customFieldValues": {},
               "description": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -285,6 +319,660 @@
           "write"
         ],
         "title": "Add Entry"
+      }
+    },
+    {
+      "name": "clockify_attendance_report",
+      "description": "Generate a Clockify attendance report via the Reports API",
+      "group": "tier1",
+      "tier": 1,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          {
+            "required": [
+              "date_range_start",
+              "date_range_end"
+            ]
+          }
+        ],
+        "properties": {
+          "amount_shown": {
+            "enum": [
+              "EARNED",
+              "COST",
+              "PROFIT",
+              "HIDE_AMOUNT",
+              "EXPORT"
+            ],
+            "type": "string"
+          },
+          "amounts": {
+            "items": {
+              "enum": [
+                "EARNED",
+                "COST",
+                "PROFIT",
+                "HIDE_AMOUNT",
+                "EXPORT"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "approval_state": {
+            "enum": [
+              "APPROVED",
+              "UNAPPROVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "attendance_filter": {
+            "additionalProperties": false,
+            "properties": {
+              "break_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "capacity_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "end_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "has_time_off": {
+                "type": "boolean"
+              },
+              "overtime_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "page": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "page_size": {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "sort_column": {
+                "enum": [
+                  "USER",
+                  "DATE",
+                  "START",
+                  "END",
+                  "BREAK",
+                  "WORK",
+                  "CAPACITY",
+                  "OVERTIME",
+                  "TIME_OFF"
+                ],
+                "type": "string"
+              },
+              "start_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "work_filters": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "filtration_type": {
+                      "enum": [
+                        "EXACTLY",
+                        "LARGER_THAN",
+                        "SMALLER_THAN"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "clients": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "currency": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "date_format": {
+            "description": "Date format, e.g. YYYY-MM-DD",
+            "type": "string"
+          },
+          "date_range_end": {
+            "description": "Reports API dateRangeEnd, e.g. 2026-05-12T23:59:59.999",
+            "type": "string"
+          },
+          "date_range_start": {
+            "description": "Reports API dateRangeStart, e.g. 2026-05-01T00:00:00.000",
+            "type": "string"
+          },
+          "date_range_type": {
+            "enum": [
+              "ABSOLUTE",
+              "TODAY",
+              "YESTERDAY",
+              "THIS_WEEK",
+              "LAST_WEEK",
+              "PAST_TWO_WEEKS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "THIS_YEAR",
+              "LAST_YEAR"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_end.",
+            "type": "string"
+          },
+          "export_type": {
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
+            "type": "string"
+          },
+          "invoicing_state": {
+            "enum": [
+              "INVOICED",
+              "UNINVOICED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "projects": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "rounding": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_start.",
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": false,
+            "properties": {
+              "contained_in_timeentry": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "tasks": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "time_format": {
+            "description": "Time format, e.g. THH:MM:SS.ssssss",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "user_custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_locale": {
+            "type": "string"
+          },
+          "users": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "week_start": {
+            "description": "Flexible date used to derive the exact weekly Reports API range.",
+            "type": "string"
+          },
+          "week_start_day": {
+            "description": "Reports API weekStart enum.",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "without_description": {
+            "type": "boolean"
+          },
+          "zoom_level": {
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "attendance_filter"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_attendance_report",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Attendance Report"
       }
     },
     {
@@ -417,8 +1105,43 @@
           "billable": {
             "type": "boolean"
           },
+          "budget_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "include_expenses": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
           "client": {
             "description": "Client name or ID",
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Client ID; bypasses name resolution when supplied",
             "type": "string"
           },
           "color": {
@@ -426,15 +1149,228 @@
             "pattern": "^#[0-9a-fA-F]{6}$",
             "type": "string"
           },
+          "cost_rate": {
+            "additionalProperties": false,
+            "description": "Project cost rate",
+            "properties": {
+              "amount": {
+                "description": "Raw upstream integer amount; no currency scaling is applied",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "since": {
+                "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount"
+            ],
+            "type": "object"
+          },
           "dry_run": {
             "type": "boolean"
+          },
+          "estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "estimate": {
+                "description": "ISO-8601 duration, e.g. PT1H30M",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "hourly_rate": {
+            "additionalProperties": false,
+            "description": "Project hourly rate",
+            "properties": {
+              "amount": {
+                "description": "Raw upstream integer amount; no currency scaling is applied",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "since": {
+                "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount"
+            ],
+            "type": "object"
           },
           "is_public": {
             "type": "boolean"
           },
+          "memberships": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "cost_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member cost rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "hourly_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member hourly rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "membership_status": {
+                  "enum": [
+                    "PENDING",
+                    "ACTIVE",
+                    "DECLINED",
+                    "INACTIVE",
+                    "ALL"
+                  ],
+                  "type": "string"
+                },
+                "membership_type": {
+                  "enum": [
+                    "WORKSPACE",
+                    "PROJECT",
+                    "USERGROUP"
+                  ],
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "name": {
             "maxLength": 150,
+            "minLength": 1,
             "type": "string"
+          },
+          "note": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignee_id": {
+                  "description": "Deprecated upstream field",
+                  "type": "string"
+                },
+                "assignee_ids": {
+                  "description": "Task assignee IDs",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "billable": {
+                  "type": "boolean"
+                },
+                "budget_estimate": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "estimate": {
+                  "description": "ISO-8601 duration, e.g. PT1H30M",
+                  "type": "string"
+                },
+                "name": {
+                  "maxLength": 150,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "ACTIVE",
+                    "DONE",
+                    "ALL"
+                  ],
+                  "type": "string"
+                },
+                "user_group_ids": {
+                  "description": "Task user group IDs",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "time_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "description": "ISO-8601 duration, e.g. PT1H30M",
+                "type": "string"
+              },
+              "include_non_billable": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
           }
         },
         "required": [
@@ -468,17 +1404,110 @@
               "color": {
                 "type": "string"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {},
               "estimateReset": {},
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
-              "memberships": {},
+              "memberships": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "membershipStatus": {
+                      "type": "string"
+                    },
+                    "membershipType": {
+                      "type": "string"
+                    },
+                    "targetId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "name": {
                 "type": "string"
               },
@@ -630,7 +1659,25 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "assignee_id": {
+            "description": "Deprecated upstream field",
+            "type": "string"
+          },
+          "assignee_ids": {
+            "description": "Task assignee IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "billable": {
+            "type": "boolean"
+          },
+          "budget_estimate": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "contains_assignee": {
             "type": "boolean"
           },
           "dry_run": {
@@ -642,6 +1689,7 @@
           },
           "name": {
             "maxLength": 150,
+            "minLength": 1,
             "type": "string"
           },
           "project": {
@@ -655,9 +1703,17 @@
             "description": "Task status",
             "enum": [
               "ACTIVE",
-              "DONE"
+              "DONE",
+              "ALL"
             ],
             "type": "string"
+          },
+          "user_group_ids": {
+            "description": "Task user group IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -690,14 +1746,48 @@
               "budgetEstimate": {
                 "type": "integer"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -1217,7 +2307,7 @@
     },
     {
       "name": "clockify_detailed_report",
-      "description": "Detailed time entry report with filtering by project and date range",
+      "description": "Generate a Clockify detailed report via the Reports API",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -1229,233 +2319,531 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          {
+            "required": [
+              "date_range_start",
+              "date_range_end"
+            ]
+          }
+        ],
         "properties": {
-          "end": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+          "amount_shown": {
+            "enum": [
+              "EARNED",
+              "COST",
+              "PROFIT",
+              "HIDE_AMOUNT",
+              "EXPORT"
+            ],
             "type": "string"
           },
-          "include_entries": {
+          "amounts": {
+            "items": {
+              "enum": [
+                "EARNED",
+                "COST",
+                "PROFIT",
+                "HIDE_AMOUNT",
+                "EXPORT"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "approval_state": {
+            "enum": [
+              "APPROVED",
+              "UNAPPROVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "archived": {
             "type": "boolean"
           },
-          "max_entries": {
-            "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
-            "minimum": 0,
-            "type": "integer"
+          "billable": {
+            "type": "boolean"
           },
-          "project": {
+          "clients": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "currency": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "date_format": {
+            "description": "Date format, e.g. YYYY-MM-DD",
+            "type": "string"
+          },
+          "date_range_end": {
+            "description": "Reports API dateRangeEnd, e.g. 2026-05-12T23:59:59.999",
+            "type": "string"
+          },
+          "date_range_start": {
+            "description": "Reports API dateRangeStart, e.g. 2026-05-01T00:00:00.000",
+            "type": "string"
+          },
+          "date_range_type": {
+            "enum": [
+              "ABSOLUTE",
+              "TODAY",
+              "YESTERDAY",
+              "THIS_WEEK",
+              "LAST_WEEK",
+              "PAST_TWO_WEEKS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "THIS_YEAR",
+              "LAST_YEAR"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "detailed_filter": {
+            "additionalProperties": false,
+            "properties": {
+              "audit_filter": {
+                "additionalProperties": false,
+                "properties": {
+                  "duration": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "duration_shorter": {
+                    "type": "boolean"
+                  },
+                  "without_project": {
+                    "type": "boolean"
+                  },
+                  "without_task": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              },
+              "options": {
+                "additionalProperties": false,
+                "properties": {
+                  "totals": {
+                    "enum": [
+                      "CALCULATE",
+                      "EXCLUDE"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "page": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "page_size": {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "sort_column": {
+                "enum": [
+                  "ID",
+                  "DESCRIPTION",
+                  "USER",
+                  "DURATION",
+                  "DATE",
+                  "ZONED_DATE",
+                  "NATURAL",
+                  "USER_DATE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_end.",
+            "type": "string"
+          },
+          "export_type": {
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
+            "type": "string"
+          },
+          "invoicing_state": {
+            "enum": [
+              "INVOICED",
+              "UNINVOICED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "projects": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "rounding": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
             "type": "string"
           },
           "start": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_start.",
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": false,
+            "properties": {
+              "contained_in_timeentry": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "tasks": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "time_format": {
+            "description": "Time format, e.g. THH:MM:SS.ssssss",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
+          },
+          "user_custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_locale": {
+            "type": "string"
+          },
+          "users": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "week_start": {
+            "description": "Flexible date used to derive the exact weekly Reports API range.",
+            "type": "string"
+          },
+          "week_start_day": {
+            "description": "Reports API weekStart enum.",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "without_description": {
+            "type": "boolean"
+          },
+          "zoom_level": {
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
+            "type": "string"
           }
         },
         "required": [
-          "start",
-          "end"
+          "detailed_filter"
         ],
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_detailed_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": false,
-            "properties": {
-              "byProject": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "entries": {
-                      "type": "integer"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "totalHours": {
-                      "type": "number"
-                    },
-                    "totalSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "projectName",
-                    "entries",
-                    "totalSeconds",
-                    "totalHours"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "entries": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "billable": {
-                      "type": "boolean"
-                    },
-                    "costRate": {},
-                    "customFieldValues": {},
-                    "description": {
-                      "type": "string"
-                    },
-                    "hourlyRate": {},
-                    "id": {
-                      "type": "string"
-                    },
-                    "isLocked": {
-                      "type": "boolean"
-                    },
-                    "kioskId": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "tagIds": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "taskId": {
-                      "type": "string"
-                    },
-                    "timeInterval": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "duration": {
-                          "type": "string"
-                        },
-                        "end": {
-                          "type": "string"
-                        },
-                        "start": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "start"
-                      ],
-                      "type": "object"
-                    },
-                    "type": {
-                      "type": "string"
-                    },
-                    "userId": {
-                      "type": "string"
-                    },
-                    "workspaceId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "description",
-                    "projectId",
-                    "timeInterval"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "range": {
-                "additionalProperties": false,
-                "properties": {
-                  "end": {
-                    "type": "string"
-                  },
-                  "start": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "start",
-                  "end"
-                ],
-                "type": "object"
-              },
-              "suggestedActions": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "arguments": {
-                      "additionalProperties": {},
-                      "type": "object"
-                    },
-                    "missingArgs": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "tool": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "tool",
-                    "reason"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "totals": {
-                "additionalProperties": false,
-                "properties": {
-                  "entries": {
-                    "type": "integer"
-                  },
-                  "runningEntries": {
-                    "type": "integer"
-                  },
-                  "totalHours": {
-                    "type": "number"
-                  },
-                  "totalSeconds": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "entries",
-                  "runningEntries",
-                  "totalSeconds",
-                  "totalHours"
-                ],
-                "type": "object"
-              }
-            },
-            "required": [
-              "range",
-              "totals",
-              "byProject",
-              "suggestedActions"
-            ],
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -1463,8 +2851,7 @@
         },
         "required": [
           "ok",
-          "action",
-          "data"
+          "action"
         ],
         "type": "object"
       },
@@ -1589,12 +2976,46 @@
                   "billable": {
                     "type": "boolean"
                   },
-                  "costRate": {},
+                  "costRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "customFieldValues": {},
                   "description": {
                     "type": "string"
                   },
-                  "hourlyRate": {},
+                  "hourlyRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "id": {
                     "type": "string"
                   },
@@ -1843,12 +3264,46 @@
               "billable": {
                 "type": "boolean"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "customFieldValues": {},
               "description": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -1986,17 +3441,110 @@
               "color": {
                 "type": "string"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {},
               "estimateReset": {},
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
-              "memberships": {},
+              "memberships": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "membershipStatus": {
+                      "type": "string"
+                    },
+                    "membershipType": {
+                      "type": "string"
+                    },
+                    "targetId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "name": {
                 "type": "string"
               },
@@ -2184,14 +3732,48 @@
               "budgetEstimate": {
                 "type": "integer"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -2305,6 +3887,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "archived": {
+            "description": "Clockify archived filter value",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -2315,6 +3905,19 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "sort_column": {
+            "enum": [
+              "NAME"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -2453,12 +4056,46 @@
                 "billable": {
                   "type": "boolean"
                 },
-                "costRate": {},
+                "costRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "customFieldValues": {},
                 "description": {
                   "type": "string"
                 },
-                "hourlyRate": {},
+                "hourlyRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "id": {
                   "type": "string"
                 },
@@ -2563,6 +4200,60 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "access": {
+            "enum": [
+              "PUBLIC",
+              "PRIVATE"
+            ],
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "client_status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "clients": {
+            "description": "Client IDs to include or exclude",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "contains_client": {
+            "type": "boolean"
+          },
+          "contains_group": {
+            "type": "boolean"
+          },
+          "contains_user": {
+            "type": "boolean"
+          },
+          "expense_date": {
+            "description": "yyyy-MM-dd",
+            "type": "string"
+          },
+          "expense_limit": {
+            "type": "integer"
+          },
+          "hydrated": {
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -2573,6 +4264,51 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "NAME",
+              "CLIENT_NAME",
+              "DURATION",
+              "BUDGET",
+              "PROGRESS"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "strict_name_search": {
+            "type": "boolean"
+          },
+          "user_groups": {
+            "description": "User group IDs to include or exclude",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_status": {
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "DECLINED",
+              "INACTIVE",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "users": {
+            "description": "User IDs to include or exclude",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -2604,17 +4340,110 @@
                 "color": {
                   "type": "string"
                 },
-                "costRate": {},
+                "costRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "duration": {
                   "type": "string"
                 },
                 "estimate": {},
                 "estimateReset": {},
-                "hourlyRate": {},
+                "hourlyRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "id": {
                   "type": "string"
                 },
-                "memberships": {},
+                "memberships": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "costRate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourlyRate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "membershipStatus": {
+                        "type": "string"
+                      },
+                      "membershipType": {
+                        "type": "string"
+                      },
+                      "targetId": {
+                        "type": "string"
+                      },
+                      "userId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "userId"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -2772,6 +4601,13 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -2786,6 +4622,23 @@
           "project": {
             "description": "Project name or ID",
             "type": "string"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "NAME"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "strict_name_search": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -2819,14 +4672,48 @@
                 "budgetEstimate": {
                   "type": "integer"
                 },
-                "costRate": {},
+                "costRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "duration": {
                   "type": "string"
                 },
                 "estimate": {
                   "type": "string"
                 },
-                "hourlyRate": {},
+                "hourlyRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "id": {
                   "type": "string"
                 },
@@ -3064,7 +4951,24 @@
                 "cakeOrganizationId": {
                   "type": "string"
                 },
-                "costRate": {},
+                "costRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "currencies": {},
                 "featureSubscriptionType": {
                   "type": "string"
@@ -3075,14 +4979,90 @@
                   },
                   "type": "array"
                 },
-                "hourlyRate": {},
+                "hourlyRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "id": {
                   "type": "string"
                 },
                 "imageUrl": {
                   "type": "string"
                 },
-                "memberships": {},
+                "memberships": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "costRate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourlyRate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "membershipStatus": {
+                        "type": "string"
+                      },
+                      "membershipType": {
+                        "type": "string"
+                      },
+                      "targetId": {
+                        "type": "string"
+                      },
+                      "userId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "userId"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -3209,12 +5189,46 @@
                   "billable": {
                     "type": "boolean"
                   },
-                  "costRate": {},
+                  "costRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "customFieldValues": {},
                   "description": {
                     "type": "string"
                   },
-                  "hourlyRate": {},
+                  "hourlyRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "id": {
                     "type": "string"
                   },
@@ -3411,12 +5425,46 @@
                     "billable": {
                       "type": "boolean"
                     },
-                    "costRate": {},
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
-                    "hourlyRate": {},
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "id": {
                       "type": "string"
                     },
@@ -3505,12 +5553,46 @@
                     "billable": {
                       "type": "boolean"
                     },
-                    "costRate": {},
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
-                    "hourlyRate": {},
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "id": {
                       "type": "string"
                     },
@@ -3943,12 +6025,46 @@
               "billable": {
                 "type": "boolean"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "customFieldValues": {},
               "description": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -4087,7 +6203,7 @@
     },
     {
       "name": "clockify_summary_report",
-      "description": "Summarize entries for a date/time range by project using the current user's time entries",
+      "description": "Generate a Clockify summary report via the Reports API",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -4099,230 +6215,515 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          {
+            "required": [
+              "date_range_start",
+              "date_range_end"
+            ]
+          }
+        ],
         "properties": {
-          "end": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+          "amount_shown": {
+            "enum": [
+              "EARNED",
+              "COST",
+              "PROFIT",
+              "HIDE_AMOUNT",
+              "EXPORT"
+            ],
             "type": "string"
           },
-          "include_entries": {
+          "amounts": {
+            "items": {
+              "enum": [
+                "EARNED",
+                "COST",
+                "PROFIT",
+                "HIDE_AMOUNT",
+                "EXPORT"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "approval_state": {
+            "enum": [
+              "APPROVED",
+              "UNAPPROVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "archived": {
             "type": "boolean"
           },
-          "max_entries": {
-            "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
-            "minimum": 0,
-            "type": "integer"
+          "billable": {
+            "type": "boolean"
           },
-          "project": {
-            "description": "Optional project name or ID to push down as an upstream filter",
+          "clients": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "currency": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "date_format": {
+            "description": "Date format, e.g. YYYY-MM-DD",
+            "type": "string"
+          },
+          "date_range_end": {
+            "description": "Reports API dateRangeEnd, e.g. 2026-05-12T23:59:59.999",
+            "type": "string"
+          },
+          "date_range_start": {
+            "description": "Reports API dateRangeStart, e.g. 2026-05-01T00:00:00.000",
+            "type": "string"
+          },
+          "date_range_type": {
+            "enum": [
+              "ABSOLUTE",
+              "TODAY",
+              "YESTERDAY",
+              "THIS_WEEK",
+              "LAST_WEEK",
+              "PAST_TWO_WEEKS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "THIS_YEAR",
+              "LAST_YEAR"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_end.",
+            "type": "string"
+          },
+          "export_type": {
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
+            "type": "string"
+          },
+          "invoicing_state": {
+            "enum": [
+              "INVOICED",
+              "UNINVOICED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "projects": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "rounding": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
             "type": "string"
           },
           "start": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_start.",
+            "type": "string"
+          },
+          "summary_filter": {
+            "additionalProperties": false,
+            "properties": {
+              "groups": {
+                "description": "1 to 3 values. MCP DAY is sent upstream as DATE.",
+                "items": {
+                  "enum": [
+                    "CLIENT",
+                    "PROJECT",
+                    "DAY",
+                    "WEEK",
+                    "MONTH",
+                    "TIMEENTRY",
+                    "TASK"
+                  ],
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "sort_column": {
+                "enum": [
+                  "GROUP",
+                  "DURATION",
+                  "AMOUNT",
+                  "EARNED",
+                  "COST",
+                  "PROFIT"
+                ],
+                "type": "string"
+              },
+              "summary_chart_type": {
+                "enum": [
+                  "BILLABILITY",
+                  "PROJECT"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "groups"
+            ],
+            "type": "object"
+          },
+          "tags": {
+            "additionalProperties": false,
+            "properties": {
+              "contained_in_timeentry": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "tasks": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "time_format": {
+            "description": "Time format, e.g. THH:MM:SS.ssssss",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
           "timezone": {
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
+          },
+          "user_custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_locale": {
+            "type": "string"
+          },
+          "users": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "week_start": {
+            "description": "Flexible date used to derive the exact weekly Reports API range.",
+            "type": "string"
+          },
+          "week_start_day": {
+            "description": "Reports API weekStart enum.",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "without_description": {
+            "type": "boolean"
+          },
+          "zoom_level": {
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
+            "type": "string"
           }
         },
+        "required": [
+          "summary_filter"
+        ],
         "type": "object"
       },
       "output_schema": {
-        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_summary_report",
             "type": "string"
-          },
-          "data": {
-            "additionalProperties": false,
-            "properties": {
-              "byProject": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "entries": {
-                      "type": "integer"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "totalHours": {
-                      "type": "number"
-                    },
-                    "totalSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "projectName",
-                    "entries",
-                    "totalSeconds",
-                    "totalHours"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "entries": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "billable": {
-                      "type": "boolean"
-                    },
-                    "costRate": {},
-                    "customFieldValues": {},
-                    "description": {
-                      "type": "string"
-                    },
-                    "hourlyRate": {},
-                    "id": {
-                      "type": "string"
-                    },
-                    "isLocked": {
-                      "type": "boolean"
-                    },
-                    "kioskId": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "tagIds": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "taskId": {
-                      "type": "string"
-                    },
-                    "timeInterval": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "duration": {
-                          "type": "string"
-                        },
-                        "end": {
-                          "type": "string"
-                        },
-                        "start": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "start"
-                      ],
-                      "type": "object"
-                    },
-                    "type": {
-                      "type": "string"
-                    },
-                    "userId": {
-                      "type": "string"
-                    },
-                    "workspaceId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "description",
-                    "projectId",
-                    "timeInterval"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "range": {
-                "additionalProperties": false,
-                "properties": {
-                  "end": {
-                    "type": "string"
-                  },
-                  "start": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "start",
-                  "end"
-                ],
-                "type": "object"
-              },
-              "suggestedActions": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "arguments": {
-                      "additionalProperties": {},
-                      "type": "object"
-                    },
-                    "missingArgs": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "tool": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "tool",
-                    "reason"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "totals": {
-                "additionalProperties": false,
-                "properties": {
-                  "entries": {
-                    "type": "integer"
-                  },
-                  "runningEntries": {
-                    "type": "integer"
-                  },
-                  "totalHours": {
-                    "type": "number"
-                  },
-                  "totalSeconds": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "entries",
-                  "runningEntries",
-                  "totalSeconds",
-                  "totalHours"
-                ],
-                "type": "object"
-              }
-            },
-            "required": [
-              "range",
-              "totals",
-              "byProject",
-              "suggestedActions"
-            ],
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -4330,8 +6731,7 @@
         },
         "required": [
           "ok",
-          "action",
-          "data"
+          "action"
         ],
         "type": "object"
       },
@@ -4540,12 +6940,46 @@
                   "billable": {
                     "type": "boolean"
                   },
-                  "costRate": {},
+                  "costRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "customFieldValues": {},
                   "description": {
                     "type": "string"
                   },
-                  "hourlyRate": {},
+                  "hourlyRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
                   "id": {
                     "type": "string"
                   },
@@ -4842,12 +7276,46 @@
                     "billable": {
                       "type": "boolean"
                     },
-                    "costRate": {},
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "customFieldValues": {},
                     "description": {
                       "type": "string"
                     },
-                    "hourlyRate": {},
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
                     "id": {
                       "type": "string"
                     },
@@ -5102,12 +7570,46 @@
                 "billable": {
                   "type": "boolean"
                 },
-                "costRate": {},
+                "costRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "customFieldValues": {},
                 "description": {
                   "type": "string"
                 },
-                "hourlyRate": {},
+                "hourlyRate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
                 "id": {
                   "type": "string"
                 },
@@ -5216,22 +7718,39 @@
             "maxLength": 256,
             "type": "string"
           },
+          "archive_projects": {
+            "type": "boolean"
+          },
           "archived": {
             "type": "boolean"
           },
+          "cc_emails": {
+            "description": "Additional invoice email recipients, max 3 upstream",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "client": {
             "description": "Client name or ID",
+            "type": "string"
+          },
+          "currency_id": {
             "type": "string"
           },
           "dry_run": {
             "type": "boolean"
           },
           "email": {
+            "format": "email",
             "maxLength": 254,
             "type": "string"
           },
+          "mark_tasks_as_done": {
+            "type": "boolean"
+          },
           "name": {
-            "maxLength": 150,
+            "maxLength": 100,
             "type": "string"
           },
           "note": {
@@ -5389,12 +7908,46 @@
               "billable": {
                 "type": "boolean"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "customFieldValues": {},
               "description": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -5503,8 +8056,43 @@
           "billable": {
             "type": "boolean"
           },
+          "budget_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "include_expenses": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
           "client": {
             "description": "Client name or ID",
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Client ID; bypasses name resolution when supplied",
             "type": "string"
           },
           "color": {
@@ -5512,14 +8100,197 @@
             "pattern": "^#[0-9a-fA-F]{6}$",
             "type": "string"
           },
+          "cost_rate": {
+            "additionalProperties": false,
+            "description": "Project cost rate",
+            "properties": {
+              "amount": {
+                "description": "Raw upstream integer amount; no currency scaling is applied",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "since": {
+                "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount"
+            ],
+            "type": "object"
+          },
           "dry_run": {
             "type": "boolean"
+          },
+          "estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "estimate": {
+                "description": "ISO-8601 duration, e.g. PT1H30M",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "estimate_reset": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "day_of_month": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "day_of_week": {
+                "enum": [
+                  "MONDAY",
+                  "TUESDAY",
+                  "WEDNESDAY",
+                  "THURSDAY",
+                  "FRIDAY",
+                  "SATURDAY",
+                  "SUNDAY"
+                ],
+                "type": "string"
+              },
+              "hour": {
+                "maximum": 23,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "interval": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "month": {
+                "enum": [
+                  "JANUARY",
+                  "FEBRUARY",
+                  "MARCH",
+                  "APRIL",
+                  "MAY",
+                  "JUNE",
+                  "JULY",
+                  "AUGUST",
+                  "SEPTEMBER",
+                  "OCTOBER",
+                  "NOVEMBER",
+                  "DECEMBER"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "hourly_rate": {
+            "additionalProperties": false,
+            "description": "Project hourly rate",
+            "properties": {
+              "amount": {
+                "description": "Raw upstream integer amount; no currency scaling is applied",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "since": {
+                "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount"
+            ],
+            "type": "object"
           },
           "is_public": {
             "type": "boolean"
           },
+          "memberships": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "cost_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member cost rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "hourly_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member hourly rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "membership_status": {
+                  "enum": [
+                    "PENDING",
+                    "ACTIVE",
+                    "DECLINED",
+                    "INACTIVE",
+                    "ALL"
+                  ],
+                  "type": "string"
+                },
+                "membership_type": {
+                  "enum": [
+                    "WORKSPACE",
+                    "PROJECT",
+                    "USERGROUP"
+                  ],
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "name": {
             "maxLength": 150,
+            "minLength": 1,
             "type": "string"
           },
           "note": {
@@ -5529,6 +8300,91 @@
           "project": {
             "description": "Project name or ID",
             "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignee_id": {
+                  "description": "Deprecated upstream field",
+                  "type": "string"
+                },
+                "assignee_ids": {
+                  "description": "Task assignee IDs",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "billable": {
+                  "type": "boolean"
+                },
+                "budget_estimate": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "estimate": {
+                  "description": "ISO-8601 duration, e.g. PT1H30M",
+                  "type": "string"
+                },
+                "name": {
+                  "maxLength": 150,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "ACTIVE",
+                    "DONE",
+                    "ALL"
+                  ],
+                  "type": "string"
+                },
+                "user_group_ids": {
+                  "description": "Task user group IDs",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "time_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "description": "ISO-8601 duration, e.g. PT1H30M",
+                "type": "string"
+              },
+              "include_non_billable": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
           }
         },
         "required": [
@@ -5562,17 +8418,110 @@
               "color": {
                 "type": "string"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {},
               "estimateReset": {},
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
-              "memberships": {},
+              "memberships": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "costRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "hourlyRate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount": {
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "inherited": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount"
+                      ],
+                      "type": "object"
+                    },
+                    "membershipStatus": {
+                      "type": "string"
+                    },
+                    "membershipType": {
+                      "type": "string"
+                    },
+                    "targetId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "name": {
                 "type": "string"
               },
@@ -5731,7 +8680,25 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "assignee_id": {
+            "description": "Deprecated upstream field",
+            "type": "string"
+          },
+          "assignee_ids": {
+            "description": "Task assignee IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "billable": {
+            "type": "boolean"
+          },
+          "budget_estimate": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "contains_assignee": {
             "type": "boolean"
           },
           "dry_run": {
@@ -5741,8 +8708,19 @@
             "description": "ISO-8601 duration estimate, e.g. PT2H30M",
             "type": "string"
           },
+          "membership_status": {
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "DECLINED",
+              "INACTIVE",
+              "ALL"
+            ],
+            "type": "string"
+          },
           "name": {
             "maxLength": 150,
+            "minLength": 1,
             "type": "string"
           },
           "project": {
@@ -5753,13 +8731,21 @@
             "description": "Task status",
             "enum": [
               "ACTIVE",
-              "DONE"
+              "DONE",
+              "ALL"
             ],
             "type": "string"
           },
           "task": {
             "description": "Task ID or exact name",
             "type": "string"
+          },
+          "user_group_ids": {
+            "description": "Task user group IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -5793,14 +8779,48 @@
               "budgetEstimate": {
                 "type": "integer"
               },
-              "costRate": {},
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "duration": {
                 "type": "string"
               },
               "estimate": {
                 "type": "string"
               },
-              "hourlyRate": {},
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
               "id": {
                 "type": "string"
               },
@@ -5857,7 +8877,7 @@
     },
     {
       "name": "clockify_weekly_summary",
-      "description": "Get a weekly summary for the current user, grouped by day and project. This is a safe wrapper built over time-entry data rather than a separate reports API.",
+      "description": "Generate a Clockify weekly report via the Reports API. weekly_filter.group is PROJECT or USER; subgroup is TIME.",
       "group": "tier1",
       "tier": 1,
       "read_only": true,
@@ -5870,256 +8890,479 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "include_entries": {
+          "amount_shown": {
+            "enum": [
+              "EARNED",
+              "COST",
+              "PROFIT",
+              "HIDE_AMOUNT",
+              "EXPORT"
+            ],
+            "type": "string"
+          },
+          "amounts": {
+            "items": {
+              "enum": [
+                "EARNED",
+                "COST",
+                "PROFIT",
+                "HIDE_AMOUNT",
+                "EXPORT"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "approval_state": {
+            "enum": [
+              "APPROVED",
+              "UNAPPROVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "archived": {
             "type": "boolean"
           },
-          "max_entries": {
-            "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies).",
-            "minimum": 0,
-            "type": "integer"
+          "billable": {
+            "type": "boolean"
           },
-          "project": {
-            "description": "Optional project name or ID to push down as an upstream filter",
+          "clients": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "currency": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "date_format": {
+            "description": "Date format, e.g. YYYY-MM-DD",
+            "type": "string"
+          },
+          "date_range_end": {
+            "description": "Reports API dateRangeEnd, e.g. 2026-05-12T23:59:59.999",
+            "type": "string"
+          },
+          "date_range_start": {
+            "description": "Reports API dateRangeStart, e.g. 2026-05-01T00:00:00.000",
+            "type": "string"
+          },
+          "date_range_type": {
+            "enum": [
+              "ABSOLUTE",
+              "TODAY",
+              "YESTERDAY",
+              "THIS_WEEK",
+              "LAST_WEEK",
+              "PAST_TWO_WEEKS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "THIS_YEAR",
+              "LAST_YEAR"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_end.",
+            "type": "string"
+          },
+          "export_type": {
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
+            "type": "string"
+          },
+          "invoicing_state": {
+            "enum": [
+              "INVOICED",
+              "UNINVOICED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "projects": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "rounding": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_start.",
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": false,
+            "properties": {
+              "contained_in_timeentry": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "tasks": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "time_format": {
+            "description": "Time format, e.g. THH:MM:SS.ssssss",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
           "timezone": {
-            "description": "Optional IANA timezone, defaults to local/server timezone.",
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
-          "week_start": {
-            "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time.",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "output_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "action": {
-            "const": "clockify_weekly_summary",
-            "type": "string"
+          "user_custom_fields": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "is_empty": {
+                  "type": "boolean"
+                },
+                "number_condition": {
+                  "enum": [
+                    "EQUAL",
+                    "GREATER_THAN",
+                    "LESS_THAN"
+                  ],
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "TXT",
+                    "NUMBER",
+                    "DROPDOWN_SINGLE",
+                    "DROPDOWN_MULTIPLE",
+                    "CHECKBOX",
+                    "LINK"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
           },
-          "data": {
+          "user_groups": {
             "additionalProperties": false,
             "properties": {
-              "byDay": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "date": {
-                      "type": "string"
-                    },
-                    "entries": {
-                      "type": "integer"
-                    },
-                    "totalHours": {
-                      "type": "number"
-                    },
-                    "totalSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "date",
-                    "entries",
-                    "totalSeconds",
-                    "totalHours"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "byProject": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "entries": {
-                      "type": "integer"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "totalHours": {
-                      "type": "number"
-                    },
-                    "totalSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "projectName",
-                    "entries",
-                    "totalSeconds",
-                    "totalHours"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "entries": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "billable": {
-                      "type": "boolean"
-                    },
-                    "costRate": {},
-                    "customFieldValues": {},
-                    "description": {
-                      "type": "string"
-                    },
-                    "hourlyRate": {},
-                    "id": {
-                      "type": "string"
-                    },
-                    "isLocked": {
-                      "type": "boolean"
-                    },
-                    "kioskId": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "tagIds": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "taskId": {
-                      "type": "string"
-                    },
-                    "timeInterval": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "duration": {
-                          "type": "string"
-                        },
-                        "end": {
-                          "type": "string"
-                        },
-                        "start": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "start"
-                      ],
-                      "type": "object"
-                    },
-                    "type": {
-                      "type": "string"
-                    },
-                    "userId": {
-                      "type": "string"
-                    },
-                    "workspaceId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "description",
-                    "projectId",
-                    "timeInterval"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "range": {
-                "additionalProperties": false,
-                "properties": {
-                  "end": {
-                    "type": "string"
-                  },
-                  "start": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "start",
-                  "end"
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
                 ],
-                "type": "object"
+                "type": "string"
               },
-              "suggestedActions": {
+              "ids": {
+                "description": "User or user group IDs",
                 "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "arguments": {
-                      "additionalProperties": {},
-                      "type": "object"
-                    },
-                    "missingArgs": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "tool": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "tool",
-                    "reason"
-                  ],
-                  "type": "object"
+                  "type": "string"
                 },
                 "type": "array"
               },
-              "totals": {
-                "additionalProperties": false,
-                "properties": {
-                  "entries": {
-                    "type": "integer"
-                  },
-                  "runningEntries": {
-                    "type": "integer"
-                  },
-                  "totalHours": {
-                    "type": "number"
-                  },
-                  "totalSeconds": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "entries",
-                  "runningEntries",
-                  "totalSeconds",
-                  "totalHours"
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
                 ],
-                "type": "object"
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_locale": {
+            "type": "string"
+          },
+          "users": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
               },
-              "unassignedKey": {
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "week_start": {
+            "description": "Flexible date used to derive the exact weekly Reports API range.",
+            "type": "string"
+          },
+          "week_start_day": {
+            "description": "Reports API weekStart enum.",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "weekly_filter": {
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "enum": [
+                  "PROJECT",
+                  "USER"
+                ],
+                "type": "string"
+              },
+              "subgroup": {
+                "enum": [
+                  "TIME"
+                ],
                 "type": "string"
               }
             },
             "required": [
-              "range",
-              "totals",
-              "byDay",
-              "byProject",
-              "suggestedActions"
+              "group",
+              "subgroup"
             ],
             "type": "object"
           },
-          "meta": {
-            "additionalProperties": true,
-            "type": "object"
+          "without_description": {
+            "type": "boolean"
+          },
+          "zoom_level": {
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "weekly_filter"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_weekly_summary",
+            "type": "string"
           },
           "ok": {
             "type": "boolean"
@@ -6127,8 +9370,7 @@
         },
         "required": [
           "ok",
-          "action",
-          "data"
+          "action"
         ],
         "type": "object"
       },
@@ -7235,7 +10477,7 @@
     },
     {
       "name": "clockify_expense_report",
-      "description": "Get expenses filtered by date range with page-scoped category totals",
+      "description": "Generate a Clockify expense detailed report via the Reports API",
       "group": "expenses",
       "tier": 2,
       "read_only": true,
@@ -7247,24 +10489,353 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          {
+            "required": [
+              "date_range_start",
+              "date_range_end"
+            ]
+          }
+        ],
         "properties": {
+          "approval_state": {
+            "enum": [
+              "APPROVED",
+              "UNAPPROVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "categories": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "clients": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "currency": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "date_range_end": {
+            "description": "Reports API dateRangeEnd, e.g. 2026-05-12T23:59:59.999",
+            "type": "string"
+          },
+          "date_range_start": {
+            "description": "Reports API dateRangeStart, e.g. 2026-05-01T00:00:00.000",
+            "type": "string"
+          },
+          "date_range_type": {
+            "enum": [
+              "ABSOLUTE",
+              "TODAY",
+              "YESTERDAY",
+              "THIS_WEEK",
+              "LAST_WEEK",
+              "PAST_TWO_WEEKS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "THIS_YEAR",
+              "LAST_YEAR"
+            ],
+            "type": "string"
+          },
           "end": {
-            "description": "End date (YYYY-MM-DD or RFC3339)",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_end.",
+            "type": "string"
+          },
+          "export_type": {
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
+            "type": "string"
+          },
+          "invoicing_state": {
+            "enum": [
+              "INVOICED",
+              "UNINVOICED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 500,
             "type": "string"
           },
           "page": {
-            "description": "Page number (default 1)",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
           },
+          "projects": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "PROJECT",
+              "USER",
+              "CATEGORY",
+              "DATE",
+              "AMOUNT"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
           "start": {
-            "description": "Start date (YYYY-MM-DD or RFC3339)",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now'). Alias for date_range_start.",
+            "type": "string"
+          },
+          "tasks": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "Clockify IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED",
+                  "ALL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "time_zone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_locale": {
+            "type": "string"
+          },
+          "users": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN",
+                  "CONTAINS_ONLY"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User or user group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE_WITH_PENDING",
+                  "ACTIVE",
+                  "PENDING",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "week_start_day": {
+            "description": "Reports API weekStart enum.",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "without_note": {
+            "type": "boolean"
+          },
+          "zoom_level": {
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
             "type": "string"
           }
         },
@@ -9152,6 +12723,190 @@
       }
     },
     {
+      "name": "clockify_assign_project_memberships",
+      "description": "Assign or remove users and user groups on a project",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_ids",
+        "remove"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "remove": {
+            "type": "boolean"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "user_ids": {
+            "description": "User IDs to assign or remove",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_assign_project_memberships",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
+        "title": "Assign Project Memberships"
+      }
+    },
+    {
+      "name": "clockify_create_project_from_template",
+      "description": "Create a project from an existing project template",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "color": {
+            "description": "Hex color code",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "is_public": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "minLength": 1,
+            "type": "string"
+          },
+          "template_project_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "template_project_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_create_project_from_template",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Create Project From Template"
+      }
+    },
+    {
       "name": "clockify_create_project_template",
       "description": "Create a new project template",
       "group": "project_admin",
@@ -9339,11 +13094,21 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_ids"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
           "hourly_rate": {
             "description": "Hourly rate for all members (optional)",
             "type": "number"
@@ -9382,20 +13147,28 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Set Project Memberships"
       }
     },
     {
       "name": "clockify_update_project_estimate",
-      "description": "Update a project's estimate (TIME or BUDGET)",
+      "description": "Update a project's documented estimate fields",
       "group": "project_admin",
       "tier": 2,
       "read_only": false,
@@ -9408,22 +13181,145 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "budget_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "include_expenses": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "estimate_reset": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "day_of_month": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "day_of_week": {
+                "enum": [
+                  "MONDAY",
+                  "TUESDAY",
+                  "WEDNESDAY",
+                  "THURSDAY",
+                  "FRIDAY",
+                  "SATURDAY",
+                  "SUNDAY"
+                ],
+                "type": "string"
+              },
+              "hour": {
+                "maximum": 23,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "interval": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "month": {
+                "enum": [
+                  "JANUARY",
+                  "FEBRUARY",
+                  "MARCH",
+                  "APRIL",
+                  "MAY",
+                  "JUNE",
+                  "JULY",
+                  "AUGUST",
+                  "SEPTEMBER",
+                  "OCTOBER",
+                  "NOVEMBER",
+                  "DECEMBER"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
           "estimate_type": {
-            "description": "One of: TIME, BUDGET",
+            "description": "Deprecated alias; use time_estimate or budget_estimate",
+            "enum": [
+              "TIME",
+              "BUDGET"
+            ],
             "type": "string"
           },
           "estimate_value": {
-            "description": "Estimate amount (seconds for TIME, currency for BUDGET)",
+            "description": "Deprecated alias; seconds for TIME, raw amount for BUDGET",
             "type": "number"
           },
           "project_id": {
             "type": "string"
+          },
+          "time_estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "estimate": {
+                "description": "ISO-8601 duration, e.g. PT1H30M",
+                "type": "string"
+              },
+              "include_non_billable": {
+                "type": "boolean"
+              },
+              "reset_option": {
+                "enum": [
+                  "WEEKLY",
+                  "MONTHLY",
+                  "YEARLY"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "AUTO",
+                  "MANUAL"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
           }
         },
         "required": [
-          "project_id",
-          "estimate_type",
-          "estimate_value"
+          "project_id"
         ],
         "type": "object"
       },
@@ -9453,6 +13349,596 @@
           "write"
         ],
         "title": "Update Project Estimate"
+      }
+    },
+    {
+      "name": "clockify_update_project_memberships",
+      "description": "Replace project memberships and optional user-group filter/rate metadata",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "project_id"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "memberships": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "cost_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member cost rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "hourly_rate": {
+                  "additionalProperties": false,
+                  "description": "Per-member hourly rate",
+                  "properties": {
+                    "amount": {
+                      "description": "Raw upstream integer amount; no currency scaling is applied",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "since": {
+                      "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                "membership_status": {
+                  "enum": [
+                    "PENDING",
+                    "ACTIVE",
+                    "DECLINED",
+                    "INACTIVE",
+                    "ALL"
+                  ],
+                  "type": "string"
+                },
+                "membership_type": {
+                  "enum": [
+                    "WORKSPACE",
+                    "PROJECT",
+                    "USERGROUP"
+                  ],
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "user_groups": {
+            "additionalProperties": false,
+            "properties": {
+              "contains": {
+                "enum": [
+                  "CONTAINS",
+                  "DOES_NOT_CONTAIN"
+                ],
+                "type": "string"
+              },
+              "ids": {
+                "description": "User group IDs",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "ALL",
+                  "ACTIVE",
+                  "INACTIVE"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "project_id",
+          "memberships"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_project_memberships",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "admin",
+          "permission_change"
+        ],
+        "title": "Update Project Memberships"
+      }
+    },
+    {
+      "name": "clockify_update_project_template",
+      "description": "Update whether a project is a template",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "is_template"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_project_template",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Update Project Template"
+      }
+    },
+    {
+      "name": "clockify_update_project_user_cost_rate",
+      "description": "Update a project user's cost rate",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing",
+        "admin"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_id",
+        "amount"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Raw upstream integer amount; no currency scaling is applied",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "since": {
+            "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "user_id",
+          "amount"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_project_user_cost_rate",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing",
+          "admin"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing",
+          "admin"
+        ],
+        "title": "Update Project User Cost Rate"
+      }
+    },
+    {
+      "name": "clockify_update_project_user_hourly_rate",
+      "description": "Update a project user's billable hourly rate",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing",
+        "admin"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_id",
+        "amount"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Raw upstream integer amount; no currency scaling is applied",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "since": {
+            "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "user_id",
+          "amount"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_project_user_hourly_rate",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing",
+          "admin"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing",
+          "admin"
+        ],
+        "title": "Update Project User Hourly Rate"
+      }
+    },
+    {
+      "name": "clockify_update_task_cost_rate",
+      "description": "Update a task cost rate",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "project_id",
+        "task_id",
+        "amount"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Raw upstream integer amount; no currency scaling is applied",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID; required unless project is supplied",
+            "type": "string"
+          },
+          "since": {
+            "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+            "type": "string"
+          },
+          "task": {
+            "description": "Task ID or exact name",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Task ID; required unless task is supplied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_task_cost_rate",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
+        "title": "Update Task Cost Rate"
+      }
+    },
+    {
+      "name": "clockify_update_task_hourly_rate",
+      "description": "Update a task billable hourly rate",
+      "group": "project_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "project_id",
+        "task_id",
+        "amount"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Raw upstream integer amount; no currency scaling is applied",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "project": {
+            "description": "Project name or ID",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID; required unless project is supplied",
+            "type": "string"
+          },
+          "since": {
+            "description": "Clockify yyyy-MM-ddThh:mm:ssZ effective timestamp",
+            "type": "string"
+          },
+          "task": {
+            "description": "Task ID or exact name",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Task ID; required unless task is supplied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_task_hourly_rate",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
+        "title": "Update Task Hourly Rate"
       }
     },
     {

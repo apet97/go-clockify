@@ -9,7 +9,7 @@ Tools are categorized based on their impact on data and their required privilege
 ### 1. Agent-Safe Tools (Safe for general use)
 *   **Time Tracking:** `clockify_start_timer`, `clockify_stop_timer`, `clockify_log_time`, `clockify_timer_status`, `clockify_timesheet_review`, `clockify_timesheet_fill_gap`.
 *   **Contextual Information:** `clockify_whoami`, `clockify_policy_info`, `clockify_list_tools`, `clockify_activate_group`, `clockify_activate_tool`, `clockify_deactivate_group`, `clockify_search_tools`, `clockify_get_workspace`.
-*   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`, `clockify_timesheet_review`.
+*   **Reporting (Read-Only):** `clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_attendance_report`, `clockify_quick_report`, `clockify_timesheet_review`.
 *   **Discovery:** `clockify_list_projects`, `clockify_list_tasks`, `clockify_list_clients`.
 
 ### 2. Admin-Only / Sensitive Tools
@@ -208,7 +208,7 @@ a key with a stronger role works wherever a weaker one is listed.
 | Personal context (`clockify_whoami`, `clockify_get_workspace`, `clockify_list_tools`, `clockify_policy_info`, `clockify_search_tools`) | Regular | No workspace data exposed beyond the caller's membership. |
 | Project / client / tag / task **reads** (`clockify_list_projects`, `clockify_list_clients`, `clockify_list_tags`, `clockify_list_tasks`, `clockify_get_*`) | Regular | List/get reads are visible to all members. |
 | Project / client / tag / task **writes** (`clockify_create_*`, `clockify_update_*`, `clockify_archive_*`, `clockify_delete_*`) | Workspace Admin | Project Managers may also have write access on projects they manage; the upstream API enforces this on a per-resource basis. |
-| Reports (`clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_quick_report`) | Team Manager | Cross-user roll-ups require Team Manager or higher. A Regular key sees only its own entries even if a report tool is invoked. |
+| Reports (`clockify_summary_report`, `clockify_detailed_report`, `clockify_weekly_summary`, `clockify_attendance_report`, `clockify_quick_report`) | Team Manager | Cross-user roll-ups require Team Manager or higher. A Regular key sees only its own entries even if a report tool is invoked. |
 | Approvals (`clockify_list_approval_requests`, `clockify_approve_timesheet`, `clockify_reject_timesheet`, `clockify_submit_for_approval`, `clockify_withdraw_approval`) | Team Manager | Approvers must have the role for the workspace's approval policy; Regulars can submit their own requests only. |
 | Webhooks (`clockify_create_webhook`, `clockify_delete_webhook`, `clockify_test_webhook`) | Workspace Admin | Webhook surface is admin-only. |
 | Shared reports (`clockify_create_shared_report`, `clockify_list_shared_reports`, `clockify_delete_shared_report`) | Workspace Admin | Share targets bypass per-user permissions, so the upstream API requires admin scope. |

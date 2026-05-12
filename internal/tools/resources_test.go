@@ -2,11 +2,10 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
@@ -151,11 +150,17 @@ func TestResourcesReadWeeklyReportDoesNotMutateServiceWorkspace(t *testing.T) {
 	var svc *Service
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice"})
-		case "/workspaces/" + resourceWorkspace + "/user/u1/time-entries":
+		case "/workspaces/" + resourceWorkspace + "/reports/weekly":
 			observedWorkspace <- svc.WorkspaceID
-			respondJSON(t, w, []clockify.TimeEntry{})
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode weekly report body: %v", err)
+			}
+			filter, _ := body["weeklyFilter"].(map[string]any)
+			if filter["group"] != "PROJECT" || filter["subgroup"] != "TIME" {
+				t.Fatalf("unexpected weeklyFilter: %#v", filter)
+			}
+			respondJSON(t, w, map[string]any{"totals": []map[string]any{}})
 		default:
 			t.Fatalf("unexpected path: %q", r.URL.Path)
 		}

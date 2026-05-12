@@ -151,15 +151,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 10. Expense report
-		{Tool: withOutputSchema(toolRO("clockify_expense_report", "Get expenses filtered by date range with page-scoped category totals", map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
-				"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
-				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
-				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
-			},
-		}), envelopeOpenMap("clockify_expense_report")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: withOutputSchema(toolRO("clockify_expense_report", "Generate a Clockify expense detailed report via the Reports API", expenseReportInputSchema()), envelopeOpenMap("clockify_expense_report")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.expenseReport(ctx, args)
 		}},
 	}
@@ -614,65 +606,25 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-
-	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
-	}
-	if v := stringArg(args, "start"); v != "" {
-		query["start"] = v
-	}
-	if v := stringArg(args, "end"); v != "" {
-		query["end"] = v
-	}
-
-	path, err := paths.Workspace(wsID, "expenses")
+	body, err := buildExpenseReportBody(args)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	// Same envelope as listExpenses — the report aggregator hits the
-	// same /expenses endpoint, just with date-range filters.
-	var envelope struct {
-		Expenses struct {
-			Expenses []map[string]any `json:"expenses"`
-			Count    int              `json:"count"`
-		} `json:"expenses"`
-	}
-	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
+	path, err := paths.Workspace(wsID, "reports", "expenses", "detailed")
+	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	expenses := envelope.Expenses.Expenses
-
-	// Aggregates are page-scoped because the upstream endpoint returns a
-	// paginated expense slice plus the total matching count.
-	var pageTotalAmount float64
-	pageByCategory := map[string]float64{}
-	for _, exp := range expenses {
-		if amt, ok := exp["amount"].(float64); ok {
-			pageTotalAmount += amt
-			catID, _ := exp["categoryId"].(string)
-			if catID == "" {
-				catID = "uncategorized"
-			}
-			pageByCategory[catID] += amt
-		}
+	data, binary, err := s.postReportsAPI(ctx, path, body)
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
-
-	return ok("clockify_expense_report", map[string]any{
-		"expenses":         expenses,
-		"aggregationScope": "page",
-		"pageTotalAmount":  pageTotalAmount,
-		"pageByCategory":   pageByCategory,
-		"totalAmount":      pageTotalAmount,
-		"byCategory":       pageByCategory,
-	}, map[string]any{
-		"workspaceId":      wsID,
-		"count":            envelope.Expenses.Count,
-		"pageCount":        len(expenses),
-		"page":             page,
-		"pageSize":         pageSize,
-		"aggregationScope": "page",
-	}), nil
+	meta := map[string]any{
+		"workspaceId": wsID,
+		"source":      "reports-api",
+		"exportType":  body["exportType"],
+	}
+	if binary {
+		meta["binary"] = true
+	}
+	return ok("clockify_expense_report", data, meta), nil
 }

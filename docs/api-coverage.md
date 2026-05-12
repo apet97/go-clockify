@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 26 | 33 | 59 |
-| Mutating (non-destructive) | 20 | 42 | 62 |
+| Read-only | 27 | 33 | 60 |
+| Mutating (non-destructive) | 20 | 50 | 70 |
 | Destructive | 5 | 13 | 18 |
-| Billing | 0 | 8 | 8 |
-| Admin | 0 | 7 | 7 |
-| **Total tools** | **51** | **88** | **139** |
+| Billing | 0 | 12 | 12 |
+| Admin | 0 | 12 | 12 |
+| **Total tools** | **52** | **96** | **148** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (51)
+## Tier 1 — Core tools (52)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -51,12 +51,13 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 `/workspaces/{ws}/users`, `/workspaces/{ws}/reports/*`,
 `/user`, `/workspaces`.
 
-### Read-only (25 tools)
+### Read-only (27 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
+| `clockify_attendance_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/attendance` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_current_user` | `GET /user` | unit, live-read-only (TestE2EReadOnly) |
-| `clockify_detailed_report` | `GET /workspaces/{ws}/reports/detailed` | unit |
+| `clockify_detailed_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/detailed` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |
 | `clockify_get_entry` | `GET /workspaces/{ws}/time-entries/{id}` | unit |
 | `clockify_get_project` | `GET /workspaces/{ws}/projects/{id}` | unit |
@@ -68,20 +69,33 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_list_projects` | `GET /workspaces/{ws}/projects` | unit, live-read-only (TestE2EReadOnly) |
 | `clockify_list_tags` | `GET /workspaces/{ws}/tags` | unit |
 | `clockify_list_tasks` | `GET /workspaces/{ws}/projects/{id}/tasks` | unit |
+| `clockify_list_tools` | local (catalog query) | unit |
 | `clockify_list_users` | `GET /workspaces/{ws}/users` | unit |
 | `clockify_list_workspaces` | `GET /workspaces` | unit |
 | `clockify_policy_info` | local (no API call) | unit |
 | `clockify_quick_report` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries`) | unit |
 | `clockify_resolve_debug` | compatibility alias over name resolution lookup | unit, live-read-only (TestLiveTier1ReadOnly) |
 | `clockify_resolve_name` | name resolution lookup over project/client/tag/user list endpoints | unit, live-read-only (TestLiveTier1ReadOnly) |
-| `clockify_summary_report` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries`) | unit |
+| `clockify_summary_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_timer_status` | `GET /workspaces/{ws}/user/{uid}/time-entries?in-progress=true` | unit |
 | `clockify_timesheet_review` | workflow wrapper over `GET /workspaces/{ws}/user/{uid}/time-entries` | unit, live-read-only (TestLiveTier1ReadOnly) |
 | `clockify_today_entries` | `GET /workspaces/{ws}/user/{uid}/time-entries` (filtered) | unit |
-| `clockify_weekly_summary` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries` by day + project) | unit |
+| `clockify_weekly_summary` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/weekly` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
 
-### Mutating — non-destructive (21 tools)
+### Reports API document ledger
+
+Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDTIMEREPORTS.md` plus the expense detailed report excerpt. MCP inputs use snake_case and the handlers emit the upstream camelCase JSON body. All rows return the upstream JSON object directly in `data` with `meta.source="reports-api"` and `meta.workspaceId`.
+
+| Document row | Upstream endpoint | MCP tool / required filter | Documented params and enums covered | Example values covered | Unit coverage | Live evidence |
+|--------------|-------------------|----------------------------|-------------------------------------|------------------------|---------------|---------------|
+| Attendance report | `POST /workspaces/{workspaceId}/reports/attendance` | `clockify_attendance_report`; requires `attendance_filter` only | Common report fields; `attendance_filter.page`, `page_size`, `sort_column`, `break_filters`, `capacity_filters`, `end_filters`, `overtime_filters`, `start_filters`, `work_filters`, `has_time_off`; sort enum `USER`, `DATE`, `START`, `END`, `BREAK`, `WORK`, `CAPACITY`, `OVERTIME`, `TIME_OFF`; compare enum `EXACTLY`, `LARGER_THAN`, `SMALLER_THAN` | `start`, `end`, `attendance_filter.start_filters[].filtration_type=LARGER_THAN`, `value=00:00` | `TestAttendanceReportUsesReportsAPI`; `TestReportToolSchemasExposeOnlyTheirDocumentedFilters` | `TestLiveReportsDocCoverage`; planning probe returned `200` with `entities` |
+| Detailed report | `POST /workspaces/{workspaceId}/reports/detailed` | `clockify_detailed_report`; requires `detailed_filter` only | Common report fields; `detailed_filter.page`, `page_size`, `sort_column`, `audit_filter`, `options`; sort enum `ID`, `DESCRIPTION`, `USER`, `DURATION`, `DATE`, `ZONED_DATE`, `NATURAL`, `USER_DATE`; `options.totals=CALCULATE|EXCLUDE`; audit booleans; `amount_shown`/`amounts` `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT` | `amount_shown=PROFIT`, `amounts=[EARNED,COST,PROFIT]`, `options.totals=CALCULATE`, `audit_filter.without_task=true` | `TestDetailedReportUsesReportsAPI`; `TestReportToolSchemasExposeDocumentedEnumsAndAliases` | `TestLiveReportsDocCoverage`; live enum probe accepted `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT` |
+| Summary report | `POST /workspaces/{workspaceId}/reports/summary` | `clockify_summary_report`; requires `summary_filter` only | Common report fields; `summary_filter.groups` 1-3 levels, sort/chart; groups exposed as `CLIENT`, `PROJECT`, `DAY`, `WEEK`, `MONTH`, `TIMEENTRY`, `TASK`; MCP `DAY` translates to upstream `DATE`; sort enum `GROUP`, `DURATION`, `AMOUNT`, `EARNED`, `COST`, `PROFIT`; chart enum `BILLABILITY`, `PROJECT`; `amount_shown`/`amounts` enums as documented | `groups=[CLIENT,PROJECT,DAY]`, `sort_column=PROFIT`, `summary_chart_type=PROJECT` | `TestSummaryReportUsesReportsAPI`; `TestSummaryReportGroupAliasBuilder` | `TestLiveReportsDocCoverage`; planning probe confirmed upstream `DATE`; upstream rejected literal `DAY` with `400`, so `DAY` is documented as an MCP alias |
+| Weekly report | `POST /workspaces/{workspaceId}/reports/weekly` | `clockify_weekly_summary`; requires `weekly_filter` only | Common report fields; exact 7-day range required or derived from `week_start`; `weekly_filter.group=PROJECT|USER`; `weekly_filter.subgroup=TIME`; no summary/detailed/attendance filters | `week_start=2026-04-06`, `weekly_filter.group=PROJECT`, `subgroup=TIME` | `TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange`; `TestWeeklyReportRejectsInvalidSubgroup` | `TestLiveReportsDocCoverage`; planning probe returned `200` for `PROJECT/TIME` and `USER/TIME`; invalid group/subgroup returned `400` |
+| Expense detailed report | `POST /workspaces/{workspaceId}/reports/expenses/detailed` | `clockify_expense_report`; no time-report filter object | `approval_state`, `billable`, `categories`, `clients`, `currency`, `date_range_start`, `date_range_end`, `date_range_type`, `export_type`, `invoicing_state`, `note`, `page`, `page_size`, `projects`, `sort_column`, `sort_order`, `tasks`, `time_zone`, `user_groups`, `user_locale`, `users`, `week_start_day`, `without_note`, `zoom_level`; sort enum `ID`, `PROJECT`, `USER`, `CATEGORY`, `DATE`, `AMOUNT`; contains/status/user-status/date-range/export/week/zoom enums | `page=1`, `page_size=25`, `sort_column=ID`, `projects.contains=CONTAINS` | `TestExpenseReport`; `TestExpenseReportSchemaCoversDetailedExpenseReportBody` | `TestLiveReportsDocCoverage`; planning probe returned `200` with `expenses` and `totals` |
+
+### Mutating — non-destructive (20 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
@@ -94,7 +108,6 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_activate_tool` | local (tool-surface mutation) | unit |
 | `clockify_deactivate_group` | local (tool-surface mutation) | unit |
 | `clockify_find_and_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
-| `clockify_list_tools` | local (catalog query) | unit |
 | `clockify_log_time` | `POST /workspaces/{ws}/time-entries` | unit |
 | `clockify_search_tools` | local (deprecated catalog/activation shim) | unit |
 | `clockify_start_timer` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
@@ -119,7 +132,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 
 ---
 
-## Tier 2 — Domain groups (88 tools)
+## Tier 2 — Domain groups (96 tools)
 
 ### `approvals` (6 tools)
 
@@ -149,7 +162,8 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/custom-fields/*`
 
 ### `expenses` (10 tools)
 
-Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/expenses/*`
+Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/expenses/*`;
+expense detailed report uses `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/expenses/detailed`.
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
@@ -157,7 +171,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/expenses/*`
 | `clockify_create_expense_category` | mutating | unit |
 | `clockify_delete_expense` | destructive | unit |
 | `clockify_delete_expense_category` | destructive | unit |
-| `clockify_expense_report` | read-only | unit |
+| `clockify_expense_report` | read-only | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_get_expense` | read-only | unit |
 | `clockify_list_expense_categories` | read-only | unit |
 | `clockify_list_expenses` | read-only | unit |
@@ -198,18 +212,77 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 | `clockify_update_invoice` | mutating | `billing` | unit |
 | `clockify_update_invoice_item` | mutating | `billing` | unit |
 
-### `project_admin` (6 tools)
+### `project_admin` (14 tools)
 
-Clockify endpoints: `PUT/DELETE /workspaces/{ws}/projects/*`, `/workspaces/{ws}/project-templates/*`
+Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/projects/*`, `/workspaces/{ws}/project-templates/*`
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
 | `clockify_archive_projects` | mutating | unit |
+| `clockify_assign_project_memberships` | mutating, admin, permission_change | unit, live-probed (`TestLiveProjectAdminDocCoverage`) |
+| `clockify_create_project_from_template` | mutating | unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 403) |
 | `clockify_create_project_template` | mutating | unit |
 | `clockify_get_project_template` | read-only | unit |
 | `clockify_list_project_templates` | read-only | unit |
 | `clockify_set_project_memberships` | mutating | unit |
 | `clockify_update_project_estimate` | mutating | unit |
+| `clockify_update_project_memberships` | mutating, admin, permission_change | unit, live-probed (`TestLiveProjectAdminDocCoverage`) |
+| `clockify_update_project_template` | mutating | unit, live-probed (`TestLiveProjectAdminDocCoverage`) |
+| `clockify_update_project_user_cost_rate` | mutating, billing, admin | unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx) |
+| `clockify_update_project_user_hourly_rate` | mutating, billing, admin | unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx) |
+| `clockify_update_task_cost_rate` | mutating, billing | unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx) |
+| `clockify_update_task_hourly_rate` | mutating, billing | unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx) |
+
+### Client / Project / Task Doc Parity Ledger (2026-05-12)
+
+Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLIENTSDOC.md`, `PROJECTSDOC.md`, and `TASKDOC.md`. MCP inputs stay snake_case; handlers translate to Clockify camelCase body fields and hyphenated query parameters. Rate amounts are forwarded as raw upstream integers with no currency scaling.
+
+Live evidence command run locally against the confirmed sacrificial workspace on 2026-05-12:
+
+```bash
+set -a; . /tmp/clockify-livetest.env; set +a; export CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true CLOCKIFY_LIVE_WRITE_ENABLED=true CLOCKIFY_LIVE_ADMIN_ENABLED=true CLOCKIFY_LIVE_BILLING_ENABLED=true; go test -tags=livee2e -run 'TestLive.*(ClientProjectTask|ProjectAdmin).*DocCoverage' ./tests/...
+```
+
+The Tier 1 `TestLiveClientProjectTaskDocCoverage` path succeeded end-to-end. The project-admin doc test reaches every new admin/rate route; documented routes that Clockify refuses for the sacrificial account are accepted only when the upstream response is an explicit permission/plan/membership refusal and are logged by the test.
+
+#### Client Rows
+
+| Doc row | Endpoint | Parameters / fields / examples accounted for | MCP surface | Unit and live evidence |
+|---------|----------|-----------------------------------------------|-------------|------------------------|
+| Find clients | `GET /workspaces/{workspaceId}/clients` | `workspaceId` example `64a687e29ae1f428e7ebe303`; query `name=Client X`, `sort-column=NAME`, `sort-order=ASCENDING`, `page=1`, `page-size=50`, `archived` string filter | `clockify_list_clients`: `name`, `sort_column`, `sort_order`, `page`, `page_size`, `archived` | `TestClientDocListFiltersForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Add client | `POST /workspaces/{workspaceId}/clients` | Body `address`, `email`, `name`, `note`; examples use Palo Alto address, `clientx@example.com`, `Client X`, sample note | `clockify_create_client`: `address`, `email`, `name`, `note` | `TestCreateClientForwardsAddressEmailNote`; live `TestLiveClientProjectTaskDocCoverage` |
+| Delete client | `DELETE /workspaces/{workspaceId}/clients/{id}` | Path `id` example `44a687e29ae1f428e7ebe305`; response fields `address`, `archived`, `ccEmails`, `email`, `id`, `name`, `note`, `workspaceId` | `clockify_delete_client`: `client`; archives active clients before DELETE | `TestDeleteClientArchivesActiveClient`; live `TestLiveClientProjectTaskDocCoverage` |
+| Get client | `GET /workspaces/{workspaceId}/clients/{id}` | Path `id`; response fields `address`, `archived`, `ccEmails`, `currencyCode`, `currencyId`, `email`, `id`, `name`, `note`, `workspaceId` | `clockify_get_client`: `client` | `TestGetClientByID`; live `TestLiveClientProjectTaskDocCoverage` |
+| Update client | `PUT /workspaces/{workspaceId}/clients/{id}` | Query `archive-projects`, `mark-tasks-as-done`; body `address`, `archived`, `ccEmails`, `currencyId`, `email`, `name`, `note`; examples include `user@example.com` and `53a687e29ae1f428e7ebe888` | `clockify_update_client`: `archive_projects`, `mark_tasks_as_done`, `cc_emails`, `currency_id`, plus existing merge fields | `TestUpdateClientDocFieldsAndArchiveQueryForwarded`; live `TestLiveClientProjectTaskDocCoverage` (`currency_id` used when workspace currency id is discoverable) |
+
+#### Project Rows
+
+| Doc row | Endpoint | Parameters / fields / examples accounted for | MCP surface | Unit and live evidence |
+|---------|----------|-----------------------------------------------|-------------|------------------------|
+| Find projects | `GET /workspaces/{workspaceId}/projects` | Query `name`, `strict-name-search`, `archived`, `billable`, repeated `clients`, `contains-client`, `client-status` enum `ACTIVE`/`ARCHIVED`/`ALL`, repeated `users`, `contains-user`, `user-status` enum `PENDING`/`ACTIVE`/`DECLINED`/`INACTIVE`/`ALL`, `is-template`, `sort-column` enum `ID`/`NAME`/`CLIENT_NAME`/`DURATION`/`BUDGET`/`PROGRESS`, `sort-order` enum `ASCENDING`/`DESCENDING`, `hydrated`, `access` enum `PUBLIC`/`PRIVATE`, `expense-limit`, `expense-date`, repeated `userGroups`, `contains-group`, `page`, `page-size` | `clockify_list_projects`: same names in snake_case, repeated lists encoded as repeated upstream query keys | `TestProjectDocListFiltersForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Add project | `POST /workspaces/{workspaceId}/projects` | Body `name`, `clientId`, `color`, `billable`, `isPublic`, `note`, `costRate.amount/since`, `hourlyRate.amount/since`, `estimate.estimate/type` (`AUTO`, `MANUAL`), `budgetEstimate.active/estimate/includeExpenses/resetOption/type`, `timeEstimate.active/estimate/includeNonBillable/resetOption/type`, `memberships`, `tasks`; examples include `PT1H30M` and raw rate amounts | `clockify_create_project`: `client_id` plus existing `client`, `cost_rate`, `hourly_rate`, `estimate`, `budget_estimate`, `time_estimate`, `memberships`, `tasks` | `TestProjectDocCreateRichBodyForwarded`; live safe-field path in `TestLiveClientProjectTaskDocCoverage` |
+| Create project from template | `POST /workspaces/{workspaceId}/projects/from-template` | Body `name`, `templateProjectId`, optional `clientId`, `color`, `isPublic` | `clockify_create_project_from_template`: `name`, `template_project_id`, `client_id`, `color`, `is_public` | `TestTier2Dispatch_ProjectAdmin_CreateProjectFromTemplate`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Delete project | `DELETE /workspaces/{workspaceId}/projects/{projectId}` | Path `projectId`; active projects must be archived first in this MCP | `clockify_delete_project`: `project`; `clockify_archive_projects` remains bulk archive helper | `TestDeleteProjectArchivesActiveProject`; live `TestLiveClientProjectTaskDocCoverage` |
+| Get project | `GET /workspaces/{workspaceId}/projects/{projectId}` | Path `projectId`; response fields include `archived`, `billable`, `budgetEstimate`, `clientId`, `clientName`, `color`, `costRate`, `duration`, `estimate`, `estimateReset`, `hourlyRate`, `id`, `memberships`, `name`, `note`, `public`, `template`, `timeEstimate`, `workspaceId` | `clockify_get_project`: `project` | `TestUpdateProjectFetchThenMerge` and existing get coverage; live `TestLiveClientProjectTaskDocCoverage` |
+| Update project | `PUT /workspaces/{workspaceId}/projects/{projectId}` | Full body merge supports `name`, `clientId`, `color`, `archived`, `billable`, `isPublic`, `note`, rates, estimates, memberships, tasks, `estimateReset` | `clockify_update_project`: `client_id`, `cost_rate`, `hourly_rate`, `estimate`, `budget_estimate`, `estimate_reset`, `time_estimate`, `memberships`, `tasks` | `TestProjectDocUpdateRichBodyForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Update project estimate | `PATCH /workspaces/{workspaceId}/projects/{projectId}/estimate` | Body `budgetEstimate`, `estimateReset`, `timeEstimate`; enums `AUTO`/`MANUAL`, `WEEKLY`/`MONTHLY`/`YEARLY`, weekdays/months; legacy `estimate_type`/`estimate_value` remain aliases | `clockify_update_project_estimate`: `budget_estimate`, `estimate_reset`, `time_estimate`, legacy aliases | `TestTier2Dispatch_ProjectAdmin_UpdateProjectEstimate`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Update project memberships | `PATCH /workspaces/{workspaceId}/projects/{projectId}/memberships` | Body `memberships[]` with `userId`, `hourlyRate`, `costRate`, `membershipStatus`, `membershipType`; `userGroups.ids/status/contains` with `CONTAINS`/`DOES_NOT_CONTAIN` and `ALL`/`ACTIVE`/`INACTIVE` | `clockify_update_project_memberships`; `clockify_set_project_memberships` is backward-compatible alias | `TestTier2Dispatch_ProjectAdmin_DocumentedMembershipAndTemplateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Assign/remove project memberships | `POST /workspaces/{workspaceId}/projects/{projectId}/memberships` | Body `remove`, `userIds`, `userGroups` with same `contains` and `status` enums | `clockify_assign_project_memberships`: `remove`, `user_ids`, `user_groups` | `TestTier2Dispatch_ProjectAdmin_DocumentedMembershipAndTemplateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Update project template | `PATCH /workspaces/{workspaceId}/projects/{projectId}/template` | Body `isTemplate` | `clockify_update_project_template`: `is_template` | `TestTier2Dispatch_ProjectAdmin_DocumentedMembershipAndTemplateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Update project user cost rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate` | Body `amount` raw integer and optional `since` timestamp | `clockify_update_project_user_cost_rate`: `project_id`, `user_id`, `amount`, `since` | `TestTier2Dispatch_ProjectAdmin_DocumentedRateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Update project user billable rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate` | Body `amount` raw integer and optional `since` timestamp | `clockify_update_project_user_hourly_rate`: `project_id`, `user_id`, `amount`, `since` | `TestTier2Dispatch_ProjectAdmin_DocumentedRateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+
+#### Task Rows
+
+| Doc row | Endpoint | Parameters / fields / examples accounted for | MCP surface | Unit and live evidence |
+|---------|----------|-----------------------------------------------|-------------|------------------------|
+| Find tasks | `GET /workspaces/{workspaceId}/projects/{projectId}/tasks` | Query `name`, `strict-name-search`, `is-active`, `sort-column` enum `ID`/`NAME`, `sort-order` enum `ASCENDING`/`DESCENDING`, `page`, `page-size` | `clockify_list_tasks`: `project`, `name`, `strict_name_search`, `is_active`, `sort_column`, `sort_order`, pagination | `TestTaskDocListFiltersForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Add task | `POST /workspaces/{workspaceId}/projects/{projectId}/tasks` | Query `contains-assignee`; body `assigneeId`, `assigneeIds`, `billable`, `budgetEstimate`, `estimate` example `PT1H30M`, `name`, `status` enum `ACTIVE`/`DONE`/`ALL`, `userGroupIds` | `clockify_create_task`: `project_id`/`project`, `contains_assignee`, `assignee_id`, `assignee_ids`, `budget_estimate`, `estimate`, `status`, `user_group_ids` | `TestTaskDocCreateAndUpdateFieldsForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Update task | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}` | TASKDOC truncates the method/path line; MCP uses the established Clockify `PUT` route. Query `contains-assignee`, `membership-status`; body same task fields as create | `clockify_update_task`: `project`, `task`, `contains_assignee`, `membership_status`, assignee/budget/estimate/status/user-group fields | `TestTaskDocCreateAndUpdateFieldsForwarded`; live `TestLiveClientProjectTaskDocCoverage` |
+| Update task cost rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/cost-rate` | Body `amount` raw integer and optional `since`; response returns task with `costRate` | `clockify_update_task_cost_rate`: `project_id`/`project`, `task_id`/`task`, `amount`, `since` | `TestTier2Dispatch_ProjectAdmin_DocumentedRateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Update task billable rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/hourly-rate` | Body `amount` raw integer and optional `since`; response returns task with `hourlyRate` | `clockify_update_task_hourly_rate`: `project_id`/`project`, `task_id`/`task`, `amount`, `since` | `TestTier2Dispatch_ProjectAdmin_DocumentedRateTools`; live-probed in `TestLiveProjectAdminDocCoverage` |
+| Delete task | `DELETE /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}` | Path `projectId`, `taskId`; response echoes task fields | `clockify_delete_task`: `project`, `task` | `TestDeleteTaskDeletesDirectly`; live `TestLiveClientProjectTaskDocCoverage` |
+| Get task | `GET /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}` | Path `projectId`, `taskId`; response fields `assigneeId`, `assigneeIds`, `billable`, `budgetEstimate`, `costRate`, `duration`, `estimate`, `hourlyRate`, `id`, `name`, `projectId`, `status`, `userGroupIds` | `clockify_get_task`: `project`, `task` | `TestGetTaskByID`; live `TestLiveClientProjectTaskDocCoverage` |
 
 ### `scheduling` (7 tools)
 
@@ -399,7 +472,7 @@ surface and surface latent handler / upstream bugs.
 
 | Test | Tools / surface exercised | Outcome shape |
 |------|----------------------------|---------------|
-| `TestLiveTier1ReadOnly` | 15 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `quick_report`, `timesheet_review`, `timer_status`, `detailed_report`, `resolve_name`, `resolve_debug`, `policy_info` | success path |
+| `TestLiveTier1ReadOnly` | 16 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `attendance_report`, `quick_report`, `timesheet_review`, `timer_status`, `detailed_report`, `resolve_name`, `resolve_debug`, `policy_info` | success path |
 | `TestLiveTier2ReadOnlySweep` | 22 Tier-2 read-only and report tools across 11 groups | success path for the current list/report surface |
 | `TestLiveT2SchedulingRecurringCRUD` | `create_assignment`, `get_assignment` via list scan, `update_assignment`, `delete_assignment` on recurring-assignment routes | success path |
 | `TestLiveT2ExpensesCRUD` | `create_expense_category`, `update_expense_category`, `create_expense`, `get_expense` bogus-id handling; delete-category archive constraint remains pinned | mixed success / documented upstream constraint |
@@ -416,10 +489,13 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2WebhooksCRUD` | all 7 webhook tools: create/get/update/list-events/test dry-run/delete dry-run/delete using live `webhookEvent` + trigger-source body shape | success path |
 | `TestLiveT2TimeOffRemainingTools` | all 12 time-off tool names: policy/request list/get/create/update/delete/status/balance paths; request create reaches live body contract and unsupported/permission routes are asserted where Clockify rejects the operation | success path + plan/permission/unsupported-route probes |
 | `TestLiveT2ApprovalsRemainingTools` | all 6 approvals tool names: list, submit period/periodStart, get, approve/reject dry-run, withdraw | success path + documented approval period / GET-route 4xx probes |
+| `TestLiveClientProjectTaskDocCoverage` | client/project/task doc rows from `CLIENTSDOC.md`, `PROJECTSDOC.md`, and `TASKDOC.md` through the MCP path | success path |
+| `TestLiveProjectAdminDocCoverage` | project template clone, project template flag, project estimate/membership endpoints, project-user rates, task rates | success path where allowed; explicit upstream permission/plan refusals pinned |
+| `TestLiveReportsDocCoverage` | ATTENDANCEANDTIMEREPORTS.md + expense detailed report rows: attendance, detailed, summary, weekly, expense detailed reports with documented filters and amount fields | success path where enabled; explicit upstream permission/plan refusals pinned |
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 139-tool catalog is 51 Tier 1 tools + 88 Tier 2 tools, with
+current 148-tool catalog is 52 Tier 1 tools + 96 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -428,8 +504,9 @@ explicitly allowing local-only Tier-1 catalog/tool-surface helpers that
 should not pretend to call Clockify. PR #59 manually exercised the then-current
 121 generated catalog tools through the MCP path against the
 sacrificial workspace; PR #62 added the invite-user raw-route
-validation probe. The two later timesheet workflow helpers are covered
-by unit tests and live-test hooks, but have not by themselves been
+validation probe. Later timesheet workflow helpers and the client /
+project / task plus Reports API doc-parity expansions are covered by
+unit tests and live-test hooks, but have not by themselves been
 promoted into launch evidence.
 That does **not** mean every tool has a live success path: the tests
 distinguish successful CRUD from concrete upstream constraints such as
@@ -657,4 +734,4 @@ committed into go-clockify.
 
 ---
 
-*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-03. Re-run verification after `make gen-tool-catalog`.*
+*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-12. Re-run verification after `make gen-tool-catalog`.*

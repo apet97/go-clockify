@@ -34,13 +34,13 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			return s.ListUsers(ctx, args)
 		}},
 		{Tool: toolRO("clockify_current_user", "Get the current Clockify user", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.CurrentUser(ctx) }},
-		{Tool: toolRO("clockify_list_projects", "List projects in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_list_projects", "List projects in the resolved workspace", projectListInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListProjects(ctx, args)
 		}},
 		{Tool: toolRO("clockify_get_project", "Get a project by ID or exact name", requiredSchema("project")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.GetProject(ctx, stringArg(args, "project"))
 		}},
-		{Tool: toolRO("clockify_list_clients", "List clients in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_list_clients", "List clients in the resolved workspace", clientListInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListClients(ctx, args)
 		}},
 		{Tool: toolRO("clockify_get_client", "Get a client by ID or exact name", requiredSchema("client")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -52,10 +52,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_get_tag", "Get a tag by ID or exact name", requiredSchema("tag")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.GetTag(ctx, args)
 		}},
-		{Tool: toolRO("clockify_list_tasks", "List tasks for a project", paginationSchema(map[string]any{
-			"required":   []string{"project"},
-			"properties": map[string]any{"project": map[string]any{"type": "string", "description": "Project name or ID"}},
-		})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_list_tasks", "List tasks for a project", taskListInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListTasks(ctx, args)
 		}},
 		{Tool: toolRO("clockify_get_task", "Get a task by ID or exact name within a project", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
@@ -80,23 +77,10 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", paginationSchema(map[string]any{"properties": map[string]any{"timezone": timezoneInputProperty()}})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TodayEntries(ctx, args)
 		}},
-		{Tool: toolRO("clockify_summary_report", "Summarize entries for a date/time range by project using the current user's time entries", map[string]any{"type": "object", "properties": map[string]any{
-			"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"timezone":        timezoneInputProperty(),
-			"project":         map[string]any{"type": "string", "description": "Optional project name or ID to push down as an upstream filter"},
-			"include_entries": map[string]any{"type": "boolean"},
-			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_summary_report", "Generate a Clockify summary report via the Reports API", reportInputSchema("summary_filter", summaryFilterSchema())), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SummaryReport(ctx, args)
 		}},
-		{Tool: toolRO("clockify_weekly_summary", "Get a weekly summary for the current user, grouped by day and project. This is a safe wrapper built over time-entry data rather than a separate reports API.", map[string]any{"type": "object", "properties": map[string]any{
-			"week_start":      map[string]any{"type": "string", "description": "Optional RFC3339 timestamp or YYYY-MM-DD date. Defaults to Monday of the current week in local time."},
-			"timezone":        map[string]any{"type": "string", "description": "Optional IANA timezone, defaults to local/server timezone."},
-			"project":         map[string]any{"type": "string", "description": "Optional project name or ID to push down as an upstream filter"},
-			"include_entries": map[string]any{"type": "boolean"},
-			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_weekly_summary", "Generate a Clockify weekly report via the Reports API. weekly_filter.group is PROJECT or USER; subgroup is TIME.", weeklyReportInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.WeeklySummary(ctx, args)
 		}},
 		{Tool: toolRO("clockify_quick_report", "Quick high-signal summary for a recent period. Safe helper over the current user's time entries.", map[string]any{"type": "object", "properties": map[string]any{
@@ -186,25 +170,43 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			return s.FindAndUpdateEntry(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_project", "Create a new project", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name":      map[string]any{"type": "string"},
-			"client":    map[string]any{"type": "string", "description": "Client name or ID"},
-			"color":     map[string]any{"type": "string", "description": "Hex color code"},
-			"billable":  map[string]any{"type": "boolean"},
-			"is_public": map[string]any{"type": "boolean"},
-			"dry_run":   map[string]any{"type": "boolean"},
+			"name":            map[string]any{"type": "string", "minLength": 1, "maxLength": 150},
+			"client":          map[string]any{"type": "string", "description": "Client name or ID"},
+			"client_id":       map[string]any{"type": "string", "description": "Client ID; bypasses name resolution when supplied"},
+			"color":           map[string]any{"type": "string", "description": "Hex color code"},
+			"billable":        map[string]any{"type": "boolean"},
+			"is_public":       map[string]any{"type": "boolean"},
+			"note":            map[string]any{"type": "string", "maxLength": 500},
+			"cost_rate":       rateRequestInputSchema("Project cost rate"),
+			"hourly_rate":     rateRequestInputSchema("Project hourly rate"),
+			"estimate":        estimateRequestInputSchema(),
+			"memberships":     map[string]any{"type": "array", "items": membershipInputSchema()},
+			"tasks":           map[string]any{"type": "array", "items": taskRequestInputSchema()},
+			"budget_estimate": estimateWithOptionsInputSchema(),
+			"time_estimate":   timeEstimateInputSchema(),
+			"dry_run":         map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateProject(ctx, args)
 		}},
 		{Tool: toolRWIdem("clockify_update_project", "Update a project by ID or exact name using a fetch-then-merge strategy. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'. Use the dedicated archived boolean to flip archival state.", map[string]any{"type": "object", "required": []string{"project"}, "properties": map[string]any{
-			"project":   map[string]any{"type": "string", "description": "Project name or ID"},
-			"name":      map[string]any{"type": "string"},
-			"client":    map[string]any{"type": "string", "description": "Client name or ID"},
-			"color":     map[string]any{"type": "string", "description": "Hex color code"},
-			"note":      map[string]any{"type": "string"},
-			"billable":  map[string]any{"type": "boolean"},
-			"is_public": map[string]any{"type": "boolean"},
-			"archived":  map[string]any{"type": "boolean"},
-			"dry_run":   map[string]any{"type": "boolean"},
+			"project":         map[string]any{"type": "string", "description": "Project name or ID"},
+			"name":            map[string]any{"type": "string", "minLength": 1, "maxLength": 150},
+			"client":          map[string]any{"type": "string", "description": "Client name or ID"},
+			"client_id":       map[string]any{"type": "string", "description": "Client ID; bypasses name resolution when supplied"},
+			"color":           map[string]any{"type": "string", "description": "Hex color code"},
+			"note":            map[string]any{"type": "string", "maxLength": 500},
+			"billable":        map[string]any{"type": "boolean"},
+			"is_public":       map[string]any{"type": "boolean"},
+			"archived":        map[string]any{"type": "boolean"},
+			"cost_rate":       rateRequestInputSchema("Project cost rate"),
+			"hourly_rate":     rateRequestInputSchema("Project hourly rate"),
+			"estimate":        estimateRequestInputSchema(),
+			"memberships":     map[string]any{"type": "array", "items": membershipInputSchema()},
+			"tasks":           map[string]any{"type": "array", "items": taskRequestInputSchema()},
+			"budget_estimate": estimateWithOptionsInputSchema(),
+			"estimate_reset":  estimateResetInputSchema(),
+			"time_estimate":   timeEstimateInputSchema(),
+			"dry_run":         map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateProject(ctx, args)
 		}},
@@ -230,13 +232,17 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			return s.DeleteClient(ctx, args)
 		}},
 		{Tool: toolRWIdem("clockify_update_client", "Update a client by ID or exact name using a fetch-then-merge strategy. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'. Use the dedicated archived boolean to flip archival state.", map[string]any{"type": "object", "required": []string{"client"}, "properties": map[string]any{
-			"client":   map[string]any{"type": "string", "description": "Client name or ID"},
-			"name":     map[string]any{"type": "string"},
-			"address":  map[string]any{"type": "string"},
-			"email":    map[string]any{"type": "string"},
-			"note":     map[string]any{"type": "string"},
-			"archived": map[string]any{"type": "boolean"},
-			"dry_run":  map[string]any{"type": "boolean"},
+			"client":             map[string]any{"type": "string", "description": "Client name or ID"},
+			"name":               map[string]any{"type": "string", "maxLength": 100},
+			"address":            map[string]any{"type": "string", "maxLength": 256},
+			"email":              map[string]any{"type": "string", "format": "email"},
+			"note":               map[string]any{"type": "string", "maxLength": 500},
+			"cc_emails":          stringArraySchema("Additional invoice email recipients, max 3 upstream"),
+			"currency_id":        map[string]any{"type": "string"},
+			"archive_projects":   map[string]any{"type": "boolean"},
+			"mark_tasks_as_done": map[string]any{"type": "boolean"},
+			"archived":           map[string]any{"type": "boolean"},
+			"dry_run":            map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateClient(ctx, args)
 		}},
@@ -261,24 +267,35 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			return s.DeleteTag(ctx, args)
 		}},
 		{Tool: toolRW("clockify_create_task", "Create a new task in a project", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"project":    map[string]any{"type": "string", "description": "Project name or ID"},
-			"project_id": map[string]any{"type": "string"},
-			"name":       map[string]any{"type": "string"},
-			"billable":   map[string]any{"type": "boolean"},
-			"estimate":   map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
-			"status":     map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}, "description": "Task status"},
-			"dry_run":    map[string]any{"type": "boolean"},
+			"project":           map[string]any{"type": "string", "description": "Project name or ID"},
+			"project_id":        map[string]any{"type": "string"},
+			"name":              map[string]any{"type": "string", "minLength": 1, "maxLength": 150},
+			"assignee_id":       map[string]any{"type": "string", "description": "Deprecated upstream field"},
+			"assignee_ids":      stringArraySchema("Task assignee IDs"),
+			"budget_estimate":   map[string]any{"type": "integer", "minimum": 0},
+			"contains_assignee": map[string]any{"type": "boolean"},
+			"billable":          map[string]any{"type": "boolean"},
+			"estimate":          map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
+			"status":            map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE", "ALL"}, "description": "Task status"},
+			"user_group_ids":    stringArraySchema("Task user group IDs"),
+			"dry_run":           map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CreateTask(ctx, args)
 		}},
 		{Tool: toolRWIdem("clockify_update_task", "Update a task by project+task reference using fetch-then-merge. Clockify's PUT is a full replacement; caller-supplied empty strings are treated as 'do not change'.", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
-			"project":  map[string]any{"type": "string", "description": "Project name or ID"},
-			"task":     map[string]any{"type": "string", "description": "Task ID or exact name"},
-			"name":     map[string]any{"type": "string"},
-			"status":   map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}, "description": "Task status"},
-			"estimate": map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
-			"billable": map[string]any{"type": "boolean"},
-			"dry_run":  map[string]any{"type": "boolean"},
+			"project":           map[string]any{"type": "string", "description": "Project name or ID"},
+			"task":              map[string]any{"type": "string", "description": "Task ID or exact name"},
+			"name":              map[string]any{"type": "string", "minLength": 1, "maxLength": 150},
+			"assignee_id":       map[string]any{"type": "string", "description": "Deprecated upstream field"},
+			"assignee_ids":      stringArraySchema("Task assignee IDs"),
+			"budget_estimate":   map[string]any{"type": "integer", "minimum": 0},
+			"contains_assignee": map[string]any{"type": "boolean"},
+			"membership_status": map[string]any{"type": "string", "enum": []string{"PENDING", "ACTIVE", "DECLINED", "INACTIVE", "ALL"}},
+			"status":            map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE", "ALL"}, "description": "Task status"},
+			"estimate":          map[string]any{"type": "string", "description": "ISO-8601 duration estimate, e.g. PT2H30M"},
+			"billable":          map[string]any{"type": "boolean"},
+			"user_group_ids":    stringArraySchema("Task user group IDs"),
+			"dry_run":           map[string]any{"type": "boolean"},
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateTask(ctx, args)
 		}},
@@ -303,14 +320,10 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SwitchProject(ctx, args)
 		}},
-		{Tool: toolRO("clockify_detailed_report", "Detailed time entry report with filtering by project and date range", map[string]any{"type": "object", "required": []string{"start", "end"}, "properties": map[string]any{
-			"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"timezone":        timezoneInputProperty(),
-			"project":         map[string]any{"type": "string"},
-			"include_entries": map[string]any{"type": "boolean"},
-			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_attendance_report", "Generate a Clockify attendance report via the Reports API", reportInputSchema("attendance_filter", attendanceFilterSchema())), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.AttendanceReport(ctx, args)
+		}},
+		{Tool: toolRO("clockify_detailed_report", "Generate a Clockify detailed report via the Reports API", reportInputSchema("detailed_filter", detailedFilterSchema())), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.DetailedReport(ctx, args)
 		}},
 		{Tool: toolRO("clockify_resolve_name", "Resolve a project, client, tag, user, or project-scoped task name/email to a Clockify ID. Prefer this before write tools when a user gives a name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {

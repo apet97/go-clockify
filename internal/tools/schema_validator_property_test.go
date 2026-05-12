@@ -39,7 +39,13 @@ func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
 		},
 		{
 			toolName: "clockify_weekly_summary",
-			args:     map[string]any{"week_start": "2026-04-21"}, // YYYY-MM-DD short date
+			args: map[string]any{ // YYYY-MM-DD short date plus the required Reports API filter.
+				"week_start": "2026-04-21",
+				"weekly_filter": map[string]any{
+					"group":    "PROJECT",
+					"subgroup": "TIME",
+				},
+			},
 		},
 	}
 

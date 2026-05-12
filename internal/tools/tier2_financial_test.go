@@ -359,17 +359,23 @@ func TestInvoiceReport(t *testing.T) {
 }
 
 func TestExpenseReport(t *testing.T) {
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/expenses" && r.Method == http.MethodGet:
+		case r.URL.Path == "/workspaces/ws1/reports/expenses/detailed" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode expense report body: %v", err)
+			}
 			respondJSON(t, w, map[string]any{
-				"expenses": map[string]any{
-					"expenses": []map[string]any{
-						{"id": "e1", "amount": 50.0, "categoryId": "cat1"},
-						{"id": "e2", "amount": 75.0, "categoryId": "cat1"},
-						{"id": "e3", "amount": 120.0, "categoryId": "cat2"},
-					},
-					"count": 3,
+				"expenses": []map[string]any{
+					{"id": "e1", "amount": 50.0, "categoryId": "cat1"},
+					{"id": "e2", "amount": 75.0, "categoryId": "cat1"},
+					{"id": "e3", "amount": 120.0, "categoryId": "cat2"},
+				},
+				"totals": map[string]any{
+					"expensesCount":       3,
+					"totalAmount":         245.0,
+					"totalAmountBillable": 125.0,
 				},
 			})
 		default:
@@ -380,44 +386,46 @@ func TestExpenseReport(t *testing.T) {
 
 	svc := New(client, "ws1")
 	result, err := svc.expenseReport(context.Background(), map[string]any{
-		"start": "2026-04-01",
-		"end":   "2026-04-30",
+		"start":       "2026-04-01T00:00:00.000",
+		"end":         "2026-04-30T23:59:59.999",
+		"page":        1,
+		"page_size":   50,
+		"sort_column": "AMOUNT",
+		"sort_order":  "DESCENDING",
+		"categories": map[string]any{
+			"contains": "CONTAINS",
+			"ids":      []any{"cat1"},
+			"status":   "ACTIVE",
+		},
 	})
 	if err != nil {
 		t.Fatalf("expense report failed: %v", err)
+	}
+	if gotBody["dateRangeStart"] != "2026-04-01T00:00:00.000" || gotBody["dateRangeEnd"] != "2026-04-30T23:59:59.999" {
+		t.Fatalf("date aliases not forwarded as dateRangeStart/dateRangeEnd: %#v", gotBody)
+	}
+	if gotBody["dateRangeType"] != "ABSOLUTE" || gotBody["exportType"] != "JSON" {
+		t.Fatalf("unexpected report defaults: %#v", gotBody)
+	}
+	if gotBody["pageSize"] != float64(50) || gotBody["sortColumn"] != "AMOUNT" || gotBody["sortOrder"] != "DESCENDING" {
+		t.Fatalf("expense report paging/sort not normalized: %#v", gotBody)
+	}
+	categories, _ := gotBody["categories"].(map[string]any)
+	if categories["contains"] != "CONTAINS" || categories["status"] != "ACTIVE" {
+		t.Fatalf("expense categories filter not normalized: %#v", categories)
 	}
 	data, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map data, got %T", result.Data)
 	}
-	if data["totalAmount"] != 245.0 {
-		t.Fatalf("expected totalAmount=245, got %v", data["totalAmount"])
+	if _, ok := data["expenses"]; !ok {
+		t.Fatalf("expected upstream expenses in data, got %#v", data)
 	}
-	if data["pageTotalAmount"] != 245.0 {
-		t.Fatalf("expected pageTotalAmount=245, got %v", data["pageTotalAmount"])
+	if _, ok := data["totals"]; !ok {
+		t.Fatalf("expected upstream totals in data, got %#v", data)
 	}
-	if data["aggregationScope"] != "page" {
-		t.Fatalf("expected aggregationScope=page, got %v", data["aggregationScope"])
-	}
-	byCategory, ok := data["byCategory"].(map[string]float64)
-	if !ok {
-		t.Fatalf("expected byCategory map, got %T", data["byCategory"])
-	}
-	pageByCategory, ok := data["pageByCategory"].(map[string]float64)
-	if !ok {
-		t.Fatalf("expected pageByCategory map, got %T", data["pageByCategory"])
-	}
-	if byCategory["cat1"] != 125.0 {
-		t.Fatalf("expected cat1=125, got %v", byCategory["cat1"])
-	}
-	if pageByCategory["cat1"] != 125.0 {
-		t.Fatalf("expected page cat1=125, got %v", pageByCategory["cat1"])
-	}
-	if result.Meta["pageSize"] != 50 {
-		t.Fatalf("expected meta pageSize=50, got %v", result.Meta["pageSize"])
-	}
-	if result.Meta["aggregationScope"] != "page" {
-		t.Fatalf("expected meta aggregationScope=page, got %v", result.Meta["aggregationScope"])
+	if result.Meta["source"] != "reports-api" {
+		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
 	}
 }
 

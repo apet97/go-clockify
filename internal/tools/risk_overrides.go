@@ -82,6 +82,34 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskDestructive | mcp.RiskAdmin,
 		auditKeys: []string{"group_id", "user_id"},
 	},
+	"clockify_update_project_memberships": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"project_id"},
+	},
+	"clockify_set_project_memberships": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"project_id", "user_ids"},
+	},
+	"clockify_assign_project_memberships": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"project_id", "user_ids", "remove"},
+	},
+	"clockify_update_project_user_cost_rate": {
+		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
+		auditKeys: []string{"project_id", "user_id", "amount"},
+	},
+	"clockify_update_project_user_hourly_rate": {
+		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
+		auditKeys: []string{"project_id", "user_id", "amount"},
+	},
+	"clockify_update_task_cost_rate": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"project_id", "task_id", "amount"},
+	},
+	"clockify_update_task_hourly_rate": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"project_id", "task_id", "amount"},
+	},
 
 	// Webhooks — external side effects.
 	"clockify_create_webhook": {

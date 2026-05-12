@@ -33,8 +33,8 @@ func TestGroupsHolidaysHandlersCount(t *testing.T) {
 func TestProjectAdminHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := projectAdminHandlers(svc)
-	if got := len(descs); got != 6 {
-		t.Fatalf("expected 6 project admin handlers, got %d", got)
+	if got := len(descs); got != 14 {
+		t.Fatalf("expected 14 project admin handlers, got %d", got)
 	}
 }
 
