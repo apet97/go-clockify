@@ -13,12 +13,15 @@ func timezoneInputProperty() map[string]any {
 }
 
 func resolveNameInputSchema() map[string]any {
-	return map[string]any{"type": "object", "required": []string{"entity_type", "name_or_id"}, "properties": map[string]any{
-		"entity_type": map[string]any{"type": "string", "description": "project, client, tag, user, or task"},
-		"name_or_id":  map[string]any{"type": "string"},
-		"project":     map[string]any{"type": "string", "description": "Project name or ID required when entity_type is task"},
-		"project_id":  map[string]any{"type": "string", "description": "Project ID required when entity_type is task unless project is supplied"},
-	}}
+	return schemaObject(
+		[]string{"entity_type", "name_or_id"},
+		map[string]any{
+			"entity_type": schemaString("project, client, tag, user, or task"),
+			"name_or_id":  schemaString(""),
+			"project":     schemaString("Project name or ID required when entity_type is task"),
+			"project_id":  schemaString("Project ID required when entity_type is task unless project is supplied"),
+		},
+	)
 }
 
 func (s *Service) Registry() []mcp.ToolDescriptor {
