@@ -127,6 +127,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 
+- **ADR 0022 — design for batched `audit_events` INSERT.** Captures
+  the strict-rule guard (intent events and `fail_closed_strict`
+  outcomes stay single-row synchronous), the two-method
+  `controlplane.Store` interface shape
+  (`AppendAuditEvent` for single + `AppendAuditEventBatch` for
+  many), and the 64-event / 250ms flush defaults that Wave 7.1's
+  follow-up implementation commit will adopt. Status remains
+  *Proposed* until that commit lands and flips it to Accepted.
+
 - **Trademark / non-affiliation disclaimer added.** New top-level
   `NOTICE.md` declares `go-clockify` an independent third-party
   client, names Clockify as a trademark of CAKE.com, and clarifies
