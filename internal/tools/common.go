@@ -102,6 +102,9 @@ type Service struct {
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
+	// DocumentedAPIWrites enables generic probe_lab_api write/delete calls.
+	// Runtime defaults this off for hosted profiles and on for local profiles.
+	DocumentedAPIWrites bool
 	// DeltaFormat selects the diff algorithm for resource notifications.
 	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
 	DeltaFormat  string
@@ -350,9 +353,10 @@ type findAndUpdateArgs struct {
 
 func New(client *clockify.Client, workspaceID string) *Service {
 	return &Service{
-		Client:        client,
-		WorkspaceID:   workspaceID,
-		resourceCache: newResourceStateCache(1024),
+		Client:              client,
+		WorkspaceID:         workspaceID,
+		DocumentedAPIWrites: true,
+		resourceCache:       newResourceStateCache(1024),
 	}
 }
 

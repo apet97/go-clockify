@@ -209,3 +209,15 @@ func TestProbeLabAPIWriteDryRunDoesNotMutate(t *testing.T) {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
 }
+
+func TestCallDocumentedWriteAPIBlockedWhenRawWritesDisabled(t *testing.T) {
+	svc := New(nil, "ws1")
+	svc.DocumentedAPIWrites = false
+	_, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
+		"operation": "POST /workspaces/{workspaceId}/clients",
+		"json_body": map[string]any{"name": "Blocked"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_DOCUMENTED_API_WRITES") {
+		t.Fatalf("err = %v, want documented API writes disabled error", err)
+	}
+}

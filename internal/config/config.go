@@ -167,6 +167,10 @@ type Config struct {
 	// resolves to a private IP only on the control-plane network.
 	// See docs/runbooks/webhook-dns-validation.md §4b.
 	WebhookAllowedDomains []string
+	// DocumentedAPIWrites enables the generic probe_lab_api write/delete
+	// escape hatch. Hosted profiles default it off so shared services expose
+	// typed tools first; local/self-hosted profiles keep the raw bridge enabled.
+	DocumentedAPIWrites bool
 	// RequireTenantClaim, when true, makes the OIDC authenticator
 	// reject any token whose tenant claim is absent — instead of
 	// quietly falling back to MCP_DEFAULT_TENANT_ID. Wired from
@@ -600,6 +604,15 @@ func Load() (Config, error) {
 			}
 		}
 	}
+	if raw := strings.TrimSpace(os.Getenv("CLOCKIFY_DOCUMENTED_API_WRITES")); raw != "" {
+		v, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_DOCUMENTED_API_WRITES %q: must be a boolean", raw)
+		}
+		cfg.DocumentedAPIWrites = v
+	} else {
+		cfg.DocumentedAPIWrites = !isHostedProfile(profileName)
+	}
 	// Strict mode: an oidc deployment without either MCP_OIDC_AUDIENCE
 	// or MCP_RESOURCE_URI accepts any valid issuer-signed token,
 	// regardless of whether the token was minted for this server. That
@@ -970,6 +983,7 @@ func (c Config) Fingerprint() map[string]any {
 		"tool_timeout":                  c.ToolTimeout.String(),
 		"max_inflight_tool_calls":       c.MaxInFlightToolCalls,
 		"report_max_entries":            c.ReportMaxEntries,
+		"documented_api_writes":         c.DocumentedAPIWrites,
 		"audit_durability_mode":         c.AuditDurabilityMode,
 		"http_legacy_policy":            c.HTTPLegacyPolicy,
 		"http_inline_metrics_enabled":   c.HTTPInlineMetricsEnabled,

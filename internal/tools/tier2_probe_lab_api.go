@@ -370,6 +370,9 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	if !allowed[requested.Method] {
 		return ResultEnvelope{}, fmt.Errorf("%s does not allow %s operations", toolName, requested.Method)
 	}
+	if requested.Method != http.MethodGet && !s.DocumentedAPIWrites && !dryrun.Enabled(args) {
+		return ResultEnvelope{}, fmt.Errorf("documented API write/delete calls are disabled; set CLOCKIFY_DOCUMENTED_API_WRITES=1 to enable this raw escape hatch")
+	}
 	op, found := documentedOperationByKey(requested.key())
 	if !found {
 		return ResultEnvelope{}, fmt.Errorf("operation %q is not in the documented Clockify allowlist", requested.key())

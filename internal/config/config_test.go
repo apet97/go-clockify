@@ -36,6 +36,52 @@ func TestValidateBaseURL(t *testing.T) {
 	}
 }
 
+func TestDocumentedAPIWritesDefaultByProfile(t *testing.T) {
+	t.Run("local_default_enabled", func(t *testing.T) {
+		setEnvs(t, map[string]string{"CLOCKIFY_API_KEY": "test-key"})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if !cfg.DocumentedAPIWrites {
+			t.Fatal("DocumentedAPIWrites default = false, want true for local profile")
+		}
+	})
+	t.Run("hosted_default_disabled", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"MCP_PROFILE":                        "shared-service",
+			"MCP_ALLOW_DEV_BACKEND":              "1",
+			"MCP_AUTH_MODE":                      "static_bearer",
+			"MCP_BEARER_TOKEN":                   "0123456789abcdef",
+			"CLOCKIFY_CONFIRMATION_TOKEN_SECRET": strings.Repeat("a", 64),
+		})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if cfg.DocumentedAPIWrites {
+			t.Fatal("DocumentedAPIWrites default = true, want false for hosted profile")
+		}
+	})
+	t.Run("hosted_explicit_enabled", func(t *testing.T) {
+		setEnvs(t, map[string]string{
+			"MCP_PROFILE":                        "shared-service",
+			"MCP_ALLOW_DEV_BACKEND":              "1",
+			"MCP_AUTH_MODE":                      "static_bearer",
+			"MCP_BEARER_TOKEN":                   "0123456789abcdef",
+			"CLOCKIFY_DOCUMENTED_API_WRITES":     "1",
+			"CLOCKIFY_CONFIRMATION_TOKEN_SECRET": strings.Repeat("a", 64),
+		})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if !cfg.DocumentedAPIWrites {
+			t.Fatal("DocumentedAPIWrites explicit override should enable raw writes")
+		}
+	})
+}
+
 func TestValidateBaseURL_HostedRejectsHTTP(t *testing.T) {
 	// Hosted mode must refuse plain http even when the host is remote
 	// — same posture as the env-level guardrail in Load().
