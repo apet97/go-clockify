@@ -141,6 +141,11 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	_ = s.Notifier.Notify("notifications/progress", params)
 }
 
+// ActivationResult is the payload returned by a Service activator
+// (ActivateGroup / ActivateTool) describing which tools came online.
+// The shape feeds activationPayload + activationMessage so the MCP
+// response envelope carries a self-describing list of newly-visible
+// tools rather than a bare "ok".
 type ActivationResult struct {
 	Kind  string `json:"kind"`
 	Name  string `json:"name"`
@@ -171,6 +176,9 @@ type ActivationResult struct {
 	ActivatedToolsBlockedByPolicy []string `json:"activatedToolsBlockedByPolicy,omitempty"`
 }
 
+// DeactivationResult mirrors ActivationResult for the deactivation
+// path: the Service.DeactivateGroup callback returns one of these to
+// describe which tools were removed from the visible tools/list.
 type DeactivationResult struct {
 	Kind              string   `json:"kind"`
 	Name              string   `json:"name"`
@@ -180,6 +188,13 @@ type DeactivationResult struct {
 	TotalVisibleTools int      `json:"totalVisibleTools,omitempty"`
 }
 
+// ResultEnvelope is the canonical shape every Tier 1 / Tier 2 tool
+// handler returns. OK is the boolean success flag, Action mirrors the
+// tool name for client-side dispatch, Data carries the typed payload
+// (struct or map) and Meta is reserved for cross-cutting metadata
+// (pagination cursors, fingerprint hashes, etc.). Wire-locked by the
+// per-tool outputSchemas in output_schemas.go; mutate this struct and
+// every schemaFor[T] surface has to be reviewed for drift.
 type ResultEnvelope struct {
 	OK     bool           `json:"ok"`
 	Action string         `json:"action"`
@@ -187,15 +202,27 @@ type ResultEnvelope struct {
 	Meta   map[string]any `json:"meta,omitempty"`
 }
 
+// WorkspaceContext is the lightweight envelope returned by
+// clockify_get_workspace when the caller only needs the resolved
+// workspace identifier (full workspace details live behind
+// clockify_list_workspaces).
 type WorkspaceContext struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
+// IdentityData pairs the upstream Clockify user with the resolved
+// workspace so a single clockify_whoami response carries everything
+// an agent needs to ground subsequent tool calls.
 type IdentityData struct {
 	User        clockify.User `json:"user"`
 	WorkspaceID string        `json:"workspaceId"`
 }
 
+// WeeklySummaryData is the structured payload for clockify_weekly_
+// summary: a date range, total counts, per-day and per-project rollups,
+// suggested follow-up actions for the agent, and (optionally) the raw
+// entries so callers can drill into specific records without a second
+// round-trip.
 type WeeklySummaryData struct {
 	Range            DateRange            `json:"range"`
 	Totals           SummaryTotals        `json:"totals"`
@@ -206,6 +233,9 @@ type WeeklySummaryData struct {
 	UnassignedKey    string               `json:"unassignedKey,omitempty"`
 }
 
+// SummaryData is the structured payload for clockify_summary_report
+// and clockify_detailed_report: per-project rollups plus optional raw
+// entries. The WeeklySummaryData variant adds a per-day axis on top.
 type SummaryData struct {
 	Range            DateRange            `json:"range"`
 	Totals           SummaryTotals        `json:"totals"`
@@ -214,6 +244,10 @@ type SummaryData struct {
 	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
 }
 
+// QuickReportData powers clockify_quick_report: a single-glance
+// snapshot with totals, the top project, any running entries, and a
+// short entry sample so an agent can answer "what did I just do?"
+// without a full detailed report round-trip.
 type QuickReportData struct {
 	Range               DateRange            `json:"range"`
 	Totals              SummaryTotals        `json:"totals"`
@@ -224,11 +258,21 @@ type QuickReportData struct {
 	SuggestedActions    []ToolSuggestion     `json:"suggestedActions"`
 }
 
+// LogTimeData is the structured payload for clockify_log_time. Entry
+// is the created TimeEntry; ResolvedProject names the project the
+// agent supplied (by name or ID) so the caller can confirm name
+// resolution succeeded.
 type LogTimeData struct {
 	Entry           clockify.TimeEntry `json:"entry"`
 	ResolvedProject string             `json:"resolvedProject,omitempty"`
 }
 
+// FindAndUpdateEntryData is the structured payload for
+// clockify_find_and_update_entry. Entry is the matched time entry;
+// MatchedBy explains which finder predicate identified it; UpdatedFields
+// lists the fields that actually changed. When dry_run:true is set,
+// Current + Proposed + DryRun carry the preview-only diff so a
+// downstream confirmation step can stage the mutation before applying.
 type FindAndUpdateEntryData struct {
 	Entry          clockify.TimeEntry      `json:"entry"`
 	MatchedBy      map[string]any          `json:"matchedBy"`
@@ -240,6 +284,8 @@ type FindAndUpdateEntryData struct {
 	Note           string                  `json:"note,omitempty"`
 }
 
+// TimeEntryUpdatePreview is the projected "current" shape of a time
+// entry shown alongside a proposed-change diff during a dry-run update.
 type TimeEntryUpdatePreview struct {
 	Description string `json:"description"`
 	ProjectID   string `json:"project_id,omitempty"`
@@ -248,11 +294,17 @@ type TimeEntryUpdatePreview struct {
 	Billable    bool   `json:"billable"`
 }
 
+// DateRange is the inclusive [Start, End] window used by every summary
+// / report payload to describe the period the rollup spans.
 type DateRange struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 }
 
+// SummaryTotals aggregates entry counts and tracked time across the
+// containing DateRange. RunningEntries is the subset of Entries that
+// are still in progress (no End yet); TotalSeconds is the canonical
+// duration, TotalHours is the convenience float derived from it.
 type SummaryTotals struct {
 	Entries        int     `json:"entries"`
 	RunningEntries int     `json:"runningEntries"`
@@ -260,6 +312,10 @@ type SummaryTotals struct {
 	TotalHours     float64 `json:"totalHours"`
 }
 
+// ProjectSummary is the per-project rollup row used by SummaryData and
+// WeeklySummaryData. ProjectID is omitempty so entries that did not
+// resolve to a project (e.g. tracked with no project tag) still appear
+// in the rollup keyed only by ProjectName.
 type ProjectSummary struct {
 	ProjectID    string  `json:"projectId,omitempty"`
 	ProjectName  string  `json:"projectName"`
@@ -268,6 +324,8 @@ type ProjectSummary struct {
 	TotalHours   float64 `json:"totalHours"`
 }
 
+// DaySummary is the per-day rollup row used by WeeklySummaryData.
+// Date is RFC 3339 YYYY-MM-DD in the configured timezone.
 type DaySummary struct {
 	Date         string  `json:"date"`
 	Entries      int     `json:"entries"`
