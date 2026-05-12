@@ -199,5 +199,7 @@ Group 6 row of the launch-candidate checklist
 does **not** close Group 7 release/sigstore/SLSA evidence, the
 mutation cron, the next-release npm expected-version proof, the
 paid-hosted external security review, the DPA / privacy / trademark
-gates, or issue #78 (19-context branch-protection restoration), all of
-which remain open.
+gates (see [`NOTICE.md`](NOTICE.md) for the non-affiliation
+disclaimer and trademark-attribution boilerplate; the formal
+paid-tier policy review remains open), or issue #78 (19-context
+branch-protection restoration), all of which remain open.

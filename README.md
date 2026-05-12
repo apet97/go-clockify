@@ -508,3 +508,10 @@ is retained as the historical post-PR #51 handoff.
 ## License
 
 [MIT](LICENSE)
+
+## Trademark and non-affiliation
+
+See [NOTICE.md](NOTICE.md) — `go-clockify` is an independent
+third-party client and is not affiliated with, endorsed by, or
+sponsored by CAKE.com or Clockify. "Clockify" is a trademark of
+CAKE.com.
