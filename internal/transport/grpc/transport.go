@@ -26,10 +26,17 @@ var errGRPCNotificationQueueFull = errors.New("grpctransport: notification dropp
 
 // Options configures a Serve invocation. Bind is required; Server is the
 // shared mcp.Server instance every stream will dispatch against. MaxRecvSize
-// caps per-frame inbound bytes; when unset it inherits Server.MaxMessageSize
-// (driven by MCP_MAX_MESSAGE_SIZE; MCP_HTTP_MAX_BODY is its deprecated
-// alias) and falls back to the 4 MiB (4194304 byte) default if Server is
-// also unset.
+// caps per-frame inbound bytes AND outbound bytes (server → client). When
+// unset it inherits Server.MaxMessageSize (driven by MCP_MAX_MESSAGE_SIZE;
+// MCP_HTTP_MAX_BODY is its deprecated alias) and falls back to the 4 MiB
+// (4194304 byte) default if Server is also unset.
+//
+// Recv- and send-side caps are tied so a notifications/tools/list_changed
+// fan-out (server → client) cannot exceed the same byte budget that
+// gates inbound tool-call payloads. gRPC's default MaxSendMsgSize is 2 GiB
+// — far above what any spec-conformant MCP frame would ever need — so
+// pinning send at MaxRecvSize tightens the DoS surface symmetrically
+// without introducing operator-visible asymmetry.
 //
 // Authenticator is optional. When non-nil, a grpc.StreamServerInterceptor
 // is installed that bridges the shared internal/authn contract onto gRPC
@@ -86,6 +93,7 @@ func Serve(ctx context.Context, opts Options) error {
 	serverOpts := []grpc.ServerOption{
 		grpc.ForceServerCodec(bytesCodec{}),
 		grpc.MaxRecvMsgSize(opts.MaxRecvSize),
+		grpc.MaxSendMsgSize(opts.MaxRecvSize),
 	}
 	if opts.TLSConfig != nil {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(opts.TLSConfig)))

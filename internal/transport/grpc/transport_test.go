@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -385,5 +386,102 @@ func TestServeMarksNotReadyBeforeGracefulDrain(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("Serve did not exit after stream closed")
+	}
+}
+
+// TestServeEnforcesMaxSendMsgSize pins the symmetric send cap added so the
+// server cannot stream a response frame larger than MaxRecvSize back to a
+// client. Before the cap, gRPC's default MaxSendMsgSize (math.MaxInt32 ≈ 2
+// GiB) left the server free to push arbitrarily large notifications or
+// tool results across an Exchange stream — a DoS surface that the
+// inbound cap could not mitigate. Pinning send at MaxRecvSize closes the
+// asymmetry.
+//
+// Drift check: delete the grpc.MaxSendMsgSize line in transport.go and
+// this test passes through to the success path, failing the assertion
+// "expected ResourceExhausted, got <result>".
+func TestServeEnforcesMaxSendMsgSize(t *testing.T) {
+	// MaxRecvSize is set just large enough to admit initialize+tools/call
+	// inbound frames but reject the server's oversized response.
+	const cap = 4096
+	const oversize = cap * 4
+
+	bigPayload := make([]byte, oversize)
+	for i := range bigPayload {
+		bigPayload[i] = 'x'
+	}
+	bigTool := mcp.ToolDescriptor{
+		Tool: mcp.Tool{
+			Name:        "big_tool",
+			Description: "Returns a payload larger than the size cap",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			return map[string]any{"payload": string(bigPayload)}, nil
+		},
+	}
+	srv := mcp.NewServer("test", []mcp.ToolDescriptor{bigTool}, nil, nil)
+
+	lis := bufconn.Listen(1024 * 1024)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Serve(ctx, Options{Listener: lis, Server: srv, MaxRecvSize: cap})
+	}()
+
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		bufconnDialer(lis),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(bytesCodec{})),
+	)
+	if err != nil {
+		t.Fatalf("dial bufconn: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	streamDesc := &grpc.StreamDesc{
+		StreamName:    ExchangeMethod,
+		ServerStreams: true,
+		ClientStreams: true,
+	}
+	streamCtx, streamCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer streamCancel()
+	stream, err := conn.NewStream(streamCtx, streamDesc, "/"+ServiceName+"/"+ExchangeMethod)
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	defer func() { _ = stream.CloseSend() }()
+
+	initPayload := []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}`)
+	if err := stream.SendMsg(&initPayload); err != nil {
+		t.Fatalf("send initialize: %v", err)
+	}
+	var initReply []byte
+	if err := stream.RecvMsg(&initReply); err != nil {
+		t.Fatalf("recv initialize reply: %v", err)
+	}
+
+	callPayload := []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"big_tool","arguments":{}}}`)
+	if err := stream.SendMsg(&callPayload); err != nil {
+		t.Fatalf("send tools/call: %v", err)
+	}
+
+	var reply []byte
+	recvErr := stream.RecvMsg(&reply)
+	if recvErr == nil {
+		// If the cap was not enforced the client would receive the
+		// full oversized payload back through the stream.
+		t.Fatalf("expected ResourceExhausted from server-side send cap; got success reply (%d bytes)", len(reply))
+	}
+	// gRPC surfaces send-size violations as ResourceExhausted on the
+	// receiver side; we accept any error containing the marker because
+	// the exact wrapping varies across grpc-go releases.
+	msg := recvErr.Error()
+	if !strings.Contains(msg, "ResourceExhausted") &&
+		!strings.Contains(msg, "received message larger") {
+		t.Fatalf("expected ResourceExhausted-style error, got %v", recvErr)
 	}
 }
