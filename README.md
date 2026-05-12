@@ -66,12 +66,14 @@ clockify-mcp --version
 
 ### Current release status
 
-`v1.2.3` is the current stable community/self-hosted API-refresh line,
-cut from commit `f98d6af` and released on 2026-05-12
-([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.3) ·
-46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.3`
-· container image `ghcr.io/apet97/go-clockify:1.2.3`). It carries the
-refreshed 152-tool Clockify API catalog and generated OpenAPI artifact.
+`v1.2.4` is the current stable community/self-hosted AIII-backed
+API-refresh line, released on 2026-05-12
+([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.4) ·
+46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.4`
+· container image `ghcr.io/apet97/go-clockify:1.2.4`). It carries the
+refreshed 152-tool Clockify API catalog and the generated 193-operation
+OpenAPI artifact, including AIII-sourced entity-change endpoints and
+the expense detailed report route.
 Operators verifying signatures should follow
 [docs/verification.md](docs/verification.md). The original
 community/self-hosted launch evidence remains anchored to `v1.2.1`;

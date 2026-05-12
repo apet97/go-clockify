@@ -144,6 +144,9 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/expenses/{expenseId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/expenses/{expenseId}"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/entities/created"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/entities/deleted"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/entities/updated"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/holidays"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/holidays"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/holidays/in-period"},
@@ -208,6 +211,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/reports/attendance"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/reports/detailed"},
+	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/reports/expenses/detailed"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/reports/summary"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/reports/weekly"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/scheduling/assignments"},
@@ -331,8 +335,8 @@ func (s *Service) ListDocumentedAPIOperations(_ context.Context, args map[string
 	return ok("clockify_list_documented_api_operations", operations, map[string]any{
 		"count":      len(operations),
 		"total":      len(documentedAPIOperations),
-		"source":     "probe-lab-openapi-docs",
-		"sourceRows": "openapi.yaml plus all *DOC*.md files from clockify-api-probe-lab",
+		"source":     "openapi-docs",
+		"sourceRows": "realOPENAPI, AIII/openapi.yaml, clockify-api-probe-lab openapi.yaml/fragments, and all *DOC*.md files",
 	}), nil
 }
 

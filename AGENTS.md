@@ -10,9 +10,9 @@
 A production-grade [Model Context Protocol](https://modelcontextprotocol.io)
 server for [Clockify](https://clockify.me), written in Go. Three
 transports (stdio, streamable HTTP 2025-03-26, opt-in gRPC behind
-`-tags=grpc`), five policy modes, signed releases. **`v1.2.3` is the
-current stable community/self-hosted API-refresh line** (released
-2026-05-12 from commit `f98d6af`). The original community/self-hosted
+`-tags=grpc`), five policy modes, signed releases. **`v1.2.4` is the
+current stable community/self-hosted AIII-backed API-refresh line**
+(released 2026-05-12). The original community/self-hosted
 launch evidence remains anchored to `v1.2.1` (released 2026-05-10 from
 rc.3 peeled commit `ce56414`; see
 [`docs/runbooks/release-candidate-evidence.md`](docs/runbooks/release-candidate-evidence.md)

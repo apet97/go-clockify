@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-05-12
+
+### Added
+
+- **AIII OpenAPI source integration.** The generated Clockify OpenAPI
+  artifact now incorporates `/Users/15x/Downloads/AIII/openapi.yaml`
+  as a low-priority parsed evidence source, filling otherwise-missing
+  entity-change read endpoints and the expense detailed report route
+  while preserving higher-confidence live/probe and `realOPENAPI`
+  operation bodies.
+
+### Changed
+
+- **Generated API surface expanded to 193 operations.**
+  `docs/openapi/clockify-openapi.yaml` now contains 126 paths, 193
+  operations, and 332 schemas. The `probe_lab_api` raw documented-route
+  allowlist now tracks 208 method/path templates and names the AIII
+  source alongside `realOPENAPI`, probe-lab OpenAPI/fragments, and
+  pasted docs.
+
 ## [1.2.2] - 2026-05-12
 
 ### Added

@@ -113,10 +113,11 @@ work and commit it.
     § "Final integration audit — rc.3 cycle ledger" for the
     consolidated rc.3 cycle PR ledger (#74, #75, #76, #77, #80,
     #83, #84, #85), validator-quirk classifications, and
-    next-step actions on the still-open gates. **`v1.2.3` is the
-    current stable community/self-hosted API-refresh line**, cut from
-    commit `f98d6af` and released 2026-05-12. The original
-    community/self-hosted launch evidence remains anchored to
+    next-step actions on the still-open gates. **`v1.2.4` is the
+    current stable community/self-hosted AIII-backed API-refresh
+    line**, released 2026-05-12 with the 193-operation generated
+    OpenAPI artifact. The original community/self-hosted launch
+    evidence remains anchored to
     `v1.2.1`, cut from rc.3's peeled commit `ce56414` and released
     2026-05-10 (see
     [`runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
