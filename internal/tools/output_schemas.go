@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"sync"
+
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
@@ -15,7 +17,17 @@ import (
 // return open shapes (map[string]any from helper builders, internal status
 // structs, etc.) get envelopeOpaque, which still pins ok/action/data and
 // makes the action a JSON Schema const so MCP clients can dispatch on it.
-func tier1OutputSchemas() map[string]map[string]any {
+//
+// The map and every envelope value inside it are built once per process
+// via sync.OnceValue. The result is shared across every Service.Registry()
+// invocation and therefore across every streamable-HTTP session: schemas
+// are immutable per binary build, so memoising eliminates ~3000 per-session
+// allocations on the reflection-heavy envelopeSchemaFor[T] path. Callers
+// MUST NOT mutate the returned maps; the existing assignment-only usage
+// in applyTier1OutputSchemas preserves that invariant.
+var tier1OutputSchemas = sync.OnceValue(buildTier1OutputSchemas)
+
+func buildTier1OutputSchemas() map[string]map[string]any {
 	return map[string]map[string]any{
 		// --- typed-data tools ---
 		"clockify_whoami":                envelopeSchemaFor[IdentityData]("clockify_whoami"),
