@@ -429,3 +429,135 @@ func TestBatchedAuditor_ConcurrentRecordAndClose(t *testing.T) {
 		t.Errorf("total persisted (%d) != total emitted (%d)", total, emitted.Load())
 	}
 }
+
+// TestAuditBatch_ShouldFlushSyncMatrix exhaustively pins the
+// strict-rule guard at the pure-function layer. Every phase × mode
+// cell in the matrix has a known sync/batch verdict; a future
+// refactor that quietly reshapes shouldFlushSync will fail loudly
+// here rather than silently weakening one of the load-bearing
+// audit-durability invariants (see internal/mcp/audit.go:33,48).
+//
+// This is the commit-3 "guard pin" complement to the commit-2
+// scenario tests in TestBatchedAuditor_*: the spot tests prove the
+// guard works for the most common cells; this matrix proves no
+// cell quietly drifts.
+func TestAuditBatch_ShouldFlushSyncMatrix(t *testing.T) {
+	type cell struct {
+		phase mcp.AuditPhase
+		mode  string
+		sync  bool // want: true → sync single-row, false → batched
+		why   string
+	}
+
+	cells := []cell{
+		// Intent records gate the mutation; any mode must take sync
+		// so a fail_closed pipeline failure short-circuits BEFORE the
+		// handler runs (audit.go:33).
+		{phase: mcp.PhaseIntent, mode: "best_effort", sync: true, why: "intent gates mutation"},
+		{phase: mcp.PhaseIntent, mode: "fail_closed", sync: true, why: "intent gates mutation"},
+		{phase: mcp.PhaseIntent, mode: "fail_closed_strict", sync: true, why: "intent gates mutation"},
+
+		// Legacy single-shot records preserve historical contract.
+		{phase: "", mode: "best_effort", sync: true, why: "legacy single-shot stays sync"},
+		{phase: "", mode: "fail_closed", sync: true, why: "legacy single-shot stays sync"},
+		{phase: "", mode: "fail_closed_strict", sync: true, why: "legacy single-shot stays sync"},
+
+		// Handler-panic outcomes are operationally critical; never
+		// risk a delayed flush losing them if the process exits.
+		{phase: mcp.PhaseHandlerPanic, mode: "best_effort", sync: true, why: "panic events are critical"},
+		{phase: mcp.PhaseHandlerPanic, mode: "fail_closed", sync: true, why: "panic events are critical"},
+		{phase: mcp.PhaseHandlerPanic, mode: "fail_closed_strict", sync: true, why: "panic events are critical"},
+
+		// Outcome under strict mode must surface the persistence error
+		// to the client (audit.go:48); batching it would silently
+		// drop that signal.
+		{phase: mcp.PhaseOutcome, mode: "fail_closed_strict", sync: true, why: "strict outcome must surface error"},
+
+		// The two cells that ACTUALLY batch — best_effort and
+		// non-strict fail_closed outcome events. Both silence
+		// persistence errors at the audit.go call site, so the
+		// batched path does not change the observable contract.
+		{phase: mcp.PhaseOutcome, mode: "best_effort", sync: false, why: "best_effort outcome is the perf cell"},
+		{phase: mcp.PhaseOutcome, mode: "fail_closed", sync: false, why: "non-strict fail_closed outcome is the perf cell"},
+
+		// Unknown / malformed phase string falls through to sync to
+		// fail closed on unexpected input rather than letting it slip
+		// into the buffer where its semantics are undefined.
+		{phase: "unrecognised", mode: "fail_closed", sync: true, why: "unknown phase fails closed to sync"},
+	}
+
+	for _, c := range cells {
+		c := c
+		t.Run(string(c.phase)+"/"+c.mode, func(t *testing.T) {
+			got := shouldFlushSync(c.phase, c.mode)
+			if got != c.sync {
+				t.Errorf("shouldFlushSync(%q, %q) = %v, want %v -- %s",
+					c.phase, c.mode, got, c.sync, c.why)
+			}
+		})
+	}
+}
+
+// TestAuditBatch_PropertyMatrix is the end-to-end counterpart to
+// TestAuditBatch_ShouldFlushSyncMatrix: every cell is exercised
+// through a real batchedAuditor wrapper so the strict-rule guard is
+// also pinned at the integration boundary (wrapper → fake Store).
+// A wrapper-side change that ignores shouldFlushSync's verdict (e.g.
+// short-circuiting the dispatch) would pass the pure-function
+// matrix above but fail this one.
+//
+// The cells use flushSize=1 so any "batch" verdict produces an
+// immediate AppendAuditEventBatch call; flushInterval is large so
+// the ticker can't accidentally satisfy a sync expectation.
+func TestAuditBatch_PropertyMatrix(t *testing.T) {
+	cases := []struct {
+		phase mcp.AuditPhase
+		mode  string
+		sync  bool
+	}{
+		{mcp.PhaseIntent, "best_effort", true},
+		{mcp.PhaseIntent, "fail_closed", true},
+		{mcp.PhaseIntent, "fail_closed_strict", true},
+		{"", "best_effort", true},
+		{"", "fail_closed", true},
+		{"", "fail_closed_strict", true},
+		{mcp.PhaseHandlerPanic, "best_effort", true},
+		{mcp.PhaseHandlerPanic, "fail_closed", true},
+		{mcp.PhaseHandlerPanic, "fail_closed_strict", true},
+		{mcp.PhaseOutcome, "fail_closed_strict", true},
+		{mcp.PhaseOutcome, "best_effort", false},
+		{mcp.PhaseOutcome, "fail_closed", false},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(string(tc.phase)+"/"+tc.mode, func(t *testing.T) {
+			fake := &batchAuditFakeStore{}
+			ba := newBatchedAuditorWithSettings(fake, tc.mode, 1, 10*time.Second)
+			t.Cleanup(func() { _ = ba.Close() })
+
+			if err := ba.RecordAudit(sampleEvent(tc.phase)); err != nil {
+				t.Fatalf("RecordAudit returned %v", err)
+			}
+			if tc.sync {
+				if got := fake.singleCount(); got != 1 {
+					t.Errorf("(phase=%q, mode=%q): expected sync, single-count=%d (want 1)",
+						tc.phase, tc.mode, got)
+				}
+				if got := fake.batchCount(); got != 0 {
+					t.Errorf("(phase=%q, mode=%q): expected sync, batch-count=%d (want 0)",
+						tc.phase, tc.mode, got)
+				}
+				return
+			}
+			if got := fake.batchCount(); got != 1 {
+				t.Errorf("(phase=%q, mode=%q): expected batch, batch-count=%d (want 1)",
+					tc.phase, tc.mode, got)
+			}
+			if got := fake.singleCount(); got != 0 {
+				t.Errorf("(phase=%q, mode=%q): expected batch, single-count=%d (want 0)",
+					tc.phase, tc.mode, got)
+			}
+		})
+	}
+}
