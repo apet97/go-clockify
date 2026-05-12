@@ -282,46 +282,60 @@ func (s *Service) ActivateNamedTool(ctx context.Context, args map[string]any) (R
 }
 
 func (s *Service) DeactivateToolGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	name := stringArg(args, "name")
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-	if s.DeactivateGroup == nil {
-		return ResultEnvelope{}, fmt.Errorf("tool deactivation is not configured")
-	}
-	result, err := s.DeactivateGroup(ctx, name)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	return ok("clockify_deactivate_group", deactivationPayload(result, deactivationMessage(result)), nil), nil
+	return doActivation(ctx, stringArg(args, "name"), "clockify_deactivate_group",
+		s.DeactivateGroup, "tool deactivation is not configured",
+		func(r DeactivationResult) map[string]any {
+			return deactivationPayload(r, deactivationMessage(r))
+		})
 }
 
 func (s *Service) activateGroupByName(ctx context.Context, name string) (ResultEnvelope, error) {
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-	if s.ActivateGroup == nil {
-		return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
-	}
-	result, err := s.ActivateGroup(ctx, name)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	return ok("clockify_activate_group", activationPayload(result, activationMessage(result)), nil), nil
+	return doActivation(ctx, name, "clockify_activate_group",
+		s.ActivateGroup, "tool activation is not configured",
+		func(r ActivationResult) map[string]any {
+			return activationPayload(r, activationMessage(r))
+		})
 }
 
 func (s *Service) activateToolByName(ctx context.Context, name string) (ResultEnvelope, error) {
+	return doActivation(ctx, name, "clockify_activate_tool",
+		s.ActivateTool, "tool activation is not configured",
+		func(r ActivationResult) map[string]any {
+			return activationPayload(r, activationMessage(r))
+		})
+}
+
+// doActivation centralises the four-step shape every activate/deactivate
+// handler shares: validate the name argument, refuse if the callback
+// field is nil (operator hasn't wired the activator into Service), call
+// the callback, and wrap the result in an "ok" envelope.
+//
+// Parameterising on T lets the same helper service ActivationResult and
+// DeactivationResult without forcing the call sites to share a single
+// result type; the format callback owns the result-to-payload mapping.
+//
+// The configErrMsg parameter carries the original per-feature wording
+// ("tool activation is not configured" vs "tool deactivation is not
+// configured") so error surfaces stay backwards-compatible.
+func doActivation[T any](
+	ctx context.Context,
+	name string,
+	action string,
+	callback func(context.Context, string) (T, error),
+	configErrMsg string,
+	format func(T) map[string]any,
+) (ResultEnvelope, error) {
 	if name == "" {
 		return ResultEnvelope{}, fmt.Errorf("name is required")
 	}
-	if s.ActivateTool == nil {
-		return ResultEnvelope{}, fmt.Errorf("tool activation is not configured")
+	if callback == nil {
+		return ResultEnvelope{}, fmt.Errorf("%s", configErrMsg)
 	}
-	result, err := s.ActivateTool(ctx, name)
+	result, err := callback(ctx, name)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_activate_tool", activationPayload(result, activationMessage(result)), nil), nil
+	return ok(action, format(result), nil), nil
 }
 
 func (s *Service) groupActivationStatus(name string) (bool, string) {
