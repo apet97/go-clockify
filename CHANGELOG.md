@@ -184,6 +184,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   labels in `metrics.RateLimitRejections` (Q3). **Status: Proposed.**
   No implementation in this commit.
 
+- **ADR 0025 — upstream-5xx circuit breaker question.** The
+  current upstream client (`internal/clockify/client.go`) retries
+  retryable 5xx (502/503/504) and 429 with exponential backoff
+  + jitter, capped at `CLOCKIFY_MAX_RETRIES` and bounded by the
+  request's context deadline — but has no circuit breaker, so an
+  extended Clockify outage turns every tool call into amplified
+  retry traffic that burns the user's Clockify quota and the
+  upstream's recovery budget. The ADR records the design space:
+  scope of the breaker — global vs per-endpoint vs per-tenant
+  (Q1); state-machine threshold — consecutive failures vs
+  percentage-over-window vs hybrid (Q2); composition with the
+  existing retry loop — breaker wraps retry vs reads every
+  attempt vs replaces retry for 5xx (Q3). The "do nothing"
+  alternative documents the trade explicitly so the choice is
+  recorded either way. **Status: Proposed.** No implementation
+  in this commit.
+
 - **Trademark / non-affiliation disclaimer added.** New top-level
   `NOTICE.md` declares `go-clockify` an independent third-party
   client, names Clockify as a trademark of CAKE.com, and clarifies
