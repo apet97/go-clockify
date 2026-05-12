@@ -3,10 +3,31 @@ package tools
 import (
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/mcp"
 )
+
+// schemaTypeCache memoises schemaForType so the reflection walk runs
+// at most once per distinct (post-deref) reflect.Type per process. Two
+// observations make this safe:
+//   - The output JSON Schema is a pure function of the post-deref type;
+//     given the same reflect.Type the result is byte-identical across
+//     every call.
+//   - All consumers (envelopeSchemaFor[T], applyTier1OutputSchemas,
+//     applyOpaqueOutputSchemas) embed the returned map as a property of
+//     a fresh outer map and never mutate it afterwards. The Tier 2
+//     descriptor cache explicitly clones via cloneDescriptorMap.
+//
+// Together with the tier1OutputSchemas sync.OnceValue gate, this
+// collapses schema generation to a single per-binary cost; subsequent
+// sessions inherit the result with zero allocations.
+//
+// Returned maps are shared and MUST NOT be mutated; the comment is
+// load-bearing because the only way to violate the invariant is a
+// future caller adding a post-construction edit.
+var schemaTypeCache sync.Map // reflect.Type → map[string]any
 
 // schemaFor produces a JSON Schema (Draft 2020-12 subset) describing the
 // shape of T. The generator is reflection-based and stdlib-only — no
@@ -40,11 +61,31 @@ func schemaFor[T any]() map[string]any {
 
 // schemaForType is the reflection workhorse. Exported only for tests in
 // the same package; not part of the public API.
+//
+// Results are memoised in schemaTypeCache keyed by the post-deref type
+// so *T and T share a cache entry. Recursive callers (slice, map,
+// struct) re-enter through schemaForType and inherit the cache.
 func schemaForType(t reflect.Type) map[string]any {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+	if cached, ok := schemaTypeCache.Load(t); ok {
+		if schema, ok := cached.(map[string]any); ok {
+			return schema
+		}
+	}
+	schema := computeSchemaForType(t)
+	actual, _ := schemaTypeCache.LoadOrStore(t, schema)
+	if cached, ok := actual.(map[string]any); ok {
+		return cached
+	}
+	return schema
+}
 
+// computeSchemaForType performs the actual reflection walk. Callers
+// must dereference pointers and consult schemaTypeCache first; this
+// helper exists so the cache-miss branch stays a single expression.
+func computeSchemaForType(t reflect.Type) map[string]any {
 	// time.Time is the one named struct that is treated as a primitive.
 	if t == reflect.TypeOf(time.Time{}) {
 		return map[string]any{"type": "string", "format": "date-time"}
