@@ -31,6 +31,16 @@ func (s *recordingStore) AppendAuditEvent(e controlplane.AuditEvent) error {
 	return nil
 }
 
+func (s *recordingStore) AppendAuditEventBatch(events []controlplane.AuditEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.events = append(s.events, events...)
+	return nil
+}
+
 func (s *recordingStore) snapshot() []controlplane.AuditEvent {
 	s.mu.Lock()
 	defer s.mu.Unlock()

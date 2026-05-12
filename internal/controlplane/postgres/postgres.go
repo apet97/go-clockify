@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/apet97/go-clockify/internal/controlplane"
@@ -360,33 +361,86 @@ func (s *Store) RetainAudit(ctx context.Context, maxAge time.Duration) (int, err
 	return int(tag.RowsAffected()), nil
 }
 
-func (s *Store) AppendAuditEvent(event controlplane.AuditEvent) error {
-	ctx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
-	defer cancel()
-	resourceIDs, _ := json.Marshal(mapOrEmpty(event.ResourceIDs))
-	metadata, _ := json.Marshal(mapOrEmpty(event.Metadata))
-	externalID := event.ID
-	if externalID == "" {
-		// The two-phase audit emits intent + outcome with the same
-		// (At, SessionID, Tool) tuple, so the synthesised external_id
-		// must include Phase to keep the ON CONFLICT (external_id) DO
-		// NOTHING from collapsing the pair into a single row.
-		externalID = fmt.Sprintf("%d-%s-%s-%s", event.At.UnixNano(), event.SessionID, event.Tool, event.Phase)
-	}
-	// Migration 002_audit_phase.sql adds the phase column; old
-	// audit_events rows pre-dating the migration default to ''. The
-	// JSON omitempty tag keeps consumers that don't know about phase
-	// from breaking on legacy single-shot records.
-	_, err := s.pool.Exec(ctx, `
+// auditInsertSQL is the single canonical INSERT statement used by both
+// AppendAuditEvent (single-row Exec) and AppendAuditEventBatch
+// (pgx.SendBatch). Keeping the SQL and column order in one place
+// guarantees the two paths cannot drift on schema migrations.
+//
+// Migration 002_audit_phase.sql added the phase column; legacy rows
+// default to ”. The ON CONFLICT (external_id) DO NOTHING clause
+// matches AppendAuditEvent's idempotency contract and pairs with the
+// intent/outcome external_id synthesis below.
+const auditInsertSQL = `
 		INSERT INTO audit_events (external_id, at, tenant_id, subject, session_id,
 		                        transport, tool, action, outcome, phase, reason,
 		                        resource_ids, metadata)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-		ON CONFLICT (external_id) DO NOTHING`,
+		ON CONFLICT (external_id) DO NOTHING`
+
+// auditInsertArgs prepares the 13 positional arguments for the INSERT
+// statement. Shared by AppendAuditEvent and AppendAuditEventBatch so
+// the two paths cannot drift on JSON column encoding or external_id
+// synthesis.
+//
+// The two-phase audit emits intent + outcome with the same (At,
+// SessionID, Tool) tuple, so the synthesised external_id includes
+// Phase to keep ON CONFLICT (external_id) DO NOTHING from collapsing
+// the pair into a single row.
+func auditInsertArgs(event controlplane.AuditEvent) []any {
+	resourceIDs, _ := json.Marshal(mapOrEmpty(event.ResourceIDs))
+	metadata, _ := json.Marshal(mapOrEmpty(event.Metadata))
+	externalID := event.ID
+	if externalID == "" {
+		externalID = fmt.Sprintf("%d-%s-%s-%s", event.At.UnixNano(), event.SessionID, event.Tool, event.Phase)
+	}
+	return []any{
 		externalID, event.At.UTC(), event.TenantID, event.Subject, event.SessionID,
 		event.Transport, event.Tool, event.Action, event.Outcome, event.Phase, event.Reason,
-		resourceIDs, metadata)
+		resourceIDs, metadata,
+	}
+}
+
+func (s *Store) AppendAuditEvent(event controlplane.AuditEvent) error {
+	ctx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx, auditInsertSQL, auditInsertArgs(event)...)
 	return err
+}
+
+// AppendAuditEventBatch consolidates len(events) round trips into one
+// pgx.SendBatch. Each row reuses the same auditInsertSQL + ON CONFLICT
+// dedupe as AppendAuditEvent, so the batched path is semantically
+// indistinguishable from a sequence of single-row inserts.
+//
+// Errors short-circuit on first failure (matching AppendAuditEvent's
+// contract; partial-success accounting belongs in the runtime layer).
+// The empty-slice case is a no-op and returns nil so callers don't
+// have to guard against it.
+//
+// ADR 0022 captures the rationale: this method is invoked only from
+// the runtime-layer batchedAuditor wrapper, which gates non-strict
+// outcome events through it. Intent records and fail_closed_strict
+// outcomes still take the AppendAuditEvent single-row path.
+func (s *Store) AppendAuditEventBatch(events []controlplane.AuditEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), storeOpTimeout)
+	defer cancel()
+
+	batch := &pgx.Batch{}
+	for _, event := range events {
+		batch.Queue(auditInsertSQL, auditInsertArgs(event)...)
+	}
+
+	br := s.pool.SendBatch(ctx, batch)
+	defer br.Close()
+	for range events {
+		if _, err := br.Exec(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // sliceOrEmpty guarantees JSON-encodes to `[]` rather than `null` for

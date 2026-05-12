@@ -92,6 +92,16 @@ type Store interface {
 	PutSession(record SessionRecord) error
 	DeleteSession(id string) error
 	AppendAuditEvent(event AuditEvent) error
+	// AppendAuditEventBatch persists a slice of audit events. Semantics
+	// are identical to a sequence of AppendAuditEvent calls: same
+	// external_id synthesis, same ON CONFLICT-do-nothing dedupe, same
+	// per-event error contract. Implementations should consolidate the
+	// transport (one round trip on Postgres via pgx.SendBatch) but must
+	// not collapse multiple events into a single row. ADR 0022 captures
+	// the runtime-layer wrapper that decides which audit events take
+	// this path; from the Store's point of view this is just "insert
+	// many." An empty slice is a no-op and returns nil.
+	AppendAuditEventBatch(events []AuditEvent) error
 	// RetainAudit drops audit events older than maxAge and returns the
 	// number removed. Called periodically by the retention reaper
 	// (B2); maxAge <= 0 is a no-op. Implementations must respect ctx
@@ -357,7 +367,26 @@ func (s *DevFileStore) DeleteSession(id string) error {
 func (s *DevFileStore) AppendAuditEvent(event AuditEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.state.AuditEvents = append(s.state.AuditEvents, event)
+	s.appendAuditEventsLocked(event)
+	return s.persistLocked()
+}
+
+// AppendAuditEventBatch appends the slice atomically under the
+// in-memory mutex and rewrites the file once. The auditCap eviction
+// applies to the combined buffer (oldest-first trim) so a large
+// batch on a capped store cannot bypass the cap.
+func (s *DevFileStore) AppendAuditEventBatch(events []AuditEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.appendAuditEventsLocked(events...)
+	return s.persistLocked()
+}
+
+func (s *DevFileStore) appendAuditEventsLocked(events ...AuditEvent) {
+	s.state.AuditEvents = append(s.state.AuditEvents, events...)
 	if s.auditCap > 0 && len(s.state.AuditEvents) > s.auditCap {
 		drop := len(s.state.AuditEvents) - s.auditCap
 		// Trim from the front (oldest-first) using a fresh slice so
@@ -367,7 +396,6 @@ func (s *DevFileStore) AppendAuditEvent(event AuditEvent) error {
 		copy(kept, s.state.AuditEvents[drop:])
 		s.state.AuditEvents = kept
 	}
-	return s.persistLocked()
 }
 
 // RetainAudit drops audit events older than maxAge from the in-memory

@@ -36,6 +36,9 @@ func (f *fakeRetainStore) DeleteSession(string) error                  { return 
 func (f *fakeRetainStore) AppendAuditEvent(controlplane.AuditEvent) error {
 	return nil
 }
+func (f *fakeRetainStore) AppendAuditEventBatch([]controlplane.AuditEvent) error {
+	return nil
+}
 func (f *fakeRetainStore) RetainAudit(_ context.Context, maxAge time.Duration) (int, error) {
 	f.calls = append(f.calls, maxAge)
 	f.lastMaxAge = maxAge

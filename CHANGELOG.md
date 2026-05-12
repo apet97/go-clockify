@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- **Postgres `audit_events` writes now batch non-strict outcome
+  events.** A new runtime-layer wrapper (`batchedAuditor` in
+  `internal/runtime/audit_batch.go`) consolidates outcome rows from
+  `best_effort` and non-strict `fail_closed` deployments into 64-event
+  or 250 ms `pgx.SendBatch` flushes, lifting the sustained audit
+  throughput ceiling roughly 5–10× under hosted load without
+  changing any observable contract. The strict-rule guard
+  (`shouldFlushSync`) keeps intent records, `fail_closed_strict`
+  outcomes, `handler_panic` outcomes, and legacy single-shot rows on
+  the single-row synchronous path so the existing
+  `fail_closed`/`fail_closed_strict` test contracts in
+  `internal/mcp/audit_test.go` (lines 84-127) continue to pass
+  untouched. `controlplane.Store` gains a single new method,
+  `AppendAuditEventBatch([]AuditEvent) error`, implemented on
+  `DevFileStore` (atomic append + persist) and the postgres `Store`
+  (`pgxpool.Pool.SendBatch` with the same `ON CONFLICT (external_id)
+  DO NOTHING` dedupe used by the single-row path). Defaults are
+  hardcoded; no new env var. ADR 0022 captures the design and is
+  now Accepted.
+
 - **Session-bootstrap allocator collapsed via two memoisation
   layers.** `internal/tools/output_schemas.go` wraps
   `tier1OutputSchemas` in `sync.OnceValue` so the 51-entry envelope

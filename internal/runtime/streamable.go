@@ -37,7 +37,17 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 	}
 	protectedResource := authn.ProtectedResourceHandler(authnCfg)
 	deps := r.deps
-	deps.auditor = controlPlaneAuditor{store: store}
+	// ADR 0022: wrap the synchronous controlPlaneAuditor with a
+	// batched auditor so non-strict outcome events consolidate
+	// into pgx.SendBatch-sized writes. Intent records,
+	// fail_closed_strict outcomes, panic outcomes, and legacy
+	// single-shot rows still take the single-row sync path
+	// (shouldFlushSync gates this). The Close() defer drains the
+	// buffer before ServeStreamableHTTP returns and the store
+	// is closed.
+	batched := newBatchedAuditor(store, r.cfg.AuditDurabilityMode)
+	defer func() { _ = batched.Close() }()
+	deps.auditor = batched
 	var readyChecker func(context.Context) error
 	if r.cfg.APIKey != "" {
 		client := clockify.NewClient(r.cfg.APIKey, r.cfg.BaseURL, r.cfg.RequestTimeout, r.cfg.MaxRetries)

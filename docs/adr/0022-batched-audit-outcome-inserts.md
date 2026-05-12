@@ -2,10 +2,31 @@
 
 ## Status
 
-Proposed — 2026-05-12. This ADR captures the design for Wave 7.1.
-A follow-up implementation commit on the same branch flips Status to
-**Accepted** and lands the `batchedAuditor` wrapper plus the
-`Store.AppendAuditEventBatch` interface method.
+Accepted — 2026-05-12. Implemented in the same wave (the immediately
+following commit):
+
+- `controlplane.Store.AppendAuditEventBatch([]AuditEvent) error`
+  added to the interface, with parallel implementations on
+  `DevFileStore` (atomic append + persist) and the postgres `Store`
+  (single `pgxpool.Pool.SendBatch` round trip).
+- `internal/runtime/audit_batch.go` introduces `batchedAuditor` —
+  the runtime-layer wrapper that owns the buffer, the ticker
+  goroutine, and the shutdown drain. `shouldFlushSync` enforces the
+  strict-rule guard.
+- `internal/runtime/streamable.go` wraps the existing
+  `controlPlaneAuditor` with `newBatchedAuditor(store, mode)` and
+  defers `Close()` so the drain runs before the store closes.
+- Pinned by `internal/runtime/audit_batch_test.go` (13 wrapper unit
+  tests, including the IntentAlwaysSync / HandlerPanicSync /
+  StrictOutcomeSync / NonStrictOutcomeBatches matrix, plus
+  StrictOutcomeErrorPropagates and ConcurrentRecordAndClose) and
+  `internal/controlplane/postgres/audit_batch_test.go` (4
+  Testcontainers integration tests covering round-trip, conflict
+  dedupe, empty-slice no-op, and mixed-phase external_id
+  distinction).
+- Drift checks recorded in the implementation commit's `Verified:`
+  line confirm both intent-sync and outcome-batch behaviour fail
+  red when `shouldFlushSync` is flipped.
 
 ## Context
 
