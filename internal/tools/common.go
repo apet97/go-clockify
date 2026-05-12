@@ -389,42 +389,41 @@ func titleFromName(name string) string {
 	return strings.Join(parts, " ")
 }
 
-func toolRO(name, desc string, schema map[string]any) mcp.Tool {
+// newTool is the shared core of the four risk-class builders below.
+// It overlays the supplied hint values on the baseAnnotations(name)
+// scaffold and returns the assembled mcp.Tool. Centralising the
+// overlay keeps the readOnly/destructive/idempotent hint matrix
+// consistent — when a fifth risk class is added it becomes a one-
+// line addition here, not another near-duplicate top-level helper.
+func newTool(name, desc string, schema map[string]any, readOnly, destructive, idempotent bool) mcp.Tool {
 	ann := baseAnnotations(name)
-	ann["readOnlyHint"] = true
-	ann["destructiveHint"] = false
-	ann["idempotentHint"] = true
+	ann["readOnlyHint"] = readOnly
+	ann["destructiveHint"] = destructive
+	ann["idempotentHint"] = idempotent
 	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
 }
 
+func toolRO(name, desc string, schema map[string]any) mcp.Tool {
+	return newTool(name, desc, schema, true, false, true)
+}
+
+// toolRW marks a write tool as non-destructive and non-idempotent.
+// Absent this explicit declaration, MCP spec-strict clients assume
+// destructive for write tools and may require extra confirmation
+// for every call.
 func toolRW(name, desc string, schema map[string]any) mcp.Tool {
-	ann := baseAnnotations(name)
-	ann["readOnlyHint"] = false
-	// Explicitly declare non-destructive. Absent this, MCP spec-strict
-	// clients assume destructive for write tools and may require extra
-	// confirmation for every call.
-	ann["destructiveHint"] = false
-	ann["idempotentHint"] = false
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
+	return newTool(name, desc, schema, false, false, false)
 }
 
 // toolRWIdem marks a write tool as idempotent. Use for PUT/PATCH-style updates
 // and tools whose handlers produce the same end state on repeated calls
 // (e.g. clockify_stop_timer when no timer is running becomes a no-op).
 func toolRWIdem(name, desc string, schema map[string]any) mcp.Tool {
-	ann := baseAnnotations(name)
-	ann["readOnlyHint"] = false
-	ann["destructiveHint"] = false
-	ann["idempotentHint"] = true
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
+	return newTool(name, desc, schema, false, false, true)
 }
 
 func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
-	ann := baseAnnotations(name)
-	ann["readOnlyHint"] = false
-	ann["destructiveHint"] = true
-	ann["idempotentHint"] = false
-	return mcp.Tool{Name: name, Description: desc, InputSchema: schema, Annotations: ann}
+	return newTool(name, desc, schema, false, true, false)
 }
 
 func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
