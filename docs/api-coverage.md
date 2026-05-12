@@ -19,11 +19,11 @@ safety classification, and test coverage. Generated from
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
 | Read-only | 27 | 37 | 64 |
-| Mutating (non-destructive) | 20 | 52 | 72 |
+| Mutating (non-destructive) | 20 | 53 | 73 |
 | Destructive | 5 | 14 | 19 |
 | Billing | 0 | 14 | 14 |
 | Admin | 0 | 14 | 14 |
-| **Total tools** | **52** | **103** | **155** |
+| **Total tools** | **52** | **104** | **156** |
 
 ## Evidence types
 
@@ -132,7 +132,7 @@ Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDT
 
 ---
 
-## Tier 2 — Domain groups (103 tools)
+## Tier 2 — Domain groups (104 tools)
 
 ### `approvals` (6 tools)
 
@@ -213,11 +213,11 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 | `clockify_update_invoice` | mutating | `billing` | unit + live (`TestLiveT2InvoicesCRUD`) |
 | `clockify_update_invoice_item` | mutating | `billing` | unit |
 
-### `probe_lab_api` (4 tools)
+### `probe_lab_api` (5 tools)
 
 Clockify endpoints: allowlisted union of `realOPENAPI`, `/Users/15x/Downloads/AIII/openapi.yaml`, `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml`, probe-lab OpenAPI fragments, and all 19 `*DOC*.md` source files. The allowlist currently contains 207 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, entity-change reads, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense detailed report, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes. `GET /workspaces/{workspaceId}/scheduling/capacity` was removed on 2026-05-12 as a probe-lab guess that Clockify rejects with `{"code":3000,"message":"No static resource …"}`; the real per-user capacity surface is `/scheduling/assignments/users/{userId}/totals` via `clockify_filter_schedule_capacity`.
 
-This group is an allowlisted escape hatch for documented routes that do not yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}` resolves from the configured workspace unless `workspace_id` is supplied; non-workspace placeholders must be provided through `path_params`; `query` object values become query parameters; `json_body` is sent as upstream JSON; `form_body` is sent as multipart form fields; `raw_response` returns base64 payloads for export endpoints. The three caller tools are separated by method class so read, write, and destructive policy/risk handling remains visible; the write/delete callers carry broad billing/admin/permission-change/external-side-effect risk bits because the allowlist includes those route families.
+This group is an allowlisted escape hatch for documented routes that do not yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}` resolves from the configured workspace unless `workspace_id` is supplied; non-workspace placeholders must be provided through `path_params`; `query` object values become query parameters; `json_body` is sent as upstream JSON; `form_body` is sent as multipart form fields; `files` sends base64-decoded multipart file parts for documented upload endpoints; `raw_response` returns base64 payloads for export endpoints. The method-class caller tools are separated so read, write, and destructive policy/risk handling remains visible; the write/delete callers carry broad billing/admin/permission-change/external-side-effect risk bits because the allowlist includes those route families. `clockify_upload_image` is a typed wrapper for `POST /file/image` with a dedicated base64 file input so image upload clients do not have to use the generic documented write caller.
 
 `make gen-coverage-matrix` writes `docs/openapi/coverage-matrix.{json,md}`
 from the generated OpenAPI, the typed tool catalog, this ledger, raw
@@ -231,6 +231,7 @@ coverage-matrix-drift` is the drift gate; the current matrix contains
 | `clockify_call_documented_read_api` | read-only | `TestProbeLabAPIReadCallResolvesPathAndRepeatedQuery`; `TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath` |
 | `clockify_call_documented_write_api` | mutating | `TestProbeLabAPIWriteCallSendsReportsJSONBody`; `TestProbeLabAPIWriteDryRunDoesNotMutate`; `TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath`; live dry-run (`TestLiveFullSurfaceDocCoverage`) |
 | `clockify_call_documented_delete_api` | destructive | `TestProbeLabAPIDeleteCallCanSendJSONBody`; live dry-run (`TestLiveFullSurfaceDocCoverage`) |
+| `clockify_upload_image` | mutating | `TestUploadImageSendsMultipartFile`; `TestEncodeMultipartWithFiles` |
 
 ### `project_admin` (14 tools)
 
@@ -524,7 +525,7 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 155-tool catalog is 52 Tier 1 tools + 103 Tier 2 tools, with
+current 156-tool catalog is 52 Tier 1 tools + 104 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -627,7 +628,7 @@ upstream limitation:
 
 ## Gaps
 
-1. **Full-success live coverage:** the current 155-tool catalog has a
+1. **Full-success live coverage:** the current 156-tool catalog has a
    manual probe, live-test hook, or local unit coverage path, but some
    API-backed tools remain asserted as upstream unsupported,
    permission-gated, plan-gated, or workspace-state limited rather

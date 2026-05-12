@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -219,5 +221,44 @@ func TestCallDocumentedWriteAPIBlockedWhenRawWritesDisabled(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_DOCUMENTED_API_WRITES") {
 		t.Fatalf("err = %v, want documented API writes disabled error", err)
+	}
+}
+
+func TestUploadImageSendsMultipartFile(t *testing.T) {
+	var gotContentType string
+	var gotBody string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/file/image" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotContentType = r.Header.Get("Content-Type")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		gotBody = string(body)
+		respondJSON(t, w, map[string]any{"id": "file-1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UploadImage(context.Background(), map[string]any{
+		"filename":     "avatar.png",
+		"content_type": "image/png",
+		"data_base64":  base64.StdEncoding.EncodeToString([]byte("png")),
+	})
+	if err != nil {
+		t.Fatalf("UploadImage: %v", err)
+	}
+	if result.Action != "clockify_upload_image" {
+		t.Fatalf("action = %s", result.Action)
+	}
+	if !strings.HasPrefix(gotContentType, "multipart/form-data") {
+		t.Fatalf("Content-Type = %q", gotContentType)
+	}
+	for _, want := range []string{`name="file"; filename="avatar.png"`, "Content-Type: image/png", "png"} {
+		if !strings.Contains(gotBody, want) {
+			t.Fatalf("body missing %q: %s", want, gotBody)
+		}
 	}
 }

@@ -28,6 +28,10 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"operation", "method", "path"},
 	},
+	"clockify_upload_image": {
+		class:     mcp.RiskWrite,
+		auditKeys: []string{"filename", "content_type"},
+	},
 
 	// Sensitive reads — user, policy, billing, balance, and webhook
 	// surfaces should be visible to audit/agents without joining the

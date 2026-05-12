@@ -12846,6 +12846,33 @@
             "description": "Preview the resolved request without sending it upstream.",
             "type": "boolean"
           },
+          "files": {
+            "description": "Multipart file parts as base64 objects. Each item has field, filename, content_type, and data_base64.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "content_type": {
+                  "type": "string"
+                },
+                "data_base64": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "filename",
+                "data_base64"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
           "form_body": {
             "additionalProperties": true,
             "description": "Multipart form fields. Array values are sent as repeated fields.",
@@ -12962,6 +12989,33 @@
           }
         ],
         "properties": {
+          "files": {
+            "description": "Multipart file parts as base64 objects. Each item has field, filename, content_type, and data_base64.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "content_type": {
+                  "type": "string"
+                },
+                "data_base64": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "filename",
+                "data_base64"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
           "form_body": {
             "additionalProperties": true,
             "description": "Multipart form fields. Array values are sent as repeated fields.",
@@ -13082,6 +13136,33 @@
           "dry_run": {
             "description": "Preview the resolved request without sending it upstream.",
             "type": "boolean"
+          },
+          "files": {
+            "description": "Multipart file parts as base64 objects. Each item has field, filename, content_type, and data_base64.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "content_type": {
+                  "type": "string"
+                },
+                "data_base64": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "filename",
+                "data_base64"
+              ],
+              "type": "object"
+            },
+            "type": "array"
           },
           "form_body": {
             "additionalProperties": true,
@@ -13231,6 +13312,76 @@
           "read"
         ],
         "title": "List Documented Api Operations"
+      }
+    },
+    {
+      "name": "clockify_upload_image",
+      "description": "Upload an image file through Clockify's documented /file/image multipart endpoint.",
+      "group": "probe_lab_api",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "audit_keys": [
+        "filename",
+        "content_type"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "description": "MIME type for the file part, for example image/png.",
+            "type": "string"
+          },
+          "data_base64": {
+            "description": "Base64-encoded file bytes. Files are bounded by the client multipart cap.",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the upload metadata without sending bytes upstream.",
+            "type": "boolean"
+          },
+          "filename": {
+            "description": "Original filename sent in the multipart file part.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "data_base64"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_upload_image",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Upload Image"
       }
     },
     {

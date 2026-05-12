@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
@@ -29,6 +30,7 @@ func init() {
 			"clockify_call_documented_read_api",
 			"clockify_call_documented_write_api",
 			"clockify_call_documented_delete_api",
+			"clockify_upload_image",
 		},
 		Builder: probeLabAPIHandlers,
 	})
@@ -48,6 +50,22 @@ func probeLabAPIHandlers(s *Service) []mcp.ToolDescriptor {
 		{Tool: toolDestructive("clockify_call_documented_delete_api", "Call an allowlisted documented DELETE endpoint. Supports json_body, query, and dry_run.", documentedAPICallSchema([]string{http.MethodDelete}, true)), ReadOnlyHint: false, DestructiveHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.CallDocumentedDeleteAPI(ctx, args)
 		}},
+		{Tool: toolRW("clockify_upload_image", "Upload an image file through Clockify's documented /file/image multipart endpoint.", uploadImageSchema()), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UploadImage(ctx, args)
+		}},
+	}
+}
+
+func uploadImageSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"filename":     map[string]any{"type": "string", "description": "Original filename sent in the multipart file part."},
+			"content_type": map[string]any{"type": "string", "description": "MIME type for the file part, for example image/png."},
+			"data_base64":  map[string]any{"type": "string", "description": "Base64-encoded file bytes. Files are bounded by the client multipart cap."},
+			"dry_run":      map[string]any{"type": "boolean", "description": "Preview the upload metadata without sending bytes upstream."},
+		},
+		"required": []string{"filename", "data_base64"},
 	}
 }
 
@@ -86,6 +104,20 @@ func documentedAPICallSchema(methods []string, allowDryRun bool) map[string]any 
 			"type":                 "object",
 			"additionalProperties": true,
 			"description":          "Multipart form fields. Array values are sent as repeated fields.",
+		},
+		"files": map[string]any{
+			"type":        "array",
+			"description": "Multipart file parts as base64 objects. Each item has field, filename, content_type, and data_base64.",
+			"items": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"field":        map[string]any{"type": "string"},
+					"filename":     map[string]any{"type": "string"},
+					"content_type": map[string]any{"type": "string"},
+					"data_base64":  map[string]any{"type": "string"},
+				},
+				"required": []string{"field", "filename", "data_base64"},
+			},
 		},
 		"raw_response": map[string]any{"type": "boolean", "description": "Return base64 body and response headers instead of JSON-decoding."},
 	}
@@ -396,8 +428,12 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if hasJSON && hasForm {
-		return ResultEnvelope{}, fmt.Errorf("json_body and form_body are mutually exclusive")
+	files, hasFiles, err := documentedFilesArg(args, "files")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if hasJSON && (hasForm || hasFiles) {
+		return ResultEnvelope{}, fmt.Errorf("json_body is mutually exclusive with form_body/files")
 	}
 	if hasJSON && jsonBody == nil {
 		hasJSON = false
@@ -426,6 +462,9 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 		if hasForm {
 			preview["form_body"] = formBody
 		}
+		if hasFiles {
+			preview["files"] = documentedFilePreview(files)
+		}
 		return ok(toolName, dryrun.Preview(toolName, preview), meta), nil
 	}
 
@@ -438,14 +477,47 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	}
 
 	var out any
-	if hasForm {
-		if err := s.Client.RequestMultipartValues(ctx, op.reportsHost(), op.Method, resolvedPath, query, formBody, &out); err != nil {
+	if hasForm || hasFiles {
+		if err := s.Client.RequestMultipartValuesWithFiles(ctx, op.reportsHost(), op.Method, resolvedPath, query, formBody, files, &out); err != nil {
 			return ResultEnvelope{}, err
 		}
 	} else if err := s.Client.RequestJSONValues(ctx, op.reportsHost(), op.Method, resolvedPath, query, documentedRequestBody(hasJSON, jsonBody), &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok(toolName, out, meta), nil
+}
+
+func (s *Service) UploadImage(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	filename := strings.TrimSpace(stringArg(args, "filename"))
+	if filename == "" {
+		return ResultEnvelope{}, fmt.Errorf("filename is required")
+	}
+	contentType := strings.TrimSpace(stringArg(args, "content_type"))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	data, err := base64.StdEncoding.DecodeString(strings.TrimSpace(stringArg(args, "data_base64")))
+	if err != nil {
+		return ResultEnvelope{}, fmt.Errorf("data_base64 must be valid base64: %w", err)
+	}
+	meta := map[string]any{
+		"filename":    filename,
+		"contentType": contentType,
+		"bytes":       len(data),
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_upload_image", dryrun.Preview("clockify_upload_image", meta), meta), nil
+	}
+	var out any
+	if err := s.Client.PostMultipartWithFiles(ctx, "/file/image", nil, []clockify.MultipartFile{{
+		FieldName:   "file",
+		Filename:    filename,
+		ContentType: contentType,
+		Data:        data,
+	}}, &out); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_upload_image", out, meta), nil
 }
 
 func documentedRequestBody(hasBody bool, body any) any {
@@ -667,6 +739,62 @@ func documentedFormValuesArg(args map[string]any, key string) (url.Values, bool,
 		return nil, true, err
 	}
 	return values, true, nil
+}
+
+func documentedFilesArg(args map[string]any, key string) ([]clockify.MultipartFile, bool, error) {
+	raw, ok := args[key]
+	if !ok || raw == nil {
+		return nil, false, nil
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		return nil, true, fmt.Errorf("%s must be an array", key)
+	}
+	files := make([]clockify.MultipartFile, 0, len(items))
+	for i, item := range items {
+		m, ok := item.(map[string]any)
+		if !ok {
+			return nil, true, fmt.Errorf("%s[%d] must be an object", key, i)
+		}
+		field := strings.TrimSpace(stringFromAny(m["field"]))
+		filename := strings.TrimSpace(stringFromAny(m["filename"]))
+		contentType := strings.TrimSpace(stringFromAny(m["content_type"]))
+		dataRaw := strings.TrimSpace(stringFromAny(m["data_base64"]))
+		if field == "" || filename == "" || dataRaw == "" {
+			return nil, true, fmt.Errorf("%s[%d] requires field, filename, and data_base64", key, i)
+		}
+		data, err := base64.StdEncoding.DecodeString(dataRaw)
+		if err != nil {
+			return nil, true, fmt.Errorf("%s[%d].data_base64 must be valid base64: %w", key, i, err)
+		}
+		files = append(files, clockify.MultipartFile{
+			FieldName:   field,
+			Filename:    filename,
+			ContentType: contentType,
+			Data:        data,
+		})
+	}
+	return files, true, nil
+}
+
+func documentedFilePreview(files []clockify.MultipartFile) []map[string]any {
+	out := make([]map[string]any, 0, len(files))
+	for _, file := range files {
+		out = append(out, map[string]any{
+			"field":        file.FieldName,
+			"filename":     file.Filename,
+			"content_type": file.ContentType,
+			"bytes":        len(file.Data),
+		})
+	}
+	return out
+}
+
+func stringFromAny(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func documentedValuesFromMap(parent string, m map[string]any) (url.Values, error) {

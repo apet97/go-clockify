@@ -5,8 +5,15 @@
   "raw_allowlist_count": 192,
   "rows": [
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_call_documented_delete_api",
+        "clockify_call_documented_read_api",
+        "clockify_call_documented_write_api",
+        "clockify_filter_schedule_capacity",
+        "clockify_list_documented_api_operations",
+        "clockify_upload_image"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -16,7 +23,10 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveFullSurfaceDocCoverage",
+        "TestLiveTier2ReadOnlySweep"
+      ],
       "method": "POST",
       "notes_count": 0,
       "operationId": "uploadImage",
@@ -27,8 +37,22 @@
       ],
       "summary": "Add a photo",
       "tag": "Files",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_call_documented_delete_api",
+        "clockify_call_documented_read_api",
+        "clockify_call_documented_write_api",
+        "clockify_filter_schedule_capacity",
+        "clockify_list_documented_api_operations",
+        "clockify_upload_image"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_call_documented_delete_api",
+        "clockify_call_documented_read_api",
+        "clockify_call_documented_write_api",
+        "clockify_filter_schedule_capacity",
+        "clockify_list_documented_api_operations",
+        "clockify_upload_image"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -5615,8 +5639,8 @@
   "summary": {
     "by_class": {
       "raw-tool-live-success": 15,
-      "raw-tool-only": 128,
-      "typed-tool-live-success": 48,
+      "raw-tool-only": 127,
+      "typed-tool-live-success": 49,
       "typed-tool-mapped": 0,
       "uncovered": 0,
       "unsupported": 1
@@ -5651,7 +5675,7 @@
         "raw-tool-only": 6
       },
       "Files": {
-        "raw-tool-only": 1
+        "typed-tool-live-success": 1
       },
       "Holidays": {
         "raw-tool-live-success": 4,
@@ -5752,6 +5776,6 @@
   },
   "tool_catalog": {
     "tier1": 52,
-    "tier2": 103
+    "tier2": 104
   }
 }

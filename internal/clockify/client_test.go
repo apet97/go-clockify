@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -172,6 +173,27 @@ func TestRetryOn429ThenSuccess(t *testing.T) {
 	}
 	if out["ok"] != true {
 		t.Fatalf("unexpected response: %v", out)
+	}
+}
+
+func TestEncodeMultipartWithFiles(t *testing.T) {
+	payload, contentType, err := encodeMultipartWithFiles(url.Values{"kind": []string{"avatar"}}, []MultipartFile{{
+		FieldName:   "file",
+		Filename:    "avatar.png",
+		ContentType: "image/png",
+		Data:        []byte("png"),
+	}})
+	if err != nil {
+		t.Fatalf("encodeMultipartWithFiles: %v", err)
+	}
+	if !strings.HasPrefix(contentType, "multipart/form-data; boundary=") {
+		t.Fatalf("contentType = %q", contentType)
+	}
+	body := string(payload)
+	for _, want := range []string{`name="kind"`, "avatar", `name="file"; filename="avatar.png"`, "Content-Type: image/png", "png"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("multipart body missing %q: %s", want, body)
+		}
 	}
 }
 
