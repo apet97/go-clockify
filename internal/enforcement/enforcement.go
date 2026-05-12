@@ -58,11 +58,12 @@ func (p *Pipeline) Clone() *Pipeline {
 		return nil
 	}
 	return &Pipeline{
-		Policy:     p.Policy.Clone(),
-		Bootstrap:  p.Bootstrap.Clone(),
-		RateLimit:  p.RateLimit,
-		DryRun:     p.DryRun,
-		Truncation: p.Truncation,
+		Policy:       p.Policy.Clone(),
+		Bootstrap:    p.Bootstrap.Clone(),
+		RateLimit:    p.RateLimit,
+		DryRun:       p.DryRun,
+		Truncation:   p.Truncation,
+		Confirmation: p.Confirmation,
 	}
 }
 

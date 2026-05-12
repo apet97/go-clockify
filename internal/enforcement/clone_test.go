@@ -1,10 +1,13 @@
 package enforcement
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
 	"github.com/apet97/go-clockify/internal/dryrun"
+	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/policy"
 	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/truncate"
@@ -34,12 +37,14 @@ func TestPipelineClone(t *testing.T) {
 
 	t.Run("deep_copies_policy_and_bootstrap", func(t *testing.T) {
 		baseBootstrap := bootstrap.Config{Mode: bootstrap.FullTier1}
+		signer := newConfirmationSigner(t)
 		original := &Pipeline{
-			Policy:     mustPolicy(t),
-			Bootstrap:  &baseBootstrap,
-			RateLimit:  ratelimit.New(1, 1, 0),
-			DryRun:     dryrun.Config{Enabled: true},
-			Truncation: truncate.Config{Enabled: true, TokenBudget: 1024},
+			Policy:       mustPolicy(t),
+			Bootstrap:    &baseBootstrap,
+			RateLimit:    ratelimit.New(1, 1, 0),
+			DryRun:       dryrun.Config{Enabled: true},
+			Truncation:   truncate.Config{Enabled: true, TokenBudget: 1024},
+			Confirmation: signer,
 		}
 		cloned := original.Clone()
 		if cloned == nil {
@@ -58,11 +63,41 @@ func TestPipelineClone(t *testing.T) {
 		if cloned.RateLimit != original.RateLimit {
 			t.Fatal("RateLimit pointer should be shared (singleton)")
 		}
+		if cloned.Confirmation != original.Confirmation {
+			t.Fatal("Confirmation signer pointer should be shared (singleton)")
+		}
 		if cloned.DryRun != original.DryRun {
 			t.Fatal("DryRun config should match by value")
 		}
 		if cloned.Truncation != original.Truncation {
 			t.Fatal("Truncation config should match by value")
+		}
+	})
+
+	t.Run("clone_preserves_confirmation_gate", func(t *testing.T) {
+		original := &Pipeline{
+			Policy:       mustPolicy(t),
+			Confirmation: newConfirmationSigner(t),
+		}
+		cloned := original.Clone()
+		if cloned == nil {
+			t.Fatal("expected non-nil clone")
+		}
+
+		_, _, err := cloned.BeforeCall(
+			context.Background(),
+			"clockify_delete_invoice",
+			map[string]any{"invoice_id": "inv-1"},
+			mcp.ToolHints{
+				ReadOnly:    false,
+				Destructive: true,
+				RiskClass:   mcp.RiskDestructive | mcp.RiskBilling,
+			},
+			nil,
+			func(string) (mcp.ToolHandler, bool) { return nil, false },
+		)
+		if !errors.Is(err, ErrConfirmationRequired) {
+			t.Fatalf("err = %v, want ErrConfirmationRequired", err)
 		}
 	})
 }
