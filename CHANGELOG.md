@@ -7,6 +7,157 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+
+- **Session-bootstrap allocator collapsed via two memoisation
+  layers.** `internal/tools/output_schemas.go` wraps
+  `tier1OutputSchemas` in `sync.OnceValue` so the 51-entry envelope
+  lookup is built once per binary, not on every `Service.Registry()`
+  call; pinned by `TestTier1OutputSchemasMemoized`. Separately
+  `internal/tools/schemagen.go` caches `schemaForType` results in a
+  `sync.Map` keyed by the post-deref `reflect.Type`, so `*T` and `T`
+  share a cache entry and every recursive descent (slice items, map
+  values, struct fields) inherits the cache; pinned by
+  `TestSchemaForTypeMemoized`. Together these eliminate the
+  reflection walk that previously dominated per-session bootstrap.
+
+- **Streamable-HTTP `/ready` upstream probe is now TTL-cached.**
+  `cachedReadyChecker` wraps `opts.ReadyChecker` with a default 15s
+  memoisation window, mirroring the legacy `transport_http.go`
+  behaviour. Stops a load balancer's 5s health-check cadence from
+  amplifying into ~17,280 upstream Clockify calls per replica per
+  day; errors are cached alongside successes so a transient outage
+  cannot turn into a quota storm. Pinned by four unit tests in
+  `internal/mcp/ready_cache_test.go`.
+
+- **SSE notification frame buffer is pooled.** The
+  `notifications/tools/list_changed` and friends fan-out write path
+  was four allocations per event (map literal, `json.Marshal` []byte,
+  string-cast for the data line, prefix concats). The new
+  `writeSSEFrame` helper draws a `*bytes.Buffer` from `sseFramePool`,
+  assembles the entire SSE frame in one allocation, and writes it in
+  a single `w.Write`. Wire output is byte-identical (struct-encoded
+  field order matches the legacy alphabetised map), pinned by
+  `TestWriteSSEFrame_MatchesLegacyMapLiteral`.
+
+### Hardening
+
+- **gRPC send-message size is now capped symmetric with recv.**
+  `internal/transport/grpc/transport.go` adds
+  `grpc.MaxSendMsgSize(opts.MaxRecvSize)` so the server cannot
+  stream a frame larger than the inbound cap. Closes the asymmetric
+  DoS surface where grpc-go's default `MaxSendMsgSize` (2 GiB) was
+  effectively unbounded compared to the documented 4 MiB inbound
+  cap. Pinned by `TestServeEnforcesMaxSendMsgSize`.
+
+- **gRPC server now ships sane keepalive defaults.** `Options.
+  KeepaliveTime` / `KeepaliveTimeout` (overrides for tests) plus a
+  permissive `KeepaliveEnforcementPolicy` so dead Exchange streams
+  are reaped within ~35 seconds instead of waiting for OS-level TCP
+  keepalive (~2 hours on Linux). Defaults (30s/5s) match grpc-go's
+  production recommendation and sit below AWS NLB / Envoy idle-
+  timeout floors. Healthy clients see no disruption; pinned by
+  `TestServeKeepaliveDoesNotDisruptHealthyStream`.
+
+- **Streamable-HTTP session pool now bounded per replica and per
+  principal.** New env vars `MCP_MAX_SESSIONS_PER_REPLICA` (returns
+  503 + Retry-After on overflow) and `MCP_MAX_SESSIONS_PER_PRINCIPAL`
+  (returns 429 + Retry-After) close the S0 multi-tenant DoS surface
+  where a single tenant could exhaust the replica's session pool.
+  Both default to 0 (unlimited), preserving the historical behaviour
+  for every existing deployment. Helm + k8s configmap defaults
+  document the knob. Pinned by
+  `TestSessionCap_PerReplicaRejectsBeyondCap`,
+  `TestSessionCap_PerPrincipalRejectsTenantOverrun`,
+  `TestSessionCap_DestroyDecrementsPrincipalCount`,
+  `TestSessionCap_ZeroDefaultsAreUnlimited`. New RPC error code
+  `RPCCodeServiceUnavailable` (-32030) communicates the capacity
+  signal; the existing `RPCCodeRateLimited` covers the principal
+  fairness case.
+
+### Schema
+
+- **`clockify_resolve_name.entity_type` now declares its enum.** The
+  field previously accepted any string and the handler did the
+  membership check inside a switch statement; spec-strict MCP
+  clients had no way to know the valid set from `tools/list`. The
+  schema now lists `["project", "client", "tag", "user", "task"]` so
+  the JSON Schema validator rejects typos at parse time, before the
+  handler runs. Pinned by `TestResolveNameInputSchema_EnumConstraint`.
+  `docs/tool-catalog.json` regenerated to surface the enum on
+  `clockify_resolve_name` and `clockify_resolve_debug`; markdown
+  catalog is unchanged because the table view does not enumerate
+  constraint values.
+
+### Refactor
+
+- **`authn/authn.go` split: OIDC subsystem extracted into
+  `authn_oidc.go`.** The 1356-line file is now 476 lines of core +
+  bearer + forward + mtls, plus a focused 913-line `authn_oidc.go`
+  holding the JWT decode/validate/JWKS/JWK/verify infrastructure.
+  Pure mechanical move — every symbol keeps its name and package;
+  the existing authn test suite runs untouched.
+
+- **`tools/common.go` builders share a `newTool` core.** The four
+  near-identical risk-class builders (`toolRO`, `toolRW`,
+  `toolRWIdem`, `toolDestructive`) now delegate to a single
+  `newTool(name, desc, schema, readOnly, destructive, idempotent
+  bool)` helper. Public surface unchanged — call sites continue to
+  use the named wrappers — but adding a fifth risk class becomes a
+  one-line addition. Catalog regeneration produces byte-identical
+  output (no wire-format drift).
+
+- **`tools/context.go` activate/deactivate handlers share
+  `doActivation[T]`.** Three near-identical handlers
+  (`activateGroupByName`, `activateToolByName`, `DeactivateToolGroup`)
+  collapsed into one generic helper parameterised on the result
+  type. ~30 lines saved.
+
+- **JSON Schema builders `schemaString` and `schemaObject`
+  introduced in `tools/common.go`.** Helper pattern for the ~80
+  hand-built `map[string]any{"type":"object", "properties": ...}`
+  literals scattered across registry.go and the Tier 2 files. First
+  conversion at `resolveNameInputSchema` proves the pattern;
+  `schemaEnum` layered on top is what makes the
+  `clockify_resolve_name` enum tightening (above) a one-line change.
+
+- **`isOIDCLoopbackHost` renamed to `isOIDCLoopback`.** The "Host"
+  suffix duplicated the parameter name `host`; single caller in
+  `validateOIDCAddress` updated in the same commit.
+
+### Docs
+
+- **Trademark / non-affiliation disclaimer added.** New top-level
+  `NOTICE.md` declares `go-clockify` an independent third-party
+  client, names Clockify as a trademark of CAKE.com, and clarifies
+  the nominative-use rationale. Cross-linked from README.md and
+  SECURITY.md (the latter alongside the still-open formal trademark
+  review entry).
+
+- **godoc on every exported DTO in `internal/tools/common.go`.**
+  Fourteen public types (`ActivationResult`, `DeactivationResult`,
+  `ResultEnvelope`, `WorkspaceContext`, `IdentityData`,
+  `WeeklySummaryData`, `SummaryData`, `QuickReportData`,
+  `LogTimeData`, `FindAndUpdateEntryData`, `TimeEntryUpdatePreview`,
+  `DateRange`, `SummaryTotals`, `ProjectSummary`, `DaySummary`)
+  gained leading-noun comments naming the producing tool(s) and any
+  cross-cutting invariants.
+
+- **Tool-count narrative drift refreshed.** `SECURITY.md` ("all 128
+  current catalog tools" → 139), `CHANGELOG.md` Unreleased narrative
+  bullets, and `docs/api-coverage.md` Live-test-coverage paragraph
+  all aligned with the post-Wave-4.4 catalog (51 Tier 1 + 88 Tier 2
+  = 139). Historical entries (`CHANGELOG.md` L130 / L2925) intact.
+
+- **SLSA private-repo notes reframed as v1.0.x-era history.** The
+  repository flipped public on 2026-04-22; three remaining surfaces
+  (`docs/verify-release.md` ×2, `docs/production-readiness.md`) still
+  narrated "the current user-owned private repository" workaround
+  prose. Each section now describes the pre-flip workaround
+  in past tense and names the cosign chain as the mandatory
+  cryptographic gate (which it was through and after the flip; SLSA
+  provenance is additive evidence).
+
 ### Security
 
 - **Confirmation-token gate now enforced for every high-risk tool
