@@ -8,6 +8,7 @@ import (
 	"github.com/apet97/go-clockify/internal/authn"
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
@@ -37,6 +38,9 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 	}
 	protectedResource := authn.ProtectedResourceHandler(authnCfg)
 	deps := r.deps
+	if deps.confirmationReplayEnabled {
+		deps.confirmationReplay = confirmationReplayStore(store)
+	}
 	// ADR 0022: wrap the synchronous controlPlaneAuditor with a
 	// batched auditor so non-strict outcome events consolidate
 	// into pgx.SendBatch-sized writes. Intent records,
@@ -104,6 +108,13 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 			return tenantRuntime(ctx, principal.TenantID, deps, store)
 		},
 	})
+}
+
+func confirmationReplayStore(store any) confirmation.ReplayStore {
+	if replay, ok := store.(confirmation.ReplayStore); ok {
+		return replay
+	}
+	return confirmation.NewMemoryReplayStore()
 }
 
 func streamableHTTPMinTLSVersion(profile string) uint16 {

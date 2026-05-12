@@ -21,6 +21,10 @@ const EnvVarTokenSecret = "CLOCKIFY_CONFIRMATION_TOKEN_SECRET"
 // clamped to [1m,1h].
 const EnvVarTokenTTL = "CLOCKIFY_CONFIRMATION_TOKEN_TTL"
 
+// EnvVarReplayProtection controls nonce replay tracking. Empty defaults
+// to enabled for hosted profiles and disabled for local/self-hosted profiles.
+const EnvVarReplayProtection = "CLOCKIFY_CONFIRMATION_REPLAY_PROTECTION"
+
 const (
 	// MinTokenTTL is the lower bound on the configured token lifetime.
 	// Anything shorter would make the dry-run-then-execute UX impossibly
@@ -71,6 +75,10 @@ func ConfigFromEnv(hosted bool) (LoadResult, error) {
 	}
 
 	var notes []string
+	replayProtection, replayRaw := readReplayProtection(hosted)
+	if replayProtection && replayRaw == "" && hosted {
+		notes = append(notes, fmt.Sprintf("%s unset; enabled by default for hosted profiles.", EnvVarReplayProtection))
+	}
 	secretRaw := strings.TrimSpace(os.Getenv(EnvVarTokenSecret))
 	var (
 		secret    []byte
@@ -107,10 +115,11 @@ func ConfigFromEnv(hosted bool) (LoadResult, error) {
 
 	return LoadResult{
 		Config: Config{
-			Enabled:   true,
-			Secret:    secret,
-			TTL:       ttl,
-			Ephemeral: ephemeral,
+			Enabled:          true,
+			Secret:           secret,
+			TTL:              ttl,
+			ReplayProtection: replayProtection,
+			Ephemeral:        ephemeral,
 		},
 		Notes: notes,
 	}, nil
@@ -145,6 +154,22 @@ func readTTL() (time.Duration, error) {
 		return 0, fmt.Errorf("%s=%s out of allowed range [%s, %s]", EnvVarTokenTTL, d, MinTokenTTL, MaxTokenTTL)
 	}
 	return d, nil
+}
+
+func readReplayProtection(hosted bool) (enabled bool, raw string) {
+	raw = strings.TrimSpace(os.Getenv(EnvVarReplayProtection))
+	switch strings.ToLower(raw) {
+	case "":
+		return hosted, raw
+	case "on", "enabled", "1", "true":
+		return true, raw
+	case "off", "disabled", "0", "false":
+		return false, raw
+	default:
+		// Unknown values fail closed for hosted by enabling protection; local
+		// callers still see a note-free default through the config spec/tests.
+		return hosted, raw
+	}
 }
 
 // decodeConfigSecret accepts hex or any of the four common base64

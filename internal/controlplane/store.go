@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/confirmation"
 )
 
 type TenantRecord struct {
@@ -73,10 +75,11 @@ type AuditEvent struct {
 }
 
 type State struct {
-	Tenants        map[string]TenantRecord  `json:"tenants"`
-	CredentialRefs map[string]CredentialRef `json:"credential_refs"`
-	Sessions       map[string]SessionRecord `json:"sessions"`
-	AuditEvents    []AuditEvent             `json:"audit_events"`
+	Tenants            map[string]TenantRecord              `json:"tenants"`
+	CredentialRefs     map[string]CredentialRef             `json:"credential_refs"`
+	Sessions           map[string]SessionRecord             `json:"sessions"`
+	AuditEvents        []AuditEvent                         `json:"audit_events"`
+	ConfirmationNonces map[string]confirmation.ReplayRecord `json:"confirmation_nonces,omitempty"`
 }
 
 // Store is the durable backend for the control plane. B1 lifted this
@@ -230,10 +233,11 @@ func openDevFile(dsn string, opts ...Option) (Store, error) {
 	s := &DevFileStore{
 		path: path,
 		state: State{
-			Tenants:        map[string]TenantRecord{},
-			CredentialRefs: map[string]CredentialRef{},
-			Sessions:       map[string]SessionRecord{},
-			AuditEvents:    []AuditEvent{},
+			Tenants:            map[string]TenantRecord{},
+			CredentialRefs:     map[string]CredentialRef{},
+			Sessions:           map[string]SessionRecord{},
+			AuditEvents:        []AuditEvent{},
+			ConfirmationNonces: map[string]confirmation.ReplayRecord{},
 		},
 	}
 	for _, o := range opts {
@@ -294,6 +298,9 @@ func (s *DevFileStore) load() error {
 	}
 	if s.state.AuditEvents == nil {
 		s.state.AuditEvents = []AuditEvent{}
+	}
+	if s.state.ConfirmationNonces == nil {
+		s.state.ConfirmationNonces = map[string]confirmation.ReplayRecord{}
 	}
 	return nil
 }
@@ -429,6 +436,39 @@ func (s *DevFileStore) RetainAudit(ctx context.Context, maxAge time.Duration) (i
 		return 0, err
 	}
 	return dropped, nil
+}
+
+// UseConfirmationNonce records a verified confirmation-token nonce. The
+// file-backed implementation is intended for local/dev and small single-node
+// deployments; hosted profiles should use Postgres so replay state is shared.
+func (s *DevFileStore) UseConfirmationNonce(ctx context.Context, rec confirmation.ReplayRecord) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if rec.Nonce == "" {
+		return confirmation.ErrTokenMalformed
+	}
+	now := time.Now().UTC()
+	if rec.UsedAt.IsZero() {
+		rec.UsedAt = now
+	}
+	key := confirmationReplayKey(rec)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for k, old := range s.state.ConfirmationNonces {
+		if !old.ExpiresAt.IsZero() && !old.ExpiresAt.After(now) {
+			delete(s.state.ConfirmationNonces, k)
+		}
+	}
+	if old, ok := s.state.ConfirmationNonces[key]; ok && (old.ExpiresAt.IsZero() || old.ExpiresAt.After(now)) {
+		return confirmation.ErrTokenReplayed
+	}
+	s.state.ConfirmationNonces[key] = rec
+	return s.persistLocked()
+}
+
+func confirmationReplayKey(rec confirmation.ReplayRecord) string {
+	return rec.Tenant + "\x00" + rec.Subject + "\x00" + rec.Session + "\x00" + rec.Tool + "\x00" + rec.Nonce
 }
 
 // Close releases backend-owned resources. DevFileStore has no

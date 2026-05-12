@@ -51,6 +51,11 @@ type Pipeline struct {
 	// warning when nil is observed under a hosted profile. See
 	// docs/adr/0018-risk-class-confirmation-tokens.md.
 	Confirmation *confirmation.Signer
+	// ConfirmationReplay records accepted confirmation-token nonces so
+	// high-risk tokens are single-use within their TTL. nil preserves
+	// the legacy stateless behaviour for local deployments that have not
+	// enabled replay protection.
+	ConfirmationReplay confirmation.ReplayStore
 }
 
 func (p *Pipeline) Clone() *Pipeline {
@@ -58,12 +63,13 @@ func (p *Pipeline) Clone() *Pipeline {
 		return nil
 	}
 	return &Pipeline{
-		Policy:       p.Policy.Clone(),
-		Bootstrap:    p.Bootstrap.Clone(),
-		RateLimit:    p.RateLimit,
-		DryRun:       p.DryRun,
-		Truncation:   p.Truncation,
-		Confirmation: p.Confirmation,
+		Policy:             p.Policy.Clone(),
+		Bootstrap:          p.Bootstrap.Clone(),
+		RateLimit:          p.RateLimit,
+		DryRun:             p.DryRun,
+		Truncation:         p.Truncation,
+		Confirmation:       p.Confirmation,
+		ConfirmationReplay: p.ConfirmationReplay,
 	}
 }
 
@@ -199,16 +205,31 @@ func (p *Pipeline) verifyConfirmationToken(ctx context.Context, name string, arg
 		return ErrConfirmationRequired
 	}
 	tenant, subject, session := bindingFromContext(ctx)
-	if _, err := p.Confirmation.Verify(confirmation.VerifyInput{
+	argsHash := confirmation.BuildArgumentFingerprint(args)
+	claims, err := p.Confirmation.Verify(confirmation.VerifyInput{
 		Tool:      name,
-		ArgsHash:  confirmation.BuildArgumentFingerprint(args),
+		ArgsHash:  argsHash,
 		RiskClass: uint32(hints.RiskClass),
 		Tenant:    tenant,
 		Subject:   subject,
 		Session:   session,
 		Token:     rawToken,
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("confirmation token rejected: %w", err)
+	}
+	if p.ConfirmationReplay != nil {
+		if err := p.ConfirmationReplay.UseConfirmationNonce(ctx, confirmation.ReplayRecord{
+			Nonce:     claims.Nonce,
+			Tool:      claims.Tool,
+			ArgsHash:  argsHash,
+			Tenant:    claims.Tenant,
+			Subject:   claims.Subject,
+			Session:   claims.Session,
+			ExpiresAt: time.Unix(claims.Expires, 0).UTC(),
+		}); err != nil {
+			return fmt.Errorf("confirmation token rejected: %w", err)
+		}
 	}
 	delete(args, "confirmation_token")
 	return nil

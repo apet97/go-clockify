@@ -17,6 +17,7 @@ of truth per backend.
 | 2 | `internal/controlplane/postgres/migrations/002_audit_phase.sql` | v1.2.0 | Adds `audit_events.phase` and `idx_audit_events_phase` for two-phase intent/outcome audit durability. |
 | 3 | `internal/controlplane/postgres/migrations/003_drop_session_affinity_id.sql` | next | Drops the unused `sessions.session_affinity_id` column after ADR 0017 made it obsolete. |
 | 4 | `internal/controlplane/postgres/migrations/004_audit_events_tenant_at_index.sql` | next | Adds `idx_audit_events_tenant_id_at` for tenant-scoped audit review over bounded time windows. |
+| 5 | `internal/controlplane/postgres/migrations/005_confirmation_nonces.sql` | next | Adds `confirmation_nonces` for hosted/shared-service confirmation-token replay protection. |
 
 A version number appears here **once** — migrations are append-only.
 Removing a column is a new row ("version 2 — drop obsolete foo").
@@ -34,6 +35,9 @@ new method) but require an implementation in every existing backend.
 | `Tenant`, `PutTenant`, `CredentialRef`, `PutCredentialRef`, `Session`, `PutSession`, `DeleteSession`, `AppendAuditEvent` | v0.6.0 | Original eight methods. |
 | `Close() error` | v1.1.0 (Wave B1.0) | Release backend-owned resources. `DevFileStore` returns nil. Postgres closes the pool. |
 | `RetainAudit(ctx, maxAge) (int, error)` | v1.1.0 (Wave B2.1) | Drop audit events older than `maxAge`, return count removed. `maxAge <= 0` is a no-op. Called by the retention reaper in `internal/runtime/retain.go` (moved out of `cmd/clockify-mcp/retain.go` during the dea1cc3 C2.2 runtime extraction). |
+
+Optional replay protection backends implement `confirmation.ReplayStore`
+(`UseConfirmationNonce`) without expanding the core `Store` interface.
 
 ## File / memory backend
 

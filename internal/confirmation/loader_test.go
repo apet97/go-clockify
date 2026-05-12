@@ -14,6 +14,7 @@ func resetEnv(t *testing.T) {
 	t.Setenv(EnvVarTokensEnabled, "")
 	t.Setenv(EnvVarTokenSecret, "")
 	t.Setenv(EnvVarTokenTTL, "")
+	t.Setenv(EnvVarReplayProtection, "")
 }
 
 // TestConfigFromEnvDefaultsEnabled documents the safe default: any
@@ -38,8 +39,48 @@ func TestConfigFromEnvDefaultsEnabled(t *testing.T) {
 	if res.Config.TTL != DefaultTTL {
 		t.Fatalf("TTL = %s, want %s", res.Config.TTL, DefaultTTL)
 	}
+	if res.Config.ReplayProtection {
+		t.Fatal("self-hosted default ReplayProtection = true, want false")
+	}
 	if len(res.Notes) == 0 {
 		t.Fatal("ephemeral fallback must emit an operator-facing note")
+	}
+}
+
+func TestConfigFromEnvHostedDefaultsReplayProtectionEnabled(t *testing.T) {
+	resetEnv(t)
+	raw := make([]byte, MinSecretBytes)
+	for i := range raw {
+		raw[i] = byte(i + 1)
+	}
+	t.Setenv(EnvVarTokenSecret, hex.EncodeToString(raw))
+	res, err := ConfigFromEnv(true)
+	if err != nil {
+		t.Fatalf("ConfigFromEnv: %v", err)
+	}
+	if !res.Config.ReplayProtection {
+		t.Fatal("hosted default ReplayProtection = false, want true")
+	}
+}
+
+func TestConfigFromEnvReplayProtectionFlag(t *testing.T) {
+	resetEnv(t)
+	t.Setenv(EnvVarTokenSecret, hex.EncodeToString(make([]byte, MinSecretBytes)))
+	t.Setenv(EnvVarReplayProtection, "enabled")
+	res, err := ConfigFromEnv(false)
+	if err != nil {
+		t.Fatalf("ConfigFromEnv enabled: %v", err)
+	}
+	if !res.Config.ReplayProtection {
+		t.Fatal("ReplayProtection should be enabled explicitly")
+	}
+	t.Setenv(EnvVarReplayProtection, "disabled")
+	res, err = ConfigFromEnv(true)
+	if err != nil {
+		t.Fatalf("ConfigFromEnv disabled: %v", err)
+	}
+	if res.Config.ReplayProtection {
+		t.Fatal("ReplayProtection should be disabled explicitly")
 	}
 }
 

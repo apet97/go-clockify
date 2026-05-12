@@ -181,6 +181,66 @@ func TestBeforeCall_HighRiskWithValidToken_AllowsExecution(t *testing.T) {
 	_ = calls
 }
 
+// TestBeforeCall_HighRiskTokenReplay_Rejected verifies optional nonce tracking:
+// once a high-risk token has been accepted, reusing the same token within TTL is
+// rejected before the handler can run.
+func TestBeforeCall_HighRiskTokenReplay_Rejected(t *testing.T) {
+	signer := newConfirmationSigner(t)
+	p := &Pipeline{
+		Policy:             standardPolicy(),
+		DryRun:             dryrun.Config{Enabled: true},
+		Confirmation:       signer,
+		ConfirmationReplay: confirmation.NewMemoryReplayStore(),
+	}
+	handler, calls := recordingHandler()
+	lookup := lookupWith(map[string]mcp.ToolHandler{"clockify_delete_invoice": handler})
+
+	previewResult, _, err := p.BeforeCall(
+		context.Background(),
+		"clockify_delete_invoice",
+		map[string]any{"invoice_id": "inv-1", "dry_run": true},
+		highRiskHints(mcp.RiskDestructive|mcp.RiskBilling),
+		nil,
+		lookup,
+	)
+	if err != nil {
+		t.Fatalf("Mint preview err = %v", err)
+	}
+	envelope, _ := previewResult.(map[string]any)
+	token, _ := envelope["confirmation_token"].(string)
+	if token == "" {
+		t.Fatal("dry-run did not produce a confirmation_token")
+	}
+
+	firstArgs := map[string]any{"invoice_id": "inv-1", "confirmation_token": token}
+	if _, _, err := p.BeforeCall(
+		context.Background(),
+		"clockify_delete_invoice",
+		firstArgs,
+		highRiskHints(mcp.RiskDestructive|mcp.RiskBilling),
+		nil,
+		lookup,
+	); err != nil {
+		t.Fatalf("first token use err = %v", err)
+	}
+
+	secondArgs := map[string]any{"invoice_id": "inv-1", "confirmation_token": token}
+	_, _, err = p.BeforeCall(
+		context.Background(),
+		"clockify_delete_invoice",
+		secondArgs,
+		highRiskHints(mcp.RiskDestructive|mcp.RiskBilling),
+		nil,
+		lookup,
+	)
+	if !errors.Is(err, confirmation.ErrTokenReplayed) {
+		t.Fatalf("second token use err = %v, want ErrTokenReplayed", err)
+	}
+	if calls.Load() != 0 {
+		t.Fatal("handler must not run on replay rejection")
+	}
+}
+
 // TestBeforeCall_HighRiskWithChangedArgs_RejectsToken verifies the
 // args binding. A token minted for {invoice_id:inv-1} must not allow
 // a {invoice_id:inv-2} execution.

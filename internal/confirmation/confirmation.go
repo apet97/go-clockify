@@ -95,6 +95,10 @@ type Config struct {
 	// TTL is the lifetime applied to Mint'd tokens. Zero defaults to
 	// DefaultTTL.
 	TTL time.Duration
+	// ReplayProtection enables single-use nonce tracking at the
+	// enforcement layer. The signer stays stateless; callers wire a
+	// ReplayStore appropriate for the runtime profile.
+	ReplayProtection bool
 	// Ephemeral marks a secret that was generated at startup rather
 	// than supplied by the operator. The enforcement layer logs a
 	// warning so operators on hosted multi-replica deployments see

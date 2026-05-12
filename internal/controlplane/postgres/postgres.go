@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/controlplane"
 )
 
@@ -361,6 +362,45 @@ func (s *Store) RetainAudit(ctx context.Context, maxAge time.Duration) (int, err
 	return int(tag.RowsAffected()), nil
 }
 
+// UseConfirmationNonce atomically records a confirmation-token nonce. The
+// primary key is the same tenant/subject/session/tool/nonce tuple used by the
+// in-memory store, so a replay across replicas fails on ON CONFLICT.
+func (s *Store) UseConfirmationNonce(ctx context.Context, rec confirmation.ReplayRecord) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if rec.Nonce == "" {
+		return confirmation.ErrTokenMalformed
+	}
+	usedAt := rec.UsedAt
+	if usedAt.IsZero() {
+		usedAt = time.Now().UTC()
+	}
+	key := postgresConfirmationReplayKey(rec)
+	tag, err := s.pool.Exec(ctx, `
+		WITH expired AS (
+			DELETE FROM confirmation_nonces WHERE expires_at <= now()
+		)
+		INSERT INTO confirmation_nonces
+			(replay_key, nonce, tool, args_hash, tenant_id, subject, session_id, expires_at, used_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		ON CONFLICT (replay_key) DO NOTHING`,
+		key, rec.Nonce, rec.Tool, rec.ArgsHash, rec.Tenant, rec.Subject, rec.Session,
+		rec.ExpiresAt.UTC(), usedAt.UTC(),
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return confirmation.ErrTokenReplayed
+	}
+	return nil
+}
+
+func postgresConfirmationReplayKey(rec confirmation.ReplayRecord) string {
+	return rec.Tenant + "\x00" + rec.Subject + "\x00" + rec.Session + "\x00" + rec.Tool + "\x00" + rec.Nonce
+}
+
 // auditInsertSQL is the single canonical INSERT statement used by both
 // AppendAuditEvent (single-row Exec) and AppendAuditEventBatch
 // (pgx.SendBatch). Keeping the SQL and column order in one place
@@ -463,3 +503,4 @@ func mapOrEmpty(v map[string]string) map[string]string {
 // Compile-time assertion that Store satisfies controlplane.Store.
 // Keeps the two from drifting without failing tests.
 var _ controlplane.Store = (*Store)(nil)
+var _ confirmation.ReplayStore = (*Store)(nil)

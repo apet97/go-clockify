@@ -106,15 +106,16 @@ func New(cfg config.Config, opts NewOpts) (*Runtime, error) {
 	return &Runtime{
 		cfg: cfg,
 		deps: runtimeDeps{
-			cfg:          cfg,
-			dd:           dd,
-			dc:           dc,
-			tc:           tc,
-			rl:           rl,
-			policy:       pol,
-			bootstrap:    bc,
-			confirmation: confSigner,
-			version:      opts.Version,
+			cfg:                       cfg,
+			dd:                        dd,
+			dc:                        dc,
+			tc:                        tc,
+			rl:                        rl,
+			policy:                    pol,
+			bootstrap:                 bc,
+			confirmation:              confSigner,
+			confirmationReplayEnabled: confResult.Config.ReplayProtection,
+			version:                   opts.Version,
 		},
 		version:       opts.Version,
 		extraHandlers: opts.ExtraHandlers,
@@ -142,12 +143,16 @@ func (r *Runtime) Run(ctx context.Context) error {
 	if r.cfg.Transport == "streamable_http" {
 		return r.runStreamableHTTP(ctx)
 	}
+	deps := r.deps
+	if deps.confirmationReplayEnabled {
+		deps.confirmationReplay = confirmation.NewMemoryReplayStore()
+	}
 	client := clockify.NewClient(r.cfg.APIKey, r.cfg.BaseURL, r.cfg.RequestTimeout, r.cfg.MaxRetries)
 	defer client.Close()
 	client.SetUserAgent("clockify-mcp-go/" + r.version)
-	service := newService(client, r.cfg.WorkspaceID, r.cfg.Timezone, r.deps.dd, r.deps.policy, r.cfg.ReportMaxEntries, r.cfg.WebhookValidateDNS, r.cfg.WebhookAllowedDomains)
+	service := newService(client, r.cfg.WorkspaceID, r.cfg.Timezone, deps.dd, deps.policy, r.cfg.ReportMaxEntries, r.cfg.WebhookValidateDNS, r.cfg.WebhookAllowedDomains)
 	service.DeltaFormat = r.cfg.DeltaFormat
-	server := buildServer(r.version, r.deps, service, r.deps.policy, &r.deps.bootstrap)
+	server := buildServer(r.version, deps, service, deps.policy, &deps.bootstrap)
 	metrics.ReadyState.SetFunc(func() float64 {
 		if server.IsReadyCached() {
 			return 1

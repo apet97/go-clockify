@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/bootstrap"
+	"github.com/apet97/go-clockify/internal/confirmation"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/policy"
@@ -39,12 +40,13 @@ func TestPipelineClone(t *testing.T) {
 		baseBootstrap := bootstrap.Config{Mode: bootstrap.FullTier1}
 		signer := newConfirmationSigner(t)
 		original := &Pipeline{
-			Policy:       mustPolicy(t),
-			Bootstrap:    &baseBootstrap,
-			RateLimit:    ratelimit.New(1, 1, 0),
-			DryRun:       dryrun.Config{Enabled: true},
-			Truncation:   truncate.Config{Enabled: true, TokenBudget: 1024},
-			Confirmation: signer,
+			Policy:             mustPolicy(t),
+			Bootstrap:          &baseBootstrap,
+			RateLimit:          ratelimit.New(1, 1, 0),
+			DryRun:             dryrun.Config{Enabled: true},
+			Truncation:         truncate.Config{Enabled: true, TokenBudget: 1024},
+			Confirmation:       signer,
+			ConfirmationReplay: confirmation.NewMemoryReplayStore(),
 		}
 		cloned := original.Clone()
 		if cloned == nil {
@@ -65,6 +67,9 @@ func TestPipelineClone(t *testing.T) {
 		}
 		if cloned.Confirmation != original.Confirmation {
 			t.Fatal("Confirmation signer pointer should be shared (singleton)")
+		}
+		if cloned.ConfirmationReplay != original.ConfirmationReplay {
+			t.Fatal("ConfirmationReplay pointer should be shared (singleton)")
 		}
 		if cloned.DryRun != original.DryRun {
 			t.Fatal("DryRun config should match by value")
