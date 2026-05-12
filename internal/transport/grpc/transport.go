@@ -18,6 +18,23 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
+)
+
+// Default gRPC keepalive parameters chosen to detect dead streams within
+// roughly a single load-balancer idle window without burning bandwidth on
+// healthy clients. The 30s/5s pairing matches the gRPC docs' production
+// recommendation and sits below the typical AWS NLB / Envoy idle-timeout
+// floor of 60s; it can be overridden per-Serve via Options.KeepaliveTime
+// and Options.KeepaliveTimeout (e.g. in tests).
+const (
+	defaultGRPCKeepaliveTime    = 30 * time.Second
+	defaultGRPCKeepaliveTimeout = 5 * time.Second
+	// minClientPingInterval mirrors grpc-go's recommended floor for the
+	// keepalive enforcement policy when servers also expect client pings:
+	// it lets a well-behaved client ping every five seconds without
+	// triggering the GOAWAY "too_many_pings" handler.
+	minClientPingInterval = 5 * time.Second
 )
 
 const grpcNotifyEnqueueTimeout = 100 * time.Millisecond
@@ -58,6 +75,15 @@ type Options struct {
 	ForwardSubjectHeader string
 	PeerCIDRAllow        []*net.IPNet
 	TLSConfig            *tls.Config
+	// KeepaliveTime is how often the server pings an otherwise-idle
+	// stream to confirm the peer is still reachable. Zero means use
+	// defaultGRPCKeepaliveTime (30 s). Tests can override to expose
+	// dead-stream cleanup within a fast wall-clock budget.
+	KeepaliveTime time.Duration
+	// KeepaliveTimeout is the grace period the server waits for a
+	// pong after each ping before closing the connection. Zero means
+	// use defaultGRPCKeepaliveTimeout (5 s).
+	KeepaliveTimeout time.Duration
 }
 
 // Serve starts the gRPC transport on the given bind and blocks until ctx
@@ -90,10 +116,31 @@ func Serve(ctx context.Context, opts Options) error {
 	healthDesc := buildHealthServiceDesc()
 	hs := &healthServer{srv: opts.Server}
 
+	keepaliveTime := opts.KeepaliveTime
+	if keepaliveTime <= 0 {
+		keepaliveTime = defaultGRPCKeepaliveTime
+	}
+	keepaliveTimeout := opts.KeepaliveTimeout
+	if keepaliveTimeout <= 0 {
+		keepaliveTimeout = defaultGRPCKeepaliveTimeout
+	}
+
 	serverOpts := []grpc.ServerOption{
 		grpc.ForceServerCodec(bytesCodec{}),
 		grpc.MaxRecvMsgSize(opts.MaxRecvSize),
 		grpc.MaxSendMsgSize(opts.MaxRecvSize),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    keepaliveTime,
+			Timeout: keepaliveTimeout,
+		}),
+		// Accept client-driven pings as often as every minClientPingInterval
+		// (even on idle connections) so a client running its own keepalive
+		// is not GOAWAY'd for being "too chatty". Without this, grpc-go's
+		// default MinTime of 5 minutes rejects anything more frequent.
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             minClientPingInterval,
+			PermitWithoutStream: true,
+		}),
 	}
 	if opts.TLSConfig != nil {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(opts.TLSConfig)))

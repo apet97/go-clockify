@@ -485,3 +485,83 @@ func TestServeEnforcesMaxSendMsgSize(t *testing.T) {
 		t.Fatalf("expected ResourceExhausted-style error, got %v", recvErr)
 	}
 }
+
+// TestServeKeepaliveDoesNotDisruptHealthyStream pins the keepalive
+// defaults: with KeepaliveTime configured (here aggressively short for
+// test speed), an Exchange stream that idles longer than the ping
+// interval must keep working — keepalive should be transparent to
+// healthy clients, only reaping dead connections.
+//
+// The aggressive 100 ms / 50 ms parameters mean the server pings the
+// client several times while the test idles; each ping is acked by
+// grpc-go's transport, no GOAWAY fires, and the second round-trip
+// succeeds on the same stream.
+//
+// Drift check: drop the grpc.KeepaliveParams option from Serve and
+// this test still passes (because dead-conn detection is not what's
+// asserted here) — but the companion grpc.KeepaliveEnforcementPolicy
+// option is what prevents the server from kicking a chatty client.
+// Removing EnforcementPolicy and tuning the client to ping faster
+// than MinTime (5 s default) makes this fail with a
+// "too_many_pings" GOAWAY.
+func TestServeKeepaliveDoesNotDisruptHealthyStream(t *testing.T) {
+	srv := newTestServer(t)
+	lis := bufconn.Listen(1024 * 1024)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Serve(ctx, Options{
+			Listener:         lis,
+			Server:           srv,
+			KeepaliveTime:    100 * time.Millisecond,
+			KeepaliveTimeout: 50 * time.Millisecond,
+		})
+	}()
+
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		bufconnDialer(lis),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(bytesCodec{})),
+	)
+	if err != nil {
+		t.Fatalf("dial bufconn: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	streamDesc := &grpc.StreamDesc{
+		StreamName:    ExchangeMethod,
+		ServerStreams: true,
+		ClientStreams: true,
+	}
+	streamCtx, streamCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer streamCancel()
+	stream, err := conn.NewStream(streamCtx, streamDesc, "/"+ServiceName+"/"+ExchangeMethod)
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	defer func() { _ = stream.CloseSend() }()
+
+	initPayload := []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}`)
+	if err := stream.SendMsg(&initPayload); err != nil {
+		t.Fatalf("send initialize: %v", err)
+	}
+	var reply []byte
+	if err := stream.RecvMsg(&reply); err != nil {
+		t.Fatalf("recv initialize reply: %v", err)
+	}
+
+	// Idle longer than 5 keepalive intervals so the server has multiple
+	// chances to ping. A healthy client always acks, the stream stays up.
+	time.Sleep(550 * time.Millisecond)
+
+	pingPayload := []byte(`{"jsonrpc":"2.0","id":2,"method":"ping","params":{}}`)
+	if err := stream.SendMsg(&pingPayload); err != nil {
+		t.Fatalf("send ping after keepalive idle: %v", err)
+	}
+	if err := stream.RecvMsg(&reply); err != nil {
+		t.Fatalf("recv ping reply after keepalive idle: %v", err)
+	}
+}
