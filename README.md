@@ -66,14 +66,18 @@ clockify-mcp --version
 
 ### Current release status
 
-`v1.2.1` is the current stable community/self-hosted line, cut from the
-rc.3 peeled commit and released on 2026-05-10
-([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.1) ·
-46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.1`
-· container image `ghcr.io/apet97/go-clockify:1.2.1`). Operators
-verifying signatures should follow [docs/verification.md](docs/verification.md);
-paid-hosted / commercial / "official Clockify" framing is explicitly
-out of scope per [docs/launch-readiness-review-may-8.md](docs/launch-readiness-review-may-8.md)
+`v1.2.3` is the current stable community/self-hosted API-refresh line,
+cut from commit `f98d6af` and released on 2026-05-12
+([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.3) ·
+46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.3`
+· container image `ghcr.io/apet97/go-clockify:1.2.3`). It carries the
+refreshed 152-tool Clockify API catalog and generated OpenAPI artifact.
+Operators verifying signatures should follow
+[docs/verification.md](docs/verification.md). The original
+community/self-hosted launch evidence remains anchored to `v1.2.1`;
+paid-hosted / commercial / "official Clockify" framing is explicitly out
+of scope per
+[docs/launch-readiness-review-may-8.md](docs/launch-readiness-review-may-8.md)
 § "Deferred paid-hosted/commercial follow-ups …".
 
 If your environment routes Go module fetches through a custom proxy or

@@ -56,11 +56,13 @@ The manual live-campaign baseline remains
 post-PR #51 local readiness gates, PR #59's manual
 sacrificial-workspace MCP-path probes, PR #62's invite-user validation
 probe, and later live-test hooks or local coverage for the current
-128-tool catalog. The community/self-hosted track is closed at
-**`v1.2.1`** (released 2026-05-10 from rc.3 peeled commit `ce56414`;
-46 signed assets, npm `dist-tags.latest=1.2.1`, container image
-`ghcr.io/apet97/go-clockify:1.2.1`, Reproducibility 9-leg matrix
-green, Deploy chain end-to-end green; full evidence in
+152-tool catalog. The latest stable community/self-hosted API-refresh
+line is **`v1.2.3`** (released 2026-05-12 from commit `f98d6af`). The
+original community/self-hosted launch track is closed at **`v1.2.1`**
+(released 2026-05-10 from rc.3 peeled commit `ce56414`; 46 signed
+assets, npm `dist-tags.latest=1.2.1`, container image
+`ghcr.io/apet97/go-clockify:1.2.1`, Reproducibility 9-leg matrix green,
+Deploy chain end-to-end green; full evidence in
 [`docs/runbooks/release-candidate-evidence.md`](runbooks/release-candidate-evidence.md)
 § "v1.2.1 release evidence record (2026-05-10)").
 
