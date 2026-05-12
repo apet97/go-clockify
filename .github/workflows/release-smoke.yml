@@ -322,7 +322,7 @@ jobs:
           grep -q "OK" release-smoke-evidence/release-doctor-strict-ok.txt
 
           set +e
-          CLOCKIFY_POLICY=standard artifacts/clockify-mcp-linux-x64 doctor --strict \
+          MCP_TENANT_POLICY_CEILING=standard CLOCKIFY_POLICY=standard artifacts/clockify-mcp-linux-x64 doctor --strict \
             >release-smoke-evidence/release-doctor-strict-fail.txt 2>&1
           code=$?
           set -e

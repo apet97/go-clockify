@@ -587,8 +587,10 @@ checked.
       default `clockify-mcp-linux-x64` binary in the prod-postgres
       profile; `release-doctor-strict-fail.txt` exits 3 with
       `Strict posture: ERROR ... CLOCKIFY_POLICY` finding when
-      `CLOCKIFY_POLICY=standard` is set (the documented expected
-      fail); `release-doctor-postgres-ok.txt` exits 0 with
+      `CLOCKIFY_POLICY=standard` is set with
+      `MCP_TENANT_POLICY_CEILING=standard` so the config-load ceiling
+      gate does not pre-empt the strict finding (the documented
+      expected fail); `release-doctor-postgres-ok.txt` exits 0 with
       `Strict posture: OK` from the postgres-tagged
       `clockify-mcp-postgres-linux-x64` binary running
       `doctor --strict --check-backends` against a
