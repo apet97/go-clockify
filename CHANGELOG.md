@@ -112,9 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that turns time-entry coverage into issues and suggested next tool
   calls, and `clockify_timesheet_fill_gap`, a time-tracking-safe
   write helper that validates overlap before creating one finished
-  entry. After later local discovery/activation and name-resolution
-  helpers, the current catalog is now 40 Tier 1 tools + 88 Tier 2
-  tools = 128 total.
+  entry. After later local discovery/activation, name-resolution,
+  client CRUD, task CRUD, and tag CRUD helpers, the current catalog
+  is now 51 Tier 1 tools + 88 Tier 2 tools = 139 total.
 
 ### Removed
 
@@ -126,8 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is no `/scheduling/{id}` or `POST /scheduling` endpoint at any
   Clockify host. That cleanup dropped the endpoint-wrapper catalog
   from 90 → 88 Tier 2 tools and 123 → 121 total before the later
-  high-level workflow-tool and helper additions brought the current
-  total to 128. The blocked-groups live test no longer pins
+  high-level workflow-tool and Tier 1 CRUD additions (clients, tasks,
+  tags) brought the current total to 139. The blocked-groups live test no longer pins
   these two tools, and the scheduling group's tool count in
   `docs/api-coverage.md` is now 7. Numeric / unit questions
   surfaced by the same probe lab pass (invoice `unitPrice`, expense

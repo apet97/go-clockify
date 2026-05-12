@@ -419,9 +419,9 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 128-tool catalog is 40 Tier 1 tools + 88 Tier 2 tools, with
-four local discovery/activation helpers covered by unit tests instead
-of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
+current 139-tool catalog is 51 Tier 1 tools + 88 Tier 2 tools, with
+local discovery/activation/name-resolution helpers covered by unit
+tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
 API-backed Tier-1 tool is not named in the livee2e source bundle, while
 explicitly allowing local-only Tier-1 catalog/tool-surface helpers that
