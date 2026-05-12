@@ -34,6 +34,47 @@ import (
 // the same status the local-hit post-get principal check (defence-
 // in-depth, kept) returns. errors.Is at the call site keeps the
 // error wrapping flexible for future fmt.Errorf("...: %w", ...) uses.
+// defaultReadyCacheTTL bounds how often /ready forwards to the
+// underlying ReadyChecker (typically a Clockify upstream probe). At an
+// LB health-check cadence of 5 s the unwrapped path burns ~17 280 calls
+// per replica per day against the customer's Clockify API quota; the
+// 15 s window matches transport_http.go's long-standing inline cache so
+// the legacy and streamable transports converge on the same default.
+const defaultReadyCacheTTL = 15 * time.Second
+
+// cachedReadyChecker wraps a probe function with TTL-based memoisation.
+// The first call after `ttl` has elapsed re-probes upstream; concurrent
+// calls inside the window read the cached result (success or last error)
+// under a single Mutex. The returned function preserves the original
+// signature so call sites stay one-liners.
+//
+// A zero ttl falls back to defaultReadyCacheTTL. nil check returns nil.
+func cachedReadyChecker(check func(context.Context) error, ttl time.Duration) func(context.Context) error {
+	if check == nil {
+		return nil
+	}
+	if ttl <= 0 {
+		ttl = defaultReadyCacheTTL
+	}
+	var (
+		mu       sync.Mutex
+		lastAt   time.Time
+		lastErr  error
+		hasCheck bool
+	)
+	return func(ctx context.Context) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if hasCheck && time.Since(lastAt) < ttl {
+			return lastErr
+		}
+		lastErr = check(ctx)
+		lastAt = time.Now()
+		hasCheck = true
+		return lastErr
+	}
+}
+
 var (
 	errSessionNotFound          = errors.New("session not found")
 	errSessionExpired           = errors.New("session expired")
@@ -180,6 +221,10 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	admission := newHTTPAdmissionLimiter(opts.AdmissionLimits)
 	go mgr.reapLoop(ctx)
 
+	// Wrap the upstream readiness probe in a TTL cache so /ready does
+	// not call Clockify on every load-balancer health-check tick.
+	readyProbe := cachedReadyChecker(opts.ReadyChecker, defaultReadyCacheTTL)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", observeHTTP("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -189,10 +234,10 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 	mux.HandleFunc("GET /ready", observeHTTP("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		if opts.ReadyChecker != nil {
+		if readyProbe != nil {
 			checkCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
-			if err := opts.ReadyChecker(checkCtx); err != nil {
+			if err := readyProbe(checkCtx); err != nil {
 				slog.Warn("ready_check_failed", "error", err.Error(), "transport", "streamable_http")
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not_ready", "reason": publicReadyFailureReason})
