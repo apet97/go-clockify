@@ -3705,7 +3705,14 @@
         "additionalProperties": false,
         "properties": {
           "entity_type": {
-            "description": "project, client, tag, user, or task",
+            "description": "Type of Clockify entity to resolve",
+            "enum": [
+              "project",
+              "client",
+              "tag",
+              "user",
+              "task"
+            ],
             "type": "string"
           },
           "name_or_id": {
@@ -3770,7 +3777,14 @@
         "additionalProperties": false,
         "properties": {
           "entity_type": {
-            "description": "project, client, tag, user, or task",
+            "description": "Type of Clockify entity to resolve",
+            "enum": [
+              "project",
+              "client",
+              "tag",
+              "user",
+              "task"
+            ],
             "type": "string"
           },
           "name_or_id": {

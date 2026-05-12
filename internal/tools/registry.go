@@ -16,10 +16,11 @@ func resolveNameInputSchema() map[string]any {
 	return schemaObject(
 		[]string{"entity_type", "name_or_id"},
 		map[string]any{
-			"entity_type": schemaString("project, client, tag, user, or task"),
-			"name_or_id":  schemaString(""),
-			"project":     schemaString("Project name or ID required when entity_type is task"),
-			"project_id":  schemaString("Project ID required when entity_type is task unless project is supplied"),
+			"entity_type": schemaEnum("Type of Clockify entity to resolve",
+				"project", "client", "tag", "user", "task"),
+			"name_or_id": schemaString(""),
+			"project":    schemaString("Project name or ID required when entity_type is task"),
+			"project_id": schemaString("Project ID required when entity_type is task unless project is supplied"),
 		},
 	)
 }

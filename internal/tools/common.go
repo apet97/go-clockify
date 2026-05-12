@@ -678,6 +678,17 @@ func schemaString(desc string) map[string]any {
 	return out
 }
 
+// schemaEnum returns a JSON Schema string property constrained to the
+// supplied enum values, with an optional description. Validators
+// (jsonschema.Validate) reject inputs outside the enum at parse time,
+// shifting the responsibility off the handler's switch statement and
+// surfacing the contract to MCP clients via tools/list.
+func schemaEnum(desc string, values ...string) map[string]any {
+	out := schemaString(desc)
+	out["enum"] = values
+	return out
+}
+
 // schemaObject returns a JSON Schema object node with optional required
 // fields and properties. Empty required/props slots are omitted from
 // the output so the wire shape stays identical to the dozens of inline
