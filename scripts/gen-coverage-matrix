@@ -43,6 +43,14 @@ METHOD_RE = re.compile(
 TOOL_RE = re.compile(r"`(clockify_[A-Za-z0-9_]+)`")
 TEST_RE = re.compile(r"`(Test[A-Za-z0-9_]+)`")
 PROBE_OP_RE = re.compile(r'\{Method:\s+http\.Method(\w+),\s+Path:\s+"([^"]+)"')
+COVERAGE_CLASS_ORDER = [
+    "typed-tool-live-success",
+    "typed-tool-mapped",
+    "raw-tool-live-success",
+    "raw-tool-only",
+    "unsupported",
+    "uncovered",
+]
 
 
 def norm_path(p: str) -> str:
@@ -256,21 +264,18 @@ def load_openapi() -> list[dict]:
 def coverage_status(row: dict) -> str:
     """Single-token coverage class for sorting.
 
-    A live-test invocation of any mapped typed tool is treated as live
-    evidence even if the OpenAPI x-clockify-live-status string is still
-    `unit-only` — the live test grep is the authoritative signal here.
+    Live evidence no longer hides whether the operation is covered by a typed
+    MCP contract or only the raw documented-API escape hatch.
     """
-    if row["live_test_names"]:
-        return "live-success"
-    if row["live_status"] == "live-success":
-        return "live-success"
-    if row["live_status"] in ("permission-gated", "workspace-state-limited"):
-        return row["live_status"]
     if row["live_status"] == "unsupported":
         return "unsupported"
     if row["typed_tools"] or row["coverage_md_tools"]:
+        if row["live_test_names"] or row["live_status"] == "live-success":
+            return "typed-tool-live-success"
         return "typed-tool-mapped"
     if row["raw_allowlisted"]:
+        if row["live_status"] == "live-success":
+            return "raw-tool-live-success"
         return "raw-tool-only"
     return "uncovered"
 
@@ -334,10 +339,12 @@ def summarize(rows: list[dict]) -> dict:
         by_class[r["coverage_class"]] = by_class.get(r["coverage_class"], 0) + 1
         bt = by_tag.setdefault(r["tag"] or "", {})
         bt[r["coverage_class"]] = bt.get(r["coverage_class"], 0) + 1
-        if not r["typed_tools"] and not r["raw_allowlisted"]:
+        if r["coverage_class"] == "uncovered":
             no_mcp_tool.append(r)
         if not r["evidence"]:
             no_evidence.append(r)
+    for cls in COVERAGE_CLASS_ORDER:
+        by_class.setdefault(cls, 0)
     return {
         "total": len(rows),
         "by_class": by_class,
@@ -359,39 +366,34 @@ def render_markdown(rows: list[dict], summary: dict, catalog_meta: dict) -> str:
     lines.append("")
     lines.append(f"- Operations in OpenAPI: **{summary['total']}**")
     for cls, n in sorted(
-        summary["by_class"].items(), key=lambda kv: -kv[1]
+        summary["by_class"].items(),
+        key=lambda kv: (COVERAGE_CLASS_ORDER.index(kv[0]) if kv[0] in COVERAGE_CLASS_ORDER else len(COVERAGE_CLASS_ORDER), kv[0]),
     ):
         lines.append(f"  - `{cls}`: {n}")
     lines.append(
-        f"- Operations with **no** MCP tool **and** no raw-allowlist hit: "
+        f"- Operations with coverage class `uncovered`: "
         f"**{summary['no_mcp_tool_count']}** (must be zero for an exhaustive surface)."
     )
     lines.append("")
     lines.append("## Per-tag rollup")
     lines.append("")
-    lines.append("| Tag | total | live-success | typed-tool-mapped | raw-tool-only | other |")
-    lines.append("|-----|------:|-------------:|------------------:|--------------:|------:|")
-    other_classes = (
-        "permission-gated",
-        "workspace-state-limited",
-        "unsupported",
-        "uncovered",
-    )
+    lines.append("| Tag | total | typed-live | typed-mapped | raw-live | raw-only | unsupported | uncovered |")
+    lines.append("|-----|------:|-----------:|-------------:|---------:|---------:|------------:|----------:|")
     for tag, classes in sorted(summary["by_tag"].items()):
         total = sum(classes.values())
-        live = classes.get("live-success", 0)
-        typed = classes.get("typed-tool-mapped", 0)
-        raw = classes.get("raw-tool-only", 0)
-        other = sum(classes.get(c, 0) for c in other_classes)
         lines.append(
-            f"| {tag or '(none)'} | {total} | {live} | {typed} | {raw} | {other} |"
+            f"| {tag or '(none)'} | {total} | "
+            f"{classes.get('typed-tool-live-success', 0)} | "
+            f"{classes.get('typed-tool-mapped', 0)} | "
+            f"{classes.get('raw-tool-live-success', 0)} | "
+            f"{classes.get('raw-tool-only', 0)} | "
+            f"{classes.get('unsupported', 0)} | "
+            f"{classes.get('uncovered', 0)} |"
         )
     lines.append("")
     lines.append("## Operations not covered by any MCP tool")
     lines.append("")
-    flagged = [
-        r for r in rows if not r["typed_tools"] and not r["raw_allowlisted"]
-    ]
+    flagged = [r for r in rows if r["coverage_class"] == "uncovered"]
     if not flagged:
         lines.append("_None — every OpenAPI operation has at least a raw documented-API allowlist match._")
     else:

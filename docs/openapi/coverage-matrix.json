@@ -32,7 +32,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -57,7 +57,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_current_user",
         "clockify_whoami"
@@ -98,7 +98,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_workspaces"
       ],
@@ -161,7 +161,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_workspace",
         "clockify_whoami"
@@ -454,7 +454,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_clients"
       ],
@@ -492,7 +492,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_client"
       ],
@@ -531,7 +531,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_client"
       ],
@@ -568,7 +568,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_client"
       ],
@@ -605,7 +605,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_delete_client"
       ],
@@ -692,7 +692,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -925,7 +925,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -953,7 +953,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -982,7 +982,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1176,7 +1176,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1205,7 +1205,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1234,7 +1234,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1289,7 +1289,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1480,7 +1480,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2089,7 +2089,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_projects"
       ],
@@ -2127,7 +2127,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_project"
       ],
@@ -2172,7 +2172,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_project_from_template"
       ],
@@ -2208,7 +2208,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_project"
       ],
@@ -2246,7 +2246,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_project"
       ],
@@ -2283,7 +2283,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_archive_projects",
         "clockify_delete_project"
@@ -2453,7 +2453,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_project_estimate"
       ],
@@ -2514,7 +2514,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_assign_project_memberships"
       ],
@@ -2552,7 +2552,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_set_project_memberships",
         "clockify_update_project_memberships"
@@ -2596,7 +2596,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_tasks"
       ],
@@ -2635,7 +2635,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_task"
       ],
@@ -2675,7 +2675,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_task"
       ],
@@ -2713,7 +2713,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_task"
       ],
@@ -2750,7 +2750,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_delete_task"
       ],
@@ -2788,7 +2788,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_task_cost_rate"
       ],
@@ -2827,7 +2827,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_task_hourly_rate"
       ],
@@ -2866,7 +2866,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_project_template"
       ],
@@ -2902,7 +2902,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_project_user_cost_rate"
       ],
@@ -2941,7 +2941,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_project_user_hourly_rate"
       ],
@@ -2980,7 +2980,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_attendance_report"
       ],
@@ -3017,7 +3017,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_detailed_report"
       ],
@@ -3053,7 +3053,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_expense_report"
       ],
@@ -3088,7 +3088,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_summary_report"
       ],
@@ -3125,7 +3125,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_weekly_summary"
       ],
@@ -3185,7 +3185,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_assignment",
         "clockify_delete_assignment",
@@ -3239,7 +3239,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_assignment",
         "clockify_delete_assignment",
@@ -3346,7 +3346,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_assignment",
         "clockify_filter_schedule_capacity"
@@ -3536,7 +3536,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_assignment",
         "clockify_delete_assignment",
@@ -3663,7 +3663,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3760,7 +3760,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_tags"
       ],
@@ -3799,7 +3799,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_create_tag"
       ],
@@ -3837,7 +3837,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_tag"
       ],
@@ -3874,7 +3874,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_update_tag"
       ],
@@ -3911,7 +3911,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_delete_tag"
       ],
@@ -3948,7 +3948,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_add_entry",
         "clockify_log_time",
@@ -4072,7 +4072,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_get_entry"
       ],
@@ -4108,7 +4108,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_find_and_update_entry",
         "clockify_update_entry"
@@ -4147,7 +4147,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_delete_entry"
       ],
@@ -4263,7 +4263,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4545,7 +4545,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4878,7 +4878,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_entries",
         "clockify_quick_report",
@@ -4976,7 +4976,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_stop_timer"
       ],
@@ -5084,7 +5084,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
         "clockify_list_users"
       ],
@@ -5381,7 +5381,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -5436,7 +5436,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "live-success",
+      "coverage_class": "raw-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -5614,8 +5614,11 @@
   ],
   "summary": {
     "by_class": {
-      "live-success": 63,
+      "raw-tool-live-success": 15,
       "raw-tool-only": 128,
+      "typed-tool-live-success": 48,
+      "typed-tool-mapped": 0,
+      "uncovered": 0,
       "unsupported": 1
     },
     "by_tag": {
@@ -5627,21 +5630,21 @@
         "unsupported": 1
       },
       "Client": {
-        "live-success": 5,
-        "raw-tool-only": 1
+        "raw-tool-only": 1,
+        "typed-tool-live-success": 5
       },
       "Custom Fields": {
-        "live-success": 1,
+        "raw-tool-live-success": 1,
         "raw-tool-only": 6
       },
       "Entity changes (Experimental)": {
         "raw-tool-only": 3
       },
       "Expense Report": {
-        "live-success": 1
+        "typed-tool-live-success": 1
       },
       "Expense categories": {
-        "live-success": 3,
+        "raw-tool-live-success": 3,
         "raw-tool-only": 2
       },
       "Expenses": {
@@ -5651,7 +5654,7 @@
         "raw-tool-only": 1
       },
       "Holidays": {
-        "live-success": 4,
+        "raw-tool-live-success": 4,
         "raw-tool-only": 1
       },
       "Invoice items": {
@@ -5664,7 +5667,7 @@
         "raw-tool-only": 2
       },
       "Invoices": {
-        "live-success": 1,
+        "raw-tool-live-success": 1,
         "raw-tool-only": 8
       },
       "Member profiles": {
@@ -5677,46 +5680,46 @@
         "raw-tool-only": 3
       },
       "Projects": {
-        "live-success": 12
+        "typed-tool-live-success": 12
       },
       "Reports": {
-        "live-success": 4
+        "typed-tool-live-success": 4
       },
       "Roles": {
         "raw-tool-only": 2
       },
       "Scheduling": {
-        "live-success": 4,
-        "raw-tool-only": 12
+        "raw-tool-only": 12,
+        "typed-tool-live-success": 4
       },
       "SharedReport": {
-        "live-success": 2,
+        "raw-tool-live-success": 2,
         "raw-tool-only": 3
       },
       "Tag": {
-        "live-success": 5
+        "typed-tool-live-success": 5
       },
       "Tasks": {
-        "live-success": 7
+        "typed-tool-live-success": 7
       },
       "Time Entries": {
-        "live-success": 2,
-        "raw-tool-only": 4
+        "raw-tool-only": 4,
+        "typed-tool-live-success": 2
       },
       "Time Off": {
-        "live-success": 1,
+        "raw-tool-live-success": 1,
         "raw-tool-only": 7
       },
       "Time Off Policies": {
-        "live-success": 1,
+        "raw-tool-live-success": 1,
         "raw-tool-only": 5
       },
       "Time entry": {
         "raw-tool-only": 1
       },
       "TimeEntry": {
-        "live-success": 4,
-        "raw-tool-only": 3
+        "raw-tool-only": 3,
+        "typed-tool-live-success": 4
       },
       "TimeOff": {
         "raw-tool-only": 4
@@ -5728,19 +5731,19 @@
         "raw-tool-only": 8
       },
       "Users": {
-        "live-success": 2,
-        "raw-tool-only": 3
+        "raw-tool-only": 3,
+        "typed-tool-live-success": 2
       },
       "Webhook": {
         "raw-tool-only": 1
       },
       "Webhooks": {
-        "live-success": 2,
+        "raw-tool-live-success": 2,
         "raw-tool-only": 7
       },
       "Workspaces": {
-        "live-success": 2,
-        "raw-tool-only": 8
+        "raw-tool-only": 8,
+        "typed-tool-live-success": 2
       }
     },
     "no_evidence_count": 0,

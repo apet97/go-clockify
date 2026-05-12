@@ -427,7 +427,7 @@ release-check:
 	@echo "== release-check: tests + coverage floors =="
 	$(MAKE) cover-check
 	@echo "== release-check: config + doc parity =="
-	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift grpc-release-parity
+	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift coverage-matrix-drift openapi-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
 	$(MAKE) repo-hygiene script-tests go-version-parity actionlint shellcheck build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="
