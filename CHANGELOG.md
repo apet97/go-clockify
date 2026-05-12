@@ -168,6 +168,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open before any implementation lands. **Status: Proposed.** No
   implementation in this commit.
 
+- **ADR 0024 — per-tenant aggregate rate-limit question.** The
+  current limiter (`internal/ratelimit/ratelimit.go`) keys on the
+  `(tenant_id, subject)` tuple via
+  `enforcement.rateLimitSubjectKey`, so an N-subject tenant gets
+  N× the per-pair quota. Whether that fair-share-per-human
+  interpretation is the operator-intended behaviour or an
+  emergent property of single-tenant origins depends on what
+  the operator believes a tenant *is*. The ADR records the
+  decision space: keep per-(tenant, subject) only (Q1-A), add a
+  per-tenant aggregate above per-pair (Q1-B), or replace per-pair
+  with per-tenant only (Q1-C); how to derive the tenant key when
+  authn lacks `tenant_id` (Q2); how the new layer composes at
+  rejection time with the existing `per_token` / `global` scope
+  labels in `metrics.RateLimitRejections` (Q3). **Status: Proposed.**
+  No implementation in this commit.
+
 - **Trademark / non-affiliation disclaimer added.** New top-level
   `NOTICE.md` declares `go-clockify` an independent third-party
   client, names Clockify as a trademark of CAKE.com, and clarifies
