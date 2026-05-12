@@ -41,25 +41,29 @@ func TestRiskOverridesMatchTaxonomy(t *testing.T) {
 	s := &Service{}
 
 	wantClass := map[string]mcp.RiskClass{
-		"clockify_send_invoice":           mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
-		"clockify_mark_invoice_paid":      mcp.RiskWrite | mcp.RiskBilling,
-		"clockify_delete_invoice":         mcp.RiskDestructive | mcp.RiskBilling,
-		"clockify_add_invoice_item":       mcp.RiskWrite | mcp.RiskBilling,
-		"clockify_update_user_role":       mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
-		"clockify_deactivate_user":        mcp.RiskWrite | mcp.RiskAdmin,
-		"clockify_remove_user_from_group": mcp.RiskDestructive | mcp.RiskAdmin,
-		"clockify_test_webhook":           mcp.RiskWrite | mcp.RiskExternalSideEffect,
+		"clockify_call_documented_write_api":  mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		"clockify_call_documented_delete_api": mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		"clockify_send_invoice":               mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
+		"clockify_mark_invoice_paid":          mcp.RiskWrite | mcp.RiskBilling,
+		"clockify_delete_invoice":             mcp.RiskDestructive | mcp.RiskBilling,
+		"clockify_add_invoice_item":           mcp.RiskWrite | mcp.RiskBilling,
+		"clockify_update_user_role":           mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		"clockify_deactivate_user":            mcp.RiskWrite | mcp.RiskAdmin,
+		"clockify_remove_user_from_group":     mcp.RiskDestructive | mcp.RiskAdmin,
+		"clockify_test_webhook":               mcp.RiskWrite | mcp.RiskExternalSideEffect,
 	}
 	wantAuditKeys := map[string][]string{
-		"clockify_send_invoice":        {"invoice_id"},
-		"clockify_mark_invoice_paid":   {"invoice_id"},
-		"clockify_create_invoice":      {"client_id", "number", "issued_date", "currency", "due_date"},
-		"clockify_update_user_role":    {"user_id", "role"},
-		"clockify_add_invoice_item":    {"invoice_id", "item_type", "description", "quantity", "unit_price"},
-		"clockify_update_invoice_item": {"invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"},
-		"clockify_create_webhook":      {"name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
-		"clockify_update_webhook":      {"webhook_id", "name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
-		"clockify_test_webhook":        {"webhook_id"},
+		"clockify_call_documented_write_api":  {"operation", "method", "path"},
+		"clockify_call_documented_delete_api": {"operation", "method", "path"},
+		"clockify_send_invoice":               {"invoice_id"},
+		"clockify_mark_invoice_paid":          {"invoice_id"},
+		"clockify_create_invoice":             {"client_id", "number", "issued_date", "currency", "due_date"},
+		"clockify_update_user_role":           {"user_id", "role"},
+		"clockify_add_invoice_item":           {"invoice_id", "item_type", "description", "quantity", "unit_price"},
+		"clockify_update_invoice_item":        {"invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"},
+		"clockify_create_webhook":             {"name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
+		"clockify_update_webhook":             {"webhook_id", "name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
+		"clockify_test_webhook":               {"webhook_id"},
 	}
 
 	got := map[string]mcp.ToolDescriptor{}

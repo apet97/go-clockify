@@ -275,8 +275,8 @@ func applyTaskRequestFields(payload map[string]any, args map[string]any) error {
 }
 
 // DeleteTask deletes a task by project + task reference (ID or name).
-// Clockify's DELETE /projects/{pid}/tasks/{tid} works directly on active tasks —
-// no archive step is required (unlike clients). Supports dry_run.
+// Clockify requires tasks to be DONE before DELETE, so active tasks are first
+// updated with the existing full-replacement shape plus status=DONE.
 func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
@@ -309,12 +309,32 @@ func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEn
 	}
 
 	if dryrun.Enabled(args) {
+		steps := []string{"GET existing task"}
+		if !strings.EqualFold(existing.Status, "DONE") {
+			steps = append(steps, "PUT status=DONE")
+		}
+		steps = append(steps, "DELETE task")
 		return ResultEnvelope{
 			OK:     true,
 			Action: "clockify_delete_task",
 			Data:   dryrun.WrapResult(existing, "clockify_delete_task"),
-			Meta:   map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID},
+			Meta: map[string]any{
+				"workspaceId":               wsID,
+				"projectId":                 projectID,
+				"taskId":                    taskID,
+				"wouldMarkDoneBeforeDelete": !strings.EqualFold(existing.Status, "DONE"),
+				"dryRunSteps":               steps,
+			},
 		}, nil
+	}
+
+	if !strings.EqualFold(existing.Status, "DONE") {
+		existing.Status = "DONE"
+		payload := taskPutPayload(existing)
+		var updated clockify.Task
+		if err := s.Client.Put(ctx, taskPath, payload, &updated); err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 
 	if err := s.Client.Delete(ctx, taskPath); err != nil {

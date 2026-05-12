@@ -17,6 +17,18 @@ type riskOverride struct {
 // captures the action-defining fields and policy/enforcement consumers see
 // the right risk bits.
 var riskOverrides = map[string]riskOverride{
+	// Probe-lab generic callers can reach documented billing, admin,
+	// permission-change, and external-side-effect routes, so their static
+	// classification must be conservatively broad.
+	"clockify_call_documented_write_api": {
+		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		auditKeys: []string{"operation", "method", "path"},
+	},
+	"clockify_call_documented_delete_api": {
+		class:     mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		auditKeys: []string{"operation", "method", "path"},
+	},
+
 	// Billing — invoices.
 	"clockify_send_invoice": {
 		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,

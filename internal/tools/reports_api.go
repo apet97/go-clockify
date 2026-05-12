@@ -352,7 +352,7 @@ func normalizeSummaryFilter(raw map[string]any) (map[string]any, error) {
 			switch strings.ToUpper(strings.TrimSpace(group)) {
 			case "DAY":
 				normalized = append(normalized, "DATE")
-			case "CLIENT", "PROJECT", "WEEK", "MONTH", "TIMEENTRY", "TASK":
+			case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "USER":
 				normalized = append(normalized, strings.ToUpper(strings.TrimSpace(group)))
 			default:
 				return nil, fmt.Errorf("summary_filter.groups contains unsupported value %q", group)

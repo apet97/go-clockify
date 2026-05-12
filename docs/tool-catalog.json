@@ -2238,7 +2238,7 @@
     },
     {
       "name": "clockify_delete_task",
-      "description": "Delete a task by project+task reference. Clockify supports direct DELETE without an archive step for tasks.",
+      "description": "Delete a task by project+task reference. The MCP marks active tasks DONE before DELETE because Clockify requires completed tasks for deletion.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
@@ -6464,16 +6464,17 @@
             "additionalProperties": false,
             "properties": {
               "groups": {
-                "description": "1 to 3 values. MCP DAY is sent upstream as DATE.",
+                "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE.",
                 "items": {
                   "enum": [
                     "CLIENT",
                     "PROJECT",
-                    "DAY",
+                    "TASK",
+                    "DATE",
                     "WEEK",
                     "MONTH",
                     "TIMEENTRY",
-                    "TASK"
+                    "USER"
                   ],
                   "type": "string"
                 },
@@ -12664,6 +12665,438 @@
           "billing"
         ],
         "title": "Update Invoice Item"
+      }
+    },
+    {
+      "name": "clockify_call_documented_delete_api",
+      "description": "Call an allowlisted documented DELETE endpoint. Supports json_body, query, and dry_run.",
+      "group": "probe_lab_api",
+      "tier": 2,
+      "read_only": false,
+      "destructive": true,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "billing",
+        "admin",
+        "permission_change",
+        "external_side_effect",
+        "destructive"
+      ],
+      "audit_keys": [
+        "operation",
+        "method",
+        "path"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "operation"
+            ]
+          },
+          {
+            "required": [
+              "method",
+              "path"
+            ]
+          }
+        ],
+        "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without sending it upstream.",
+            "type": "boolean"
+          },
+          "form_body": {
+            "additionalProperties": true,
+            "description": "Multipart form fields. Array values are sent as repeated fields.",
+            "type": "object"
+          },
+          "json_body": {
+            "additionalProperties": true,
+            "description": "JSON request body sent as-is after method/path allowlist validation.",
+            "type": "object"
+          },
+          "method": {
+            "description": "Alternative to operation; must be paired with path.",
+            "enum": [
+              "DELETE"
+            ],
+            "type": "string"
+          },
+          "operation": {
+            "description": "Exact allowlisted operation string, e.g. GET /workspaces/{workspaceId}/users/{userId}/managers.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Alternative to operation; documented path template, e.g. /workspaces/{workspaceId}/clients.",
+            "type": "string"
+          },
+          "path_params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Values for non-workspace path template variables, keyed by placeholder name.",
+            "type": "object"
+          },
+          "query": {
+            "additionalProperties": true,
+            "description": "Query parameters. Array values are sent as repeated query keys.",
+            "type": "object"
+          },
+          "raw_response": {
+            "description": "Return base64 body and response headers instead of JSON-decoding.",
+            "type": "boolean"
+          },
+          "workspace_id": {
+            "description": "Overrides the configured workspace_id when the path has {workspaceId}.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_call_documented_delete_api",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "billing",
+          "admin",
+          "permission_change",
+          "external_side_effect",
+          "destructive"
+        ],
+        "destructiveHint": true,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "billing",
+          "admin",
+          "permission_change",
+          "external_side_effect",
+          "destructive"
+        ],
+        "title": "Call Documented Delete Api"
+      }
+    },
+    {
+      "name": "clockify_call_documented_read_api",
+      "description": "Call an allowlisted documented GET endpoint. Use operation from clockify_list_documented_api_operations; path_params fill template variables.",
+      "group": "probe_lab_api",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "operation"
+            ]
+          },
+          {
+            "required": [
+              "method",
+              "path"
+            ]
+          }
+        ],
+        "properties": {
+          "form_body": {
+            "additionalProperties": true,
+            "description": "Multipart form fields. Array values are sent as repeated fields.",
+            "type": "object"
+          },
+          "json_body": {
+            "additionalProperties": true,
+            "description": "JSON request body sent as-is after method/path allowlist validation.",
+            "type": "object"
+          },
+          "method": {
+            "description": "Alternative to operation; must be paired with path.",
+            "enum": [
+              "GET"
+            ],
+            "type": "string"
+          },
+          "operation": {
+            "description": "Exact allowlisted operation string, e.g. GET /workspaces/{workspaceId}/users/{userId}/managers.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Alternative to operation; documented path template, e.g. /workspaces/{workspaceId}/clients.",
+            "type": "string"
+          },
+          "path_params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Values for non-workspace path template variables, keyed by placeholder name.",
+            "type": "object"
+          },
+          "query": {
+            "additionalProperties": true,
+            "description": "Query parameters. Array values are sent as repeated query keys.",
+            "type": "object"
+          },
+          "raw_response": {
+            "description": "Return base64 body and response headers instead of JSON-decoding.",
+            "type": "boolean"
+          },
+          "workspace_id": {
+            "description": "Overrides the configured workspace_id when the path has {workspaceId}.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_call_documented_read_api",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Call Documented Read Api"
+      }
+    },
+    {
+      "name": "clockify_call_documented_write_api",
+      "description": "Call an allowlisted documented POST, PUT, or PATCH endpoint. Supports json_body, form_body, query, raw_response, and dry_run.",
+      "group": "probe_lab_api",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing",
+        "admin",
+        "permission_change",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "operation",
+        "method",
+        "path"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "operation"
+            ]
+          },
+          {
+            "required": [
+              "method",
+              "path"
+            ]
+          }
+        ],
+        "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without sending it upstream.",
+            "type": "boolean"
+          },
+          "form_body": {
+            "additionalProperties": true,
+            "description": "Multipart form fields. Array values are sent as repeated fields.",
+            "type": "object"
+          },
+          "json_body": {
+            "additionalProperties": true,
+            "description": "JSON request body sent as-is after method/path allowlist validation.",
+            "type": "object"
+          },
+          "method": {
+            "description": "Alternative to operation; must be paired with path.",
+            "enum": [
+              "POST",
+              "PUT",
+              "PATCH"
+            ],
+            "type": "string"
+          },
+          "operation": {
+            "description": "Exact allowlisted operation string, e.g. GET /workspaces/{workspaceId}/users/{userId}/managers.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Alternative to operation; documented path template, e.g. /workspaces/{workspaceId}/clients.",
+            "type": "string"
+          },
+          "path_params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Values for non-workspace path template variables, keyed by placeholder name.",
+            "type": "object"
+          },
+          "query": {
+            "additionalProperties": true,
+            "description": "Query parameters. Array values are sent as repeated query keys.",
+            "type": "object"
+          },
+          "raw_response": {
+            "description": "Return base64 body and response headers instead of JSON-decoding.",
+            "type": "boolean"
+          },
+          "workspace_id": {
+            "description": "Overrides the configured workspace_id when the path has {workspaceId}.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_call_documented_write_api",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing",
+          "admin",
+          "permission_change",
+          "external_side_effect"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing",
+          "admin",
+          "permission_change",
+          "external_side_effect"
+        ],
+        "title": "Call Documented Write Api"
+      }
+    },
+    {
+      "name": "clockify_list_documented_api_operations",
+      "description": "List the allowlisted method/path operations from the probe-lab OpenAPI and DOC source set.",
+      "group": "probe_lab_api",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "contains": {
+            "description": "Case-insensitive substring filter against METHOD path.",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_list_documented_api_operations",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "List Documented Api Operations"
       }
     },
     {

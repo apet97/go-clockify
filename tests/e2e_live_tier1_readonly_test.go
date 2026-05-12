@@ -116,7 +116,7 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 			"start": start.Format("2006-01-02T15:04:05.000"),
 			"end":   end.Format("2006-01-02T15:04:05.000"),
 			"summary_filter": map[string]any{
-				"groups": []any{"CLIENT", "PROJECT", "DAY"},
+				"groups": []any{"CLIENT", "PROJECT", "DATE"},
 			},
 		})
 		data := extractDataMap(t, result)

@@ -195,8 +195,8 @@ func sortedMapKeys[T any](in map[string]T) []string {
 func TestGoldenTier2GroupCatalog(t *testing.T) {
 	expectedGroups := []string{
 		"approvals", "custom_fields", "expenses", "groups_holidays",
-		"invoices", "project_admin", "scheduling", "shared_reports",
-		"time_off", "user_admin", "webhooks",
+		"invoices", "probe_lab_api", "project_admin", "scheduling",
+		"shared_reports", "time_off", "user_admin", "webhooks",
 	}
 
 	for _, name := range expectedGroups {
@@ -218,8 +218,8 @@ func TestTier2TotalToolCount(t *testing.T) {
 		total += len(handlers)
 		t.Logf("group %s: %d tools", name, len(handlers))
 	}
-	if total != 96 {
-		t.Fatalf("expected 96 Tier 2 tools, got %d", total)
+	if total != 100 {
+		t.Fatalf("expected 100 Tier 2 tools, got %d", total)
 	}
 }
 
@@ -237,6 +237,7 @@ func TestTier2PerGroupToolCounts(t *testing.T) {
 		"time_off":        12,
 		"project_admin":   14,
 		"groups_holidays": 8,
+		"probe_lab_api":   4,
 	}
 	for name, expected := range expectedCounts {
 		group, ok := Tier2Groups[name]
@@ -520,7 +521,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 148 {
-		t.Fatalf("expected 148 total tools (52 Tier1 + 96 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 152 {
+		t.Fatalf("expected 152 total tools (52 Tier1 + 100 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }

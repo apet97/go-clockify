@@ -299,7 +299,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.UpdateTask(ctx, args)
 		}},
-		{Tool: toolDestructive("clockify_delete_task", "Delete a task by project+task reference. Clockify supports direct DELETE without an archive step for tasks.", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
+		{Tool: toolDestructive("clockify_delete_task", "Delete a task by project+task reference. The MCP marks active tasks DONE before DELETE because Clockify requires completed tasks for deletion.", map[string]any{"type": "object", "required": []string{"project", "task"}, "properties": map[string]any{
 			"project": map[string]any{"type": "string", "description": "Project name or ID"},
 			"task":    map[string]any{"type": "string", "description": "Task ID or exact name"},
 			"dry_run": map[string]any{"type": "boolean"},

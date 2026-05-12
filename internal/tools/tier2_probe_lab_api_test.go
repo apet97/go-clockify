@@ -1,0 +1,174 @@
+package tools
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+func TestProbeLabAPIListsDocOnlyAndOpenAPIOperations(t *testing.T) {
+	svc := New(nil, "ws1")
+	result, err := svc.ListDocumentedAPIOperations(context.Background(), map[string]any{"contains": "invoices"})
+	if err != nil {
+		t.Fatalf("list documented operations failed: %v", err)
+	}
+	ops, ok := result.Data.([]map[string]any)
+	if !ok {
+		t.Fatalf("unexpected operation list type: %T", result.Data)
+	}
+	have := map[string]bool{}
+	for _, op := range ops {
+		have[op["operation"].(string)] = true
+	}
+	for _, want := range []string{
+		"GET /workspaces/{workspaceId}/invoices/settings",
+		"POST /workspaces/{workspaceId}/invoices/{invoiceId}/duplicate",
+		"POST /workspaces/{workspaceId}/invoices/{invoiceId}/items/import",
+		"DELETE /workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}",
+	} {
+		if !have[want] {
+			t.Fatalf("documented operation list missing %s", want)
+		}
+	}
+	if total, _ := result.Meta["total"].(int); total < 190 {
+		t.Fatalf("expected combined probe-lab allowlist to cover at least 190 operations, got meta=%+v", result.Meta)
+	}
+}
+
+func TestProbeLabAPIReadCallResolvesPathAndRepeatedQuery(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/users/u1/managers" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.URL.Query()["status"]; !reflect.DeepEqual(got, []string{"ACTIVE", "PENDING"}) {
+			t.Fatalf("status query values = %v", got)
+		}
+		respondJSON(t, w, []map[string]any{{"id": "m1"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CallDocumentedReadAPI(context.Background(), map[string]any{
+		"operation": "GET /workspaces/{workspaceId}/users/{userId}/managers",
+		"path_params": map[string]any{
+			"userId": "u1",
+		},
+		"query": map[string]any{
+			"status": []any{"ACTIVE", "PENDING"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("documented read call failed: %v", err)
+	}
+	if result.Meta["path"] != "/workspaces/ws1/users/u1/managers" {
+		t.Fatalf("unexpected resolved path meta: %+v", result.Meta)
+	}
+}
+
+func TestProbeLabAPIWriteCallSendsReportsJSONBody(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/reports/summary" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"totals": []any{}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
+		"operation": "POST /workspaces/{workspaceId}/reports/summary",
+		"json_body": map[string]any{
+			"dateRangeStart": "2026-05-01T00:00:00.000",
+			"dateRangeEnd":   "2026-05-07T23:59:59.999",
+			"summaryFilter": map[string]any{
+				"groups": []any{"DATE"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("documented write call failed: %v", err)
+	}
+	if result.Meta["reportsHost"] != true {
+		t.Fatalf("reports operation should use reports host meta: %+v", result.Meta)
+	}
+	filter, _ := gotBody["summaryFilter"].(map[string]any)
+	if got := filter["groups"]; !reflect.DeepEqual(got, []any{"DATE"}) {
+		t.Fatalf("summaryFilter.groups body = %#v", got)
+	}
+}
+
+func TestProbeLabAPIDeleteCallCanSendJSONBody(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/users/u1/roles" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode delete body: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.CallDocumentedDeleteAPI(context.Background(), map[string]any{
+		"operation":   "DELETE /workspaces/{workspaceId}/users/{userId}/roles",
+		"path_params": map[string]any{"userId": "u1"},
+		"json_body":   map[string]any{"role": "MANAGER", "entityId": "p1"},
+	}); err != nil {
+		t.Fatalf("documented delete call failed: %v", err)
+	}
+	if gotBody["role"] != "MANAGER" || gotBody["entityId"] != "p1" {
+		t.Fatalf("unexpected delete body: %#v", gotBody)
+	}
+}
+
+func TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath(t *testing.T) {
+	svc := New(nil, "ws1")
+	if _, err := svc.CallDocumentedReadAPI(context.Background(), map[string]any{
+		"operation": "POST /workspaces/{workspaceId}/clients",
+	}); err == nil || !strings.Contains(err.Error(), "does not allow POST") {
+		t.Fatalf("expected read tool to reject POST, got %v", err)
+	}
+	if _, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/not-a-real-route",
+	}); err == nil || !strings.Contains(err.Error(), "allowlist") {
+		t.Fatalf("expected undocumented path rejection, got %v", err)
+	}
+}
+
+func TestProbeLabAPIWriteDryRunDoesNotMutate(t *testing.T) {
+	var called bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		respondJSON(t, w, map[string]any{})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
+		"operation": "PUT /workspaces/{workspaceId}/cost-rate",
+		"json_body": map[string]any{
+			"amount":     10000,
+			"currencyId": "cur1",
+		},
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("documented write dry-run failed: %v", err)
+	}
+	if called {
+		t.Fatal("dry-run must not call upstream")
+	}
+	if result.Action != "clockify_call_documented_write_api" {
+		t.Fatalf("unexpected action: %s", result.Action)
+	}
+}

@@ -66,7 +66,7 @@ func TestLiveReportsDocCoverage(t *testing.T) {
 		"amounts":      []any{"EARNED", "COST", "PROFIT"},
 		"projects":     map[string]any{"contains": "CONTAINS", "ids": []any{projectID}, "status": "ACTIVE"},
 		"summary_filter": map[string]any{
-			"groups":             []any{"CLIENT", "PROJECT", "DAY"},
+			"groups":             []any{"CLIENT", "PROJECT", "DATE"},
 			"sort_column":        "PROFIT",
 			"summary_chart_type": "PROJECT",
 		},

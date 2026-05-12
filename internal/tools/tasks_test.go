@@ -219,14 +219,24 @@ func TestUpdateTaskRequiresTask(t *testing.T) {
 	}
 }
 
-func TestDeleteTaskDeletesDirectly(t *testing.T) {
+func TestDeleteTaskMarksActiveTaskDoneThenDeletes(t *testing.T) {
 	var deleted bool
+	var putBody map[string]any
+	var calls []string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		taskPath := "/workspaces/ws1/projects/" + testTaskProjectID + "/tasks/" + testTaskID
 		switch {
 		case r.URL.Path == taskPath && r.Method == http.MethodGet:
+			calls = append(calls, "GET")
 			respondJSON(t, w, clockify.Task{ID: testTaskID, Name: "Old Task", ProjectID: testTaskProjectID, Status: "ACTIVE"})
+		case r.URL.Path == taskPath && r.Method == http.MethodPut:
+			calls = append(calls, "PUT")
+			if err := json.NewDecoder(r.Body).Decode(&putBody); err != nil {
+				t.Fatalf("decode put body: %v", err)
+			}
+			respondJSON(t, w, clockify.Task{ID: testTaskID, Name: "Old Task", ProjectID: testTaskProjectID, Status: "DONE"})
 		case r.URL.Path == taskPath && r.Method == http.MethodDelete:
+			calls = append(calls, "DELETE")
 			deleted = true
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -246,6 +256,12 @@ func TestDeleteTaskDeletesDirectly(t *testing.T) {
 	if !deleted {
 		t.Fatal("expected DELETE call")
 	}
+	if strings.Join(calls, ",") != "GET,PUT,DELETE" {
+		t.Fatalf("expected GET,PUT,DELETE call order, got %v", calls)
+	}
+	if putBody["name"] != "Old Task" || putBody["status"] != "DONE" {
+		t.Fatalf("PUT body must preserve task and mark DONE before delete, got %#v", putBody)
+	}
 	data, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
@@ -255,13 +271,51 @@ func TestDeleteTaskDeletesDirectly(t *testing.T) {
 	}
 }
 
+func TestDeleteTaskAlreadyDoneDeletesWithoutPut(t *testing.T) {
+	var putCalled bool
+	var deleted bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		taskPath := "/workspaces/ws1/projects/" + testTaskProjectID + "/tasks/" + testTaskID
+		switch {
+		case r.URL.Path == taskPath && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Task{ID: testTaskID, Name: "Done Task", ProjectID: testTaskProjectID, Status: "DONE"})
+		case r.URL.Path == taskPath && r.Method == http.MethodPut:
+			putCalled = true
+			respondJSON(t, w, map[string]any{})
+		case r.URL.Path == taskPath && r.Method == http.MethodDelete:
+			deleted = true
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.DeleteTask(context.Background(), map[string]any{
+		"project": testTaskProjectID,
+		"task":    testTaskID,
+	}); err != nil {
+		t.Fatalf("delete done task failed: %v", err)
+	}
+	if putCalled {
+		t.Fatal("DONE task must not be PUT before DELETE")
+	}
+	if !deleted {
+		t.Fatal("expected DELETE call")
+	}
+}
+
 func TestDeleteTaskDryRunDoesNotMutate(t *testing.T) {
 	var mutated bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		taskPath := "/workspaces/ws1/projects/" + testTaskProjectID + "/tasks/" + testTaskID
 		switch {
 		case r.URL.Path == taskPath && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.Task{ID: testTaskID, Name: "Old Task", ProjectID: testTaskProjectID})
+			respondJSON(t, w, clockify.Task{ID: testTaskID, Name: "Old Task", ProjectID: testTaskProjectID, Status: "ACTIVE"})
+		case r.URL.Path == taskPath && r.Method == http.MethodPut:
+			mutated = true
+			respondJSON(t, w, map[string]any{})
 		case r.URL.Path == taskPath && r.Method == http.MethodDelete:
 			mutated = true
 			w.WriteHeader(http.StatusNoContent)
@@ -285,6 +339,9 @@ func TestDeleteTaskDryRunDoesNotMutate(t *testing.T) {
 	}
 	if result.Action != "clockify_delete_task" {
 		t.Fatalf("unexpected action: %q", result.Action)
+	}
+	if result.Meta["wouldMarkDoneBeforeDelete"] != true {
+		t.Fatalf("dry-run should preview mark-done step, meta=%+v", result.Meta)
 	}
 }
 

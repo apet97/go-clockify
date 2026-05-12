@@ -449,7 +449,41 @@ func TestReportFilterValidation(t *testing.T) {
 	}
 }
 
-func TestSummaryReportGroupAliasBuilder(t *testing.T) {
+func TestSummaryReportGroupBuilderAcceptsCanonicalDateAndUser(t *testing.T) {
+	body, err := buildReportsAPIBody(map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-30T00:00:00Z",
+		"summary_filter": map[string]any{
+			"groups": []any{"CLIENT", "PROJECT", "DATE"},
+		},
+	}, "summary_filter", false, time.UTC)
+	if err != nil {
+		t.Fatalf("build summary body: %v", err)
+	}
+	filter := body["summaryFilter"].(map[string]any)
+	groups := filter["groups"].([]string)
+	if len(groups) != 3 || groups[2] != "DATE" {
+		t.Fatalf("DATE should be sent upstream unchanged, got %#v", groups)
+	}
+
+	body, err = buildReportsAPIBody(map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-30T00:00:00Z",
+		"summary_filter": map[string]any{
+			"groups": []any{"USER", "TASK"},
+		},
+	}, "summary_filter", false, time.UTC)
+	if err != nil {
+		t.Fatalf("build summary body with user/task groups: %v", err)
+	}
+	filter = body["summaryFilter"].(map[string]any)
+	groups = filter["groups"].([]string)
+	if len(groups) != 2 || groups[0] != "USER" || groups[1] != "TASK" {
+		t.Fatalf("USER/TASK groups should be accepted, got %#v", groups)
+	}
+}
+
+func TestSummaryReportLegacyDayAliasBuilder(t *testing.T) {
 	body, err := buildReportsAPIBody(map[string]any{
 		"start": "2026-04-01T00:00:00Z",
 		"end":   "2026-04-30T00:00:00Z",
@@ -463,7 +497,7 @@ func TestSummaryReportGroupAliasBuilder(t *testing.T) {
 	filter := body["summaryFilter"].(map[string]any)
 	groups := filter["groups"].([]string)
 	if len(groups) != 3 || groups[2] != "DATE" {
-		t.Fatalf("DAY alias should be sent upstream as DATE, got %#v", groups)
+		t.Fatalf("legacy DAY alias should be sent upstream as DATE, got %#v", groups)
 	}
 }
 

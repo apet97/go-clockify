@@ -88,7 +88,7 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 		"amount_shown": "PROFIT",
 		"amounts":      []any{"EARNED", "COST", "PROFIT"},
 		"summary_filter": map[string]any{
-			"groups":             []any{"CLIENT", "PROJECT", "DAY"},
+			"groups":             []any{"CLIENT", "PROJECT", "DATE"},
 			"sort_column":        "PROFIT",
 			"summary_chart_type": "PROJECT",
 		},
@@ -113,7 +113,7 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 	filter, _ := gotBody["summaryFilter"].(map[string]any)
 	groups, _ := filter["groups"].([]any)
 	if len(groups) != 3 || groups[2] != "DATE" {
-		t.Fatalf("summary groups should map DAY to DATE, got %#v", filter["groups"])
+		t.Fatalf("summary groups should send DATE upstream, got %#v", filter["groups"])
 	}
 	if _, has := gotBody["detailedFilter"]; has {
 		t.Fatalf("summary report must not send detailedFilter: %#v", gotBody)

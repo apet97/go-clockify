@@ -176,6 +176,45 @@ func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[str
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
 }
 
+// RequestJSONValues is the generic JSON transport used by the allowlisted
+// documented-API MCP surface. It deliberately stays below the domain helpers:
+// callers must supply a validated method/path and already-normalized query.
+func (c *Client) RequestJSONValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any, out any) error {
+	baseURL := c.baseURL
+	if reportsHost {
+		baseURL = c.ReportsBaseURL()
+	}
+	return c.doJSONValues(ctx, baseURL, method, path, query, body, out)
+}
+
+// RequestRawValues is the binary-aware sibling of RequestJSONValues.
+func (c *Client) RequestRawValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any) (*RawResponse, error) {
+	baseURL := c.baseURL
+	if reportsHost {
+		baseURL = c.ReportsBaseURL()
+	}
+	raw := &RawResponse{}
+	if err := c.doJSONValues(ctx, baseURL, method, path, query, body, raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+// RequestMultipartValues sends multipart form fields to a validated
+// documented endpoint. File streaming is intentionally not exposed here; the
+// probe-lab docs currently accept form fields for the covered MCP use cases.
+func (c *Client) RequestMultipartValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, form url.Values, out any) error {
+	baseURL := c.baseURL
+	if reportsHost {
+		baseURL = c.ReportsBaseURL()
+	}
+	payload, contentType, err := encodeMultipart(form)
+	if err != nil {
+		return err
+	}
+	return c.doRequestValues(ctx, baseURL, method, path, query, contentType, payload, out)
+}
+
 // ReportsBaseURL returns the base URL for endpoints that live on
 // Clockify's reports host (reports.api.clockify.me/v1). The reports
 // API is a separate host from api.clockify.me — hitting the reports

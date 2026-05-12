@@ -156,7 +156,7 @@ func summaryFilterSchema() map[string]any {
 		"type":     "object",
 		"required": []string{"groups"},
 		"properties": map[string]any{
-			"groups":             map[string]any{"type": "array", "minItems": 1, "description": "1 to 3 values. MCP DAY is sent upstream as DATE.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "DAY", "WEEK", "MONTH", "TIMEENTRY", "TASK"}}},
+			"groups":             map[string]any{"type": "array", "minItems": 1, "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "USER"}}},
 			"sort_column":        map[string]any{"type": "string", "enum": []string{"GROUP", "DURATION", "AMOUNT", "EARNED", "COST", "PROFIT"}},
 			"summary_chart_type": map[string]any{"type": "string", "enum": []string{"BILLABILITY", "PROJECT"}},
 		},
