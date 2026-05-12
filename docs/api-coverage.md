@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 27 | 35 | 62 |
-| Mutating (non-destructive) | 20 | 51 | 71 |
+| Read-only | 27 | 37 | 64 |
+| Mutating (non-destructive) | 20 | 52 | 72 |
 | Destructive | 5 | 14 | 19 |
 | Billing | 0 | 14 | 14 |
 | Admin | 0 | 14 | 14 |
-| **Total tools** | **52** | **100** | **152** |
+| **Total tools** | **52** | **103** | **155** |
 
 ## Evidence types
 
@@ -132,7 +132,7 @@ Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDT
 
 ---
 
-## Tier 2 — Domain groups (100 tools)
+## Tier 2 — Domain groups (103 tools)
 
 ### `approvals` (6 tools)
 
@@ -501,7 +501,7 @@ surface and surface latent handler / upstream bugs.
 | Test | Tools / surface exercised | Outcome shape |
 |------|----------------------------|---------------|
 | `TestLiveTier1ReadOnly` | 16 Tier-1 read-only tools that lacked live evidence: `list_workspaces`, `list_users`, `current_user`, `list_tags`, `list_tasks`, `today_entries`, `summary_report`, `weekly_summary`, `attendance_report`, `quick_report`, `timesheet_review`, `timer_status`, `detailed_report`, `resolve_name`, `resolve_debug`, `policy_info` | success path |
-| `TestLiveTier2ReadOnlySweep` | 22 Tier-2 read-only and report tools across 11 groups | success path for the current list/report surface |
+| `TestLiveTier2ReadOnlySweep` | 22 Tier-2 read-only and report tools across 11 non-probe domain groups | success path for the current list/report surface |
 | `TestLiveT2SchedulingRecurringCRUD` | `create_assignment`, `get_assignment` via list scan, `update_assignment`, `delete_assignment` on recurring-assignment routes | success path |
 | `TestLiveT2ExpensesCRUD` | `create_expense_category`, `update_expense_category`, `create_expense`, `get_expense` bogus-id handling; delete-category archive constraint remains pinned | mixed success / documented upstream constraint |
 | `TestLiveT2CustomFieldsCRUD` | `seed_project` works; `create_custom_field` and downstream tests cap-skipped at the upstream's 50-field-per-workspace limit | success on seed; cap-skipped on field tools |

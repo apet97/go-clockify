@@ -301,7 +301,152 @@ if [ -d .github/workflows ]; then
 fi
 
 if [ -f "$CATALOG_FILE" ]; then
-  expected_tool_count=$(grep -oE '"name": *"clockify_[a-z0-9_]+"' "$CATALOG_FILE" | wc -l | tr -d '[:space:]')
+  if ! catalog_counts=$(python3 - "$CATALOG_FILE" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    catalog = json.load(fh)
+
+tier1 = catalog.get("tier1", [])
+tier2 = catalog.get("tier2", [])
+
+def count_rows(rows):
+    read_only = 0
+    mutating = 0
+    destructive = 0
+    billing = 0
+    admin = 0
+    for row in rows:
+        if row.get("read_only"):
+            read_only += 1
+        elif row.get("destructive"):
+            destructive += 1
+        else:
+            mutating += 1
+        risk = row.get("risk_class") or []
+        if "billing" in risk:
+            billing += 1
+        if "admin" in risk:
+            admin += 1
+    return read_only, mutating, destructive, billing, admin
+
+t1_ro, t1_mut, t1_des, t1_billing, t1_admin = count_rows(tier1)
+t2_ro, t2_mut, t2_des, t2_billing, t2_admin = count_rows(tier2)
+groups = {row.get("group") for row in tier2 if row.get("group")}
+print(
+    len(tier1) + len(tier2),
+    len(tier1),
+    len(tier2),
+    len(groups),
+    t1_ro,
+    t2_ro,
+    t1_mut,
+    t2_mut,
+    t1_des,
+    t2_des,
+    t1_billing,
+    t2_billing,
+    t1_admin,
+    t2_admin,
+)
+PY
+  ); then
+    err "unable to parse catalog counts from $CATALOG_FILE"
+    expected_tool_count=0
+  else
+    read -r expected_tool_count expected_tier1_count expected_tier2_count expected_tier2_group_count \
+      expected_tier1_read_only expected_tier2_read_only \
+      expected_tier1_mutating expected_tier2_mutating \
+      expected_tier1_destructive expected_tier2_destructive \
+      expected_tier1_billing expected_tier2_billing \
+      expected_tier1_admin expected_tier2_admin <<< "$catalog_counts"
+
+    if [ -f README.md ]; then
+      while IFS= read -r line; do
+        line_no=${line%%:*}
+        text=${line#*:}
+        if [[ "$text" =~ Tier[[:space:]]1[[:space:]]\(([0-9]+)[[:space:]]tools ]]; then
+          got="${BASH_REMATCH[1]}"
+          if [ "$got" != "$expected_tier1_count" ]; then
+            err "README Tier 1 count drift in README.md:$line_no: found $got tools, expected $expected_tier1_count from $CATALOG_FILE"
+          fi
+        fi
+      done < <(grep -nE '\*\*Tier 1 \([0-9]+ tools' README.md 2>/dev/null || true)
+
+      while IFS= read -r line; do
+        line_no=${line%%:*}
+        text=${line#*:}
+        if [[ "$text" =~ Tier[[:space:]]2[[:space:]]\(([0-9]+)[[:space:]]tools,[[:space:]]([0-9]+)[[:space:]]groups ]]; then
+          got_tools="${BASH_REMATCH[1]}"
+          got_groups="${BASH_REMATCH[2]}"
+          if [ "$got_tools" != "$expected_tier2_count" ]; then
+            err "README Tier 2 count drift in README.md:$line_no: found $got_tools tools, expected $expected_tier2_count from $CATALOG_FILE"
+          fi
+          if [ "$got_groups" != "$expected_tier2_group_count" ]; then
+            err "README Tier 2 group-count drift in README.md:$line_no: found $got_groups groups, expected $expected_tier2_group_count from $CATALOG_FILE"
+          fi
+        fi
+      done < <(grep -nE '\*\*Tier 2 \([0-9]+ tools, [0-9]+ groups' README.md 2>/dev/null || true)
+    fi
+
+    if [ -f docs/api-coverage.md ]; then
+      check_api_coverage_row() {
+        local label="$1"
+        local want_tier1="$2"
+        local want_tier2="$3"
+        local want_total="$4"
+        local actual line_no got_tier1 got_tier2 got_total
+        if ! actual=$(awk -F'|' -v label="$label" '
+          function clean(s) {
+            gsub(/[*[:space:]]/, "", s)
+            return s
+          }
+          BEGIN {
+            want = label
+            gsub(/[*[:space:]]/, "", want)
+          }
+          clean($2) == want {
+            print NR, clean($3), clean($4), clean($5)
+            found = 1
+            exit
+          }
+          END {
+            if (!found) {
+              exit 2
+            }
+          }
+        ' docs/api-coverage.md); then
+          err "docs/api-coverage.md summary missing row: $label"
+          return
+        fi
+        read -r line_no got_tier1 got_tier2 got_total <<< "$actual"
+        if [ "$got_tier1" != "$want_tier1" ] || [ "$got_tier2" != "$want_tier2" ] || [ "$got_total" != "$want_total" ]; then
+          err "api-coverage count drift in docs/api-coverage.md:$line_no: $label has $got_tier1/$got_tier2/$got_total, expected $want_tier1/$want_tier2/$want_total from $CATALOG_FILE"
+        fi
+      }
+
+      check_api_coverage_row "Read-only" "$expected_tier1_read_only" "$expected_tier2_read_only" "$((expected_tier1_read_only + expected_tier2_read_only))"
+      check_api_coverage_row "Mutating (non-destructive)" "$expected_tier1_mutating" "$expected_tier2_mutating" "$((expected_tier1_mutating + expected_tier2_mutating))"
+      check_api_coverage_row "Destructive" "$expected_tier1_destructive" "$expected_tier2_destructive" "$((expected_tier1_destructive + expected_tier2_destructive))"
+      check_api_coverage_row "Billing" "$expected_tier1_billing" "$expected_tier2_billing" "$((expected_tier1_billing + expected_tier2_billing))"
+      check_api_coverage_row "Admin" "$expected_tier1_admin" "$expected_tier2_admin" "$((expected_tier1_admin + expected_tier2_admin))"
+      check_api_coverage_row "Total tools" "$expected_tier1_count" "$expected_tier2_count" "$expected_tool_count"
+
+      while IFS= read -r line; do
+        line_no=${line%%:*}
+        text=${line#*:}
+        if [[ "$text" =~ \(([0-9]+)[[:space:]]tools\) ]]; then
+          got="${BASH_REMATCH[1]}"
+          if [ "$got" != "$expected_tier2_count" ]; then
+            err "api-coverage Tier 2 heading drift in docs/api-coverage.md:$line_no: found $got tools, expected $expected_tier2_count from $CATALOG_FILE"
+          fi
+        fi
+      done < <(grep -nE '^## Tier 2 .*Domain groups \([0-9]+ tools\)' docs/api-coverage.md 2>/dev/null || true)
+    fi
+  fi
+
   current_count_files=(README.md CONTRIBUTING.md SECURITY.md AGENTS.md docs/README.md docs/clients.md docs/production-readiness.md docs/support-matrix.md .github/workflows/docker-image.yml deploy/Dockerfile)
 
   for file in "${current_count_files[@]}"; do

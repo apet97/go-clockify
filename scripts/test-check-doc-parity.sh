@@ -79,6 +79,12 @@
 #   68. Phase 7 fail: dependency-review lacks default-branch evidence trigger
 #   69. Phase 7 fail: release-smoke doctor output artifact missing
 #   70. Phase 7 fail: docker-image SLSA feature-gate notice missing
+#   71. Phase 3 fail: stale private-repository wording
+#   72. Phase 3 fail: stale private-access parenthetical
+#   73. Phase 3 fail: v-prefixed ghcr.io image tag
+#   74. Phase 3 pass: bare-semver ghcr.io image tag
+#   75. Phase 3 fail: README Tier-2 count/group drift
+#   76. Phase 3 fail: api-coverage summary total drift
 #
 # Each case builds throwaway fixtures in a per-case tmpdir, runs the
 # script with cwd set to the fixture (the script under test uses
@@ -163,7 +169,7 @@ jobs:
         run: |
           echo "::notice title=SLSA attestation skipped::GitHub artifact attestations are unavailable for this user-owned private repository per ADR-0013; mandatory image build, Trivy, cosign image signature, and SBOM attestation gates already passed."
 labels:
-  org.opencontainers.image.description=Go MCP server for Clockify: 1 tools, three transports, five policy modes
+  org.opencontainers.image.description=Go MCP server for Clockify: 2 tools, three transports, five policy modes
 EOF
 
     cat > "$dir/.github/workflows/release.yml" <<'EOF'
@@ -407,7 +413,7 @@ EOF
 EOF
 
     cat > "$dir/deploy/Dockerfile" <<'EOF'
-LABEL org.opencontainers.image.description="Go MCP server for Clockify: 1 tools, three transports, five policy modes"
+LABEL org.opencontainers.image.description="Go MCP server for Clockify: 2 tools, three transports, five policy modes"
 EOF
 
     for monitoring_file in \
@@ -427,12 +433,15 @@ EOF
 # Test fixture opt-out
 EOF
 
-    # Phase 2 known_tools: catalog with one tool entry that matches
+    # Phase 2 known_tools: catalog with two tool entries that match
     # the script's '"name": *"clockify_[a-z0-9_]+"' regex.
     cat > "$dir/docs/tool-catalog.json" <<'EOF'
 {
   "tier1": [
-    {"name": "clockify_list_workspaces"}
+    {"name": "clockify_list_workspaces", "read_only": true, "destructive": false, "risk_class": ["read"]}
+  ],
+  "tier2": [
+    {"name": "clockify_call_documented_read_api", "group": "probe_lab_api", "read_only": true, "destructive": false, "risk_class": ["read"]}
   ]
 }
 EOF
@@ -879,7 +888,7 @@ run_case "Phase 3: OCI image description tool-count drift fails closed" \
 # --- Case 13: OCI image description stale policy count ---
 mut_oci_policy_count_drift() {
     cat > "$1/deploy/Dockerfile" <<'EOF'
-LABEL org.opencontainers.image.description="Go MCP server for Clockify: 1 tools, three transports, four policy modes"
+LABEL org.opencontainers.image.description="Go MCP server for Clockify: 2 tools, three transports, four policy modes"
 EOF
 }
 MUTATOR=mut_oci_policy_count_drift
@@ -1514,6 +1523,40 @@ mut_ghcr_bare_semver_in_doc() {
 MUTATOR=mut_ghcr_bare_semver_in_doc
 run_case "Phase 3: bare semver ghcr.io image tag passes" \
     0 'doc-parity: OK'
+
+# --- Case 75: README Tier-2 count/group drift ---
+mut_readme_tier2_count_drift() {
+    cat >> "$1/README.md" <<'EOF'
+
+## Tool tiers
+
+**Tier 2 (96 tools, 11 groups, on demand):** stale list.
+EOF
+}
+MUTATOR=mut_readme_tier2_count_drift
+run_case "Phase 3: README Tier-2 count/group drift fails closed" \
+    1 'README Tier 2 count drift|README Tier 2 group-count drift'
+
+# --- Case 76: docs/api-coverage.md total row drift ---
+mut_api_coverage_total_drift() {
+    cat > "$1/docs/api-coverage.md" <<'EOF'
+# API coverage
+
+## Summary
+
+| Classification | Tier 1 | Tier 2 | Total |
+|----------------|--------|--------|-------|
+| Read-only | 1 | 1 | 2 |
+| Mutating (non-destructive) | 0 | 0 | 0 |
+| Destructive | 0 | 0 | 0 |
+| Billing | 0 | 0 | 0 |
+| Admin | 0 | 0 | 0 |
+| **Total tools** | **1** | **0** | **1** |
+EOF
+}
+MUTATOR=mut_api_coverage_total_drift
+run_case "Phase 3: api-coverage summary total drift fails closed" \
+    1 'api-coverage count drift'
 
 # --- Final report ---
 echo

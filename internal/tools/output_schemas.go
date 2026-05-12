@@ -103,7 +103,7 @@ func applyTier1OutputSchemas(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 
 // applyOpaqueOutputSchemas gives every descriptor that lacks an
 // outputSchema a generic envelopeOpaque schema keyed by tool name. Used
-// by Tier 2 group activation so all 91 lazy-loaded tools advertise at
+// by Tier 2 group activation so all 103 lazy-loaded tools advertise at
 // least the envelope wrapper to clients without the maintenance burden
 // of hand-crafting per-tool typed schemas.
 func applyOpaqueOutputSchemas(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
