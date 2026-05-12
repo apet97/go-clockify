@@ -3,18 +3,18 @@ package clockify
 import "time"
 
 type Workspace struct {
-	ID                      string   `json:"id"`
-	Name                    string   `json:"name"`
-	CakeOrganizationID      string   `json:"cakeOrganizationId,omitempty"`
-	CostRate                any      `json:"costRate,omitempty"`
-	Currencies              any      `json:"currencies,omitempty"`
-	FeatureSubscriptionType string   `json:"featureSubscriptionType,omitempty"`
-	Features                []string `json:"features,omitempty"`
-	HourlyRate              any      `json:"hourlyRate,omitempty"`
-	ImageURL                string   `json:"imageUrl,omitempty"`
-	Memberships             any      `json:"memberships,omitempty"`
-	Subdomain               any      `json:"subdomain,omitempty"`
-	WorkspaceSettings       any      `json:"workspaceSettings,omitempty"`
+	ID                      string              `json:"id"`
+	Name                    string              `json:"name"`
+	CakeOrganizationID      string              `json:"cakeOrganizationId,omitempty"`
+	CostRate                *Rate               `json:"costRate,omitempty"`
+	Currencies              any                 `json:"currencies,omitempty"`
+	FeatureSubscriptionType string              `json:"featureSubscriptionType,omitempty"`
+	Features                []string            `json:"features,omitempty"`
+	HourlyRate              *Rate               `json:"hourlyRate,omitempty"`
+	ImageURL                string              `json:"imageUrl,omitempty"`
+	Memberships             []ProjectMembership `json:"memberships,omitempty"`
+	Subdomain               any                 `json:"subdomain,omitempty"`
+	WorkspaceSettings       any                 `json:"workspaceSettings,omitempty"`
 }
 
 type User struct {
@@ -31,25 +31,25 @@ type User struct {
 }
 
 type Project struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	ClientID       string `json:"clientId,omitempty"`
-	ClientName     string `json:"clientName,omitempty"`
-	Color          string `json:"color,omitempty"`
-	Archived       bool   `json:"archived"`
-	Billable       bool   `json:"billable,omitempty"`
-	BudgetEstimate any    `json:"budgetEstimate,omitempty"`
-	CostRate       any    `json:"costRate,omitempty"`
-	Duration       string `json:"duration,omitempty"`
-	Estimate       any    `json:"estimate,omitempty"`
-	EstimateReset  any    `json:"estimateReset,omitempty"`
-	HourlyRate     any    `json:"hourlyRate,omitempty"`
-	Memberships    any    `json:"memberships,omitempty"`
-	Note           string `json:"note,omitempty"`
-	Public         bool   `json:"public,omitempty"`
-	Template       bool   `json:"template,omitempty"`
-	TimeEstimate   any    `json:"timeEstimate,omitempty"`
-	WorkspaceID    string `json:"workspaceId,omitempty"`
+	ID             string              `json:"id"`
+	Name           string              `json:"name"`
+	ClientID       string              `json:"clientId,omitempty"`
+	ClientName     string              `json:"clientName,omitempty"`
+	Color          string              `json:"color,omitempty"`
+	Archived       bool                `json:"archived"`
+	Billable       bool                `json:"billable,omitempty"`
+	BudgetEstimate any                 `json:"budgetEstimate,omitempty"`
+	CostRate       *Rate               `json:"costRate,omitempty"`
+	Duration       string              `json:"duration,omitempty"`
+	Estimate       any                 `json:"estimate,omitempty"`
+	EstimateReset  any                 `json:"estimateReset,omitempty"`
+	HourlyRate     *Rate               `json:"hourlyRate,omitempty"`
+	Memberships    []ProjectMembership `json:"memberships,omitempty"`
+	Note           string              `json:"note,omitempty"`
+	Public         bool                `json:"public,omitempty"`
+	Template       bool                `json:"template,omitempty"`
+	TimeEstimate   any                 `json:"timeEstimate,omitempty"`
+	WorkspaceID    string              `json:"workspaceId,omitempty"`
 }
 
 type ClientEntity struct {
@@ -80,10 +80,10 @@ type Task struct {
 	AssigneeIDs    []string `json:"assigneeIds,omitempty"`
 	Billable       bool     `json:"billable"`
 	BudgetEstimate int64    `json:"budgetEstimate,omitempty"`
-	CostRate       any      `json:"costRate,omitempty"`
+	CostRate       *Rate    `json:"costRate,omitempty"`
 	Duration       string   `json:"duration,omitempty"`
 	Estimate       string   `json:"estimate,omitempty"`
-	HourlyRate     any      `json:"hourlyRate,omitempty"`
+	HourlyRate     *Rate    `json:"hourlyRate,omitempty"`
 	Status         string   `json:"status,omitempty"`
 	UserGroupIDs   []string `json:"userGroupIds,omitempty"`
 }
@@ -102,9 +102,9 @@ type TimeEntry struct {
 	TaskID            string       `json:"taskId,omitempty"`
 	TagIDs            []string     `json:"tagIds,omitempty"`
 	Billable          bool         `json:"billable,omitempty"`
-	CostRate          any          `json:"costRate,omitempty"`
+	CostRate          *Rate        `json:"costRate,omitempty"`
 	CustomFieldValues any          `json:"customFieldValues,omitempty"`
-	HourlyRate        any          `json:"hourlyRate,omitempty"`
+	HourlyRate        *Rate        `json:"hourlyRate,omitempty"`
 	IsLocked          bool         `json:"isLocked,omitempty"`
 	KioskID           string       `json:"kioskId,omitempty"`
 	Type              string       `json:"type,omitempty"`
