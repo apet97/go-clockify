@@ -16,6 +16,7 @@ func TestRiskClassIsHighRisk(t *testing.T) {
 	}{
 		{"zero", 0, false},
 		{"read only", RiskRead, false},
+		{"sensitive read only", RiskRead | RiskSensitiveRead, false},
 		{"write only", RiskWrite, false},
 		{"read + write", RiskRead | RiskWrite, false},
 		{"billing", RiskBilling, true},
@@ -25,7 +26,7 @@ func TestRiskClassIsHighRisk(t *testing.T) {
 		{"destructive", RiskDestructive, true},
 		{"write + billing", RiskWrite | RiskBilling, true},
 		{"destructive + admin", RiskDestructive | RiskAdmin, true},
-		{"all bits", RiskRead | RiskWrite | RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive, true},
+		{"all bits", RiskRead | RiskWrite | RiskSensitiveRead | RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

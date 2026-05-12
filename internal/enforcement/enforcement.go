@@ -317,6 +317,7 @@ func riskClassNames(rc mcp.RiskClass) []string {
 	all := []entry{
 		{mcp.RiskRead, "read"},
 		{mcp.RiskWrite, "write"},
+		{mcp.RiskSensitiveRead, "sensitive_read"},
 		{mcp.RiskBilling, "billing"},
 		{mcp.RiskAdmin, "admin"},
 		{mcp.RiskPermissionChange, "permission_change"},

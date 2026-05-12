@@ -273,6 +273,9 @@ default `*_id` capture in audit events. See
 
 | Tool | Tier | Audit Keys |
 |------|------|------------|
+| `clockify_current_user` | 1 | `user_id` |
+| `clockify_list_users` | 1 | `workspace_id` |
+| `clockify_policy_info` | 1 | `policy` |
 | `clockify_add_invoice_item` | 2 | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_add_user_to_group` | 2 | `group_id`, `user_id` |
 | `clockify_assign_project_memberships` | 2 | `project_id`, `user_ids`, `remove` |
@@ -286,11 +289,25 @@ default `*_id` capture in audit events. See
 | `clockify_delete_invoice_item` | 2 | `invoice_id`, `item_index`, `item_id` |
 | `clockify_delete_user_group` | 2 | `group_id` |
 | `clockify_delete_webhook` | 2 | `webhook_id` |
+| `clockify_export_invoice` | 2 | `invoice_id` |
+| `clockify_get_invoice` | 2 | `invoice_id` |
+| `clockify_get_member_profile` | 2 | `user_id` |
+| `clockify_get_time_off_policy` | 2 | `policy_id` |
+| `clockify_get_user_group` | 2 | `group_id` |
+| `clockify_get_webhook` | 2 | `webhook_id` |
+| `clockify_invoice_report` | 2 | `date_range`, `client_id` |
+| `clockify_list_invoice_items` | 2 | `invoice_id` |
+| `clockify_list_invoices` | 2 | `client_id`, `status` |
+| `clockify_list_user_groups` | 2 | `workspace_id` |
+| `clockify_list_user_groups_admin` | 2 | `workspace_id` |
+| `clockify_list_webhook_events` | 2 | `webhook_id` |
+| `clockify_list_webhooks` | 2 | `workspace_id` |
 | `clockify_mark_invoice_paid` | 2 | `invoice_id` |
 | `clockify_remove_user_from_group` | 2 | `group_id`, `user_id` |
 | `clockify_send_invoice` | 2 | `invoice_id` |
 | `clockify_set_project_memberships` | 2 | `project_id`, `user_ids` |
 | `clockify_test_webhook` | 2 | `webhook_id` |
+| `clockify_time_off_balance` | 2 | `user_id`, `policy_id` |
 | `clockify_update_invoice` | 2 | `invoice_id`, `status`, `client_id` |
 | `clockify_update_invoice_item` | 2 | `invoice_id`, `item_index`, `item_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_update_project_memberships` | 2 | `project_id` |

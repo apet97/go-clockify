@@ -29,6 +29,78 @@ var riskOverrides = map[string]riskOverride{
 		auditKeys: []string{"operation", "method", "path"},
 	},
 
+	// Sensitive reads — user, policy, billing, balance, and webhook
+	// surfaces should be visible to audit/agents without joining the
+	// confirmation-token high-risk mask.
+	"clockify_current_user": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"user_id"},
+	},
+	"clockify_list_users": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"workspace_id"},
+	},
+	"clockify_policy_info": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"policy"},
+	},
+	"clockify_get_user_group": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"group_id"},
+	},
+	"clockify_list_user_groups_admin": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"workspace_id"},
+	},
+	"clockify_export_invoice": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"invoice_id"},
+	},
+	"clockify_get_invoice": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"invoice_id"},
+	},
+	"clockify_invoice_report": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"date_range", "client_id"},
+	},
+	"clockify_list_invoice_items": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"invoice_id"},
+	},
+	"clockify_list_invoices": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"client_id", "status"},
+	},
+	"clockify_get_time_off_policy": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"policy_id"},
+	},
+	"clockify_time_off_balance": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"user_id", "policy_id"},
+	},
+	"clockify_get_member_profile": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"user_id"},
+	},
+	"clockify_list_user_groups": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"workspace_id"},
+	},
+	"clockify_get_webhook": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"webhook_id"},
+	},
+	"clockify_list_webhook_events": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"webhook_id"},
+	},
+	"clockify_list_webhooks": {
+		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
+		auditKeys: []string{"workspace_id"},
+	},
+
 	// Billing — invoices.
 	"clockify_send_invoice": {
 		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,

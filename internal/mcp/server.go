@@ -200,6 +200,7 @@ type RiskClass uint32
 const (
 	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
 	RiskWrite                                    // ordinary mutating writes
+	RiskSensitiveRead                            // reads users, policies, invoices, balances, webhooks, or similar sensitive state
 	RiskBilling                                  // touches invoices / payments
 	RiskAdmin                                    // workspace-admin scope (deactivate, group/user mgmt)
 	RiskPermissionChange                         // role / permission changes

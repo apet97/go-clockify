@@ -43,6 +43,10 @@ func TestRiskOverridesMatchTaxonomy(t *testing.T) {
 	wantClass := map[string]mcp.RiskClass{
 		"clockify_call_documented_write_api":  mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
 		"clockify_call_documented_delete_api": mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		"clockify_list_users":                 mcp.RiskRead | mcp.RiskSensitiveRead,
+		"clockify_get_member_profile":         mcp.RiskRead | mcp.RiskSensitiveRead,
+		"clockify_time_off_balance":           mcp.RiskRead | mcp.RiskSensitiveRead,
+		"clockify_get_webhook":                mcp.RiskRead | mcp.RiskSensitiveRead,
 		"clockify_send_invoice":               mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
 		"clockify_mark_invoice_paid":          mcp.RiskWrite | mcp.RiskBilling,
 		"clockify_delete_invoice":             mcp.RiskDestructive | mcp.RiskBilling,

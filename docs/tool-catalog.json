@@ -1854,6 +1854,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "user_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -1922,7 +1925,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Current User"
       }
@@ -4832,6 +4836,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "workspace_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4916,7 +4923,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Users"
       }
@@ -5337,6 +5345,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "policy"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -5364,7 +5375,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Policy Info"
       }
@@ -11538,6 +11550,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "group_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -11573,7 +11588,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get User Group"
       }
@@ -11634,6 +11650,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "workspace_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -11674,7 +11693,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List User Groups Admin"
       }
@@ -12097,6 +12117,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "invoice_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -12136,7 +12159,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Export Invoice"
       }
@@ -12152,6 +12176,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -12198,7 +12225,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Invoice"
       }
@@ -12214,6 +12242,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "date_range",
+        "client_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -12267,7 +12299,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Invoice Report"
       }
@@ -12283,6 +12316,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -12319,7 +12355,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Invoice Items"
       }
@@ -12335,6 +12372,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "client_id",
+        "status"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -12401,7 +12442,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Invoices"
       }
@@ -15867,6 +15909,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "policy_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -15912,7 +15957,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Time Off Policy"
       }
@@ -16139,6 +16185,10 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "user_id",
+        "policy_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -16189,7 +16239,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Time Off Balance"
       }
@@ -16635,6 +16686,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "user_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -16671,7 +16725,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Member Profile"
       }
@@ -16687,6 +16742,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -16728,7 +16786,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List User Groups"
       }
@@ -17276,6 +17335,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "webhook_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -17312,7 +17374,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Webhook"
       }
@@ -17328,6 +17391,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "webhook_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -17356,7 +17422,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Webhook Events"
       }
@@ -17372,6 +17439,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -17413,7 +17483,8 @@
         "openWorldHint": true,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Webhooks"
       }
