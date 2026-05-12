@@ -62,6 +62,14 @@ type Config struct {
 	HTTPRequireProtocolVersion bool
 	DefaultProtocolVersion     string
 
+	// Streamable HTTP session caps (per-replica and per-principal).
+	// 0 = disabled (matches legacy behaviour). When non-zero,
+	// streamSessionManager.create rejects initialize requests beyond
+	// the cap with HTTP 503 + Retry-After (replica cap) or HTTP 429
+	// + Retry-After (principal cap). See ADR/Wave 5 notes.
+	MaxSessionsPerReplica   int
+	MaxSessionsPerPrincipal int
+
 	// Enterprise shared-service
 	ControlPlaneDSN string
 	// ControlPlaneAuditCap is the max number of audit events retained
@@ -693,6 +701,16 @@ func Load() (Config, error) {
 		return Config{}, err
 	} else {
 		cfg.HTTPRateLimitGETPerSession = n
+	}
+	if n, err := nonNegativeInt("MCP_MAX_SESSIONS_PER_REPLICA", os.Getenv("MCP_MAX_SESSIONS_PER_REPLICA"), 1_000_000); err != nil {
+		return Config{}, err
+	} else {
+		cfg.MaxSessionsPerReplica = n
+	}
+	if n, err := nonNegativeInt("MCP_MAX_SESSIONS_PER_PRINCIPAL", os.Getenv("MCP_MAX_SESSIONS_PER_PRINCIPAL"), 100_000); err != nil {
+		return Config{}, err
+	} else {
+		cfg.MaxSessionsPerPrincipal = n
 	}
 	cfg.HTTPRequireProtocolVersion = os.Getenv("MCP_HTTP_REQUIRE_PROTOCOL_VERSION") == "1"
 	cfg.DefaultProtocolVersion = strings.TrimSpace(os.Getenv("MCP_DEFAULT_PROTOCOL_VERSION"))

@@ -381,6 +381,8 @@ The essentials (regenerate with `go run ./cmd/gen-config-docs -mode=all`):
 | `MCP_HTTP_RATELIMIT_PER_PRINCIPAL` | `0` | Process-local HTTP admission limit per authenticated subject+tenant per minute (0=disabled; hosted profiles default to 300) |
 | `MCP_LOG_FORMAT` | `text` | Log format (stderr; PII-scrubbed) |
 | `MCP_MAX_MESSAGE_SIZE` | `4194304` | Max request size in bytes (primary knob); 0 < N <= 104857600 |
+| `MCP_MAX_SESSIONS_PER_PRINCIPAL` | `0` | Streamable HTTP session cap per authenticated subject+tenant on this replica (0=disabled; initialize requests beyond the cap return 429). Bounds blast radius when a single principal opens many initialize sessions. |
+| `MCP_MAX_SESSIONS_PER_REPLICA` | `0` | Streamable HTTP session cap per replica (0=disabled; initialize requests beyond the cap return 503 with Retry-After). Pair with a per-principal cap to prevent a single tenant from starving the pool. |
 | `MCP_METRICS_AUTH_MODE` | `static_bearer (when MCP_METRICS_BIND set)` | Auth mode for dedicated metrics listener |
 | `MCP_METRICS_BEARER_TOKEN` | `—` | Bearer token (>=16 chars) for static_bearer metrics |
 | `MCP_METRICS_BIND` | `—` | Dedicated metrics listener (optional; recommended for streamable_http) |

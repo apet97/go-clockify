@@ -25,6 +25,8 @@ data:
   MCP_HTTP_RATELIMIT_PER_IP: "600"          # process-local HTTP admission requests/source IP/minute (0=disabled)
   MCP_HTTP_RATELIMIT_PER_PRINCIPAL: "300"   # process-local HTTP admission requests/subject+tenant/minute (0=disabled)
   MCP_HTTP_RATELIMIT_GET_PER_SESSION: "4"   # concurrent streamable_http SSE GETs per session on this pod (0=disabled)
+  MCP_MAX_SESSIONS_PER_REPLICA: "0"         # streamable_http session cap per replica; initialize requests beyond cap return 503+Retry-After (0=disabled)
+  MCP_MAX_SESSIONS_PER_PRINCIPAL: "0"       # streamable_http session cap per subject+tenant on this pod; beyond cap returns 429+Retry-After (0=disabled)
   MCP_HTTP_REQUIRE_PROTOCOL_VERSION: "0"    # set 1 to reject post-initialize streamable_http requests missing Mcp-Protocol-Version
   MCP_DEFAULT_PROTOCOL_VERSION: ""          # optional initialize fallback when clients omit params.protocolVersion; empty = newest supported
   # Core Clockify API (uncomment and set as needed)

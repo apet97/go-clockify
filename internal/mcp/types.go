@@ -37,6 +37,7 @@ const (
 	RPCCodeMethodNotAllowed     = -32015
 	RPCCodeUnauthenticated      = -32020
 	RPCCodeForbidden            = -32021
+	RPCCodeServiceUnavailable   = -32030
 )
 
 // InvalidParamsError is returned from Enforcement.BeforeCall when the tool's

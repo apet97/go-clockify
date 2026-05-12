@@ -222,6 +222,18 @@ type StreamableHTTPOptions struct {
 	// JSON-RPC dispatch; multi-replica hosted deployments still need
 	// cross-replica gateway limits.
 	AdmissionLimits HTTPAdmissionLimits
+	// MaxSessionsPerReplica caps the number of active streamable_http
+	// sessions on this replica. initialize requests beyond the cap return
+	// HTTP 503 with Retry-After. 0 = unlimited (matches the legacy
+	// behaviour before this knob existed). Pair with MaxSessionsPerPrincipal
+	// to prevent a single tenant from starving the pool.
+	MaxSessionsPerReplica int
+	// MaxSessionsPerPrincipal caps active sessions per authenticated
+	// (tenant_id, subject) on this replica. initialize requests beyond
+	// the cap return HTTP 429 with Retry-After so a tenant-internal
+	// retry loop can back off without affecting other tenants. 0 =
+	// unlimited.
+	MaxSessionsPerPrincipal int
 	// RequireProtocolVersionHeader, when true, rejects post-initialize
 	// streamable HTTP requests that omit Mcp-Protocol-Version. Default false
 	// preserves compatibility with older clients while still counting missing
@@ -272,6 +284,9 @@ func ServeStreamableHTTP(ctx context.Context, opts StreamableHTTPOptions) error 
 		idleGraceAfterDisconnect: grace,
 		store:                    opts.ControlPlane,
 		items:                    map[string]*streamSession{},
+		maxPerReplica:            opts.MaxSessionsPerReplica,
+		maxPerPrincipal:          opts.MaxSessionsPerPrincipal,
+		perPrincipal:             map[string]int{},
 	}
 	admission := newHTTPAdmissionLimiter(opts.AdmissionLimits)
 	go mgr.reapLoop(ctx)
@@ -454,6 +469,24 @@ func streamableRPCHandler(opts StreamableHTTPOptions, mgr *streamSessionManager,
 			}
 			session, err = mgr.create(r.Context(), id, principal, opts)
 			if err != nil {
+				if errors.Is(err, errSessionReplicaCapReached) {
+					// 503 + Retry-After communicates "this replica is
+					// at capacity; route to another replica or wait".
+					// Standard LB pattern.
+					w.Header().Set("Retry-After", "30")
+					writeJSONRPCError(w, http.StatusServiceUnavailable, RPCCodeServiceUnavailable, "session cap reached on this replica")
+					return
+				}
+				if errors.Is(err, errSessionPrincipalCapReached) {
+					// 429 + Retry-After communicates "your principal
+					// is over quota on this replica; back off". Distinct
+					// from the per-replica 503 so clients can tell the
+					// difference between "the pool is full" and "you
+					// are using too many slots".
+					w.Header().Set("Retry-After", "30")
+					writeJSONRPCError(w, http.StatusTooManyRequests, RPCCodeRateLimited, "session cap reached for principal")
+					return
+				}
 				writeJSONError(w, http.StatusInternalServerError, err.Error())
 				return
 			}
@@ -768,11 +801,90 @@ type streamSessionManager struct {
 	idleGraceAfterDisconnect time.Duration
 	store                    controlplane.Store
 	items                    map[string]*streamSession
+	// maxPerReplica / maxPerPrincipal: 0 = unlimited. Caps are enforced
+	// at create time; rehydration via get() does not increment the
+	// per-replica counter because the originating replica was already
+	// charged when the session was created.
+	maxPerReplica   int
+	maxPerPrincipal int
+	// perPrincipal counts active sessions keyed by sessionPrincipalKey.
+	// Mirrors m.items lifetime: incremented in create, decremented in
+	// destroy/closeAll/reap.
+	perPrincipal map[string]int
 }
 
+// sessionPrincipalKey builds the bucketing key for the per-principal
+// session counter. Mirrors enforcement.rateLimitSubjectKey to keep the
+// shared (tenant_id, subject) abstraction consistent across the rate
+// limiter and session counter, but lives here to avoid pulling the
+// enforcement package into the mcp dependency graph.
+func sessionPrincipalKey(p authn.Principal) string {
+	if p.Subject == "" {
+		return ""
+	}
+	if p.TenantID == "" {
+		return p.Subject
+	}
+	return p.TenantID + "\x00" + p.Subject
+}
+
+// perPrincipalCount returns the current count for key, treating a nil
+// perPrincipal map as zero so test harnesses that omit the map from
+// the literal still operate correctly. Caller must hold m.mu.
+func (m *streamSessionManager) perPrincipalCount(key string) int {
+	if m.perPrincipal == nil {
+		return 0
+	}
+	return m.perPrincipal[key]
+}
+
+// Sentinels for cap rejections — the streamableRPCHandler maps them to
+// HTTP responses (replica → 503 capacity, principal → 429 tenant
+// fairness).
+var (
+	errSessionReplicaCapReached   = errors.New("streamable_http session cap reached on this replica")
+	errSessionPrincipalCapReached = errors.New("streamable_http session cap reached for principal")
+)
+
 func (m *streamSessionManager) create(ctx context.Context, id string, principal authn.Principal, opts StreamableHTTPOptions) (*streamSession, error) {
+	principalKey := sessionPrincipalKey(principal)
+	// Reservation: take the mutex once to check caps and reserve a
+	// placeholder slot. Holding the lock through opts.Factory below
+	// would serialise session creation across the replica; reserving
+	// first then doing Factory unlocked keeps cap checks atomic while
+	// allowing parallel session bootstrap.
+	m.mu.Lock()
+	if m.maxPerReplica > 0 && len(m.items) >= m.maxPerReplica {
+		m.mu.Unlock()
+		return nil, errSessionReplicaCapReached
+	}
+	if m.maxPerPrincipal > 0 && principalKey != "" && m.perPrincipalCount(principalKey) >= m.maxPerPrincipal {
+		m.mu.Unlock()
+		return nil, errSessionPrincipalCapReached
+	}
+	// Placeholder reservation prevents another initialize call from
+	// slipping in while Factory runs. A nil entry tells get() this is
+	// an in-flight reservation, not a usable session.
+	m.items[id] = nil
+	if principalKey != "" {
+		if m.perPrincipal == nil {
+			m.perPrincipal = map[string]int{}
+		}
+		m.perPrincipal[principalKey]++
+	}
+	m.mu.Unlock()
+
 	runtime, err := opts.Factory(ctx, principal, id)
 	if err != nil {
+		m.mu.Lock()
+		delete(m.items, id)
+		if principalKey != "" && m.perPrincipal != nil {
+			m.perPrincipal[principalKey]--
+			if m.perPrincipal[principalKey] <= 0 {
+				delete(m.perPrincipal, principalKey)
+			}
+		}
+		m.mu.Unlock()
 		return nil, err
 	}
 	session := &streamSession{
@@ -810,6 +922,12 @@ func (m *streamSessionManager) create(ctx context.Context, id string, principal 
 	}); err != nil {
 		m.mu.Lock()
 		delete(m.items, id)
+		if principalKey != "" && m.perPrincipal != nil {
+			m.perPrincipal[principalKey]--
+			if m.perPrincipal[principalKey] <= 0 {
+				delete(m.perPrincipal, principalKey)
+			}
+		}
 		m.mu.Unlock()
 		session.closeRuntime()
 		return nil, err
@@ -843,6 +961,13 @@ func (m *streamSessionManager) get(
 ) (*streamSession, error) {
 	m.mu.Lock()
 	if session, ok := m.items[id]; ok {
+		// A nil entry is a create() reservation placeholder — another
+		// initialize call is mid-bootstrap with this id. Treat it as
+		// "not found" so the caller's retry path handles it cleanly.
+		if session == nil {
+			m.mu.Unlock()
+			return nil, errSessionNotFound
+		}
 		if time.Now().After(session.expiresAt) {
 			m.mu.Unlock()
 			go m.destroy(id, session)
@@ -908,6 +1033,7 @@ func (m *streamSessionManager) get(
 	// requiring the client to re-initialize after every cross-pod
 	// hop would defeat the rehydration contract.
 	session.server.MarkInitialized(rec.ProtocolVersion, rec.ClientName, rec.ClientVersion)
+	principalKey := sessionPrincipalKey(principal)
 	m.mu.Lock()
 	// Race: while we did the rehydration work outside the lock another
 	// concurrent request on this instance may have rehydrated the same
@@ -917,7 +1043,27 @@ func (m *streamSessionManager) get(
 		session.closeRuntime()
 		return existing, nil
 	}
+	// Cap enforcement at rehydration time. The session is being
+	// resurrected on THIS replica which consumes local resources;
+	// per-replica and per-principal caps must respect that even
+	// though the originating replica already charged its own quota.
+	if m.maxPerReplica > 0 && len(m.items) >= m.maxPerReplica {
+		m.mu.Unlock()
+		session.closeRuntime()
+		return nil, errSessionReplicaCapReached
+	}
+	if m.maxPerPrincipal > 0 && principalKey != "" && m.perPrincipalCount(principalKey) >= m.maxPerPrincipal {
+		m.mu.Unlock()
+		session.closeRuntime()
+		return nil, errSessionPrincipalCapReached
+	}
 	m.items[id] = session
+	if principalKey != "" {
+		if m.perPrincipal == nil {
+			m.perPrincipal = map[string]int{}
+		}
+		m.perPrincipal[principalKey]++
+	}
 	m.mu.Unlock()
 	return session, nil
 }
@@ -1051,6 +1197,14 @@ func (m *streamSessionManager) reapOnce(now time.Time) {
 	var evict []reapReason
 	m.mu.Lock()
 	for id, session := range m.items {
+		// Skip placeholder reservations from in-flight create() calls
+		// — they are not fully constructed sessions and have no
+		// expiresAt to evaluate. The placeholder is cleared when
+		// create returns success (session replaces nil) or failure
+		// (entry deleted).
+		if session == nil {
+			continue
+		}
 		if now.After(session.expiresAt) {
 			evict = append(evict, reapReason{reapEntry{id, session}, "ttl"})
 			continue
@@ -1071,6 +1225,15 @@ func (m *streamSessionManager) reapOnce(now time.Time) {
 func (m *streamSessionManager) destroy(id string, session *streamSession) {
 	m.mu.Lock()
 	delete(m.items, id)
+	if session != nil && m.perPrincipal != nil {
+		key := sessionPrincipalKey(session.principal)
+		if key != "" {
+			m.perPrincipal[key]--
+			if m.perPrincipal[key] <= 0 {
+				delete(m.perPrincipal, key)
+			}
+		}
+	}
 	m.mu.Unlock()
 	if session == nil {
 		return
@@ -1089,8 +1252,13 @@ func (m *streamSessionManager) closeAll() {
 		items = append(items, item)
 	}
 	m.items = map[string]*streamSession{}
+	m.perPrincipal = map[string]int{}
 	m.mu.Unlock()
 	for i, item := range items {
+		if item == nil {
+			// Placeholder reservation: nothing to close.
+			continue
+		}
 		item.events.close()
 		item.closeRuntime()
 		_ = m.deleteSession("close_all", ids[i])

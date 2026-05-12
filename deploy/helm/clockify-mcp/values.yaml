@@ -92,6 +92,8 @@ config:
   MCP_HTTP_RATELIMIT_PER_IP: "600"
   MCP_HTTP_RATELIMIT_PER_PRINCIPAL: "300"
   MCP_HTTP_RATELIMIT_GET_PER_SESSION: "4"
+  MCP_MAX_SESSIONS_PER_REPLICA: "0"        # streamable_http session cap per replica (0=disabled)
+  MCP_MAX_SESSIONS_PER_PRINCIPAL: "0"      # streamable_http session cap per subject+tenant on this replica (0=disabled)
   MCP_HTTP_REQUIRE_PROTOCOL_VERSION: "0"
   MCP_DEFAULT_PROTOCOL_VERSION: ""  # optional initialize fallback when clients omit params.protocolVersion; empty = newest supported
 

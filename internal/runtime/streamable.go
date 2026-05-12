@@ -85,6 +85,8 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 		ExtraHandlers:                r.extraHandlers,
 		TLSConfig:                    tlsConfig,
 		AdmissionLimits:              httpAdmissionLimits(r.cfg),
+		MaxSessionsPerReplica:        r.cfg.MaxSessionsPerReplica,
+		MaxSessionsPerPrincipal:      r.cfg.MaxSessionsPerPrincipal,
 		RequireProtocolVersionHeader: r.cfg.HTTPRequireProtocolVersion,
 		DefaultProtocolVersion:       r.cfg.DefaultProtocolVersion,
 		POSTWriteTimeout:             r.cfg.ToolTimeout + 10*time.Second,
