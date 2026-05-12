@@ -558,7 +558,7 @@ func validateOIDCRemoteURL(u *url.URL, label, raw string, strict bool) error {
 	if strict {
 		return fmt.Errorf("%s %q must use https in OIDC strict mode", label, raw)
 	}
-	if isOIDCLoopbackHost(u.Hostname()) {
+	if isOIDCLoopback(u.Hostname()) {
 		return nil
 	}
 	return fmt.Errorf("%s %q must use https unless the host is loopback", label, raw)
@@ -637,7 +637,7 @@ func isPublicOIDCRemoteAddr(addr netip.Addr) bool {
 	return true
 }
 
-func isOIDCLoopbackHost(host string) bool {
+func isOIDCLoopback(host string) bool {
 	if strings.EqualFold(host, "localhost") {
 		return true
 	}
