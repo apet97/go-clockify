@@ -14097,7 +14097,7 @@ components:
         application/json:
           example:
             webhooks:
-            - authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            - authToken: "<redacted>"
               deliveryEnabled: false
               enabled: false
               id: 76a687e29ae1f428e7ebe101
@@ -14119,7 +14119,7 @@ components:
       content:
         application/json:
           example:
-            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            authToken: "<redacted>"
             deliveryEnabled: false
             enabled: false
             id: 76a687e29ae1f428e7ebe101
@@ -14140,7 +14140,7 @@ components:
       content:
         application/json:
           example:
-            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            authToken: "<redacted>"
             deliveryEnabled: false
             enabled: false
             id: 76a687e29ae1f428e7ebe101

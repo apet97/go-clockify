@@ -41,6 +41,7 @@ SOURCE_PRIORITIES = {
   "probe-fragment" => 20,
   "doc-md" => 10
 }.freeze
+SENSITIVE_EXAMPLE_KEY_RE = /\A(?:api[_-]?key|auth[_-]?token|token|secret)\z/i
 
 options = {
   real_dir: ENV.fetch("CLOCKIFY_OPENAPI_REAL_DIR", DEFAULT_REAL_DIR),
@@ -79,6 +80,21 @@ def sort_deep(value)
     value.map { |item| sort_deep(item) }
   else
     value
+  end
+end
+
+def redact_sensitive_examples!(value)
+  case value
+  when Hash
+    value.each do |key, child|
+      if child.is_a?(String) && key.to_s.match?(SENSITIVE_EXAMPLE_KEY_RE)
+        value[key] = "<redacted>"
+      else
+        redact_sensitive_examples!(child)
+      end
+    end
+  when Array
+    value.each { |child| redact_sensitive_examples!(child) }
   end
 end
 
@@ -1063,6 +1079,7 @@ mcp_mapping, tool_risks, tool_meta = discover_mcp_mapping(options)
 merger.apply_metadata(findings, mcp_mapping, tool_risks, tool_meta)
 
 doc = merger.document
+redact_sensitive_examples!(doc)
 errors = validate_document(doc, options[:repo_root])
 abort(errors.join("\n")) unless errors.empty?
 
