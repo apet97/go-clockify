@@ -12086,6 +12086,62 @@
       }
     },
     {
+      "name": "clockify_export_invoice",
+      "description": "Export an invoice as raw bytes. Defaults user_locale to en-US and returns base64 body plus response headers.",
+      "group": "invoices",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_id": {
+            "type": "string"
+          },
+          "user_locale": {
+            "description": "Required by live Clockify export API; defaults to en-US",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_export_invoice",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Export Invoice"
+      }
+    },
+    {
       "name": "clockify_get_invoice",
       "description": "Get a single invoice by ID",
       "group": "invoices",
@@ -12174,7 +12230,15 @@
             "type": "integer"
           },
           "status": {
-            "description": "Filter by status (e.g. PAID, SENT, DRAFT)",
+            "description": "Filter by live invoice status",
+            "enum": [
+              "UNSENT",
+              "SENT",
+              "PAID",
+              "PARTIALLY_PAID",
+              "VOID",
+              "OVERDUE"
+            ],
             "type": "string"
           }
         },
@@ -12287,7 +12351,15 @@
             "type": "integer"
           },
           "status": {
-            "description": "Filter by status (e.g. PAID, SENT, DRAFT)",
+            "description": "Filter by live invoice status",
+            "enum": [
+              "UNSENT",
+              "SENT",
+              "PAID",
+              "PARTIALLY_PAID",
+              "VOID",
+              "OVERDUE"
+            ],
             "type": "string"
           }
         },
@@ -12336,7 +12408,7 @@
     },
     {
       "name": "clockify_mark_invoice_paid",
-      "description": "Mark an invoice as paid (sets status=PAID). Supports dry_run:true to preview the invoice that would be updated.",
+      "description": "Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated.",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
@@ -12478,7 +12550,7 @@
     },
     {
       "name": "clockify_update_invoice",
-      "description": "Update an existing invoice. Supports dry_run:true.",
+      "description": "Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true.",
       "group": "invoices",
       "tier": 2,
       "read_only": false,
@@ -12530,7 +12602,15 @@
             "type": "string"
           },
           "status": {
-            "description": "Invoice status",
+            "description": "Invoice status. DRAFT is not a live value; use UNSENT for draft-like invoices.",
+            "enum": [
+              "UNSENT",
+              "SENT",
+              "PAID",
+              "PARTIALLY_PAID",
+              "VOID",
+              "OVERDUE"
+            ],
             "type": "string"
           }
         },
@@ -16544,6 +16624,59 @@
       }
     },
     {
+      "name": "clockify_get_member_profile",
+      "description": "Get a user's workspace-scoped member profile",
+      "group": "user_admin",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "description": "User ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_get_member_profile",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Get Member Profile"
+      }
+    },
+    {
       "name": "clockify_list_user_groups",
       "description": "List user groups in the workspace",
       "group": "user_admin",
@@ -16675,6 +16808,117 @@
           "destructive"
         ],
         "title": "Remove User From Group"
+      }
+    },
+    {
+      "name": "clockify_update_member_profile",
+      "description": "Update a user's workspace-scoped member profile. Supports dry_run:true.",
+      "group": "user_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "description": "Preview the profile payload without applying it",
+            "type": "boolean"
+          },
+          "image_url": {
+            "description": "Profile image URL",
+            "type": "string"
+          },
+          "name": {
+            "description": "Profile display name",
+            "maxLength": 150,
+            "type": "string"
+          },
+          "remove_profile_image": {
+            "description": "Remove the profile image",
+            "type": "boolean"
+          },
+          "user_custom_fields": {
+            "description": "Member profile custom field values",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "user_id": {
+            "description": "User ID",
+            "type": "string"
+          },
+          "week_start": {
+            "description": "First day of the week",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type": "string"
+          },
+          "work_capacity": {
+            "description": "Daily work capacity, for example PT7H",
+            "type": "string"
+          },
+          "working_days": {
+            "description": "Array of working day enum strings; live Clockify rejects a JSON-encoded string here.",
+            "items": {
+              "enum": [
+                "MONDAY",
+                "TUESDAY",
+                "WEDNESDAY",
+                "THURSDAY",
+                "FRIDAY",
+                "SATURDAY",
+                "SUNDAY"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_update_member_profile",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Update Member Profile"
       }
     },
     {

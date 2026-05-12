@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -30,7 +31,7 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"total": 2,
 				"invoices": []map[string]any{
-					{"id": "inv1", "status": "DRAFT"},
+					{"id": "inv1", "status": "UNSENT"},
 					{"id": "inv2", "status": "PAID"},
 				},
 			})
@@ -41,16 +42,32 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 				"number":     "INV-1",
 				"issuedDate": "2026-04-01T00:00:00Z",
 				"dueDate":    "2026-05-01T00:00:00Z",
-				"status":     "DRAFT",
+				"status":     "UNSENT",
 				"currency":   "USD",
 				"items":      []map[string]any{{"id": "item1", "description": "Hour"}},
 			})
+		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/invoices/inv1/export":
+			if got := r.URL.Query().Get("userLocale"); got != "en-US" {
+				t.Fatalf("expected export userLocale=en-US, got %q", got)
+			}
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF invoice"))
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices":
-			respondJSON(t, w, map[string]any{"id": "inv-new", "clientId": "c1", "status": "DRAFT"})
+			respondJSON(t, w, map[string]any{"id": "inv-new", "clientId": "c1", "status": "UNSENT"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			var body map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&body)
-			respondJSON(t, w, map[string]any{"id": "inv1", "status": body["status"], "currency": body["currency"]})
+			if _, ok := body["status"]; ok {
+				t.Fatalf("invoice status must not be sent in PUT body: %#v", body)
+			}
+			respondJSON(t, w, map[string]any{"id": "inv1", "status": "UNSENT", "currency": body["currency"]})
+		case r.Method == "PATCH" && r.URL.Path == "/workspaces/ws1/invoices/inv1/status":
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["invoiceStatus"] == "" {
+				t.Fatalf("expected invoiceStatus patch body, got %#v", body)
+			}
+			respondJSON(t, w, map[string]any{"ok": true})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			w.WriteHeader(http.StatusNoContent)
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices/inv1/send":
@@ -79,7 +96,15 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	res, err = svc.getInvoice(ctx, map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_get_invoice")
 
-	// 2b. getInvoice — validation error (empty id)
+	// 2b. exportInvoice — defaults user_locale to en-US
+	res, err = svc.exportInvoice(ctx, map[string]any{"invoice_id": "inv1"})
+	mustOK(t, res, err, "clockify_export_invoice")
+	raw, ok := res.Data.(map[string]any)
+	if !ok || raw["body"] != base64.StdEncoding.EncodeToString([]byte("%PDF invoice")) {
+		t.Fatalf("exportInvoice data = %#v", res.Data)
+	}
+
+	// 2c. getInvoice — validation error (empty id)
 	if _, err := svc.getInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
@@ -233,15 +258,15 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// Sanity: at least 13 upstream requests (deleteInvoiceItem dry-run uses
+	// Sanity: at least 15 upstream requests (deleteInvoiceItem dry-run uses
 	// MinimalResult and does not hit the network).
-	if len(requests) < 13 {
-		t.Fatalf("expected at least 13 upstream requests, got %d: %+v", len(requests), requests)
+	if len(requests) < 15 {
+		t.Fatalf("expected at least 15 upstream requests, got %d: %+v", len(requests), requests)
 	}
 }
 
 // TestTier2_Invoices_GroupRegistration verifies the group is registered
-// in the Tier2Groups catalog and the Builder produces all 12 descriptors.
+// in the Tier2Groups catalog and the Builder produces all 13 descriptors.
 func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 	g, ok := Tier2Groups["invoices"]
 	if !ok {
@@ -252,8 +277,8 @@ func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 	}
 	svc := New(nil, "ws1")
 	descs := g.Builder(svc)
-	if len(descs) != 12 {
-		t.Fatalf("expected 12 invoice tools, got %d", len(descs))
+	if len(descs) != 13 {
+		t.Fatalf("expected 13 invoice tools, got %d", len(descs))
 	}
 	wantPrefix := "clockify_"
 	for _, d := range descs {
@@ -300,14 +325,11 @@ func TestTier2_Invoices_ListSendsStatusesNotStatus(t *testing.T) {
 	}
 }
 
-func TestMarkInvoicePaidMergesRequiredInvoiceFields(t *testing.T) {
-	var gotBody map[string]any
+func TestMarkInvoicePaidUsesStatusPatchBody(t *testing.T) {
+	var gotPatchBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1/invoices/inv1" {
-			t.Fatalf("unexpected request path: %s", r.URL.Path)
-		}
-		switch r.Method {
-		case http.MethodGet:
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			respondJSON(t, w, map[string]any{
 				"id":         "inv1",
 				"clientId":   "client1",
@@ -318,13 +340,15 @@ func TestMarkInvoicePaidMergesRequiredInvoiceFields(t *testing.T) {
 				"note":       "existing note",
 				"status":     "SENT",
 			})
-		case http.MethodPut:
-			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/ws1/invoices/inv1/status":
+			if err := json.NewDecoder(r.Body).Decode(&gotPatchBody); err != nil {
 				t.Fatalf("decode body: %v", err)
 			}
-			respondJSON(t, w, map[string]any{"id": "inv1", "status": gotBody["status"]})
+			respondJSON(t, w, map[string]any{"ok": true})
+		case r.Method == http.MethodPut:
+			t.Fatalf("markInvoicePaid must use PATCH status route, not PUT")
 		default:
-			t.Fatalf("unexpected method: %s", r.Method)
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 	})
 	defer cleanup()
@@ -333,19 +357,11 @@ func TestMarkInvoicePaidMergesRequiredInvoiceFields(t *testing.T) {
 	res, err := svc.markInvoicePaid(context.Background(), map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_mark_invoice_paid")
 
-	want := map[string]any{
-		"status":     "PAID",
-		"clientId":   "client1",
-		"number":     "INV-2026-001",
-		"issuedDate": "2026-05-01T00:00:00Z",
-		"dueDate":    "2026-05-15T00:00:00Z",
-		"currency":   "USD",
-		"note":       "existing note",
+	if gotPatchBody["invoiceStatus"] != "PAID" {
+		t.Fatalf("expected invoiceStatus=PAID patch body, got %#v", gotPatchBody)
 	}
-	for key, wantValue := range want {
-		if gotBody[key] != wantValue {
-			t.Fatalf("expected %s=%v in mark-paid body, got %#v", key, wantValue, gotBody)
-		}
+	if _, ok := gotPatchBody["status"]; ok {
+		t.Fatalf("status patch body must not use legacy status key: %#v", gotPatchBody)
 	}
 }
 
@@ -394,15 +410,22 @@ func TestCreateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 }
 
 func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
-	var gotBody map[string]any
+	var gotBody, gotPatchBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut || r.URL.Path != "/workspaces/ws1/invoices/inv1" {
+		switch {
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1":
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": "inv1"})
+		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/ws1/invoices/inv1/status":
+			if err := json.NewDecoder(r.Body).Decode(&gotPatchBody); err != nil {
+				t.Fatalf("decode patch body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"ok": true})
+		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
-			t.Fatalf("decode body: %v", err)
-		}
-		respondJSON(t, w, map[string]any{"id": "inv1"})
 	})
 	defer cleanup()
 
@@ -426,7 +449,6 @@ func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 		"currency":   "EUR",
 		"dueDate":    "2026-06-01T00:00:00Z",
 		"note":       "updated",
-		"status":     "SENT",
 	}
 	for key, wantValue := range want {
 		if gotBody[key] != wantValue {
@@ -437,6 +459,12 @@ func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 		if _, ok := gotBody[legacy]; ok {
 			t.Fatalf("body must not include legacy key %q: %#v", legacy, gotBody)
 		}
+	}
+	if _, ok := gotBody["status"]; ok {
+		t.Fatalf("status must not be sent in invoice-field PUT body: %#v", gotBody)
+	}
+	if gotPatchBody["invoiceStatus"] != "SENT" {
+		t.Fatalf("expected split status patch invoiceStatus=SENT, got %#v", gotPatchBody)
 	}
 }
 
@@ -475,8 +503,49 @@ func TestInvoiceCreateAndUpdateDryRunAvoidsMutation(t *testing.T) {
 		t.Fatalf("update dry-run data = %#v", update.Data)
 	}
 	updatePayload, ok := updateData["payload"].(map[string]any)
-	if !ok || updatePayload["status"] != "SENT" {
+	statusPayload, _ := updatePayload["status_update"].(map[string]any)
+	if !ok || statusPayload["invoiceStatus"] != "SENT" {
 		t.Fatalf("update dry-run payload = %#v", updateData["payload"])
+	}
+}
+
+func TestInvoiceStatusValidationRejectsDraft(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("DRAFT validation must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateInvoice(context.Background(), map[string]any{
+		"invoice_id": "inv1",
+		"status":     "DRAFT",
+	})
+	if err == nil || !strings.Contains(err.Error(), "use UNSENT") {
+		t.Fatalf("expected actionable DRAFT rejection, got %v", err)
+	}
+}
+
+func TestExportInvoiceDefaultsUserLocale(t *testing.T) {
+	var gotQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/inv1/export" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotQuery = r.URL.Query()
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write([]byte("%PDF default locale"))
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.exportInvoice(context.Background(), map[string]any{"invoice_id": "inv1"})
+	mustOK(t, res, err, "clockify_export_invoice")
+	if got := gotQuery.Get("userLocale"); got != "en-US" {
+		t.Fatalf("expected default userLocale=en-US, got %q", got)
+	}
+	data, ok := res.Data.(map[string]any)
+	if !ok || data["body"] != base64.StdEncoding.EncodeToString([]byte("%PDF default locale")) {
+		t.Fatalf("expected base64 raw export envelope, got %#v", res.Data)
 	}
 }
 

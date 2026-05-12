@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -25,6 +26,8 @@ func init() {
 			"clockify_remove_user_from_group",
 			"clockify_update_user_role",
 			"clockify_deactivate_user",
+			"clockify_get_member_profile",
+			"clockify_update_member_profile",
 		},
 		Builder: userAdminHandlers,
 	})
@@ -159,7 +162,90 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.DeactivateUser(ctx, args)
 			},
 		},
+		// 9. Get member profile (RO)
+		{
+			Tool: toolRO("clockify_get_member_profile", "Get a user's workspace-scoped member profile", map[string]any{
+				"type":     "object",
+				"required": []string{"user_id"},
+				"properties": map[string]any{
+					"user_id": map[string]any{"type": "string", "description": "User ID"},
+				},
+			}),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.GetMemberProfile(ctx, args)
+			},
+		},
+		// 10. Update member profile (RW)
+		{
+			Tool: toolRW("clockify_update_member_profile", "Update a user's workspace-scoped member profile. Supports dry_run:true.", map[string]any{
+				"type":     "object",
+				"required": []string{"user_id"},
+				"properties": map[string]any{
+					"user_id":              map[string]any{"type": "string", "description": "User ID"},
+					"name":                 map[string]any{"type": "string", "description": "Profile display name"},
+					"image_url":            map[string]any{"type": "string", "description": "Profile image URL"},
+					"remove_profile_image": map[string]any{"type": "boolean", "description": "Remove the profile image"},
+					"week_start":           map[string]any{"type": "string", "enum": memberProfileDayEnums(), "description": "First day of the week"},
+					"work_capacity":        map[string]any{"type": "string", "description": "Daily work capacity, for example PT7H"},
+					"working_days": map[string]any{
+						"type":        "array",
+						"description": "Array of working day enum strings; live Clockify rejects a JSON-encoded string here.",
+						"items":       map[string]any{"type": "string", "enum": memberProfileDayEnums()},
+					},
+					"user_custom_fields": map[string]any{
+						"type":        "array",
+						"description": "Member profile custom field values",
+						"items":       map[string]any{"type": "object", "additionalProperties": true},
+					},
+					"dry_run": map[string]any{"type": "boolean", "description": "Preview the profile payload without applying it"},
+				},
+			}),
+			ReadOnlyHint: false,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.UpdateMemberProfile(ctx, args)
+			},
+		},
 	}
+}
+
+var validMemberProfileDays = map[string]bool{
+	"MONDAY":    true,
+	"TUESDAY":   true,
+	"WEDNESDAY": true,
+	"THURSDAY":  true,
+	"FRIDAY":    true,
+	"SATURDAY":  true,
+	"SUNDAY":    true,
+}
+
+func memberProfileDayEnums() []string {
+	return []string{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"}
+}
+
+func normalizeMemberProfileDay(raw, field string) (string, error) {
+	day := strings.ToUpper(strings.TrimSpace(raw))
+	if day == "" {
+		return "", nil
+	}
+	if !validMemberProfileDays[day] {
+		return "", fmt.Errorf("%s must be one of MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY; got %q", field, raw)
+	}
+	return day, nil
+}
+
+func normalizeMemberProfileDays(raw []string, field string) ([]string, error) {
+	days := make([]string, 0, len(raw))
+	for _, item := range raw {
+		day, err := normalizeMemberProfileDay(item, field)
+		if err != nil {
+			return nil, err
+		}
+		if day != "" {
+			days = append(days, day)
+		}
+	}
+	return days, nil
 }
 
 // ListUserGroups returns user groups for the workspace.
@@ -491,6 +577,92 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 
 	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
 	return ok("clockify_deactivate_user", result, map[string]any{
+		"workspaceId": wsID,
+		"userId":      userID,
+	}), nil
+}
+
+// GetMemberProfile returns a workspace-scoped member profile for a user.
+func (s *Service) GetMemberProfile(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	userID := stringArg(args, "user_id")
+	if err := resolve.ValidateID(userID, "user_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "member-profile", userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var result map[string]any
+	if err := s.Client.Get(ctx, path, nil, &result); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_get_member_profile", result, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+}
+
+// UpdateMemberProfile updates live-supported workspace member profile fields.
+func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	userID := stringArg(args, "user_id")
+	if err := resolve.ValidateID(userID, "user_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	payload := map[string]any{}
+	setIfString(payload, args, "name", "name")
+	setIfString(payload, args, "image_url", "imageUrl")
+	setIfBool(payload, args, "remove_profile_image", "removeProfileImage")
+	setIfString(payload, args, "work_capacity", "workCapacity")
+	if weekStart := stringArg(args, "week_start"); strings.TrimSpace(weekStart) != "" {
+		day, err := normalizeMemberProfileDay(weekStart, "week_start")
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		payload["weekStart"] = day
+	}
+	if workingDays, ok, err := strictStringSliceArg(args, "working_days"); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		days, err := normalizeMemberProfileDays(workingDays, "working_days")
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		payload["workingDays"] = days
+	}
+	if customFields, ok, err := mapSliceArg(args, "user_custom_fields"); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		payload["userCustomFields"] = customFields
+	}
+	if len(payload) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("at least one member profile field must be provided")
+	}
+
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_member_profile", dryrunPreviewPayload("clockify_update_member_profile", payload), map[string]any{
+			"workspaceId": wsID,
+			"userId":      userID,
+		}), nil
+	}
+
+	path, err := paths.Workspace(wsID, "member-profile", userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var result map[string]any
+	if err := s.Client.Patch(ctx, path, payload, &result); err != nil {
+		return ResultEnvelope{}, err
+	}
+	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
+	return ok("clockify_update_member_profile", result, map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
 	}), nil

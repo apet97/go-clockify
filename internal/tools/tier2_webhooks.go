@@ -395,6 +395,63 @@ func webhookTriggerSourceArgs(args map[string]any, workspaceID string) (string, 
 	return sourceType, source
 }
 
+func webhookUserEventRequiresUserSource(event string) bool {
+	switch strings.ToUpper(strings.TrimSpace(event)) {
+	case "USER_EMAIL_CHANGED", "USER_UPDATED":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateWebhookUserEventTriggerSource(event, sourceType string, source []string) error {
+	if !webhookUserEventRequiresUserSource(event) {
+		return nil
+	}
+	if strings.ToUpper(strings.TrimSpace(sourceType)) != "USER_ID" {
+		return fmt.Errorf("%s webhooks require trigger_source_type=USER_ID and a nonempty trigger_source user id", strings.ToUpper(strings.TrimSpace(event)))
+	}
+	for _, item := range source {
+		if strings.TrimSpace(item) != "" {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s webhooks require trigger_source_type=USER_ID and a nonempty trigger_source user id", strings.ToUpper(strings.TrimSpace(event)))
+}
+
+func webhookStringFromPayload(payload map[string]any, key string) string {
+	if v, ok := payload[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func webhookStringSliceFromPayload(payload map[string]any, key string) []string {
+	raw, ok := payload[key]
+	if !ok {
+		return nil
+	}
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return nil
+		}
+		return []string{v}
+	default:
+		return nil
+	}
+}
+
 // ListWebhooks returns webhooks for the workspace.
 func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -509,6 +566,9 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	triggerSourceType, triggerSource := webhookTriggerSourceArgs(args, wsID)
+	if err := validateWebhookUserEventTriggerSource(webhookEvent, triggerSourceType, triggerSource); err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	payload := map[string]any{
 		"url":               url,
@@ -596,6 +656,13 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 
 	if !changed {
 		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name, auth_token) must be provided for update")
+	}
+	if err := validateWebhookUserEventTriggerSource(
+		webhookStringFromPayload(payload, "webhookEvent"),
+		webhookStringFromPayload(payload, "triggerSourceType"),
+		webhookStringSliceFromPayload(payload, "triggerSource"),
+	); err != nil {
+		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
 		current := maps.Clone(existing)

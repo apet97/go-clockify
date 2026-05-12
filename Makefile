@@ -4,7 +4,7 @@
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench bench-baseline-check \
         build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
-        gen-tool-catalog catalog-drift gen-openapi openapi-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
+        gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
         grpc-release-parity \
 	repo-hygiene script-tests actionlint shellcheck live-contract-local \
 	release-check rc-evidence rc-evidence-plan launch-external-status public-content-audit \
@@ -46,7 +46,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift coverage-matrix-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -151,6 +151,9 @@ repo-hygiene:
 #     catalog gains a Tier-2 or API-backed Tier-1 tool that is not at
 #     least named by the livee2e source bundle. Static guard only:
 #     scheduled cron runs remain the authoritative launch evidence.
+#   - openapi-live-overrides.sh — pins live Clockify schema overrides
+#     in the generated OpenAPI file, the phantom-path quarantine, and
+#     zero uncovered operations in the generated coverage matrix.
 #   - collect-license-evidence.sh — prints raw `go list -deps` module
 #     graphs and local license-file candidates for release/build-tag
 #     variants. Legal/product review still decides whether the evidence
@@ -173,6 +176,7 @@ script-tests:
 	bash scripts/test-check-public-content-audit.sh
 	bash scripts/test-check-go-version-parity.sh
 	bash scripts/test-check-live-tool-coverage.sh
+	bash scripts/test-openapi-live-overrides.sh
 	bash scripts/test-collect-license-evidence.sh
 	bash scripts/test-prepare-rc-evidence.sh
 	bash scripts/test-publish-npm.sh
@@ -281,6 +285,25 @@ catalog-drift:
 	  && diff -q docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before" >/dev/null \
 	  || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale — run \`make gen-tool-catalog\` and commit"; \
 	       diff -u "$$tmpdir/tool-catalog.md.before" docs/tool-catalog.md | head -80; exit 1; }
+
+# gen-coverage-matrix joins the OpenAPI, tool catalog, api-coverage
+# ledger, the raw documented-API allowlist, and tests/e2e_live* live
+# invocations into docs/openapi/coverage-matrix.{json,md}.
+gen-coverage-matrix:
+	python3 scripts/gen-coverage-matrix
+
+# coverage-matrix-drift re-runs the matrix generator and fails if the
+# committed artifact drifted.
+coverage-matrix-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before" 2>/dev/null || true; \
+	 cp docs/openapi/coverage-matrix.md   "$$tmpdir/coverage-matrix.md.before"   2>/dev/null || true; \
+	 $(MAKE) --no-print-directory gen-coverage-matrix >/dev/null; \
+	 diff -q docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before" >/dev/null \
+	  && diff -q docs/openapi/coverage-matrix.md   "$$tmpdir/coverage-matrix.md.before"   >/dev/null \
+	  || { echo "[coverage-matrix-drift] docs/openapi/coverage-matrix.{json,md} are stale — run \`make gen-coverage-matrix\` and commit"; \
+	       diff -u "$$tmpdir/coverage-matrix.md.before" docs/openapi/coverage-matrix.md | head -80; exit 1; }
 
 verify-vuln:
 	@go_pin="$$(awk '$$1 == "go" { print $$2; exit }' go.mod)"; \

@@ -17,8 +17,8 @@ func TestInvoiceHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("invoices group not registered")
 	}
-	if len(descs) != 12 {
-		t.Fatalf("expected 12 invoice tools, got %d", len(descs))
+	if len(descs) != 13 {
+		t.Fatalf("expected 13 invoice tools, got %d", len(descs))
 	}
 
 	names := map[string]bool{}
@@ -28,6 +28,7 @@ func TestInvoiceHandlersCount(t *testing.T) {
 	for _, want := range []string{
 		"clockify_list_invoices",
 		"clockify_get_invoice",
+		"clockify_export_invoice",
 		"clockify_create_invoice",
 		"clockify_update_invoice",
 		"clockify_delete_invoice",

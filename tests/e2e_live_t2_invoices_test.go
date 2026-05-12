@@ -60,6 +60,9 @@ func TestLiveT2InvoicesCRUD(t *testing.T) {
 	if gotID, _ := extractDataMap(t, got)["id"].(string); gotID != invoiceID {
 		t.Fatalf("clockify_get_invoice id mismatch: got %q want %q", gotID, invoiceID)
 	}
+	_ = h.callOK(ctx, "clockify_export_invoice", map[string]any{
+		"invoice_id": invoiceID,
+	})
 
 	updated := h.callOK(ctx, "clockify_update_invoice", map[string]any{
 		"invoice_id":  invoiceID,
@@ -73,6 +76,10 @@ func TestLiveT2InvoicesCRUD(t *testing.T) {
 	if updatedID, _ := extractDataMap(t, updated)["id"].(string); updatedID != invoiceID {
 		t.Fatalf("clockify_update_invoice id mismatch: got %q want %q", updatedID, invoiceID)
 	}
+	_ = h.callOK(ctx, "clockify_update_invoice", map[string]any{
+		"invoice_id": invoiceID,
+		"status":     "SENT",
+	})
 
 	item := h.callOK(ctx, "clockify_add_invoice_item", map[string]any{
 		"invoice_id":  invoiceID,

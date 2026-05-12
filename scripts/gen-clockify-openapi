@@ -350,12 +350,37 @@ end
 def status_bucket(status, text)
   lowered = text.to_s.downcase
   return "live-success" if status && status >= 200 && status < 300
-  return "workspace-state-limited" if lowered.match?(/archive|active|workspace-state|in-use|cap|limit/)
+  # 4xx with "No static resource" upstream body means the path itself
+  # does not exist (Clockify error code 3000). That's not a workspace-
+  # state limit; treat as fully unsupported / phantom so callers can
+  # decide to quarantine the path. The /cap/ keyword used to match
+  # /scheduling/capacity by accident — narrow it to whole words.
+  return "unsupported" if status && [400, 404, 405, 409, 415, 422].include?(status) &&
+                          lowered.match?(/no static resource|"code":\s*3000/)
+  return "workspace-state-limited" if lowered.match?(/archive|active|workspace-state|in-use|\bcap-skipped\b|\bcap\s|\blimit\b/)
   return "permission-gated" if lowered.match?(/permission|plan|membership|owner|forbidden|not allowed|requires/)
   return "unsupported" if status && [400, 404, 405, 409, 415, 422].include?(status)
   return "documented" unless status
 
   "live-validated-error"
+end
+
+# Phantom-path quarantine. Any (method, path) listed here is dropped
+# from the merged contract because some upstream evidence source guesses
+# at a route that Clockify does not actually serve (the canonical signal
+# is a 404 body containing "No static resource" / Clockify error 3000).
+# Keep this list short and justify each entry.
+PHANTOM_PATHS = [
+  # /workspaces/{workspaceId}/scheduling/capacity — present in
+  # clockify-api-probe-lab/openapi.yaml as a hand-written guess, but the
+  # adjacent probe fixture proves Clockify responds with
+  # {"message":"No static resource v1/workspaces/{ws}/scheduling/capacity.","code":3000}.
+  # The realOPENAPI/SCHEDULINGOPENAPI.YAML does not list it.
+  ["get", "/workspaces/{workspaceId}/scheduling/capacity"]
+].freeze
+
+def phantom_path?(method, path)
+  PHANTOM_PATHS.include?([method.downcase, path])
 end
 
 def host_from_source(value)
@@ -833,6 +858,13 @@ class Merger
   end
 
   def add_operation(method, path, op, source:, domain:, host:, evidence:, priority:)
+    if phantom_path?(method, path)
+      @quarantine << {
+        "source" => source,
+        "reason" => "phantom path quarantined (#{method.upcase} #{path}): see PHANTOM_PATHS in scripts/gen-clockify-openapi"
+      }
+      return
+    end
     op = deep_copy(op)
     op["operationId"] = operation_id(method, path, @used_operation_ids) if op["operationId"].to_s.empty?
     op["tags"] = [tag_for_domain(domain)] if Array(op["tags"]).empty?
@@ -1031,6 +1063,171 @@ def validate_document(doc, repo_root = nil)
   errors
 end
 
+DAY_ENUM = %w[MONDAY TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY SUNDAY].freeze
+LIVE_INVOICE_STATUS_ENUM = %w[UNSENT SENT PAID PARTIALLY_PAID VOID OVERDUE].freeze
+
+def schema_properties(doc, name)
+  schema = doc.dig("components", "schemas", name)
+  return nil unless schema.is_a?(Hash)
+
+  schema["properties"] ||= {}
+end
+
+def operation_for(doc, path, method)
+  doc.dig("paths", path, method)
+end
+
+def append_text!(target, key, text)
+  existing = target[key].to_s.strip
+  return if existing.include?(text)
+
+  target[key] = existing.empty? ? text : "#{existing}\n#{text}"
+end
+
+def append_operation_note!(op, note)
+  return unless op.is_a?(Hash)
+
+  notes = Array(op["x-clockify-notes"])
+  notes << note unless notes.include?(note)
+  op["x-clockify-notes"] = notes
+end
+
+def ensure_query_parameter!(op, name, schema:, required: false, description: nil)
+  op["parameters"] ||= []
+  existing = op["parameters"].find { |param| param.is_a?(Hash) && param["in"] == "query" && param["name"] == name }
+  if existing
+    existing["required"] = required
+    existing["schema"] = schema
+    existing["description"] = description if description
+    return
+  end
+
+  param = {
+    "in" => "query",
+    "name" => name,
+    "required" => required,
+    "schema" => schema
+  }
+  param["description"] = description if description
+  op["parameters"] << param
+end
+
+def apply_live_overrides!(doc)
+  if (props = schema_properties(doc, "SummaryReportResponse"))
+    props.delete("chart")
+    props["donutChart"] = {
+      "description" => "Live summary reports return donutChart instead of the stale chart key.",
+      "items" => {"type" => "object", "additionalProperties" => true},
+      "type" => "array"
+    }
+    props["groupTotals"] = {
+      "description" => "Live summary report group total counters.",
+      "additionalProperties" => true,
+      "properties" => {
+        "groupOneTotalCount" => {"type" => "integer"},
+        "groupTwoTotalCount" => {"type" => "integer"}
+      },
+      "type" => "object"
+    }
+  end
+
+  %w[MemberProfileUpdateRequest MemberProfileDtoV1].each do |schema_name|
+    next unless (props = schema_properties(doc, schema_name))
+
+    props["workingDays"] = {
+      "description" => "Live Clockify serializes working days as an array of day enum strings; JSON-encoded strings are rejected.",
+      "items" => {"type" => "string", "enum" => DAY_ENUM},
+      "type" => "array"
+    }
+  end
+
+  if (props = schema_properties(doc, "UserDtoV1"))
+    props["roles"] = {
+      "description" => "Included when user responses request role details; shape varies by workspace role surface.",
+      "items" => {"type" => "object", "additionalProperties" => true},
+      "type" => "array"
+    }
+  end
+
+  if (props = schema_properties(doc, "WebhookDtoV1"))
+    %w[entityType feature payloadType validSourceTypes].each { |field| props.delete(field) }
+    append_text!(doc.dig("components", "schemas", "WebhookDtoV1"), "description", "Live webhook records do not return entityType, feature, payloadType, or validSourceTypes.")
+  end
+
+  if (schema = doc.dig("components", "schemas", "WebhookRequest"))
+    append_text!(schema, "description", "For USER_EMAIL_CHANGED and USER_UPDATED, live Clockify requires triggerSourceType USER_ID and a nonempty triggerSource user id.")
+    props = schema["properties"] || {}
+    append_text!(props["triggerSourceType"], "description", "USER_EMAIL_CHANGED and USER_UPDATED require USER_ID.") if props["triggerSourceType"].is_a?(Hash)
+    append_text!(props["triggerSource"], "description", "USER_EMAIL_CHANGED and USER_UPDATED require at least one user id.") if props["triggerSource"].is_a?(Hash)
+  end
+
+  if (schema = doc.dig("components", "schemas", "InvoiceStatus"))
+    schema["description"] = "Represents the live status of an invoice. DRAFT is rejected by Clockify; use UNSENT for draft-like invoices."
+    schema["enum"] = LIVE_INVOICE_STATUS_ENUM
+    schema["type"] = "string"
+  end
+  if (schema = doc.dig("components", "schemas", "InvoiceStatusRequest"))
+    schema["properties"] ||= {}
+    schema["properties"]["invoiceStatus"] = {"$ref" => "#/components/schemas/InvoiceStatus"}
+    schema["required"] = ["invoiceStatus"]
+  end
+  if (op = operation_for(doc, "/workspaces/{workspaceId}/invoices/{invoiceId}/export", "get"))
+    ensure_query_parameter!(
+      op,
+      "userLocale",
+      required: true,
+      schema: {"type" => "string", "default" => "en-US"},
+      description: "Required by live Clockify invoice export; the MCP defaults it to en-US."
+    )
+  end
+
+  if (schema = doc.dig("components", "schemas", "CreateWorkspaceRequest"))
+    schema["required"] = Array(schema["required"]).push("organizationId").uniq
+  end
+
+  if (op = operation_for(doc, "/workspaces/{workspaceId}/holidays/in-period", "get"))
+    Array(op["parameters"]).each do |param|
+      next unless param.is_a?(Hash) && param["in"] == "query" && param["name"] == "assigned-to"
+
+      param["required"] = true
+      append_text!(param, "description", "Required by live Clockify for in-period holiday lookup.")
+    end
+    append_operation_note!(op, "Live Clockify returns 500 for unknown assigned-to user ids instead of a clean 4xx.")
+  end
+
+  if (props = schema_properties(doc, "ExpenseCategoryDtoV1"))
+    props["status"] = {
+      "description" => "Live expense category responses may include status:null.",
+      "nullable" => true,
+      "type" => "string"
+    }
+  end
+  if (props = schema_properties(doc, "ExpenseDtoV1"))
+    append_text!(props["quantity"], "description", "Create/update requests use amount; live expense responses expose the entered amount as quantity and the computed value as total.") if props["quantity"].is_a?(Hash)
+  end
+  if (props = schema_properties(doc, "ExpenseCreateRequest"))
+    append_text!(props["amount"], "description", "Live expense responses expose this value as quantity.") if props["amount"].is_a?(Hash)
+  end
+
+  [
+    ["/workspaces/{workspaceId}/policies/{policyId}", "delete", "Live Clockify requires archiving a time-off policy before deletion."],
+    ["/workspaces/{workspaceId}/time-off/policies/{policyId}", "delete", "Live Clockify requires archiving a time-off policy before deletion."],
+    ["/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}", "delete", "Live Clockify requires marking some tasks DONE before deletion."]
+  ].each do |path, method, note|
+    append_operation_note!(operation_for(doc, path, method), note)
+  end
+  %w[
+    /workspaces/{workspaceId}/policies/{policyId}
+    /workspaces/{workspaceId}/time-off/policies/{policyId}
+  ].each do |path|
+    append_operation_note!(operation_for(doc, path, "put"), "Policy update payloads should preserve non-null automaticTimeEntryCreation values observed from GET before PUT.")
+  end
+
+  if (op = operation_for(doc, "/workspaces/{workspaceId}/webhooks", "get"))
+    append_operation_note!(op, "Clockify currently returns 500 for webhooks?type=SYSTEM.")
+  end
+end
+
 def write_yaml(path, doc)
   FileUtils.mkdir_p(File.dirname(path))
   payload = YAML.dump(JSON.parse(JSON.generate(doc))).sub(/\A---\n/, "")
@@ -1087,6 +1284,7 @@ mcp_mapping, tool_risks, tool_meta = discover_mcp_mapping(options)
 merger.apply_metadata(findings, mcp_mapping, tool_risks, tool_meta)
 
 doc = merger.document
+apply_live_overrides!(doc)
 redact_sensitive_examples!(doc)
 errors = validate_document(doc, options[:repo_root])
 abort(errors.join("\n")) unless errors.empty?

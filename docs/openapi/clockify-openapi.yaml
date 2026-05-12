@@ -3031,7 +3031,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - description: Filter list of holidays assigned to user.
+      - description: |-
+          Filter list of holidays assigned to user.
+          Required by live Clockify for in-period holiday lookup.
         example: 60f924bafdaf031696ec6218
         in: query
         name: assigned-to
@@ -3101,6 +3103,8 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /api/v1/workspaces/{ws}/holidays/in-period | 200
         | fixtures/holidays/in-period.json |"
+      - Live Clockify returns 500 for unknown assigned-to user ids instead of a clean
+        4xx.
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -3903,6 +3907,14 @@ paths:
         required: true
         schema:
           type: string
+      - in: query
+        name: userLocale
+        required: true
+        schema:
+          type: string
+          default: en-US
+        description: Required by live Clockify invoice export; the MCP defaults it
+          to en-US.
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceExportResponse"
@@ -4640,6 +4652,9 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-clockify-notes:
+      - Policy update payloads should preserve non-null automaticTimeEntryCreation
+        values observed from GET before PUT.
     delete:
       tags:
       - Policy
@@ -4671,6 +4686,8 @@ paths:
       - destructive
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-clockify-notes:
+      - Live Clockify requires archiving a time-off policy before deletion.
   "/workspaces/{workspaceId}/policies/{policyId}/archive":
     patch:
       tags:
@@ -7402,6 +7419,7 @@ paths:
         `cl"
       - "| `clockify_delete_task` | `GET` + optional `PUT status=DONE` + `DELETE /workspaces/{ws}/projects/{id}/tasks/{tid}`
         | unit, dry-run |"
+      - Live Clockify requires marking some tasks DONE before deletion.
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -9550,50 +9568,6 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
-  "/workspaces/{workspaceId}/scheduling/capacity":
-    get:
-      tags:
-      - Scheduling
-      summary: User capacity for a window
-      operationId: getWorkspacesWorkspaceIdSchedulingCapacity
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: query
-        name: start
-        required: true
-        schema:
-          format: date-time
-          type: string
-      - in: query
-        name: end
-        required: true
-        schema:
-          format: date-time
-          type: string
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      - workspace-state-limited
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: workspace-state-limited
-      x-clockify-mcp-tools: []
-      x-clockify-notes:
-      - "| GET | api.clockify.me | /api/v1/workspaces/{ws}/scheduling/capacity | 404
-        | fixtures/scheduling/api__workspaces_{ws}_scheduling_capacity.json |"
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/findings/scheduling.md
-      - clockify-api-probe-lab/openapi.yaml
   "/workspaces/{workspaceId}/shared-reports":
     get:
       tags:
@@ -11310,6 +11284,9 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-clockify-notes:
+      - Policy update payloads should preserve non-null automaticTimeEntryCreation
+        values observed from GET before PUT.
     patch:
       tags:
       - Time Off Policies
@@ -11459,6 +11436,8 @@ paths:
       - clockify-api-probe-lab/POLICIESDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-clockify-notes:
+      - Live Clockify requires archiving a time-off policy before deletion.
   "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests":
     post:
       tags:
@@ -14198,6 +14177,7 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{ws}/webhooks | 200 | fixtures/webhooks/list-page1.json
         |"
+      - Clockify currently returns 500 for webhooks?type=SYSTEM.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -16796,6 +16776,7 @@ components:
           type: string
       required:
       - name
+      - organizationId
       type: object
     Currency:
       description: ISO 4217 currency code
@@ -17708,6 +17689,10 @@ components:
           default: "##default"
           description: Represents workspace identifier across the system.
           type: string
+        status:
+          description: Live expense category responses may include status:null.
+          nullable: true
+          type: string
       type: object
     ExpenseCategoryRequest:
       description: Request body for adding or updating an expense category.
@@ -17764,7 +17749,9 @@ components:
         userId: 89b687e29ae1f428e7ebe912
       properties:
         amount:
-          description: Represents an expense amount as the double data type.
+          description: |-
+            Represents an expense amount as the double data type.
+            Live expense responses expose this value as quantity.
           format: double
           maximum: 92233720368547760
           type: number
@@ -17885,7 +17872,9 @@ components:
           description: Represents project identifier across the system.
           type: string
         quantity:
-          description: Represents expense quantity as double data type.
+          description: |-
+            Represents expense quantity as double data type.
+            Create/update requests use amount; live expense responses expose the entered amount as quantity and the computed value as total.
           format: double
           type: number
         taskId:
@@ -19394,7 +19383,8 @@ components:
       - BALANCE
       type: string
     InvoiceStatus:
-      description: Represents the status of an invoice.
+      description: Represents the live status of an invoice. DRAFT is rejected by
+        Clockify; use UNSENT for draft-like invoices.
       enum:
       - UNSENT
       - SENT
@@ -19611,8 +19601,19 @@ components:
             format.
           type: string
         workingDays:
-          description: Represents a list of days of the week.
-          type: string
+          description: Live Clockify serializes working days as an array of day enum
+            strings; JSON-encoded strings are rejected.
+          items:
+            type: string
+            enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+          type: array
         workspaceNumber:
           description: Represents the number of workspace(s) the user is associated
             to.
@@ -19649,8 +19650,19 @@ components:
             For example, PT7H.
           type: string
         workingDays:
-          description: Represents a list of days of the week.
-          type: string
+          description: Live Clockify serializes working days as an array of day enum
+            strings; JSON-encoded strings are rejected.
+          items:
+            type: string
+            enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+          type: array
       type: object
     MembershipDtoV1:
       additionalProperties: false
@@ -21077,11 +21089,6 @@ components:
       additionalProperties: true
       description: Summary report response.
       properties:
-        chart:
-          description: List of summary report charts.
-          items:
-            "$ref": "#/components/schemas/SummaryReportChartDto"
-          type: array
         groupOne:
           description: List of top-level groups.
           items:
@@ -21092,6 +21099,22 @@ components:
           items:
             "$ref": "#/components/schemas/TimeEntryReportTotals"
           type: array
+        donutChart:
+          description: Live summary reports return donutChart instead of the stale
+            chart key.
+          items:
+            type: object
+            additionalProperties: true
+          type: array
+        groupTotals:
+          description: Live summary report group total counters.
+          additionalProperties: true
+          properties:
+            groupOneTotalCount:
+              type: integer
+            groupTwoTotalCount:
+              type: integer
+          type: object
       type: object
     SummaryReportSettingsDtoV1:
       description: Represents a summary report settings object.
@@ -23112,6 +23135,13 @@ components:
           "$ref": "#/components/schemas/UserSettingsDtoV1"
         status:
           "$ref": "#/components/schemas/AccountStatus"
+        roles:
+          description: Included when user responses request role details; shape varies
+            by workspace role surface.
+          items:
+            type: object
+            additionalProperties: true
+          type: array
       type: object
     UserFilterRequest:
       description: Request body for filtering workspace users.
@@ -23607,10 +23637,6 @@ components:
           default: false
           description: Indicates whether webhook is enabled or not.
           type: boolean
-        entityType:
-          "$ref": "#/components/schemas/WebhookEntityType"
-        feature:
-          "$ref": "#/components/schemas/Feature"
         id:
           description: Represents webhook identifier across the system.
           type: string
@@ -23619,8 +23645,6 @@ components:
           description: Represents webhook name.
           type: string
           x-sourceDefault: "##default"
-        payloadType:
-          "$ref": "#/components/schemas/WebhookPayloadType"
         planEnabled:
           default: false
           description: Indicates whether webhook is supported by current plan. It
@@ -23644,10 +23668,6 @@ components:
           description: Represents user identifier across the system.
           type: string
           x-sourceDefault: "##default"
-        validSourceTypes:
-          items:
-            "$ref": "#/components/schemas/WebhookEventTriggerSourceType"
-          type: array
         webhookEvent:
           "$ref": "#/components/schemas/WebhookEventType"
         workspaceId:
@@ -23655,6 +23675,8 @@ components:
           type: string
           x-sourceDefault: "##default"
       type: object
+      description: Live webhook records do not return entityType, feature, payloadType,
+        or validSourceTypes.
     WebhookEntityType:
       enum:
       - AUTH
@@ -23885,13 +23907,16 @@ components:
           type: string
           x-sourceDefault: "##default"
         triggerSource:
-          description: Represents a list of trigger sources.
+          description: |-
+            Represents a list of trigger sources.
+            USER_EMAIL_CHANGED and USER_UPDATED require at least one user id.
           items:
             type: string
           type: array
           x-sourceDefault: "##default"
         triggerSourceType:
           "$ref": "#/components/schemas/WebhookEventTriggerSourceType"
+          description: USER_EMAIL_CHANGED and USER_UPDATED require USER_ID.
         url:
           description: Represents a webhook target url.
           format: uri
@@ -23907,6 +23932,8 @@ components:
       - url
       - webhookEvent
       type: object
+      description: For USER_EMAIL_CHANGED and USER_UPDATED, live Clockify requires
+        triggerSourceType USER_ID and a nonempty triggerSource user id.
     WebhookType:
       enum:
       - USER_CREATED
@@ -24649,6 +24676,9 @@ x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi-fragments/time-off-a.yaml
   reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/time-off-a.yaml):
     mapping values are not allowed in this context at line 61 column 53"
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
   reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi_scheduling.yaml):
     mapping values are not allowed in this context at line 4 column 154"

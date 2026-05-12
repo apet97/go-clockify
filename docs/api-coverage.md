@@ -193,7 +193,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/groups/*`, `/workspace
 | `clockify_list_user_groups_admin` | read-only | unit |
 | `clockify_update_user_group_admin` | mutating | unit |
 
-### `invoices` (12 tools)
+### `invoices` (13 tools)
 
 Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 
@@ -203,20 +203,27 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 | `clockify_create_invoice` | mutating | `billing` | unit |
 | `clockify_delete_invoice` | destructive | `billing` | unit |
 | `clockify_delete_invoice_item` | destructive | `billing` | unit |
+| `clockify_export_invoice` | read-only | | unit + live (`TestLiveT2InvoicesCRUD`) |
 | `clockify_get_invoice` | read-only | | unit |
 | `clockify_invoice_report` | read-only | | unit |
 | `clockify_list_invoice_items` | read-only | | unit |
 | `clockify_list_invoices` | read-only | | unit |
-| `clockify_mark_invoice_paid` | mutating | `billing` | unit |
+| `clockify_mark_invoice_paid` | mutating | `billing` | unit + live (`TestLiveT2InvoicesCRUD`) |
 | `clockify_send_invoice` | mutating | `billing`, `external_side_effect` | unit |
-| `clockify_update_invoice` | mutating | `billing` | unit |
+| `clockify_update_invoice` | mutating | `billing` | unit + live (`TestLiveT2InvoicesCRUD`) |
 | `clockify_update_invoice_item` | mutating | `billing` | unit |
 
 ### `probe_lab_api` (4 tools)
 
-Clockify endpoints: allowlisted union of `realOPENAPI`, `/Users/15x/Downloads/AIII/openapi.yaml`, `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml`, probe-lab OpenAPI fragments, and all 19 `*DOC*.md` source files. The allowlist currently contains 208 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, entity-change reads, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense detailed report, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes.
+Clockify endpoints: allowlisted union of `realOPENAPI`, `/Users/15x/Downloads/AIII/openapi.yaml`, `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml`, probe-lab OpenAPI fragments, and all 19 `*DOC*.md` source files. The allowlist currently contains 207 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, entity-change reads, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense detailed report, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes. `GET /workspaces/{workspaceId}/scheduling/capacity` was removed on 2026-05-12 as a probe-lab guess that Clockify rejects with `{"code":3000,"message":"No static resource …"}`; the real per-user capacity surface is `/scheduling/assignments/users/{userId}/totals` via `clockify_filter_schedule_capacity`.
 
 This group is an allowlisted escape hatch for documented routes that do not yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}` resolves from the configured workspace unless `workspace_id` is supplied; non-workspace placeholders must be provided through `path_params`; `query` object values become query parameters; `json_body` is sent as upstream JSON; `form_body` is sent as multipart form fields; `raw_response` returns base64 payloads for export endpoints. The three caller tools are separated by method class so read, write, and destructive policy/risk handling remains visible; the write/delete callers carry broad billing/admin/permission-change/external-side-effect risk bits because the allowlist includes those route families.
+
+`make gen-coverage-matrix` writes `docs/openapi/coverage-matrix.{json,md}`
+from the generated OpenAPI, the typed tool catalog, this ledger, raw
+allowlist entries, and live-test source references. `make
+coverage-matrix-drift` is the drift gate; the current matrix contains
+192 OpenAPI operations and reports zero uncovered operations.
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
@@ -352,9 +359,9 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/time-off/*`
 | `clockify_update_time_off_policy` | mutating | unit |
 | `clockify_update_time_off_request` | mutating | unit |
 
-### `user_admin` (8 tools)
+### `user_admin` (10 tools)
 
-Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/users/*`, `/workspaces/{ws}/user-groups/*`
+Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/users/*`, `/workspaces/{ws}/user-groups/*`, `/workspaces/{ws}/member-profile/*`
 
 | Tool | Classification | Risk tags | Tests |
 |------|---------------|-----------|-------|
@@ -362,8 +369,10 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/users/*`, `/workspaces
 | `clockify_create_user_group` | mutating | `admin` | unit |
 | `clockify_deactivate_user` | mutating | `admin` | unit |
 | `clockify_delete_user_group` | destructive | `admin` | unit |
+| `clockify_get_member_profile` | read-only | | unit + live (`TestLiveTier2ReadOnlySweep`) |
 | `clockify_list_user_groups` | read-only | | unit |
 | `clockify_remove_user_from_group` | destructive | `admin` | unit |
+| `clockify_update_member_profile` | mutating | | unit + live dry-run (`TestLiveT2UserAdminCRUDAndOwnerSafety`) |
 | `clockify_update_user_group` | mutating | `admin` | unit |
 | `clockify_update_user_role` | mutating | `admin`, `permission_change` | unit |
 
@@ -389,6 +398,12 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/webhooks/*`
 | `clockify_list_webhooks` | read-only | | unit |
 | `clockify_test_webhook` | mutating | `external_side_effect` | unit |
 | `clockify_update_webhook` | mutating | `external_side_effect` | unit |
+
+`USER_EMAIL_CHANGED` and `USER_UPDATED` webhooks require
+`trigger_source_type=USER_ID` plus a nonempty `trigger_source` user ID
+on the live API. `clockify_create_webhook` and
+`clockify_update_webhook` validate that cross-field rule before making
+an upstream call.
 
 ---
 
@@ -509,7 +524,7 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 152-tool catalog is 52 Tier 1 tools + 100 Tier 2 tools, with
+current 155-tool catalog is 52 Tier 1 tools + 103 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -531,8 +546,9 @@ responses.
 
 ### API contract fixes closed by the campaign (May 2026)
 
-The original campaign surfaced 13 handler or descriptor mismatches.
-They are now closed in code and test coverage except where noted as an
+The original campaign and the follow-up exhaustive OpenAPI pass
+surfaced handler, descriptor, and generated-contract mismatches. They
+are now closed in code and test coverage except where noted as an
 upstream limitation:
 
 1. Invoice list/report envelopes and invoice-item embedding are handled.
@@ -555,10 +571,15 @@ upstream limitation:
    updated memberships from the full project object.
 10. Custom-field descriptors advertise the live enum values.
 11. Invoice create/update carry live-required `number` and RFC3339
-    `issuedDate`; mark-paid carries forward the required invoice
-    fields before setting `status=PAID`; invoice items use
-    workspace item type names, `applyTaxes`, and line-order path
-    parameters. `update_invoice_item` is live-pinned as unsupported
+    `issuedDate`; invoice status writes use
+    `PATCH /workspaces/{ws}/invoices/{invoiceId}/status` with
+    `{invoiceStatus: ...}`; the live status enum is
+    `UNSENT|SENT|PAID|PARTIALLY_PAID|VOID|OVERDUE` and `DRAFT` is
+    rejected with an actionable "use UNSENT" error. Invoice export uses
+    `GET /export?userLocale=en-US` and returns a binary-aware base64
+    envelope. Invoice items use workspace item type names,
+    `applyTaxes`, and line-order path parameters.
+    `update_invoice_item` is live-pinned as unsupported
     (`PUT /items/{order}` returns 405 on this Clockify version).
 12. Expense update now fetches and carries forward live-required
     multipart fields (`userId`, `date`, `amount`, `categoryId`,
@@ -575,6 +596,15 @@ upstream limitation:
     body. The sacrificial workspace currently returns
     "Approval period has changed..." for the probed weekly submit,
     and per-id approval GET is pinned as 405 unsupported.
+16. Member profile reads and updates now have typed tools. Updates
+    serialize `working_days` to live `workingDays` as an array of day
+    enum strings and support `dry_run`.
+17. The generated OpenAPI applies live overrides for summary reports
+    (`donutChart`, `groupTotals`), user role inclusions, webhook
+    live-absent fields, invoice status/export shape, required
+    workspace `organizationId`, holiday in-period assignment, expense
+    category `status:null`, and expense request-vs-response amount
+    notes.
 
 ### Workspace-state findings
 
@@ -587,12 +617,17 @@ upstream limitation:
   groups accept DELETE directly. The harness provides
   `rawArchiveAndDeleteProject` and `rawArchiveAndDeleteClient`
   cleanup primitives; raw `DELETE` works for tags and user groups.
+- **Remaining Clockify-side bugs.** `GET /workspaces/{ws}/webhooks?type=SYSTEM`
+  currently returns 500, and holiday in-period lookup can return 500
+  for an unknown-but-valid-looking `assigned-to` user object ID instead
+  of a clean 4xx. These are recorded in generated OpenAPI notes rather
+  than hidden behind typed MCP behavior.
 
 ---
 
 ## Gaps
 
-1. **Full-success live coverage:** the current 128-tool catalog has a
+1. **Full-success live coverage:** the current 155-tool catalog has a
    manual probe, live-test hook, or local unit coverage path, but some
    API-backed tools remain asserted as upstream unsupported,
    permission-gated, plan-gated, or workspace-state limited rather
@@ -748,4 +783,4 @@ committed into go-clockify.
 
 ---
 
-*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-12. Re-run verification after `make gen-tool-catalog`.*
+*Tool names and classification counts verified against `docs/tool-catalog.json` on 2026-05-13. Re-run verification after `make gen-tool-catalog`.*

@@ -40,7 +40,7 @@ work and commit it.
   through the MCP path, the documented invite-user route is pinned by
   a no-email validation probe, stale non-catalog user-invite risk
   overrides are removed, and risk overrides now fail if they target
-  ghost descriptor names. The current catalog is 152 tools after two
+  ghost descriptor names. The current catalog is 155 tools after two
   Tier 1 timesheet workflow helpers, five local discovery/activation
   and name-resolution helpers, expanded client/project/task/admin and
   reports coverage, and the latest documented probe-lab route refresh
@@ -113,9 +113,9 @@ work and commit it.
     § "Final integration audit — rc.3 cycle ledger" for the
     consolidated rc.3 cycle PR ledger (#74, #75, #76, #77, #80,
     #83, #84, #85), validator-quirk classifications, and
-    next-step actions on the still-open gates. **`v1.2.4` is the
+    next-step actions on the still-open gates. **`v1.2.5` is the
     current stable community/self-hosted AIII-backed API-refresh
-    line**, released 2026-05-12 with the 193-operation generated
+    line**, released 2026-05-13 with the 192-operation generated
     OpenAPI artifact. The original community/self-hosted launch
     evidence remains anchored to
     `v1.2.1`, cut from rc.3's peeled commit `ce56414` and released

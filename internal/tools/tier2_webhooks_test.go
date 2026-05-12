@@ -259,6 +259,59 @@ func TestCreateWebhookDefaultsTriggerSourceWhenOmitted(t *testing.T) {
 	}
 }
 
+func TestCreateWebhookUserEventsRequireUserSource(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid user-event webhook must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":          "user webhook",
+		"url":           "https://example.com/hook",
+		"webhook_event": "USER_UPDATED",
+	})
+	if err == nil || !strings.Contains(err.Error(), "trigger_source_type=USER_ID") {
+		t.Fatalf("expected user-source validation error, got %v", err)
+	}
+}
+
+func TestCreateWebhookUserEventsAcceptUserSource(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/webhooks" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": "wh1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":                "user webhook",
+		"url":                 "https://example.com/hook",
+		"webhook_event":       "USER_EMAIL_CHANGED",
+		"trigger_source_type": "USER_ID",
+		"trigger_source":      []any{"user1"},
+	})
+	if err != nil {
+		t.Fatalf("CreateWebhook user-event failed: %v", err)
+	}
+	if result.Action != "clockify_create_webhook" {
+		t.Fatalf("expected create action, got %q", result.Action)
+	}
+	if gotBody["triggerSourceType"] != "USER_ID" {
+		t.Fatalf("expected USER_ID trigger source type, got %#v", gotBody)
+	}
+	source, ok := gotBody["triggerSource"].([]any)
+	if !ok || len(source) != 1 || source[0] != "user1" {
+		t.Fatalf("expected user trigger source, got %#v", gotBody["triggerSource"])
+	}
+}
+
 func TestCreateWebhookDryRunAvoidsPost(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
@@ -485,6 +538,41 @@ func TestUpdateWebhookRejectsNoFieldsProvided(t *testing.T) {
 	_, err := svc.UpdateWebhook(context.Background(), map[string]any{"webhook_id": "wh1"})
 	if err == nil || !strings.Contains(err.Error(), "at least one field") {
 		t.Fatalf("expected no-fields error, got %v", err)
+	}
+}
+
+func TestUpdateWebhookUserEventsRequireUserSource(t *testing.T) {
+	var putCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":                "wh1",
+				"name":              "old",
+				"url":               "https://example.com/old",
+				"webhookEvent":      "NEW_TIME_ENTRY",
+				"triggerSourceType": "WORKSPACE_ID",
+				"triggerSource":     []string{"ws1"},
+			})
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodPut:
+			putCalled = true
+			t.Fatal("invalid user-event webhook update must not PUT")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.UpdateWebhook(context.Background(), map[string]any{
+		"webhook_id":    "wh1",
+		"webhook_event": "USER_UPDATED",
+	})
+	if err == nil || !strings.Contains(err.Error(), "trigger_source_type=USER_ID") {
+		t.Fatalf("expected user-source validation error, got %v", err)
+	}
+	if putCalled {
+		t.Fatal("PUT should not be called after user-source validation failure")
 	}
 }
 

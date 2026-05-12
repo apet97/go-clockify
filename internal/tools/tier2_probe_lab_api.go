@@ -230,7 +230,13 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"},
-	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/scheduling/capacity"},
+	// NOTE: /scheduling/capacity is a phantom path — Clockify returns
+	// 404 + {"code":3000,"message":"No static resource …"} for it. The
+	// real per-user capacity endpoint is
+	// /scheduling/assignments/users/{userId}/totals (covered above and
+	// by clockify_filter_schedule_capacity). Quarantined in the OpenAPI
+	// generator (scripts/gen-clockify-openapi PHANTOM_PATHS); do not
+	// re-add to the allowlist without proving the route exists.
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/shared-reports"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/shared-reports"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/shared-reports/{sharedReportId}"},

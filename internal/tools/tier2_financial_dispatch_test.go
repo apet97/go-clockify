@@ -38,9 +38,9 @@ func newFinancialUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
-			_, _ = w.Write([]byte(`{"total":1,"invoices":[{"id":"inv-1","status":"DRAFT","amount":100}]}`))
+			_, _ = w.Write([]byte(`{"total":1,"invoices":[{"id":"inv-1","status":"UNSENT","amount":100}]}`))
 		case http.MethodPost:
-			_, _ = w.Write([]byte(`{"id":"inv-new","status":"DRAFT","amount":250}`))
+			_, _ = w.Write([]byte(`{"id":"inv-new","status":"UNSENT","amount":250}`))
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -51,7 +51,7 @@ func newFinancialUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
-			_, _ = w.Write([]byte(`{"id":"inv-1","status":"DRAFT","amount":100}`))
+			_, _ = w.Write([]byte(`{"id":"inv-1","status":"UNSENT","amount":100}`))
 		case http.MethodDelete:
 			w.WriteHeader(http.StatusNoContent)
 		default:

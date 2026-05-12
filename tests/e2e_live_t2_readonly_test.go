@@ -104,6 +104,7 @@ func TestLiveTier2ReadOnlySweep(t *testing.T) {
 		}},
 		{"user_admin", []call{
 			{"clockify_list_user_groups", nil, ""},
+			{"clockify_get_member_profile", map[string]any{"user_id": c.OwnerUserID}, ""},
 		}},
 		{"webhooks", []call{
 			{"clockify_list_webhooks", nil, ""},

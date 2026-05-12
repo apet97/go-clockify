@@ -19,8 +19,8 @@ func TestUserAdminHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("user_admin group not found")
 	}
-	if len(descriptors) != 8 {
-		t.Fatalf("expected 8 user_admin tools, got %d", len(descriptors))
+	if len(descriptors) != 10 {
+		t.Fatalf("expected 10 user_admin tools, got %d", len(descriptors))
 	}
 }
 
@@ -249,6 +249,87 @@ func TestCreateUserGroup(t *testing.T) {
 	}
 	if data["name"] != "Backend Team" {
 		t.Fatalf("unexpected group name: %v", data["name"])
+	}
+}
+
+func TestMemberProfileTools(t *testing.T) {
+	var patchBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/member-profile/user1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"name":        "Pat",
+				"workingDays": []string{"MONDAY", "TUESDAY"},
+			})
+		case r.URL.Path == "/workspaces/ws1/member-profile/user1" && r.Method == http.MethodPatch:
+			if err := json.NewDecoder(r.Body).Decode(&patchBody); err != nil {
+				t.Fatalf("decode profile patch: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"name":        patchBody["name"],
+				"weekStart":   patchBody["weekStart"],
+				"workingDays": patchBody["workingDays"],
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.GetMemberProfile(context.Background(), map[string]any{"user_id": "user1"})
+	mustOK(t, result, err, "clockify_get_member_profile")
+
+	result, err = svc.UpdateMemberProfile(context.Background(), map[string]any{
+		"user_id":              "user1",
+		"name":                 "Pat Updated",
+		"week_start":           "monday",
+		"work_capacity":        "PT7H",
+		"working_days":         []any{"monday", "tuesday", "wednesday"},
+		"remove_profile_image": true,
+		"user_custom_fields":   []any{map[string]any{"id": "cf1", "value": "blue"}},
+	})
+	mustOK(t, result, err, "clockify_update_member_profile")
+	if patchBody["weekStart"] != "MONDAY" {
+		t.Fatalf("expected weekStart=MONDAY, got %#v", patchBody)
+	}
+	days, ok := patchBody["workingDays"].([]any)
+	if !ok || len(days) != 3 || days[0] != "MONDAY" || days[2] != "WEDNESDAY" {
+		t.Fatalf("expected workingDays array of enum strings, got %#v", patchBody["workingDays"])
+	}
+	if _, ok := patchBody["working_days"]; ok {
+		t.Fatalf("payload must not contain snake_case working_days: %#v", patchBody)
+	}
+	if patchBody["removeProfileImage"] != true {
+		t.Fatalf("expected removeProfileImage=true, got %#v", patchBody)
+	}
+}
+
+func TestUpdateMemberProfileDryRunSerializesWorkingDays(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("member profile dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.UpdateMemberProfile(context.Background(), map[string]any{
+		"user_id":       "user1",
+		"working_days":  []string{"monday", "friday"},
+		"work_capacity": "PT6H",
+		"dry_run":       true,
+	})
+	mustOK(t, result, err, "clockify_update_member_profile")
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("expected dry-run data, got %#v", result.Data)
+	}
+	payload, ok := data["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected dry-run payload map, got %#v", data["payload"])
+	}
+	days, ok := payload["workingDays"].([]string)
+	if !ok || len(days) != 2 || days[0] != "MONDAY" || days[1] != "FRIDAY" {
+		t.Fatalf("expected dry-run workingDays []string, got %#v", payload["workingDays"])
 	}
 }
 

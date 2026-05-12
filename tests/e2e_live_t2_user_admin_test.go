@@ -23,6 +23,18 @@ func TestLiveT2UserAdminCRUDAndOwnerSafety(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
+	_ = h.callOK(ctx, "clockify_get_member_profile", map[string]any{
+		"user_id": c.OwnerUserID,
+	})
+	dryProfile := h.callOK(ctx, "clockify_update_member_profile", map[string]any{
+		"user_id":      c.OwnerUserID,
+		"working_days": []any{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"},
+		"dry_run":      true,
+	})
+	if dryRun, _ := extractDataMap(t, dryProfile)["dry_run"].(bool); !dryRun {
+		t.Fatalf("clockify_update_member_profile dry-run did not return dry_run=true: %#v", dryProfile)
+	}
+
 	created := h.callOK(ctx, "clockify_create_user_group", map[string]any{
 		"name": c.LivePrefix("ua", 0),
 	})

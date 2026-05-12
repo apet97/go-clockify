@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-05-13
+
+### Added
+
+- **Typed invoice export and member-profile tools.** Added
+  `clockify_export_invoice`, `clockify_get_member_profile`, and
+  `clockify_update_member_profile` with live-shaped payload handling,
+  dry-run support for writes, and catalog/test coverage.
+- **OpenAPI coverage matrix gate.** Added the generated
+  `docs/openapi/coverage-matrix.{json,md}` artifacts plus
+  `make gen-coverage-matrix` / `make coverage-matrix-drift` so every
+  generated OpenAPI operation is mapped to typed or raw MCP coverage.
+
+### Changed
+
+- **Invoice status writes now match the live API.** Status changes use
+  `PATCH /workspaces/{workspaceId}/invoices/{invoiceId}/status` with
+  `{invoiceStatus: ...}`, validate the live status enum, reject stale
+  `DRAFT` input with an actionable `UNSENT` hint, and split status
+  changes from normal invoice field updates.
+- **Webhook validation catches live user-event constraints locally.**
+  `USER_EMAIL_CHANGED` and `USER_UPDATED` create/update requests now
+  require `trigger_source_type=USER_ID` and a nonempty
+  `trigger_source` before any Clockify call is made.
+- **Generated OpenAPI contract reflects live drift.** The unified
+  contract now has 125 paths, 192 operations, and 332 schemas after
+  quarantining the phantom scheduling-capacity route and applying live
+  overrides for summary reports, invoice status/export, member
+  profiles, webhook fields, workspace creation, holidays, expenses,
+  policy/task deletion notes, and known Clockify-side 500s.
+
 ## [1.2.4] - 2026-05-12
 
 ### Added

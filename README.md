@@ -13,7 +13,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Highlights
 
-- **148 tools** — 52 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 96 on-demand (invoices, scheduling, approvals, admin, …) across 11 activatable groups.
+- **155 tools** — 52 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 103 on-demand (invoices, scheduling, approvals, admin, …) across 12 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run previews on every write tool and HMAC confirmation tokens for high-risk tool calls (ADR 0018).
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
@@ -66,14 +66,16 @@ clockify-mcp --version
 
 ### Current release status
 
-`v1.2.4` is the current stable community/self-hosted AIII-backed
-API-refresh line, released on 2026-05-12
-([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.4) ·
-46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.4`
-· container image `ghcr.io/apet97/go-clockify:1.2.4`). It carries the
-refreshed 152-tool Clockify API catalog and the generated 193-operation
-OpenAPI artifact, including AIII-sourced entity-change endpoints and
-the expense detailed report route.
+`v1.2.5` is the current stable community/self-hosted AIII-backed
+API-refresh line, released on 2026-05-13
+([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.5) ·
+46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.5`
+· container image `ghcr.io/apet97/go-clockify:1.2.5`). It carries the
+refreshed 155-tool Clockify API catalog and the generated 192-operation
+OpenAPI artifact, including AIII-sourced entity-change endpoints, the
+expense detailed report route, live invoice/member-profile/webhook
+contract corrections, and the quarantined `/scheduling/capacity`
+phantom route.
 Operators verifying signatures should follow
 [docs/verification.md](docs/verification.md). The original
 community/self-hosted launch evidence remains anchored to `v1.2.1`;

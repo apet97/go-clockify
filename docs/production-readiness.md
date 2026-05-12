@@ -56,9 +56,9 @@ The manual live-campaign baseline remains
 post-PR #51 local readiness gates, PR #59's manual
 sacrificial-workspace MCP-path probes, PR #62's invite-user validation
 probe, and later live-test hooks or local coverage for the current
-152-tool catalog. The latest stable community/self-hosted AIII-backed
-API-refresh line is **`v1.2.4`** (released 2026-05-12 with the
-193-operation generated OpenAPI artifact). The
+155-tool catalog. The latest stable community/self-hosted AIII-backed
+API-refresh line is **`v1.2.5`** (released 2026-05-13 with the
+192-operation generated OpenAPI artifact). The
 original community/self-hosted launch track is closed at **`v1.2.1`**
 (released 2026-05-10 from rc.3 peeled commit `ce56414`; 46 signed
 assets, npm `dist-tags.latest=1.2.1`, container image
