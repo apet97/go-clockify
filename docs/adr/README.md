@@ -32,6 +32,7 @@ from `git log` and inline code comments.
 | 0019 | Postgres row-level security for the paid-hosted plane (proposed) | [0019-paid-commercial-rls-decision.md](0019-paid-commercial-rls-decision.md) |
 | 0021 | Hosted tenant policy ceiling | [0021-hosted-tenant-policy-ceiling.md](0021-hosted-tenant-policy-ceiling.md) |
 | 0022 | Batched audit_events INSERT for non-strict outcomes | [0022-batched-audit-outcome-inserts.md](0022-batched-audit-outcome-inserts.md) |
+| 0023 | Cross-transport MaxInFlightToolCalls parity (proposed) | [0023-cross-transport-inflight-parity.md](0023-cross-transport-inflight-parity.md) |
 
 ADRs 0001–0018 are **Accepted**. ADR 0010 was promoted from Proposed
 during the May 8 launch-readiness remediation because the v1.x line has

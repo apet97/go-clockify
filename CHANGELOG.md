@@ -156,6 +156,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   follow-up implementation commit will adopt. Status remains
   *Proposed* until that commit lands and flips it to Accepted.
 
+- **ADR 0023 — cross-transport `MaxInFlightToolCalls` parity
+  question.** Captures the design space for extending the stdio-only
+  in-flight semaphore (`MCP_MAX_INFLIGHT_TOOL_CALLS`) to streamable
+  HTTP and gRPC, framed as three open questions: per-transport vs
+  global scope (Q1); composition with `httpAdmissionLimiter` and
+  gRPC native flow control (Q2); rejection signal shape — block,
+  503, or transport-native cancellation (Q3). Commit `b42f074`
+  explicitly doubled down on stdio-only by operator decision, so
+  this ADR exists to force the operator-policy answer into the
+  open before any implementation lands. **Status: Proposed.** No
+  implementation in this commit.
+
 - **Trademark / non-affiliation disclaimer added.** New top-level
   `NOTICE.md` declares `go-clockify` an independent third-party
   client, names Clockify as a trademark of CAKE.com, and clarifies
