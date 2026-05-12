@@ -119,7 +119,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_delete_custom_field` | no | yes | no | yes | `destructive` | Delete a custom field by ID (supports dry_run preview) |
 | `clockify_get_custom_field` | yes | no | yes | no | `read` | Get a custom field by ID |
 | `clockify_list_custom_fields` | yes | no | yes | no | `read` | List custom fields in the workspace with optional pagination |
-| `clockify_set_custom_field_value` | no | no | no | no | `write` | Set a custom field value on a specific project or time entry |
+| `clockify_set_custom_field_value` | no | no | no | no | `write` | Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value. |
 | `clockify_update_custom_field` | no | no | no | no | `write` | Update an existing custom field by ID |
 
 ### `expenses`

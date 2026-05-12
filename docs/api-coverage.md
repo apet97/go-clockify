@@ -61,7 +61,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 | `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |
 | `clockify_get_entry` | `GET /workspaces/{ws}/time-entries/{id}` | unit |
 | `clockify_get_project` | `GET /workspaces/{ws}/projects/{id}` | unit |
-| `clockify_get_tag` | `GET /workspaces/{ws}/tags/{id}` | unit |
+| `clockify_get_tag` | `GET /workspaces/{ws}/tags/{id}` | unit, live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |
 | `clockify_get_task` | `GET /workspaces/{ws}/projects/{id}/tasks/{tid}` | unit |
 | `clockify_get_workspace` | `GET /workspaces/{ws}` | unit, live-read-only (TestE2EReadOnly) |
 | `clockify_list_clients` | `GET /workspaces/{ws}/clients` | unit |
@@ -102,7 +102,7 @@ Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDT
 | `clockify_add_entry` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_create_client` | `POST /workspaces/{ws}/clients` | unit, sacrificial-mutating (TestE2EMutating) |
 | `clockify_create_project` | `POST /workspaces/{ws}/projects` | unit, sacrificial-mutating (TestE2EMutating) |
-| `clockify_create_tag` | `POST /workspaces/{ws}/tags` | unit |
+| `clockify_create_tag` | `POST /workspaces/{ws}/tags` | unit, live-pagination (`TestLivePaginationOnTags`), live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |
 | `clockify_create_task` | `POST /workspaces/{ws}/projects/{id}/tasks` | unit |
 | `clockify_activate_group` | local (tool-surface mutation) | unit |
 | `clockify_activate_tool` | local (tool-surface mutation) | unit |
@@ -117,7 +117,7 @@ Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDT
 | `clockify_update_client` | `GET` + `PUT /workspaces/{ws}/clients/{id}` (fetch-then-merge) | unit |
 | `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}` | unit |
 | `clockify_update_project` | `GET` + `PUT /workspaces/{ws}/projects/{id}` (fetch-then-merge) | unit |
-| `clockify_update_tag` | `GET` + `PUT /workspaces/{ws}/tags/{id}` (fetch-then-merge) | unit |
+| `clockify_update_tag` | `GET` + `PUT /workspaces/{ws}/tags/{id}` (fetch-then-merge) | unit, live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |
 | `clockify_update_task` | `GET` + `PUT /workspaces/{ws}/projects/{id}/tasks/{tid}` (fetch-then-merge) | unit |
 
 ### Destructive (5 tools)
@@ -127,7 +127,7 @@ Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDT
 | `clockify_delete_client` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/clients/{id}` | unit, dry-run |
 | `clockify_delete_entry` | `DELETE /workspaces/{ws}/time-entries/{id}` | unit, dry-run (TestLiveDryRunDoesNotMutate), sacrificial-mutating (TestE2EMutating) |
 | `clockify_delete_project` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/projects/{id}` | unit, dry-run |
-| `clockify_delete_tag` | `GET` + `DELETE /workspaces/{ws}/tags/{id}` | unit, dry-run |
+| `clockify_delete_tag` | `GET` + `DELETE /workspaces/{ws}/tags/{id}` | unit, dry-run, live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |
 | `clockify_delete_task` | `GET` + optional `PUT status=DONE` + `DELETE /workspaces/{ws}/projects/{id}/tasks/{tid}` | unit, dry-run |
 
 ---
@@ -214,7 +214,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 
 ### `probe_lab_api` (4 tools)
 
-Clockify endpoints: allowlisted union of `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml` plus all 19 `*DOC*.md` source files. The allowlist currently contains 191 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, add-on webhook lists, webhook get/logs, holiday in-period, and project/task/client archive/rate/admin routes.
+Clockify endpoints: allowlisted union of `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml` plus all 19 `*DOC*.md` source files. The allowlist currently contains 204 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes.
 
 This group is an allowlisted escape hatch for documented routes that do not yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}` resolves from the configured workspace unless `workspace_id` is supplied; non-workspace placeholders must be provided through `path_params`; `query` object values become query parameters; `json_body` is sent as upstream JSON; `form_body` is sent as multipart form fields; `raw_response` returns base64 payloads for export endpoints. The three caller tools are separated by method class so read, write, and destructive policy/risk handling remains visible; the write/delete callers carry broad billing/admin/permission-change/external-side-effect risk bits because the allowlist includes those route families.
 
@@ -222,8 +222,8 @@ This group is an allowlisted escape hatch for documented routes that do not yet 
 |------|---------------|-------|
 | `clockify_list_documented_api_operations` | read-only | `TestProbeLabAPIListsDocOnlyAndOpenAPIOperations` |
 | `clockify_call_documented_read_api` | read-only | `TestProbeLabAPIReadCallResolvesPathAndRepeatedQuery`; `TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath` |
-| `clockify_call_documented_write_api` | mutating | `TestProbeLabAPIWriteCallSendsReportsJSONBody`; `TestProbeLabAPIWriteDryRunDoesNotMutate`; `TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath` |
-| `clockify_call_documented_delete_api` | destructive | `TestProbeLabAPIDeleteCallCanSendJSONBody` |
+| `clockify_call_documented_write_api` | mutating | `TestProbeLabAPIWriteCallSendsReportsJSONBody`; `TestProbeLabAPIWriteDryRunDoesNotMutate`; `TestProbeLabAPIRejectsWrongToolClassAndUndocumentedPath`; live dry-run (`TestLiveFullSurfaceDocCoverage`) |
+| `clockify_call_documented_delete_api` | destructive | `TestProbeLabAPIDeleteCallCanSendJSONBody`; live dry-run (`TestLiveFullSurfaceDocCoverage`) |
 
 ### `project_admin` (14 tools)
 
@@ -494,6 +494,7 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2ProjectAdminCRUD` | `seed_project`, `create_project_template`, `get_project_template`, `update_project_estimate`, `set_project_memberships`, `archive_projects` | success path |
 | `TestLivePolicyModes` | `clockify_create_client` parametrised over all 5 policy modes (`read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full`) | gate behaviour pinned |
 | `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope; `clockify_create_tag` (Tier 1) seeded × 11 | success path |
+| `TestLiveTagCRUDDocCoverage` | `clockify_create_tag`, `clockify_get_tag`, `clockify_update_tag`, `clockify_delete_tag` against a prefixed sacrificial tag | success path |
 | `TestLiveTier1RemainingCRUD` | remaining Tier-1 tool names not covered by the first campaign: `get_project`, `list_clients`, `list_entries`, `create_task`, `log_time`, `update_entry`, `find_and_update_entry`, `timesheet_fill_gap`, `switch_project`, `stop_timer`, `search_tools` | success path |
 | `TestLiveT2InvoicesCRUD` | all 12 invoice tools: invoice create/list/get/update/delete, invoice report, item add/list/delete, send dry-run, mark-paid dry-run + real; update-item route asserted as unsupported on this Clockify version | success path + documented unsupported `PUT /items/{order}` 405 |
 | `TestLiveT2SharedReportsCRUDAndExports` | all 6 shared-report tools: SUMMARY create/get/update/export JSON/PDF/delete; DETAILED/WEEKLY JSON export when workspace fixtures exist | success path / conditional export breadth |
@@ -508,7 +509,7 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 148-tool catalog is 52 Tier 1 tools + 96 Tier 2 tools, with
+current 152-tool catalog is 52 Tier 1 tools + 100 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -517,10 +518,10 @@ explicitly allowing local-only Tier-1 catalog/tool-surface helpers that
 should not pretend to call Clockify. PR #59 manually exercised the then-current
 121 generated catalog tools through the MCP path against the
 sacrificial workspace; PR #62 added the invite-user raw-route
-validation probe. Later timesheet workflow helpers and the client /
-project / task plus Reports API doc-parity expansions are covered by
-unit tests and live-test hooks, but have not by themselves been
-promoted into launch evidence.
+validation probe. Later timesheet workflow helpers, client/project/task
+plus Reports API doc-parity expansions, and the documented probe-lab
+route refresh are covered by unit tests and live-test hooks, but have
+not by themselves been promoted into launch evidence.
 That does **not** mean every tool has a live success path: the tests
 distinguish successful CRUD from concrete upstream constraints such as
 expense-category archive-before-delete, custom-field workspace caps,

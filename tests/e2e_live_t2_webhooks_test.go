@@ -20,8 +20,10 @@ func TestLiveT2WebhooksCRUD(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
+	webhookName := c.RunID + "-wh"
+	updatedWebhookName := c.RunID + "-w2"
 	create := h.callOK(ctx, "clockify_create_webhook", map[string]any{
-		"name":                "mcp-live-wh",
+		"name":                webhookName,
 		"url":                 "https://example.com/clockify-mcp-live",
 		"webhook_event":       "NEW_TIME_ENTRY",
 		"trigger_source_type": "WORKSPACE_ID",
@@ -50,7 +52,7 @@ func TestLiveT2WebhooksCRUD(t *testing.T) {
 
 	updated := h.callOK(ctx, "clockify_update_webhook", map[string]any{
 		"webhook_id":    webhookID,
-		"name":          "mcp-live-wh2",
+		"name":          updatedWebhookName,
 		"webhook_event": "TIMER_STOPPED",
 	})
 	if event, _ := extractDataMap(t, updated)["webhookEvent"].(string); event != "TIMER_STOPPED" {

@@ -90,13 +90,12 @@ func TestLiveTier1RemainingCRUD(t *testing.T) {
 	})
 
 	t.Run("timesheet_fill_gap", func(t *testing.T) {
-		gapStart := start.Add(90 * time.Minute).Format(time.RFC3339)
-		gapEnd := start.Add(120 * time.Minute).Format(time.RFC3339)
+		gapStartTime, gapEndTime := findLiveEmptyEntryWindow(t, h, ctx, 30*time.Minute)
 		result := h.callOK(ctx, "clockify_timesheet_fill_gap", map[string]any{
 			"project_id":  projectID,
 			"description": c.LivePrefix("fill-gap", 0),
-			"start":       gapStart,
-			"end":         gapEnd,
+			"start":       gapStartTime.Format(time.RFC3339),
+			"end":         gapEndTime.Format(time.RFC3339),
 			"billable":    false,
 		})
 		entryID := liveNestedEntryID(t, result, "entry")
@@ -127,6 +126,28 @@ func TestLiveTier1RemainingCRUD(t *testing.T) {
 			t.Fatalf("clockify_stop_timer id mismatch after switch: got %q want %q", stoppedID, startedID)
 		}
 	})
+}
+
+func findLiveEmptyEntryWindow(t *testing.T, h *liveMCPHarness, ctx context.Context, duration time.Duration) (time.Time, time.Time) {
+	t.Helper()
+	now := time.Now().UTC().Truncate(time.Second)
+	for daysAgo := 30; daysAgo >= 2; daysAgo-- {
+		day := time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC).AddDate(0, 0, -daysAgo)
+		for hour := 0; hour <= 10; hour += 2 {
+			start := day.Add(time.Duration(hour) * time.Hour)
+			end := start.Add(duration)
+			result := h.callOK(ctx, "clockify_list_entries", map[string]any{
+				"start":     start.Format(time.RFC3339),
+				"end":       end.Format(time.RFC3339),
+				"page_size": 50,
+			})
+			if len(extractList(t, result)) == 0 {
+				return start, end
+			}
+		}
+	}
+	t.Skip("could not find an empty sacrificial-workspace time-entry window in the last 30 days")
+	return time.Time{}, time.Time{}
 }
 
 func liveEntryIDFromResult(t *testing.T, result map[string]any) string {

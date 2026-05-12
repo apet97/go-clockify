@@ -38,6 +38,43 @@ func TestProbeLabAPIListsDocOnlyAndOpenAPIOperations(t *testing.T) {
 	}
 }
 
+func TestProbeLabAPINormalizesDocumentedPathAliases(t *testing.T) {
+	cases := map[string]string{
+		"/api/v1/workspaces/{wsId}/projects/{projectId}/tasks/{id}":           "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+		"/v1/workspaces/{workspaceId}/time-off/policies/{id}":                 "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+		"/workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate": "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate",
+		"/workspaces/{workspaceId}/expenses/{expenseId}/files/{id}":           "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}",
+		"/workspaces/{workspaceId}/webhooks/{id}/logs":                        "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+	}
+	for input, want := range cases {
+		if got := normalizeDocumentedAPIPath(input); got != want {
+			t.Fatalf("normalizeDocumentedAPIPath(%q)=%q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestProbeLabAPIAllowlistCoversOpenAPIDriftPatch(t *testing.T) {
+	for _, operation := range []string{
+		"PUT /workspaces/{workspaceId}",
+		"GET /workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}",
+		"GET /workspaces/{workspaceId}/time-off/balance/user/{userId}",
+		"GET /workspaces/{workspaceId}/time-off/requests",
+		"GET /workspaces/{workspaceId}/user-groups/{groupId}",
+		"GET /workspaces/{workspaceId}/user-groups/{groupId}/users",
+		"GET /workspaces/{workspaceId}/users/{userId}/time-off/balances",
+		"GET /workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+		"PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/token",
+		"POST /workspaces/{workspaceId}/policies/{policyId}/requests",
+		"DELETE /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+		"PATCH /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+		"PUT /workspaces/{workspaceId}/time-off/policies/{policyId}",
+	} {
+		if _, ok := documentedOperationByKey(operation); !ok {
+			t.Fatalf("documented allowlist missing %s", operation)
+		}
+	}
+}
+
 func TestProbeLabAPIReadCallResolvesPathAndRepeatedQuery(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/users/u1/managers" {

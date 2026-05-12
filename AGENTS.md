@@ -133,14 +133,13 @@ rules live in this file and the docs above.
     in [`docs/api-coverage.md`](docs/api-coverage.md).
     PR #62 adds the documented invite-user route as a no-email raw
     route validation probe because no dedicated catalog tool exists.
-    The current catalog has 139 tools after two agent-facing
+    The current catalog has 152 tools after two agent-facing
     timesheet workflow helpers, five local discovery/activation
-    and name-resolution helpers, and (most recently) three Tier 1
-    client CRUD tools — get_client, delete_client, update_client —
-    plus an expanded create_client schema were added on top of the
-    raw API coverage surface; those helpers are covered by unit
-    tests, and the timesheet workflow helpers also have live-test
-    hooks.
+    and name-resolution helpers, expanded client/project/task/admin
+    and reports coverage, and the latest documented probe-lab route
+    refresh were added on top of the raw API coverage surface; those
+    helpers are covered by unit tests, and API-backed additions have
+    live-test hooks where the upstream workspace permits them.
     This is coverage evidence only; it did not itself close Group 1
     and does **not** close Group 6 or Group 7 launch blockers.
 - **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)

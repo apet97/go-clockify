@@ -529,10 +529,6 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 	return fmt.Errorf("request failed without specific error")
 }
 
-func (c *Client) doOnce(ctx context.Context, baseURL, method, path, endpoint string, query map[string]string, contentType string, payload []byte, out any) error {
-	return c.doOnceValues(ctx, baseURL, method, path, endpoint, valuesFromQueryMap(query), contentType, payload, out)
-}
-
 func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoint string, query url.Values, contentType string, payload []byte, out any) error {
 	ctx, span := tracing.Default.Start(ctx, "clockify.http")
 	span.SetAttribute("upstream.endpoint", endpoint)

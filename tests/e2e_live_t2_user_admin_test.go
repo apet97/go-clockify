@@ -65,8 +65,8 @@ func TestLiveT2UserAdminCRUDAndOwnerSafety(t *testing.T) {
 		"user_id": "000000000000000000000001",
 		"role":    "REGULAR",
 	})
-	if !containsErrorText(roleErr, "not found", "doesn't belong", "404", "400", "405", "method not allowed", "permission") {
-		t.Fatalf("expected not-found/permission/method-style update_user_role error, got %q", roleErr)
+	if !containsErrorText(roleErr, "not found", "doesn't belong", "404", "400", "405", "method not allowed", "permission", "role-strip helper", "requires delete") {
+		t.Fatalf("expected not-found/permission/method/local-safety update_user_role error, got %q", roleErr)
 	}
 
 	dryDeactivate := h.callOK(ctx, "clockify_deactivate_user", map[string]any{

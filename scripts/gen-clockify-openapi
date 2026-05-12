@@ -1,0 +1,1072 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Generates docs/openapi/clockify-openapi.yaml from the local Clockify API
+# evidence bundle. The script is intentionally self-contained because the
+# source bundle lives outside this repository and includes a mix of valid
+# OpenAPI YAML, pasted Markdown API docs, live probe findings, and QA reports.
+
+require "digest"
+require "fileutils"
+require "json"
+require "optparse"
+require "set"
+require "yaml"
+
+METHODS = %w[get post put patch delete options head trace].freeze
+METHOD_ORDER = {
+  "get" => 0,
+  "post" => 1,
+  "put" => 2,
+  "patch" => 3,
+  "delete" => 4,
+  "options" => 5,
+  "head" => 6,
+  "trace" => 7
+}.freeze
+
+DEFAULT_REAL_DIR = "/Users/15x/Downloads/realOPENAPI"
+DEFAULT_PROBE_DIR = "/Users/15x/Downloads/WORKING/clockify-api-probe-lab"
+DEFAULT_FINDINGS_DIR = "/Users/15x/Downloads/newfolderwithfindings"
+DEFAULT_REPO_ROOT = File.expand_path("..", __dir__)
+DEFAULT_OUT = File.join(DEFAULT_REPO_ROOT, "docs/openapi/clockify-openapi.yaml")
+
+MAIN_SERVER = "https://api.clockify.me/api/v1"
+REPORTS_SERVER = "https://reports.api.clockify.me/v1"
+
+SOURCE_PRIORITIES = {
+  "real-openapi" => 40,
+  "probe-openapi" => 30,
+  "probe-supplement" => 25,
+  "probe-fragment" => 20,
+  "doc-md" => 10
+}.freeze
+
+options = {
+  real_dir: ENV.fetch("CLOCKIFY_OPENAPI_REAL_DIR", DEFAULT_REAL_DIR),
+  probe_dir: ENV.fetch("CLOCKIFY_OPENAPI_PROBE_DIR", DEFAULT_PROBE_DIR),
+  findings_dir: ENV.fetch("CLOCKIFY_OPENAPI_FINDINGS_DIR", DEFAULT_FINDINGS_DIR),
+  repo_root: ENV.fetch("CLOCKIFY_OPENAPI_REPO_ROOT", DEFAULT_REPO_ROOT),
+  out: DEFAULT_OUT,
+  validate_only: false
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: scripts/gen-clockify-openapi [options]"
+  opts.on("-out PATH", "--out PATH", "Output YAML path") { |v| options[:out] = v }
+  opts.on("--real-dir PATH", "realOPENAPI source directory") { |v| options[:real_dir] = v }
+  opts.on("--probe-dir PATH", "clockify-api-probe-lab directory") { |v| options[:probe_dir] = v }
+  opts.on("--findings-dir PATH", "QA findings directory") { |v| options[:findings_dir] = v }
+  opts.on("--repo-root PATH", "GOCLMCP repo root") { |v| options[:repo_root] = v }
+  opts.on("--validate-only", "Validate an existing generated YAML") { options[:validate_only] = true }
+end.parse!
+
+def deep_copy(value)
+  JSON.parse(JSON.generate(value))
+end
+
+def canonical_json(value)
+  JSON.generate(sort_deep(value))
+end
+
+def sort_deep(value)
+  case value
+  when Hash
+    value.keys.map(&:to_s).sort.each_with_object({}) do |key, out|
+      out[key] = sort_deep(value[key])
+    end
+  when Array
+    value.map { |item| sort_deep(item) }
+  else
+    value
+  end
+end
+
+def yaml_files(dir)
+  return [] unless Dir.exist?(dir)
+
+  Dir[File.join(dir, "*")].select { |path| path.match?(/\.(ya?ml)\z/i) }.sort
+end
+
+def source_label(path, options)
+  expanded = File.expand_path(path)
+  roots = {
+    "realOPENAPI" => File.expand_path(options[:real_dir]),
+    "clockify-api-probe-lab" => File.expand_path(options[:probe_dir]),
+    "newfolderwithfindings" => File.expand_path(options[:findings_dir]),
+    "GOCLMCP" => File.expand_path(options[:repo_root])
+  }
+  root_name, root_path = roots.find { |_name, root| expanded.start_with?(root + File::SEPARATOR) || expanded == root }
+  return expanded unless root_name
+
+  rel = expanded.sub(root_path, "").sub(%r{\A/}, "")
+  rel.empty? ? root_name : File.join(root_name, rel)
+end
+
+def domain_from_path(path)
+  base = File.basename(path).downcase
+  return "reports" if base.include?("attendance") || base.include?("report")
+  return "approval" if base.include?("approval")
+  return "balance" if base.include?("balance")
+  return "custom_fields" if base.include?("cf") || base.include?("custom")
+  return "expenses" if base.include?("expense")
+  return "holidays" if base.include?("holiday")
+  return "invoices" if base.include?("invoice") || base.include?("inveoice")
+  return "policies" if base.include?("polic")
+  return "projects" if base.include?("project")
+  return "scheduling" if base.include?("schedul")
+  return "tasks" if base.include?("task")
+  return "time_entries" if base.include?("timeentr")
+  return "time_off" if base.include?("timeoff") || base.include?("time-off")
+  return "user_groups" if base.include?("group")
+  return "users" if base.include?("user")
+  return "webhooks" if base.include?("webhook")
+  return "workspaces" if base.include?("workspace")
+  return "clients" if base.include?("client")
+  return "tags" if base.include?("tag")
+
+  File.basename(path, File.extname(path)).downcase.gsub(/[^a-z0-9]+/, "_")
+end
+
+def pascal_domain(domain)
+  domain.split(/[^a-z0-9]+/).reject(&:empty?).map { |part| part[0].upcase + part[1..] }.join
+end
+
+def normalize_path(path)
+  normalized = path.to_s.strip
+  normalized = normalized.sub(%r{\Ahttps://api\.clockify\.me/api/v1}, "")
+  normalized = normalized.sub(%r{\Ahttps://reports\.api\.clockify\.me/v1}, "")
+  normalized = normalized.sub(%r{\Ahttps://api\.clockify\.me/api}, "")
+  normalized = normalized.sub(%r{\Ahttps://reports\.api\.clockify\.me}, "")
+  normalized = normalized.sub(%r{\A/api/v1}, "")
+  normalized = normalized.sub(%r{\A/v1}, "")
+  normalized = "/" + normalized unless normalized.start_with?("/")
+  canonicalize_path_params(normalized.gsub(%r{/+}, "/"))
+end
+
+def canonicalize_path_params(path)
+  segments = path.split("/")
+  segments.each_with_index do |segment, i|
+    next unless segment.match?(/\A\{[^}]+\}\z/)
+
+    raw_name = segment[1..-2]
+    previous = segments[i - 1].to_s
+    canonical = case raw_name
+                when "ws", "wsId", "workspace", "workspace_id", "workspaceId"
+                  "workspaceId"
+                when "uid", "user", "user_id", "userId"
+                  "userId"
+                else
+                  canonical_param_for_segment(previous, raw_name)
+                end
+    segments[i] = "{#{canonical}}"
+  end
+  out = segments.join("/")
+  out.empty? ? "/" : out
+end
+
+def canonical_param_for_segment(segment, fallback)
+  {
+    "addons" => "addonId",
+    "approval-requests" => "approvalId",
+    "assignments" => "assignmentId",
+    "categories" => "categoryId",
+    "clients" => "clientId",
+    "custom-fields" => "customFieldId",
+    "expenses" => "expenseId",
+    "holidays" => "holidayId",
+    "invoices" => "invoiceId",
+    "items" => "order",
+    "payments" => "paymentId",
+    "policies" => "policyId",
+    "projects" => "projectId",
+    "requests" => "requestId",
+    "shared-reports" => "sharedReportId",
+    "tags" => "tagId",
+    "tasks" => "taskId",
+    "time-entries" => "timeEntryId",
+    "user" => "userId",
+    "user-groups" => "groupId",
+    "users" => "userId",
+    "webhooks" => "webhookId"
+  }.fetch(segment, fallback)
+end
+
+def host_for(path, op = nil, source_servers = [])
+  text = [path, op&.fetch("description", nil), op&.fetch("summary", nil)].compact.join(" ").downcase
+  operation_servers = Array(op && op["servers"]).map { |server| server["url"].to_s }
+  return REPORTS_SERVER if operation_servers.any? { |url| url.include?("reports.api.clockify.me") } &&
+                           operation_servers.none? { |url| url.include?("api.clockify.me/api") }
+  return REPORTS_SERVER if source_servers.any? { |url| url.include?("reports.api.clockify.me") } &&
+                           source_servers.none? { |url| url.include?("api.clockify.me/api") }
+  return REPORTS_SERVER if text.include?("/reports/") || text.include?("shared-reports")
+
+  MAIN_SERVER
+end
+
+def normalize_security!(value, aliases)
+  case value
+  when Hash
+    value.keys.each do |key|
+      new_key = case key.to_s
+                when "AddonKeyAuth", "MarketplaceKeyAuth"
+                  aliases << key.to_s
+                  "AddonTokenAuth"
+                when "ApiKeyAuth"
+                  "ApiKeyAuth"
+                else
+                  key
+                end
+      child = value.delete(key)
+      value[new_key] = child
+      normalize_security!(child, aliases)
+    end
+  when Array
+    value.each { |item| normalize_security!(item, aliases) }
+  end
+end
+
+def canonical_security_scheme(name)
+  case name.to_s
+  when "AddonKeyAuth", "MarketplaceKeyAuth", "AddonTokenAuth"
+    "AddonTokenAuth"
+  when "ApiKeyAuth"
+    "ApiKeyAuth"
+  else
+    name.to_s
+  end
+end
+
+def operation_security_aliases(op, schemes)
+  aliases = Hash.new { |h, key| h[key] = {"schemes" => Set.new, "headers" => Set.new} }
+  Array(op["security"]).each do |requirement|
+    next unless requirement.is_a?(Hash)
+
+    requirement.keys.each do |scheme|
+      canonical = canonical_security_scheme(scheme)
+      aliases[canonical]["schemes"] << scheme.to_s
+      header = schemes.dig(scheme, "name").to_s if schemes.is_a?(Hash)
+      aliases[canonical]["headers"] << header unless header.to_s.empty?
+    end
+  end
+  aliases.keys.sort.each_with_object({}) do |scheme, out|
+    out[scheme] = {
+      "schemes" => aliases[scheme]["schemes"].to_a.sort,
+      "headers" => aliases[scheme]["headers"].to_a.sort
+    }
+  end
+end
+
+def rewrite_refs!(value, ref_maps)
+  case value
+  when Hash
+    if value["$ref"].is_a?(String)
+      value["$ref"] = rewrite_ref(value["$ref"], ref_maps)
+    end
+    value.each_value { |child| rewrite_refs!(child, ref_maps) }
+  when Array
+    value.each { |child| rewrite_refs!(child, ref_maps) }
+  end
+end
+
+def rewrite_ref(ref, ref_maps)
+  match = ref.match(%r{\A#/components/([^/]+)/([^/]+)\z})
+  return ref unless match
+
+  section = match[1]
+  name = match[2]
+  mapped = ref_maps.dig(section, name)
+  mapped ? "#/components/#{section}/#{mapped}" : ref
+end
+
+def operation_id(method, path, used)
+  raw = "#{method}_#{path}"
+        .gsub(/[{}]/, "")
+        .gsub(/[^a-zA-Z0-9]+/, "_")
+        .gsub(/\A_+|_+\z/, "")
+  parts = raw.split("_").reject(&:empty?)
+  id = parts.first.to_s.downcase + parts.drop(1).map { |part| part[0].upcase + part[1..] }.join
+  id = "#{method}Operation" if id.empty?
+  unique = id
+  suffix = 2
+  while used.include?(unique)
+    unique = "#{id}#{suffix}"
+    suffix += 1
+  end
+  used << unique
+  unique
+end
+
+def method_path_from_doc(lines)
+  operations = []
+  pending_method = nil
+  lines.each do |line|
+    stripped = line.strip
+    if stripped.match?(/\A(GET|POST|PUT|PATCH|DELETE)\z/i)
+      pending_method = stripped.downcase
+      next
+    end
+    inline = stripped.match(/\A(GET|POST|PUT|PATCH|DELETE)\s+(\/(?:api\/)?v1\/\S+)/i)
+    if inline
+      operations << [inline[1].downcase, normalize_path(inline[2])]
+      pending_method = nil
+      next
+    end
+    next unless pending_method && stripped.match?(%r{\A/(?:api/)?v1/})
+
+    path = stripped.split(/\s+/).first
+    operations << [pending_method, normalize_path(path)]
+    pending_method = nil
+  end
+  operations.uniq
+end
+
+def extract_status(raw)
+  token = raw.to_s[/\b([1-5][0-9][0-9])\b/, 1]
+  token&.to_i
+end
+
+def status_bucket(status, text)
+  lowered = text.to_s.downcase
+  return "live-success" if status && status >= 200 && status < 300
+  return "workspace-state-limited" if lowered.match?(/archive|active|workspace-state|in-use|cap|limit/)
+  return "permission-gated" if lowered.match?(/permission|plan|membership|owner|forbidden|not allowed|requires/)
+  return "unsupported" if status && [400, 404, 405, 409, 415, 422].include?(status)
+  return "documented" unless status
+
+  "live-validated-error"
+end
+
+def host_from_source(value)
+  text = value.to_s.downcase
+  return REPORTS_SERVER if text.include?("reports.api.clockify.me")
+  return MAIN_SERVER if text.include?("api.clockify.me")
+
+  nil
+end
+
+def server_from_finding(host_value, path_value)
+  host_text = host_value.to_s.downcase
+  path_text = path_value.to_s.downcase
+  text = "#{host_text} #{path_text}"
+  reports = text.include?("reports.api.clockify.me")
+  main = text.include?("api.clockify.me") && !reports
+  return "https://reports.api.clockify.me/api/v1" if reports && path_text.match?(%r{(^|/)api/v1/})
+  return REPORTS_SERVER if reports
+  return "https://api.clockify.me/v1" if main && path_text.match?(%r{(^|/)v1/}) && !path_text.match?(%r{(^|/)api/v1/})
+  return MAIN_SERVER if main
+
+  nil
+end
+
+def discover_findings(options)
+  records = Hash.new { |h, key| h[key] = [] }
+  files = []
+  probe_findings = File.join(options[:probe_dir], "findings")
+  files.concat(Dir[File.join(probe_findings, "*.md")]) if Dir.exist?(probe_findings)
+  files.concat(Dir[File.join(options[:findings_dir], "agent-*.md")]) if Dir.exist?(options[:findings_dir])
+  files.sort.each do |file|
+    label = source_label(file, options)
+    File.readlines(file, chomp: true).each do |line|
+      cells = line.split("|").map(&:strip)
+      next unless cells.size >= 5
+
+      method = nil
+      path = nil
+      status = nil
+      host = nil
+      if METHODS.include?(cells[1].to_s.downcase) && cells[3].to_s.include?("/")
+        method = cells[1].downcase
+        path = normalize_path(cells[3])
+        host = server_from_finding(cells[2], cells[3]) || host_from_source(cells[2]) || host_from_source(cells[3])
+        status = extract_status(cells[4])
+      elsif METHODS.include?(cells[3].to_s.downcase) && cells[2].to_s.include?("/")
+        method = cells[3].downcase
+        path = normalize_path(cells[2])
+        host = server_from_finding(cells[1], cells[2]) || host_from_source(cells[1]) || host_from_source(cells[2])
+        status = extract_status(cells[4])
+      elsif cells[1].to_s.include?("/") && METHODS.include?(cells[2].to_s.downcase)
+        method = cells[2].downcase
+        path = normalize_path(cells[1])
+        host = server_from_finding(cells[1], cells[1]) || host_from_source(cells[1])
+        status = extract_status(cells[3])
+      end
+      next unless method && path
+
+      text = line
+      records[[method, path, host]] << {
+        "source" => label,
+        "host" => host,
+        "status" => status,
+        "bucket" => status_bucket(status, text),
+        "note" => text.gsub(/\s+/, " ")[0, 240]
+      }
+    end
+  end
+  records
+end
+
+def discover_mcp_mapping(options)
+  path = File.join(options[:repo_root], "docs/api-coverage.md")
+  return [{}, {}, {}] unless File.exist?(path)
+
+  mapping = Hash.new { |h, key| h[key] = Set.new }
+  tool_meta = Hash.new do |h, key|
+    h[key] = {
+      "evidence" => Set.new,
+      "statuses" => Set.new,
+      "notes" => Set.new
+    }
+  end
+  File.readlines(path, chomp: true).each do |line|
+    tools = line.scan(/`(clockify_[^`]+)`/).flatten
+    next if tools.empty?
+
+    bucket = coverage_bucket_for_text(line)
+    tools.each do |tool|
+      tool_meta[tool]["evidence"] << "mcp-catalog"
+      tool_meta[tool]["evidence"] << bucket if bucket
+      tool_meta[tool]["statuses"] << bucket if bucket
+      tool_meta[tool]["notes"] << line.gsub(/\s+/, " ")[0, 240]
+    end
+
+    line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(https:\/\/(?:api|reports)\.clockify\.me(?:\/api)?\/v1)?(\/[^`\s|,)]+)/i) do |method, host, op_path|
+      tools.each { |tool| mapping[[method.downcase, normalize_path("#{host}#{op_path}")]] << tool }
+    end
+    line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^`\s|,)]+)/i) do |method, op_path|
+      tools.each { |tool| mapping[[method.downcase, normalize_path(op_path)]] << tool }
+    end
+  end
+
+  risks = {}
+  catalog_path = File.join(options[:repo_root], "docs/tool-catalog.json")
+  if File.exist?(catalog_path)
+    catalog = JSON.parse(File.read(catalog_path))
+    Array(catalog["tier1"]).concat(Array(catalog["tier2"])).each do |tool|
+      risks[tool["name"]] = Array(tool["risk_class"])
+    end
+  end
+  normalized_meta = {}
+  tool_meta.keys.sort.each do |tool|
+    normalized_meta[tool] = {
+      "evidence" => tool_meta[tool]["evidence"].to_a.sort,
+      "statuses" => tool_meta[tool]["statuses"].to_a.sort,
+      "notes" => tool_meta[tool]["notes"].to_a.sort
+    }
+  end
+  [mapping.transform_values { |set| set.to_a.sort }, risks, normalized_meta]
+end
+
+def coverage_bucket_for_text(text)
+  lowered = text.to_s.downcase
+  return "permission-gated" if lowered.match?(/permission|forbidden|plan|paid|subscription|owner|reviewed each surface/)
+  return "workspace-state-limited" if lowered.match?(/workspace-state|cap-skipped|cap |limit|in-use|fixture|empty workspace/)
+  return "unsupported" if lowered.match?(/unsupported|405|404|not-found|rejected/)
+  return "live-success" if lowered.match?(/testlive|teste2e|live-|sacrificial-mutating|live-probed|scheduled workflow/)
+  return "unit-only" if lowered.match?(/\bunit\b|dry-run|mock/)
+
+  nil
+end
+
+def default_risk_for(method)
+  case method
+  when "get", "head", "options"
+    ["read"]
+  when "delete"
+    ["destructive"]
+  else
+    ["write"]
+  end
+end
+
+def raw_unit_notes(path)
+  notes = []
+  notes << "Money/rate fields use raw upstream integer units; no currency scaling is applied." if path.match?(%r{/(invoices|hourly-rate|cost-rate|expenses)})
+  notes << "Invoice item unitPrice/amount fields are preserved in raw upstream minor units." if path.include?("/invoices/")
+  notes << "Expense amount and total fields preserve upstream scaling observed in live probes." if path.include?("/expenses")
+  notes
+end
+
+def quirk_notes(path, method)
+  notes = []
+  notes << "Reports and shared-reports use the reports API host, not the main API host." if path.include?("/reports/") || path.include?("shared-reports")
+  notes << "Expense create/update uses multipart form-data in live Clockify." if path.include?("/expenses") && %w[post put patch].include?(method)
+  notes << "Archive active projects or clients before delete where Clockify requires it." if method == "delete" && path.match?(%r{/(projects|clients)/})
+  notes << "Shared-report GET-by-id is bare /shared-reports/{id}; workspace-prefixed paths are used for list/create/update/delete." if path.include?("shared-reports")
+  notes
+end
+
+def parameter_name(param)
+  return nil unless param.is_a?(Hash)
+  return param["name"] if param["in"] == "path"
+
+  ref = param["$ref"].to_s
+  return ref.split("/").last if ref.start_with?("#/components/parameters/")
+
+  nil
+end
+
+def ensure_path_parameters!(op, path)
+  wanted = path.scan(/\{([^}]+)\}/).flatten
+  existing = Array(op["parameters"]).select do |param|
+    name = parameter_name(param)
+    name.nil? || wanted.include?(name)
+  end
+  seen = existing.each_with_object(Set.new) do |param, set|
+    name = parameter_name(param)
+    next unless name
+
+    set << name
+  end
+  wanted.each do |name|
+    next if seen.include?(name)
+
+    existing << {
+      "name" => name,
+      "in" => "path",
+      "required" => true,
+      "schema" => {"type" => "string"}
+    }
+    seen << name
+  end
+  op["parameters"] = existing unless existing.empty?
+end
+
+def json_pointer_exists?(doc, ref)
+  return false unless ref.start_with?("#/")
+
+  current = doc
+  ref.sub("#/", "").split("/").each do |raw|
+    token = raw.gsub("~1", "/").gsub("~0", "~")
+    return false unless current.is_a?(Hash) && current.key?(token)
+
+    current = current[token]
+  end
+  true
+end
+
+class Merger
+  attr_reader :quarantine
+
+  def initialize(options)
+    @options = options
+    @operations = {}
+    @components = Hash.new { |h, key| h[key] = {} }
+    @component_hashes = Hash.new { |h, key| h[key] = {} }
+    @quarantine = []
+    @used_operation_ids = Set.new
+    @aliases = Set.new
+    @security_header_aliases = Hash.new { |h, key| h[key] = Set.new }
+  end
+
+  def add_yaml_file(path, kind)
+    doc = YAML.load_file(path)
+    return unless doc.is_a?(Hash)
+
+    label = source_label(path, @options)
+    domain = domain_from_path(path)
+    servers = Array(doc["servers"]).map { |server| server["url"].to_s }
+    security_schemes = doc.dig("components", "securitySchemes") || {}
+    collect_security_aliases(security_schemes)
+    ref_maps = merge_components(doc["components"] || {}, domain)
+    Array(doc.dig("components", "securitySchemes")).each { |scheme| @aliases << scheme[0].to_s if scheme[0].to_s != "ApiKeyAuth" }
+
+    paths = doc["paths"] || {}
+    paths.keys.sort.each do |raw_path|
+      item = paths[raw_path]
+      next unless item.is_a?(Hash)
+
+      inherited_parameters = Array(item["parameters"])
+      item.keys.map(&:to_s).select { |m| METHODS.include?(m.downcase) }.sort_by { |m| METHOD_ORDER.fetch(m.downcase, 99) }.each do |method|
+        op = deep_copy(item[method])
+        op["parameters"] = merge_parameters(inherited_parameters, Array(op["parameters"]))
+        aliases = operation_security_aliases(op, security_schemes)
+        op["x-clockify-security-aliases"] = aliases unless aliases.empty?
+        rewrite_refs!(op, ref_maps)
+        normalize_security!(op, @aliases)
+        normalized = normalize_path(raw_path)
+        host = host_for(normalized, op, servers)
+        add_operation(
+          method.downcase,
+          normalized,
+          op,
+          source: label,
+          domain: domain,
+          host: host,
+          evidence: kind,
+          priority: SOURCE_PRIORITIES.fetch(kind, 0)
+        )
+      end
+    end
+  rescue StandardError => e
+    @quarantine << {
+      "source" => source_label(path, @options),
+      "reason" => e.message.lines.first.to_s.strip
+    }
+  end
+
+  def add_markdown_doc(path)
+    label = source_label(path, @options)
+    domain = domain_from_path(path)
+    method_path_from_doc(File.readlines(path, chomp: true)).each do |method, normalized|
+      op = {
+        "tags" => [tag_for_domain(domain)],
+        "summary" => "Documented #{method.upcase} #{normalized}",
+        "description" => "Operation discovered from pasted Clockify API Markdown. Schemas stay broad unless a parsed OpenAPI source or live fixture provides narrower structure.",
+        "operationId" => operation_id(method, normalized, @used_operation_ids),
+        "security" => [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}],
+        "responses" => {
+          "default" => {
+            "description" => "Documented Clockify response.",
+            "content" => {
+              "application/json" => {
+                "schema" => {"type" => "object", "additionalProperties" => true}
+              }
+            }
+          }
+        }
+      }
+      add_operation(
+        method,
+        normalized,
+        op,
+        source: label,
+        domain: domain,
+        host: host_for(normalized, op, []),
+        evidence: "doc-md",
+        priority: SOURCE_PRIORITIES.fetch("doc-md")
+      )
+    end
+  end
+
+  def apply_metadata(findings, mcp_mapping, tool_risks, tool_meta)
+    @operations.each do |(method, path), record|
+      op = record[:op]
+      findings_for_op = Array(findings[[method, path, record[:host]]]) + Array(findings[[method, path, nil]])
+      other_host_findings = findings.each_with_object([]) do |((f_method, f_path, f_host), values), out|
+        next unless f_method == method && f_path == path && f_host && f_host != record[:host]
+
+        out.concat(values)
+      end
+      evidence = Array(op["x-clockify-evidence"])
+      source_files = Array(op["x-clockify-source-files"])
+      findings_for_op.each do |finding|
+        evidence << finding["bucket"]
+        source_files << finding["source"]
+      end
+      live_status = choose_live_status(evidence, findings_for_op)
+      tools = Array(mcp_mapping[[method, path]]).sort
+      evidence.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "evidence")) })
+      tool_statuses = tools.flat_map { |tool| Array(tool_meta.dig(tool, "statuses")) }
+      live_status = choose_live_status(evidence, findings_for_op, tool_statuses)
+      risk = tools.flat_map { |tool| tool_risks[tool] }.compact
+      risk = default_risk_for(method) if risk.empty?
+
+      op["x-clockify-source-files"] = source_files.uniq.sort
+      op["x-clockify-host"] = record[:host]
+      op["x-clockify-evidence"] = evidence.uniq.sort
+      op["x-clockify-live-status"] = live_status
+      op["x-clockify-mcp-tools"] = tools
+      op["x-clockify-risk"] = risk.uniq.sort
+
+      raw_notes = raw_unit_notes(path)
+      op["x-clockify-raw-unit-notes"] = raw_notes unless raw_notes.empty?
+      notes = quirk_notes(path, method)
+      notes.concat(findings_for_op.map { |finding| finding["note"] }) if findings_for_op.any?
+      notes.concat(other_host_findings.map { |finding| "Wrong-host finding not applied to live status: #{finding["note"]}" }) if other_host_findings.any?
+      notes.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "notes")) }) if tools.any?
+      op["x-clockify-notes"] = notes.uniq.sort unless notes.empty?
+      ensure_path_parameters!(op, path)
+      op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
+      op["servers"] = [{"url" => REPORTS_SERVER}] if record[:host] == REPORTS_SERVER
+    end
+  end
+
+  def document
+    paths = {}
+    @operations.keys.sort_by { |method, path| [path, METHOD_ORDER.fetch(method, 99)] }.each do |method, path|
+      paths[path] ||= {}
+      paths[path][method] = sort_operation(@operations[[method, path]][:op])
+    end
+
+    doc = {
+      "openapi" => "3.0.3",
+      "info" => {
+        "title" => "Clockify Unified OpenAPI",
+        "version" => "2026-05-12",
+        "description" => [
+          "Generated by scripts/gen-clockify-openapi from realOPENAPI, clockify-api-probe-lab, GOCLMCP coverage docs, and QA findings.",
+          "Do not edit this file by hand; run `make gen-openapi` after source evidence changes.",
+          "Operation vendor extensions preserve provenance, host, live status, MCP mapping, risk, raw unit notes, and known upstream quirks."
+        ].join("\n")
+      },
+      "servers" => [
+        {"url" => MAIN_SERVER, "description" => "Main Clockify API"},
+        {"url" => REPORTS_SERVER, "description" => "Clockify reports and shared-reports API"}
+      ],
+      "security" => [{"ApiKeyAuth" => []}],
+      "tags" => tags(paths),
+      "paths" => paths,
+      "components" => pruned_components(paths),
+      "x-clockify-generation" => {
+        "generator" => "scripts/gen-clockify-openapi",
+        "sourcePrecedence" => [
+          "live/probe findings metadata",
+          "realOPENAPI operation bodies",
+          "probe-lab OpenAPI operation bodies",
+          "probe-lab fragments/supplementary OpenAPI operation bodies",
+          "pasted DOC Markdown operation inventory",
+          "GOCLMCP catalog/coverage annotations"
+        ],
+        "securityAliasesNormalized" => @aliases.to_a.uniq.sort - ["ApiKeyAuth", "AddonTokenAuth"],
+        "securityHeaderAliasesNormalized" => security_header_aliases
+      },
+      "x-clockify-source-quarantine" => @quarantine.sort_by { |entry| entry["source"] }
+    }
+    doc
+  end
+
+  private
+
+  def collect_security_aliases(schemes)
+    return unless schemes.is_a?(Hash)
+
+    schemes.each do |scheme, cfg|
+      canonical = case scheme.to_s
+                  when "AddonKeyAuth", "MarketplaceKeyAuth"
+                    @aliases << scheme.to_s
+                    "AddonTokenAuth"
+                  when "ApiKeyAuth"
+                    "ApiKeyAuth"
+                  else
+                    scheme.to_s
+                  end
+      header = cfg.is_a?(Hash) ? cfg["name"].to_s : ""
+      @security_header_aliases[canonical] << header unless header.empty?
+    end
+  end
+
+  def security_header_aliases
+    @security_header_aliases.keys.sort.each_with_object({}) do |scheme, out|
+      out[scheme] = @security_header_aliases[scheme].to_a.sort
+    end
+  end
+
+  def merge_components(components, domain)
+    ref_maps = Hash.new { |h, key| h[key] = {} }
+    components.each do |section, values|
+      next if section.to_s == "securitySchemes"
+      next unless values.is_a?(Hash)
+
+      values.keys.sort.each do |name|
+        value = deep_copy(values[name])
+        normalize_security!(value, @aliases)
+        hash = Digest::SHA256.hexdigest(canonical_json(value))
+        existing_by_hash = @component_hashes[section][hash]
+        if existing_by_hash
+          ref_maps[section][name] = existing_by_hash
+          next
+        end
+
+        target = name
+        if @components[section].key?(target)
+          prefix = pascal_domain(domain)
+          target = "#{prefix}#{name}"
+          suffix = 2
+          while @components[section].key?(target)
+            target = "#{prefix}#{name}#{suffix}"
+            suffix += 1
+          end
+        end
+        @components[section][target] = value
+        @component_hashes[section][hash] = target
+        ref_maps[section][name] = target
+      end
+    end
+    ref_maps.each do |section, mapping|
+      mapping.each_value do |target|
+        rewrite_refs!(@components[section][target], ref_maps) if @components[section][target]
+      end
+    end
+    ref_maps
+  end
+
+  def merge_parameters(path_params, op_params)
+    merged = []
+    seen = Set.new
+    path_params.concat(op_params).each do |param|
+      key = if param.is_a?(Hash) && param["$ref"]
+              param["$ref"]
+            elsif param.is_a?(Hash)
+              "#{param["in"]}:#{param["name"]}"
+            else
+              param.to_s
+            end
+      next if seen.include?(key)
+
+      seen << key
+      merged << param
+    end
+    merged
+  end
+
+  def add_operation(method, path, op, source:, domain:, host:, evidence:, priority:)
+    op = deep_copy(op)
+    op["operationId"] = operation_id(method, path, @used_operation_ids) if op["operationId"].to_s.empty?
+    op["tags"] = [tag_for_domain(domain)] if Array(op["tags"]).empty?
+    op["x-clockify-source-files"] = [source]
+    op["x-clockify-host"] = host
+    op["x-clockify-evidence"] = [evidence]
+    op["x-clockify-live-status"] = evidence == "real-openapi" ? "documented" : evidence
+
+    key = [method, path]
+    existing = @operations[key]
+    if existing.nil? || priority > existing[:priority]
+      if existing
+        op["x-clockify-source-files"] = (Array(op["x-clockify-source-files"]) + Array(existing[:op]["x-clockify-source-files"])).uniq.sort
+        op["x-clockify-evidence"] = (Array(op["x-clockify-evidence"]) + Array(existing[:op]["x-clockify-evidence"])).uniq.sort
+      end
+      @operations[key] = {op: op, priority: priority, host: host}
+    else
+      existing[:op]["x-clockify-source-files"] = (Array(existing[:op]["x-clockify-source-files"]) + [source]).uniq.sort
+      existing[:op]["x-clockify-evidence"] = (Array(existing[:op]["x-clockify-evidence"]) + [evidence]).uniq.sort
+      existing[:host] = REPORTS_SERVER if host == REPORTS_SERVER
+    end
+  end
+
+  def choose_live_status(evidence, findings, tool_statuses = [])
+    buckets = findings.map { |finding| finding["bucket"] }
+    buckets.concat(tool_statuses)
+    return "live-success" if buckets.include?("live-success")
+    return "workspace-state-limited" if buckets.include?("workspace-state-limited")
+    return "permission-gated" if buckets.include?("permission-gated")
+    return "unsupported" if buckets.include?("unsupported")
+    return "unit-only" if buckets.include?("unit-only")
+    return "probe-documented" if evidence.any? { |entry| entry.to_s.start_with?("probe") }
+
+    "documented"
+  end
+
+  def sort_operation(op)
+    preferred = %w[tags summary description operationId servers security parameters requestBody responses]
+    out = {}
+    preferred.each { |key| out[key] = sort_deep(op[key]) if op.key?(key) }
+    op.keys.map(&:to_s).sort.each do |key|
+      next if out.key?(key)
+
+      out[key] = sort_deep(op[key])
+    end
+    out
+  end
+
+  def tag_for_domain(domain)
+    {
+      "custom_fields" => "Custom Fields",
+      "time_entries" => "Time Entries",
+      "time_off" => "Time Off",
+      "user_groups" => "User Groups"
+    }.fetch(domain, domain.split(/[^a-z0-9]+/).map { |part| part[0].upcase + part[1..] }.join(" "))
+  end
+
+  def tags(paths)
+    names = paths.values.flat_map do |item|
+      item.values.flat_map { |op| Array(op["tags"]) }
+    end.uniq.sort
+    names.map { |name| {"name" => name} }
+  end
+
+  def pruned_components(paths)
+    refs = Set.new
+    collect_refs(paths, refs)
+    changed = true
+    while changed
+      changed = false
+      refs.to_a.each do |ref|
+        match = ref.match(%r{\A#/components/([^/]+)/([^/]+)\z})
+        next unless match
+
+        value = @components.dig(match[1], match[2])
+        next unless value
+
+        before = refs.size
+        collect_refs(value, refs)
+        changed ||= refs.size > before
+      end
+    end
+
+    out = {
+      "securitySchemes" => {
+        "ApiKeyAuth" => {"type" => "apiKey", "in" => "header", "name" => "X-Api-Key"},
+        "AddonTokenAuth" => {"type" => "apiKey", "in" => "header", "name" => "X-Addon-Token"}
+      }
+    }
+    @components.keys.sort.each do |section|
+      kept = {}
+      @components[section].keys.sort.each do |name|
+        ref = "#/components/#{section}/#{name}"
+        kept[name] = sort_deep(@components[section][name]) if refs.include?(ref)
+      end
+      out[section] = kept unless kept.empty?
+    end
+    out
+  end
+
+  def collect_refs(value, refs)
+    case value
+    when Hash
+      refs << value["$ref"] if value["$ref"].is_a?(String)
+      value.each_value { |child| collect_refs(child, refs) }
+    when Array
+      value.each { |child| collect_refs(child, refs) }
+    end
+  end
+end
+
+def document_operation_keys(doc)
+  keys = []
+  (doc["paths"] || {}).each do |path, item|
+    item.each do |method, _op|
+      keys << "#{method.upcase} #{normalize_path(path)}" if METHODS.include?(method)
+    end
+  end
+  keys.uniq.sort
+end
+
+def mcp_probe_allowlist_keys(repo_root)
+  path = File.join(repo_root, "internal/tools/tier2_probe_lab_api.go")
+  return nil unless File.exist?(path)
+
+  verbs = {
+    "Get" => "GET",
+    "Post" => "POST",
+    "Put" => "PUT",
+    "Patch" => "PATCH",
+    "Delete" => "DELETE"
+  }
+  File.read(path).scan(/\{Method: http\.Method(\w+), Path: "([^"]+)"\}/).map do |method, raw_path|
+    verb = verbs.fetch(method)
+    "#{verb} #{normalize_path(raw_path)}"
+  end.uniq.sort
+end
+
+def validate_document(doc, repo_root = nil)
+  errors = []
+  paths = doc["paths"] || {}
+  operation_ids = {}
+  components = doc["components"] || {}
+  refs = []
+  collect = lambda do |value|
+    case value
+    when Hash
+      refs << value["$ref"] if value["$ref"].is_a?(String)
+      value.each_value { |child| collect.call(child) }
+    when Array
+      value.each { |child| collect.call(child) }
+    end
+  end
+  collect.call(paths)
+  collect.call(components)
+
+  refs.uniq.each { |ref| errors << "unresolved ref #{ref}" if ref.start_with?("#/") && !json_pointer_exists?(doc, ref) }
+
+  paths.each do |path, item|
+    item.each do |method, op|
+      next unless METHODS.include?(method)
+
+      id = op["operationId"].to_s
+      errors << "#{method.upcase} #{path} missing operationId" if id.empty?
+      errors << "duplicate operationId #{id}" if operation_ids.key?(id)
+      operation_ids[id] = true
+      errors << "#{method.upcase} #{path} missing security" if Array(op["security"]).empty?
+      expected_params = path.scan(/\{([^}]+)\}/).flatten
+      actual_params = Array(op["parameters"]).map do |param|
+        next nil unless param.is_a?(Hash)
+        next param["name"] if param["in"] == "path"
+
+        ref = param["$ref"]
+        if ref&.start_with?("#/components/parameters/")
+          components.dig("parameters", ref.split("/").last, "name")
+        end
+      end.compact
+      expected_params.each do |param|
+        errors << "#{method.upcase} #{path} missing path parameter #{param}" unless actual_params.include?(param)
+      end
+      if path.include?("/reports/") || path.include?("shared-reports")
+        servers = Array(op["servers"]).map { |server| server["url"] }
+        errors << "#{method.upcase} #{path} missing reports server" unless servers.include?(REPORTS_SERVER)
+      end
+    end
+  end
+  if repo_root
+    allowlist = mcp_probe_allowlist_keys(repo_root)
+    if allowlist
+      missing = document_operation_keys(doc) - allowlist
+      missing.each do |operation|
+        errors << "probe_lab_api allowlist missing OpenAPI operation #{operation}"
+      end
+    end
+  end
+  errors
+end
+
+def write_yaml(path, doc)
+  FileUtils.mkdir_p(File.dirname(path))
+  payload = YAML.dump(JSON.parse(JSON.generate(doc))).sub(/\A---\n/, "")
+  File.write(path, payload)
+end
+
+if options[:validate_only]
+  doc = YAML.load_file(options[:out])
+  errors = validate_document(doc, options[:repo_root])
+  abort(errors.join("\n")) unless errors.empty?
+  puts "validated #{options[:out]}"
+  exit 0
+end
+
+merger = Merger.new(options)
+
+required_dirs = [options[:real_dir], options[:probe_dir], options[:repo_root]]
+missing = required_dirs.reject { |dir| Dir.exist?(dir) }
+abort("missing required source directories: #{missing.join(", ")}") unless missing.empty?
+
+yaml_files(options[:real_dir]).each { |path| merger.add_yaml_file(path, "real-openapi") }
+
+probe_root_yaml = File.join(options[:probe_dir], "openapi.yaml")
+merger.add_yaml_file(probe_root_yaml, "probe-openapi") if File.exist?(probe_root_yaml)
+
+supplemental = %w[
+  Invoiceopenapi.yaml
+  USEREXPENCUSTOMFIED.yaml
+  inveoice+Balance+Policies+TimeOff.yaml
+  openapi_scheduling.yaml
+  openapi_timeentry.yaml
+  openapi_usergroups_tags.yaml
+]
+supplemental.each do |name|
+  path = File.join(options[:probe_dir], name)
+  merger.add_yaml_file(path, "probe-supplement") if File.exist?(path)
+end
+
+Dir[File.join(options[:probe_dir], "openapi-fragments", "*.yaml")].sort.each do |path|
+  merger.add_yaml_file(path, "probe-fragment")
+end
+Dir[File.join(options[:probe_dir], "openapi-fragments-v3", "*.yaml")].sort.each do |path|
+  merger.add_yaml_file(path, "probe-fragment")
+end
+
+Dir[File.join(options[:probe_dir], "*DOC.md")].sort.each do |path|
+  merger.add_markdown_doc(path)
+end
+
+findings = discover_findings(options)
+mcp_mapping, tool_risks, tool_meta = discover_mcp_mapping(options)
+merger.apply_metadata(findings, mcp_mapping, tool_risks, tool_meta)
+
+doc = merger.document
+errors = validate_document(doc, options[:repo_root])
+abort(errors.join("\n")) unless errors.empty?
+
+write_yaml(options[:out], doc)
+puts "wrote #{options[:out]}"
+puts "operations: #{doc["paths"].sum { |_path, item| item.keys.count { |key| METHODS.include?(key) } }}"
+puts "quarantined sources: #{doc["x-clockify-source-quarantine"].size}"

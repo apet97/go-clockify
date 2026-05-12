@@ -176,12 +176,16 @@ func weeklyFilterSchema() map[string]any {
 
 func containsArchivedReportFilterSchema() map[string]any {
 	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"contains": map[string]any{"type": "string", "enum": reportContainsEnums},
-			"ids":      stringArraySchema("Clockify IDs"),
-			"status":   map[string]any{"type": "string", "enum": reportArchivedStatusEnums},
-		},
+		"type":       "object",
+		"properties": archivedReportFilterProperties(),
+	}
+}
+
+func archivedReportFilterProperties() map[string]any {
+	return map[string]any{
+		"contains": map[string]any{"type": "string", "enum": reportContainsEnums},
+		"ids":      stringArraySchema("Clockify IDs"),
+		"status":   map[string]any{"type": "string", "enum": reportArchivedStatusEnums},
 	}
 }
 
@@ -197,7 +201,7 @@ func containsUsersReportFilterSchema() map[string]any {
 }
 
 func tagReportFilterSchema() map[string]any {
-	props := containsArchivedReportFilterSchema()["properties"].(map[string]any)
+	props := archivedReportFilterProperties()
 	props["contained_in_timeentry"] = map[string]any{"type": "string", "enum": reportContainsEnums}
 	return map[string]any{"type": "object", "properties": props}
 }

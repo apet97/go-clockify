@@ -10085,7 +10085,7 @@
     },
     {
       "name": "clockify_set_custom_field_value",
-      "description": "Set a custom field value on a specific project or time entry",
+      "description": "Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value.",
       "group": "custom_fields",
       "tier": 2,
       "read_only": false,
@@ -10170,6 +10170,18 @@
             "type": "array"
           },
           "field_id": {
+            "type": "string"
+          },
+          "field_type": {
+            "description": "Upstream-accepted custom-field type; defaults to the current field type because Clockify requires type on update",
+            "enum": [
+              "TXT",
+              "NUMBER",
+              "DROPDOWN_SINGLE",
+              "DROPDOWN_MULTIPLE",
+              "CHECKBOX",
+              "LINK"
+            ],
             "type": "string"
           },
           "name": {

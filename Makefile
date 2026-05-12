@@ -4,7 +4,7 @@
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench bench-baseline-check \
         build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
-        gen-tool-catalog catalog-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
+        gen-tool-catalog catalog-drift gen-openapi openapi-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
         grpc-release-parity \
 	repo-hygiene script-tests actionlint shellcheck live-contract-local \
 	release-check rc-evidence rc-evidence-plan launch-external-status public-content-audit \
@@ -242,6 +242,29 @@ actionlint:
 # refuses to merge an unrefreshed catalog.
 gen-tool-catalog:
 	go run ./scripts/gen-tool-catalog -out docs
+
+# gen-openapi regenerates the unified Clockify OpenAPI artifact from
+# the local evidence bundle: /Users/15x/Downloads/realOPENAPI,
+# /Users/15x/Downloads/WORKING/clockify-api-probe-lab, this repo's
+# coverage/catalog docs, and the QA finding reports. The generator is
+# deterministic and validates refs, operation IDs, path params, security,
+# and reports-host routing before writing.
+gen-openapi:
+	scripts/gen-clockify-openapi --out docs/openapi/clockify-openapi.yaml
+
+# openapi-drift re-runs the OpenAPI generator and fails if the committed
+# artifact drifted. This is a local evidence-bundle gate rather than part
+# of verify-core because the source API-doc bundle lives outside the repo.
+openapi-drift:
+	@test -f docs/openapi/clockify-openapi.yaml || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml missing — run \`make gen-openapi\`"; exit 1; }
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before"; \
+	 $(MAKE) --no-print-directory gen-openapi >/dev/null; \
+	 scripts/gen-clockify-openapi --validate-only --out docs/openapi/clockify-openapi.yaml >/dev/null; \
+	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
+	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale — run \`make gen-openapi\` and commit"; \
+	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
 
 # catalog-drift re-runs gen-tool-catalog and fails if the generated
 # docs change relative to the current working tree contents. Wired

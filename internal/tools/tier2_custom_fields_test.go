@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 )
@@ -13,13 +14,29 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/custom-fields":
-			respondJSON(t, w, []map[string]any{{"id": "f1", "name": "Region"}})
+			respondJSON(t, w, []map[string]any{{"id": "f1", "name": "Region", "type": "TXT", "required": true}})
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
 			t.Fatalf("single custom-field GET must not be used; live Clockify returns 405 for this path")
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/custom-fields":
 			respondJSON(t, w, map[string]any{"id": "f-new", "name": "Priority"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode update body: %v", err)
+			}
+			if got, _ := body["type"].(string); got != "TXT" {
+				t.Fatalf("update body type = %q, want current TXT (body=%#v)", got, body)
+			}
 			respondJSON(t, w, map[string]any{"id": "f1", "name": "Region (updated)"})
+		case r.Method == "PATCH" && r.URL.Path == "/workspaces/ws1/projects/p1/custom-fields/f1":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode project custom-field body: %v", err)
+			}
+			if got, _ := body["defaultValue"].(string); got != "North" {
+				t.Fatalf("project custom-field defaultValue = %q, want North (body=%#v)", got, body)
+			}
+			respondJSON(t, w, map[string]any{"id": "f1", "defaultValue": "North"})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -83,6 +100,13 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 	if _, err := svc.UpdateCustomField(ctx, map[string]any{"field_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty field_id")
 	}
+
+	res, err = svc.SetCustomFieldValue(ctx, map[string]any{
+		"field_id":   "f1",
+		"project_id": "p1",
+		"value":      "North",
+	})
+	mustOK(t, res, err, "clockify_set_custom_field_value")
 
 	// Delete — dry-run, executed, validation
 	res, err = svc.DeleteCustomField(ctx, map[string]any{"field_id": "f1", "dry_run": true})

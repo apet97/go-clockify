@@ -3,9 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
@@ -88,8 +90,13 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 					"type":     "object",
 					"required": []string{"field_id"},
 					"properties": map[string]any{
-						"field_id":       map[string]any{"type": "string"},
-						"name":           map[string]any{"type": "string"},
+						"field_id": map[string]any{"type": "string"},
+						"name":     map[string]any{"type": "string"},
+						"field_type": map[string]any{
+							"type":        "string",
+							"description": "Upstream-accepted custom-field type; defaults to the current field type because Clockify requires type on update",
+							"enum":        []string{"TXT", "NUMBER", "DROPDOWN_SINGLE", "DROPDOWN_MULTIPLE", "CHECKBOX", "LINK"},
+						},
 						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 						"required":       map[string]any{"type": "boolean"},
 					},
@@ -120,7 +127,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. Set custom field value on a project or entry
 		{
 			Tool: toolRW("clockify_set_custom_field_value",
-				"Set a custom field value on a specific project or time entry",
+				"Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value.",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"field_id", "value"},
@@ -278,7 +285,33 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 
+	existing, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
 	body := map[string]any{}
+	if name, _ := existing["name"].(string); name != "" {
+		body["name"] = name
+	}
+	fieldType := strings.ToUpper(strings.TrimSpace(stringArg(args, "field_type")))
+	if fieldType == "" {
+		fieldType, _ = existing["type"].(string)
+		fieldType = strings.ToUpper(strings.TrimSpace(fieldType))
+	}
+	if fieldType == "" {
+		return ResultEnvelope{}, fmt.Errorf("field_type is required because Clockify requires type on custom-field update and the current field type could not be resolved")
+	}
+	if !validCustomFieldTypes[fieldType] {
+		return ResultEnvelope{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
+	}
+	body["type"] = fieldType
+	if vals, ok := existing["allowedValues"].([]any); ok {
+		body["allowedValues"] = vals
+	}
+	if req, ok := existing["required"].(bool); ok {
+		body["required"] = req
+	}
 	if name := stringArg(args, "name"); name != "" {
 		body["name"] = name
 	}
@@ -367,24 +400,75 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{
-		"customFieldId": fieldID,
-		"value":         value,
+	if projectID != "" {
+		path, err := paths.Workspace(wsID, "projects", projectID, "custom-fields", fieldID)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		body := map[string]any{"defaultValue": value}
+		var out map[string]any
+		if err := s.Client.Patch(ctx, path, body, &out); err != nil {
+			return ResultEnvelope{}, err
+		}
+		return ok("clockify_set_custom_field_value", out, map[string]any{"workspaceId": wsID}), nil
 	}
 
-	var path string
-	if projectID != "" {
-		path, err = paths.Workspace(wsID, "projects", projectID, "custom-fields")
-	} else {
-		path, err = paths.Workspace(wsID, "time-entries", entryID, "custom-fields")
-	}
+	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-
-	var out map[string]any
-	if err := s.Client.Put(ctx, path, body, &out); err != nil {
+	var existing clockify.TimeEntry
+	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_set_custom_field_value", out, map[string]any{"workspaceId": wsID}), nil
+	if err := s.requireCurrentUserEntry(ctx, existing); err != nil {
+		return ResultEnvelope{}, err
+	}
+	previous := existing
+	customFields, err := mergeCustomFieldValue(existing.CustomFieldValues, fieldID, value)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	existing.CustomFieldValues = customFields
+	var updated clockify.TimeEntry
+	if err := s.Client.Put(ctx, entryPath, timeEntryPutPayload(existing), &updated); err != nil {
+		return ResultEnvelope{}, err
+	}
+	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
+	s.emitWeeklyReportsForEntryChange(ctx, wsID, &previous, &updated)
+	return ok("clockify_set_custom_field_value", updated, map[string]any{"workspaceId": wsID}), nil
+}
+
+func mergeCustomFieldValue(existing any, fieldID string, value any) ([]map[string]any, error) {
+	out := []map[string]any{}
+	found := false
+	appendField := func(field map[string]any) {
+		next := maps.Clone(field)
+		if id, _ := next["customFieldId"].(string); id == fieldID {
+			next["value"] = value
+			found = true
+		}
+		out = append(out, next)
+	}
+	switch fields := existing.(type) {
+	case nil:
+	case []map[string]any:
+		for _, field := range fields {
+			appendField(field)
+		}
+	case []any:
+		for _, item := range fields {
+			field, ok := item.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("existing custom field values must contain only objects")
+			}
+			appendField(field)
+		}
+	default:
+		return nil, fmt.Errorf("existing custom field values had unsupported shape %T", existing)
+	}
+	if !found {
+		out = append(out, map[string]any{"customFieldId": fieldID, "value": value})
+	}
+	return out, nil
 }

@@ -52,6 +52,7 @@ func TestLiveT2CustomFieldsCRUD(t *testing.T) {
 
 	fieldName := c.LivePrefix("cf-text", 0)
 	var fieldID string
+	fieldDeleted := false
 	t.Run("create_custom_field", func(t *testing.T) {
 		if projectID == "" {
 			t.Skip("seed project unavailable")
@@ -112,6 +113,9 @@ func TestLiveT2CustomFieldsCRUD(t *testing.T) {
 		}
 		fieldID = id
 		c.RegisterCleanup("custom-field", id, func(ctx context.Context) error {
+			if fieldDeleted {
+				return nil
+			}
 			return c.rawDeletePath(ctx, "/custom-fields/"+id)
 		})
 	})
@@ -206,10 +210,14 @@ func TestLiveT2CustomFieldsCRUD(t *testing.T) {
 			t.Fatalf("dry_run delete did not produce dry_run:true envelope: %#v", sc)
 		}
 		// Independent verification: the field must still be in the
-		// upstream after the dry-run call.
-		var probe map[string]any
-		if err := c.rawGetPath(ctx, "/custom-fields/"+fieldID, &probe); err != nil {
-			t.Fatalf("field disappeared after dry-run delete: %v", err)
+		// upstream after the dry-run call. Live Clockify returns 405
+		// for single custom-field GET, so verify through list scan.
+		exists, err := liveCustomFieldExists(ctx, c, fieldID)
+		if err != nil {
+			t.Fatalf("list custom fields after dry-run delete: %v", err)
+		}
+		if !exists {
+			t.Fatalf("field disappeared after dry-run delete")
 		}
 	})
 
@@ -222,20 +230,28 @@ func TestLiveT2CustomFieldsCRUD(t *testing.T) {
 		_ = h.callOK(ctx, "clockify_delete_custom_field", map[string]any{
 			"field_id": fieldID,
 		})
-		// Independent verification: the upstream now refuses to GET
-		// the deleted field.
-		var probe map[string]any
-		err := c.rawGetPath(ctx, "/custom-fields/"+fieldID, &probe)
-		if err == nil {
+		fieldDeleted = true
+		// Independent verification: the upstream no longer returns
+		// the field in the supported list route.
+		exists, err := liveCustomFieldExists(ctx, c, fieldID)
+		if err != nil {
+			t.Fatalf("list custom fields after delete: %v", err)
+		}
+		if exists {
 			t.Fatalf("field %s still readable after delete", fieldID)
 		}
-		if !strings.Contains(strings.ToLower(err.Error()), "not found") &&
-			!strings.Contains(err.Error(), "doesn't belong to Workspace") &&
-			!strings.Contains(err.Error(), "404") {
-			t.Fatalf("expected not-found-style error after delete, got: %v", err)
-		}
-		// The cleanup registry will still try to delete; its
-		// rawDeletePath will surface a 404 which we tolerate via
-		// the t.Logf-only failure path in flushCleanups.
 	})
+}
+
+func liveCustomFieldExists(ctx context.Context, c *liveCampaignContext, fieldID string) (bool, error) {
+	var fields []map[string]any
+	if err := c.rawGetPath(ctx, "/custom-fields", &fields); err != nil {
+		return false, err
+	}
+	for _, field := range fields {
+		if id, _ := field["id"].(string); id == fieldID {
+			return true, nil
+		}
+	}
+	return false, nil
 }

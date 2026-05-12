@@ -40,11 +40,13 @@ work and commit it.
   through the MCP path, the documented invite-user route is pinned by
   a no-email validation probe, stale non-catalog user-invite risk
   overrides are removed, and risk overrides now fail if they target
-  ghost descriptor names. The current catalog is 128 tools after two
-  Tier 1 timesheet workflow helpers plus five local discovery,
-  activation, and name-resolution helpers were added on top of that
-  raw API coverage surface. The local helpers are unit tested; the
-  timesheet workflow helpers also have live-test hooks.
+  ghost descriptor names. The current catalog is 152 tools after two
+  Tier 1 timesheet workflow helpers, five local discovery/activation
+  and name-resolution helpers, expanded client/project/task/admin and
+  reports coverage, and the latest documented probe-lab route refresh
+  were added on top of that raw API coverage surface. The local
+  helpers are unit tested; API-backed additions have live-test hooks
+  where the upstream workspace permits them.
   This is manual campaign coverage only and does not tick any
   external launch-evidence box.
 - **Historical baselines, not current candidate SHAs:** post-PR #63

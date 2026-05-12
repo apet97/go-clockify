@@ -109,6 +109,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodGet, Path: "/workspaces"},
 	{Method: http.MethodPost, Path: "/workspaces"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}"},
+	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/addons/{addonId}/webhooks"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/approval-requests"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/approval-requests"},
@@ -140,6 +141,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/expenses/categories/{categoryId}"},
 	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/expenses/{expenseId}"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/expenses/{expenseId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/expenses/{expenseId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/holidays"},
@@ -170,6 +172,9 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/member-profile/{userId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/policies"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/policies"},
+	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/policies/{policyId}/requests"},
+	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"},
+	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/policies/{policyId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/policies/{policyId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/policies/{policyId}"},
@@ -244,6 +249,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/time-entries/{timeEntryId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-entries/{timeEntryId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/time-entries/{timeEntryId}"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-off/balance/user/{userId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"},
 	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-off/policies"},
@@ -251,10 +257,12 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/time-off/policies/{id}"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-off/policies/{id}"},
 	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/time-off/policies/{id}"},
+	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/time-off/policies/{id}"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"},
 	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/time-off/requests"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/time-off/requests"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/time-off/requests/users/{userId}"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/time-off/requests/{requestId}"},
@@ -263,7 +271,9 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/user-groups"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/user-groups"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/user-groups/{groupId}"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/user-groups/{groupId}"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/user-groups/{groupId}"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/user-groups/{groupId}/users"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/user-groups/{groupId}/users"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/user-groups/{id}"},
@@ -285,6 +295,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value"},
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/users/{userId}/hourly-rate"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/users/{userId}/managers"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/users/{userId}/time-off/balances"},
 	{Method: http.MethodDelete, Path: "/workspaces/{workspaceId}/users/{userId}/roles"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/users/{userId}/roles"},
 	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/webhooks"},
@@ -294,6 +305,8 @@ var documentedAPIOperations = []documentedAPIOperation{
 	{Method: http.MethodPut, Path: "/workspaces/{workspaceId}/webhooks/{webhookId}"},
 	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"},
 	{Method: http.MethodPost, Path: "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"},
+	{Method: http.MethodGet, Path: "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"},
+	{Method: http.MethodPatch, Path: "/workspaces/{workspaceId}/webhooks/{webhookId}/token"},
 }
 
 func (s *Service) ListDocumentedAPIOperations(_ context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -459,25 +472,101 @@ func documentedOperationFromArgs(args map[string]any) (documentedAPIOperation, e
 
 func normalizeDocumentedAPIPath(path string) string {
 	if strings.HasPrefix(path, "/api/v1/") {
-		return strings.TrimPrefix(path, "/api/v1")
+		path = strings.TrimPrefix(path, "/api/v1")
+	} else if strings.HasPrefix(path, "/v1/") {
+		path = strings.TrimPrefix(path, "/v1")
 	}
-	if strings.HasPrefix(path, "/v1/") {
-		return strings.TrimPrefix(path, "/v1")
+	return canonicalDocumentedAPIPath(path)
+}
+
+func canonicalDocumentedAPIPath(path string) string {
+	segments := strings.Split(path, "/")
+	for i, segment := range segments {
+		if !strings.HasPrefix(segment, "{") || !strings.HasSuffix(segment, "}") {
+			continue
+		}
+		name := strings.TrimSuffix(strings.TrimPrefix(segment, "{"), "}")
+		previous := ""
+		if i > 0 {
+			previous = segments[i-1]
+		}
+		switch name {
+		case "ws", "wsId", "workspace", "workspace_id", "workspaceId":
+			name = "workspaceId"
+		case "uid", "user", "user_id", "userId":
+			name = "userId"
+		default:
+			name = canonicalDocumentedParam(previous, name)
+		}
+		segments[i] = "{" + name + "}"
 	}
-	return path
+	return strings.Join(segments, "/")
+}
+
+func canonicalDocumentedParam(segment, fallback string) string {
+	switch segment {
+	case "addons":
+		return "addonId"
+	case "approval-requests":
+		return "approvalId"
+	case "assignments":
+		return "assignmentId"
+	case "categories":
+		return "categoryId"
+	case "clients":
+		return "clientId"
+	case "custom-fields":
+		return "customFieldId"
+	case "expenses":
+		return "expenseId"
+	case "files":
+		return "fileId"
+	case "holidays":
+		return "holidayId"
+	case "invoices":
+		return "invoiceId"
+	case "items":
+		return "order"
+	case "payments":
+		return "paymentId"
+	case "policies":
+		return "policyId"
+	case "projects":
+		return "projectId"
+	case "requests":
+		return "requestId"
+	case "shared-reports":
+		return "sharedReportId"
+	case "tags":
+		return "tagId"
+	case "tasks":
+		return "taskId"
+	case "time-entries":
+		return "timeEntryId"
+	case "user":
+		return "userId"
+	case "user-groups":
+		return "groupId"
+	case "users":
+		return "userId"
+	case "webhooks":
+		return "webhookId"
+	default:
+		return fallback
+	}
 }
 
 func documentedOperationByKey(key string) (documentedAPIOperation, bool) {
 	for _, op := range documentedAPIOperations {
 		if op.key() == key {
-			return op, true
+			return documentedAPIOperation{Method: op.Method, Path: normalizeDocumentedAPIPath(op.Path)}, true
 		}
 	}
 	return documentedAPIOperation{}, false
 }
 
 func (op documentedAPIOperation) key() string {
-	return op.Method + " " + op.Path
+	return op.Method + " " + normalizeDocumentedAPIPath(op.Path)
 }
 
 func (op documentedAPIOperation) reportsHost() bool {
