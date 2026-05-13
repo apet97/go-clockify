@@ -158,12 +158,18 @@ def parse_coverage_md() -> dict[tuple[str, str], list[dict]]:
             ln = lines[j]
             if ln.startswith("### ") or ln.strip() == "---":
                 break
-            for em in explicit_re.finditer(ln):
-                endpoints.append((em.group(1).lower(), canon_path(norm_path(em.group(2)))))
-            for bm in bare_path_re.finditer(ln):
-                p = bm.group(1)
-                if "/" in p and not p.startswith("//"):
-                    endpoints.append((None, canon_path(norm_path(p))))
+            # Table rows that carry both `clockify_xxx` and `METHOD /path`
+            # are handled exactly in the direct line pass above. Do not also
+            # treat those row-local paths as section-wide prose endpoints, or
+            # one approval/scheduling row can fan out across every tool in the
+            # section and make the matrix look more typed than it is.
+            if not ln.lstrip().startswith("|"):
+                for em in explicit_re.finditer(ln):
+                    endpoints.append((em.group(1).lower(), canon_path(norm_path(em.group(2)))))
+                for bm in bare_path_re.finditer(ln):
+                    p = bm.group(1)
+                    if "/" in p and not p.startswith("//"):
+                        endpoints.append((None, canon_path(norm_path(p))))
             for tm in TOOL_RE.findall(ln):
                 tools_in_section.add(tm)
                 for testname in TEST_RE.findall(ln):

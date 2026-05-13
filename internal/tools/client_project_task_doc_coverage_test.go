@@ -39,8 +39,11 @@ func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 		}
 	}
 
-	requireProps("clockify_list_clients", "name", "sort_column", "sort_order", "archived")
-	requireProps("clockify_update_client", "cc_emails", "currency_id", "archive_projects", "mark_tasks_as_done")
+	requireProps("clockify_list_clients", "name", "sort_column", "sort_order", "archived", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
+	requireProps("clockify_get_client", "client", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
+	requireProps("clockify_client_report", "client", "invoice_page", "invoice_page_size", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
+	requireProps("clockify_create_client", "name", "address", "email", "note", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
+	requireProps("clockify_update_client", "cc_emails", "currency_id", "archive_projects", "mark_tasks_as_done", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
 	requireProps("clockify_list_projects", "strict_name_search", "clients", "contains_client", "client_status", "users", "contains_user", "user_status", "is_template", "hydrated", "access", "expense_limit", "expense_date", "user_groups", "contains_group", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
 	requireProps("clockify_get_project", "hydrated", "custom_field_entity_type", "expense_limit", "expense_date", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
 	requireProps("clockify_create_project", "client_id", "cost_rate", "hourly_rate", "estimate", "memberships", "tasks", "budget_estimate", "time_estimate", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")

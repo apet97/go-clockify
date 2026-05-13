@@ -792,12 +792,24 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_get_approval_request
+      - clockify_list_approval_requests
+      x-clockify-notes:
+      - Clockify approval-request endpoints include list, submit, resubmit, user-scoped
+        submit/resubmit, and documented PATCH status updates. `clockify_get_approval_request`
+        scans the documented list endpoint; it does not call an undocumented per-i
+      - "| `clockify_get_approval_request` | read-only | `GET /workspaces/{workspaceId}/approval-requests`;
+        unit; scans documented list pages |"
+      - "| `clockify_list_approval_requests` | read-only | `GET /workspaces/{workspaceId}/approval-requests`;
+        unit |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -871,10 +883,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_submit_for_approval
+      x-clockify-notes:
+      - "| `clockify_submit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests`;
+        unit |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -933,10 +951,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_resubmit_for_approval
+      x-clockify-notes:
+      - "| `clockify_resubmit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval`;
+        unit |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -995,12 +1019,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_submit_for_user_approval
+      x-clockify-notes:
+      - "| `clockify_submit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}`;
+        unit |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1062,12 +1092,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_resubmit_for_user_approval
+      x-clockify-notes:
+      - "| `clockify_resubmit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval`;
+        unit |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1131,12 +1167,24 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_approve_timesheet
+      - clockify_reject_timesheet
+      - clockify_withdraw_approval
+      x-clockify-notes:
+      - "| `clockify_approve_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
+        unit |"
+      - "| `clockify_reject_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
+        unit |"
+      - "| `clockify_withdraw_approval` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
+        unit |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1443,12 +1491,16 @@ paths:
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-live-status: live-success
       x-clockify-mcp-tools:
+      - clockify_client_report
       - clockify_get_client
       x-clockify-notes:
       - "| Get client | `GET /workspaces/{workspaceId}/clients/{id}` | Path `id`;
         response fields `address`, `archived`, `ccEmails`, `currencyCode`, `currencyId`,
         `email`, `id`, `name`, `note`, `workspaceId` | `clockify_get_client`: `client`
         | `Test"
+      - "| `clockify_client_report` | `GET /workspaces/{ws}/clients/{id}` + `POST
+        https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`/`detailed`,
+        `POST /workspaces/{ws}/invoices/info` | unit |"
       - "| `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |"
       x-clockify-risk:
       - read
@@ -3573,17 +3625,24 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
       - probe-openapi
       - probe-supplement
       - real-openapi
+      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: unit-only
+      x-clockify-mcp-tools:
+      - clockify_client_report
+      x-clockify-notes:
+      - "| `clockify_client_report` | `GET /workspaces/{ws}/clients/{id}` + `POST
+        https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`/`detailed`,
+        `POST /workspaces/{ws}/invoices/info` | unit |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
       x-clockify-risk:
-      - write
+      - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md

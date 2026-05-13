@@ -83,7 +83,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
           labels: |
             org.opencontainers.image.title=clockify-mcp
-            org.opencontainers.image.description=Go MCP server for Clockify: 159 tools, three transports, five policy modes
+            org.opencontainers.image.description=Go MCP server for Clockify: 163 tools, three transports, five policy modes
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.version=${{ steps.build_meta.outputs.version }}
@@ -227,7 +227,7 @@ jobs:
             echo "OCI description contains marketing puffery: $desc"
             exit 1
           fi
-          if ! printf '%s' "$desc" | grep -Eq '159 tools.*five policy modes'; then
+          if ! printf '%s' "$desc" | grep -Eq '163 tools.*five policy modes'; then
             echo "OCI description is stale: $desc"
             exit 1
           fi

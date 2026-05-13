@@ -31,7 +31,7 @@ func TestGetClientByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get client failed: %v", err)
 	}
-	ce, ok := result.Data.(clockify.ClientEntity)
+	ce, ok := result.Data.(ClientView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -72,7 +72,7 @@ func TestGetClientByExactName(t *testing.T) {
 	if listCalls == 0 {
 		t.Fatal("expected name resolution to query the list endpoint")
 	}
-	ce, ok := result.Data.(clockify.ClientEntity)
+	ce, ok := result.Data.(ClientView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -444,5 +444,184 @@ func TestCreateClientOmitsBlankOptionalFields(t *testing.T) {
 	}
 	if _, hasEmail := body["email"]; hasEmail {
 		t.Fatalf("empty email must not be forwarded, got %+v", body)
+	}
+}
+
+func TestClientViewPreservesClientFields(t *testing.T) {
+	view := clientViewFromClient(clockify.ClientEntity{
+		ID:           testClientID,
+		Name:         "Acme",
+		Address:      "123 Foo St",
+		Email:        "ops@acme.example",
+		Note:         "preferred net30",
+		CurrencyCode: "USD",
+		CurrencyID:   "cur1",
+		WorkspaceID:  "ws1",
+	})
+	if view.ID != testClientID || view.Name != "Acme" || view.Email != "ops@acme.example" {
+		t.Fatalf("top-level client fields not preserved: %#v", view)
+	}
+	if view.Currency.Code != "USD" || view.Currency.ID != "cur1" {
+		t.Fatalf("currency block not mapped: %#v", view.Currency)
+	}
+	if view.Contact.Address != "123 Foo St" || view.Contact.Note != "preferred net30" {
+		t.Fatalf("contact block not mapped: %#v", view.Contact)
+	}
+	if view.Raw["id"] != testClientID || view.Raw["currencyCode"] != "USD" {
+		t.Fatalf("raw client payload not preserved: %#v", view.Raw)
+	}
+}
+
+func TestListClientsEnrichesProjectsAndReports(t *testing.T) {
+	var projectQuery string
+	var reportCalls int
+	var reportBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/clients" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.ClientEntity{{ID: "c1", Name: "Client A", CurrencyCode: "USD"}, {ID: "c2", Name: "Client B"}})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			projectQuery = r.URL.RawQuery
+			respondJSON(t, w, []clockify.Project{{
+				ID:       "p1",
+				Name:     "Project A",
+				ClientID: "c1",
+				Billable: true,
+			}})
+		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+			reportCalls++
+			if err := json.NewDecoder(r.Body).Decode(&reportBody); err != nil {
+				t.Fatalf("decode report body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{
+				"groupOne": []map[string]any{{
+					"clientId":     "c1",
+					"duration":     7200,
+					"entriesCount": 2,
+					"amounts": []map[string]any{
+						{"type": "EARNED", "value": 50000, "currency": "USD"},
+						{"type": "COST", "value": 12000, "currency": "USD"},
+						{"type": "PROFIT", "value": 38000, "currency": "USD"},
+					},
+				}},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EntryFinancialReports = true
+	result, err := svc.ListClients(context.Background(), map[string]any{
+		"financial_start": "2023-05-13T00:00:00Z",
+		"financial_end":   "2026-05-13T00:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("ListClients: %v", err)
+	}
+	clients := result.Data.([]ClientView)
+	if len(clients) != 2 {
+		t.Fatalf("clients length = %d, want 2", len(clients))
+	}
+	if !strings.Contains(projectQuery, "clients=c1") || !strings.Contains(projectQuery, "clients=c2") ||
+		!strings.Contains(projectQuery, "contains-client=true") || !strings.Contains(projectQuery, "client-status=ALL") ||
+		!strings.Contains(projectQuery, "hydrated=true") {
+		t.Fatalf("project enrichment query missing filters: %s", projectQuery)
+	}
+	if reportCalls != 1 {
+		t.Fatalf("reports calls = %d, want 1", reportCalls)
+	}
+	filter := reportBody["summaryFilter"].(map[string]any)
+	groups := filter["groups"].([]any)
+	if len(groups) != 3 || groups[0] != "CLIENT" || groups[1] != "PROJECT" || groups[2] != "TASK" {
+		t.Fatalf("summary groups = %#v", groups)
+	}
+	if clients[0].ProjectSummary.Count != 1 || clients[0].ProjectSummary.BillableCount != 1 {
+		t.Fatalf("project summary not mapped: %#v", clients[0].ProjectSummary)
+	}
+	if clients[0].Financials.Source != entryFinancialSourceReportsAPI || clients[0].Financials.Earned.AmountCents != 50000 {
+		t.Fatalf("financials not mapped: %#v", clients[0].Financials)
+	}
+	if clients[0].TimeSummary.TrackedDurationSeconds != 7200 || clients[0].TimeSummary.EntriesCount != 2 {
+		t.Fatalf("time summary not mapped: %#v", clients[0].TimeSummary)
+	}
+}
+
+func TestClientReportAddsInvoiceDetailEntriesAndHealth(t *testing.T) {
+	var invoiceCalled bool
+	var detailedCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/clients/"+testClientID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", CurrencyCode: "USD"})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.Project{{ID: "p1", Name: "Project A", ClientID: testClientID, Billable: true}})
+		case r.URL.Path == "/workspaces/ws1/projects/p1/tasks" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.Task{})
+		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+			respondJSON(t, w, map[string]any{
+				"groupOne": []map[string]any{{
+					"clientId": testClientID,
+					"duration": 3600,
+					"amounts":  []map[string]any{{"type": "EARNED", "value": 25000, "currency": "USD"}},
+				}},
+			})
+		case r.URL.Path == "/workspaces/ws1/invoices/info" && r.Method == http.MethodPost:
+			invoiceCalled = true
+			respondJSON(t, w, map[string]any{
+				"total": 1,
+				"invoices": []map[string]any{{
+					"id":           "inv1",
+					"clientId":     testClientID,
+					"amount":       25000,
+					"balance":      5000,
+					"paid":         20000,
+					"currencyCode": "USD",
+					"status":       "PARTIALLY_PAID",
+					"daysOverdue":  3,
+				}},
+			})
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
+			detailedCalled = true
+			respondJSON(t, w, map[string]any{
+				"timeentries": []map[string]any{{
+					"_id":               "e1",
+					"description":       "",
+					"clientId":          testClientID,
+					"clientName":        "Acme",
+					"projectId":         "p1",
+					"projectName":       "Project A",
+					"locked":            true,
+					"duration":          3600,
+					"approvalRequestId": "apr1",
+					"approvalState":     "PENDING",
+					"amounts":           []map[string]any{{"type": "EARNED", "value": 25000, "currency": "USD"}},
+				}},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EntryFinancialReports = true
+	result, err := svc.ClientReport(context.Background(), map[string]any{"client": testClientID})
+	if err != nil {
+		t.Fatalf("ClientReport: %v", err)
+	}
+	report := result.Data.(ClientReportView)
+	if !invoiceCalled || !detailedCalled {
+		t.Fatalf("expected invoice and detailed report enrichment calls, invoice=%v detailed=%v", invoiceCalled, detailedCalled)
+	}
+	if report.Client.InvoiceSummary.TotalCount != 1 || report.Client.InvoiceSummary.OverdueCount != 1 {
+		t.Fatalf("invoice summary not mapped: %#v", report.Client.InvoiceSummary)
+	}
+	if report.EntryHealth.LockedCount != 1 || report.EntryHealth.MissingDescriptionCount != 1 {
+		t.Fatalf("entry health not mapped: %#v", report.EntryHealth)
+	}
+	if report.Client.ApprovalSummary.States["PENDING"] != 1 || len(report.Entries) != 1 {
+		t.Fatalf("approval/detail summary not mapped: approvals=%#v entries=%#v", report.Client.ApprovalSummary, report.Entries)
 	}
 }

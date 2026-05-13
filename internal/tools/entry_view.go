@@ -39,6 +39,10 @@ type EntryView struct {
 	WorkspaceID       string                `json:"workspaceId,omitempty"`
 	TimeInterval      clockify.TimeInterval `json:"timeInterval"`
 	Financials        EntryFinancials       `json:"financials"`
+	Approval          *EntryApprovalView    `json:"approval,omitempty"`
+	Invoicing         *EntryInvoicingView   `json:"invoicing,omitempty"`
+	Entities          *EntryEntitiesView    `json:"entities,omitempty"`
+	Audit             *EntryAuditView       `json:"audit,omitempty"`
 }
 
 type EntryFinancials struct {
@@ -97,12 +101,15 @@ func (s *Service) enrichEntryViews(ctx context.Context, wsID string, entries []c
 		return views, meta
 	}
 
-	reportValues, reportErr := s.reportFinancialsForEntries(ctx, wsID, entries)
+	reportValues, reportErr := s.reportEnrichmentsForEntries(ctx, wsID, entries)
 	reportMatched := 0
 	for i := range views {
-		if value, ok := reportValues[entries[i].ID]; ok && value.hasMoney() {
-			views[i].Financials = value.financials()
-			reportMatched++
+		if value, ok := reportValues[entries[i].ID]; ok {
+			applyReportEntryEnrichment(&views[i], value)
+			if value.hasMoney() {
+				views[i].Financials = value.financials()
+				reportMatched++
+			}
 		}
 	}
 
@@ -140,6 +147,57 @@ func (s *Service) enrichEntryViews(ctx context.Context, wsID string, entries []c
 	return views, meta
 }
 
+func applyReportEntryEnrichment(view *EntryView, enrichment reportEntryEnrichment) {
+	if view == nil {
+		return
+	}
+	reportView := enrichment.view
+	if reportView.Description != "" && view.Description == "" {
+		view.Description = reportView.Description
+	}
+	if reportView.Type != "" && view.Type == "" {
+		view.Type = reportView.Type
+	}
+	if reportView.Billable != nil {
+		view.Billable = *reportView.Billable
+	}
+	if reportView.Locked != nil {
+		view.IsLocked = *reportView.Locked
+	}
+	if reportView.CustomFieldValues != nil && view.CustomFieldValues == nil {
+		view.CustomFieldValues = reportView.CustomFieldValues
+	}
+	if reportView.Entities != nil {
+		view.Entities = reportView.Entities
+		if reportView.Entities.Project != nil {
+			view.ProjectID = firstNonEmptyString(view.ProjectID, reportView.Entities.Project.ID)
+			view.ProjectName = firstNonEmptyString(view.ProjectName, reportView.Entities.Project.Name)
+		}
+		if reportView.Entities.Task != nil {
+			view.TaskID = firstNonEmptyString(view.TaskID, reportView.Entities.Task.ID)
+		}
+		if reportView.Entities.User != nil {
+			view.UserID = firstNonEmptyString(view.UserID, reportView.Entities.User.ID)
+		}
+		if len(view.TagIDs) == 0 && len(reportView.Entities.Tags) > 0 {
+			for _, tag := range reportView.Entities.Tags {
+				if tag.ID != "" {
+					view.TagIDs = append(view.TagIDs, tag.ID)
+				}
+			}
+		}
+	}
+	if reportView.Approval != nil {
+		view.Approval = reportView.Approval
+	}
+	if reportView.Invoicing != nil {
+		view.Invoicing = reportView.Invoicing
+	}
+	if reportView.Audit != nil {
+		view.Audit = reportView.Audit
+	}
+}
+
 func withFinancialMeta(meta map[string]any, financial map[string]any) map[string]any {
 	if meta == nil {
 		meta = map[string]any{}
@@ -150,7 +208,7 @@ func withFinancialMeta(meta map[string]any, financial map[string]any) map[string
 	return meta
 }
 
-func (s *Service) reportFinancialsForEntries(ctx context.Context, wsID string, entries []clockify.TimeEntry) (map[string]reportEntryMoney, error) {
+func (s *Service) reportEnrichmentsForEntries(ctx context.Context, wsID string, entries []clockify.TimeEntry) (map[string]reportEntryEnrichment, error) {
 	if s == nil || s.Client == nil || !s.entryFinancialReportsEnabled() {
 		return nil, fmt.Errorf("reports API enrichment disabled for non-canonical Clockify base URL")
 	}
@@ -179,7 +237,7 @@ func (s *Service) reportFinancialsForEntries(ctx context.Context, wsID string, e
 		return nil, fmt.Errorf("entries do not have IDs for reports API matching")
 	}
 
-	out := make(map[string]reportEntryMoney, len(entries))
+	out := make(map[string]reportEntryEnrichment, len(entries))
 	const pageSize = 200
 	for page := 1; page <= aggregatePageSafetyStop; page++ {
 		body := map[string]any{
@@ -207,9 +265,10 @@ func (s *Service) reportFinancialsForEntries(ctx context.Context, wsID string, e
 			if _, ok := want[id]; !ok {
 				continue
 			}
-			money := reportMoneyFromRow(row)
-			if money.hasMoney() {
-				out[id] = money
+			view := reportEntryViewFromRow(row)
+			out[id] = reportEntryEnrichment{
+				money: reportMoneyFromRow(row),
+				view:  view,
 			}
 		}
 		if len(out) == len(want) || len(rows) < pageSize {
@@ -266,6 +325,19 @@ type reportEntryMoney struct {
 	reason string
 }
 
+type reportEntryEnrichment struct {
+	money reportEntryMoney
+	view  ReportEntryView
+}
+
+func (e reportEntryEnrichment) hasMoney() bool {
+	return e.money.hasMoney()
+}
+
+func (e reportEntryEnrichment) financials() EntryFinancials {
+	return e.money.financials()
+}
+
 func (m reportEntryMoney) hasMoney() bool {
 	return m.earned != nil || m.cost != nil || m.profit != nil
 }
@@ -297,21 +369,24 @@ func reportTimeEntryRows(payload map[string]any) []map[string]any {
 }
 
 func mapSlice(v any) []map[string]any {
-	items, ok := v.([]any)
-	if !ok {
+	switch items := v.(type) {
+	case []map[string]any:
+		return items
+	case []any:
+		out := make([]map[string]any, 0, len(items))
+		for _, item := range items {
+			if m, ok := item.(map[string]any); ok {
+				out = append(out, m)
+			}
+		}
+		return out
+	default:
 		return nil
 	}
-	out := make([]map[string]any, 0, len(items))
-	for _, item := range items {
-		if m, ok := item.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func reportRowEntryID(row map[string]any) string {
-	for _, key := range []string{"id", "entryId", "timeEntryId", "time_entry_id", "_id"} {
+	for _, key := range []string{"id", "entryId", "timeEntryId", "time_entry_id", "_id", "get_id", "getId"} {
 		if id := strings.TrimSpace(fmt.Sprint(row[key])); id != "" && id != "<nil>" {
 			return id
 		}

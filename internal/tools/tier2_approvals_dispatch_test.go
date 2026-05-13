@@ -15,6 +15,7 @@ package tools_test
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -29,8 +30,18 @@ func newApprovalsUpstream(t *testing.T) *testharness.FakeClockify {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
-			_, _ = w.Write([]byte(`[{"id":"ar-1","status":"PENDING"}]`))
+			page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+			if page <= 1 {
+				_, _ = w.Write([]byte(`[{"id":"ar-1","status":"PENDING","dateRange":{"start":"2026-04-01","end":"2026-04-07"},"owner":{"id":"u1","name":"Owner"},"creator":{"id":"u2","name":"Creator"}}]`))
+				return
+			}
+			_, _ = w.Write([]byte(`[]`))
 		case http.MethodPost:
+			body := map[string]any{}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if _, hasStatus := body["status"]; hasStatus {
+				t.Fatalf("submit must use documented period/periodStart body, got %#v", body)
+			}
 			_, _ = w.Write([]byte(`{"id":"ar-new","status":"PENDING"}`))
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -40,13 +51,15 @@ func newApprovalsUpstream(t *testing.T) *testharness.FakeClockify {
 	mux.HandleFunc("/workspaces/test-workspace/approval-requests/ar-1", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
-		case http.MethodGet:
-			_, _ = w.Write([]byte(`{"id":"ar-1","status":"PENDING","start":"2026-04-01","end":"2026-04-07"}`))
-		case http.MethodPut:
-			// Echo back the body so dry-run vs. live transitions are
-			// distinguishable in tests if needed.
+		case http.MethodPatch:
 			body := map[string]any{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
+			if _, hasStatus := body["status"]; hasStatus {
+				t.Fatalf("approval status updates must use documented state body, got %#v", body)
+			}
+			if _, hasState := body["state"]; !hasState {
+				t.Fatalf("approval PATCH missing state: %#v", body)
+			}
 			body["id"] = "ar-1"
 			_ = json.NewEncoder(w).Encode(body)
 		default:
@@ -54,8 +67,32 @@ func newApprovalsUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 	})
 
-	mux.HandleFunc("/workspaces/test-workspace/approval-requests/missing", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"message":"approval not found"}`, http.StatusNotFound)
+	mux.HandleFunc("/workspaces/test-workspace/approval-requests/resubmit-entries-for-approval", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"ar-resubmitted","status":"PENDING"}`))
+	})
+
+	userID := "aaaaaaaaaaaaaaaaaaaaaaaa"
+	mux.HandleFunc("/workspaces/test-workspace/approval-requests/users/"+userID, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"ar-user-new","status":"PENDING","owner":{"id":"aaaaaaaaaaaaaaaaaaaaaaaa"}}`))
+	})
+
+	mux.HandleFunc("/workspaces/test-workspace/approval-requests/users/"+userID+"/resubmit-entries-for-approval", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"ar-user-resubmitted","status":"PENDING","owner":{"id":"aaaaaaaaaaaaaaaaaaaaaaaa"}}`))
 	})
 
 	return testharness.NewFakeClockify(t, mux)
@@ -104,7 +141,7 @@ func TestTier2Dispatch_Approvals_GetMissingSurfacesToolError(t *testing.T) {
 		Upstream: upstream,
 	})
 	if res.Outcome != testharness.OutcomeToolError {
-		t.Fatalf("expected tool_error for 404, got %q (err=%q)", res.Outcome, res.ErrorMessage)
+		t.Fatalf("expected tool_error for missing approval, got %q (err=%q)", res.Outcome, res.ErrorMessage)
 	}
 	if !res.UpstreamHit {
 		t.Fatalf("404 path should still hit upstream")
@@ -134,11 +171,40 @@ func TestTier2Dispatch_Approvals_SubmitForApproval(t *testing.T) {
 	}
 }
 
+func TestTier2Dispatch_Approvals_ResubmitAndUserSubmitTools(t *testing.T) {
+	upstream := newApprovalsUpstream(t)
+	userID := "aaaaaaaaaaaaaaaaaaaaaaaa"
+
+	cases := []struct {
+		tool string
+		args map[string]any
+		want string
+	}{
+		{"clockify_resubmit_for_approval", map[string]any{"period": "WEEKLY", "period_start": "2026-04-01T00:00:00.000Z"}, "ar-resubmitted"},
+		{"clockify_submit_for_user_approval", map[string]any{"user_id": userID, "period": "WEEKLY", "period_start": "2026-04-01T00:00:00.000Z"}, "ar-user-new"},
+		{"clockify_resubmit_for_user_approval", map[string]any{"user_id": userID, "period": "WEEKLY", "period_start": "2026-04-01T00:00:00.000Z"}, "ar-user-resubmitted"},
+	}
+	for _, tc := range cases {
+		res := dispatchTier2(t, tier2InvokeOpts{
+			Group:    "approvals",
+			Tool:     tc.tool,
+			Args:     tc.args,
+			Upstream: upstream,
+		})
+		if res.Outcome != testharness.OutcomeSuccess {
+			t.Fatalf("%s outcome=%q err=%q raw=%s", tc.tool, res.Outcome, res.ErrorMessage, string(res.Raw))
+		}
+		if !strings.Contains(res.ResultText, tc.want) {
+			t.Fatalf("%s result missing %s: %q", tc.tool, tc.want, res.ResultText)
+		}
+	}
+}
+
 func TestTier2Dispatch_Approvals_ApproveAndDryRun(t *testing.T) {
 	upstream := newApprovalsUpstream(t)
 
-	// Dry run path: handler should issue a GET (not a PUT) and surface a
-	// preview envelope.
+	// Dry run path scans the documented list endpoint and surfaces a preview
+	// envelope without calling the per-id endpoint.
 	res := dispatchTier2(t, tier2InvokeOpts{
 		Group:    "approvals",
 		Tool:     "clockify_approve_timesheet",
@@ -152,7 +218,7 @@ func TestTier2Dispatch_Approvals_ApproveAndDryRun(t *testing.T) {
 		t.Fatalf("approve(dry_run) result missing id: %q", res.ResultText)
 	}
 
-	// Live path: handler issues a PUT with status=APPROVED.
+	// Live path issues documented PATCH with state=APPROVED.
 	res = dispatchTier2(t, tier2InvokeOpts{
 		Group:    "approvals",
 		Tool:     "clockify_approve_timesheet",
@@ -209,8 +275,8 @@ func TestTier2Dispatch_Approvals_Withdraw(t *testing.T) {
 	if res.Outcome != testharness.OutcomeSuccess {
 		t.Fatalf("withdraw outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
 	}
-	if !strings.Contains(res.ResultText, "WITHDRAWN") {
-		t.Fatalf("withdraw did not echo WITHDRAWN: %q", res.ResultText)
+	if !strings.Contains(res.ResultText, "WITHDRAWN_SUBMISSION") {
+		t.Fatalf("withdraw did not echo WITHDRAWN_SUBMISSION: %q", res.ResultText)
 	}
 }
 

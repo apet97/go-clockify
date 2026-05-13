@@ -13,7 +13,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 
 ## Highlights
 
-- **159 tools** — 52 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 107 on-demand (invoices, scheduling, approvals, admin, documented API helpers, …) across 12 activatable groups.
+- **163 tools** — 53 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 110 on-demand (invoices, scheduling, approvals, admin, documented API helpers, …) across 12 activatable groups.
 - **Resources & prompts** — six `clockify://` URI templates and ten built-in prompt templates alongside the tool surface.
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run previews on every write tool and HMAC confirmation tokens for high-risk tool calls (ADR 0018).
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
@@ -71,7 +71,7 @@ API-refresh line, released on 2026-05-13
 ([GitHub Release](https://github.com/apet97/go-clockify/releases/tag/v1.2.5) ·
 46 signed assets · npm `@apet97/clockify-mcp-go` `dist-tags.latest=1.2.5`
 · container image `ghcr.io/apet97/go-clockify:1.2.5`). It carries the
-refreshed 159-tool Clockify API catalog and the generated 192-operation
+refreshed 163-tool Clockify API catalog and the generated 192-operation
 OpenAPI artifact, including AIII-sourced entity-change endpoints, the
 expense detailed report route, live invoice/member-profile/webhook
 contract corrections, and the quarantined `/scheduling/capacity`
@@ -326,9 +326,9 @@ Large workspace report hygiene:
 
 ## Tool tiers
 
-**Tier 1 (52 tools, always loaded):** timer, entries, projects (incl. create/update/delete/archive), clients (full CRUD), tags (full CRUD), tasks (full CRUD), users, workspaces, reports, workflows, search, activation, context.
+**Tier 1 (53 tools, always loaded):** timer, entries, projects (incl. create/update/delete/archive), clients (full CRUD plus client report), tags (full CRUD), tasks (full CRUD), users, workspaces, reports, workflows, search, activation, context.
 
-**Tier 2 (107 tools, 12 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin, and `probe_lab_api` documented-API escape hatch tools.
+**Tier 2 (110 tools, 12 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin, and `probe_lab_api` documented-API escape hatch tools.
 
 Call `clockify_list_tools` to discover a Tier 2 group or specific tool, `clockify_activate_group` / `clockify_activate_tool` to widen the current session, and `clockify_deactivate_group` to shrink the visible surface after a task. Activation updates `tools/list` at runtime, and `activated_tools` only lists names that are visible after bootstrap and policy filtering. `clockify_search_tools` remains as a deprecated compatibility shim for older clients.
 

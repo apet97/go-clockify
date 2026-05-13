@@ -116,7 +116,7 @@ func TestCreateClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create client failed: %v", err)
 	}
-	ce, ok := result.Data.(clockify.ClientEntity)
+	ce, ok := result.Data.(ClientView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}

@@ -291,8 +291,35 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 				t.Fatalf("decode detailed body: %v", err)
 			}
 			respondJSON(t, w, map[string]any{
-				"totals":      []map[string]any{{"entriesCount": 3}},
-				"timeentries": []map[string]any{{"id": "e1", "description": "Build"}},
+				"totals": []map[string]any{{"entriesCount": 3}},
+				"timeentries": []map[string]any{{
+					"_id":               "e1",
+					"description":       "Build",
+					"type":              "REGULAR",
+					"locked":            true,
+					"billable":          true,
+					"duration":          3600,
+					"approvalRequestId": "approval-1",
+					"approvalState":     "APPROVED",
+					"invoiced":          true,
+					"invoicingState":    "INVOICED",
+					"invoiceId":         "invoice-1",
+					"invoiceNumber":     "INV-1",
+					"clientId":          "c1",
+					"clientName":        "Client A",
+					"userId":            "u1",
+					"userName":          "Test User",
+					"projectId":         "p1",
+					"projectName":       "Project A",
+					"taskId":            "t1",
+					"taskName":          "Task A",
+					"customFieldValues": []map[string]any{{"name": "Phase", "value": "Build"}},
+					"amounts": []map[string]any{
+						{"type": "EARNED", "value": 7200, "currency": "USD"},
+						{"type": "COST", "value": 1200, "currency": "USD"},
+						{"type": "PROFIT", "value": 6000, "currency": "USD"},
+					},
+				}},
 			})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -328,6 +355,43 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 	}
 	if _, ok := data["timeentries"]; !ok {
 		t.Fatalf("expected upstream timeentries in data, got %#v", data)
+	}
+	if _, ok := data["raw"].(map[string]any); !ok {
+		t.Fatalf("expected raw upstream payload copy in data, got %#v", data["raw"])
+	}
+	entries, ok := data["entries"].([]ReportEntryView)
+	if !ok || len(entries) != 1 {
+		t.Fatalf("expected normalized entries, got %T %#v", data["entries"], data["entries"])
+	}
+	if entries[0].ID != "e1" || entries[0].Approval == nil || entries[0].Approval.RequestID != "approval-1" {
+		t.Fatalf("entry normalization missed id/approval: %#v", entries[0])
+	}
+	if entries[0].Audit == nil || entries[0].Audit.Locked == nil || !*entries[0].Audit.Locked {
+		t.Fatalf("entry normalization missed locked audit state: %#v", entries[0].Audit)
+	}
+	if entries[0].Invoicing == nil || entries[0].Invoicing.InvoiceID != "invoice-1" || entries[0].Invoicing.State != "INVOICED" {
+		t.Fatalf("entry normalization missed invoicing state: %#v", entries[0].Invoicing)
+	}
+	assertMoneyCents(t, entries[0].Financials.Earned, 7200, "USD")
+	entrySummary, ok := data["entry_summary"].(ReportEntrySummary)
+	if !ok || entrySummary.Count != 1 || entrySummary.Duration.Seconds != 3600 || entrySummary.LockedCount != 1 {
+		t.Fatalf("unexpected entry summary: %T %#v", data["entry_summary"], data["entry_summary"])
+	}
+	approvalSummary, ok := data["approval_summary"].(ReportApprovalSummary)
+	if !ok || approvalSummary.WithApprovalRequest != 1 || approvalSummary.States["APPROVED"] != 1 {
+		t.Fatalf("unexpected approval summary: %T %#v", data["approval_summary"], data["approval_summary"])
+	}
+	totalsSummary, ok := data["totals_summary"].(ReportTotalsSummary)
+	if !ok || totalsSummary.EntriesCount != 3 {
+		t.Fatalf("unexpected totals summary: %T %#v", data["totals_summary"], data["totals_summary"])
+	}
+	entitySummary, ok := data["entity_summary"].(ReportEntitySummary)
+	if !ok || len(entitySummary.Clients) != 1 || entitySummary.Clients[0].ID != "c1" {
+		t.Fatalf("unexpected entity summary: %T %#v", data["entity_summary"], data["entity_summary"])
+	}
+	clientSummary, ok := data["client_summary"].([]ReportClientSummary)
+	if !ok || len(clientSummary) != 1 || clientSummary[0].Client.ID != "c1" || clientSummary[0].Financials.Earned.AmountCents != 7200 {
+		t.Fatalf("unexpected client summary: %T %#v", data["client_summary"], data["client_summary"])
 	}
 	filter, _ := gotBody["detailedFilter"].(map[string]any)
 	if filter["pageSize"] != float64(20) || filter["sortColumn"] != "ID" {
@@ -580,6 +644,44 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 		t.Fatalf("unexpected binary envelope: %#v", data)
 	}
 	if result.Meta["binary"] != true || result.Meta["source"] != "reports-api" {
+		t.Fatalf("unexpected binary meta: %#v", result.Meta)
+	}
+}
+
+func TestDetailedReportBinaryExportDoesNotNormalizePayload(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
+			w.Header().Set("Content-Type", "text/csv")
+			w.Header().Set("Content-Disposition", `attachment; filename="detailed.csv"`)
+			_, _ = w.Write([]byte("csv-bytes"))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.DetailedReport(context.Background(), map[string]any{
+		"start":       "2026-04-01T00:00:00Z",
+		"end":         "2026-04-30T00:00:00Z",
+		"export_type": "CSV",
+		"detailed_filter": map[string]any{
+			"page":      1,
+			"page_size": 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("detailed report CSV failed: %v", err)
+	}
+	data := result.Data.(map[string]any)
+	if data["filename"] != "detailed.csv" || data["body"] == "" {
+		t.Fatalf("unexpected binary envelope: %#v", data)
+	}
+	if _, has := data["entries"]; has {
+		t.Fatalf("binary detailed export must not append normalized entries: %#v", data)
+	}
+	if result.Meta["binary"] != true || result.Meta["normalizedEntries"] != nil {
 		t.Fatalf("unexpected binary meta: %#v", result.Meta)
 	}
 }

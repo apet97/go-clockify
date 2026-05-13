@@ -154,12 +154,52 @@ func addFinancialRangeInputProperties(props map[string]any) {
 }
 
 func clientListInputSchema() map[string]any {
-	return paginationSchema(map[string]any{"properties": map[string]any{
+	props := map[string]any{
 		"name":        map[string]any{"type": "string"},
 		"sort_column": map[string]any{"type": "string", "enum": []string{"NAME"}},
 		"sort_order":  map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
 		"archived":    map[string]any{"type": "string", "description": "Clockify archived filter value"},
-	}})
+	}
+	addFinancialRangeInputProperties(props)
+	return paginationSchema(map[string]any{"properties": props})
+}
+
+func clientGetInputSchema() map[string]any {
+	props := map[string]any{
+		"client": map[string]any{"type": "string", "description": "Client name or ID"},
+	}
+	addFinancialRangeInputProperties(props)
+	return map[string]any{"type": "object", "required": []string{"client"}, "properties": props}
+}
+
+func clientCreateInputSchema() map[string]any {
+	props := map[string]any{
+		"name":    map[string]any{"type": "string"},
+		"address": map[string]any{"type": "string"},
+		"email":   map[string]any{"type": "string"},
+		"note":    map[string]any{"type": "string"},
+		"dry_run": map[string]any{"type": "boolean"},
+	}
+	addFinancialRangeInputProperties(props)
+	return map[string]any{"type": "object", "required": []string{"name"}, "properties": props}
+}
+
+func clientUpdateInputSchema() map[string]any {
+	props := map[string]any{
+		"client":             map[string]any{"type": "string", "description": "Client name or ID"},
+		"name":               map[string]any{"type": "string", "maxLength": 100},
+		"address":            map[string]any{"type": "string", "maxLength": 256},
+		"email":              map[string]any{"type": "string", "format": "email"},
+		"note":               map[string]any{"type": "string", "maxLength": 500},
+		"cc_emails":          stringArraySchema("Additional invoice email recipients"),
+		"currency_id":        map[string]any{"type": "string"},
+		"archive_projects":   map[string]any{"type": "boolean"},
+		"mark_tasks_as_done": map[string]any{"type": "boolean"},
+		"archived":           map[string]any{"type": "boolean"},
+		"dry_run":            map[string]any{"type": "boolean"},
+	}
+	addFinancialRangeInputProperties(props)
+	return map[string]any{"type": "object", "required": []string{"client"}, "properties": props}
 }
 
 func taskListInputSchema() map[string]any {

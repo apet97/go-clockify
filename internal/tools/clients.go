@@ -33,16 +33,22 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
+	views, financialMeta := s.enrichClientViews(ctx, wsID, out, args, false)
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_clients", out, meta), nil
+	return ok("clockify_list_clients", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelope, error) {
+	return s.GetClientWithArgs(ctx, map[string]any{"client": clientRef})
+}
+
+func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	clientRef := stringArg(args, "client")
 	if clientRef == "" {
 		return ResultEnvelope{}, fmt.Errorf("client is required")
 	}
@@ -62,7 +68,8 @@ func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelo
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_client", out, map[string]any{"workspaceId": wsID, "clientId": clientID}), nil
+	view, financialMeta := s.enrichClientView(ctx, wsID, out, args, false)
+	return ok("clockify_get_client", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, financialMeta)), nil
 }
 
 func (s *Service) CreateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -96,7 +103,8 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Post(ctx, path, payload, &client); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_create_client", client, map[string]any{"workspaceId": wsID}), nil
+	view, financialMeta := s.enrichClientView(ctx, wsID, client, args, false)
+	return ok("clockify_create_client", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 // UpdateClient performs a fetch-then-merge update of a client.
@@ -184,7 +192,8 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.PutWithQuery(ctx, clientPath, query, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_update_client", updated, meta), nil
+	view, financialMeta := s.enrichClientView(ctx, wsID, updated, args, false)
+	return ok("clockify_update_client", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // clientPutPayload builds the full-replacement body for PUT /clients/{id}.

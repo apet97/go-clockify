@@ -11,7 +11,7 @@ package tools_test
 //   expenses        — pure POST with optional-field sub-struct assembly
 //   invoices        — POST gated on resolve.ValidateID(client_id)
 //   custom_fields   — POST with enum validation + array-of-strings body
-//   approvals       — both POST (submit_for_approval) and PUT
+//   approvals       — both POST (submit_for_approval) and PATCH
 //                     (approve_timesheet) so the enforcement pipeline's
 //                     mutation-path handling shows up in two flavours
 //
@@ -73,8 +73,8 @@ func stubClockifyForTier2Writes(b *testing.B) *testharness.FakeClockify {
 		case strings.HasSuffix(path, "/approval-requests") && r.Method == http.MethodPost:
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(approvalJSON))
-		// approval-requests PUT — clockify_approve_timesheet
-		case strings.Contains(path, "/approval-requests/") && r.Method == http.MethodPut:
+		// approval-requests PATCH — clockify_approve_timesheet
+		case strings.Contains(path, "/approval-requests/") && r.Method == http.MethodPatch:
 			_, _ = w.Write([]byte(approvedJSON))
 		default:
 			http.NotFound(w, r)
@@ -169,10 +169,10 @@ func BenchmarkClockifySubmitForApproval(b *testing.B) {
 }
 
 // BenchmarkClockifyApproveTimesheet measures the approvals.approveTimesheet
-// mutation path (no dry_run): ValidateID(approval_id) → PUT
+// mutation path (no dry_run): ValidateID(approval_id) → PATCH
 // /workspaces/{ws}/approval-requests/{id}. One upstream HTTP request per
-// iteration, distinct from submitForApproval because the PUT response
-// envelope and status-field merge logic are different code paths.
+// iteration, distinct from submitForApproval because the PATCH response
+// envelope and state-field merge logic are different code paths.
 func BenchmarkClockifyApproveTimesheet(b *testing.B) {
 	invokeTier2WriteBench(b, "clockify_approve_timesheet", []string{"approvals"}, func() map[string]any {
 		return map[string]any{

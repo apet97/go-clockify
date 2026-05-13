@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 27 | 40 | 67 |
-| Mutating (non-destructive) | 20 | 53 | 73 |
+| Read-only | 28 | 40 | 68 |
+| Mutating (non-destructive) | 20 | 56 | 76 |
 | Destructive | 5 | 14 | 19 |
 | Billing | 0 | 14 | 14 |
 | Admin | 0 | 14 | 14 |
-| **Total tools** | **52** | **107** | **159** |
+| **Total tools** | **53** | **110** | **163** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (52)
+## Tier 1 — Core tools (53)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -51,11 +51,12 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 `/workspaces/{ws}/users`, `/workspaces/{ws}/reports/*`,
 `/user`, `/workspaces`.
 
-### Read-only (27 tools)
+### Read-only (28 tools)
 
 | Tool | Endpoint | Tests |
 |------|----------|-------|
 | `clockify_attendance_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/attendance` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
+| `clockify_client_report` | `GET /workspaces/{ws}/clients/{id}` + `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`/`detailed`, `POST /workspaces/{ws}/invoices/info` | unit |
 | `clockify_current_user` | `GET /user` | unit, live-read-only (TestE2EReadOnly) |
 | `clockify_detailed_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/detailed` | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |
 | `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |
@@ -90,7 +91,7 @@ Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPOR
 | Document row | Upstream endpoint | MCP tool / required filter | Documented params and enums covered | Example values covered | Unit coverage | Live evidence |
 |--------------|-------------------|----------------------------|-------------------------------------|------------------------|---------------|---------------|
 | Attendance report | `POST /workspaces/{workspaceId}/reports/attendance` | `clockify_attendance_report`; requires `attendance_filter` only | Common report fields; `attendance_filter.page`, `page_size`, `sort_column`, `break_filters`, `capacity_filters`, `end_filters`, `overtime_filters`, `start_filters`, `work_filters`, `has_time_off`; sort enum `USER`, `DATE`, `START`, `END`, `BREAK`, `WORK`, `CAPACITY`, `OVERTIME`, `TIME_OFF`; compare enum `EXACTLY`, `LARGER_THAN`, `SMALLER_THAN` | `start`, `end`, `attendance_filter.start_filters[].filtration_type=LARGER_THAN`, `value=00:00` | `TestAttendanceReportUsesReportsAPI`; `TestReportToolSchemasExposeOnlyTheirDocumentedFilters` | `TestLiveReportsDocCoverage`; planning probe returned `200` with `entities` |
-| Detailed report | `POST /workspaces/{workspaceId}/reports/detailed` | `clockify_detailed_report`; requires `detailed_filter` only | Common report fields; `detailed_filter.page`, `page_size`, `sort_column`, `audit_filter`, `options`; sort enum `ID`, `DESCRIPTION`, `USER`, `DURATION`, `DATE`, `ZONED_DATE`, `NATURAL`, `USER_DATE`; `options.totals=CALCULATE|EXCLUDE`; audit booleans; `amount_shown`/`amounts` `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT` | `amount_shown=PROFIT`, `amounts=[EARNED,COST,PROFIT]`, `options.totals=CALCULATE`, `audit_filter.without_task=true` | `TestDetailedReportUsesReportsAPI`; `TestReportToolSchemasExposeDocumentedEnumsAndAliases` | `TestLiveReportsDocCoverage`; live enum probe accepted `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT` |
+| Detailed report | `POST /workspaces/{workspaceId}/reports/detailed` | `clockify_detailed_report`; requires `detailed_filter` only | Common report fields; `detailed_filter.page`, `page_size`, `sort_column`, `audit_filter`, `options`; sort enum `ID`, `DESCRIPTION`, `USER`, `DURATION`, `DATE`, `ZONED_DATE`, `NATURAL`, `USER_DATE`; `options.totals=CALCULATE|EXCLUDE`; audit booleans; `amount_shown`/`amounts` `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT`; JSON responses preserve raw `timeentries`/`totals` and append normalized `entries`, `entry_summary`, and `approval_summary` blocks | `amount_shown=PROFIT`, `amounts=[EARNED,COST,PROFIT]`, `options.totals=CALCULATE`, `audit_filter.without_task=true` | `TestDetailedReportUsesReportsAPI`; `TestDetailedReportBinaryExportDoesNotNormalizePayload`; `TestReportToolSchemasExposeDocumentedEnumsAndAliases` | `TestLiveReportsDocCoverage`; live enum probe accepted `EARNED`, `COST`, `PROFIT`, `HIDE_AMOUNT`, `EXPORT` |
 | Summary report | `POST /workspaces/{workspaceId}/reports/summary` | `clockify_summary_report`; requires `summary_filter` only | Common report fields; `summary_filter.groups` 1-3 levels, sort/chart; groups exposed as `CLIENT`, `PROJECT`, `TASK`, `DATE`, `WEEK`, `MONTH`, `TIMEENTRY`, `USER`; legacy MCP input `DAY` still translates to upstream `DATE` but is no longer advertised; sort enum `GROUP`, `DURATION`, `AMOUNT`, `EARNED`, `COST`, `PROFIT`; chart enum `BILLABILITY`, `PROJECT`; `amount_shown`/`amounts` enums as documented | `groups=[CLIENT,PROJECT,DATE]`, lower-level `TASK` and `TIMEENTRY` after a first-level group, `sort_column=PROFIT`, `summary_chart_type=PROJECT` | `TestSummaryReportUsesReportsAPI`; `TestSummaryReportGroupBuilderAcceptsCanonicalDateAndUser`; `TestSummaryReportLegacyDayAliasBuilder` | `TestLiveReportsDocCoverage`; planning probe confirmed upstream `DATE`; upstream rejected literal `DAY` with `400`; upstream accepted `TAG`, recorded as live evidence but intentionally not advertised because the MCP enum follows the requested source list |
 | Weekly report | `POST /workspaces/{workspaceId}/reports/weekly` | `clockify_weekly_summary`; requires `weekly_filter` only | Common report fields; exact 7-day range required or derived from `week_start`; `weekly_filter.group=PROJECT|USER`; `weekly_filter.subgroup=TIME`; no summary/detailed/attendance filters | `week_start=2026-04-06`, `weekly_filter.group=PROJECT`, `subgroup=TIME` | `TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange`; `TestWeeklyReportRejectsInvalidSubgroup` | `TestLiveReportsDocCoverage`; planning probe returned `200` for `PROJECT/TIME` and `USER/TIME`; invalid group/subgroup returned `400` |
 | Expense detailed report | `POST /workspaces/{workspaceId}/reports/expenses/detailed` | `clockify_expense_report`; no time-report filter object | `approval_state`, `billable`, `categories`, `clients`, `currency`, `date_range_start`, `date_range_end`, `date_range_type`, `export_type`, `invoicing_state`, `note`, `page`, `page_size`, `projects`, `sort_column`, `sort_order`, `tasks`, `time_zone`, `user_groups`, `user_locale`, `users`, `week_start_day`, `without_note`, `zoom_level`; sort enum `ID`, `PROJECT`, `USER`, `CATEGORY`, `DATE`, `AMOUNT`; contains/status/user-status/date-range/export/week/zoom enums | `page=1`, `page_size=25`, `sort_column=ID`, `projects.contains=CONTAINS` | `TestExpenseReport`; `TestExpenseReportSchemaCoversDetailedExpenseReportBody` | `TestLiveReportsDocCoverage`; planning probe returned `200` with `expenses` and `totals` |
@@ -132,20 +133,23 @@ Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPOR
 
 ---
 
-## Tier 2 — Domain groups (107 tools)
+## Tier 2 — Domain groups (110 tools)
 
-### `approvals` (6 tools)
+### `approvals` (9 tools)
 
-Clockify endpoints: `GET/POST/PUT /workspaces/{ws}/approval-requests/*`
+Clockify approval-request endpoints include list, submit, resubmit, user-scoped submit/resubmit, and documented PATCH status updates. `clockify_get_approval_request` scans the documented list endpoint; it does not call an undocumented per-id GET route.
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
-| `clockify_approve_timesheet` | mutating | unit |
-| `clockify_get_approval_request` | read-only | unit |
-| `clockify_list_approval_requests` | read-only | unit |
-| `clockify_reject_timesheet` | mutating | unit |
-| `clockify_submit_for_approval` | mutating | unit |
-| `clockify_withdraw_approval` | mutating | unit |
+| `clockify_approve_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`; unit |
+| `clockify_get_approval_request` | read-only | `GET /workspaces/{workspaceId}/approval-requests`; unit; scans documented list pages |
+| `clockify_list_approval_requests` | read-only | `GET /workspaces/{workspaceId}/approval-requests`; unit |
+| `clockify_reject_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`; unit |
+| `clockify_resubmit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval`; unit |
+| `clockify_resubmit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval`; unit |
+| `clockify_submit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests`; unit |
+| `clockify_submit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}`; unit |
+| `clockify_withdraw_approval` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`; unit |
 
 ### `custom_fields` (6 tools)
 
@@ -532,14 +536,14 @@ surface and surface latent handler / upstream bugs.
 | `TestLiveT2UserInviteValidationProbe` | raw Clockify invite-user route `POST /workspaces/{workspaceId}/users?send-email=false`; no catalog tool exposed | validation / plan / permission / unsupported-method refusal, with no email sent |
 | `TestLiveT2WebhooksCRUD` | all 7 webhook tools: create/get/update/list-events/test dry-run/delete dry-run/delete using live `webhookEvent` + trigger-source body shape | success path |
 | `TestLiveT2TimeOffRemainingTools` | all 12 time-off tool names: policy/request list/get/create/update/delete/status/balance paths; request create reaches live body contract and unsupported/permission routes are asserted where Clockify rejects the operation | success path + plan/permission/unsupported-route probes |
-| `TestLiveT2ApprovalsRemainingTools` | all 6 approvals tool names: list, submit period/periodStart, get, approve/reject dry-run, withdraw | success path + documented approval period / GET-route 4xx probes |
+| `TestLiveT2ApprovalsRemainingTools` | approvals list, submit period/periodStart, get-by-list-scan, approve/reject dry-run, withdraw | success path + documented approval period / documented list/PATCH route probes |
 | `TestLiveClientProjectTaskDocCoverage` | client/project/task doc rows from `CLIENTSDOC.md`, `PROJECTSDOC.md`, and `TASKDOC.md` through the MCP path | success path |
 | `TestLiveProjectAdminDocCoverage` | project template clone, project template flag, project estimate/membership endpoints, project-user rates, task rates | success path where allowed; explicit upstream permission/plan refusals pinned |
 | `TestLiveReportsDocCoverage` | ATTENDANCEANDTIMEREPORTS.md + expense detailed report rows: attendance, detailed, summary, weekly, expense detailed reports with documented filters and amount fields | success path where enabled; explicit upstream permission/plan refusals pinned |
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 159-tool catalog is 52 Tier 1 tools + 107 Tier 2 tools, with
+current 163-tool catalog is 53 Tier 1 tools + 110 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -642,7 +646,7 @@ upstream limitation:
 
 ## Gaps
 
-1. **Full-success live coverage:** the current 159-tool catalog has a
+1. **Full-success live coverage:** the current 163-tool catalog has a
    manual probe, live-test hook, or local unit coverage path, but some
    API-backed tools remain asserted as upstream unsupported,
    permission-gated, plan-gated, or workspace-state limited rather

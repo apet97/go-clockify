@@ -10,24 +10,28 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
-// TestApprovalHandlersCount verifies that the approvals group produces exactly 6 tools.
+// TestApprovalHandlersCount verifies that the approvals group produces the
+// documented list/create/resubmit/PATCH approval surface.
 func TestApprovalHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descriptors, ok := svc.Tier2Handlers("approvals")
 	if !ok {
 		t.Fatal("approvals group not found in Tier2Groups")
 	}
-	if len(descriptors) != 6 {
-		t.Fatalf("expected 6 approval tools, got %d", len(descriptors))
+	if len(descriptors) != 9 {
+		t.Fatalf("expected 9 approval tools, got %d", len(descriptors))
 	}
 
 	expected := map[string]bool{
-		"clockify_list_approval_requests": true,
-		"clockify_get_approval_request":   true,
-		"clockify_submit_for_approval":    true,
-		"clockify_approve_timesheet":      true,
-		"clockify_reject_timesheet":       true,
-		"clockify_withdraw_approval":      true,
+		"clockify_list_approval_requests":     true,
+		"clockify_get_approval_request":       true,
+		"clockify_submit_for_approval":        true,
+		"clockify_resubmit_for_approval":      true,
+		"clockify_submit_for_user_approval":   true,
+		"clockify_resubmit_for_user_approval": true,
+		"clockify_approve_timesheet":          true,
+		"clockify_reject_timesheet":           true,
+		"clockify_withdraw_approval":          true,
 	}
 	for _, d := range descriptors {
 		if !expected[d.Tool.Name] {
@@ -93,15 +97,18 @@ func TestListApprovalRequests(t *testing.T) {
 	if !result.OK {
 		t.Fatal("expected OK=true")
 	}
-	items, ok := result.Data.([]map[string]any)
+	items, ok := result.Data.([]ApprovalView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
 	if len(items) != 2 {
 		t.Fatalf("expected 2 approval requests, got %d", len(items))
 	}
-	if items[0]["id"] != "ar1" {
-		t.Fatalf("unexpected first approval ID: %v", items[0]["id"])
+	if items[0].ID != "ar1" {
+		t.Fatalf("unexpected first approval ID: %v", items[0].ID)
+	}
+	if items[0].Status["state"] != "PENDING" {
+		t.Fatalf("unexpected first approval status: %#v", items[0].Status)
 	}
 }
 

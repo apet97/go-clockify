@@ -277,20 +277,28 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_get_approval_request",
+        "clockify_list_approval_requests"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
+        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi"
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_status": "unit-only",
+      "live_test_names": [
+        "TestLiveT2ApprovalsRemainingTools",
+        "TestLiveTier2ReadOnlySweep"
+      ],
       "method": "GET",
-      "notes_count": 0,
+      "notes_count": 3,
       "operationId": "getApprovalRequests",
       "path": "/workspaces/{workspaceId}/approval-requests",
       "raw_allowlisted": true,
@@ -299,23 +307,35 @@
       ],
       "summary": "Get approval requests",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_get_approval_request",
+        "clockify_list_approval_requests"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_get_approval_request",
+        "clockify_list_approval_requests"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_submit_for_approval"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "real-openapi"
+        "mcp-catalog",
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "documented",
-      "live_test_names": [],
+      "live_status": "unit-only",
+      "live_test_names": [
+        "TestLiveT2ApprovalsRemainingTools"
+      ],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 1,
       "operationId": "submitApprovalRequest",
       "path": "/workspaces/{workspaceId}/approval-requests",
       "raw_allowlisted": true,
@@ -324,23 +344,31 @@
       ],
       "summary": "Submit approval request",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_submit_for_approval"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_submit_for_approval"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-mapped",
+      "coverage_md_tools": [
+        "clockify_resubmit_for_approval"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "real-openapi"
+        "mcp-catalog",
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "documented",
+      "live_status": "unit-only",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 1,
       "operationId": "resubmitEntriesForApproval",
       "path": "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval",
       "raw_allowlisted": true,
@@ -349,25 +377,33 @@
       ],
       "summary": "Submit non pending/approved entries/expenses for approval to an existing approval request",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_resubmit_for_approval"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_resubmit_for_approval"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-mapped",
+      "coverage_md_tools": [
+        "clockify_submit_for_user_approval"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
+        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi"
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
+      "live_status": "unit-only",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 1,
       "operationId": "submitApprovalRequestForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}",
       "raw_allowlisted": true,
@@ -376,25 +412,33 @@
       ],
       "summary": "Submit an approval request for a user",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_submit_for_user_approval"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_submit_for_user_approval"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-mapped",
+      "coverage_md_tools": [
+        "clockify_resubmit_for_user_approval"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
+        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi"
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
+      "live_status": "unit-only",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 1,
       "operationId": "resubmitEntriesForApprovalForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
       "raw_allowlisted": true,
@@ -403,24 +447,36 @@
       ],
       "summary": "Re-submit rejected/withdrawn entries/expenses for an approval of a user",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_resubmit_for_user_approval"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_resubmit_for_user_approval"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_approve_timesheet",
+        "clockify_reject_timesheet",
+        "clockify_withdraw_approval"
+      ],
       "evidence": [
         "aiii-openapi",
+        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi"
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_status": "unit-only",
+      "live_test_names": [
+        "TestLiveT2ApprovalsRemainingTools"
+      ],
       "method": "PATCH",
-      "notes_count": 0,
+      "notes_count": 3,
       "operationId": "updateApprovalRequest",
       "path": "/workspaces/{workspaceId}/approval-requests/{approvalId}",
       "raw_allowlisted": true,
@@ -429,8 +485,16 @@
       ],
       "summary": "Update an approval request",
       "tag": "Approval",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_approve_timesheet",
+        "clockify_reject_timesheet",
+        "clockify_withdraw_approval"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_approve_timesheet",
+        "clockify_reject_timesheet",
+        "clockify_withdraw_approval"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -559,6 +623,7 @@
     {
       "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
+        "clockify_client_report",
         "clockify_get_client"
       ],
       "evidence": [
@@ -576,7 +641,7 @@
         "TestLiveClientProjectTaskDocCoverage"
       ],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 3,
       "operationId": "getWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
       "raw_allowlisted": true,
@@ -586,9 +651,11 @@
       "summary": "Get client",
       "tag": "Client",
       "typed_tools": [
+        "clockify_client_report",
         "clockify_get_client"
       ],
       "typed_tools_in_catalog": [
+        "clockify_client_report",
         "clockify_get_client"
       ],
       "typed_tools_orphan": []
@@ -1427,30 +1494,38 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-mapped",
+      "coverage_md_tools": [
+        "clockify_client_report"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
+        "mcp-catalog",
         "probe-openapi",
         "probe-supplement",
-        "real-openapi"
+        "real-openapi",
+        "unit-only"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
+      "live_status": "unit-only",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 1,
       "operationId": "filterInvoices",
       "path": "/workspaces/{workspaceId}/invoices/info",
       "raw_allowlisted": true,
       "risk": [
-        "write"
+        "read"
       ],
       "summary": "Filter out invoices",
       "tag": "Invoices",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_client_report"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_client_report"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -5743,15 +5818,16 @@
   "summary": {
     "by_class": {
       "raw-tool-live-success": 15,
-      "raw-tool-only": 125,
-      "typed-tool-live-success": 51,
-      "typed-tool-mapped": 0,
+      "raw-tool-only": 118,
+      "typed-tool-live-success": 54,
+      "typed-tool-mapped": 4,
       "uncovered": 0,
       "unsupported": 1
     },
     "by_tag": {
       "Approval": {
-        "raw-tool-only": 6
+        "typed-tool-live-success": 3,
+        "typed-tool-mapped": 3
       },
       "Balance": {
         "raw-tool-only": 6,
@@ -5796,7 +5872,8 @@
       },
       "Invoices": {
         "raw-tool-live-success": 1,
-        "raw-tool-only": 8
+        "raw-tool-only": 7,
+        "typed-tool-mapped": 1
       },
       "Member profiles": {
         "raw-tool-only": 2
@@ -5879,7 +5956,7 @@
     "total": 192
   },
   "tool_catalog": {
-    "tier1": 52,
-    "tier2": 107
+    "tier1": 53,
+    "tier2": 110
   }
 }

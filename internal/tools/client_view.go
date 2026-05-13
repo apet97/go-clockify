@@ -1,0 +1,646 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/paths"
+)
+
+type ClientCurrencyView struct {
+	Code string `json:"code,omitempty"`
+	ID   string `json:"id,omitempty"`
+}
+
+type ClientContactView struct {
+	Email    string `json:"email,omitempty"`
+	Address  string `json:"address,omitempty"`
+	Note     string `json:"note,omitempty"`
+	CCEmails any    `json:"ccEmails,omitempty"`
+}
+
+type ClientProjectSummary struct {
+	Count         int  `json:"count"`
+	ActiveCount   int  `json:"active_count,omitempty"`
+	ArchivedCount int  `json:"archived_count,omitempty"`
+	BillableCount int  `json:"billable_count,omitempty"`
+	TasksCount    int  `json:"tasks_count,omitempty"`
+	Truncated     bool `json:"truncated,omitempty"`
+}
+
+type ClientTimeSummary struct {
+	TrackedDurationSeconds int64   `json:"tracked_duration_seconds,omitempty"`
+	TrackedHours           float64 `json:"tracked_hours,omitempty"`
+	TrackedDisplay         string  `json:"tracked_display,omitempty"`
+	EntriesCount           int     `json:"entries_count,omitempty"`
+	Source                 string  `json:"source"`
+	Reason                 string  `json:"reason,omitempty"`
+}
+
+type ClientInvoiceSummary struct {
+	TotalCount    int            `json:"total_count,omitempty"`
+	ReturnedCount int            `json:"returned_count,omitempty"`
+	Amount        *MoneyView     `json:"amount,omitempty"`
+	Balance       *MoneyView     `json:"balance,omitempty"`
+	Paid          *MoneyView     `json:"paid,omitempty"`
+	OverdueCount  int            `json:"overdue_count,omitempty"`
+	ByStatus      map[string]int `json:"by_status,omitempty"`
+	Source        string         `json:"source"`
+	Reason        string         `json:"reason,omitempty"`
+}
+
+type ClientApprovalSummary struct {
+	Source                 string                       `json:"source"`
+	Reason                 string                       `json:"reason,omitempty"`
+	WithApprovalRequest    int                          `json:"with_approval_request,omitempty"`
+	WithoutApprovalRequest int                          `json:"without_approval_request,omitempty"`
+	RequestIDs             []string                     `json:"request_ids,omitempty"`
+	States                 map[string]int               `json:"states,omitempty"`
+	DurationsByState       map[string]EntryDurationView `json:"durations_by_state,omitempty"`
+}
+
+type ClientEntryHealth struct {
+	EntriesCount            int `json:"entries_count"`
+	LockedCount             int `json:"locked_count,omitempty"`
+	MissingDescriptionCount int `json:"missing_description_count,omitempty"`
+	MissingProjectCount     int `json:"missing_project_count,omitempty"`
+	MissingTaskCount        int `json:"missing_task_count,omitempty"`
+}
+
+type ClientView struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Address      string `json:"address,omitempty"`
+	Archived     bool   `json:"archived,omitempty"`
+	CCEmails     any    `json:"ccEmails,omitempty"`
+	CurrencyCode string `json:"currencyCode,omitempty"`
+	CurrencyID   string `json:"currencyId,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Note         string `json:"note,omitempty"`
+	WorkspaceID  string `json:"workspaceId,omitempty"`
+
+	Currency        ClientCurrencyView    `json:"currency"`
+	Contact         ClientContactView     `json:"contact"`
+	ProjectSummary  ClientProjectSummary  `json:"project_summary"`
+	Financials      ProjectFinancials     `json:"financials"`
+	TimeSummary     ClientTimeSummary     `json:"time_summary"`
+	InvoiceSummary  ClientInvoiceSummary  `json:"invoice_summary"`
+	ApprovalSummary ClientApprovalSummary `json:"approval_summary"`
+	Warnings        []string              `json:"warnings,omitempty"`
+	Raw             map[string]any        `json:"raw,omitempty"`
+}
+
+type ClientReportView struct {
+	Client           ClientView         `json:"client"`
+	Range            FinancialRangeView `json:"range"`
+	Projects         []ProjectView      `json:"projects,omitempty"`
+	Entries          []ReportEntryView  `json:"entries,omitempty"`
+	EntryHealth      ClientEntryHealth  `json:"entry_health"`
+	SuggestedActions []ToolSuggestion   `json:"suggestedActions,omitempty"`
+	Warnings         []string           `json:"warnings,omitempty"`
+}
+
+type clientReportTotals struct {
+	money        reportEntryMoney
+	duration     int64
+	hasDuration  bool
+	entriesCount int
+}
+
+func clientViewFromClient(client clockify.ClientEntity) ClientView {
+	view := ClientView{
+		ID:           client.ID,
+		Name:         client.Name,
+		Address:      client.Address,
+		Archived:     client.Archived,
+		CCEmails:     client.CCEmails,
+		CurrencyCode: client.CurrencyCode,
+		CurrencyID:   client.CurrencyID,
+		Email:        client.Email,
+		Note:         client.Note,
+		WorkspaceID:  client.WorkspaceID,
+		Currency: ClientCurrencyView{
+			Code: client.CurrencyCode,
+			ID:   client.CurrencyID,
+		},
+		Contact: ClientContactView{
+			Email:    client.Email,
+			Address:  client.Address,
+			Note:     client.Note,
+			CCEmails: client.CCEmails,
+		},
+		Financials: ProjectFinancials{
+			Source: entryFinancialSourceUnavailable,
+			Reason: "financial enrichment was not available",
+		},
+		TimeSummary: ClientTimeSummary{
+			Source: entryFinancialSourceUnavailable,
+			Reason: "tracked-time enrichment was not available",
+		},
+		InvoiceSummary: ClientInvoiceSummary{
+			Source: entryFinancialSourceUnavailable,
+			Reason: "invoice enrichment is only loaded by clockify_client_report",
+		},
+		ApprovalSummary: ClientApprovalSummary{
+			Source: entryFinancialSourceUnavailable,
+			Reason: "approval enrichment requires detailed report rows",
+		},
+		Raw: clientRawMap(client),
+	}
+	return view
+}
+
+func clientRawMap(client clockify.ClientEntity) map[string]any {
+	raw := map[string]any{
+		"id":       client.ID,
+		"name":     client.Name,
+		"archived": client.Archived,
+	}
+	if client.Address != "" {
+		raw["address"] = client.Address
+	}
+	if client.CCEmails != nil {
+		raw["ccEmails"] = client.CCEmails
+	}
+	if client.CurrencyCode != "" {
+		raw["currencyCode"] = client.CurrencyCode
+	}
+	if client.CurrencyID != "" {
+		raw["currencyId"] = client.CurrencyID
+	}
+	if client.Email != "" {
+		raw["email"] = client.Email
+	}
+	if client.Note != "" {
+		raw["note"] = client.Note
+	}
+	if client.WorkspaceID != "" {
+		raw["workspaceId"] = client.WorkspaceID
+	}
+	return raw
+}
+
+func (s *Service) enrichClientView(ctx context.Context, wsID string, client clockify.ClientEntity, args map[string]any, deep bool) (ClientView, map[string]any) {
+	views, meta := s.enrichClientViews(ctx, wsID, []clockify.ClientEntity{client}, args, deep)
+	if len(views) == 0 {
+		return clientViewFromClient(client), meta
+	}
+	return views[0], meta
+}
+
+func (s *Service) enrichClientViews(ctx context.Context, wsID string, clients []clockify.ClientEntity, args map[string]any, deep bool) ([]ClientView, map[string]any) {
+	views := make([]ClientView, len(clients))
+	clientIDs := make([]string, 0, len(clients))
+	for i := range clients {
+		views[i] = clientViewFromClient(clients[i])
+		if clients[i].ID != "" {
+			clientIDs = append(clientIDs, clients[i].ID)
+		}
+	}
+	meta := map[string]any{
+		"clients": len(clients),
+		"source":  entryFinancialSourceUnavailable,
+	}
+	if len(clients) == 0 {
+		return views, meta
+	}
+	finRange := financialRangeFromArgs(args)
+	for i := range views {
+		views[i].Financials.Range = &finRange
+	}
+	if !s.projectDeepEnrichmentEnabled() {
+		addClientWarningAll(views, "deep client enrichment disabled for non-canonical Clockify base URL")
+		meta["reason"] = "deep client enrichment disabled for non-canonical Clockify base URL"
+		return views, meta
+	}
+
+	projects, truncated, projectErr := s.listProjectsForClientEnrichment(ctx, wsID, clientIDs)
+	if projectErr != nil {
+		addClientWarningAll(views, "project enrichment failed: "+projectErr.Error())
+		meta["project_enrichment_error"] = projectErr.Error()
+	} else {
+		if truncated {
+			meta["projects_truncated"] = true
+		}
+		applyClientProjectSummaries(views, projects, truncated)
+	}
+
+	totals, reportErr := s.reportFinancialsForClients(ctx, wsID, clientIDs, finRange)
+	reportMatched := 0
+	for i := range views {
+		total, ok := totals[views[i].ID]
+		if !ok {
+			continue
+		}
+		if total.money.hasMoney() {
+			views[i].Financials = projectFinancialsFromReport(total.money, finRange)
+			reportMatched++
+		}
+		if total.hasDuration || total.entriesCount > 0 {
+			views[i].TimeSummary = ClientTimeSummary{
+				TrackedDurationSeconds: total.duration,
+				TrackedHours:           hours(total.duration),
+				TrackedDisplay:         durationDisplay(total.duration),
+				EntriesCount:           total.entriesCount,
+				Source:                 entryFinancialSourceReportsAPI,
+			}
+		}
+	}
+	meta["reports_api_matched"] = reportMatched
+	if reportMatched > 0 {
+		meta["source"] = entryFinancialSourceReportsAPI
+	}
+	if reportErr != nil {
+		addClientWarningAll(views, "reports API enrichment failed: "+reportErr.Error())
+		meta["reports_api_error"] = reportErr.Error()
+	}
+	if deep {
+		for i := range views {
+			invoices, err := s.invoiceSummaryForClient(ctx, wsID, views[i].ID, args)
+			if err != nil {
+				views[i].Warnings = append(views[i].Warnings, "invoice enrichment failed: "+err.Error())
+			} else {
+				views[i].InvoiceSummary = invoices
+			}
+			detailed, err := s.detailedReportViewsForClient(ctx, wsID, views[i].ID, finRange)
+			if err != nil {
+				views[i].Warnings = append(views[i].Warnings, "approval/detail enrichment failed: "+err.Error())
+			} else {
+				views[i].ApprovalSummary = clientApprovalSummaryFromReport(detailed.ApprovalSummary)
+			}
+		}
+	}
+	return views, meta
+}
+
+func addClientWarningAll(views []ClientView, warning string) {
+	for i := range views {
+		views[i].Warnings = append(views[i].Warnings, warning)
+	}
+}
+
+func (s *Service) listProjectsForClientEnrichment(ctx context.Context, wsID string, clientIDs []string) ([]clockify.Project, bool, error) {
+	if len(clientIDs) == 0 {
+		return nil, false, nil
+	}
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return nil, false, err
+	}
+	values := url.Values{}
+	values.Set("page", "1")
+	values.Set("page-size", strconv.Itoa(projectTaskEnrichmentPageSize))
+	values.Set("contains-client", "true")
+	values.Set("client-status", "ALL")
+	values.Set("hydrated", "true")
+	for _, id := range clientIDs {
+		values.Add("clients", id)
+	}
+	var projects []clockify.Project
+	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
+		return nil, false, err
+	}
+	return projects, len(projects) >= projectTaskEnrichmentPageSize, nil
+}
+
+func applyClientProjectSummaries(views []ClientView, projects []clockify.Project, truncated bool) {
+	index := map[string]int{}
+	for i := range views {
+		index[views[i].ID] = i
+	}
+	for _, project := range projects {
+		i, ok := index[project.ClientID]
+		if !ok {
+			continue
+		}
+		summary := &views[i].ProjectSummary
+		summary.Count++
+		if project.Archived {
+			summary.ArchivedCount++
+		} else {
+			summary.ActiveCount++
+		}
+		if project.Billable {
+			summary.BillableCount++
+		}
+		if truncated {
+			summary.Truncated = true
+		}
+	}
+}
+
+func (s *Service) reportFinancialsForClients(ctx context.Context, wsID string, clientIDs []string, finRange FinancialRangeView) (map[string]clientReportTotals, error) {
+	out := map[string]clientReportTotals{}
+	if len(clientIDs) == 0 {
+		return out, nil
+	}
+	path, err := paths.Workspace(wsID, "reports", "summary")
+	if err != nil {
+		return out, err
+	}
+	body := map[string]any{
+		"amountShown":   "EARNED",
+		"amounts":       []string{"EARNED", "COST", "PROFIT"},
+		"dateRangeType": firstNonEmptyString(finRange.DateRangeType, "ABSOLUTE"),
+		"clients": map[string]any{
+			"contains": "CONTAINS",
+			"ids":      clientIDs,
+			"status":   "ALL",
+		},
+		"summaryFilter": map[string]any{
+			"groups": []string{"CLIENT", "PROJECT", "TASK"},
+		},
+	}
+	if finRange.Start != "" {
+		body["dateRangeStart"] = finRange.Start
+	}
+	if finRange.End != "" {
+		body["dateRangeEnd"] = finRange.End
+	}
+	if finRange.Timezone != "" {
+		body["timeZone"] = finRange.Timezone
+	}
+	var payload map[string]any
+	if err := s.Client.PostReports(ctx, path, body, &payload); err != nil {
+		return out, err
+	}
+	collectClientReportTotals(payload, stringSet(clientIDs), out)
+	return out, nil
+}
+
+func collectClientReportTotals(v any, clientIDs map[string]struct{}, out map[string]clientReportTotals) {
+	switch item := v.(type) {
+	case []any:
+		for _, child := range item {
+			collectClientReportTotals(child, clientIDs, out)
+		}
+	case []map[string]any:
+		for _, child := range item {
+			collectClientReportTotals(child, clientIDs, out)
+		}
+	case map[string]any:
+		if id := reportGroupID(item, "client"); id != "" {
+			if _, ok := clientIDs[id]; ok {
+				out[id] = mergeClientReportTotals(out[id], item)
+			}
+		}
+		for _, child := range item {
+			collectClientReportTotals(child, clientIDs, out)
+		}
+	}
+}
+
+func mergeClientReportTotals(existing clientReportTotals, row map[string]any) clientReportTotals {
+	existing.money = mergeReportEntryMoney(existing.money, reportMoneyFromRow(row))
+	if seconds, ok := reportDurationSeconds(row); ok {
+		existing.duration += seconds
+		existing.hasDuration = true
+	}
+	if count, ok := reportInt(firstPresent(row, "entriesCount", "entries_count", "count")); ok {
+		existing.entriesCount += count
+	}
+	return existing
+}
+
+func (s *Service) invoiceSummaryForClient(ctx context.Context, wsID, clientID string, args map[string]any) (ClientInvoiceSummary, error) {
+	path, err := paths.Workspace(wsID, "invoices", "info")
+	if err != nil {
+		return ClientInvoiceSummary{}, err
+	}
+	page := max(intArg(args, "invoice_page", 1), 1)
+	pageSize := intArg(args, "invoice_page_size", 50)
+	if pageSize < 1 {
+		pageSize = 50
+	}
+	if pageSize > 200 {
+		pageSize = 200
+	}
+	body := map[string]any{
+		"page":     page,
+		"pageSize": pageSize,
+		"clients": map[string]any{
+			"contains": "CONTAINS",
+			"ids":      []string{clientID},
+			"status":   "ALL",
+		},
+	}
+	var payload map[string]any
+	if err := s.Client.Post(ctx, path, body, &payload); err != nil {
+		return ClientInvoiceSummary{}, err
+	}
+	return invoiceSummaryFromPayload(payload), nil
+}
+
+func invoiceSummaryFromPayload(payload map[string]any) ClientInvoiceSummary {
+	summary := ClientInvoiceSummary{
+		Source:   "invoice_api",
+		ByStatus: map[string]int{},
+	}
+	if total, ok := reportInt(firstPresent(payload, "total", "count")); ok {
+		summary.TotalCount = total
+	}
+	for _, invoice := range mapSlice(payload["invoices"]) {
+		summary.ReturnedCount++
+		currency := reportCurrency(invoice)
+		summary.Amount = moneySum(summary.Amount, moneyFromAny(firstPresent(invoice, "amount"), currency))
+		summary.Balance = moneySum(summary.Balance, moneyFromAny(firstPresent(invoice, "balance"), currency))
+		summary.Paid = moneySum(summary.Paid, moneyFromAny(firstPresent(invoice, "paid"), currency))
+		status := strings.ToUpper(firstReportString(invoice, "status"))
+		if status != "" {
+			summary.ByStatus[status]++
+		}
+		if days, ok := reportInt(firstPresent(invoice, "daysOverdue", "days_overdue")); ok && days > 0 {
+			summary.OverdueCount++
+		}
+	}
+	if len(summary.ByStatus) == 0 {
+		summary.ByStatus = nil
+	}
+	if summary.TotalCount == 0 {
+		summary.TotalCount = summary.ReturnedCount
+	}
+	return summary
+}
+
+func (s *Service) detailedReportViewsForClient(ctx context.Context, wsID, clientID string, finRange FinancialRangeView) (detailedReportViews, error) {
+	path, err := paths.Workspace(wsID, "reports", "detailed")
+	if err != nil {
+		return detailedReportViews{}, err
+	}
+	body := map[string]any{
+		"amountShown":   "EARNED",
+		"amounts":       []string{"EARNED", "COST", "PROFIT"},
+		"dateRangeType": firstNonEmptyString(finRange.DateRangeType, "ABSOLUTE"),
+		"clients": map[string]any{
+			"contains": "CONTAINS",
+			"ids":      []string{clientID},
+			"status":   "ALL",
+		},
+		"detailedFilter": map[string]any{
+			"page":     1,
+			"pageSize": projectTaskEnrichmentPageSize,
+			"options":  map[string]any{"totals": "CALCULATE"},
+		},
+	}
+	if finRange.Start != "" {
+		body["dateRangeStart"] = finRange.Start
+	}
+	if finRange.End != "" {
+		body["dateRangeEnd"] = finRange.End
+	}
+	if finRange.Timezone != "" {
+		body["timeZone"] = finRange.Timezone
+	}
+	var payload map[string]any
+	if err := s.Client.PostReports(ctx, path, body, &payload); err != nil {
+		return detailedReportViews{}, err
+	}
+	return normalizeDetailedReportPayload(payload), nil
+}
+
+func clientApprovalSummaryFromReport(summary ReportApprovalSummary) ClientApprovalSummary {
+	return ClientApprovalSummary{
+		Source:                 entryFinancialSourceReportsAPI,
+		WithApprovalRequest:    summary.WithApprovalRequest,
+		WithoutApprovalRequest: summary.WithoutApprovalRequest,
+		RequestIDs:             summary.RequestIDs,
+		States:                 summary.States,
+		DurationsByState:       summary.DurationsByState,
+	}
+}
+
+func clientEntryHealth(entries []ReportEntryView) ClientEntryHealth {
+	summary := summarizeReportEntries(entries)
+	return ClientEntryHealth{
+		EntriesCount:            summary.Count,
+		LockedCount:             summary.LockedCount,
+		MissingDescriptionCount: summary.MissingDescriptionCount,
+		MissingProjectCount:     summary.MissingProjectCount,
+		MissingTaskCount:        summary.MissingTaskCount,
+	}
+}
+
+func (s *Service) ClientReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	clientRef := strings.TrimSpace(stringArg(args, "client"))
+	if clientRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("client is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "clients", clientID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var client clockify.ClientEntity
+	if err := s.Client.Get(ctx, path, nil, &client); err != nil {
+		return ResultEnvelope{}, err
+	}
+	view, meta := s.enrichClientView(ctx, wsID, client, args, false)
+	finRange := financialRangeFromArgs(args)
+	report := ClientReportView{
+		Client:           view,
+		Range:            finRange,
+		SuggestedActions: clientReportSuggestions(view, finRange),
+		Warnings:         append([]string{}, view.Warnings...),
+	}
+	if s.projectDeepEnrichmentEnabled() {
+		projects, truncated, err := s.listProjectsForClientEnrichment(ctx, wsID, []string{clientID})
+		if err != nil {
+			report.Warnings = append(report.Warnings, "project detail enrichment failed: "+err.Error())
+		} else {
+			if truncated {
+				report.Warnings = append(report.Warnings, "project detail enrichment was truncated at the page cap")
+			}
+			projectViews, projectMeta := s.enrichProjectViews(ctx, wsID, projects, args)
+			report.Projects = projectViews
+			meta["project_details"] = projectMeta
+		}
+		invoices, err := s.invoiceSummaryForClient(ctx, wsID, clientID, args)
+		if err != nil {
+			report.Warnings = append(report.Warnings, "invoice enrichment failed: "+err.Error())
+		} else {
+			report.Client.InvoiceSummary = invoices
+		}
+		detailed, err := s.detailedReportViewsForClient(ctx, wsID, clientID, finRange)
+		if err != nil {
+			report.Warnings = append(report.Warnings, "detailed report enrichment failed: "+err.Error())
+		} else {
+			report.Entries = detailed.Entries
+			report.EntryHealth = clientEntryHealth(detailed.Entries)
+			report.Client.ApprovalSummary = clientApprovalSummaryFromReport(detailed.ApprovalSummary)
+		}
+	}
+	return ok("clockify_client_report", report, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, meta)), nil
+}
+
+func clientReportSuggestions(client ClientView, finRange FinancialRangeView) []ToolSuggestion {
+	ref := firstNonEmptyString(client.ID, client.Name)
+	if ref == "" {
+		return nil
+	}
+	args := map[string]any{"client": ref}
+	if finRange.Start != "" {
+		args["financial_start"] = finRange.Start
+	}
+	if finRange.End != "" {
+		args["financial_end"] = finRange.End
+	}
+	return []ToolSuggestion{
+		{
+			Tool:      "clockify_detailed_report",
+			Reason:    "Inspect the underlying detailed report rows for this client.",
+			Arguments: detailedReportSuggestionArgs(ref, finRange),
+		},
+		{
+			Tool:      "clockify_list_projects",
+			Reason:    "Review the projects attached to this client.",
+			Arguments: args,
+		},
+	}
+}
+
+func detailedReportSuggestionArgs(clientRef string, finRange FinancialRangeView) map[string]any {
+	args := map[string]any{
+		"date_range_type": firstNonEmptyString(finRange.DateRangeType, "ABSOLUTE"),
+		"clients":         map[string]any{"contains": "CONTAINS", "ids": []string{clientRef}, "status": "ALL"},
+		"detailed_filter": map[string]any{
+			"page":      1,
+			"page_size": 50,
+			"options":   map[string]any{"totals": "CALCULATE"},
+		},
+	}
+	if finRange.Start != "" {
+		args["date_range_start"] = finRange.Start
+	}
+	if finRange.End != "" {
+		args["date_range_end"] = finRange.End
+	}
+	if finRange.Timezone != "" {
+		args["time_zone"] = finRange.Timezone
+	}
+	return args
+}
+
+func clientReportInputSchema() map[string]any {
+	props := map[string]any{
+		"client":            map[string]any{"type": "string", "description": "Client name or ID"},
+		"invoice_page":      map[string]any{"type": "integer", "minimum": 1},
+		"invoice_page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
+	}
+	addFinancialRangeInputProperties(props)
+	return map[string]any{
+		"type":       "object",
+		"required":   []string{"client"},
+		"properties": props,
+	}
+}

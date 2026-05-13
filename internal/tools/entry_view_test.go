@@ -15,7 +15,20 @@ func TestEntryViewEnrichmentMapsReportsAPIMoney(t *testing.T) {
 		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
 			respondJSON(t, w, map[string]any{
 				"timeEntries": []map[string]any{{
-					"id": "entry-1",
+					"get_id":            "entry-1",
+					"approvalRequestId": "approval-1",
+					"locked":            true,
+					"type":              "REGULAR",
+					"userId":            "user-1",
+					"userName":          "Firstname Lastname",
+					"clientId":          "client-1",
+					"clientName":        "Client A",
+					"projectId":         "project-1",
+					"projectName":       "Project A",
+					"taskId":            "task-1",
+					"taskName":          "Task A",
+					"customFieldValues": []map[string]any{{"name": "Phase", "value": "Build"}},
+					"tags":              []any{map[string]any{"id": "tag-1", "name": "Feature"}},
 					"amounts": []map[string]any{
 						{"type": "EARNED", "value": 12500, "currency": "USD"},
 						{"type": "COST", "value": 5000, "currency": "USD"},
@@ -43,8 +56,35 @@ func TestEntryViewEnrichmentMapsReportsAPIMoney(t *testing.T) {
 	assertMoneyCents(t, fin.Earned, 12500, "USD")
 	assertMoneyCents(t, fin.Cost, 5000, "USD")
 	assertMoneyCents(t, fin.Profit, 7500, "USD")
+	if views[0].Approval == nil || views[0].Approval.RequestID != "approval-1" {
+		t.Fatalf("approval not enriched from detailed report row: %#v", views[0].Approval)
+	}
+	if views[0].Audit == nil || views[0].Audit.Locked == nil || !*views[0].Audit.Locked {
+		t.Fatalf("audit locked state not enriched: %#v", views[0].Audit)
+	}
+	if views[0].Entities == nil || views[0].Entities.Project == nil || views[0].Entities.Project.Name != "Project A" {
+		t.Fatalf("entities not enriched: %#v", views[0].Entities)
+	}
+	if views[0].ProjectID != "project-1" || views[0].TaskID != "task-1" || len(views[0].TagIDs) != 1 || views[0].TagIDs[0] != "tag-1" {
+		t.Fatalf("top-level entry fields not filled from report row: %#v", views[0])
+	}
 	if meta["reports_api_matched"] != 1 {
 		t.Fatalf("unexpected financial meta: %#v", meta)
+	}
+}
+
+func TestReportRowEntryIDNormalizesDetailedReportAliases(t *testing.T) {
+	for _, row := range []map[string]any{
+		{"_id": "entry-1"},
+		{"id": "entry-1"},
+		{"get_id": "entry-1"},
+		{"entryId": "entry-1"},
+		{"timeEntryId": "entry-1"},
+		{"timeEntry": map[string]any{"get_id": "entry-1"}},
+	} {
+		if got := reportRowEntryID(row); got != "entry-1" {
+			t.Fatalf("reportRowEntryID(%#v) = %q, want entry-1", row, got)
+		}
 	}
 }
 

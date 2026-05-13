@@ -53,6 +53,8 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 	}
 	if binary {
 		meta["binary"] = true
+	} else if endpoint.pathName == "detailed" {
+		meta["normalizedEntries"] = appendDetailedReportViews(data)
 	}
 	return ok(endpoint.toolName, data, meta), nil
 }
