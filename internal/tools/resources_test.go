@@ -150,6 +150,8 @@ func TestResourcesReadWeeklyReportDoesNotMutateServiceWorkspace(t *testing.T) {
 	var svc *Service
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case "/workspaces/" + resourceWorkspace + "/reports/weekly":
 			observedWorkspace <- svc.WorkspaceID
 			var body map[string]any

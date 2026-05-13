@@ -26,6 +26,7 @@ func init() {
 			"clockify_remove_user_from_group",
 			"clockify_update_user_role",
 			"clockify_deactivate_user",
+			"clockify_list_user_managers",
 			"clockify_get_member_profile",
 			"clockify_update_member_profile",
 		},
@@ -162,7 +163,25 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.DeactivateUser(ctx, args)
 			},
 		},
-		// 9. Get member profile (RO)
+		// 9. List user managers (RO)
+		{
+			Tool: toolRO("clockify_list_user_managers", "List managers assigned to a user", map[string]any{
+				"type":     "object",
+				"required": []string{"user_id"},
+				"properties": map[string]any{
+					"user_id":     map[string]any{"type": "string", "description": "User ID"},
+					"page":        map[string]any{"type": "integer", "description": "Page number (default 1)"},
+					"page_size":   map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+					"sort_column": map[string]any{"type": "string", "enum": []string{"ID", "EMAIL", "NAME", "NAME_LOWERCASE", "ACCESS", "HOURLYRATE", "COSTRATE"}},
+					"sort_order":  map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
+				},
+			}),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.ListUserManagers(ctx, args)
+			},
+		},
+		// 10. Get member profile (RO)
 		{
 			Tool: toolRO("clockify_get_member_profile", "Get a user's workspace-scoped member profile", map[string]any{
 				"type":     "object",
@@ -176,7 +195,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.GetMemberProfile(ctx, args)
 			},
 		},
-		// 10. Update member profile (RW)
+		// 11. Update member profile (RW)
 		{
 			Tool: toolRW("clockify_update_member_profile", "Update a user's workspace-scoped member profile. Supports dry_run:true.", map[string]any{
 				"type":     "object",
@@ -582,6 +601,39 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 	}), nil
 }
 
+// ListUserManagers returns managers assigned to a workspace user.
+func (s *Service) ListUserManagers(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	userID := stringArg(args, "user_id")
+	if err := resolve.ValidateID(userID, "user_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	page, pageSize := paginationFromArgs(args)
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
+	if v := strings.TrimSpace(stringArg(args, "sort_column")); v != "" {
+		query["sort-column"] = v
+	}
+	if v := strings.TrimSpace(stringArg(args, "sort_order")); v != "" {
+		query["sort-order"] = v
+	}
+	path, err := paths.Workspace(wsID, "users", userID, "managers")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var result []map[string]any
+	if err := s.Client.Get(ctx, path, query, &result); err != nil {
+		return ResultEnvelope{}, err
+	}
+	meta := addPaginationMeta(map[string]any{"workspaceId": wsID, "userId": userID, "count": len(result)}, args, page, pageSize)
+	return ok("clockify_list_user_managers", userManagerViewsFromRaw(result), meta), nil
+}
+
 // GetMemberProfile returns a workspace-scoped member profile for a user.
 func (s *Service) GetMemberProfile(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	userID := stringArg(args, "user_id")
@@ -601,7 +653,7 @@ func (s *Service) GetMemberProfile(ctx context.Context, args map[string]any) (Re
 	if err := s.Client.Get(ctx, path, nil, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_member_profile", result, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+	return ok("clockify_get_member_profile", memberProfileViewFromRaw(result), map[string]any{"workspaceId": wsID, "userId": userID}), nil
 }
 
 // UpdateMemberProfile updates live-supported workspace member profile fields.
@@ -662,7 +714,7 @@ func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
-	return ok("clockify_update_member_profile", result, map[string]any{
+	return ok("clockify_update_member_profile", memberProfileViewFromRaw(result), map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
 	}), nil

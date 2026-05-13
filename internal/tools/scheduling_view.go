@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -280,6 +281,7 @@ func assignmentViewFromRaw(raw map[string]any, start, end time.Time) AssignmentV
 		"source":   "scheduled_minus_tracked",
 	}
 	view["entities"] = assignmentEntities(raw)
+	view["assignment"] = assignmentDetails(raw)
 	return view
 }
 
@@ -436,7 +438,11 @@ func (s *Service) getWorkspaceScheduleUserTotals(ctx context.Context, args map[s
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_workspace_schedule_user_totals", totals, map[string]any{
+	views := make([]map[string]any, 0, len(totals))
+	for _, total := range totals {
+		views = append(views, scheduleTotalView(total, "USER"))
+	}
+	return ok("clockify_get_workspace_schedule_user_totals", views, map[string]any{
 		"workspaceId": wsID,
 		"count":       len(totals),
 	}), nil
@@ -544,8 +550,8 @@ func assignmentGroupsFromArgs(args map[string]any) ([]string, error) {
 	if !ok || len(groups) == 0 {
 		return []string{"USER", "PROJECT", "TASK"}, nil
 	}
-	if len(groups) > 3 {
-		return nil, fmt.Errorf("group_by must contain 1 to 3 values")
+	if len(groups) > len(assignmentReportGroups) {
+		return nil, fmt.Errorf("group_by must contain 1 to %d values", len(assignmentReportGroups))
 	}
 	allowed := stringSet(assignmentReportGroups)
 	out := make([]string, 0, len(groups))
@@ -633,6 +639,11 @@ func assignmentGroupValue(raw map[string]any, group string, fallback time.Time, 
 func assignmentBucketTime(raw map[string]any, fallback time.Time, defaultTZ *time.Location) time.Time {
 	for _, key := range []string{"date", "start", "time", "week", "month"} {
 		if t, ok := parseAssignmentTime(firstPresent(raw, key)); ok {
+			return t
+		}
+	}
+	if interval, ok := raw["timeInterval"].(map[string]any); ok {
+		if t, ok := parseAssignmentTime(firstPresent(interval, "start")); ok {
 			return t
 		}
 	}
@@ -820,6 +831,9 @@ func (s *Service) reportFinancialsForAssignmentGroups(ctx context.Context, wsID 
 	if s == nil || s.Client == nil || !s.entryFinancialReportsEnabled() {
 		return out, fmt.Errorf("reports API enrichment disabled for non-canonical Clockify base URL")
 	}
+	if !assignmentGroupsUseSummary(groups) {
+		return s.reportFinancialsForAssignmentGroupsDetailed(ctx, wsID, groups, start, end, args)
+	}
 	path, err := paths.Workspace(wsID, "reports", "summary")
 	if err != nil {
 		return out, err
@@ -842,6 +856,77 @@ func (s *Service) reportFinancialsForAssignmentGroups(ctx context.Context, wsID 
 	}
 	collectAssignmentReportRows(payload, groups, out)
 	return out, nil
+}
+
+func assignmentGroupsUseSummary(groups []string) bool {
+	if len(groups) == 0 || len(groups) > 3 {
+		return false
+	}
+	for _, group := range groups {
+		switch strings.ToUpper(strings.TrimSpace(group)) {
+		case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY":
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Service) reportFinancialsForAssignmentGroupsDetailed(ctx context.Context, wsID string, groups []string, start, end time.Time, args map[string]any) (map[string]assignmentReportAccumulator, error) {
+	out := map[string]assignmentReportAccumulator{}
+	path, err := paths.Workspace(wsID, "reports", "detailed")
+	if err != nil {
+		return out, err
+	}
+	pageSize := min(max(intArg(args, "page_size", 100), 1), 1000)
+	for page := 1; page <= aggregatePageSafetyStop; page++ {
+		body := map[string]any{
+			"dateRangeStart": start.Format(time.RFC3339),
+			"dateRangeEnd":   end.Format(time.RFC3339),
+			"dateRangeType":  "ABSOLUTE",
+			"amountShown":    "EARNED",
+			"amounts":        []string{"EARNED", "COST", "PROFIT"},
+			"detailedFilter": map[string]any{
+				"page":     page,
+				"pageSize": pageSize,
+				"options":  map[string]any{"totals": "CALCULATE"},
+			},
+		}
+		if tz := strings.TrimSpace(stringArg(args, "timezone")); tz != "" {
+			body["timeZone"] = tz
+		}
+		applyAssignmentReportFilters(body, args)
+		var payload map[string]any
+		if err := s.Client.PostReports(ctx, path, body, &payload); err != nil {
+			return out, err
+		}
+		rows := reportTimeEntryRows(payload)
+		for _, item := range rows {
+			keyMap := assignmentGroupKeyForRaw(item, groups, start, s.DefaultTimezone)
+			key := reportGroupKeyString(keyMap, groups)
+			row := out[key]
+			row.key = key
+			row.groupKey = keyMap
+			if row.raw == nil {
+				row.raw = map[string]any{"reports_detailed": []map[string]any{}}
+			}
+			if list, ok := row.raw["reports_detailed"].([]map[string]any); ok {
+				row.raw["reports_detailed"] = append(list, item)
+			}
+			row.trackedSeconds += reportDurationSecondsOrZero(item)
+			money := reportMoneyFromRow(item)
+			row.amountTracked = moneySum(row.amountTracked, money.earned)
+			row.costTracked = moneySum(row.costTracked, money.cost)
+			row.realizedProfit, _ = profitMoney(row.amountTracked, row.costTracked, money.reason)
+			row.entities = mergeAssignmentEntities(row.entities, reportEntities(item))
+			row.sourceAppend("reports_detailed")
+			out[key] = row
+		}
+		if len(rows) < pageSize {
+			return out, nil
+		}
+	}
+	return out, fmt.Errorf("reports API detailed pagination safety stop reached at %d pages", aggregatePageSafetyStop)
 }
 
 func applyAssignmentReportFilters(body map[string]any, args map[string]any) {
@@ -952,6 +1037,21 @@ func reportTemporalGroupValue(row map[string]any, group string) string {
 			return text
 		}
 	}
+	if interval, ok := row["timeInterval"].(map[string]any); ok {
+		if text := cleanReportID(firstPresent(interval, "start")); text != "" {
+			if t, ok := parseAssignmentTime(text); ok {
+				switch group {
+				case "DATE":
+					return t.Format("2006-01-02")
+				case "WEEK":
+					year, week := t.ISOWeek()
+					return fmt.Sprintf("%04d-W%02d", year, week)
+				case "MONTH":
+					return t.Format("2006-01")
+				}
+			}
+		}
+	}
 	return ""
 }
 
@@ -970,6 +1070,26 @@ func reportEntities(row map[string]any) map[string]any {
 		"client":  nestedReportEntity(row, "client"),
 		"task":    nestedReportEntity(row, "task"),
 	}
+}
+
+func mergeAssignmentEntities(a, b map[string]any) map[string]any {
+	if a == nil {
+		a = map[string]any{}
+	}
+	for key, value := range b {
+		if existing, ok := a[key].(map[string]any); ok {
+			candidate, _ := value.(map[string]any)
+			if cleanReportID(firstPresent(existing, "id", "name")) != "" {
+				continue
+			}
+			if cleanReportID(firstPresent(candidate, "id", "name")) != "" {
+				a[key] = candidate
+			}
+			continue
+		}
+		a[key] = value
+	}
+	return a
 }
 
 func nestedReportEntity(row map[string]any, kind string) map[string]any {
@@ -1120,7 +1240,7 @@ func (s *Service) enrichProjectScheduleTotals(ctx context.Context, wsID string, 
 			copyRow["variance"] = map[string]any{"duration": durationView(scheduled - value.trackedSeconds), "source": "scheduled_minus_tracked"}
 			matched++
 		}
-		out = append(out, copyRow)
+		out = append(out, scheduleTotalView(copyRow, "PROJECT"))
 	}
 	meta["reports_api_matched"] = matched
 	if matched > 0 {
@@ -1152,7 +1272,110 @@ func (s *Service) enrichScheduleCapacity(ctx context.Context, wsID string, capac
 	if err != nil {
 		meta["reports_api_error"] = err.Error()
 	}
-	return out, meta
+	return scheduleTotalView(out, "USER"), meta
+}
+
+func scheduleTotalView(raw map[string]any, kind string) map[string]any {
+	view := map[string]any{}
+	for k, v := range raw {
+		view[k] = v
+	}
+	scheduled := scheduleSecondsFromTotal(raw)
+	view["scheduled"] = map[string]any{
+		"duration": durationView(scheduled),
+		"source":   "scheduling_api",
+	}
+	capacity := capacitySecondsFromUserTotal(raw)
+	if capacity == 0 {
+		capacity = int64(math.Round(numberOrZero(firstPresent(raw, "capacitySeconds", "availableSeconds"))))
+	}
+	if capacity != 0 {
+		view["capacity"] = map[string]any{
+			"duration": durationView(capacity),
+			"source":   "scheduling_api",
+		}
+		view["availability"] = map[string]any{
+			"duration": durationView(capacity - scheduled),
+			"source":   "capacity_minus_scheduled",
+		}
+	}
+	view["entities"] = assignmentEntities(raw)
+	view["capacity_by_day"] = scheduleDayDurations(firstPresent(raw, "capacityPerDay", "capacity_per_day"), "capacity")
+	view["total_hours_by_day"] = scheduleDayDurations(firstPresent(raw, "totalHoursPerDay", "total_hours_per_day"), "total")
+	view["working_days"] = firstPresent(raw, "workingDays", "working_days")
+	view["user_status"] = firstReportString(raw, "userStatus", "user_status")
+	view["user_image"] = firstReportString(raw, "userImage", "user_image")
+	if assignments := scheduleProjectHeatmap(raw); len(assignments) > 0 {
+		view["project_heatmap"] = assignments
+	}
+	view["schedule_total_kind"] = kind
+	view["raw"] = raw
+	return view
+}
+
+func assignmentDetails(raw map[string]any) map[string]any {
+	details := map[string]any{
+		"id":                       firstReportString(raw, "id", "_id", "assignmentId", "assignment_id"),
+		"published":                firstPresent(raw, "published", "isPublished"),
+		"start_time":               firstReportString(raw, "startTime", "start_time"),
+		"hours_per_day":            firstPresent(raw, "hoursPerDay", "hours_per_day"),
+		"include_non_working_days": firstPresent(raw, "includeNonWorkingDays", "include_non_working_days"),
+		"exclude_days":             firstPresent(raw, "excludeDays", "exclude_days"),
+		"recurring":                firstPresent(raw, "recurring", "recurringAssignment", "recurring_assignment"),
+		"period":                   firstPresent(raw, "period"),
+		"source":                   "scheduling_api",
+	}
+	for key, value := range maps.Clone(details) {
+		if value == nil || value == "" {
+			delete(details, key)
+		}
+	}
+	return details
+}
+
+func scheduleDayDurations(raw any, label string) []map[string]any {
+	rows := mapSlice(raw)
+	out := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		seconds := int64(0)
+		if n, ok := reportNumber(firstPresent(row, "seconds", label+"Seconds")); ok {
+			seconds = int64(math.Round(n))
+		} else if n, ok := reportNumber(firstPresent(row, "totalHours", "hours", "capacityHours")); ok {
+			seconds = int64(math.Round(n * 3600))
+		}
+		out = append(out, map[string]any{
+			"date":     firstReportString(row, "date", "day"),
+			"duration": durationView(seconds),
+			"raw":      maps.Clone(row),
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func scheduleProjectHeatmap(raw map[string]any) []map[string]any {
+	rows := mapSlice(firstPresent(raw, "assignments", "assignmentDays"))
+	out := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, map[string]any{
+			"date":           firstReportString(row, "date", "day"),
+			"has_assignment": firstPresent(row, "hasAssignment", "has_assignment"),
+			"raw":            maps.Clone(row),
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func numberOrZero(v any) float64 {
+	if n, ok := reportNumber(v); ok {
+		return n
+	}
+	return 0
 }
 
 func scheduleSecondsFromTotal(row map[string]any) int64 {
@@ -1203,6 +1426,12 @@ func durationSecondsFromNested(v any) int64 {
 func moneyFromAny(v any, currency string) *MoneyView {
 	if v == nil {
 		return nil
+	}
+	switch typed := v.(type) {
+	case *MoneyView:
+		return typed
+	case MoneyView:
+		return &typed
 	}
 	if nested, ok := v.(map[string]any); ok {
 		currency = firstNonEmptyString(reportCurrency(nested), currency)

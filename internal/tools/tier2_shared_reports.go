@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"net/url"
 	"strings"
 
@@ -27,6 +28,31 @@ var sharedReportTypes = []string{
 	"PROJECT", "TEAM_FULL", "TEAM_LIMITED", "TEAM_GROUPS",
 	"INVOICES", "KIOSK_PIN_LIST", "KIOSK_ASSIGNEES",
 	"USER_DATA_EXPORT",
+}
+
+func sharedReportViewsFromRaw(items []map[string]any) []map[string]any {
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		out = append(out, sharedReportViewFromRaw(item))
+	}
+	return out
+}
+
+func sharedReportViewFromRaw(raw map[string]any) map[string]any {
+	view := maps.Clone(raw)
+	view["sharing"] = map[string]any{
+		"id":          firstReportString(raw, "id", "_id", "sharedReportId", "shared_report_id"),
+		"name":        firstReportString(raw, "name"),
+		"type":        strings.ToUpper(firstReportString(raw, "type", "reportType", "report_type")),
+		"public_link": firstReportString(raw, "publicLink", "public_link", "url"),
+		"is_public":   firstPresent(raw, "isPublic", "public", "shared"),
+		"fixed_date":  firstPresent(raw, "fixedDate", "fixed_date"),
+		"shared_with": firstPresent(raw, "sharedWith", "shared_with", "users", "userGroups"),
+		"created_by":  firstPresent(raw, "createdBy", "created_by", "owner"),
+		"source":      "shared_reports_api",
+	}
+	view["raw"] = maps.Clone(raw)
+	return view
 }
 
 // sharedReportFilterSchema is the JSON Schema fragment for the
@@ -177,7 +203,7 @@ func (s *Service) listSharedReports(ctx context.Context, args map[string]any) (R
 	if err := s.Client.GetReports(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_shared_reports", envelope.Reports, map[string]any{
+	return ok("clockify_list_shared_reports", sharedReportViewsFromRaw(envelope.Reports), map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Reports),
 		"total":       envelope.Count,
@@ -209,7 +235,7 @@ func (s *Service) getSharedReport(ctx context.Context, args map[string]any) (Res
 	if err := s.Client.GetReports(ctx, path, query, &report); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_shared_report", report, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_get_shared_report", sharedReportViewFromRaw(report), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) createSharedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

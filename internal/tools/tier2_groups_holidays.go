@@ -24,6 +24,7 @@ func init() {
 			"clockify_update_user_group_admin",
 			"clockify_delete_user_group_admin",
 			"clockify_list_holidays",
+			"clockify_list_holidays_in_period",
 			"clockify_create_holiday",
 			"clockify_delete_holiday",
 		},
@@ -116,7 +117,26 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.ListHolidays(ctx)
 			},
 		},
-		// 7. Create holiday
+		// 7. List holidays in period
+		{
+			Tool: toolRO("clockify_list_holidays_in_period",
+				"List holidays assigned to a user in a date period",
+				map[string]any{
+					"type":     "object",
+					"required": []string{"assigned_to", "start", "end"},
+					"properties": map[string]any{
+						"assigned_to": map[string]any{"type": "string", "description": "User ID the holidays are assigned to"},
+						"user_id":     map[string]any{"type": "string", "description": "Alias for assigned_to"},
+						"start":       map[string]any{"type": "string", "description": "Range start timestamp/date"},
+						"end":         map[string]any{"type": "string", "description": "Range end timestamp/date"},
+					},
+				}),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.ListHolidaysInPeriod(ctx, args)
+			},
+		},
+		// 8. Create holiday
 		{
 			Tool: toolRW("clockify_create_holiday",
 				"Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
@@ -141,7 +161,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.CreateHoliday(ctx, args)
 			},
 		},
-		// 8. Delete holiday (destructive, dry-run minimal)
+		// 9. Delete holiday (destructive, dry-run minimal)
 		{
 			Tool: toolDestructive("clockify_delete_holiday",
 				"Delete a holiday by ID (supports dry_run preview)",
@@ -326,6 +346,41 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	return ok("clockify_list_holidays", out, map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
+	}), nil
+}
+
+func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	assignedTo := firstNonEmptyString(strings.TrimSpace(stringArg(args, "assigned_to")), strings.TrimSpace(stringArg(args, "user_id")))
+	if assignedTo == "" {
+		return ResultEnvelope{}, fmt.Errorf("assigned_to is required")
+	}
+	start := strings.TrimSpace(stringArg(args, "start"))
+	end := strings.TrimSpace(stringArg(args, "end"))
+	if start == "" || end == "" {
+		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "holidays", "in-period")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query := map[string]string{
+		"assigned-to": assignedTo,
+		"start":       start,
+		"end":         end,
+	}
+	var out []map[string]any
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_list_holidays_in_period", out, map[string]any{
+		"workspaceId": wsID,
+		"assignedTo":  assignedTo,
+		"count":       len(out),
+		"warning":     "Clockify may return a server error for valid-looking but unknown assigned_to users; pass a live user ID from this workspace.",
 	}), nil
 }
 

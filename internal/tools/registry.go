@@ -80,7 +80,10 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_today_entries", "List time entries for the current day", paginationSchema(map[string]any{"properties": map[string]any{"timezone": timezoneInputProperty()}})), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.TodayEntries(ctx, args)
 		}},
-		{Tool: toolRO("clockify_summary_report", "Generate a Clockify summary report via the Reports API", reportInputSchema("summary_filter", summaryFilterSchema())), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_list_in_progress_time_entries", "List workspace-wide in-progress timers with entry financial and custom-field enrichment", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.ListInProgressTimeEntries(ctx, args)
+		}},
+		{Tool: toolRO("clockify_summary_report", "Generate a Clockify summary report via the Reports API. Supports up to 3 groups: CLIENT, PROJECT, TASK, DATE, WEEK, MONTH, TIMEENTRY.", reportInputSchema("summary_filter", summaryFilterSchema())), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.SummaryReport(ctx, args)
 		}},
 		{Tool: toolRO("clockify_weekly_summary", "Generate a Clockify weekly report via the Reports API. weekly_filter.group is PROJECT or USER; subgroup is TIME.", weeklyReportInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {

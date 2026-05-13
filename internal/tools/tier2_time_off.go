@@ -45,7 +45,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"user_id":   map[string]any{"type": "string", "description": "Filter by user ID or name/email"},
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
-				}}), envelopeOpenMapSlice("clockify_list_time_off_requests")),
+				}}), envelopeSchemaFor[[]TimeOffRequestView]("clockify_list_time_off_requests")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffRequests(ctx, args)
@@ -58,7 +58,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
-				}}), envelopeOpenMap("clockify_get_time_off_request")),
+				}}), envelopeSchemaFor[TimeOffRequestView]("clockify_get_time_off_request")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffRequest(ctx, args)
@@ -150,7 +150,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "properties": map[string]any{
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
-				}}), envelopeOpenMapSlice("clockify_list_time_off_policies")),
+				}}), envelopeSchemaFor[[]TimeOffPolicyView]("clockify_list_time_off_policies")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffPolicies(ctx, args)
@@ -162,7 +162,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				"Get a time off policy by ID",
 				map[string]any{"type": "object", "required": []string{"policy_id"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
-				}}), envelopeOpenMap("clockify_get_time_off_policy")),
+				}}), envelopeSchemaFor[TimeOffPolicyView]("clockify_get_time_off_policy")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getTimeOffPolicy(ctx, args)
@@ -212,7 +212,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"policy_id", "user_id"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email"},
-				}}), envelopeOpenMap("clockify_time_off_balance")),
+				}}), envelopeSchemaFor[TimeOffBalanceView]("clockify_time_off_balance")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.timeOffBalance(ctx, args)
@@ -264,7 +264,7 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_requests", envelope.Requests, map[string]any{
+	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Requests),
 		"total":       envelope.Count,
@@ -297,7 +297,7 @@ func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_get_time_off_request", request, map[string]any{
+	return ok("clockify_get_time_off_request", timeOffRequestViewFromRaw(request), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 	}), nil
@@ -353,7 +353,7 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_create_time_off_request", result, map[string]any{
+	return ok("clockify_create_time_off_request", timeOffRequestViewFromRaw(result), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 	}), nil
@@ -426,7 +426,7 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_update_time_off_request", result, map[string]any{
+	return ok("clockify_update_time_off_request", timeOffRequestViewFromRaw(result), map[string]any{
 		"workspaceId":   wsID,
 		"policyId":      policyID,
 		"changedFields": changed,
@@ -508,7 +508,7 @@ func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_approve_time_off", result, map[string]any{
+	return ok("clockify_approve_time_off", timeOffRequestViewFromRaw(result), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"requestId":   requestID,
@@ -546,7 +546,7 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_deny_time_off", result, map[string]any{
+	return ok("clockify_deny_time_off", timeOffRequestViewFromRaw(result), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"requestId":   requestID,
@@ -575,7 +575,7 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_policies", policies, map[string]any{
+	return ok("clockify_list_time_off_policies", timeOffPolicyViewsFromRaw(policies), map[string]any{
 		"workspaceId": wsID,
 		"count":       len(policies),
 	}), nil
@@ -601,7 +601,7 @@ func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_get_time_off_policy", policy, map[string]any{
+	return ok("clockify_get_time_off_policy", timeOffPolicyViewFromRaw(policy), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 	}), nil
@@ -649,7 +649,7 @@ func (s *Service) createTimeOffPolicy(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_create_time_off_policy", result, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_create_time_off_policy", timeOffPolicyViewFromRaw(result), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -708,7 +708,7 @@ func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_update_time_off_policy", result, map[string]any{
+	return ok("clockify_update_time_off_policy", timeOffPolicyViewFromRaw(result), map[string]any{
 		"workspaceId":   wsID,
 		"policyId":      policyID,
 		"changedFields": changed,
@@ -745,7 +745,7 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_time_off_balance", balance, map[string]any{
+	return ok("clockify_time_off_balance", timeOffBalanceViewFromRaw(balance), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"userId":      userID,

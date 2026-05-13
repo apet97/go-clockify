@@ -35,18 +35,24 @@ type Project struct {
 	Name           string              `json:"name"`
 	ClientID       string              `json:"clientId,omitempty"`
 	ClientName     string              `json:"clientName,omitempty"`
+	Client         any                 `json:"client,omitempty"`
 	Color          string              `json:"color,omitempty"`
 	Archived       bool                `json:"archived"`
 	Billable       bool                `json:"billable,omitempty"`
 	BudgetEstimate any                 `json:"budgetEstimate,omitempty"`
 	CostRate       *Rate               `json:"costRate,omitempty"`
+	Currency       any                 `json:"currency,omitempty"`
+	CustomFields   any                 `json:"customFields,omitempty"`
 	Duration       string              `json:"duration,omitempty"`
 	Estimate       any                 `json:"estimate,omitempty"`
 	EstimateReset  any                 `json:"estimateReset,omitempty"`
+	Expenses       any                 `json:"expenses,omitempty"`
+	Favorite       bool                `json:"favorite,omitempty"`
 	HourlyRate     *Rate               `json:"hourlyRate,omitempty"`
 	Memberships    []ProjectMembership `json:"memberships,omitempty"`
 	Note           string              `json:"note,omitempty"`
 	Public         bool                `json:"public,omitempty"`
+	Tasks          []Task              `json:"tasks,omitempty"`
 	Template       bool                `json:"template,omitempty"`
 	TimeEstimate   any                 `json:"timeEstimate,omitempty"`
 	WorkspaceID    string              `json:"workspaceId,omitempty"`

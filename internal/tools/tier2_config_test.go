@@ -25,8 +25,8 @@ func TestCustomFieldHandlersCount(t *testing.T) {
 func TestGroupsHolidaysHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := groupsHolidaysHandlers(svc)
-	if got := len(descs); got != 8 {
-		t.Fatalf("expected 8 groups/holidays handlers, got %d", got)
+	if got := len(descs); got != 9 {
+		t.Fatalf("expected 9 groups/holidays handlers, got %d", got)
 	}
 }
 

@@ -191,9 +191,9 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	// 8. listInvoiceItems — reads embedded items from getInvoice
 	res, err = svc.listInvoiceItems(ctx, map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_list_invoice_items")
-	items, ok := res.Data.([]map[string]any)
+	items, ok := res.Data.([]InvoiceItemView)
 	if !ok {
-		t.Fatalf("listInvoiceItems data: expected []map[string]any, got %T", res.Data)
+		t.Fatalf("listInvoiceItems data: expected []InvoiceItemView, got %T", res.Data)
 	}
 	if len(items) != 1 || items[0]["id"] != "item1" {
 		t.Fatalf("listInvoiceItems items: expected [{id:item1}], got %#v", items)
@@ -266,7 +266,7 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 }
 
 // TestTier2_Invoices_GroupRegistration verifies the group is registered
-// in the Tier2Groups catalog and the Builder produces all 13 descriptors.
+// in the Tier2Groups catalog and the Builder produces all descriptors.
 func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 	g, ok := Tier2Groups["invoices"]
 	if !ok {
@@ -277,8 +277,8 @@ func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 	}
 	svc := New(nil, "ws1")
 	descs := g.Builder(svc)
-	if len(descs) != 13 {
-		t.Fatalf("expected 13 invoice tools, got %d", len(descs))
+	if len(descs) != 15 {
+		t.Fatalf("expected 15 invoice tools, got %d", len(descs))
 	}
 	wantPrefix := "clockify_"
 	for _, d := range descs {
@@ -748,9 +748,9 @@ func TestListInvoiceItemsReadsEmbeddedInvoiceItems(t *testing.T) {
 	svc := New(client, "ws1")
 	res, err := svc.listInvoiceItems(context.Background(), map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_list_invoice_items")
-	items, ok := res.Data.([]map[string]any)
+	items, ok := res.Data.([]InvoiceItemView)
 	if !ok {
-		t.Fatalf("expected []map[string]any, got %T", res.Data)
+		t.Fatalf("expected []InvoiceItemView, got %T", res.Data)
 	}
 	if len(items) != 1 || items[0]["id"] != "item1" {
 		t.Fatalf("expected embedded invoice item item1, got %#v", items)

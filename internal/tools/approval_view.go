@@ -7,24 +7,37 @@ import (
 )
 
 type ApprovalView struct {
-	ID               string                 `json:"id,omitempty"`
-	Request          map[string]any         `json:"request,omitempty"`
-	Owner            map[string]any         `json:"owner,omitempty"`
-	Creator          map[string]any         `json:"creator,omitempty"`
-	Status           map[string]any         `json:"status,omitempty"`
-	DateRange        any                    `json:"date_range,omitempty"`
-	Totals           map[string]any         `json:"totals,omitempty"`
-	DurationTotals   ApprovalDurationTotals `json:"duration_totals"`
-	MoneyTotals      ApprovalMoneyTotals    `json:"money_totals"`
-	Financials       EntryFinancials        `json:"financials"`
-	EntrySummary     ReportEntrySummary     `json:"entry_summary"`
-	ExpenseSummary   ApprovalExpenseSummary `json:"expense_summary"`
-	ClientSummary    []ReportClientSummary  `json:"client_summary,omitempty"`
-	Entries          []ReportEntryView      `json:"entries,omitempty"`
-	Expenses         []map[string]any       `json:"expenses,omitempty"`
-	Actions          []string               `json:"actions,omitempty"`
-	SuggestedActions []ToolSuggestion       `json:"suggestedActions,omitempty"`
-	Raw              map[string]any         `json:"raw,omitempty"`
+	ID               string                          `json:"id,omitempty"`
+	Request          map[string]any                  `json:"request,omitempty"`
+	Owner            map[string]any                  `json:"owner,omitempty"`
+	Creator          map[string]any                  `json:"creator,omitempty"`
+	Status           map[string]any                  `json:"status,omitempty"`
+	AuditTrail       *ApprovalAuditTrail             `json:"audit_trail,omitempty"`
+	DateRange        any                             `json:"date_range,omitempty"`
+	Totals           map[string]any                  `json:"totals,omitempty"`
+	DurationTotals   ApprovalDurationTotals          `json:"duration_totals"`
+	MoneyTotals      ApprovalMoneyTotals             `json:"money_totals"`
+	Financials       EntryFinancials                 `json:"financials"`
+	EntrySummary     ReportEntrySummary              `json:"entry_summary"`
+	ExpenseSummary   ApprovalExpenseSummary          `json:"expense_summary"`
+	ClientSummary    []ReportClientSummary           `json:"client_summary,omitempty"`
+	Rollups          map[string][]ReportEntityRollup `json:"rollups,omitempty"`
+	Entries          []ReportEntryView               `json:"entries,omitempty"`
+	Expenses         []map[string]any                `json:"expenses,omitempty"`
+	Actions          []string                        `json:"actions,omitempty"`
+	SuggestedActions []ToolSuggestion                `json:"suggestedActions,omitempty"`
+	Raw              map[string]any                  `json:"raw,omitempty"`
+}
+
+type ApprovalAuditTrail struct {
+	State         string         `json:"state,omitempty"`
+	UpdatedBy     string         `json:"updated_by,omitempty"`
+	UpdatedByName string         `json:"updated_by_name,omitempty"`
+	UpdatedAt     string         `json:"updated_at,omitempty"`
+	Note          string         `json:"note,omitempty"`
+	Creator       map[string]any `json:"creator,omitempty"`
+	Source        string         `json:"source,omitempty"`
+	Raw           map[string]any `json:"raw,omitempty"`
 }
 
 type ApprovalDurationTotals struct {
@@ -92,6 +105,8 @@ func approvalViewFromRaw(raw map[string]any) ApprovalView {
 	view.EntrySummary = summarizeReportEntries(view.Entries)
 	view.ExpenseSummary = approvalExpenseSummary(raw, view.Expenses)
 	view.ClientSummary = summarizeReportClients(view.Entries)
+	view.Rollups = approvalEntryRollups(view.Entries)
+	view.AuditTrail = approvalAuditTrail(raw, request)
 	view.Actions = approvalActions(view.Status)
 	view.SuggestedActions = approvalSuggestedActions(view)
 	return view
@@ -151,6 +166,40 @@ func approvalStatusMap(request map[string]any) map[string]any {
 	return out
 }
 
+func approvalAuditTrail(raw, request map[string]any) *ApprovalAuditTrail {
+	status := approvalStatusMap(request)
+	if status == nil {
+		status = approvalStatusMap(raw)
+	}
+	creator := cloneOptionalMap(firstPresent(request, "creator"))
+	if len(creator) == 0 {
+		creator = cloneOptionalMap(firstPresent(raw, "creator"))
+	}
+	if len(creator) > 0 {
+		if _, ok := creator["email"]; !ok {
+			if email := firstReportString(creator, "userEmail", "user_email"); email != "" {
+				creator["email"] = email
+			}
+		}
+	}
+	trail := &ApprovalAuditTrail{
+		State:         strings.ToUpper(reportValueString(status["state"])),
+		UpdatedBy:     firstNonEmptyString(reportValueString(status["updatedBy"]), firstReportString(request, "updatedBy", "updated_by")),
+		UpdatedByName: firstNonEmptyString(reportValueString(status["updatedByUserName"]), firstReportString(request, "updatedByUserName", "updated_by_user_name")),
+		UpdatedAt:     firstNonEmptyString(reportValueString(status["updatedAt"]), firstReportString(request, "updatedAt", "updated_at")),
+		Note:          firstNonEmptyString(reportValueString(status["note"]), firstReportString(request, "note")),
+		Creator:       creator,
+		Source:        "approval_api",
+	}
+	if len(status) > 0 {
+		trail.Raw = maps.Clone(status)
+	}
+	if trail.State == "" && trail.UpdatedBy == "" && trail.UpdatedByName == "" && trail.UpdatedAt == "" && trail.Note == "" && len(trail.Creator) == 0 {
+		return nil
+	}
+	return trail
+}
+
 func approvalTotalsMap(raw map[string]any) map[string]any {
 	out := map[string]any{}
 	for _, key := range []string{
@@ -164,6 +213,27 @@ func approvalTotalsMap(raw map[string]any) map[string]any {
 		if value, ok := raw[key]; ok {
 			out[key] = value
 		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func approvalEntryRollups(entries []ReportEntryView) map[string][]ReportEntityRollup {
+	if len(entries) == 0 {
+		return nil
+	}
+	summary := summarizeReportEntities(entries)
+	out := map[string][]ReportEntityRollup{}
+	if len(summary.Users) > 0 {
+		out["users"] = summary.Users
+	}
+	if len(summary.Projects) > 0 {
+		out["projects"] = summary.Projects
+	}
+	if len(summary.Tasks) > 0 {
+		out["tasks"] = summary.Tasks
 	}
 	if len(out) == 0 {
 		return nil

@@ -33,6 +33,7 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 			return ResultEnvelope{}, err
 		}
 	}
+	args, defaultsMeta := s.argsWithUserReportDefaults(ctx, args)
 	body, err := buildReportsAPIBody(args, endpoint.filterKey, endpoint.pathName == "weekly", s.DefaultTimezone)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -51,10 +52,17 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		"source":      "reports-api",
 		"exportType":  body["exportType"],
 	}
+	if defaultsMeta != nil {
+		meta["defaults"] = defaultsMeta
+	}
 	if binary {
 		meta["binary"] = true
 	} else if endpoint.pathName == "detailed" {
 		meta["normalizedEntries"] = appendDetailedReportViews(data)
+	} else if endpoint.pathName == "summary" {
+		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
+	} else if endpoint.pathName == "weekly" {
+		meta["normalizedRollups"] = appendWeeklyReportViews(data, body)
 	}
 	return ok(endpoint.toolName, data, meta), nil
 }
@@ -124,6 +132,11 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 			return nil, err
 		}
 		body[snakeReportKeyToCamel(filterKey)] = normalized
+	}
+	if deriveWeeklyRange {
+		if err := validateWeeklyDateRange(body, defaultTimezone); err != nil {
+			return nil, err
+		}
 	}
 	return body, nil
 }
@@ -275,11 +288,9 @@ func setWeeklyDateRange(body map[string]any, args map[string]any, defaultTimezon
 			return err
 		}
 	}
-	weekday := int(base.Weekday())
-	if weekday == 0 {
-		weekday = 7
-	}
-	start := time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -(weekday - 1))
+	weekStart := weekStartOffset(stringArg(args, "week_start_day"))
+	offset := (weekdayOneBased(base) - weekStart + 7) % 7
+	start := time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -offset)
 	end := start.AddDate(0, 0, 7).Add(-time.Millisecond)
 	body["dateRangeStart"] = start.Format("2006-01-02T15:04:05.000")
 	body["dateRangeEnd"] = end.Format("2006-01-02T15:04:05.000")
@@ -369,8 +380,10 @@ func normalizeSummaryFilter(raw map[string]any) (map[string]any, error) {
 			switch strings.ToUpper(strings.TrimSpace(group)) {
 			case "DAY":
 				normalized = append(normalized, "DATE")
-			case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "USER":
+			case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY":
 				normalized = append(normalized, strings.ToUpper(strings.TrimSpace(group)))
+			case "USER":
+				return nil, fmt.Errorf("summary_filter.groups does not support USER; use clockify_assignment_report for user-grouped scheduled-vs-tracked joins or clockify_detailed_report for user rows")
 			default:
 				return nil, fmt.Errorf("summary_filter.groups contains unsupported value %q", group)
 			}

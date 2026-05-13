@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 28 | 40 | 68 |
+| Read-only | 29 | 46 | 75 |
 | Mutating (non-destructive) | 20 | 56 | 76 |
 | Destructive | 5 | 14 | 19 |
 | Billing | 0 | 14 | 14 |
 | Admin | 0 | 14 | 14 |
-| **Total tools** | **53** | **110** | **163** |
+| **Total tools** | **54** | **116** | **170** |
 
 ## Evidence types
 
@@ -38,7 +38,7 @@ safety classification, and test coverage. Generated from
 
 ---
 
-## Tier 1 — Core tools (53)
+## Tier 1 — Core tools (54)
 
 The per-tool tables below list the stable local test coverage that
 ships with normal CI. The manual sacrificial-workspace section later
@@ -133,7 +133,7 @@ Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPOR
 
 ---
 
-## Tier 2 — Domain groups (110 tools)
+## Tier 2 — Domain groups (116 tools)
 
 ### `approvals` (9 tools)
 
@@ -150,6 +150,14 @@ Clockify approval-request endpoints include list, submit, resubmit, user-scoped 
 | `clockify_submit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests`; unit |
 | `clockify_submit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}`; unit |
 | `clockify_withdraw_approval` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`; unit |
+
+### `change_tracking` (1 tools)
+
+Clockify entity-change endpoints: `GET /workspaces/{workspaceId}/entities/{created|updated|deleted}`.
+
+| Tool | Classification | Tests |
+|------|---------------|-------|
+| `clockify_entity_changes` | read-only | unit; repeated `type` query params |
 
 ### `custom_fields` (6 tools)
 
@@ -197,7 +205,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/groups/*`, `/workspace
 | `clockify_list_user_groups_admin` | read-only | unit |
 | `clockify_update_user_group_admin` | mutating | unit |
 
-### `invoices` (13 tools)
+### `invoices` (14 tools)
 
 Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 
@@ -209,6 +217,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 | `clockify_delete_invoice_item` | destructive | `billing` | unit |
 | `clockify_export_invoice` | read-only | | unit + live (`TestLiveT2InvoicesCRUD`) |
 | `clockify_get_invoice` | read-only | | unit |
+| `clockify_get_invoice_settings` | read-only | | unit |
 | `clockify_invoice_report` | read-only | | unit |
 | `clockify_list_invoice_items` | read-only | | unit |
 | `clockify_list_invoices` | read-only | | unit |

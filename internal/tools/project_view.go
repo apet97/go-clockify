@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
 	"strconv"
@@ -23,47 +24,56 @@ type FinancialRangeView struct {
 }
 
 type ProjectView struct {
-	ID             string                       `json:"id"`
-	Name           string                       `json:"name"`
-	ClientID       string                       `json:"clientId,omitempty"`
-	ClientName     string                       `json:"clientName,omitempty"`
-	Color          string                       `json:"color,omitempty"`
-	Archived       bool                         `json:"archived"`
-	Billable       bool                         `json:"billable,omitempty"`
-	BudgetEstimate any                          `json:"budgetEstimate,omitempty"`
-	CostRate       *clockify.Rate               `json:"costRate,omitempty"`
-	Duration       string                       `json:"duration,omitempty"`
-	Estimate       any                          `json:"estimate,omitempty"`
-	EstimateReset  any                          `json:"estimateReset,omitempty"`
-	HourlyRate     *clockify.Rate               `json:"hourlyRate,omitempty"`
-	Memberships    []clockify.ProjectMembership `json:"memberships,omitempty"`
-	Note           string                       `json:"note,omitempty"`
-	Public         bool                         `json:"public,omitempty"`
-	Template       bool                         `json:"template,omitempty"`
-	TimeEstimate   any                          `json:"timeEstimate,omitempty"`
-	WorkspaceID    string                       `json:"workspaceId,omitempty"`
+	ID                     string                       `json:"id"`
+	Name                   string                       `json:"name"`
+	ClientID               string                       `json:"clientId,omitempty"`
+	ClientName             string                       `json:"clientName,omitempty"`
+	Client                 any                          `json:"client,omitempty"`
+	Color                  string                       `json:"color,omitempty"`
+	Archived               bool                         `json:"archived"`
+	Billable               bool                         `json:"billable,omitempty"`
+	BudgetEstimate         any                          `json:"budgetEstimate,omitempty"`
+	CostRate               *clockify.Rate               `json:"costRate,omitempty"`
+	Currency               any                          `json:"currency,omitempty"`
+	CustomFields           any                          `json:"customFields,omitempty"`
+	CustomFieldsNormalized []CustomFieldValueView       `json:"custom_fields_normalized,omitempty"`
+	Duration               string                       `json:"duration,omitempty"`
+	Estimate               any                          `json:"estimate,omitempty"`
+	EstimateReset          any                          `json:"estimateReset,omitempty"`
+	Expenses               any                          `json:"expenses,omitempty"`
+	Favorite               bool                         `json:"favorite,omitempty"`
+	HourlyRate             *clockify.Rate               `json:"hourlyRate,omitempty"`
+	Memberships            []clockify.ProjectMembership `json:"memberships,omitempty"`
+	Note                   string                       `json:"note,omitempty"`
+	Public                 bool                         `json:"public,omitempty"`
+	Template               bool                         `json:"template,omitempty"`
+	TimeEstimate           any                          `json:"timeEstimate,omitempty"`
+	WorkspaceID            string                       `json:"workspaceId,omitempty"`
 
 	Rates            ProjectRatesView     `json:"rates"`
 	Financials       ProjectFinancials    `json:"financials"`
 	Estimates        ProjectEstimateView  `json:"estimates"`
 	EstimateProgress EstimateProgressView `json:"estimate_progress"`
 	Tasks            []TaskView           `json:"tasks,omitempty"`
+	ExpensesSummary  map[string]any       `json:"expenses_summary,omitempty"`
+	RawHydrated      map[string]any       `json:"raw_hydrated,omitempty"`
 }
 
 type TaskView struct {
-	ID             string         `json:"id"`
-	Name           string         `json:"name"`
-	ProjectID      string         `json:"projectId"`
-	AssigneeID     string         `json:"assigneeId,omitempty"`
-	AssigneeIDs    []string       `json:"assigneeIds,omitempty"`
-	Billable       bool           `json:"billable"`
-	BudgetEstimate int64          `json:"budgetEstimate,omitempty"`
-	CostRate       *clockify.Rate `json:"costRate,omitempty"`
-	Duration       string         `json:"duration,omitempty"`
-	Estimate       string         `json:"estimate,omitempty"`
-	HourlyRate     *clockify.Rate `json:"hourlyRate,omitempty"`
-	Status         string         `json:"status,omitempty"`
-	UserGroupIDs   []string       `json:"userGroupIds,omitempty"`
+	ID                     string                 `json:"id"`
+	Name                   string                 `json:"name"`
+	ProjectID              string                 `json:"projectId"`
+	AssigneeID             string                 `json:"assigneeId,omitempty"`
+	AssigneeIDs            []string               `json:"assigneeIds,omitempty"`
+	Billable               bool                   `json:"billable"`
+	BudgetEstimate         int64                  `json:"budgetEstimate,omitempty"`
+	CostRate               *clockify.Rate         `json:"costRate,omitempty"`
+	Duration               string                 `json:"duration,omitempty"`
+	Estimate               string                 `json:"estimate,omitempty"`
+	HourlyRate             *clockify.Rate         `json:"hourlyRate,omitempty"`
+	Status                 string                 `json:"status,omitempty"`
+	UserGroupIDs           []string               `json:"userGroupIds,omitempty"`
+	CustomFieldsNormalized []CustomFieldValueView `json:"custom_fields_normalized,omitempty"`
 
 	Rates            TaskRateView         `json:"rates"`
 	Financials       ProjectFinancials    `json:"financials"`
@@ -139,32 +149,40 @@ type reportGroupMoney struct {
 
 func projectViewFromProject(project clockify.Project) ProjectView {
 	view := ProjectView{
-		ID:             project.ID,
-		Name:           project.Name,
-		ClientID:       project.ClientID,
-		ClientName:     project.ClientName,
-		Color:          project.Color,
-		Archived:       project.Archived,
-		Billable:       project.Billable,
-		BudgetEstimate: project.BudgetEstimate,
-		CostRate:       project.CostRate,
-		Duration:       project.Duration,
-		Estimate:       project.Estimate,
-		EstimateReset:  project.EstimateReset,
-		HourlyRate:     project.HourlyRate,
-		Memberships:    project.Memberships,
-		Note:           project.Note,
-		Public:         project.Public,
-		Template:       project.Template,
-		TimeEstimate:   project.TimeEstimate,
-		WorkspaceID:    project.WorkspaceID,
-		Rates:          projectRatesFromProject(project),
+		ID:                     project.ID,
+		Name:                   project.Name,
+		ClientID:               project.ClientID,
+		ClientName:             project.ClientName,
+		Client:                 project.Client,
+		Color:                  project.Color,
+		Archived:               project.Archived,
+		Billable:               project.Billable,
+		BudgetEstimate:         project.BudgetEstimate,
+		CostRate:               project.CostRate,
+		Currency:               project.Currency,
+		CustomFields:           project.CustomFields,
+		CustomFieldsNormalized: customFieldValuesFromRaw(project.CustomFields),
+		Duration:               project.Duration,
+		Estimate:               project.Estimate,
+		EstimateReset:          project.EstimateReset,
+		Expenses:               project.Expenses,
+		Favorite:               project.Favorite,
+		HourlyRate:             project.HourlyRate,
+		Memberships:            project.Memberships,
+		Note:                   project.Note,
+		Public:                 project.Public,
+		Template:               project.Template,
+		TimeEstimate:           project.TimeEstimate,
+		WorkspaceID:            project.WorkspaceID,
+		Rates:                  projectRatesFromProject(project),
 		Financials: ProjectFinancials{
 			Source: entryFinancialSourceUnavailable,
 			Reason: "financial enrichment was not available",
 		},
 		Estimates: estimatesFromProject(project),
 	}
+	view.ExpensesSummary = projectExpensesSummary(project.Expenses)
+	view.RawHydrated = projectRawHydratedMap(project)
 	view.EstimateProgress = progressFromEstimates(view.Estimates, 0, false)
 	return view
 }
@@ -338,13 +356,20 @@ func (s *Service) enrichProjectViews(ctx context.Context, wsID string, projects 
 
 	taskIDs := map[string]struct{}{}
 	for i := range views {
-		tasks, truncated, err := s.listProjectTasksForEnrichment(ctx, wsID, views[i].ID)
-		if err != nil {
-			meta["task_enrichment_error"] = err.Error()
-			continue
-		}
-		if truncated {
-			meta["tasks_truncated"] = true
+		tasks := projects[i].Tasks
+		if len(tasks) == 0 {
+			var truncated bool
+			var err error
+			tasks, truncated, err = s.listProjectTasksForEnrichment(ctx, wsID, views[i].ID)
+			if err != nil {
+				meta["task_enrichment_error"] = err.Error()
+				continue
+			}
+			if truncated {
+				meta["tasks_truncated"] = true
+			}
+		} else {
+			meta["tasks_source"] = "hydrated_project"
 		}
 		project := projects[i]
 		taskViews := make([]TaskView, 0, len(tasks))
@@ -706,6 +731,14 @@ func projectCurrency(project *clockify.Project) string {
 	if project == nil {
 		return ""
 	}
+	if nested, ok := project.Currency.(map[string]any); ok {
+		if s := firstNonEmptyString(reportValueString(nested["code"]), reportValueString(nested["id"])); s != "" {
+			return s
+		}
+	}
+	if s := reportValueString(project.Currency); s != "" {
+		return s
+	}
 	if project.HourlyRate != nil && project.HourlyRate.Currency != "" {
 		return project.HourlyRate.Currency
 	}
@@ -721,6 +754,60 @@ func projectCurrency(project *clockify.Project) string {
 		}
 	}
 	return ""
+}
+
+func projectRawHydratedMap(project clockify.Project) map[string]any {
+	raw := map[string]any{}
+	if project.Currency != nil {
+		raw["currency"] = project.Currency
+	}
+	if project.Client != nil {
+		raw["client"] = project.Client
+	}
+	if project.CustomFields != nil {
+		raw["customFields"] = project.CustomFields
+	}
+	if project.Expenses != nil {
+		raw["expenses"] = project.Expenses
+	}
+	if project.Favorite {
+		raw["favorite"] = project.Favorite
+	}
+	if len(project.Tasks) > 0 {
+		raw["tasks"] = project.Tasks
+	}
+	if len(raw) == 0 {
+		return nil
+	}
+	return maps.Clone(raw)
+}
+
+func projectExpensesSummary(raw any) map[string]any {
+	if raw == nil {
+		return nil
+	}
+	out := map[string]any{"raw": raw}
+	rows := mapSlice(raw)
+	if len(rows) > 0 {
+		out["count"] = len(rows)
+		var total *MoneyView
+		for _, row := range rows {
+			total = moneySum(total, moneyFromAny(firstPresent(row, "amount", "total", "value"), reportCurrency(row)))
+		}
+		if total != nil {
+			out["amount"] = total
+		}
+		return out
+	}
+	if m, ok := raw.(map[string]any); ok {
+		if count, ok := reportInt(firstPresent(m, "count", "total")); ok {
+			out["count"] = count
+		}
+		if money := moneyFromAny(firstPresent(m, "amount", "total", "value"), reportCurrency(m)); money != nil {
+			out["amount"] = money
+		}
+	}
+	return out
 }
 
 func estimateSecondsFromRaw(v any) (int64, bool) {

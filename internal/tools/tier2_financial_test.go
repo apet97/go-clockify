@@ -17,8 +17,8 @@ func TestInvoiceHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("invoices group not registered")
 	}
-	if len(descs) != 13 {
-		t.Fatalf("expected 13 invoice tools, got %d", len(descs))
+	if len(descs) != 15 {
+		t.Fatalf("expected 15 invoice tools, got %d", len(descs))
 	}
 
 	names := map[string]bool{}
@@ -34,6 +34,8 @@ func TestInvoiceHandlersCount(t *testing.T) {
 		"clockify_delete_invoice",
 		"clockify_send_invoice",
 		"clockify_mark_invoice_paid",
+		"clockify_get_invoice_settings",
+		"clockify_list_invoice_payments",
 		"clockify_list_invoice_items",
 		"clockify_add_invoice_item",
 		"clockify_update_invoice_item",
@@ -112,7 +114,7 @@ func TestListInvoices(t *testing.T) {
 	if result.Action != "clockify_list_invoices" {
 		t.Fatalf("expected action clockify_list_invoices, got %s", result.Action)
 	}
-	items, ok := result.Data.([]map[string]any)
+	items, ok := result.Data.([]InvoiceView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -318,27 +320,21 @@ func TestInvoiceReport(t *testing.T) {
 	if !ok || len(statuses) != 1 || statuses[0] != "PAID" {
 		t.Fatalf("expected body statuses=[\"PAID\"], got %v", gotBody["statuses"])
 	}
-	data, ok := result.Data.(map[string]any)
+	data, ok := result.Data.(InvoiceReportView)
 	if !ok {
-		t.Fatalf("expected map data, got %T", result.Data)
+		t.Fatalf("expected InvoiceReportView data, got %T", result.Data)
 	}
-	if data["totalAmount"] != 650.0 {
-		t.Fatalf("expected totalAmount=650, got %v", data["totalAmount"])
+	if data.TotalAmount == nil || data.TotalAmount.AmountCents != 650 {
+		t.Fatalf("expected totalAmount=650 cents, got %#v", data.TotalAmount)
 	}
-	if data["pageTotalAmount"] != 650.0 {
-		t.Fatalf("expected pageTotalAmount=650, got %v", data["pageTotalAmount"])
+	if data.PageTotalAmount == nil || data.PageTotalAmount.AmountCents != 650 {
+		t.Fatalf("expected pageTotalAmount=650 cents, got %#v", data.PageTotalAmount)
 	}
-	if data["aggregationScope"] != "page" {
-		t.Fatalf("expected aggregationScope=page, got %v", data["aggregationScope"])
+	if data.AggregationScope != "page" {
+		t.Fatalf("expected aggregationScope=page, got %v", data.AggregationScope)
 	}
-	statusCounts, ok := data["statusCounts"].(map[string]int)
-	if !ok {
-		t.Fatalf("expected statusCounts map, got %T", data["statusCounts"])
-	}
-	pageStatusCounts, ok := data["pageStatusCounts"].(map[string]int)
-	if !ok {
-		t.Fatalf("expected pageStatusCounts map, got %T", data["pageStatusCounts"])
-	}
+	statusCounts := data.StatusCounts
+	pageStatusCounts := data.PageStatusCounts
 	if statusCounts["PAID"] != 2 {
 		t.Fatalf("expected 2 PAID, got %d", statusCounts["PAID"])
 	}

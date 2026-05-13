@@ -52,7 +52,8 @@ func (s *Service) WhoAmI(ctx context.Context) (ResultEnvelope, error) {
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_whoami", IdentityData{User: user, WorkspaceID: resolvedWorkspaceID}, nil), nil
+	view := userViewFromUser(user)
+	return ok("clockify_whoami", IdentityData{User: user, UserView: &view, WorkspaceID: resolvedWorkspaceID}, nil), nil
 }
 
 func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
@@ -60,7 +61,7 @@ func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_current_user", user, nil), nil
+	return ok("clockify_current_user", userViewFromUser(user), nil), nil
 }
 
 func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
@@ -105,5 +106,5 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_users", users, meta), nil
+	return ok("clockify_list_users", userViewsFromUsers(users), meta), nil
 }

@@ -44,20 +44,20 @@ func TestAssignmentReportJoinsScheduledAndTrackedMoney(t *testing.T) {
 				"costScheduled":   10000,
 				"currency":        "USD",
 			}})
-		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
 			sawReports = true
 			body := map[string]any{}
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatalf("decode report body: %v", err)
 			}
-			filter, _ := body["summaryFilter"].(map[string]any)
-			if got := filter["groups"]; !reflect.DeepEqual(got, []any{"USER", "PROJECT", "TASK"}) {
-				t.Fatalf("summary groups = %#v, want USER/PROJECT/TASK", got)
+			filter, _ := body["detailedFilter"].(map[string]any)
+			if got := filter["page"]; got != float64(1) && got != 1 {
+				t.Fatalf("detailed page = %#v, want 1", got)
 			}
 			if got := body["amountShown"]; got != "EARNED" {
 				t.Fatalf("amountShown = %#v, want EARNED", got)
 			}
-			respondJSON(t, w, map[string]any{"rows": []map[string]any{{
+			respondJSON(t, w, map[string]any{"timeEntries": []map[string]any{{
 				"userId":    "u1",
 				"projectId": "p1",
 				"taskId":    "t1",
@@ -117,7 +117,7 @@ func TestAssignmentReportReportFailureDoesNotFail(t *testing.T) {
 			respondJSON(t, w, []map[string]any{})
 		case r.URL.Path == "/workspaces/ws1/scheduling/assignments/projects/totals" && r.Method == http.MethodPost:
 			respondJSON(t, w, []map[string]any{})
-		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
 			http.Error(w, `{"message":"reports down"}`, http.StatusBadGateway)
 		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
@@ -155,8 +155,8 @@ func TestAssignmentReportTrackedOnlyRowsAreNotDoubleCounted(t *testing.T) {
 			respondJSON(t, w, []map[string]any{})
 		case r.URL.Path == "/workspaces/ws1/scheduling/assignments/projects/totals" && r.Method == http.MethodPost:
 			respondJSON(t, w, []map[string]any{})
-		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
-			respondJSON(t, w, map[string]any{"rows": []map[string]any{{
+		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
+			respondJSON(t, w, map[string]any{"timeEntries": []map[string]any{{
 				"userId":   "u1",
 				"duration": 3600,
 				"amounts":  []map[string]any{{"type": "EARNED", "value": 10000, "currency": "USD"}},

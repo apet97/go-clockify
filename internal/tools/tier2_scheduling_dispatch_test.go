@@ -146,6 +146,23 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		_, _ = w.Write([]byte(`{"rows":[{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","taskId":"task-1","duration":43200,"amounts":[{"type":"EARNED","value":72000,"currency":"USD"},{"type":"COST","value":10800,"currency":"USD"},{"type":"PROFIT","value":61200,"currency":"USD"}]}]}`))
 	})
 
+	mux.HandleFunc("/workspaces/test-workspace/reports/detailed", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body["detailedFilter"] == nil {
+			t.Fatalf("detailed report missing filter body: %#v", body)
+		}
+		if body["amountShown"] != "EARNED" {
+			t.Fatalf("detailed report amountShown = %#v, want EARNED", body["amountShown"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"timeEntries":[{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","taskId":"task-1","duration":43200,"amounts":[{"type":"EARNED","value":72000,"currency":"USD"},{"type":"COST","value":10800,"currency":"USD"},{"type":"PROFIT","value":61200,"currency":"USD"}]}]}`))
+	})
+
 	// Recurring per-assignment endpoint — PATCH update / DELETE.
 	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/recurring/a-1", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

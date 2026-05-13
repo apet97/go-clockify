@@ -369,7 +369,7 @@ func TestCreateTimeOffRequest(t *testing.T) {
 	if result.Action != "clockify_create_time_off_request" {
 		t.Fatalf("expected action clockify_create_time_off_request, got %s", result.Action)
 	}
-	data, ok := result.Data.(map[string]any)
+	data, ok := result.Data.(TimeOffRequestView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}

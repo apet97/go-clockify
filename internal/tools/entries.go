@@ -154,6 +154,35 @@ func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (Result
 	return ok("clockify_today_entries", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
+// ListInProgressTimeEntries returns workspace-wide running timers.
+func (s *Service) ListInProgressTimeEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	page, pageSize := paginationFromArgs(args)
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "time-entries", "status", "in-progress")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
+	var entries []clockify.TimeEntry
+	if err := s.Client.Get(ctx, path, query, &entries); err != nil {
+		return ResultEnvelope{}, err
+	}
+	meta := addPaginationMeta(map[string]any{
+		"workspaceId": wsID,
+		"count":       len(entries),
+		"page":        page,
+		"pageSize":    pageSize,
+	}, args, page, pageSize)
+	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
+	return ok("clockify_list_in_progress_time_entries", views, withFinancialMeta(meta, financialMeta)), nil
+}
+
 // AddEntry creates a new time entry.
 func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	startRaw := stringArg(args, "start")

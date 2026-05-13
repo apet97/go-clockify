@@ -156,7 +156,7 @@ func summaryFilterSchema() map[string]any {
 		"type":     "object",
 		"required": []string{"groups"},
 		"properties": map[string]any{
-			"groups":             map[string]any{"type": "array", "minItems": 1, "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "USER"}}},
+			"groups":             map[string]any{"type": "array", "minItems": 1, "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE. Summary Reports does not support USER; use clockify_assignment_report or clockify_detailed_report for user-grouped analysis.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY"}}},
 			"sort_column":        map[string]any{"type": "string", "enum": []string{"GROUP", "DURATION", "AMOUNT", "EARNED", "COST", "PROFIT"}},
 			"summary_chart_type": map[string]any{"type": "string", "enum": []string{"BILLABILITY", "PROJECT"}},
 		},

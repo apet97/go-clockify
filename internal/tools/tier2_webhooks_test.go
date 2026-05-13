@@ -97,8 +97,11 @@ func TestListWebhooks(t *testing.T) {
 	if len(items) != 1 || items[0]["id"] != "wh1" {
 		t.Fatalf("ListWebhooks items: expected [{id:wh1}], got %#v", items)
 	}
-	if got := items[0]["authToken"]; got != "********wxyz" {
-		t.Fatalf("expected masked authToken, got %#v", got)
+	if _, ok := items[0]["authToken"]; ok {
+		t.Fatalf("authToken must not be returned: %#v", items[0])
+	}
+	if items[0]["secret_token_present"] != true || items[0]["auth_token_suffix"] != "wxyz" {
+		t.Fatalf("expected token presence + suffix, got %#v", items[0])
 	}
 	if result.Meta["count"] != 1 {
 		t.Fatalf("expected meta count=1, got %v", result.Meta["count"])
@@ -132,8 +135,11 @@ func TestGetWebhookMasksAuthToken(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetWebhook data: expected map, got %T", result.Data)
 	}
-	if got := item["authToken"]; got != "********1234" {
-		t.Fatalf("expected masked authToken, got %#v", got)
+	if _, ok := item["authToken"]; ok {
+		t.Fatalf("authToken must not be returned: %#v", item)
+	}
+	if item["secret_token_present"] != true || item["auth_token_suffix"] != "1234" {
+		t.Fatalf("expected token presence + suffix, got %#v", item)
 	}
 }
 
@@ -188,8 +194,11 @@ func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateWebhook data: expected map, got %T", result.Data)
 	}
-	if got := data["authToken"]; got != "********1234" {
-		t.Fatalf("expected returned authToken to be masked, got %#v", got)
+	if _, ok := data["authToken"]; ok {
+		t.Fatalf("authToken must not be returned: %#v", data)
+	}
+	if data["secret_token_present"] != true || data["auth_token_suffix"] != "1234" {
+		t.Fatalf("expected token presence + suffix, got %#v", data)
 	}
 }
 
@@ -340,8 +349,11 @@ func TestCreateWebhookDryRunAvoidsPost(t *testing.T) {
 	if !ok || payload["webhookEvent"] != "NEW_TIME_ENTRY" || payload["triggerSourceType"] != "WORKSPACE_ID" {
 		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
 	}
-	if got := payload["authToken"]; got != "********9876" {
-		t.Fatalf("expected dry-run authToken to be masked, got %#v", got)
+	if _, ok := payload["authToken"]; ok {
+		t.Fatalf("authToken must not be returned in dry-run payload: %#v", payload)
+	}
+	if payload["secret_token_present"] != true || payload["auth_token_suffix"] != "9876" {
+		t.Fatalf("expected dry-run token presence + suffix, got %#v", payload)
 	}
 }
 
@@ -448,8 +460,11 @@ func TestUpdateWebhookCarriesRequiredLiveFields(t *testing.T) {
 	if !ok {
 		t.Fatalf("UpdateWebhook data: expected map, got %T", result.Data)
 	}
-	if got := data["authToken"]; got != "********9876" {
-		t.Fatalf("expected returned authToken to be masked, got %#v", got)
+	if _, ok := data["authToken"]; ok {
+		t.Fatalf("authToken must not be returned: %#v", data)
+	}
+	if data["secret_token_present"] != true || data["auth_token_suffix"] != "9876" {
+		t.Fatalf("expected returned token presence + suffix, got %#v", data)
 	}
 	source, ok := gotBody["triggerSource"].([]any)
 	if !ok || len(source) != 1 || source[0] != "ws1" {
@@ -502,15 +517,21 @@ func TestUpdateWebhookDryRunAvoidsPut(t *testing.T) {
 	if !ok || payload["name"] != "new" || payload["webhookEvent"] != "TIMER_STOPPED" {
 		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
 	}
-	if got := payload["authToken"]; got != "********9876" {
-		t.Fatalf("expected dry-run payload authToken to be masked, got %#v", got)
+	if _, ok := payload["authToken"]; ok {
+		t.Fatalf("authToken must not be returned in dry-run payload: %#v", payload)
+	}
+	if payload["secret_token_present"] != true || payload["auth_token_suffix"] != "9876" {
+		t.Fatalf("expected dry-run payload token presence + suffix, got %#v", payload)
 	}
 	current, ok := dataMap["current"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected current webhook in dry-run data, got %#v", dataMap["current"])
 	}
-	if got := current["authToken"]; got != "********1234" {
-		t.Fatalf("expected current authToken to be masked, got %#v", got)
+	if _, ok := current["authToken"]; ok {
+		t.Fatalf("authToken must not be returned in current webhook: %#v", current)
+	}
+	if current["secret_token_present"] != true || current["auth_token_suffix"] != "1234" {
+		t.Fatalf("expected current token presence + suffix, got %#v", current)
 	}
 }
 

@@ -22,27 +22,28 @@ const (
 // fields at the top level and appends a financials block so old clients keep
 // working while agents can answer money questions without a second tool call.
 type EntryView struct {
-	ID                string                `json:"id"`
-	Description       string                `json:"description"`
-	ProjectID         string                `json:"projectId"`
-	ProjectName       string                `json:"projectName,omitempty"`
-	TaskID            string                `json:"taskId,omitempty"`
-	TagIDs            []string              `json:"tagIds,omitempty"`
-	Billable          bool                  `json:"billable,omitempty"`
-	CostRate          *clockify.Rate        `json:"costRate,omitempty"`
-	CustomFieldValues any                   `json:"customFieldValues,omitempty"`
-	HourlyRate        *clockify.Rate        `json:"hourlyRate,omitempty"`
-	IsLocked          bool                  `json:"isLocked,omitempty"`
-	KioskID           string                `json:"kioskId,omitempty"`
-	Type              string                `json:"type,omitempty"`
-	UserID            string                `json:"userId,omitempty"`
-	WorkspaceID       string                `json:"workspaceId,omitempty"`
-	TimeInterval      clockify.TimeInterval `json:"timeInterval"`
-	Financials        EntryFinancials       `json:"financials"`
-	Approval          *EntryApprovalView    `json:"approval,omitempty"`
-	Invoicing         *EntryInvoicingView   `json:"invoicing,omitempty"`
-	Entities          *EntryEntitiesView    `json:"entities,omitempty"`
-	Audit             *EntryAuditView       `json:"audit,omitempty"`
+	ID                string                 `json:"id"`
+	Description       string                 `json:"description"`
+	ProjectID         string                 `json:"projectId"`
+	ProjectName       string                 `json:"projectName,omitempty"`
+	TaskID            string                 `json:"taskId,omitempty"`
+	TagIDs            []string               `json:"tagIds,omitempty"`
+	Billable          bool                   `json:"billable,omitempty"`
+	CostRate          *clockify.Rate         `json:"costRate,omitempty"`
+	CustomFieldValues any                    `json:"customFieldValues,omitempty"`
+	CustomFields      []CustomFieldValueView `json:"custom_fields_normalized,omitempty"`
+	HourlyRate        *clockify.Rate         `json:"hourlyRate,omitempty"`
+	IsLocked          bool                   `json:"isLocked,omitempty"`
+	KioskID           string                 `json:"kioskId,omitempty"`
+	Type              string                 `json:"type,omitempty"`
+	UserID            string                 `json:"userId,omitempty"`
+	WorkspaceID       string                 `json:"workspaceId,omitempty"`
+	TimeInterval      clockify.TimeInterval  `json:"timeInterval"`
+	Financials        EntryFinancials        `json:"financials"`
+	Approval          *EntryApprovalView     `json:"approval,omitempty"`
+	Invoicing         *EntryInvoicingView    `json:"invoicing,omitempty"`
+	Entities          *EntryEntitiesView     `json:"entities,omitempty"`
+	Audit             *EntryAuditView        `json:"audit,omitempty"`
 }
 
 type EntryFinancials struct {
@@ -65,6 +66,7 @@ func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
 		Billable:          entry.Billable,
 		CostRate:          entry.CostRate,
 		CustomFieldValues: entry.CustomFieldValues,
+		CustomFields:      customFieldValuesFromRaw(entry.CustomFieldValues),
 		HourlyRate:        entry.HourlyRate,
 		IsLocked:          entry.IsLocked,
 		KioskID:           entry.KioskID,
@@ -166,6 +168,11 @@ func applyReportEntryEnrichment(view *EntryView, enrichment reportEntryEnrichmen
 	}
 	if reportView.CustomFieldValues != nil && view.CustomFieldValues == nil {
 		view.CustomFieldValues = reportView.CustomFieldValues
+	}
+	if len(reportView.CustomFields) > 0 && len(view.CustomFields) == 0 {
+		view.CustomFields = reportView.CustomFields
+	} else if len(view.CustomFields) == 0 {
+		view.CustomFields = customFieldValuesFromRaw(view.CustomFieldValues)
 	}
 	if reportView.Entities != nil {
 		view.Entities = reportView.Entities

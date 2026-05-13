@@ -224,6 +224,7 @@ type WorkspaceContext struct {
 // an agent needs to ground subsequent tool calls.
 type IdentityData struct {
 	User        clockify.User `json:"user"`
+	UserView    *UserView     `json:"user_view,omitempty"`
 	WorkspaceID string        `json:"workspaceId"`
 }
 

@@ -16,6 +16,8 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+type WebhookLogView map[string]any
+
 func init() {
 	registerTier2Group(Tier2Group{
 		Name:        "webhooks",
@@ -27,6 +29,7 @@ func init() {
 			"clockify_create_webhook",
 			"clockify_update_webhook",
 			"clockify_delete_webhook",
+			"clockify_list_webhook_logs",
 			"clockify_list_webhook_events",
 			"clockify_test_webhook",
 		},
@@ -149,7 +152,27 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.DeleteWebhook(ctx, args)
 			},
 		},
-		// 6. List webhook events (RO)
+		// 6. List webhook delivery logs (RO)
+		{
+			Tool: toolRO("clockify_list_webhook_logs", "List delivery logs for a webhook", map[string]any{
+				"type":     "object",
+				"required": []string{"webhook_id"},
+				"properties": map[string]any{
+					"webhook_id":     map[string]any{"type": "string", "description": "Webhook ID"},
+					"from":           map[string]any{"type": "string", "description": "Only logs after this RFC3339 timestamp"},
+					"to":             map[string]any{"type": "string", "description": "Only logs before this RFC3339 timestamp"},
+					"status":         map[string]any{"type": "string", "enum": []string{"ALL", "SUCCEEDED", "FAILED"}},
+					"sort_by_newest": map[string]any{"type": "boolean"},
+					"page":           map[string]any{"type": "integer", "description": "Page number (default 1)"},
+					"page_size":      map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+				},
+			}),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.ListWebhookLogs(ctx, args)
+			},
+		},
+		// 7. List webhook events (RO)
 		{
 			Tool: toolRO("clockify_list_webhook_events", "List available webhook event types", map[string]any{
 				"type": "object",
@@ -159,7 +182,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.ListWebhookEvents(ctx, args)
 			},
 		},
-		// 7. Test webhook (RW)
+		// 8. Test webhook (RW)
 		{
 			Tool: toolRW("clockify_test_webhook", "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.", map[string]any{
 				"type":     "object",
@@ -522,13 +545,20 @@ func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ResultEn
 func maskWebhookAuthToken(webhook map[string]any) {
 	raw, ok := webhook["authToken"].(string)
 	if !ok || raw == "" {
+		delete(webhook, "authToken")
+		if _, exists := webhook["secret_token_present"]; !exists {
+			webhook["secret_token_present"] = false
+		}
 		return
 	}
+	webhook["secret_token_present"] = true
 	if len(raw) <= 4 {
-		webhook["authToken"] = "********"
+		webhook["auth_token_suffix"] = ""
+		delete(webhook, "authToken")
 		return
 	}
-	webhook["authToken"] = "********" + raw[len(raw)-4:]
+	webhook["auth_token_suffix"] = raw[len(raw)-4:]
+	delete(webhook, "authToken")
 }
 
 func webhookDryRunPreview(tool string, payload map[string]any) map[string]any {
@@ -540,6 +570,34 @@ func webhookDryRunPreview(tool string, payload map[string]any) map[string]any {
 		"payload": previewPayload,
 		"note":    "No changes were made.",
 	}
+}
+
+func webhookLogViewsFromRaw(items []map[string]any) []WebhookLogView {
+	out := make([]WebhookLogView, 0, len(items))
+	for _, item := range items {
+		statusCode, _ := reportInt(firstPresent(item, "statusCode", "status_code"))
+		status := "UNKNOWN"
+		if statusCode >= 200 && statusCode < 300 {
+			status = "SUCCEEDED"
+		} else if statusCode > 0 {
+			status = "FAILED"
+		}
+		view := WebhookLogView(maps.Clone(item))
+		view["delivery"] = map[string]any{
+			"id":              firstReportString(item, "id", "_id"),
+			"webhook_id":      firstReportString(item, "webhookId", "webhook_id"),
+			"event_status_id": firstReportString(item, "webhookEventStatusId", "webhook_event_status_id"),
+			"responded_at":    firstReportString(item, "respondedAt", "responded_at"),
+			"status_code":     statusCode,
+			"status":          status,
+			"source":          "webhook_logs_api",
+		}
+		view["request"] = map[string]any{"body": firstReportString(item, "requestBody", "request_body")}
+		view["response"] = map[string]any{"body": firstReportString(item, "responseBody", "response_body")}
+		view["raw"] = maps.Clone(item)
+		out = append(out, view)
+	}
+	return out
 }
 
 // CreateWebhook creates a new webhook with URL validation.
@@ -781,6 +839,50 @@ var webhookEventEnum = []string{
 	"USERS_INVITED_TO_WORKSPACE",
 }
 
+// ListWebhookLogs returns delivery attempts for a webhook via the documented
+// POST logs search route.
+func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	webhookID := stringArg(args, "webhook_id")
+	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	page, pageSize := paginationFromArgs(args)
+	body := map[string]any{}
+	if v := strings.TrimSpace(stringArg(args, "from")); v != "" {
+		body["from"] = v
+	}
+	if v := strings.TrimSpace(stringArg(args, "to")); v != "" {
+		body["to"] = v
+	}
+	if v := strings.ToUpper(strings.TrimSpace(stringArg(args, "status"))); v != "" {
+		if v != "ALL" && v != "SUCCEEDED" && v != "FAILED" {
+			return ResultEnvelope{}, fmt.Errorf("status must be ALL, SUCCEEDED, or FAILED")
+		}
+		body["status"] = v
+	}
+	if v, ok := args["sort_by_newest"].(bool); ok {
+		body["sortByNewest"] = v
+	}
+	path, err := paths.Workspace(wsID, "webhooks", webhookID, "logs")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query := map[string]string{
+		"page": strconv.Itoa(page),
+		"size": strconv.Itoa(pageSize),
+	}
+	var logs []map[string]any
+	if err := s.Client.PostWithQuery(ctx, path, query, body, &logs); err != nil {
+		return ResultEnvelope{}, err
+	}
+	meta := addPaginationMeta(map[string]any{"workspaceId": wsID, "webhookId": webhookID, "count": len(logs)}, args, page, pageSize)
+	return ok("clockify_list_webhook_logs", webhookLogViewsFromRaw(logs), meta), nil
+}
+
 // ListWebhookEvents returns the static enum of webhook event types
 // the Clockify webhooks API accepts. The upstream exposes no
 // listing endpoint — see findings/webhooks.md (#15).
@@ -818,6 +920,7 @@ func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultE
 		if err := s.Client.Get(ctx, previewPath, nil, &webhook); err != nil {
 			return ResultEnvelope{}, err
 		}
+		maskWebhookAuthToken(webhook)
 		return ResultEnvelope{
 			OK:     true,
 			Action: "clockify_test_webhook",

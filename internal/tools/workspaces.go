@@ -14,7 +14,7 @@ func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
 	if err := s.Client.Get(ctx, "/workspaces", nil, &workspaces); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_workspaces", workspaces, map[string]any{"count": len(workspaces)}), nil
+	return ok("clockify_list_workspaces", workspaceViewsFromWorkspaces(workspaces), map[string]any{"count": len(workspaces)}), nil
 }
 
 func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
@@ -64,5 +64,5 @@ func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_workspace", out, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_get_workspace", workspaceViewFromRaw(out), map[string]any{"workspaceId": wsID}), nil
 }

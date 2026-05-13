@@ -52,7 +52,8 @@ func TestReportToolSchemasExposeDocumentedEnumsAndAliases(t *testing.T) {
 	assertEnumContains(t, amountItems, "EARNED", "COST", "PROFIT")
 	summaryFilter := summaryProps["summary_filter"].(map[string]any)["properties"].(map[string]any)
 	groupItems := summaryFilter["groups"].(map[string]any)["items"].(map[string]any)
-	assertEnumContains(t, groupItems, "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "USER")
+	assertEnumContains(t, groupItems, "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY")
+	assertEnumMissing(t, groupItems, "USER")
 	assertEnumMissing(t, groupItems, "DAY")
 	assertEnumMissing(t, groupItems, "TAG")
 

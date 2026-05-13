@@ -59,21 +59,42 @@ type EntryAuditView struct {
 	Raw                map[string]any `json:"raw,omitempty"`
 }
 
+type MoneyByCurrencyView struct {
+	Type     string         `json:"type,omitempty"`
+	Currency string         `json:"currency,omitempty"`
+	Money    MoneyView      `json:"money"`
+	Raw      map[string]any `json:"raw,omitempty"`
+}
+
+type ReportRateBreakdownView struct {
+	Rate         *MoneyView     `json:"rate,omitempty"`
+	Amount       *MoneyView     `json:"amount,omitempty"`
+	EarnedAmount *MoneyView     `json:"earnedAmount,omitempty"`
+	EarnedRate   *MoneyView     `json:"earnedRate,omitempty"`
+	CostAmount   *MoneyView     `json:"costAmount,omitempty"`
+	CostRate     *MoneyView     `json:"costRate,omitempty"`
+	Currency     string         `json:"currency,omitempty"`
+	Raw          map[string]any `json:"raw,omitempty"`
+}
+
 type ReportEntryView struct {
-	ID                string              `json:"id,omitempty"`
-	Description       string              `json:"description,omitempty"`
-	Type              string              `json:"type,omitempty"`
-	Billable          *bool               `json:"billable,omitempty"`
-	Locked            *bool               `json:"locked,omitempty"`
-	Duration          *EntryDurationView  `json:"duration,omitempty"`
-	TimeInterval      map[string]any      `json:"time_interval,omitempty"`
-	Entities          *EntryEntitiesView  `json:"entities,omitempty"`
-	CustomFieldValues any                 `json:"customFieldValues,omitempty"`
-	Approval          *EntryApprovalView  `json:"approval,omitempty"`
-	Invoicing         *EntryInvoicingView `json:"invoicing,omitempty"`
-	Audit             *EntryAuditView     `json:"audit,omitempty"`
-	Financials        EntryFinancials     `json:"financials"`
-	Raw               map[string]any      `json:"raw,omitempty"`
+	ID                string                   `json:"id,omitempty"`
+	Description       string                   `json:"description,omitempty"`
+	Type              string                   `json:"type,omitempty"`
+	Billable          *bool                    `json:"billable,omitempty"`
+	Locked            *bool                    `json:"locked,omitempty"`
+	Duration          *EntryDurationView       `json:"duration,omitempty"`
+	TimeInterval      map[string]any           `json:"time_interval,omitempty"`
+	Entities          *EntryEntitiesView       `json:"entities,omitempty"`
+	CustomFieldValues any                      `json:"customFieldValues,omitempty"`
+	CustomFields      []CustomFieldValueView   `json:"custom_fields_normalized,omitempty"`
+	Approval          *EntryApprovalView       `json:"approval,omitempty"`
+	Invoicing         *EntryInvoicingView      `json:"invoicing,omitempty"`
+	Audit             *EntryAuditView          `json:"audit,omitempty"`
+	Financials        EntryFinancials          `json:"financials"`
+	RateBreakdown     *ReportRateBreakdownView `json:"rate_breakdown,omitempty"`
+	MoneyByCurrency   []MoneyByCurrencyView    `json:"money_by_currency,omitempty"`
+	Raw               map[string]any           `json:"raw,omitempty"`
 }
 
 type ReportEntrySummary struct {
@@ -97,12 +118,13 @@ type ReportApprovalSummary struct {
 }
 
 type ReportTotalsSummary struct {
-	Rows              int                `json:"rows"`
-	EntriesCount      int                `json:"entries_count,omitempty"`
-	TotalTime         *EntryDurationView `json:"total_time,omitempty"`
-	TotalBillableTime *EntryDurationView `json:"total_billable_time,omitempty"`
-	Financials        EntryFinancials    `json:"financials"`
-	Raw               any                `json:"raw,omitempty"`
+	Rows              int                   `json:"rows"`
+	EntriesCount      int                   `json:"entries_count,omitempty"`
+	TotalTime         *EntryDurationView    `json:"total_time,omitempty"`
+	TotalBillableTime *EntryDurationView    `json:"total_billable_time,omitempty"`
+	Financials        EntryFinancials       `json:"financials"`
+	MoneyByCurrency   []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
+	Raw               any                   `json:"raw,omitempty"`
 }
 
 type ReportEntityRollup struct {
@@ -205,6 +227,7 @@ func reportEntryViewFromRow(row map[string]any) ReportEntryView {
 	}
 	if custom := firstPresent(row, "customFieldValues", "customFields", "custom_field_values"); custom != nil {
 		view.CustomFieldValues = custom
+		view.CustomFields = customFieldValuesFromRaw(custom)
 	}
 	entities := reportEntryEntities(row)
 	if !entryEntitiesEmpty(entities) {
@@ -226,6 +249,8 @@ func reportEntryViewFromRow(row map[string]any) ReportEntryView {
 	if money.hasMoney() {
 		view.Financials = money.financials()
 	}
+	view.RateBreakdown = reportRateBreakdownFromRow(row)
+	view.MoneyByCurrency = reportMoneyByCurrency(row)
 	return view
 }
 
@@ -358,6 +383,13 @@ func summarizeReportTotals(data map[string]any, entries []ReportEntryView) Repor
 	}
 	if money.hasMoney() {
 		summary.Financials = money.financials()
+	}
+	if byCurrency := reportMoneyByCurrency(data); len(byCurrency) > 0 {
+		summary.MoneyByCurrency = byCurrency
+	} else {
+		for _, row := range rows {
+			summary.MoneyByCurrency = append(summary.MoneyByCurrency, reportMoneyByCurrency(row)...)
+		}
 	}
 	return summary
 }
@@ -757,4 +789,79 @@ func entryAuditEmpty(audit EntryAuditView) bool {
 
 func boolPtrValue(value *bool) bool {
 	return value != nil && *value
+}
+
+func reportRateBreakdownFromRow(row map[string]any) *ReportRateBreakdownView {
+	currency := reportCurrency(row)
+	view := ReportRateBreakdownView{
+		Rate:         reportMoneyField(row, currency, "rate", "hourlyRate"),
+		Amount:       reportMoneyField(row, currency, "amount", "billableAmount"),
+		EarnedAmount: reportMoneyField(row, currency, "earnedAmount", "earned_amount"),
+		EarnedRate:   reportMoneyField(row, currency, "earnedRate", "earned_rate"),
+		CostAmount:   reportMoneyField(row, currency, "costAmount", "cost_amount"),
+		CostRate:     reportMoneyField(row, currency, "costRate", "cost_rate"),
+		Currency:     currency,
+	}
+	if view.Rate == nil && view.Amount == nil && view.EarnedAmount == nil && view.EarnedRate == nil && view.CostAmount == nil && view.CostRate == nil {
+		return nil
+	}
+	view.Raw = map[string]any{}
+	for _, key := range []string{"rate", "amount", "earnedAmount", "earnedRate", "costAmount", "costRate", "currency"} {
+		if value, ok := row[key]; ok {
+			view.Raw[key] = value
+		}
+	}
+	return &view
+}
+
+func reportMoneyField(row map[string]any, currency string, keys ...string) *MoneyView {
+	for _, key := range keys {
+		value, ok := row[key]
+		if !ok {
+			continue
+		}
+		if nested, ok := value.(map[string]any); ok {
+			currency = firstNonEmptyString(reportCurrency(nested), currency)
+			value = firstPresent(nested, "value", "amount", "total")
+		}
+		if n, ok := reportNumber(value); ok {
+			return moneyPtr(MoneyFromReportNumber(n, currency))
+		}
+	}
+	return nil
+}
+
+func reportMoneyByCurrency(row map[string]any) []MoneyByCurrencyView {
+	if row == nil {
+		return nil
+	}
+	var out []MoneyByCurrencyView
+	addRows := func(kind string, rows []map[string]any) {
+		for _, item := range rows {
+			value, ok := reportNumber(firstPresent(item, "value", "amount", "total"))
+			if !ok {
+				continue
+			}
+			currency := firstNonEmptyString(reportCurrency(item), firstReportString(item, "currencyCode", "currency_code"))
+			out = append(out, MoneyByCurrencyView{
+				Type:     strings.ToUpper(firstNonEmptyString(kind, firstReportString(item, "type", "amountType", "name"))),
+				Currency: currency,
+				Money:    MoneyFromReportNumber(value, currency),
+				Raw:      maps.Clone(item),
+			})
+		}
+	}
+	addRows("", mapSlice(row["amountByCurrency"]))
+	addRows("", mapSlice(row["amount_by_currency"]))
+	addRows("TOTAL", mapSlice(row["totalAmountByCurrency"]))
+	addRows("TOTAL", mapSlice(row["total_amount_by_currency"]))
+	for _, amount := range mapSlice(row["amounts"]) {
+		kind := strings.ToUpper(firstReportString(amount, "type", "amountType", "name"))
+		addRows(kind, mapSlice(amount["amountByCurrency"]))
+		addRows(kind, mapSlice(amount["amount_by_currency"]))
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }

@@ -90,6 +90,8 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/weekly" && r.Method == http.MethodPost:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode weekly body: %v", err)
@@ -286,6 +288,8 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode detailed body: %v", err)
@@ -412,6 +416,10 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 func TestDetailedReportDefaultsMoneyColumns(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" && r.Method == http.MethodGet {
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
+			return
+		}
 		if r.URL.Path != "/workspaces/ws1/reports/detailed" || r.Method != http.MethodPost {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -441,6 +449,8 @@ func TestAttendanceReportUsesReportsAPI(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/attendance" && r.Method == http.MethodPost:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode attendance body: %v", err)
@@ -542,7 +552,7 @@ func TestReportFilterValidation(t *testing.T) {
 	}
 }
 
-func TestSummaryReportGroupBuilderAcceptsCanonicalDateAndUser(t *testing.T) {
+func TestSummaryReportGroupBuilderAcceptsCanonicalDateAndRejectsUser(t *testing.T) {
 	body, err := buildReportsAPIBody(map[string]any{
 		"start": "2026-04-01T00:00:00Z",
 		"end":   "2026-04-30T00:00:00Z",
@@ -559,20 +569,15 @@ func TestSummaryReportGroupBuilderAcceptsCanonicalDateAndUser(t *testing.T) {
 		t.Fatalf("DATE should be sent upstream unchanged, got %#v", groups)
 	}
 
-	body, err = buildReportsAPIBody(map[string]any{
+	_, err = buildReportsAPIBody(map[string]any{
 		"start": "2026-04-01T00:00:00Z",
 		"end":   "2026-04-30T00:00:00Z",
 		"summary_filter": map[string]any{
 			"groups": []any{"USER", "TASK"},
 		},
 	}, "summary_filter", false, time.UTC)
-	if err != nil {
-		t.Fatalf("build summary body with user/task groups: %v", err)
-	}
-	filter = body["summaryFilter"].(map[string]any)
-	groups = filter["groups"].([]string)
-	if len(groups) != 2 || groups[0] != "USER" || groups[1] != "TASK" {
-		t.Fatalf("USER/TASK groups should be accepted, got %#v", groups)
+	if err == nil || !strings.Contains(err.Error(), "does not support USER") {
+		t.Fatalf("expected USER rejection, got %v", err)
 	}
 }
 
@@ -611,6 +616,8 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode summary body: %v", err)
@@ -651,6 +658,8 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 func TestDetailedReportBinaryExportDoesNotNormalizePayload(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
 			w.Header().Set("Content-Type", "text/csv")
 			w.Header().Set("Content-Disposition", `attachment; filename="detailed.csv"`)

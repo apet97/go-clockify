@@ -19,8 +19,8 @@ func TestUserAdminHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("user_admin group not found")
 	}
-	if len(descriptors) != 10 {
-		t.Fatalf("expected 10 user_admin tools, got %d", len(descriptors))
+	if len(descriptors) != 11 {
+		t.Fatalf("expected 11 user_admin tools, got %d", len(descriptors))
 	}
 }
 
@@ -30,8 +30,8 @@ func TestWebhookHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("webhooks group not found")
 	}
-	if len(descriptors) != 7 {
-		t.Fatalf("expected 7 webhook tools, got %d", len(descriptors))
+	if len(descriptors) != 8 {
+		t.Fatalf("expected 8 webhook tools, got %d", len(descriptors))
 	}
 }
 

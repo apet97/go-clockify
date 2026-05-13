@@ -65,6 +65,8 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
 		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode summary body: %v", err)
@@ -126,6 +128,10 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 func TestSummaryReportDefaultsMoneyColumns(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" && r.Method == http.MethodGet {
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
+			return
+		}
 		if r.URL.Path != "/workspaces/ws1/reports/summary" || r.Method != http.MethodPost {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -148,6 +154,43 @@ func TestSummaryReportDefaultsMoneyColumns(t *testing.T) {
 		t.Fatalf("summary report failed: %v", err)
 	}
 	assertReportMoneyDefaults(t, gotBody)
+}
+
+func TestSummaryReportUsesCurrentUserSettingsAsDefaults(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{"timeZone": "Europe/Belgrade", "weekStart": "MONDAY"}})
+		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode summary body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"totals": []map[string]any{{"entriesCount": 1}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.SummaryReport(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-08T00:00:00Z",
+		"summary_filter": map[string]any{
+			"groups": []any{"CLIENT"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("summary report failed: %v", err)
+	}
+	if gotBody["timeZone"] != "Europe/Belgrade" || gotBody["weekStart"] != "MONDAY" {
+		t.Fatalf("user defaults not applied: %#v", gotBody)
+	}
+	defaults, _ := result.Meta["defaults"].(map[string]any)
+	if defaults["default_source"] != "user_settings" {
+		t.Fatalf("defaults meta missing user_settings source: %#v", result.Meta)
+	}
 }
 
 func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {

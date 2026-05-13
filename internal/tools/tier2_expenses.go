@@ -45,7 +45,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
 				"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
 			},
-		}), envelopeOpenMapSlice("clockify_list_expenses")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeSchemaFor[[]ExpenseView]("clockify_list_expenses")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenses(ctx, args)
 		}},
 
@@ -54,7 +54,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"type":       "object",
 			"required":   []string{"expense_id"},
 			"properties": map[string]any{"expense_id": map[string]any{"type": "string"}},
-		}), envelopeOpenMap("clockify_get_expense")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeSchemaFor[ExpenseView]("clockify_get_expense")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.getExpense(ctx, args)
 		}},
 
@@ -196,7 +196,7 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	items := envelope.Expenses.Expenses
-	return ok("clockify_list_expenses", items, map[string]any{
+	return ok("clockify_list_expenses", expenseViewsFromRaw(items), map[string]any{
 		"workspaceId": wsID,
 		"count":       envelope.Expenses.Count,
 		"page":        page,
@@ -222,7 +222,7 @@ func (s *Service) getExpense(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.Get(ctx, path, nil, &expense); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_expense", expense, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_get_expense", expenseViewFromRaw(expense), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) createExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -281,7 +281,7 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_create_expense", created, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_create_expense", expenseViewFromRaw(created), map[string]any{"workspaceId": wsID}), nil
 }
 
 // validUpdateExpenseChangeFields lists the upstream-accepted tokens for
@@ -452,7 +452,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.PutMultipart(ctx, path, form, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_update_expense", updated, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_update_expense", expenseViewFromRaw(updated), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -625,6 +625,8 @@ func (s *Service) expenseReport(ctx context.Context, args map[string]any) (Resul
 	}
 	if binary {
 		meta["binary"] = true
+	} else {
+		appendExpenseReportViews(data)
 	}
 	return ok("clockify_expense_report", data, meta), nil
 }
