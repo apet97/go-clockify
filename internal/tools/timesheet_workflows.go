@@ -13,13 +13,13 @@ import (
 )
 
 type TimesheetReviewData struct {
-	Range            DateRange            `json:"range"`
-	Totals           SummaryTotals        `json:"totals"`
-	ByDay            []DaySummary         `json:"byDay"`
-	ByProject        []ProjectSummary     `json:"byProject"`
-	Issues           []TimesheetIssue     `json:"issues"`
-	SuggestedActions []ToolSuggestion     `json:"suggestedActions"`
-	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
+	Range            DateRange        `json:"range"`
+	Totals           SummaryTotals    `json:"totals"`
+	ByDay            []DaySummary     `json:"byDay"`
+	ByProject        []ProjectSummary `json:"byProject"`
+	Issues           []TimesheetIssue `json:"issues"`
+	SuggestedActions []ToolSuggestion `json:"suggestedActions"`
+	Entries          []EntryView      `json:"entries,omitempty"`
 }
 
 type TimesheetIssue struct {
@@ -58,11 +58,11 @@ type TimeEntryRef struct {
 }
 
 type TimesheetFillGapData struct {
-	DryRun    bool               `json:"dryRun"`
-	Proposed  TimeEntryDraft     `json:"proposed"`
-	Entry     clockify.TimeEntry `json:"entry,omitempty"`
-	Overlaps  []TimeEntryRef     `json:"overlaps,omitempty"`
-	Validated bool               `json:"validated"`
+	DryRun    bool           `json:"dryRun"`
+	Proposed  TimeEntryDraft `json:"proposed"`
+	Entry     EntryView      `json:"entry,omitempty"`
+	Overlaps  []TimeEntryRef `json:"overlaps,omitempty"`
+	Validated bool           `json:"validated"`
 }
 
 func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -121,7 +121,19 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		SuggestedActions: suggestions,
 	}
 	if boolArg(args, "include_entries") {
-		data.Entries = entries
+		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
+		data.Entries = views
+		meta := paginationMeta(agg, reportPageSize, limits)
+		meta["financials"] = financialMeta
+		return ok("clockify_timesheet_review", data, mergeMeta(map[string]any{
+			"workspaceId":  wsID,
+			"userId":       userID,
+			"timezone":     loc.String(),
+			"mode":         mode,
+			"source":       "time-entries-workflow-review",
+			"workdayStart": workdayStart,
+			"workdayEnd":   workdayEnd,
+		}, meta)), nil
 	}
 	meta := mergeMeta(map[string]any{
 		"workspaceId":  wsID,
@@ -214,12 +226,13 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
+	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 	return ok("clockify_timesheet_fill_gap", TimesheetFillGapData{
 		Proposed:  draft,
-		Entry:     entry,
+		Entry:     view,
 		Overlaps:  overlaps,
 		Validated: true,
-	}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+	}, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": userID}, financialMeta)), nil
 }
 
 func (s *Service) rejectEntryOverlap(ctx context.Context, start, end time.Time, args map[string]any) error {

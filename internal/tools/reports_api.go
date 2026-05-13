@@ -37,6 +37,7 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	applyReportsAPIMoneyDefaults(body, endpoint)
 	path, err := paths.Workspace(wsID, "reports", endpoint.pathName)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -54,6 +55,20 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		meta["binary"] = true
 	}
 	return ok(endpoint.toolName, data, meta), nil
+}
+
+func applyReportsAPIMoneyDefaults(body map[string]any, endpoint reportEndpoint) {
+	if endpoint.pathName != "detailed" && endpoint.pathName != "summary" && endpoint.pathName != "weekly" {
+		return
+	}
+	if _, hasShown := body["amountShown"]; hasShown {
+		return
+	}
+	if _, hasAmounts := body["amounts"]; hasAmounts {
+		return
+	}
+	body["amountShown"] = "EARNED"
+	body["amounts"] = []string{"EARNED", "COST", "PROFIT"}
 }
 
 func (s *Service) postReportsAPI(ctx context.Context, path string, body map[string]any) (map[string]any, bool, error) {

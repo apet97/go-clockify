@@ -52,8 +52,8 @@ func expenseReportInputSchema() map[string]any {
 
 func reportCommonProperties() map[string]any {
 	return map[string]any{
-		"amount_shown":        map[string]any{"type": "string", "enum": reportAmountEnums},
-		"amounts":             map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": reportAmountEnums}},
+		"amount_shown":        map[string]any{"type": "string", "enum": reportAmountEnums, "description": "Primary amount column. Summary, detailed, and weekly reports default to EARNED when neither amount_shown nor amounts is provided."},
+		"amounts":             map[string]any{"type": "array", "description": "Visible amount columns. Summary, detailed, and weekly reports default to EARNED, COST, and PROFIT when neither amount_shown nor amounts is provided.", "items": map[string]any{"type": "string", "enum": reportAmountEnums}},
 		"approval_state":      map[string]any{"type": "string", "enum": reportApprovalStateEnums},
 		"archived":            map[string]any{"type": "boolean"},
 		"billable":            map[string]any{"type": "boolean"},

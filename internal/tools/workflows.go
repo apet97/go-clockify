@@ -90,7 +90,8 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 	if err := s.Client.Post(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
-	return ok("clockify_log_time", LogTimeData{Entry: out, ResolvedProject: projectID}, map[string]any{"workspaceId": wsID}), nil
+	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
+	return ok("clockify_log_time", LogTimeData{Entry: view, ResolvedProject: projectID}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 func logTimePreviewMeta(wsID, userID, projectID string) map[string]any {
@@ -157,8 +158,9 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		updatedFields = append(updatedFields, "billable")
 	}
 	if parsed.DryRun {
+		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{
-			Entry:          entry,
+			Entry:          view,
 			MatchedBy:      matchedBy,
 			UpdatedFields:  updatedFields,
 			MatchedEntryID: current.ID,
@@ -166,10 +168,11 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 			Proposed:       proposedEntryChanges(entry, updatedFields),
 			DryRun:         true,
 			Note:           "No changes were made.",
-		}, map[string]any{"workspaceId": wsID, "noop": len(updatedFields) == 0}), nil
+		}, withFinancialMeta(map[string]any{"workspaceId": wsID, "noop": len(updatedFields) == 0}, financialMeta)), nil
 	}
 	if len(updatedFields) == 0 {
-		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: entry, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID, "noop": true}), nil
+		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
+		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID, "noop": true}, financialMeta)), nil
 	}
 	payload := timeEntryPutPayload(entry)
 	path, err := paths.Workspace(wsID, "time-entries", entry.ID)
@@ -180,7 +183,8 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	if err := s.Client.Put(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
-	return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: out, MatchedBy: matchedBy, UpdatedFields: updatedFields}, map[string]any{"workspaceId": wsID}), nil
+	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
+	return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 func timeEntryUpdatePreview(entry clockify.TimeEntry) *TimeEntryUpdatePreview {

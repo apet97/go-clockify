@@ -346,20 +346,22 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	}
 	projects := projectSummariesFromAgg(agg)
 	totals := totalsFromAgg(agg)
+	runningViews, runningFinancialMeta := s.enrichEntryViews(ctx, wsID, agg.RunningList)
 	data := QuickReportData{
 		Range:               DateRange{Start: startUTC.Format(time.RFC3339), End: endUTC.Format(time.RFC3339)},
 		Totals:              totals,
-		RunningEntries:      agg.RunningList,
+		RunningEntries:      runningViews,
 		ProjectsRepresented: len(projects),
 		SuggestedActions:    reportSuggestedActions(projects, totals, startUTC, endUTC),
 	}
 	if len(projects) > 0 {
 		data.TopProject = &projects[0]
 	}
+	var sampleFinancialMeta map[string]any
 	if includeEntries {
-		data.EntriesSample = agg.Entries
+		data.EntriesSample, sampleFinancialMeta = s.enrichEntryViews(ctx, wsID, agg.Entries)
 	} else {
-		data.EntriesSample = agg.EntriesSample
+		data.EntriesSample, sampleFinancialMeta = s.enrichEntryViews(ctx, wsID, agg.EntriesSample)
 	}
 	meta := mergeMeta(map[string]any{
 		"workspaceId": wsID,
@@ -368,6 +370,10 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 		"timezone":    loc.String(),
 		"source":      "time-entries-wrapper",
 	}, paginationMeta(agg, reportPageSize, limits))
+	meta["financials"] = map[string]any{
+		"running_entries": runningFinancialMeta,
+		"entries_sample":  sampleFinancialMeta,
+	}
 	return ok("clockify_quick_report", data, meta), nil
 }
 

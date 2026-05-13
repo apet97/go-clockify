@@ -105,6 +105,12 @@ type Service struct {
 	// DocumentedAPIWrites enables generic probe_lab_api write/delete calls.
 	// Runtime defaults this off for hosted profiles and on for local profiles.
 	DocumentedAPIWrites bool
+	// EntryFinancialReports forces entry financial enrichment to call the
+	// reports host even when the client is pointed at a non-canonical base URL.
+	// Production Clockify calls auto-enable this path; tests and local proxies
+	// opt in explicitly so unrelated fake handlers do not receive surprise
+	// reports-api requests.
+	EntryFinancialReports bool
 	// DeltaFormat selects the diff algorithm for resource notifications.
 	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
 	DeltaFormat  string
@@ -252,13 +258,19 @@ type SummaryData struct {
 // short entry sample so an agent can answer "what did I just do?"
 // without a full detailed report round-trip.
 type QuickReportData struct {
-	Range               DateRange            `json:"range"`
-	Totals              SummaryTotals        `json:"totals"`
-	TopProject          *ProjectSummary      `json:"topProject,omitempty"`
-	RunningEntries      []clockify.TimeEntry `json:"runningEntries,omitempty"`
-	EntriesSample       []clockify.TimeEntry `json:"entriesSample,omitempty"`
-	ProjectsRepresented int                  `json:"projectsRepresented"`
-	SuggestedActions    []ToolSuggestion     `json:"suggestedActions"`
+	Range               DateRange        `json:"range"`
+	Totals              SummaryTotals    `json:"totals"`
+	TopProject          *ProjectSummary  `json:"topProject,omitempty"`
+	RunningEntries      []EntryView      `json:"runningEntries,omitempty"`
+	EntriesSample       []EntryView      `json:"entriesSample,omitempty"`
+	ProjectsRepresented int              `json:"projectsRepresented"`
+	SuggestedActions    []ToolSuggestion `json:"suggestedActions"`
+}
+
+type TimerStatusData struct {
+	Running bool       `json:"running"`
+	Entry   *EntryView `json:"entry,omitempty"`
+	Elapsed string     `json:"elapsed,omitempty"`
 }
 
 // LogTimeData is the structured payload for clockify_log_time. Entry
@@ -266,8 +278,8 @@ type QuickReportData struct {
 // agent supplied (by name or ID) so the caller can confirm name
 // resolution succeeded.
 type LogTimeData struct {
-	Entry           clockify.TimeEntry `json:"entry"`
-	ResolvedProject string             `json:"resolvedProject,omitempty"`
+	Entry           EntryView `json:"entry"`
+	ResolvedProject string    `json:"resolvedProject,omitempty"`
 }
 
 // FindAndUpdateEntryData is the structured payload for
@@ -277,7 +289,7 @@ type LogTimeData struct {
 // Current + Proposed + DryRun carry the preview-only diff so a
 // downstream confirmation step can stage the mutation before applying.
 type FindAndUpdateEntryData struct {
-	Entry          clockify.TimeEntry      `json:"entry"`
+	Entry          EntryView               `json:"entry"`
 	MatchedBy      map[string]any          `json:"matchedBy"`
 	UpdatedFields  []string                `json:"updatedFields"`
 	MatchedEntryID string                  `json:"matched_entry_id,omitempty"`

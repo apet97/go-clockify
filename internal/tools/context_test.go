@@ -130,9 +130,9 @@ func TestTimerStatusRunningAfterRecentFinished(t *testing.T) {
 	if data["running"] != true {
 		t.Fatalf("expected running=true (in-progress filter must take precedence over recency), got %v", data["running"])
 	}
-	entry, ok := data["entry"].(clockify.TimeEntry)
+	entry, ok := data["entry"].(EntryView)
 	if !ok {
-		t.Fatalf("expected entry to be a TimeEntry, got %T", data["entry"])
+		t.Fatalf("expected entry to be an EntryView, got %T", data["entry"])
 	}
 	if entry.ID != "running" {
 		t.Fatalf("expected running entry id=running, got %q", entry.ID)

@@ -127,6 +127,7 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 	if gotBody["dateRangeStart"] != "2026-04-06T00:00:00.000" || gotBody["dateRangeEnd"] != "2026-04-12T23:59:59.999" {
 		t.Fatalf("weekly range not derived as exact local week: %#v", gotBody)
 	}
+	assertReportMoneyDefaults(t, gotBody)
 	filter, _ := gotBody["weeklyFilter"].(map[string]any)
 	if filter["group"] != "PROJECT" || filter["subgroup"] != "TIME" {
 		t.Fatalf("unexpected weeklyFilter body: %#v", filter)
@@ -344,6 +345,34 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 	}
 }
 
+func TestDetailedReportDefaultsMoneyColumns(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/reports/detailed" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode detailed body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"totals": []map[string]any{{"entriesCount": 1}}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.DetailedReport(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-08T00:00:00Z",
+		"detailed_filter": map[string]any{
+			"page":      1,
+			"page_size": 20,
+		},
+	})
+	if err != nil {
+		t.Fatalf("detailed report failed: %v", err)
+	}
+	assertReportMoneyDefaults(t, gotBody)
+}
+
 func TestAttendanceReportUsesReportsAPI(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -552,6 +581,26 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 	}
 	if result.Meta["binary"] != true || result.Meta["source"] != "reports-api" {
 		t.Fatalf("unexpected binary meta: %#v", result.Meta)
+	}
+}
+
+func assertReportMoneyDefaults(t *testing.T, body map[string]any) {
+	t.Helper()
+	if body["amountShown"] != "EARNED" {
+		t.Fatalf("amountShown = %v, want EARNED", body["amountShown"])
+	}
+	amounts, ok := body["amounts"].([]any)
+	if !ok {
+		t.Fatalf("amounts = %T %#v, want []any", body["amounts"], body["amounts"])
+	}
+	want := []string{"EARNED", "COST", "PROFIT"}
+	if len(amounts) != len(want) {
+		t.Fatalf("amounts = %#v, want %v", amounts, want)
+	}
+	for i, v := range want {
+		if amounts[i] != v {
+			t.Fatalf("amounts = %#v, want %v", amounts, want)
+		}
 	}
 }
 

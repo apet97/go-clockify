@@ -436,7 +436,8 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 	}
 	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
 	s.emitWeeklyReportsForEntryChange(ctx, wsID, &previous, &updated)
-	return ok("clockify_set_custom_field_value", updated, map[string]any{"workspaceId": wsID}), nil
+	view, financialMeta := s.enrichEntryView(ctx, wsID, updated)
+	return ok("clockify_set_custom_field_value", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 func mergeCustomFieldValue(existing any, fieldID string, value any) ([]map[string]any, error) {

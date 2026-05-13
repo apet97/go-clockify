@@ -61,7 +61,8 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
-	return ok("clockify_start_timer", out, meta), nil
+	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
+	return ok("clockify_start_timer", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, error) {
@@ -86,7 +87,8 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 		return nil, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
-	return ok("clockify_stop_timer", out, map[string]any{"workspaceId": wsID, "userId": user.ID}), nil
+	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
+	return ok("clockify_stop_timer", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": user.ID}, financialMeta)), nil
 }
 
 func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
@@ -105,6 +107,8 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 	}
 
 	entry := entries[0]
+	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
+	meta = withFinancialMeta(meta, financialMeta)
 	startTime, err := entry.StartTime()
 	if err != nil {
 		return ResultEnvelope{}, fmt.Errorf("parse start time: %w", err)
@@ -119,7 +123,7 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 
 	return ok("clockify_timer_status", map[string]any{
 		"running": true,
-		"entry":   entry,
+		"entry":   view,
 		"elapsed": elapsedStr,
 	}, meta), nil
 }

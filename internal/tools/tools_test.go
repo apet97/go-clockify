@@ -123,6 +123,33 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 	}
 }
 
+func TestSummaryReportDefaultsMoneyColumns(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/reports/summary" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode summary body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"totals": []map[string]any{{"entriesCount": 1}}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.SummaryReport(context.Background(), map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-08T00:00:00Z",
+		"summary_filter": map[string]any{
+			"groups": []any{"CLIENT", "PROJECT", "DATE"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("summary report failed: %v", err)
+	}
+	assertReportMoneyDefaults(t, gotBody)
+}
+
 func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -507,7 +534,7 @@ func TestGetEntry(t *testing.T) {
 	if result.Action != "clockify_get_entry" {
 		t.Fatalf("expected action clockify_get_entry, got %s", result.Action)
 	}
-	entry, ok := result.Data.(clockify.TimeEntry)
+	entry, ok := result.Data.(EntryView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -550,7 +577,7 @@ func TestTodayEntries(t *testing.T) {
 	if result.Action != "clockify_today_entries" {
 		t.Fatalf("expected action clockify_today_entries, got %s", result.Action)
 	}
-	entries, ok := result.Data.([]clockify.TimeEntry)
+	entries, ok := result.Data.([]EntryView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -669,7 +696,7 @@ func TestAddEntry(t *testing.T) {
 	if result.Action != "clockify_add_entry" {
 		t.Fatalf("expected action clockify_add_entry, got %s", result.Action)
 	}
-	entry, ok := result.Data.(clockify.TimeEntry)
+	entry, ok := result.Data.(EntryView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -1240,9 +1267,9 @@ func TestTimerStatus_Running(t *testing.T) {
 		t.Fatalf("expected elapsed to contain minutes, got %q", elapsed)
 	}
 	// Verify the entry is in the result
-	entry, ok := dataMap["entry"].(clockify.TimeEntry)
+	entry, ok := dataMap["entry"].(EntryView)
 	if !ok {
-		t.Fatalf("expected clockify.TimeEntry for entry field, got %T", dataMap["entry"])
+		t.Fatalf("expected EntryView for entry field, got %T", dataMap["entry"])
 	}
 	if entry.ID != "e1" {
 		t.Fatalf("expected entry ID e1, got %s", entry.ID)
@@ -2122,9 +2149,9 @@ func TestListEntriesProjectFilterPushesResolvedName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list entries failed: %v", err)
 	}
-	entries, ok := result.Data.([]clockify.TimeEntry)
+	entries, ok := result.Data.([]EntryView)
 	if !ok {
-		t.Fatalf("expected []clockify.TimeEntry, got %T", result.Data)
+		t.Fatalf("expected []EntryView, got %T", result.Data)
 	}
 	if len(entries) != 1 || entries[0].ID != "target" {
 		t.Fatalf("expected target entry from resolved project filter, got %+v", entries)
@@ -2167,9 +2194,9 @@ func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list entries failed: %v", err)
 	}
-	entries, ok := result.Data.([]clockify.TimeEntry)
+	entries, ok := result.Data.([]EntryView)
 	if !ok {
-		t.Fatalf("expected []clockify.TimeEntry, got %T", result.Data)
+		t.Fatalf("expected []EntryView, got %T", result.Data)
 	}
 	if len(entries) != 2 || entries[0].ID != "e3" || entries[1].ID != "e4" {
 		t.Fatalf("expected second page of filtered entries, got %+v", entries)

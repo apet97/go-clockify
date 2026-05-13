@@ -216,6 +216,223 @@
               "description": {
                 "type": "string"
               },
+              "financials": {
+                "additionalProperties": false,
+                "properties": {
+                  "cost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "earned": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "rate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "billable_earnings": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost_scope": {
+                        "type": "string"
+                      },
+                      "duration_seconds": {
+                        "type": "integer"
+                      },
+                      "effective_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "effective_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourly_scope": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hourly_scope",
+                      "cost_scope",
+                      "duration_seconds"
+                    ],
+                    "type": "object"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
               "hourlyRate": {
                 "additionalProperties": false,
                 "properties": {
@@ -290,7 +507,8 @@
               "id",
               "description",
               "projectId",
-              "timeInterval"
+              "timeInterval",
+              "financials"
             ],
             "type": "object"
           },
@@ -351,6 +569,7 @@
         ],
         "properties": {
           "amount_shown": {
+            "description": "Primary amount column. Summary, detailed, and weekly reports default to EARNED when neither amount_shown nor amounts is provided.",
             "enum": [
               "EARNED",
               "COST",
@@ -361,6 +580,7 @@
             "type": "string"
           },
           "amounts": {
+            "description": "Visible amount columns. Summary, detailed, and weekly reports default to EARNED, COST, and PROFIT when neither amount_shown nor amounts is provided.",
             "items": {
               "enum": [
                 "EARNED",
@@ -2339,6 +2559,7 @@
         ],
         "properties": {
           "amount_shown": {
+            "description": "Primary amount column. Summary, detailed, and weekly reports default to EARNED when neither amount_shown nor amounts is provided.",
             "enum": [
               "EARNED",
               "COST",
@@ -2349,6 +2570,7 @@
             "type": "string"
           },
           "amounts": {
+            "description": "Visible amount columns. Summary, detailed, and weekly reports default to EARNED, COST, and PROFIT when neither amount_shown nor amounts is provided.",
             "items": {
               "enum": [
                 "EARNED",
@@ -3002,6 +3224,223 @@
                   "description": {
                     "type": "string"
                   },
+                  "financials": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "earned": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "profit": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "rate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "billable_earnings": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost_scope": {
+                            "type": "string"
+                          },
+                          "duration_seconds": {
+                            "type": "integer"
+                          },
+                          "effective_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "effective_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "hourly_scope": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "hourly_scope",
+                          "cost_scope",
+                          "duration_seconds"
+                        ],
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source"
+                    ],
+                    "type": "object"
+                  },
                   "hourlyRate": {
                     "additionalProperties": false,
                     "properties": {
@@ -3076,7 +3515,8 @@
                   "id",
                   "description",
                   "projectId",
-                  "timeInterval"
+                  "timeInterval",
+                  "financials"
                 ],
                 "type": "object"
               },
@@ -3290,6 +3730,223 @@
               "description": {
                 "type": "string"
               },
+              "financials": {
+                "additionalProperties": false,
+                "properties": {
+                  "cost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "earned": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "rate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "billable_earnings": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost_scope": {
+                        "type": "string"
+                      },
+                      "duration_seconds": {
+                        "type": "integer"
+                      },
+                      "effective_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "effective_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourly_scope": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hourly_scope",
+                      "cost_scope",
+                      "duration_seconds"
+                    ],
+                    "type": "object"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
               "hourlyRate": {
                 "additionalProperties": false,
                 "properties": {
@@ -3364,7 +4021,8 @@
               "id",
               "description",
               "projectId",
-              "timeInterval"
+              "timeInterval",
+              "financials"
             ],
             "type": "object"
           },
@@ -4082,6 +4740,223 @@
                 "description": {
                   "type": "string"
                 },
+                "financials": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cost": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "earned": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "profit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "rate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "billable_earnings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "cost_scope": {
+                          "type": "string"
+                        },
+                        "duration_seconds": {
+                          "type": "integer"
+                        },
+                        "effective_cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "effective_hourly": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "entry_cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "entry_hourly": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "hourly_scope": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "hourly_scope",
+                        "cost_scope",
+                        "duration_seconds"
+                      ],
+                      "type": "object"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "source"
+                  ],
+                  "type": "object"
+                },
                 "hourlyRate": {
                   "additionalProperties": false,
                   "properties": {
@@ -4156,7 +5031,8 @@
                 "id",
                 "description",
                 "projectId",
-                "timeInterval"
+                "timeInterval",
+                "financials"
               ],
               "type": "object"
             },
@@ -5226,6 +6102,223 @@
                   "description": {
                     "type": "string"
                   },
+                  "financials": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "earned": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "profit": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "rate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "billable_earnings": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost_scope": {
+                            "type": "string"
+                          },
+                          "duration_seconds": {
+                            "type": "integer"
+                          },
+                          "effective_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "effective_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "hourly_scope": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "hourly_scope",
+                          "cost_scope",
+                          "duration_seconds"
+                        ],
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source"
+                    ],
+                    "type": "object"
+                  },
                   "hourlyRate": {
                     "additionalProperties": false,
                     "properties": {
@@ -5300,7 +6393,8 @@
                   "id",
                   "description",
                   "projectId",
-                  "timeInterval"
+                  "timeInterval",
+                  "financials"
                 ],
                 "type": "object"
               },
@@ -5473,6 +6567,223 @@
                     "description": {
                       "type": "string"
                     },
+                    "financials": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "earned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "profit": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "rate": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "billable_earnings": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost_scope": {
+                              "type": "string"
+                            },
+                            "duration_seconds": {
+                              "type": "integer"
+                            },
+                            "effective_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "effective_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "hourly_scope": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "hourly_scope",
+                            "cost_scope",
+                            "duration_seconds"
+                          ],
+                          "type": "object"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "type": "object"
+                    },
                     "hourlyRate": {
                       "additionalProperties": false,
                       "properties": {
@@ -5547,7 +6858,8 @@
                     "id",
                     "description",
                     "projectId",
-                    "timeInterval"
+                    "timeInterval",
+                    "financials"
                   ],
                   "type": "object"
                 },
@@ -5601,6 +6913,223 @@
                     "description": {
                       "type": "string"
                     },
+                    "financials": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "earned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "profit": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "rate": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "billable_earnings": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost_scope": {
+                              "type": "string"
+                            },
+                            "duration_seconds": {
+                              "type": "integer"
+                            },
+                            "effective_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "effective_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "hourly_scope": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "hourly_scope",
+                            "cost_scope",
+                            "duration_seconds"
+                          ],
+                          "type": "object"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "type": "object"
+                    },
                     "hourlyRate": {
                       "additionalProperties": false,
                       "properties": {
@@ -5675,7 +7204,8 @@
                     "id",
                     "description",
                     "projectId",
-                    "timeInterval"
+                    "timeInterval",
+                    "financials"
                   ],
                   "type": "object"
                 },
@@ -6083,6 +7613,223 @@
               "description": {
                 "type": "string"
               },
+              "financials": {
+                "additionalProperties": false,
+                "properties": {
+                  "cost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "earned": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "rate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "billable_earnings": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost_scope": {
+                        "type": "string"
+                      },
+                      "duration_seconds": {
+                        "type": "integer"
+                      },
+                      "effective_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "effective_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourly_scope": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hourly_scope",
+                      "cost_scope",
+                      "duration_seconds"
+                    ],
+                    "type": "object"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
               "hourlyRate": {
                 "additionalProperties": false,
                 "properties": {
@@ -6157,7 +7904,8 @@
               "id",
               "description",
               "projectId",
-              "timeInterval"
+              "timeInterval",
+              "financials"
             ],
             "type": "object"
           },
@@ -6210,10 +7958,339 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_stop_timer",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "billable": {
+                "type": "boolean"
+              },
+              "costRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
+              "customFieldValues": {},
+              "description": {
+                "type": "string"
+              },
+              "financials": {
+                "additionalProperties": false,
+                "properties": {
+                  "cost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "earned": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "rate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "billable_earnings": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost_scope": {
+                        "type": "string"
+                      },
+                      "duration_seconds": {
+                        "type": "integer"
+                      },
+                      "effective_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "effective_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourly_scope": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hourly_scope",
+                      "cost_scope",
+                      "duration_seconds"
+                    ],
+                    "type": "object"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
+              "hourlyRate": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "type": "string"
+              },
+              "isLocked": {
+                "type": "boolean"
+              },
+              "kioskId": {
+                "type": "string"
+              },
+              "projectId": {
+                "type": "string"
+              },
+              "projectName": {
+                "type": "string"
+              },
+              "tagIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "taskId": {
+                "type": "string"
+              },
+              "timeInterval": {
+                "additionalProperties": false,
+                "properties": {
+                  "duration": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "start"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "type": "string"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "description",
+              "projectId",
+              "timeInterval",
+              "financials"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6221,7 +8298,8 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
@@ -6267,6 +8345,7 @@
         ],
         "properties": {
           "amount_shown": {
+            "description": "Primary amount column. Summary, detailed, and weekly reports default to EARNED when neither amount_shown nor amounts is provided.",
             "enum": [
               "EARNED",
               "COST",
@@ -6277,6 +8356,7 @@
             "type": "string"
           },
           "amounts": {
+            "description": "Visible amount columns. Summary, detailed, and weekly reports default to EARNED, COST, and PROFIT when neither amount_shown nor amounts is provided.",
             "items": {
               "enum": [
                 "EARNED",
@@ -6867,10 +8947,354 @@
         "type": "object"
       },
       "output_schema": {
+        "additionalProperties": false,
         "properties": {
           "action": {
             "const": "clockify_timer_status",
             "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "elapsed": {
+                "type": "string"
+              },
+              "entry": {
+                "additionalProperties": false,
+                "properties": {
+                  "billable": {
+                    "type": "boolean"
+                  },
+                  "costRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
+                  "customFieldValues": {},
+                  "description": {
+                    "type": "string"
+                  },
+                  "financials": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "earned": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "profit": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "rate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "billable_earnings": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost_scope": {
+                            "type": "string"
+                          },
+                          "duration_seconds": {
+                            "type": "integer"
+                          },
+                          "effective_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "effective_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "hourly_scope": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "hourly_scope",
+                          "cost_scope",
+                          "duration_seconds"
+                        ],
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source"
+                    ],
+                    "type": "object"
+                  },
+                  "hourlyRate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "inherited": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount"
+                    ],
+                    "type": "object"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isLocked": {
+                    "type": "boolean"
+                  },
+                  "kioskId": {
+                    "type": "string"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "tagIds": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "taskId": {
+                    "type": "string"
+                  },
+                  "timeInterval": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "duration": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "start"
+                    ],
+                    "type": "object"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "description",
+                  "projectId",
+                  "timeInterval",
+                  "financials"
+                ],
+                "type": "object"
+              },
+              "running": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "running"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "ok": {
             "type": "boolean"
@@ -6878,7 +9302,8 @@
         },
         "required": [
           "ok",
-          "action"
+          "action",
+          "data"
         ],
         "type": "object"
       },
@@ -6999,6 +9424,223 @@
                   "description": {
                     "type": "string"
                   },
+                  "financials": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "earned": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "profit": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "rate": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "billable_earnings": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount_cents": {
+                                "type": "integer"
+                              },
+                              "amount_decimal": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "display": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "amount_cents",
+                              "amount_decimal"
+                            ],
+                            "type": "object"
+                          },
+                          "cost_scope": {
+                            "type": "string"
+                          },
+                          "duration_seconds": {
+                            "type": "integer"
+                          },
+                          "effective_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "effective_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_cost": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "entry_hourly": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ],
+                            "type": "object"
+                          },
+                          "hourly_scope": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "hourly_scope",
+                          "cost_scope",
+                          "duration_seconds"
+                        ],
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source"
+                    ],
+                    "type": "object"
+                  },
                   "hourlyRate": {
                     "additionalProperties": false,
                     "properties": {
@@ -7073,7 +9715,8 @@
                   "id",
                   "description",
                   "projectId",
-                  "timeInterval"
+                  "timeInterval",
+                  "financials"
                 ],
                 "type": "object"
               },
@@ -7341,6 +9984,223 @@
                     "description": {
                       "type": "string"
                     },
+                    "financials": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "earned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "profit": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "rate": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "billable_earnings": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount_cents": {
+                                  "type": "integer"
+                                },
+                                "amount_decimal": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "display": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount_cents",
+                                "amount_decimal"
+                              ],
+                              "type": "object"
+                            },
+                            "cost_scope": {
+                              "type": "string"
+                            },
+                            "duration_seconds": {
+                              "type": "integer"
+                            },
+                            "effective_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "effective_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_cost": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "entry_hourly": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "inherited": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "type": "object"
+                            },
+                            "hourly_scope": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "hourly_scope",
+                            "cost_scope",
+                            "duration_seconds"
+                          ],
+                          "type": "object"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "type": "object"
+                    },
                     "hourlyRate": {
                       "additionalProperties": false,
                       "properties": {
@@ -7415,7 +10275,8 @@
                     "id",
                     "description",
                     "projectId",
-                    "timeInterval"
+                    "timeInterval",
+                    "financials"
                   ],
                   "type": "object"
                 },
@@ -7639,6 +10500,223 @@
                 "description": {
                   "type": "string"
                 },
+                "financials": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cost": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "earned": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "profit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "rate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "billable_earnings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "cost_scope": {
+                          "type": "string"
+                        },
+                        "duration_seconds": {
+                          "type": "integer"
+                        },
+                        "effective_cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "effective_hourly": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "entry_cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "entry_hourly": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "inherited": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount"
+                          ],
+                          "type": "object"
+                        },
+                        "hourly_scope": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "hourly_scope",
+                        "cost_scope",
+                        "duration_seconds"
+                      ],
+                      "type": "object"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "source"
+                  ],
+                  "type": "object"
+                },
                 "hourlyRate": {
                   "additionalProperties": false,
                   "properties": {
@@ -7713,7 +10791,8 @@
                 "id",
                 "description",
                 "projectId",
-                "timeInterval"
+                "timeInterval",
+                "financials"
               ],
               "type": "object"
             },
@@ -7977,6 +11056,223 @@
               "description": {
                 "type": "string"
               },
+              "financials": {
+                "additionalProperties": false,
+                "properties": {
+                  "cost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "earned": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "rate": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "billable_earnings": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount_cents": {
+                            "type": "integer"
+                          },
+                          "amount_decimal": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount_cents",
+                          "amount_decimal"
+                        ],
+                        "type": "object"
+                      },
+                      "cost_scope": {
+                        "type": "string"
+                      },
+                      "duration_seconds": {
+                        "type": "integer"
+                      },
+                      "effective_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "effective_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_cost": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "entry_hourly": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amount": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "inherited": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "type": "object"
+                      },
+                      "hourly_scope": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "hourly_scope",
+                      "cost_scope",
+                      "duration_seconds"
+                    ],
+                    "type": "object"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
               "hourlyRate": {
                 "additionalProperties": false,
                 "properties": {
@@ -8051,7 +11347,8 @@
               "id",
               "description",
               "projectId",
-              "timeInterval"
+              "timeInterval",
+              "financials"
             ],
             "type": "object"
           },
@@ -8938,6 +12235,7 @@
         "additionalProperties": false,
         "properties": {
           "amount_shown": {
+            "description": "Primary amount column. Summary, detailed, and weekly reports default to EARNED when neither amount_shown nor amounts is provided.",
             "enum": [
               "EARNED",
               "COST",
@@ -8948,6 +12246,7 @@
             "type": "string"
           },
           "amounts": {
+            "description": "Visible amount columns. Summary, detailed, and weekly reports default to EARNED, COST, and PROFIT when neither amount_shown nor amounts is provided.",
             "items": {
               "enum": [
                 "EARNED",
