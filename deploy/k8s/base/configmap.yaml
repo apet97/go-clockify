@@ -20,6 +20,11 @@ data:
   CLOCKIFY_TOOL_TIMEOUT: "45s"
   CLOCKIFY_REPORT_MAX_ENTRIES: "10000"
   CLOCKIFY_BOOTSTRAP_MODE: "full_tier1"
+  CLOCKIFY_DOCUMENTED_API_WRITES: "0"          # keep probe_lab_api raw writes disabled by default in k8s/hosted-style deployments
+  CLOCKIFY_CIRCUIT_BREAKER: "auto"             # auto enables for hosted profiles; local/self-hosted profiles can opt in
+  CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD: "5"
+  CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION: "45s"
+  CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES: "1"
   MCP_MAX_INFLIGHT_TOOL_CALLS: "64"
   MCP_MAX_MESSAGE_SIZE: "4194304"
   MCP_HTTP_RATELIMIT_PER_IP: "600"          # process-local HTTP admission requests/source IP/minute (0=disabled)
