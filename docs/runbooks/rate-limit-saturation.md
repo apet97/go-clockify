@@ -11,7 +11,19 @@
 - **Throughput** — `CLOCKIFY_RATE_LIMIT` (default 120/min) caps total
   tool calls per fixed 60-second window.
 
-Either limit can saturate independently. The upstream Clockify API
+Authenticated HTTP/gRPC deployments can also apply nested upstream
+budgets after the process-wide gate:
+
+- `CLOCKIFY_PER_TOKEN_CONCURRENCY` and
+  `CLOCKIFY_PER_TOKEN_RATE_LIMIT` cap each authenticated
+  tenant+subject pair.
+- `CLOCKIFY_PER_TENANT_CONCURRENCY` and
+  `CLOCKIFY_PER_TENANT_RATE_LIMIT` cap the aggregate tenant budget.
+  Hosted/shared-service profiles default these to `10` concurrent
+  calls and `120/min` so one tenant cannot multiply upstream load
+  through many active subjects.
+
+Any limit can saturate independently. The upstream Clockify API
 also rate-limits, with its own quotas. Saturation usually means one
 of those three knobs is wrong, or a client is misbehaving in a way
 the knobs were not sized for.
@@ -101,6 +113,15 @@ Raise the per-window budget:
 ```sh
 kubectl -n clockify-mcp set env deploy/clockify-mcp \
   CLOCKIFY_RATE_LIMIT=240
+```
+
+If only one hosted tenant is saturating while other tenants should keep
+flowing, tune the tenant aggregate instead of raising the global window:
+
+```sh
+kubectl -n clockify-mcp set env deploy/clockify-mcp \
+  CLOCKIFY_PER_TENANT_RATE_LIMIT=180 \
+  CLOCKIFY_PER_TENANT_CONCURRENCY=16
 ```
 
 ### HTTP admission saturation (429 before JSON-RPC dispatch)

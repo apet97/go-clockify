@@ -33,7 +33,7 @@ from `git log` and inline code comments.
 | 0021 | Hosted tenant policy ceiling | [0021-hosted-tenant-policy-ceiling.md](0021-hosted-tenant-policy-ceiling.md) |
 | 0022 | Batched audit_events INSERT for non-strict outcomes | [0022-batched-audit-outcome-inserts.md](0022-batched-audit-outcome-inserts.md) |
 | 0023 | Cross-transport MaxInFlightToolCalls parity (proposed) | [0023-cross-transport-inflight-parity.md](0023-cross-transport-inflight-parity.md) |
-| 0024 | Per-tenant aggregate rate-limit (proposed) | [0024-per-tenant-aggregate-rate-limit.md](0024-per-tenant-aggregate-rate-limit.md) |
+| 0024 | Per-tenant aggregate rate-limit | [0024-per-tenant-aggregate-rate-limit.md](0024-per-tenant-aggregate-rate-limit.md) |
 | 0025 | Upstream-5xx circuit breaker against Clockify | [0025-upstream-clockify-circuit-breaker.md](0025-upstream-clockify-circuit-breaker.md) |
 
 ADRs 0001–0018 are **Accepted**. ADR 0010 was promoted from Proposed

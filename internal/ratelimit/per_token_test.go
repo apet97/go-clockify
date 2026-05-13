@@ -101,6 +101,57 @@ func TestAcquireForSubjectRespectsGlobalCap(t *testing.T) {
 	}
 }
 
+func TestAcquireForTenantSubjectCapsTenantAggregate(t *testing.T) {
+	// Global and per-subject budgets are permissive; tenant budget is tight.
+	rl := newPerTokenLimiter(100, 1000, 0, 100)
+	rl.SetPerTenantLimits(0, 2)
+
+	rel1, scope, err := rl.AcquireForTenantSubject(context.Background(), "tenant-a", "alice")
+	if err != nil || scope != ScopePerToken {
+		t.Fatalf("tenant-a/alice acquire: err=%v scope=%s", err, scope)
+	}
+	defer rel1()
+	rel2, _, err := rl.AcquireForTenantSubject(context.Background(), "tenant-a", "bob")
+	if err != nil {
+		t.Fatalf("tenant-a/bob acquire: %v", err)
+	}
+	defer rel2()
+
+	_, scope, err = rl.AcquireForTenantSubject(context.Background(), "tenant-a", "charlie")
+	if err == nil {
+		t.Fatal("expected tenant aggregate rejection")
+	}
+	if !errors.Is(err, ErrRateLimitExceeded) {
+		t.Fatalf("wrong error: %v", err)
+	}
+	if scope != ScopePerTenant {
+		t.Fatalf("scope: %s", scope)
+	}
+
+	rel3, _, err := rl.AcquireForTenantSubject(context.Background(), "tenant-b", "alice")
+	if err != nil {
+		t.Fatalf("tenant-b should have its own budget: %v", err)
+	}
+	defer rel3()
+}
+
+func TestAcquireForTenantSubjectTenantOnlyLayerReleases(t *testing.T) {
+	rl := newPerTokenLimiter(1, 1000, 0, 0)
+	rl.SetPerTenantLimits(1, 10)
+
+	rel, scope, err := rl.AcquireForTenantSubject(context.Background(), "tenant-a", "alice")
+	if err != nil || scope != ScopePerTenant {
+		t.Fatalf("acquire: err=%v scope=%s", err, scope)
+	}
+	rel()
+
+	rel, scope, err = rl.AcquireForTenantSubject(context.Background(), "tenant-a", "bob")
+	if err != nil || scope != ScopePerTenant {
+		t.Fatalf("second acquire should not leak slots: err=%v scope=%s", err, scope)
+	}
+	rel()
+}
+
 func TestAcquireForSubjectDisabledPerTokenLayer(t *testing.T) {
 	rl := NewWithAcquireTimeout(100, 1000, 60000, 20*time.Millisecond)
 	// Per-token not configured — layer disabled; scope returns ScopeGlobal

@@ -45,6 +45,15 @@ type RateLimiter struct {
 	perTokenMaxPerWindow  int64
 	subjectsMu            sync.RWMutex
 	subjects              map[string]*subjectLimiter
+
+	// Per-tenant aggregate budgets sit above the per-(tenant, subject)
+	// layer. They let hosted/shared-service operators cap one tenant's
+	// total upstream Clockify request budget even when that tenant has
+	// many active subjects.
+	perTenantMaxConcurrent int
+	perTenantMaxPerWindow  int64
+	tenantsMu              sync.RWMutex
+	tenants                map[string]*subjectLimiter
 }
 
 // subjectLimiter tracks one Principal.Subject's window counter and
@@ -114,13 +123,17 @@ func FromEnvWithAcquireTimeout(acquireTimeout time.Duration) *RateLimiter {
 	maxWin := envInt("CLOCKIFY_RATE_LIMIT", 120)
 	perTokenConc := envInt("CLOCKIFY_PER_TOKEN_CONCURRENCY", 5)
 	perTokenWin := envInt("CLOCKIFY_PER_TOKEN_RATE_LIMIT", 60)
-	if maxConc == 0 && maxWin == 0 && perTokenConc == 0 && perTokenWin == 0 {
+	perTenantConc := envInt("CLOCKIFY_PER_TENANT_CONCURRENCY", 0)
+	perTenantWin := envInt("CLOCKIFY_PER_TENANT_RATE_LIMIT", 0)
+	if maxConc == 0 && maxWin == 0 && perTokenConc == 0 && perTokenWin == 0 && perTenantConc == 0 && perTenantWin == 0 {
 		return nil
 	}
 	rl := NewWithAcquireTimeout(maxConc, int64(maxWin), 60000, acquireTimeout)
 	if rl != nil {
 		rl.perTokenMaxConcurrent = perTokenConc
 		rl.perTokenMaxPerWindow = int64(perTokenWin)
+		rl.perTenantMaxConcurrent = perTenantConc
+		rl.perTenantMaxPerWindow = int64(perTenantWin)
 	}
 	return rl
 }
@@ -167,6 +180,17 @@ func (rl *RateLimiter) SetPerTokenLimits(maxConcurrent int, maxPerWindow int64) 
 	}
 	rl.perTokenMaxConcurrent = maxConcurrent
 	rl.perTokenMaxPerWindow = maxPerWindow
+}
+
+// SetPerTenantLimits configures the aggregate per-tenant budget layer.
+// Setting both caps to 0 disables the layer. Call before Acquire* so the
+// limiter's topology remains stable during traffic.
+func (rl *RateLimiter) SetPerTenantLimits(maxConcurrent int, maxPerWindow int64) {
+	if rl == nil {
+		return
+	}
+	rl.perTenantMaxConcurrent = maxConcurrent
+	rl.perTenantMaxPerWindow = maxPerWindow
 }
 
 // Acquire reserves a slot. The returned function must be called to release
@@ -236,6 +260,7 @@ type PerTokenScope string
 const (
 	ScopeGlobal     PerTokenScope = "global"
 	ScopePerToken   PerTokenScope = "per_token"
+	ScopePerTenant  PerTokenScope = "per_tenant"
 	ScopeUnknown    PerTokenScope = "unknown"
 	ScopeConcurrent               = "concurrency"
 )
@@ -251,6 +276,23 @@ const (
 // stranded on a per-token failure. The returned PerTokenScope identifies
 // which layer rejected.
 func (rl *RateLimiter) AcquireForSubject(ctx context.Context, subject string) (func(), PerTokenScope, error) {
+	return rl.acquireForTenantSubject(ctx, "", subject)
+}
+
+// AcquireForTenantSubject extends AcquireForSubject with an aggregate
+// tenant budget layer. The tenant layer is skipped when tenant is empty or
+// no per-tenant caps are configured. The per-subject key remains
+// tenant+"\x00"+subject when both values are present, preserving the
+// existing per-token fairness while adding a tenant-level ceiling above it.
+func (rl *RateLimiter) AcquireForTenantSubject(ctx context.Context, tenant string, subject string) (func(), PerTokenScope, error) {
+	subjectKey := subject
+	if tenant != "" && subject != "" {
+		subjectKey = tenant + "\x00" + subject
+	}
+	return rl.acquireForTenantSubject(ctx, tenant, subjectKey)
+}
+
+func (rl *RateLimiter) acquireForTenantSubject(ctx context.Context, tenant string, subject string) (func(), PerTokenScope, error) {
 	release, err := rl.Acquire(ctx)
 	if err != nil {
 		scope := ScopeGlobal
@@ -259,63 +301,89 @@ func (rl *RateLimiter) AcquireForSubject(ctx context.Context, subject string) (f
 		}
 		return nil, scope, err
 	}
+
+	releases := []func(){}
+	if release != nil {
+		releases = append(releases, release)
+	}
+	releaseAll := func() {
+		for i := len(releases) - 1; i >= 0; i-- {
+			releases[i]()
+		}
+	}
+
+	if rl != nil && tenant != "" && (rl.perTenantMaxConcurrent > 0 || rl.perTenantMaxPerWindow > 0) {
+		tenantLimiter := rl.tenantLimiterFor(tenant)
+		tenantRelease, err := tenantLimiter.acquire(ctx, rl.windowMillis, rl.acquireTimeout)
+		if err != nil {
+			releaseAll()
+			return nil, ScopePerTenant, err
+		}
+		releases = append(releases, tenantRelease)
+	}
+
 	if rl == nil || subject == "" || (rl.perTokenMaxConcurrent <= 0 && rl.perTokenMaxPerWindow <= 0) {
+		if len(releases) > 1 {
+			return releaseAll, ScopePerTenant, nil
+		}
 		return release, ScopeGlobal, nil
 	}
 
 	sub := rl.subjectLimiterFor(subject)
 	subRelease, err := sub.acquire(ctx, rl.windowMillis, rl.acquireTimeout)
 	if err != nil {
-		if release != nil {
-			release()
-		}
+		releaseAll()
 		return nil, ScopePerToken, err
 	}
-	combined := func() {
-		subRelease()
-		if release != nil {
-			release()
-		}
-	}
+	releases = append(releases, subRelease)
+	combined := releaseAll
 	return combined, ScopePerToken, nil
 }
 
 func (rl *RateLimiter) subjectLimiterFor(subject string) *subjectLimiter {
+	return rl.limiterFor(subject, &rl.subjectsMu, &rl.subjects, rl.perTokenMaxConcurrent, rl.perTokenMaxPerWindow)
+}
+
+func (rl *RateLimiter) tenantLimiterFor(tenant string) *subjectLimiter {
+	return rl.limiterFor(tenant, &rl.tenantsMu, &rl.tenants, rl.perTenantMaxConcurrent, rl.perTenantMaxPerWindow)
+}
+
+func (rl *RateLimiter) limiterFor(key string, mu *sync.RWMutex, limiters *map[string]*subjectLimiter, maxConcurrent int, maxPerWindow int64) *subjectLimiter {
 	nowMillis := time.Now().UnixMilli()
 	// Warm path: RLock-protected lookup. Skips the creation branch on
 	// every call after the first per subject, which is >99% of traffic
 	// in steady state. Measured via BenchmarkAcquireForSubjectSteady.
-	rl.subjectsMu.RLock()
-	if existing, ok := rl.subjects[subject]; ok {
-		rl.subjectsMu.RUnlock()
+	mu.RLock()
+	if existing, ok := (*limiters)[key]; ok {
+		mu.RUnlock()
 		existing.lastSeenMillis.Store(nowMillis)
 		return existing
 	}
-	rl.subjectsMu.RUnlock()
+	mu.RUnlock()
 
 	// Cold path: create the entry under a write lock, double-checking
 	// under the lock in case another goroutine raced us between the
 	// RUnlock and Lock.
-	rl.subjectsMu.Lock()
-	defer rl.subjectsMu.Unlock()
-	if rl.subjects == nil {
-		rl.subjects = map[string]*subjectLimiter{}
+	mu.Lock()
+	defer mu.Unlock()
+	if *limiters == nil {
+		*limiters = map[string]*subjectLimiter{}
 	}
-	if existing, ok := rl.subjects[subject]; ok {
+	if existing, ok := (*limiters)[key]; ok {
 		existing.lastSeenMillis.Store(nowMillis)
 		return existing
 	}
 	var sem chan struct{}
-	if rl.perTokenMaxConcurrent > 0 {
-		sem = make(chan struct{}, rl.perTokenMaxConcurrent)
+	if maxConcurrent > 0 {
+		sem = make(chan struct{}, maxConcurrent)
 	}
 	sub := &subjectLimiter{
 		semaphore:    sem,
-		maxPerWindow: rl.perTokenMaxPerWindow,
+		maxPerWindow: maxPerWindow,
 	}
 	sub.windowStart.Store(nowMillis)
 	sub.lastSeenMillis.Store(nowMillis)
-	rl.subjects[subject] = sub
+	(*limiters)[key] = sub
 	return sub
 }
 
@@ -332,17 +400,22 @@ func (rl *RateLimiter) ReapIdleSubjects(now time.Time, maxIdle time.Duration) in
 		return 0
 	}
 	cutoff := now.Add(-maxIdle).UnixMilli()
-	rl.subjectsMu.Lock()
-	defer rl.subjectsMu.Unlock()
+	return reapIdleLimiters(cutoff, &rl.subjectsMu, rl.subjects) +
+		reapIdleLimiters(cutoff, &rl.tenantsMu, rl.tenants)
+}
+
+func reapIdleLimiters(cutoff int64, mu *sync.RWMutex, limiters map[string]*subjectLimiter) int {
+	mu.Lock()
+	defer mu.Unlock()
 	evicted := 0
-	for name, sub := range rl.subjects {
+	for name, sub := range limiters {
 		if sub.lastSeenMillis.Load() > cutoff {
 			continue
 		}
 		if len(sub.semaphore) > 0 {
 			continue
 		}
-		delete(rl.subjects, name)
+		delete(limiters, name)
 		evicted++
 	}
 	return evicted

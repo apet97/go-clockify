@@ -113,6 +113,8 @@ var allProfilesSlice = []Profile{
 			"MCP_HTTP_RATELIMIT_PER_IP":          "600",
 			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
 			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
+			"CLOCKIFY_PER_TENANT_CONCURRENCY":    "10",
+			"CLOCKIFY_PER_TENANT_RATE_LIMIT":     "120",
 			"CLOCKIFY_POLICY":                    "time_tracking_safe",
 			// MCP_TENANT_POLICY_CEILING=time_tracking_safe — hosted
 			// multi-tenant ceiling. Tenant records may NARROW their
@@ -149,6 +151,8 @@ var allProfilesSlice = []Profile{
 			"MCP_HTTP_RATELIMIT_PER_IP":          "600",
 			"MCP_HTTP_RATELIMIT_PER_PRINCIPAL":   "300",
 			"MCP_HTTP_RATELIMIT_GET_PER_SESSION": "4",
+			"CLOCKIFY_PER_TENANT_CONCURRENCY":    "10",
+			"CLOCKIFY_PER_TENANT_RATE_LIMIT":     "120",
 			"CLOCKIFY_POLICY":                    "time_tracking_safe",
 			// Hosted multi-tenant ceiling — see ADR 0021 and the
 			// shared-service profile above. prod-postgres inherits

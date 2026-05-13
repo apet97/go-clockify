@@ -12,6 +12,8 @@ func TestFromEnvDefaults(t *testing.T) {
 	// Clear any env that might be set.
 	os.Unsetenv("CLOCKIFY_MAX_CONCURRENT")
 	os.Unsetenv("CLOCKIFY_RATE_LIMIT")
+	os.Unsetenv("CLOCKIFY_PER_TENANT_CONCURRENCY")
+	os.Unsetenv("CLOCKIFY_PER_TENANT_RATE_LIMIT")
 
 	rl := FromEnv()
 	if rl == nil {
@@ -27,11 +29,16 @@ func TestFromEnvDefaults(t *testing.T) {
 	if rl.acquireTimeout != DefaultAcquireTimeout {
 		t.Errorf("acquireTimeout = %v; want %v", rl.acquireTimeout, DefaultAcquireTimeout)
 	}
+	if rl.perTenantMaxConcurrent != 0 || rl.perTenantMaxPerWindow != 0 {
+		t.Errorf("per-tenant defaults = %d/%d; want disabled", rl.perTenantMaxConcurrent, rl.perTenantMaxPerWindow)
+	}
 }
 
 func TestFromEnvWithAcquireTimeoutRespectsOverride(t *testing.T) {
 	os.Unsetenv("CLOCKIFY_MAX_CONCURRENT")
 	os.Unsetenv("CLOCKIFY_RATE_LIMIT")
+	os.Unsetenv("CLOCKIFY_PER_TENANT_CONCURRENCY")
+	os.Unsetenv("CLOCKIFY_PER_TENANT_RATE_LIMIT")
 
 	rl := FromEnvWithAcquireTimeout(250 * time.Millisecond)
 	if rl == nil {

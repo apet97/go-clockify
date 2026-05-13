@@ -323,6 +323,14 @@ of `120/min` serves three subjects at the default `60/min` per subject,
 the global cap binds first and quiet subjects can see avoidable
 rejections before the noisy subject exhausts its own slice.
 
+Hosted/shared-service profiles also set
+`CLOCKIFY_PER_TENANT_RATE_LIMIT=120` and
+`CLOCKIFY_PER_TENANT_CONCURRENCY=10` by default. These budgets sit
+between the global gate and the per-token gate: a tenant with many
+subjects cannot consume the whole upstream budget, while quiet subjects
+inside other tenants continue to use their own per-token slices. Local
+profiles leave the tenant aggregate disabled unless operators opt in.
+
 `CLOCKIFY_RATE_LIMIT` should always be set with the upstream
 Clockify quota in mind — exceed it and the upstream will start
 returning `429`s, which the local rate limiter cannot prevent. See

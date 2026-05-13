@@ -2,47 +2,25 @@
 
 ## Status
 
-Proposed — captured here because changing rate-limit aggregation
-shifts a policy boundary every hosted operator depends on. The
-current `(tenant, subject)` keying gives an N-subject tenant N×
-the per-pair quota; whether that is "fair-share per active user
-within a tenant" (the operator-intended interpretation) or
-"single tenant gets N× the load" (the operator-concerning
-interpretation) depends on what the operator believes a tenant
-*is*. Strict-rule #2 in `CLAUDE.md` forbids quietly changing
-this — the right path is to record the policy choice in an ADR
-before any code lands. This ADR records the questions a maintainer
-/ operator must resolve before that implementation can ship; it
-does **not** record an accepted decision. When a decision lands,
-this file moves to Accepted, the `(proposed)` suffix drops from
-the ADR index in [`README.md`](README.md), and the implementation
-wave (formerly known as "Wave B.12 — per-tenant aggregate") can
-proceed.
+Accepted — 2026-05-13. Hosted/shared-service profiles add an
+in-process aggregate per-tenant request budget above the existing
+per-(tenant, subject) fairness layer. The default remains disabled
+for local/community profiles and enabled by profile defaults for
+hosted shapes. This keeps per-human fairness inside a tenant while
+preventing one hosted tenant from multiplying upstream Clockify load
+through many active subjects.
 
 ## Context
 
-The current per-call gate runs in
-`internal/enforcement/enforcement.go:127-151`. It calls
-`RateLimiter.AcquireForSubject(ctx, subject)` where `subject` is
-derived by `rateLimitSubjectKey` at
-`internal/enforcement/enforcement.go:313-321`:
-
-```go
-func rateLimitSubjectKey(principal *authn.Principal) string {
-    if principal == nil || principal.Subject == "" {
-        return ""
-    }
-    if principal.TenantID == "" {
-        return principal.Subject
-    }
-    return principal.TenantID + "\x00" + principal.Subject
-}
-```
-
-So the per-token bucket is keyed on the `(tenant_id, subject)`
-tuple when both are available, on the subject alone when the
-tenant header is absent, and is skipped entirely for
-unauthenticated traffic. The same shape is used by
+The per-call gate runs in
+`internal/enforcement/enforcement.go`. It passes tenant and subject
+separately to `RateLimiter.AcquireForTenantSubject(ctx, tenant,
+subject)`. The limiter applies the global process budget first,
+then the tenant aggregate layer when a tenant is known and the
+tenant caps are configured, then the existing per-token layer keyed
+as `(tenant_id, subject)` when both are available or as `subject`
+when tenant is absent. Unauthenticated traffic still skips the
+per-token and per-tenant layers. The same principal shape is used by
 `internal/mcp/transport_streamable_http.go:821-829`
 (`sessionPrincipalKey`) for the per-principal session counter
 shipped in the make-it-goated wave; the comment there is explicit
@@ -50,23 +28,25 @@ that it "Mirrors enforcement.rateLimitSubjectKey to keep the
 shared `(tenant_id, subject)` abstraction consistent across the
 rate limiter and session counter."
 
-The per-pair quota comes from two env vars
-(`internal/config/spec.go:54-55`):
+The per-pair quota comes from two env vars:
 
 - `CLOCKIFY_PER_TOKEN_CONCURRENCY` (default 5) — concurrent
   tool-call slots per `(tenant, subject)`.
 - `CLOCKIFY_PER_TOKEN_RATE_LIMIT` (default 60) — calls per 60s
   window per `(tenant, subject)`.
 
-The implementation lives at
-`internal/ratelimit/ratelimit.go:283-320` (`subjectLimiterFor`),
-which creates lazy per-key buckets in a `map[string]*subjectLimiter`
-and reaps idle entries via `StartSubjectReaper`. `AcquireForSubject`
-at `internal/ratelimit/ratelimit.go:253-281` composes the global
-limit (semaphore + window) with the per-pair limit; rejections at
-either layer fire `metrics.RateLimitRejections.Inc(kind,
-scopeLabel)` with `scopeLabel` set to "global" or "per_token"
-(`internal/enforcement/enforcement.go:140-147`).
+The accepted per-tenant aggregate adds two hosted-hardening env vars:
+
+- `CLOCKIFY_PER_TENANT_CONCURRENCY` — concurrent tool-call slots per
+  tenant.
+- `CLOCKIFY_PER_TENANT_RATE_LIMIT` — calls per 60s window per tenant.
+
+The implementation lives in `internal/ratelimit/ratelimit.go`, which
+creates lazy per-key buckets in `map[string]*subjectLimiter` maps and
+reaps idle subject and tenant entries via `StartSubjectReaper`.
+Rejections fire `metrics.RateLimitRejections.Inc(kind, scopeLabel)`
+with `scopeLabel` set to `"global"`, `"per_tenant"`, or
+`"per_token"`.
 
 **The operator-policy question this ADR records.** Today an
 N-subject tenant gets `N * CLOCKIFY_PER_TOKEN_RATE_LIMIT` calls
@@ -89,8 +69,17 @@ caps and still saturate a replica's outbound Clockify quota.
 
 ## Decision
 
-**Proposed.** The questions below frame the design space; each
-must have an explicit answer before this ADR moves to Accepted.
+**Accepted.** The selected answers are:
+
+- Q1 = B: add a per-tenant aggregate above per-(tenant, subject).
+- Q2 = C: skip the per-tenant layer when authentication lacks a
+  tenant ID; keep existing subject/global fallback semantics.
+- Q3 = A: compose the layers hierarchically, releasing already-held
+  slots on later-layer rejection and labelling tenant rejections as
+  `per_tenant`.
+
+The options below remain as historical design context for future
+operators who revisit the policy boundary.
 
 ### Q1: What is the policy intent for tenant aggregation?
 
@@ -140,9 +129,9 @@ Each option has different fairness / DoS properties:
 
 ### Q2: How is the tenant key derived when authn lacks a tenant_id?
 
-`rateLimitSubjectKey` already handles three cases: no principal,
-no tenant on the principal, both present. Any per-tenant policy
-must declare what "no tenant" means:
+`AcquireForTenantSubject` preserves the three existing cases: no
+principal, no tenant on the principal, both present. Any per-tenant
+policy must declare what "no tenant" means:
 
 **A. Empty tenant collapses to subject-only bucketing (current).**
 A subject whose authentication path doesn't supply a tenant goes
@@ -176,12 +165,11 @@ Today the limiter rejects with `scope` set to `ScopeGlobal` or
 `internal/enforcement/enforcement.go:147`). A per-tenant layer
 adds a third scope. Three composition shapes:
 
-**A. Hierarchical, acquire-in-order.** Acquire the per-tenant
-slot first (cheaper to check; one map lookup), then the
-per-pair slot, then the global. Rejection releases all already-
-acquired slots so partial holds never strand. `scopeLabel`
-takes the value `per_tenant` when the new layer rejects, exactly
-mirroring the existing `per_token` semantics.
+**A. Hierarchical, acquire-in-order.** Preserve the existing global
+admission gate, then acquire the per-tenant slot, then the per-pair
+slot. Rejection releases all already-acquired slots so partial holds
+never strand. `scopeLabel` takes the value `per_tenant` when the new
+layer rejects, exactly mirroring the existing `per_token` semantics.
 
 **B. Independent, parallel acquire.** Try both per-tenant and
 per-pair acquire in parallel goroutines; whichever rejects first
@@ -201,10 +189,8 @@ The error code surfaced to the client must distinguish a
 "per-tenant rejection" from a "per-pair rejection" so a noisy
 subject and a noisy tenant generate different operator dashboards.
 The existing RPCCodeRateLimited error code carries no scope
-information today — the scope only appears in the metric, not the
-wire error. Q3 would either keep this asymmetry (operators
-distinguish via metrics, not wire codes) or introduce a new error
-shape (operators distinguish via JSON-RPC error.data fields).
+information today; this ADR keeps that wire shape stable and uses the
+metric scope label for operator dashboards.
 
 ## Alternatives considered
 
@@ -220,89 +206,55 @@ shape (operators distinguish via JSON-RPC error.data fields).
   per tenant. We cannot delegate the per-tenant policy to upstream.
 - **Combine the per-tenant question with profile-centric
   configuration (ADR 0015) so the policy is profile-tunable.**
-  Defer: profile-tunability would let `local-stdio` keep the
-  current behaviour while `shared-service` adopts a per-tenant
-  aggregate, but that decision is itself a Q1 sub-question. The
-  ADR records the option; the implementation may take it.
+  Accepted in this implementation: profile-tunability lets
+  `local-stdio` keep the current behaviour while `shared-service`
+  adopts a per-tenant aggregate.
 - **Pre-position a candidate env var name family in this ADR.**
   Rejected to keep this proposal aligned with the doc-parity
   gate rule on env-var-shaped tokens
-  (`scripts/check-doc-parity.sh` §env-vars). The implementation
-  commit that flips this ADR to Accepted will introduce the
-  spec.go entry, the help docs, and the Helm / k8s manifest
-  edits in the same commit per the `config-doc-parity` rule.
+  (`scripts/check-doc-parity.sh` §env-vars). The accepted
+  implementation introduces the spec.go entries, generated help, and
+  Helm / k8s manifest edits in the same commit per the
+  `config-doc-parity` rule.
 
 ## Consequences
 
-Once a decision lands:
+With Q1-B / Q2-C / Q3-A accepted:
 
-- If Q1 = A: no code change. Update the
-  `CLOCKIFY_PER_TOKEN_*` Help strings to call out the
-  N-subject amplification explicitly so operators are not
-  surprised. Close this ADR with Status `Rejected — keep
-  per-(tenant, subject) only`.
-- If Q1 = B: `internal/ratelimit/ratelimit.go` grows a second
-  bucket map keyed by `tenant_id` alone; `AcquireForSubject`
-  becomes `AcquireForTenantSubject(ctx, tenant, subject)` or
-  similar (interface widens) and the enforcement call site
-  updates accordingly. A new env-var pair lands in
-  `internal/config/spec.go` and propagates through
-  `gen-config-docs`, Helm, k8s. A new metric label value
-  `per_tenant` joins `metrics.RateLimitRejections`. The
-  `internal/ratelimit/per_token_test.go` matrix gains a
-  per-tenant isolation test.
-- If Q1 = C: `internal/ratelimit/ratelimit.go` `subjectLimiterFor`
-  is rekeyed on `tenant_id` only; `rateLimitSubjectKey` simplifies
-  to return the tenant. The session-cap mirror in
-  `transport_streamable_http.go:821-829` updates to match. The
-  existing test `TestAcquireForSubjectIsolatesSubjects` is
-  rewritten or retired; a new `TestAcquireForTenantIsolatesTenants`
-  pins the new contract.
-
-Regardless of Q1: `scopeLabel` semantics in
-`metrics.RateLimitRejections` are documented in
-`docs/observability.md` (or sibling) so dashboards can be tuned.
-The session-cap rationale doc in CHANGELOG cross-links this ADR
-so future operators reading either trail land on both.
+- `internal/ratelimit/ratelimit.go` maintains a second lazy bucket
+  map keyed by `tenant_id` alone.
+- `AcquireForTenantSubject(ctx, tenant, subject)` preserves the old
+  `(tenant, subject)` per-token key while applying a tenant ceiling
+  above it.
+- `CLOCKIFY_PER_TENANT_CONCURRENCY` and
+  `CLOCKIFY_PER_TENANT_RATE_LIMIT` are disabled by default in local
+  profiles and set by hosted/shared-service profiles.
+- `scopeLabel=per_tenant` joins the existing `global` and
+  `per_token` rejection labels.
+- Tenant entries are reaped by the same idle limiter reaper used for
+  per-token entries, so long-lived hosted replicas do not keep stale
+  tenant buckets forever.
 
 ## Migration
 
-When a decision lands:
-
-1. Pick A / B / C for each Q.
-2. If Q1 = A, close the ADR; no migration.
-3. If Q1 = B or C, update `internal/ratelimit/ratelimit.go` and
-   `internal/enforcement/enforcement.go` (key derivation +
-   `AcquireForSubject` signature if needed). Regenerate config
-   docs and `help_generated.go` in the same commit.
-4. Update `internal/mcp/transport_streamable_http.go:821-829`
-   if the session-cap key shape changes (it currently mirrors
-   `rateLimitSubjectKey`).
-5. Add a per-tenant isolation test under
-   `internal/ratelimit/per_token_test.go`, with a drift check
-   (flip the per-tenant cap to 0 or 1 and assert the matrix goes
-   red on cells that should be bounded) in the commit body's
-   `Verified:` line.
-6. Flip this ADR's Status to `Accepted — <YYYY-MM-DD>` and drop
-   the `(proposed)` suffix from the index in `README.md`.
-7. Update `CHANGELOG.md` under `### Hardening` (or `### Performance`
-   if Q1 = A) to describe the chosen behaviour; cross-link this
-   ADR.
+No data migration is required. Operators who do not configure
+`CLOCKIFY_PER_TENANT_*` retain the prior global + per-token behaviour.
+Hosted profiles receive the tenant aggregate defaults through profile
+configuration and deployment manifests; operators can tune or disable
+the layer explicitly with those env vars.
 
 ## References
 
-- `internal/enforcement/enforcement.go:127-151` — per-call gate
-  that derives the subject key and calls `AcquireForSubject`.
-- `internal/enforcement/enforcement.go:313-321` —
-  `rateLimitSubjectKey(principal)`: returns `""` (no principal),
-  `subject` (no tenant), or `tenant_id + "\x00" + subject`.
-- `internal/ratelimit/ratelimit.go:253-281` —
-  `AcquireForSubject(ctx, subject)` composes global + per-pair.
-- `internal/ratelimit/ratelimit.go:283-320` — `subjectLimiterFor`
-  lazy-creates per-key buckets in `map[string]*subjectLimiter`.
-- `internal/ratelimit/ratelimit.go:112-126` —
+- `internal/enforcement/enforcement.go` — per-call gate that passes
+  tenant and subject to `AcquireForTenantSubject`.
+- `internal/ratelimit/ratelimit.go` — `AcquireForTenantSubject`
+  composes global + tenant aggregate + per-token layers.
+- `internal/ratelimit/ratelimit.go` — `subjectLimiterFor` and
+  `tenantLimiterFor` lazy-create per-key buckets in
+  `map[string]*subjectLimiter`.
+- `internal/ratelimit/ratelimit.go` —
   `FromEnvWithAcquireTimeout` reads `CLOCKIFY_PER_TOKEN_*` and
-  stores per-token limits on the limiter.
+  `CLOCKIFY_PER_TENANT_*`.
 - `internal/ratelimit/per_token_test.go:20` —
   `TestAcquireForSubjectIsolatesSubjects` (per-pair isolation
   contract that Q1-C would retire).
@@ -318,8 +270,8 @@ When a decision lands:
   `sessionPrincipalKey` deliberately mirroring
   `rateLimitSubjectKey` for the session-cap path.
 - `metrics.RateLimitRejections` — labels (`kind`, `scopeLabel`)
-  where `scopeLabel` currently takes `"global"` or `"per_token"`;
-  a per-tenant layer adds `"per_tenant"`.
+  where `scopeLabel` takes `"global"`, `"per_tenant"`, or
+  `"per_token"`.
 - ADR 0014 — Production fail-closed defaults (informs default
   enable / disable for any new layer).
 - ADR 0015 — Profile-centric configuration model (per-profile

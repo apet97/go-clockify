@@ -40,6 +40,8 @@ func setProfileEnv(t *testing.T, profile string, overrides map[string]string) {
 		"MCP_HTTP_RATELIMIT_PER_PRINCIPAL",
 		"MCP_HTTP_RATELIMIT_GET_PER_SESSION",
 		"CLOCKIFY_SANITIZE_UPSTREAM_ERRORS",
+		"CLOCKIFY_PER_TENANT_CONCURRENCY",
+		"CLOCKIFY_PER_TENANT_RATE_LIMIT",
 		// Hosted tenant policy ceiling — defaulted by shared-service and
 		// prod-postgres. See ADR 0021.
 		"MCP_TENANT_POLICY_CEILING",

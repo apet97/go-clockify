@@ -49,6 +49,8 @@ func TestEnvSpec_CoversEveryGetenv(t *testing.T) {
 		"CLOCKIFY_RATE_LIMIT":                     true, // internal/ratelimit
 		"CLOCKIFY_PER_TOKEN_CONCURRENCY":          true, // internal/ratelimit
 		"CLOCKIFY_PER_TOKEN_RATE_LIMIT":           true, // internal/ratelimit
+		"CLOCKIFY_PER_TENANT_CONCURRENCY":         true, // internal/ratelimit
+		"CLOCKIFY_PER_TENANT_RATE_LIMIT":          true, // internal/ratelimit
 		"CLOCKIFY_TOKEN_BUDGET":                   true, // internal/truncate
 		"CLOCKIFY_TRUNCATION_FAIL_CLOSED":         true, // internal/truncate
 		"CLOCKIFY_BOOTSTRAP_MODE":                 true, // internal/tools

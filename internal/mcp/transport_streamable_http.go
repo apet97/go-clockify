@@ -814,8 +814,8 @@ type streamSessionManager struct {
 }
 
 // sessionPrincipalKey builds the bucketing key for the per-principal
-// session counter. Mirrors enforcement.rateLimitSubjectKey to keep the
-// shared (tenant_id, subject) abstraction consistent across the rate
+// session counter. Mirrors the enforcement rate-limit key shape to keep
+// the shared (tenant_id, subject) abstraction consistent across the rate
 // limiter and session counter, but lives here to avoid pulling the
 // enforcement package into the mcp dependency graph.
 func sessionPrincipalKey(p authn.Principal) string {

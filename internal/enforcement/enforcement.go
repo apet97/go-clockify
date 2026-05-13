@@ -132,24 +132,29 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 	}
 
 	// 3. Rate limit -- per tenant+subject when a Principal is on the
-	// context, global-only fallback otherwise. Scope label distinguishes the
-	// two rejection layers so dashboards can tell a noisy tenant from a
-	// global saturation event.
+	// context, global-only fallback otherwise. Scope label distinguishes
+	// global, per-tenant, and per-token rejection layers so dashboards can
+	// tell a noisy tenant from a single noisy subject or global saturation.
 	var release func()
 	if p.RateLimit != nil {
+		tenant := ""
 		subject := ""
 		if principal, ok := authn.PrincipalFromContext(ctx); ok && principal != nil {
-			subject = rateLimitSubjectKey(principal)
+			tenant = principal.TenantID
+			subject = principal.Subject
 		}
-		rel, scope, err := p.RateLimit.AcquireForSubject(ctx, subject)
+		rel, scope, err := p.RateLimit.AcquireForTenantSubject(ctx, tenant, subject)
 		if err != nil {
 			kind := "window"
 			if errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded) {
 				kind = "concurrency"
 			}
 			scopeLabel := "global"
-			if scope == ratelimit.ScopePerToken {
+			switch scope {
+			case ratelimit.ScopePerToken:
 				scopeLabel = "per_token"
+			case ratelimit.ScopePerTenant:
+				scopeLabel = "per_tenant"
 			}
 			metrics.RateLimitRejections.Inc(kind, scopeLabel)
 			return nil, nil, fmt.Errorf("rate limited: %w", err)
@@ -331,16 +336,6 @@ func riskClassNames(rc mcp.RiskClass) []string {
 		}
 	}
 	return out
-}
-
-func rateLimitSubjectKey(principal *authn.Principal) string {
-	if principal == nil || principal.Subject == "" {
-		return ""
-	}
-	if principal.TenantID == "" {
-		return principal.Subject
-	}
-	return principal.TenantID + "\x00" + principal.Subject
 }
 
 // AfterCall applies post-processing (truncation) to a successful result.

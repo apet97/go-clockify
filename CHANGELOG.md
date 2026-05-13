@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hosted profiles, emits breaker state/rejection/transition metrics,
   and lets `/ready` degrade when the core upstream probe is locally
   fast-failed.
+- **Per-tenant upstream request budgets.** ADR 0024 is now accepted
+  and implemented as an aggregate per-tenant layer above the existing
+  per tenant+subject rate limiter. Hosted/shared-service profiles
+  default `CLOCKIFY_PER_TENANT_CONCURRENCY=10` and
+  `CLOCKIFY_PER_TENANT_RATE_LIMIT=120`; local profiles leave the layer
+  disabled unless explicitly configured.
 
 ## [1.2.5] - 2026-05-13
 
