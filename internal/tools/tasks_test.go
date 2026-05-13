@@ -35,7 +35,7 @@ func TestGetTaskByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get task failed: %v", err)
 	}
-	task, ok := result.Data.(clockify.Task)
+	task, ok := result.Data.(TaskView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}

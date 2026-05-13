@@ -109,7 +109,7 @@ func taskRequestInputSchema() map[string]any {
 }
 
 func projectListInputSchema() map[string]any {
-	return paginationSchema(map[string]any{"properties": map[string]any{
+	props := map[string]any{
 		"name":               map[string]any{"type": "string"},
 		"strict_name_search": map[string]any{"type": "boolean"},
 		"archived":           map[string]any{"type": "boolean"},
@@ -129,7 +129,28 @@ func projectListInputSchema() map[string]any {
 		"expense_date":       map[string]any{"type": "string", "description": "yyyy-MM-dd"},
 		"user_groups":        stringArraySchema("User group IDs to include or exclude"),
 		"contains_group":     map[string]any{"type": "boolean"},
-	}})
+	}
+	addFinancialRangeInputProperties(props)
+	return paginationSchema(map[string]any{"properties": props})
+}
+
+func projectGetInputSchema() map[string]any {
+	props := map[string]any{
+		"project":                  map[string]any{"type": "string", "description": "Project name or ID"},
+		"hydrated":                 map[string]any{"type": "boolean", "description": "Defaults to true so rates, memberships, and estimate fields can be returned when Clockify provides them."},
+		"custom_field_entity_type": map[string]any{"type": "string", "description": "Clockify custom-field-entity-type query value, e.g. TIMEENTRY"},
+		"expense_limit":            map[string]any{"type": "integer"},
+		"expense_date":             map[string]any{"type": "string", "description": "yyyy-MM-dd"},
+	}
+	addFinancialRangeInputProperties(props)
+	return map[string]any{"type": "object", "required": []string{"project"}, "properties": props}
+}
+
+func addFinancialRangeInputProperties(props map[string]any) {
+	props["financial_start"] = map[string]any{"type": "string", "description": "Optional Reports API enrichment range start. Defaults to three years before request time when no financial range is supplied."}
+	props["financial_end"] = map[string]any{"type": "string", "description": "Optional Reports API enrichment range end. Defaults to request time when no financial range is supplied."}
+	props["financial_date_range_type"] = map[string]any{"type": "string", "enum": reportDateRangeTypeEnums, "description": "Optional Reports API dateRangeType override for project/task financial enrichment."}
+	props["financial_timezone"] = timezoneInputProperty()
 }
 
 func clientListInputSchema() map[string]any {
@@ -142,15 +163,17 @@ func clientListInputSchema() map[string]any {
 }
 
 func taskListInputSchema() map[string]any {
+	props := map[string]any{
+		"project":            map[string]any{"type": "string", "description": "Project name or ID"},
+		"name":               map[string]any{"type": "string"},
+		"strict_name_search": map[string]any{"type": "boolean"},
+		"is_active":          map[string]any{"type": "boolean"},
+		"sort_column":        map[string]any{"type": "string", "enum": []string{"ID", "NAME"}},
+		"sort_order":         map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
+	}
+	addFinancialRangeInputProperties(props)
 	return paginationSchema(map[string]any{
-		"required": []string{"project"},
-		"properties": map[string]any{
-			"project":            map[string]any{"type": "string", "description": "Project name or ID"},
-			"name":               map[string]any{"type": "string"},
-			"strict_name_search": map[string]any{"type": "boolean"},
-			"is_active":          map[string]any{"type": "boolean"},
-			"sort_column":        map[string]any{"type": "string", "enum": []string{"ID", "NAME"}},
-			"sort_order":         map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
-		},
+		"required":   []string{"project"},
+		"properties": props,
 	})
 }

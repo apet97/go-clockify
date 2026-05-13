@@ -39,7 +39,7 @@ func TestCreateProject(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected OK=true")
 	}
-	project, ok := result.Data.(clockify.Project)
+	project, ok := result.Data.(ProjectView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -82,7 +82,7 @@ func TestCreateProjectWithClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create project with client failed: %v", err)
 	}
-	project, ok := result.Data.(clockify.Project)
+	project, ok := result.Data.(ProjectView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -190,7 +190,7 @@ func TestCreateTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create task failed: %v", err)
 	}
-	task, ok := result.Data.(clockify.Task)
+	task, ok := result.Data.(TaskView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}

@@ -88,9 +88,9 @@ func TestUpdateProjectFetchThenMerge(t *testing.T) {
 		t.Fatalf("clientId must be preserved on merge; got %#v", putBody["clientId"])
 	}
 
-	updated, ok := result.Data.(clockify.Project)
+	updated, ok := result.Data.(ProjectView)
 	if !ok {
-		t.Fatalf("expected Project data, got %T", result.Data)
+		t.Fatalf("expected ProjectView data, got %T", result.Data)
 	}
 	if updated.Name != "Alpha Renamed" {
 		t.Fatalf("returned project name = %q", updated.Name)
@@ -101,6 +101,48 @@ func TestUpdateProjectFetchThenMerge(t *testing.T) {
 	}
 	if len(changed) != 2 {
 		t.Fatalf("expected 2 changed fields (name, billable), got %v", changed)
+	}
+}
+
+func TestGetProjectForcesHydratedQuery(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/projects/" + testProjectID
+		if r.Method != http.MethodGet || r.URL.Path != path {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		q := r.URL.Query()
+		if got := q.Get("hydrated"); got != "true" {
+			t.Fatalf("hydrated = %q, want true", got)
+		}
+		if got := q.Get("custom-field-entity-type"); got != "TIMEENTRY" {
+			t.Fatalf("custom-field-entity-type = %q", got)
+		}
+		if got := q.Get("expense-limit"); got != "5" {
+			t.Fatalf("expense-limit = %q", got)
+		}
+		if got := q.Get("expense-date"); got != "2026-05-13" {
+			t.Fatalf("expense-date = %q", got)
+		}
+		respondJSON(t, w, clockify.Project{ID: testProjectID, Name: "Alpha"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.GetProject(context.Background(), map[string]any{
+		"project":                  testProjectID,
+		"custom_field_entity_type": "TIMEENTRY",
+		"expense_limit":            5,
+		"expense_date":             "2026-05-13",
+	})
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	project, ok := result.Data.(ProjectView)
+	if !ok {
+		t.Fatalf("expected ProjectView, got %T", result.Data)
+	}
+	if project.ID != testProjectID {
+		t.Fatalf("project ID = %s", project.ID)
 	}
 }
 

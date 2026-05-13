@@ -42,6 +42,7 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
+	views, financialMeta := s.enrichTaskViews(ctx, wsID, projectID, out, args)
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"projectId":   projectID,
@@ -49,7 +50,7 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_tasks", out, meta), nil
+	return ok("clockify_list_tasks", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // GetTask fetches a single task by ID or exact name within a project.
@@ -83,7 +84,8 @@ func (s *Service) GetTask(ctx context.Context, args map[string]any) (ResultEnvel
 	if err := s.Client.Get(ctx, taskPath, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_task", out, map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}), nil
+	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, out, args)
+	return ok("clockify_get_task", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}, financialMeta)), nil
 }
 
 func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -125,7 +127,8 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.PostWithQuery(ctx, path, query, payload, &task); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_create_task", task, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, task, args)
+	return ok("clockify_create_task", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
 // UpdateTask performs a fetch-then-merge update of a task.
@@ -228,7 +231,8 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.PutWithQuery(ctx, taskPath, query, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_update_task", updated, meta), nil
+	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, updated, args)
+	return ok("clockify_update_task", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // taskPutPayload builds the full-replacement body for PUT /projects/{pid}/tasks/{tid}.

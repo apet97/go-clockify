@@ -1149,9 +1149,9 @@ func TestListProjects(t *testing.T) {
 	if result.Action != "clockify_list_projects" {
 		t.Fatalf("expected action clockify_list_projects, got %s", result.Action)
 	}
-	projects, ok := result.Data.([]clockify.Project)
+	projects, ok := result.Data.([]ProjectView)
 	if !ok {
-		t.Fatalf("expected []clockify.Project, got %T", result.Data)
+		t.Fatalf("expected []ProjectView, got %T", result.Data)
 	}
 	if len(projects) != 2 {
 		t.Fatalf("expected 2 projects, got %d", len(projects))
@@ -2006,7 +2006,7 @@ func TestListTasks(t *testing.T) {
 	if result.Action != "clockify_list_tasks" {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
-	tasks, ok := result.Data.([]clockify.Task)
+	tasks, ok := result.Data.([]TaskView)
 	if !ok || len(tasks) != 1 || tasks[0].ID != "tk1" {
 		t.Fatalf("unexpected tasks: %+v", result.Data)
 	}

@@ -37,6 +37,7 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 	addStringQuery(query, args, "sort_column", "sort-column")
 	addStringQuery(query, args, "sort_order", "sort-order")
 	addBoolQuery(query, args, "hydrated", "hydrated")
+	query["hydrated"] = "true"
 	addStringQuery(query, args, "access", "access")
 	addIntQuery(query, args, "expense_limit", "expense-limit")
 	addStringQuery(query, args, "expense_date", "expense-date")
@@ -55,16 +56,18 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
+	views, financialMeta := s.enrichProjectViews(ctx, wsID, projects, args)
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(projects),
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_projects", projects, meta), nil
+	return ok("clockify_list_projects", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
-func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnvelope, error) {
+func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	projectRef := stringArg(args, "project")
 	if projectRef == "" {
 		return ResultEnvelope{}, fmt.Errorf("project is required")
 	}
@@ -81,10 +84,15 @@ func (s *Service) GetProject(ctx context.Context, projectRef string) (ResultEnve
 		return ResultEnvelope{}, err
 	}
 	var out clockify.Project
-	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
+	query := map[string]string{"hydrated": "true"}
+	addStringQuery(query, args, "custom_field_entity_type", "custom-field-entity-type")
+	addIntQuery(query, args, "expense_limit", "expense-limit")
+	addStringQuery(query, args, "expense_date", "expense-date")
+	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_project", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+	view, financialMeta := s.enrichProjectView(ctx, wsID, out, args)
+	return ok("clockify_get_project", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
 func (s *Service) CreateProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -126,7 +134,8 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 
 	s.emitResourceUpdate(ctx, projectResourceURI(wsID, project.ID))
 	meta := map[string]any{"workspaceId": wsID}
-	return ok("clockify_create_project", project, meta), nil
+	view, financialMeta := s.enrichProjectView(ctx, wsID, project, args)
+	return ok("clockify_create_project", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // UpdateProject performs a fetch-then-merge update of a project.
@@ -221,7 +230,8 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	s.emitResourceUpdate(ctx, projectResourceURI(wsID, projectID))
-	return ok("clockify_update_project", updated, meta), nil
+	view, financialMeta := s.enrichProjectView(ctx, wsID, updated, args)
+	return ok("clockify_update_project", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // projectPutPayload builds the full-replacement body for
