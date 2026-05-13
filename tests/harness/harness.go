@@ -54,6 +54,11 @@ type Options struct {
 	// tests leave this nil; parity tests that exercise protocol-level
 	// validation can opt in without rebuilding each transport fixture.
 	Enforcement mcp.Enforcement
+
+	// SanitizeUpstreamErrors mirrors mcp.Server.SanitizeUpstreamErrors so
+	// parity tests can assert the hosted error-redaction contract across
+	// stdio, legacy HTTP, streamable HTTP, and gRPC.
+	SanitizeUpstreamErrors bool
 }
 
 // ServerSharer is an optional interface implemented by transports whose
@@ -120,6 +125,7 @@ func buildMockServer(opts Options) *mcp.Server {
 		}}
 	}
 	srv := mcp.NewServer("harness-test", tools, opts.Enforcement, nil)
+	srv.SanitizeUpstreamErrors = opts.SanitizeUpstreamErrors
 	if opts.MaxMessageSize > 0 {
 		srv.MaxMessageSize = opts.MaxMessageSize
 	}
