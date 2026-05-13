@@ -402,6 +402,85 @@ func TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA(t *testing.T) {
 	}
 }
 
+func TestValidateWebhookURLRejectsPrivateIPv6Literals(t *testing.T) {
+	cases := []string{
+		"https://[::1]/hook",
+		"https://[fc00::1]/hook",
+		"https://[fd12:3456:789a::1]/hook",
+		"https://[fe80::1]/hook",
+		"https://[::ffff:10.0.0.1]/hook",
+	}
+	for _, raw := range cases {
+		t.Run(raw, func(t *testing.T) {
+			if err := validateWebhookURL(raw); err == nil {
+				t.Fatalf("expected private/reserved IPv6 literal to be rejected: %s", raw)
+			}
+		})
+	}
+}
+
+func TestValidateWebhookURL_DNS_PunycodeAndCNAMEToPrivate(t *testing.T) {
+	cases := []struct {
+		name string
+		host string
+		ip   string
+	}{
+		{"punycode_private", "xn--bcher-kva.example", "10.0.0.8"},
+		{"cname_final_private", "cname-to-private.example.com", "192.168.10.25"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var resolvedHost string
+			svc := &Service{
+				WebhookValidateDNS: true,
+				WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+					resolvedHost = host
+					addr, err := netip.ParseAddr(c.ip)
+					if err != nil {
+						t.Fatalf("bad test ip %s: %v", c.ip, err)
+					}
+					return []netip.Addr{addr}, nil
+				},
+			}
+			err := svc.validateWebhookURLForService(context.Background(), "https://"+c.host+"/hook")
+			if err == nil {
+				t.Fatalf("%s resolving to %s should be rejected", c.host, c.ip)
+			}
+			if resolvedHost != c.host {
+				t.Fatalf("resolver host = %q, want %q", resolvedHost, c.host)
+			}
+		})
+	}
+}
+
+func TestValidateWebhookURL_DNS_ReResolvesEveryValidation(t *testing.T) {
+	answers := []string{"8.8.8.8", "10.0.0.9"}
+	calls := 0
+	svc := &Service{
+		WebhookValidateDNS: true,
+		WebhookHostResolver: func(ctx context.Context, host string) ([]netip.Addr, error) {
+			if calls >= len(answers) {
+				t.Fatalf("unexpected resolver call %d", calls+1)
+			}
+			addr, err := netip.ParseAddr(answers[calls])
+			if err != nil {
+				t.Fatalf("bad test ip %s: %v", answers[calls], err)
+			}
+			calls++
+			return []netip.Addr{addr}, nil
+		},
+	}
+	if err := svc.validateWebhookURLForService(context.Background(), "https://rebinding.example.com/hook"); err != nil {
+		t.Fatalf("first public answer should be allowed: %v", err)
+	}
+	if err := svc.validateWebhookURLForService(context.Background(), "https://rebinding.example.com/hook"); err == nil {
+		t.Fatal("second private answer should be rejected after re-resolution")
+	}
+	if calls != 2 {
+		t.Fatalf("resolver calls = %d, want 2", calls)
+	}
+}
+
 // TestValidateWebhookURL_DNS_NoFlagSkipsResolution confirms that
 // when WebhookValidateDNS is false (local/dev profile default), the
 // resolver is never consulted — preserving the prior behaviour for
