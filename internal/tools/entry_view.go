@@ -29,6 +29,8 @@ type EntryView struct {
 	TaskID            string                 `json:"taskId,omitempty"`
 	TagIDs            []string               `json:"tagIds,omitempty"`
 	Billable          bool                   `json:"billable,omitempty"`
+	BillableState     string                 `json:"billable_state"`
+	BillablePresent   bool                   `json:"billable_present"`
 	CostRate          *clockify.Rate         `json:"costRate,omitempty"`
 	CustomFieldValues any                    `json:"customFieldValues,omitempty"`
 	CustomFields      []CustomFieldValueView `json:"custom_fields_normalized,omitempty"`
@@ -56,6 +58,7 @@ type EntryFinancials struct {
 }
 
 func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
+	billablePresent := entry.BillablePresent || entry.Billable
 	return EntryView{
 		ID:                entry.ID,
 		Description:       entry.Description,
@@ -64,6 +67,8 @@ func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
 		TaskID:            entry.TaskID,
 		TagIDs:            entry.TagIDs,
 		Billable:          entry.Billable,
+		BillableState:     billableStateFromPresence(entry.Billable, billablePresent),
+		BillablePresent:   billablePresent,
 		CostRate:          entry.CostRate,
 		CustomFieldValues: entry.CustomFieldValues,
 		CustomFields:      customFieldValuesFromRaw(entry.CustomFieldValues),
@@ -162,6 +167,11 @@ func applyReportEntryEnrichment(view *EntryView, enrichment reportEntryEnrichmen
 	}
 	if reportView.Billable != nil {
 		view.Billable = *reportView.Billable
+		view.BillablePresent = true
+		view.BillableState = billableStateFromPresence(*reportView.Billable, true)
+	} else if reportView.BillablePresent {
+		view.BillablePresent = true
+		view.BillableState = reportView.BillableState
 	}
 	if reportView.Locked != nil {
 		view.IsLocked = *reportView.Locked
@@ -422,9 +432,9 @@ func reportMoneyFromRow(row map[string]any) reportEntryMoney {
 		mv := MoneyFromReportNumber(value, firstNonEmptyString(reportCurrency(item), rowCurrency))
 		assignReportMoney(&money, kind, mv)
 	}
-	assignDirectReportMoney(&money, row, rowCurrency, "EARNED", "earned", "billableAmount", "billable", "amount", "totalAmount")
-	assignDirectReportMoney(&money, row, rowCurrency, "COST", "cost", "costAmount")
-	assignDirectReportMoney(&money, row, rowCurrency, "PROFIT", "profit", "profitAmount")
+	assignDirectReportMoney(&money, row, rowCurrency, "EARNED", "earned", "earnedAmount", "earned_amount", "billableAmount", "billable_amount", "billable", "amount", "totalAmount", "total_amount")
+	assignDirectReportMoney(&money, row, rowCurrency, "COST", "cost", "costAmount", "cost_amount")
+	assignDirectReportMoney(&money, row, rowCurrency, "PROFIT", "profit", "profitAmount", "profit_amount")
 	return money
 }
 

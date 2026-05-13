@@ -699,13 +699,16 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 			}
 		}
 
+		body := trimBody(string(bodyBytes))
+		translation := TranslateAPIError(resp.StatusCode, body)
 		return &APIError{
-			Method:     method,
-			Path:       path,
-			StatusCode: resp.StatusCode,
-			Status:     resp.Status,
-			Body:       trimBody(string(bodyBytes)),
-			RetryAfter: retryAfter,
+			Method:      method,
+			Path:        path,
+			StatusCode:  resp.StatusCode,
+			Status:      resp.Status,
+			Body:        body,
+			RetryAfter:  retryAfter,
+			Translation: &translation,
 		}
 	}
 

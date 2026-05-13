@@ -1,6 +1,9 @@
 package clockify
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Workspace struct {
 	ID                      string              `json:"id"`
@@ -108,6 +111,7 @@ type TimeEntry struct {
 	TaskID            string       `json:"taskId,omitempty"`
 	TagIDs            []string     `json:"tagIds,omitempty"`
 	Billable          bool         `json:"billable,omitempty"`
+	BillablePresent   bool         `json:"-"`
 	CostRate          *Rate        `json:"costRate,omitempty"`
 	CustomFieldValues any          `json:"customFieldValues,omitempty"`
 	HourlyRate        *Rate        `json:"hourlyRate,omitempty"`
@@ -117,6 +121,24 @@ type TimeEntry struct {
 	UserID            string       `json:"userId,omitempty"`
 	WorkspaceID       string       `json:"workspaceId,omitempty"`
 	TimeInterval      TimeInterval `json:"timeInterval"`
+}
+
+func (e *TimeEntry) UnmarshalJSON(data []byte) error {
+	type alias TimeEntry
+	aux := struct {
+		Billable *bool `json:"billable"`
+		*alias
+	}{
+		alias: (*alias)(e),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	e.BillablePresent = aux.Billable != nil
+	if aux.Billable != nil {
+		e.Billable = *aux.Billable
+	}
+	return nil
 }
 
 func (e TimeEntry) StartTime() (time.Time, error) {

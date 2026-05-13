@@ -379,8 +379,8 @@ func TestBuildServer_ActivateToolByTier2Name(t *testing.T) {
 	if result.Kind != "tool" || result.Name != "clockify_send_invoice" || result.Group != "invoices" {
 		t.Fatalf("unexpected activation result: %+v", result)
 	}
-	if result.ToolCount != 15 {
-		t.Fatalf("expected invoices tool count 15, got %d", result.ToolCount)
+	if result.ToolCount != 16 {
+		t.Fatalf("expected invoices tool count 16, got %d", result.ToolCount)
 	}
 	found := false
 	for _, name := range result.ActivatedTools {
@@ -442,8 +442,8 @@ func TestBuildServer_DeactivateGroupRemovesTier2Tools(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deactivate invoices: %v", err)
 	}
-	if result.ToolCount != 15 {
-		t.Fatalf("ToolCount=%d, want 15", result.ToolCount)
+	if result.ToolCount != 16 {
+		t.Fatalf("ToolCount=%d, want 16", result.ToolCount)
 	}
 	if server.VisibleToolNames()["clockify_list_invoices"] {
 		t.Fatal("expected invoice tool hidden after deactivation")

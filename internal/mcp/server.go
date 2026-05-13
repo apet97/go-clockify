@@ -174,6 +174,11 @@ type sanitizable interface {
 	Sanitized() string
 }
 
+type errorTranslator interface {
+	error
+	ErrorTranslation() any
+}
+
 // sanitizeClientError walks the error chain looking for any wrapped
 // error that exposes a Sanitized() form, returning that form as the
 // MCP client-facing message. Errors with no sanitised form fall back
@@ -985,13 +990,18 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			if s.SanitizeUpstreamErrors {
 				text = sanitizeClientError(err)
 			}
-			resp.Result = map[string]any{
+			result := map[string]any{
 				"content": []map[string]any{{
 					"type": "text",
 					"text": text,
 				}},
 				"isError": true,
 			}
+			var translator errorTranslator
+			if errors.As(err, &translator) {
+				result["structuredContent"] = map[string]any{"error_translation": translator.ErrorTranslation()}
+			}
+			resp.Result = result
 		} else {
 			resp.Result = toolResultEnvelope(result)
 		}

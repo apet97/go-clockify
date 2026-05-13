@@ -58,11 +58,12 @@ type TimeEntryRef struct {
 }
 
 type TimesheetFillGapData struct {
-	DryRun    bool           `json:"dryRun"`
-	Proposed  TimeEntryDraft `json:"proposed"`
-	Entry     EntryView      `json:"entry,omitempty"`
-	Overlaps  []TimeEntryRef `json:"overlaps,omitempty"`
-	Validated bool           `json:"validated"`
+	DryRun     bool            `json:"dryRun"`
+	Proposed   TimeEntryDraft  `json:"proposed"`
+	Entry      EntryView       `json:"entry,omitempty"`
+	Overlaps   []TimeEntryRef  `json:"overlaps,omitempty"`
+	Validated  bool            `json:"validated"`
+	Validation *ValidationView `json:"validation,omitempty"`
 }
 
 func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -103,9 +104,10 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 	limits := s.reportLimitsForArgs(args)
 	effectiveMax := limits.AppliedMaxEntries
 	agg, wsID, userID, err := s.aggregateEntriesRange(ctx, start, end, loc, aggregateOptions{
-		PageSize:       reportPageSize,
-		IncludeEntries: true,
-		MaxEntries:     effectiveMax,
+		PageSize:            reportPageSize,
+		IncludeEntries:      true,
+		MaxEntries:          effectiveMax,
+		ResolveProjectNames: true,
 	})
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -180,9 +182,6 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if len(overlaps) > 0 && !boolArg(args, "allow_overlap") {
-		return ResultEnvelope{}, fmt.Errorf("requested gap overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
-	}
 
 	var billablePtr *bool
 	if billable, ok := args["billable"].(bool); ok {
@@ -197,12 +196,32 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 		Billable:    billablePtr,
 	}
 	if dryrun.Enabled(args) {
+		if len(overlaps) > 0 && !boolArg(args, "allow_overlap") {
+			validation := validationFailed("overlap_check", ValidationProblem{
+				Code:        "overlap",
+				Field:       "start,end",
+				Message:     fmt.Sprintf("requested gap overlaps %d existing entr%s", len(overlaps), pluralY(len(overlaps))),
+				Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
+			})
+			return ok("clockify_timesheet_fill_gap", TimesheetFillGapData{
+				DryRun:     true,
+				Proposed:   draft,
+				Overlaps:   overlaps,
+				Validated:  true,
+				Validation: &validation,
+			}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+		}
+		validation := validationOK("overlap_check")
 		return ok("clockify_timesheet_fill_gap", TimesheetFillGapData{
-			DryRun:    true,
-			Proposed:  draft,
-			Overlaps:  overlaps,
-			Validated: true,
+			DryRun:     true,
+			Proposed:   draft,
+			Overlaps:   overlaps,
+			Validated:  true,
+			Validation: &validation,
 		}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
+	}
+	if len(overlaps) > 0 && !boolArg(args, "allow_overlap") {
+		return ResultEnvelope{}, fmt.Errorf("requested gap overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 	}
 
 	payload := map[string]any{

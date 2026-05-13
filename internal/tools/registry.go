@@ -30,6 +30,9 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_whoami", "Get current user and resolved workspace", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.WhoAmI(ctx) }},
 		{Tool: toolRO("clockify_list_workspaces", "List available Clockify workspaces", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.ListWorkspaces(ctx) }},
 		{Tool: toolRO("clockify_get_workspace", "Get the resolved workspace", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) { return s.GetWorkspace(ctx) }},
+		{Tool: toolRO("clockify_workspace_governance", "Explain Clockify workspace governance settings: locks, approvals, rounding, required fields, creation permissions, features, subscription, and working days", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			return s.WorkspaceGovernance(ctx)
+		}},
 		{Tool: toolRO("clockify_list_users", "List users in the resolved workspace", paginationSchema(nil)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListUsers(ctx, args)
 		}},
@@ -97,6 +100,15 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 			"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Optional per-request cap override (bounded by server CLOCKIFY_REPORT_MAX_ENTRIES). 0 = unlimited (server cap still applies)."},
 		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.QuickReport(ctx, args)
+		}},
+		{Tool: toolRO("clockify_monthly_brief", "Read-only month brief with money totals and entry audit health.", monthlyBriefInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.MonthlyBrief(ctx, args)
+		}},
+		{Tool: toolRO("clockify_money_report", "Read-only money report using Clockify Reports API earned, cost, and profit totals.", moneyReportInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.MoneyReport(ctx, args)
+		}},
+		{Tool: toolRO("clockify_audit_entries", "Read-only detailed report audit for missing fields, locked entries, billable state, approval, and invoicing health.", auditEntriesInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.AuditEntries(ctx, args)
 		}},
 		{Tool: toolRO("clockify_timesheet_review", "Review a day, week, or date range and return timesheet issues plus ready next-tool suggestions for an AI agent.", map[string]any{"type": "object", "properties": map[string]any{
 			"date":            map[string]any{"type": "string", "description": "YYYY-MM-DD date to review; defaults to today in timezone."},
@@ -336,7 +348,7 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_resolve_debug", "Deprecated compatibility alias for clockify_resolve_name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ResolveDebug(ctx, args)
 		}},
-		{Tool: toolRO("clockify_policy_info", "Display effective policy configuration", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+		{Tool: toolRO("clockify_policy_info", "Display the MCP server policy configuration; this is not Clockify workspace policy/governance. Use clockify_workspace_governance for Clockify workspace settings.", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 			return s.PolicyInfo(ctx)
 		}},
 		{Tool: toolRO("clockify_list_tools", "Search/list the tool catalog by query string. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.", map[string]any{"type": "object", "properties": map[string]any{

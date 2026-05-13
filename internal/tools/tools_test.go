@@ -1342,15 +1342,22 @@ func TestHandlerAPIError(t *testing.T) {
 	}
 }
 
-// TestAddEntryDryRun verifies that dry_run:true returns a preview envelope
-// without issuing a POST to the Clockify API.
+// TestAddEntryDryRun verifies that dry_run:true returns a validated preview
+// envelope without issuing a POST to the Clockify API.
 func TestAddEntryDryRun(t *testing.T) {
 	var postCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			postCalled = true
 		}
-		t.Fatalf("unexpected %s %s — dry run should not call the API", r.Method, r.URL.Path)
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
 	})
 	defer cleanup()
 
@@ -1376,6 +1383,10 @@ func TestAddEntryDryRun(t *testing.T) {
 	}
 	if dataMap["dry_run"] != true {
 		t.Fatalf("expected dry_run=true marker, got %+v", dataMap)
+	}
+	validation := dataMap["validation"].(ValidationView)
+	if validation.Status != validationStatusOK {
+		t.Fatalf("expected validation ok, got %#v", validation)
 	}
 	if dataMap["note"] == nil {
 		t.Fatal("expected note in dry run preview")
@@ -1461,7 +1472,14 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 
 func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		t.Fatalf("dry-run should not call upstream: %s %s", r.Method, r.URL.Path)
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("dry-run should not call upstream mutation or unknown read: %s %s", r.Method, r.URL.Path)
+		}
 	})
 	defer cleanup()
 

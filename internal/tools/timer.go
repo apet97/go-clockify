@@ -48,7 +48,26 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 		meta["projectId"] = projectID
 	}
 	if dryrun.Enabled(args) {
-		preview := dryrunPreviewPayload("clockify_start_timer", payload)
+		running, _, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if userID != "" {
+			meta["userId"] = userID
+		}
+		validation := validationOK("timer_state_check")
+		preview := dryrunPreviewPayloadValidated("clockify_start_timer", payload, validation)
+		if len(running) > 0 && running[0].IsRunning() {
+			validation = validationFailed("timer_state_check", ValidationProblem{
+				Code:        "running_timer_exists",
+				Message:     "a timer is already running",
+				Remediation: "Stop the current timer before starting another timer.",
+			})
+			preview = dryrunPreviewPayloadValidated("clockify_start_timer", payload, validation)
+			view, financialMeta := s.enrichEntryView(ctx, wsID, running[0])
+			preview["running_entry"] = view
+			meta = withFinancialMeta(meta, financialMeta)
+		}
 		preview["args"] = maps.Clone(args)
 		return ok("clockify_start_timer", preview, meta), nil
 	}
@@ -67,7 +86,27 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 
 func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, error) {
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{OK: true, Action: "clockify_stop_timer", Data: dryrun.Preview("clockify_stop_timer", args)}, nil
+		entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+		if err != nil {
+			return nil, err
+		}
+		meta := map[string]any{"workspaceId": wsID, "userId": userID}
+		payload := map[string]any{"end": time.Now().UTC().Format(time.RFC3339)}
+		if len(entries) == 0 || !entries[0].IsRunning() {
+			preview := dryrunPreviewPayloadValidated("clockify_stop_timer", payload, validationFailed("timer_state_check", ValidationProblem{
+				Code:        "no_running_timer",
+				Message:     "there is no running timer to stop",
+				Remediation: "Use clockify_timer_status to confirm timer state before retrying.",
+			}))
+			preview["args"] = maps.Clone(args)
+			return ok("clockify_stop_timer", preview, meta), nil
+		}
+		view, financialMeta := s.enrichEntryView(ctx, wsID, entries[0])
+		meta = withFinancialMeta(meta, financialMeta)
+		preview := dryrunPreviewPayloadValidated("clockify_stop_timer", payload, validationOK("timer_state_check"))
+		preview["args"] = maps.Clone(args)
+		preview["running_entry"] = view
+		return ok("clockify_stop_timer", preview, meta), nil
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

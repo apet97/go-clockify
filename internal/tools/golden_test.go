@@ -28,6 +28,7 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_activate_tool",
 		"clockify_add_entry",
 		"clockify_attendance_report",
+		"clockify_audit_entries",
 		"clockify_client_report",
 		"clockify_create_client",
 		"clockify_create_project",
@@ -58,6 +59,8 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_list_users",
 		"clockify_list_workspaces",
 		"clockify_log_time",
+		"clockify_money_report",
+		"clockify_monthly_brief",
 		"clockify_policy_info",
 		"clockify_quick_report",
 		"clockify_resolve_debug",
@@ -78,6 +81,7 @@ func TestGoldenTier1ToolList(t *testing.T) {
 		"clockify_update_task",
 		"clockify_weekly_summary",
 		"clockify_whoami",
+		"clockify_workspace_governance",
 	}
 
 	if len(names) != len(expected) {
@@ -223,15 +227,15 @@ func TestTier2TotalToolCount(t *testing.T) {
 		total += len(handlers)
 		t.Logf("group %s: %d tools", name, len(handlers))
 	}
-	if total != 116 {
-		t.Fatalf("expected 116 Tier 2 tools, got %d", total)
+	if total != 117 {
+		t.Fatalf("expected 117 Tier 2 tools, got %d", total)
 	}
 }
 
 func TestTier2PerGroupToolCounts(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	expectedCounts := map[string]int{
-		"invoices":        15,
+		"invoices":        16,
 		"approvals":       9,
 		"change_tracking": 1,
 		"expenses":        10,
@@ -510,13 +514,13 @@ func TestTier2GroupsHaveMetadata(t *testing.T) {
 func TestTier1CatalogGoldenCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	reg := svc.Registry()
-	if len(reg) != 54 {
-		t.Fatalf("expected 54 Tier 1 tools, got %d", len(reg))
+	if len(reg) != 58 {
+		t.Fatalf("expected 58 Tier 1 tools, got %d", len(reg))
 	}
 }
 
 // ---------------------------------------------------------------------------
-// 10. Total tool count (Tier 1 + Tier 2 = 170)
+// 10. Total tool count (Tier 1 + Tier 2 = 175)
 // ---------------------------------------------------------------------------
 
 func TestTotalToolCount(t *testing.T) {
@@ -527,7 +531,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 170 {
-		t.Fatalf("expected 170 total tools (54 Tier1 + 116 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 175 {
+		t.Fatalf("expected 175 total tools (58 Tier1 + 117 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }

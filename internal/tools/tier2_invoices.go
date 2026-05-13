@@ -29,6 +29,7 @@ func init() {
 			"clockify_get_invoice_settings",
 			"clockify_list_invoice_payments",
 			"clockify_list_invoice_items",
+			"clockify_unbilled_for_client",
 			"clockify_add_invoice_item",
 			"clockify_update_invoice_item",
 			"clockify_delete_invoice_item",
@@ -174,6 +175,11 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 			},
 		}), envelopeSchemaFor[[]InvoiceItemView]("clockify_list_invoice_items")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listInvoiceItems(ctx, args)
+		}},
+
+		// 11b. Unbilled for client
+		{Tool: withOutputSchema(toolRO("clockify_unbilled_for_client", "List uninvoiced detailed-report entries and money totals for one client", unbilledForClientInputSchema()), envelopeSchemaFor[UnbilledForClientView]("clockify_unbilled_for_client")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.UnbilledForClient(ctx, args)
 		}},
 
 		// 12. Add invoice item

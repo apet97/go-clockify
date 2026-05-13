@@ -50,12 +50,12 @@ func buildTier1OutputSchemas() map[string]map[string]any {
 		"clockify_get_entry":                     envelopeSchemaFor[EntryView]("clockify_get_entry"),
 		"clockify_today_entries":                 envelopeSchemaFor[[]EntryView]("clockify_today_entries"),
 		"clockify_list_in_progress_time_entries": envelopeSchemaFor[[]EntryView]("clockify_list_in_progress_time_entries"),
-		"clockify_summary_report":                envelopeOpaque("clockify_summary_report"),
-		"clockify_weekly_summary":                envelopeOpaque("clockify_weekly_summary"),
+		"clockify_summary_report":                reportOutputSchema("clockify_summary_report", summaryReportNormalizedProperties()),
+		"clockify_weekly_summary":                reportOutputSchema("clockify_weekly_summary", weeklyReportNormalizedProperties()),
 		"clockify_quick_report":                  envelopeSchemaFor[QuickReportData]("clockify_quick_report"),
 		"clockify_timesheet_review":              envelopeSchemaFor[TimesheetReviewData]("clockify_timesheet_review"),
 		"clockify_attendance_report":             envelopeOpaque("clockify_attendance_report"),
-		"clockify_detailed_report":               envelopeOpaque("clockify_detailed_report"),
+		"clockify_detailed_report":               reportOutputSchema("clockify_detailed_report", detailedReportNormalizedProperties()),
 		"clockify_log_time":                      envelopeSchemaFor[LogTimeData]("clockify_log_time"),
 		"clockify_timesheet_fill_gap":            envelopeSchemaFor[TimesheetFillGapData]("clockify_timesheet_fill_gap"),
 		"clockify_add_entry":                     envelopeSchemaFor[EntryView]("clockify_add_entry"),
@@ -70,22 +70,26 @@ func buildTier1OutputSchemas() map[string]map[string]any {
 		"clockify_start_timer":                   envelopeSchemaFor[EntryView]("clockify_start_timer"),
 
 		// --- open-shape tools (helper-driven, dynamic data) ---
-		"clockify_stop_timer":       envelopeSchemaFor[EntryView]("clockify_stop_timer"),
-		"clockify_timer_status":     envelopeSchemaFor[TimerStatusData]("clockify_timer_status"),
-		"clockify_switch_project":   envelopeOpaque("clockify_switch_project"),
-		"clockify_delete_entry":     envelopeOpaque("clockify_delete_entry"),
-		"clockify_delete_project":   envelopeOpaque("clockify_delete_project"),
-		"clockify_delete_client":    envelopeOpaque("clockify_delete_client"),
-		"clockify_delete_tag":       envelopeOpaque("clockify_delete_tag"),
-		"clockify_delete_task":      envelopeOpaque("clockify_delete_task"),
-		"clockify_resolve_name":     envelopeOpaque("clockify_resolve_name"),
-		"clockify_resolve_debug":    envelopeOpaque("clockify_resolve_debug"),
-		"clockify_policy_info":      envelopeOpaque("clockify_policy_info"),
-		"clockify_list_tools":       envelopeOpaque("clockify_list_tools"),
-		"clockify_activate_group":   envelopeOpaque("clockify_activate_group"),
-		"clockify_activate_tool":    envelopeOpaque("clockify_activate_tool"),
-		"clockify_deactivate_group": envelopeOpaque("clockify_deactivate_group"),
-		"clockify_search_tools":     envelopeOpaque("clockify_search_tools"),
+		"clockify_stop_timer":           envelopeSchemaFor[EntryView]("clockify_stop_timer"),
+		"clockify_timer_status":         envelopeSchemaFor[TimerStatusData]("clockify_timer_status"),
+		"clockify_switch_project":       envelopeOpaque("clockify_switch_project"),
+		"clockify_delete_entry":         envelopeOpaque("clockify_delete_entry"),
+		"clockify_delete_project":       envelopeOpaque("clockify_delete_project"),
+		"clockify_delete_client":        envelopeOpaque("clockify_delete_client"),
+		"clockify_delete_tag":           envelopeOpaque("clockify_delete_tag"),
+		"clockify_delete_task":          envelopeOpaque("clockify_delete_task"),
+		"clockify_resolve_name":         envelopeOpaque("clockify_resolve_name"),
+		"clockify_resolve_debug":        envelopeOpaque("clockify_resolve_debug"),
+		"clockify_workspace_governance": envelopeSchemaFor[WorkspaceGovernanceView]("clockify_workspace_governance"),
+		"clockify_monthly_brief":        monthlyBriefOutputSchema(),
+		"clockify_money_report":         moneyReportOutputSchema("clockify_money_report"),
+		"clockify_audit_entries":        envelopeSchemaFor[AuditEntriesView]("clockify_audit_entries"),
+		"clockify_policy_info":          envelopeOpaque("clockify_policy_info"),
+		"clockify_list_tools":           envelopeOpaque("clockify_list_tools"),
+		"clockify_activate_group":       envelopeOpaque("clockify_activate_group"),
+		"clockify_activate_tool":        envelopeOpaque("clockify_activate_tool"),
+		"clockify_deactivate_group":     envelopeOpaque("clockify_deactivate_group"),
+		"clockify_search_tools":         envelopeOpaque("clockify_search_tools"),
 	}
 }
 
@@ -115,4 +119,93 @@ func applyOpaqueOutputSchemas(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		}
 	}
 	return in
+}
+
+func reportOutputSchema(action string, dataProps map[string]any) map[string]any {
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []string{"ok", "action", "data"},
+		"properties": map[string]any{
+			"ok":     map[string]any{"type": "boolean"},
+			"action": map[string]any{"type": "string", "const": action},
+			"data": map[string]any{
+				"type":                 "object",
+				"additionalProperties": true,
+				"properties":           dataProps,
+			},
+			"meta": map[string]any{
+				"type":                 "object",
+				"additionalProperties": true,
+			},
+		},
+	}
+}
+
+func detailedReportNormalizedProperties() map[string]any {
+	return map[string]any{
+		"raw":              map[string]any{"type": "object", "additionalProperties": true},
+		"entries":          schemaFor[[]ReportEntryView](),
+		"entry_summary":    schemaFor[ReportEntrySummary](),
+		"approval_summary": schemaFor[ReportApprovalSummary](),
+		"totals_summary":   schemaFor[ReportTotalsSummary](),
+		"entity_summary":   schemaFor[ReportEntitySummary](),
+		"client_summary":   schemaFor[[]ReportClientSummary](),
+		"suggestedActions": schemaFor[[]ToolSuggestion](),
+	}
+}
+
+func summaryReportNormalizedProperties() map[string]any {
+	return map[string]any{
+		"raw":                  map[string]any{"type": "object", "additionalProperties": true},
+		"summary_rollups":      openObjectArraySchema(),
+		"group_totals_summary": schemaFor[ReportGroupTotalsSummary](),
+		"donut_chart_summary":  schemaFor[[]DonutChartSegmentView](),
+		"totals_summary":       schemaFor[ReportTotalsSummary](),
+		"suggestedActions":     schemaFor[[]ToolSuggestion](),
+	}
+}
+
+func weeklyReportNormalizedProperties() map[string]any {
+	return map[string]any{
+		"raw":               map[string]any{"type": "object", "additionalProperties": true},
+		"weekly_rollups":    openObjectArraySchema(),
+		"weekly_day_totals": schemaFor[[]WeeklyDayTotalView](),
+		"totals_summary":    schemaFor[ReportTotalsSummary](),
+		"suggestedActions":  schemaFor[[]ToolSuggestion](),
+	}
+}
+
+func moneyReportOutputSchema(action string) map[string]any {
+	return reportOutputSchema(action, map[string]any{
+		"range":                schemaFor[FinancialRangeView](),
+		"group_by":             map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+		"rollups":              openObjectArraySchema(),
+		"group_totals_summary": schemaFor[ReportGroupTotalsSummary](),
+		"totals_summary":       schemaFor[ReportTotalsSummary](),
+		"suggestedActions":     schemaFor[[]ToolSuggestion](),
+		"warnings":             map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+		"raw":                  map[string]any{"type": "object", "additionalProperties": true},
+	})
+}
+
+func monthlyBriefOutputSchema() map[string]any {
+	return reportOutputSchema("clockify_monthly_brief", map[string]any{
+		"month":            map[string]any{"type": "string"},
+		"range":            schemaFor[FinancialRangeView](),
+		"money":            map[string]any{"type": "object", "additionalProperties": true},
+		"audit":            map[string]any{"type": "object", "additionalProperties": true},
+		"suggestedActions": schemaFor[[]ToolSuggestion](),
+		"warnings":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+	})
+}
+
+func openObjectArraySchema() map[string]any {
+	return map[string]any{
+		"type": "array",
+		"items": map[string]any{
+			"type":                 "object",
+			"additionalProperties": true,
+		},
+	}
 }

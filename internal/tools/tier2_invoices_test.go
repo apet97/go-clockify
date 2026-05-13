@@ -277,8 +277,8 @@ func TestTier2_Invoices_GroupRegistration(t *testing.T) {
 	}
 	svc := New(nil, "ws1")
 	descs := g.Builder(svc)
-	if len(descs) != 15 {
-		t.Fatalf("expected 15 invoice tools, got %d", len(descs))
+	if len(descs) != 16 {
+		t.Fatalf("expected 16 invoice tools, got %d", len(descs))
 	}
 	wantPrefix := "clockify_"
 	for _, d := range descs {

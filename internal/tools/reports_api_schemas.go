@@ -31,6 +31,7 @@ func reportInputSchema(reportFilterKey string, reportFilterSchema map[string]any
 func weeklyReportInputSchema() map[string]any {
 	props := reportCommonProperties()
 	props["weekly_filter"] = weeklyFilterSchema()
+	props["include_future"] = map[string]any{"type": "boolean", "description": "Include normalized weekly day rows after today. Defaults to false; raw Reports API payload is still preserved."}
 	return map[string]any{
 		"type":       "object",
 		"required":   []string{"weekly_filter"},

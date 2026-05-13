@@ -2,6 +2,7 @@ package tools
 
 import (
 	"maps"
+	"sort"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -49,6 +50,9 @@ type WorkspaceView struct {
 	Currencies              any               `json:"currencies,omitempty"`
 	FeatureSubscriptionType string            `json:"featureSubscriptionType,omitempty"`
 	Features                []string          `json:"features,omitempty"`
+	FeaturesHuman           []FeatureLabel    `json:"features_human,omitempty"`
+	SubscriptionLabel       string            `json:"subscription_label,omitempty"`
+	PlanCohort              string            `json:"plan_cohort,omitempty"`
 	HourlyRate              *clockify.Rate    `json:"hourlyRate,omitempty"`
 	ImageURL                string            `json:"imageUrl,omitempty"`
 	Memberships             any               `json:"memberships,omitempty"`
@@ -59,22 +63,33 @@ type WorkspaceView struct {
 }
 
 type WorkspaceSettings struct {
-	Currencies                any      `json:"currencies,omitempty"`
-	Features                  []string `json:"features,omitempty"`
-	FeaturePlan               string   `json:"feature_plan,omitempty"`
-	DurationFormat            string   `json:"duration_format,omitempty"`
-	CurrencyFormat            any      `json:"currency_format,omitempty"`
-	NumberFormat              any      `json:"number_format,omitempty"`
-	ProjectLabel              string   `json:"project_label,omitempty"`
-	TaskLabel                 string   `json:"task_label,omitempty"`
-	WorkingDays               any      `json:"working_days,omitempty"`
-	LockPolicy                any      `json:"lock_policy,omitempty"`
-	Rounding                  any      `json:"rounding,omitempty"`
-	EntityCreationPermissions any      `json:"entity_creation_permissions,omitempty"`
-	HasHourlyRate             bool     `json:"has_hourly_rate,omitempty"`
-	HasCostRate               bool     `json:"has_cost_rate,omitempty"`
-	MembershipsCount          int      `json:"memberships_count,omitempty"`
-	Source                    string   `json:"source,omitempty"`
+	Currencies                any            `json:"currencies,omitempty"`
+	Features                  []string       `json:"features,omitempty"`
+	FeaturePlan               string         `json:"feature_plan,omitempty"`
+	FeaturesHuman             []FeatureLabel `json:"features_human,omitempty"`
+	SubscriptionLabel         string         `json:"subscription_label,omitempty"`
+	PlanCohort                string         `json:"plan_cohort,omitempty"`
+	DurationFormat            string         `json:"duration_format,omitempty"`
+	CurrencyFormat            any            `json:"currency_format,omitempty"`
+	NumberFormat              any            `json:"number_format,omitempty"`
+	ProjectLabel              string         `json:"project_label,omitempty"`
+	TaskLabel                 string         `json:"task_label,omitempty"`
+	WorkingDays               []string       `json:"working_days,omitempty"`
+	WorkingDayPattern         string         `json:"working_day_pattern,omitempty"`
+	WeekendIncluded           bool           `json:"weekend_included,omitempty"`
+	WorkingDayCount           int            `json:"working_day_count,omitempty"`
+	LockPolicy                any            `json:"lock_policy,omitempty"`
+	Rounding                  any            `json:"rounding,omitempty"`
+	EntityCreationPermissions any            `json:"entity_creation_permissions,omitempty"`
+	HasHourlyRate             bool           `json:"has_hourly_rate,omitempty"`
+	HasCostRate               bool           `json:"has_cost_rate,omitempty"`
+	MembershipsCount          int            `json:"memberships_count,omitempty"`
+	Source                    string         `json:"source,omitempty"`
+}
+
+type FeatureLabel struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
 }
 
 func userViewFromUser(user clockify.User) UserView {
@@ -157,6 +172,9 @@ func workspaceViewFromWorkspace(ws clockify.Workspace) WorkspaceView {
 		"subdomain":               ws.Subdomain,
 		"workspaceSettings":       ws.WorkspaceSettings,
 	}
+	featuresHuman := humanFeatureLabels(ws.Features)
+	subscriptionLabel, planCohort := subscriptionLabels(ws.FeatureSubscriptionType)
+	workingDays := sortedWorkingDays(workspaceSettingAny(ws.WorkspaceSettings, "workingDays", "working_days"))
 	return WorkspaceView{
 		ID:                      ws.ID,
 		Name:                    ws.Name,
@@ -165,6 +183,9 @@ func workspaceViewFromWorkspace(ws clockify.Workspace) WorkspaceView {
 		Currencies:              ws.Currencies,
 		FeatureSubscriptionType: ws.FeatureSubscriptionType,
 		Features:                ws.Features,
+		FeaturesHuman:           featuresHuman,
+		SubscriptionLabel:       subscriptionLabel,
+		PlanCohort:              planCohort,
 		HourlyRate:              ws.HourlyRate,
 		ImageURL:                ws.ImageURL,
 		Memberships:             ws.Memberships,
@@ -173,13 +194,19 @@ func workspaceViewFromWorkspace(ws clockify.Workspace) WorkspaceView {
 		SettingsSummary: WorkspaceSettings{
 			Currencies:                ws.Currencies,
 			Features:                  ws.Features,
+			FeaturesHuman:             featuresHuman,
 			FeaturePlan:               ws.FeatureSubscriptionType,
+			SubscriptionLabel:         subscriptionLabel,
+			PlanCohort:                planCohort,
 			DurationFormat:            workspaceSettingString(ws.WorkspaceSettings, "durationFormat", "duration_format"),
 			CurrencyFormat:            workspaceSettingAny(ws.WorkspaceSettings, "currencyFormat", "currency_format"),
 			NumberFormat:              workspaceSettingAny(ws.WorkspaceSettings, "numberFormat", "number_format"),
 			ProjectLabel:              workspaceSettingString(ws.WorkspaceSettings, "projectLabel", "project_label"),
 			TaskLabel:                 workspaceSettingString(ws.WorkspaceSettings, "taskLabel", "task_label"),
-			WorkingDays:               workspaceSettingAny(ws.WorkspaceSettings, "workingDays", "working_days"),
+			WorkingDays:               workingDays,
+			WorkingDayPattern:         workingDayPattern(workingDays),
+			WeekendIncluded:           workingDaysIncludeWeekend(workingDays),
+			WorkingDayCount:           len(workingDays),
 			LockPolicy:                workspaceLockPolicy(ws.WorkspaceSettings),
 			Rounding:                  workspaceSettingAny(ws.WorkspaceSettings, "round"),
 			EntityCreationPermissions: workspaceSettingAny(ws.WorkspaceSettings, "entityCreationPermissions", "entity_creation_permissions"),
@@ -222,8 +249,13 @@ func workspaceViewFromRaw(raw map[string]any) WorkspaceView {
 		}
 		view.SettingsSummary.Features = view.Features
 	}
+	view.FeaturesHuman = humanFeatureLabels(view.Features)
+	view.SettingsSummary.FeaturesHuman = view.FeaturesHuman
 	view.Currencies = firstPresent(raw, "currencies")
 	view.FeatureSubscriptionType = firstReportString(raw, "featureSubscriptionType")
+	view.SubscriptionLabel, view.PlanCohort = subscriptionLabels(view.FeatureSubscriptionType)
+	view.SettingsSummary.SubscriptionLabel = view.SubscriptionLabel
+	view.SettingsSummary.PlanCohort = view.PlanCohort
 	view.ImageURL = firstReportString(raw, "imageUrl")
 	view.Subdomain = firstPresent(raw, "subdomain")
 	view.WorkspaceSettings = firstPresent(raw, "workspaceSettings")
@@ -234,7 +266,11 @@ func workspaceViewFromRaw(raw map[string]any) WorkspaceView {
 	view.SettingsSummary.NumberFormat = workspaceSettingAny(view.WorkspaceSettings, "numberFormat", "number_format")
 	view.SettingsSummary.ProjectLabel = workspaceSettingString(view.WorkspaceSettings, "projectLabel", "project_label")
 	view.SettingsSummary.TaskLabel = workspaceSettingString(view.WorkspaceSettings, "taskLabel", "task_label")
-	view.SettingsSummary.WorkingDays = workspaceSettingAny(view.WorkspaceSettings, "workingDays", "working_days")
+	workingDays := sortedWorkingDays(workspaceSettingAny(view.WorkspaceSettings, "workingDays", "working_days"))
+	view.SettingsSummary.WorkingDays = workingDays
+	view.SettingsSummary.WorkingDayPattern = workingDayPattern(workingDays)
+	view.SettingsSummary.WeekendIncluded = workingDaysIncludeWeekend(workingDays)
+	view.SettingsSummary.WorkingDayCount = len(workingDays)
 	view.SettingsSummary.LockPolicy = workspaceLockPolicy(view.WorkspaceSettings)
 	view.SettingsSummary.Rounding = workspaceSettingAny(view.WorkspaceSettings, "round")
 	view.SettingsSummary.EntityCreationPermissions = workspaceSettingAny(view.WorkspaceSettings, "entityCreationPermissions", "entity_creation_permissions")
@@ -268,21 +304,122 @@ func workspaceLockPolicy(raw any) any {
 
 func memberProfileViewFromRaw(raw map[string]any) map[string]any {
 	view := maps.Clone(raw)
+	workingDays := sortedWorkingDays(firstPresent(raw, "workingDays", "working_days"))
 	view["profile"] = map[string]any{
-		"id":            firstReportString(raw, "id", "_id", "userId", "user_id"),
-		"name":          firstReportString(raw, "name"),
-		"email":         firstReportString(raw, "email"),
-		"week_start":    strings.ToUpper(firstReportString(raw, "weekStart", "week_start")),
-		"work_capacity": firstPresent(raw, "workCapacity", "work_capacity"),
-		"working_days":  firstPresent(raw, "workingDays", "working_days"),
-		"status":        strings.ToUpper(firstReportString(raw, "status")),
-		"source":        "member_profile_api",
+		"id":                  firstReportString(raw, "id", "_id", "userId", "user_id"),
+		"name":                firstReportString(raw, "name"),
+		"email":               firstReportString(raw, "email"),
+		"week_start":          strings.ToUpper(firstReportString(raw, "weekStart", "week_start")),
+		"work_capacity":       firstPresent(raw, "workCapacity", "work_capacity"),
+		"working_days":        workingDays,
+		"working_day_pattern": workingDayPattern(workingDays),
+		"weekend_included":    workingDaysIncludeWeekend(workingDays),
+		"working_day_count":   len(workingDays),
+		"status":              strings.ToUpper(firstReportString(raw, "status")),
+		"source":              "member_profile_api",
 	}
 	if custom := customFieldsFromFirst(raw, "userCustomFields", "user_custom_fields", "customFields", "customFieldValues"); len(custom) > 0 {
 		view["custom_fields_normalized"] = custom
 	}
 	view["raw"] = maps.Clone(raw)
 	return view
+}
+
+func humanFeatureLabels(features []string) []FeatureLabel {
+	if len(features) == 0 {
+		return nil
+	}
+	out := make([]FeatureLabel, 0, len(features))
+	for _, feature := range features {
+		key := strings.ToUpper(strings.TrimSpace(feature))
+		if key == "" {
+			continue
+		}
+		out = append(out, FeatureLabel{Key: key, Label: humanizeFeatureKey(key)})
+	}
+	return out
+}
+
+func humanizeFeatureKey(key string) string {
+	key = strings.ReplaceAll(strings.ToLower(key), "_", " ")
+	parts := strings.Fields(key)
+	for i := range parts {
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, " ")
+}
+
+func subscriptionLabels(raw string) (string, string) {
+	value := strings.ToUpper(strings.TrimSpace(raw))
+	if value == "" {
+		return "", ""
+	}
+	label := humanizeFeatureKey(value)
+	cohort := "paid"
+	switch {
+	case strings.Contains(value, "FREE"):
+		cohort = "free"
+	case strings.Contains(value, "TRIAL"):
+		cohort = "trial"
+	case strings.Contains(value, "ENTERPRISE"):
+		cohort = "enterprise"
+	}
+	return label, cohort
+}
+
+func sortedWorkingDays(raw any) []string {
+	order := map[string]int{"MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6, "SUNDAY": 7}
+	seen := map[string]struct{}{}
+	var days []string
+	for _, value := range anyStringSlice(raw) {
+		day := strings.ToUpper(strings.TrimSpace(value))
+		if _, ok := order[day]; !ok {
+			continue
+		}
+		if _, ok := seen[day]; ok {
+			continue
+		}
+		seen[day] = struct{}{}
+		days = append(days, day)
+	}
+	sort.Slice(days, func(i, j int) bool { return order[days[i]] < order[days[j]] })
+	return days
+}
+
+func anyStringSlice(raw any) []string {
+	switch v := raw.(type) {
+	case []string:
+		return append([]string(nil), v...)
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s := reportValueString(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		if s := reportValueString(raw); s != "" {
+			return []string{s}
+		}
+		return nil
+	}
+}
+
+func workingDayPattern(days []string) string {
+	if len(days) == 0 {
+		return ""
+	}
+	return strings.Join(days, ",")
+}
+
+func workingDaysIncludeWeekend(days []string) bool {
+	for _, day := range days {
+		if day == "SATURDAY" || day == "SUNDAY" {
+			return true
+		}
+	}
+	return false
 }
 
 func userManagerViewsFromRaw(items []map[string]any) []map[string]any {

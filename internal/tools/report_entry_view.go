@@ -82,6 +82,8 @@ type ReportEntryView struct {
 	Description       string                   `json:"description,omitempty"`
 	Type              string                   `json:"type,omitempty"`
 	Billable          *bool                    `json:"billable,omitempty"`
+	BillableState     string                   `json:"billable_state,omitempty"`
+	BillablePresent   bool                     `json:"billable_present,omitempty"`
 	Locked            *bool                    `json:"locked,omitempty"`
 	Duration          *EntryDurationView       `json:"duration,omitempty"`
 	TimeInterval      map[string]any           `json:"time_interval,omitempty"`
@@ -102,6 +104,7 @@ type ReportEntrySummary struct {
 	Duration                EntryDurationView `json:"duration"`
 	BillableCount           int               `json:"billable_count,omitempty"`
 	UnbillableCount         int               `json:"unbillable_count,omitempty"`
+	BillableUnsetCount      int               `json:"billable_unset_count,omitempty"`
 	LockedCount             int               `json:"locked_count,omitempty"`
 	MissingDescriptionCount int               `json:"missing_description_count,omitempty"`
 	MissingProjectCount     int               `json:"missing_project_count,omitempty"`
@@ -206,8 +209,13 @@ func reportEntryViewFromRow(row map[string]any) ReportEntryView {
 		},
 		Raw: maps.Clone(row),
 	}
-	if billable, ok := firstReportBool(row, "billable", "isBillable"); ok {
+	if state, ok := billableStateFromRaw(firstPresent(row, "billable", "isBillable")); ok {
+		view.BillableState = state
+		view.BillablePresent = true
+		billable := state == billableStateBillable
 		view.Billable = &billable
+	} else {
+		view.BillableState = billableStateUnset
 	}
 	if locked, ok := firstReportBool(row, "locked", "isLocked"); ok {
 		view.Locked = &locked
@@ -261,11 +269,20 @@ func summarizeReportEntries(entries []ReportEntryView) ReportEntrySummary {
 		if entry.Duration != nil {
 			seconds += entry.Duration.Seconds
 		}
-		if entry.Billable != nil {
-			if *entry.Billable {
-				summary.BillableCount++
+		switch entry.BillableState {
+		case billableStateBillable:
+			summary.BillableCount++
+		case billableStateNonBillable:
+			summary.UnbillableCount++
+		default:
+			if entry.Billable != nil {
+				if *entry.Billable {
+					summary.BillableCount++
+				} else {
+					summary.UnbillableCount++
+				}
 			} else {
-				summary.UnbillableCount++
+				summary.BillableUnsetCount++
 			}
 		}
 		if entry.Locked != nil && *entry.Locked {

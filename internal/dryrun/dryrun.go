@@ -24,10 +24,11 @@ func Enabled(args map[string]any) bool {
 
 func Preview(tool string, args map[string]any) map[string]any {
 	return map[string]any{
-		"dry_run": true,
-		"tool":    tool,
-		"args":    args,
-		"note":    "No changes were made.",
+		"dry_run":    true,
+		"tool":       tool,
+		"args":       args,
+		"note":       "No changes were made.",
+		"validation": unknownValidation("generic dry-run preview did not run tool-specific validation"),
 	}
 }
 
@@ -182,21 +183,34 @@ func BuildPreviewArgs(args map[string]any) map[string]any {
 // WrapResult wraps an API result in a dry-run envelope.
 func WrapResult(result any, toolName string) map[string]any {
 	return map[string]any{
-		"dry_run": true,
-		"tool":    toolName,
-		"preview": result,
-		"note":    "This is a dry-run preview. No changes were made.",
+		"dry_run":    true,
+		"tool":       toolName,
+		"preview":    result,
+		"note":       "This is a dry-run preview. No changes were made.",
+		"validation": unknownValidation("destructive dry-run preview fetched the target resource but did not validate every execution precondition"),
 	}
 }
 
 // MinimalResult produces a dry-run envelope when no preview data is available.
 func MinimalResult(toolName string, args map[string]any) map[string]any {
 	return map[string]any{
-		"dry_run":  true,
-		"tool":     toolName,
-		"args":     args,
-		"resource": nil,
-		"note":     "This is a dry-run preview. No changes were made. No preview data available for this tool.",
+		"dry_run":    true,
+		"tool":       toolName,
+		"args":       args,
+		"resource":   nil,
+		"note":       "This is a dry-run preview. No changes were made. No preview data available for this tool.",
+		"validation": unknownValidation("minimal destructive dry-run has no safe read endpoint to validate the target"),
+	}
+}
+
+func unknownValidation(message string) map[string]any {
+	return map[string]any{
+		"status":          "unknown",
+		"preview_quality": "minimal_no_handler_validation",
+		"warnings": []map[string]any{{
+			"code":    "not_validated",
+			"message": message,
+		}},
 	}
 }
 

@@ -21,6 +21,7 @@ type aggregateOptions struct {
 	SampleEntries         int  // retain at most this many sample entries independent of IncludeEntries
 	CollectRunningEntries bool // retain running entries independent of IncludeEntries
 	ProjectID             string
+	ResolveProjectNames   bool // hydrate missing project names for agent-facing aggregate summaries
 }
 
 // projectBucket accumulates seconds and entry count for a single project
@@ -29,6 +30,8 @@ type aggregateOptions struct {
 type projectBucket struct {
 	ID           string
 	Name         string
+	ClientID     string
+	ClientName   string
 	Entries      int
 	TotalSeconds int64
 }
@@ -188,10 +191,51 @@ func (s *Service) aggregateEntriesRangeForWorkspace(ctx context.Context, workspa
 		}
 
 		if len(batch) < pageSize {
+			if opts.ResolveProjectNames {
+				s.resolveAggregateProjectBuckets(ctx, wsID, result)
+			}
 			return result, wsID, user.ID, nil
 		}
 	}
 	return nil, "", "", fmt.Errorf("report pagination safety stop reached at %d pages for range %s..%s; narrow the range", aggregatePageSafetyStop, start.Format(time.RFC3339), end.Format(time.RFC3339))
+}
+
+func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID string, result *aggregateResult) {
+	if s == nil || s.Client == nil || result == nil {
+		return
+	}
+	for _, bucket := range result.ByProject {
+		if bucket == nil || strings.TrimSpace(bucket.ID) == "" {
+			continue
+		}
+		if strings.TrimSpace(bucket.Name) != "" && bucket.Name != "(no project)" {
+			continue
+		}
+		path, err := paths.Workspace(wsID, "projects", bucket.ID)
+		if err != nil {
+			continue
+		}
+		var project clockify.Project
+		if err := s.Client.Get(ctx, path, map[string]string{"hydrated": "true"}, &project); err != nil {
+			continue
+		}
+		if name := strings.TrimSpace(project.Name); name != "" {
+			bucket.Name = name
+		}
+		clientID, clientName := projectClientRef(project)
+		bucket.ClientID = firstNonEmptyString(bucket.ClientID, clientID)
+		bucket.ClientName = firstNonEmptyString(bucket.ClientName, clientName)
+	}
+}
+
+func projectClientRef(project clockify.Project) (string, string) {
+	clientID := strings.TrimSpace(project.ClientID)
+	clientName := strings.TrimSpace(project.ClientName)
+	if m, ok := project.Client.(map[string]any); ok {
+		clientID = firstNonEmptyString(clientID, firstReportString(m, "id", "_id", "clientId"))
+		clientName = firstNonEmptyString(clientName, firstReportString(m, "name", "clientName"))
+	}
+	return clientID, clientName
 }
 
 type reportLimitState struct {
@@ -340,6 +384,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 		SampleEntries:         5,
 		CollectRunningEntries: true,
 		ProjectID:             projectID,
+		ResolveProjectNames:   true,
 	})
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -479,6 +524,8 @@ func projectSummariesFromAgg(agg *aggregateResult) []ProjectSummary {
 		out = append(out, ProjectSummary{
 			ProjectID:    b.ID,
 			ProjectName:  b.Name,
+			ClientID:     b.ClientID,
+			ClientName:   b.ClientName,
 			Entries:      b.Entries,
 			TotalSeconds: b.TotalSeconds,
 			TotalHours:   hours(b.TotalSeconds),

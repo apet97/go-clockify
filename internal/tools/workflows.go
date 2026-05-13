@@ -67,16 +67,19 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 				preview["blocked"] = true
 				preview["warning"] = fmt.Sprintf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 				preview["overlaps"] = overlaps
-				preview["validated"] = true
+				attachValidationToPreview(preview, validationFailed("overlap_check", ValidationProblem{
+					Code:        "overlap",
+					Field:       "start,end",
+					Message:     fmt.Sprintf("requested entry overlaps %d existing entr%s", len(overlaps), pluralY(len(overlaps))),
+					Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
+				}))
 				return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
 			}
 			return nil, fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 		}
 	}
 	if dryrun.Enabled(args) {
-		preview := dryrunPreviewPayload("clockify_log_time", payload)
-		preview["blocked"] = false
-		preview["validated"] = true
+		preview := dryrunPreviewPayloadValidated("clockify_log_time", payload, validationOK("overlap_check"))
 		if len(overlaps) > 0 {
 			preview["overlaps"] = overlaps
 		}
@@ -155,10 +158,12 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	}
 	if parsed.Billable != nil && *parsed.Billable != entry.Billable {
 		entry.Billable = *parsed.Billable
+		entry.BillablePresent = true
 		updatedFields = append(updatedFields, "billable")
 	}
 	if parsed.DryRun {
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
+		validation := validationOK("lookup_and_payload_check")
 		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{
 			Entry:          view,
 			MatchedBy:      matchedBy,
@@ -168,6 +173,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 			Proposed:       proposedEntryChanges(entry, updatedFields),
 			DryRun:         true,
 			Note:           "No changes were made.",
+			Validation:     &validation,
 		}, withFinancialMeta(map[string]any{"workspaceId": wsID, "noop": len(updatedFields) == 0}, financialMeta)), nil
 	}
 	if len(updatedFields) == 0 {
@@ -189,11 +195,13 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 
 func timeEntryUpdatePreview(entry clockify.TimeEntry) *TimeEntryUpdatePreview {
 	return &TimeEntryUpdatePreview{
-		Description: entry.Description,
-		ProjectID:   entry.ProjectID,
-		Start:       entry.TimeInterval.Start,
-		End:         entry.TimeInterval.End,
-		Billable:    entry.Billable,
+		Description:     entry.Description,
+		ProjectID:       entry.ProjectID,
+		Start:           entry.TimeInterval.Start,
+		End:             entry.TimeInterval.End,
+		Billable:        entry.Billable,
+		BillableState:   billableStateFromPresence(entry.Billable, entry.BillablePresent),
+		BillablePresent: entry.BillablePresent,
 	}
 }
 

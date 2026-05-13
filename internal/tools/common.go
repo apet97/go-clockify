@@ -298,16 +298,19 @@ type FindAndUpdateEntryData struct {
 	Proposed       map[string]any          `json:"proposed_changes,omitempty"`
 	DryRun         bool                    `json:"dry_run,omitempty"`
 	Note           string                  `json:"note,omitempty"`
+	Validation     *ValidationView         `json:"validation,omitempty"`
 }
 
 // TimeEntryUpdatePreview is the projected "current" shape of a time
 // entry shown alongside a proposed-change diff during a dry-run update.
 type TimeEntryUpdatePreview struct {
-	Description string `json:"description"`
-	ProjectID   string `json:"project_id,omitempty"`
-	Start       string `json:"start,omitempty"`
-	End         string `json:"end,omitempty"`
-	Billable    bool   `json:"billable"`
+	Description     string `json:"description"`
+	ProjectID       string `json:"project_id,omitempty"`
+	Start           string `json:"start,omitempty"`
+	End             string `json:"end,omitempty"`
+	Billable        bool   `json:"billable"`
+	BillableState   string `json:"billable_state,omitempty"`
+	BillablePresent bool   `json:"billable_present,omitempty"`
 }
 
 // DateRange is the inclusive [Start, End] window used by every summary
@@ -335,6 +338,8 @@ type SummaryTotals struct {
 type ProjectSummary struct {
 	ProjectID    string  `json:"projectId,omitempty"`
 	ProjectName  string  `json:"projectName"`
+	ClientID     string  `json:"clientId,omitempty"`
+	ClientName   string  `json:"clientName,omitempty"`
 	Entries      int     `json:"entries"`
 	TotalSeconds int64   `json:"totalSeconds"`
 	TotalHours   float64 `json:"totalHours"`

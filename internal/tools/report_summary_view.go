@@ -41,6 +41,7 @@ type DonutChartSegmentView struct {
 
 type WeeklyDayTotalView struct {
 	Date            string                `json:"date,omitempty"`
+	IsFuture        bool                  `json:"is_future,omitempty"`
 	Duration        EntryDurationView     `json:"duration"`
 	Financials      EntryFinancials       `json:"financials"`
 	MoneyByCurrency []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
@@ -95,13 +96,14 @@ func appendSummaryReportViews(data map[string]any, body map[string]any) int {
 	return len(rollups)
 }
 
-func appendWeeklyReportViews(data map[string]any, body map[string]any) int {
+func appendWeeklyReportViews(data map[string]any, body map[string]any, includeFuture bool) int {
 	if data == nil {
 		return 0
 	}
 	raw := maps.Clone(data)
-	rollups := summaryRollups(data, nil)
-	dayTotals := weeklyDayTotals(data)
+	now := reportNowForBody(body)
+	rollups := summaryRollupsFiltered(data, nil, includeFuture, now)
+	dayTotals := weeklyDayTotals(data, includeFuture, now)
 	data["raw"] = raw
 	data["weekly_rollups"] = rollups
 	data["weekly_day_totals"] = dayTotals
@@ -129,10 +131,14 @@ func summaryGroupsFromBody(body map[string]any) []string {
 }
 
 func summaryRollups(data map[string]any, groups []string) []ReportRollupView {
+	return summaryRollupsFiltered(data, groups, true, time.Time{})
+}
+
+func summaryRollupsFiltered(data map[string]any, groups []string, includeFuture bool, now time.Time) []ReportRollupView {
 	rows := firstReportRows(data, "groupOne", "group_one", "groups", "rows", "items")
 	out := make([]ReportRollupView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, reportRollupFromRow(row, groups, 0))
+		out = append(out, reportRollupFromRowFiltered(row, groups, 0, includeFuture, now))
 	}
 	return out
 }
@@ -146,7 +152,7 @@ func firstReportRows(data map[string]any, keys ...string) []map[string]any {
 	return nil
 }
 
-func reportRollupFromRow(row map[string]any, groups []string, level int) ReportRollupView {
+func reportRollupFromRowFiltered(row map[string]any, groups []string, level int, includeFuture bool, now time.Time) ReportRollupView {
 	group := ""
 	if level < len(groups) {
 		group = groups[level]
@@ -161,7 +167,7 @@ func reportRollupFromRow(row map[string]any, groups []string, level int) ReportR
 	childrenRows := firstReportRows(row, "children", "items", "groupTwo", "group_two", "groupThree", "group_three")
 	children := make([]ReportRollupView, 0, len(childrenRows))
 	for _, child := range childrenRows {
-		children = append(children, reportRollupFromRow(child, groups, level+1))
+		children = append(children, reportRollupFromRowFiltered(child, groups, level+1, includeFuture, now))
 	}
 	entries, _ := reportInt(firstPresent(row, "entriesCount", "entries_count", "count"))
 	return ReportRollupView{
@@ -173,7 +179,7 @@ func reportRollupFromRow(row map[string]any, groups []string, level int) ReportR
 		Entries:            entries,
 		Financials:         fin,
 		MoneyByCurrency:    reportMoneyByCurrency(row),
-		WeeklyDayBreakdown: weeklyDayRows(row),
+		WeeklyDayBreakdown: weeklyDayRows(row, includeFuture, now),
 		Children:           children,
 		Raw:                maps.Clone(row),
 	}
@@ -277,14 +283,19 @@ func donutChartSummary(data map[string]any) []DonutChartSegmentView {
 	return out
 }
 
-func weeklyDayTotals(data map[string]any) []WeeklyDayTotalView {
-	return weeklyDayRows(data)
+func weeklyDayTotals(data map[string]any, includeFuture bool, now time.Time) []WeeklyDayTotalView {
+	return weeklyDayRows(data, includeFuture, now)
 }
 
-func weeklyDayRows(data map[string]any) []WeeklyDayTotalView {
+func weeklyDayRows(data map[string]any, includeFuture bool, now time.Time) []WeeklyDayTotalView {
 	rows := firstReportRows(data, "totalsByDay", "totals_by_day", "dailyTotals", "daily_totals", "days")
 	out := make([]WeeklyDayTotalView, 0, len(rows))
 	for _, row := range rows {
+		date := firstReportString(row, "date", "day", "start")
+		isFuture := reportDayIsFuture(date, now)
+		if isFuture && !includeFuture {
+			continue
+		}
 		seconds, _ := reportDurationSeconds(row)
 		money := reportMoneyFromRow(row)
 		fin := EntryFinancials{Source: entryFinancialSourceUnavailable, Reason: "no report money fields were present for this day"}
@@ -292,7 +303,8 @@ func weeklyDayRows(data map[string]any) []WeeklyDayTotalView {
 			fin = money.financials()
 		}
 		out = append(out, WeeklyDayTotalView{
-			Date:            firstReportString(row, "date", "day", "start"),
+			Date:            date,
+			IsFuture:        isFuture,
 			Duration:        entryDurationView(seconds, "reports_api"),
 			Financials:      fin,
 			MoneyByCurrency: reportMoneyByCurrency(row),
@@ -300,6 +312,35 @@ func weeklyDayRows(data map[string]any) []WeeklyDayTotalView {
 		})
 	}
 	return out
+}
+
+func reportNowForBody(body map[string]any) time.Time {
+	loc := time.UTC
+	if tz := reportValueString(body["timeZone"]); tz != "" {
+		if loaded, err := time.LoadLocation(tz); err == nil {
+			loc = loaded
+		}
+	}
+	return time.Now().In(loc)
+}
+
+func reportDayIsFuture(raw string, now time.Time) bool {
+	if raw == "" {
+		return false
+	}
+	if now.IsZero() {
+		return false
+	}
+	date := raw
+	if len(date) >= len("2006-01-02") {
+		date = date[:len("2006-01-02")]
+	}
+	day, err := time.ParseInLocation("2006-01-02", date, now.Location())
+	if err != nil {
+		return false
+	}
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	return day.After(today)
 }
 
 func reportDrilldownSuggestions(body map[string]any) []ToolSuggestion {

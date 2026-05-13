@@ -62,7 +62,7 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 	} else if endpoint.pathName == "summary" {
 		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
 	} else if endpoint.pathName == "weekly" {
-		meta["normalizedRollups"] = appendWeeklyReportViews(data, body)
+		meta["normalizedRollups"] = appendWeeklyReportViews(data, body, boolArg(args, "include_future"))
 	}
 	return ok(endpoint.toolName, data, meta), nil
 }

@@ -36,8 +36,8 @@ func TestToolContractMatrix(t *testing.T) {
 			}
 		}
 	}
-	if len(all) != 170 {
-		t.Fatalf("expected 170 tools, got %d", len(all))
+	if len(all) != 175 {
+		t.Fatalf("expected 175 tools, got %d", len(all))
 	}
 
 	readOnly := &policy.Policy{Mode: policy.ReadOnly, DeniedTools: map[string]bool{}, DeniedGroups: map[string]bool{}}
@@ -48,6 +48,7 @@ func TestToolContractMatrix(t *testing.T) {
 		"clockify_deactivate_group": true, "clockify_list_tools": true,
 		"clockify_whoami": true, "clockify_current_user": true, "clockify_list_workspaces": true,
 		"clockify_search_tools": true, "clockify_policy_info": true, "clockify_resolve_name": true, "clockify_resolve_debug": true,
+		"clockify_workspace_governance": true, "clockify_monthly_brief": true, "clockify_money_report": true, "clockify_audit_entries": true,
 	}
 	timeTrackingSafeWrites := map[string]bool{
 		"clockify_start_timer": true, "clockify_stop_timer": true, "clockify_add_entry": true,

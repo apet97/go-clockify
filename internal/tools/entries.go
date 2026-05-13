@@ -253,18 +253,41 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 		payload["billable"] = billable
 	}
 
-	if dryrun.Enabled(args) {
-		return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: dryrun.Preview("clockify_add_entry", args)}, nil
-	}
 	if !endTime.IsZero() {
 		if err := s.rejectEntryOverlap(ctx, startTime, endTime, args); err != nil {
+			if dryrun.Enabled(args) {
+				validation := validationFailed("overlap_check", ValidationProblem{
+					Code:        "overlap",
+					Field:       "start,end",
+					Message:     err.Error(),
+					Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
+				})
+				return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: attachValidationToPreview(dryrun.Preview("clockify_add_entry", args), validation)}, nil
+			}
 			return ResultEnvelope{}, err
 		}
 	}
 
 	dedupeMeta, err := s.addEntryDedupeMeta(ctx, desc, projectID, payload)
 	if err != nil {
+		if dryrun.Enabled(args) {
+			validation := validationFailed("dedupe_check", ValidationProblem{
+				Code:        "duplicate_or_overlap",
+				Message:     err.Error(),
+				Remediation: "Change the time entry details, or adjust dedupe/overlap settings only after manual review.",
+			})
+			return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: attachValidationToPreview(dryrun.Preview("clockify_add_entry", args), validation)}, nil
+		}
 		return ResultEnvelope{}, err
+	}
+	if dryrun.Enabled(args) {
+		validation := validationOK("overlap_and_dedupe_check")
+		preview := dryrunPreviewPayloadValidated("clockify_add_entry", payload, validation)
+		preview["args"] = args
+		if len(dedupeMeta) > 0 {
+			preview["dedupe"] = dedupeMeta
+		}
+		return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: preview}, nil
 	}
 
 	path, err := paths.Workspace(wsID, "time-entries")
@@ -430,6 +453,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	// Merge billable
 	if billable, hasBillable := args["billable"].(bool); hasBillable && billable != existing.Billable {
 		existing.Billable = billable
+		existing.BillablePresent = true
 		changedFields = append(changedFields, "billable")
 	}
 
@@ -447,7 +471,12 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{OK: true, Action: "clockify_update_entry", Data: dryrun.Preview("clockify_update_entry", args), Meta: meta}, nil
+		validation := validationOK("ownership_and_payload_check")
+		preview := dryrunPreviewPayloadValidated("clockify_update_entry", timeEntryPutPayload(existing), validation)
+		preview["args"] = args
+		preview["current"] = timeEntryUpdatePreview(previous)
+		preview["proposed_changes"] = proposedEntryChanges(existing, changedFields)
+		return ResultEnvelope{OK: true, Action: "clockify_update_entry", Data: preview, Meta: meta}, nil
 	}
 
 	putPayload := timeEntryPutPayload(existing)
