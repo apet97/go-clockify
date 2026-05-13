@@ -1,0 +1,192 @@
+# Clockify WORKSPACES — verified reads (Agent A)
+# Base: https://api.clockify.me/api
+# Auth: header X-Api-Key
+# Verified against workspace 65b382b606de527a7ee2b60e on 2026-05-12.
+# Fixtures: fixtures/workspaces-fresh-a/*.json (+ *.status.txt)
+
+paths:
+  /v1/workspaces:
+    get:
+      summary: Get all my workspaces
+      parameters:
+        - in: query
+          name: roles
+          description: |
+            Repeatable. Filter by caller's role. Owners are NOT counted as
+            admins when WORKSPACE_ADMIN is used (verified: 0 results).
+            Repeating the param ANDs/ORs as documented; sending OWNER and
+            WORKSPACE_ADMIN together returned the full list (25), same as
+            OWNER alone. Unknown values appear to be ignored, not 400.
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [WORKSPACE_ADMIN, OWNER, TEAM_MANAGER, PROJECT_MANAGER]
+      responses:
+        '200':
+          description: OK — array of WorkspaceDtoV1 (may be empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WorkspaceDtoV1' }
+
+  /v1/workspaces/{workspaceId}:
+    get:
+      summary: Get workspace info
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK — single WorkspaceDtoV1 (same shape as list element)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceDtoV1' }
+        '404':
+          description: |
+            Unknown workspace id. Body is EMPTY (zero bytes), not JSON.
+            go-clockify handler must tolerate empty body on 4xx and not
+            attempt to json.Decode it.
+
+components:
+  schemas:
+    WorkspaceDtoV1:
+      type: object
+      # Verified top-level keys (exact set observed, in this order):
+      # cakeOrganizationId, costRate, currencies, featureSubscriptionType,
+      # features, hourlyRate, id, imageUrl, memberships, name, subdomain,
+      # workspaceSettings
+      required: [id, name, features, memberships, workspaceSettings]
+      properties:
+        id:
+          type: string
+          example: "65b382b606de527a7ee2b60e"
+        name:
+          type: string
+          example: "WORKSPACE"
+        cakeOrganizationId:
+          type: string
+          example: "678fed5d3b6581697c1b3425"
+        imageUrl:
+          type: string
+          description: May be empty string "" (NOT null, NOT absent).
+          example: ""
+        featureSubscriptionType:
+          type: string
+          description: |
+            Observed value BUNDLE_YEAR_2024 — not present in the doc's
+            example enum (doc shows STANDARD_2021). Treat as open string;
+            do not pin a closed enum in the handler.
+          example: "BUNDLE_YEAR_2024"
+        features:
+          type: array
+          description: Flat array of feature strings (75 entries observed).
+          items: { type: string }
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        currencies:
+          type: array
+          items: { $ref: '#/components/schemas/CurrencyWithDefaultInfoDtoV1' }
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/MembershipDtoV1' }
+        subdomain:
+          $ref: '#/components/schemas/WorkspaceSubdomainDtoV1'
+        workspaceSettings:
+          $ref: '#/components/schemas/WorkspaceSettingsDtoV1'
+
+    RateDtoV1:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int32
+          example: 150
+        currency:
+          type: string
+          example: "EUR"
+
+    CurrencyWithDefaultInfoDtoV1:
+      type: object
+      properties:
+        id:        { type: string, example: "69644fd2dc6d1f31695f2178" }
+        code:      { type: string, example: "USD" }
+        isDefault: { type: boolean, example: false }
+
+    MembershipDtoV1:
+      type: object
+      # Verified keys for workspace memberships in this response:
+      # costRate, hourlyRate, membershipStatus, membershipType,
+      # targetId, userId.  NOTE: doc lists these in a different order
+      # and shows them as "##default" defaults; live shape has real values.
+      properties:
+        userId:           { type: string }
+        targetId:         { type: string, description: "Workspace id for WORKSPACE memberships." }
+        membershipType:
+          type: string
+          enum: [WORKSPACE, PROJECT, USERGROUP]
+        membershipStatus:
+          type: string
+          enum: [PENDING, ACTIVE, DECLINED, INACTIVE]
+          description: Doc also lists "ALL" but that is a filter value, never a stored value.
+        costRate:   { $ref: '#/components/schemas/RateDtoV1', nullable: true }
+        hourlyRate: { $ref: '#/components/schemas/RateDtoV1', nullable: true }
+
+    WorkspaceSubdomainDtoV1:
+      type: object
+      description: |
+        Live shape is {name, enabled}. Doc's "##default" is a placeholder,
+        not the real shape. `name` is null when subdomain disabled.
+      properties:
+        name:    { type: string, nullable: true, example: null }
+        enabled: { type: boolean, example: false }
+
+    WorkspaceSettingsDtoV1:
+      type: object
+      # Verified keys (alphabetised here for review; live response order varies):
+      # activeBillableHours, adminOnlyPages, automaticLock, canSeeTimeSheet,
+      # canSeeTracker, currencyFormat, defaultBillableProjects, durationFormat,
+      # entityCreationPermissions, forceDescription, forceProjects, forceTags,
+      # forceTasks, isProjectPublicByDefault, lockTimeEntries, lockTimeZone,
+      # multiFactorEnabled, numberFormat, onlyAdminsCanChangeBillableStatus,
+      # onlyAdminsCreateProject, onlyAdminsCreateTag, onlyAdminsCreateTask,
+      # onlyAdminsSeeAllTimeEntries, onlyAdminsSeeBillableRates,
+      # onlyAdminsSeeDashboard, onlyAdminsSeePublicProjectsEntries,
+      # projectFavorites, projectGroupingLabel, projectLabel,
+      # projectPickerSpecialFilter, round, taskLabel, timeRoundingInReports,
+      # timeTrackingMode, trackTimeDownToSecond, workingDays
+      properties:
+        durationFormat:    { type: string, example: "COMPACT" }
+        numberFormat:      { type: string, example: "SPACE_COMMA" }
+        currencyFormat:    { type: string, example: "CURRENCY_SPACE_VALUE" }
+        timeTrackingMode:  { type: string, example: "DEFAULT" }
+        trackTimeDownToSecond: { type: boolean }
+        multiFactorEnabled:    { type: boolean }
+        automaticLock:         { type: object, nullable: true }
+        lockTimeEntries:       { type: string, nullable: true, format: date-time }
+        lockTimeZone:          { type: string, nullable: true }
+        round:
+          type: object
+          description: |
+            Live shape: {round: "Round to nearest", minutes: "15"}.
+            `minutes` is a STRING in the response, not an integer.
+          properties:
+            round:   { type: string, example: "Round to nearest" }
+            minutes: { type: string, example: "15" }
+        workingDays:
+          type: array
+          items: { type: string }
+        projectFavorites: { type: boolean }
+        adminOnlyPages:   { type: array, items: { type: string } }
+        entityCreationPermissions:
+          type: object
+          additionalProperties: true
+        # Remaining flags are plain booleans; documented above by name.

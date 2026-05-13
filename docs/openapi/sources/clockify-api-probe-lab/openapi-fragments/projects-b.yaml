@@ -1,0 +1,242 @@
+# Clockify Projects — MUTATIONS (Agent B), observed against live workspace
+# 65b382b606de527a7ee2b60e on 2026-05-12. Each operation was exercised
+# once valid + once invalid; fixtures are in fixtures/projects-fresh-b/.
+#
+# Headline finding: the published OpenAPI says archive/template/estimate/
+# memberships use PATCH on /projects/{id}. Upstream rejected EVERY PATCH on
+# /projects/{id} with HTTP 405 + code 3000 "Request method 'PATCH' is not
+# supported". Archiving must be done via PUT /projects/{id} with
+# {"archived": true} in the full body — confirmed by put-archive-true.json
+# and delete-after-put-archive.json. PATCH still works on the sub-resources
+# /estimate, /template, /memberships.
+openapi: 3.0.3
+info:
+  title: Clockify Projects API (mutations, observed)
+  version: 2026-05-12-probe-b
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/projects:
+    post:
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:        { type: string, minLength: 2, maxLength: 250 }
+                color:       { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+                isPublic:    { type: boolean }
+                billable:    { type: boolean }
+                clientId:    { type: string }
+                memberships: { type: array, items: { $ref: '#/components/schemas/MembershipRequest' } }
+      responses:
+        '201': { description: created; body is full ProjectDtoV1 with id }
+        '400':
+          description: |
+            Missing/invalid name. Observed body:
+            {"code":501,"message":"Project name is required"}.
+            Note: upstream uses its own numeric `code` field; HTTP status
+            is 400, not 501.
+  /workspaces/{workspaceId}/projects/from-template:
+    post:
+      summary: Create project from template
+      responses:
+        '400':
+          description: |
+            Empty body returns {"code":501,"message":"Template project id is required."}
+  /workspaces/{workspaceId}/projects/{projectId}:
+    put:
+      summary: Update project (also the ONLY way to toggle archived)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:     { type: string, minLength: 2, maxLength: 250 }
+                color:    { type: string }
+                archived: { type: boolean, description: 'Set true to archive; required before DELETE.' }
+                billable: { type: boolean }
+                isPublic: { type: boolean }
+                # Tag attachment: tagIds is silently ignored by upstream
+                # (response omits the field; both valid-id and bogus-id
+                # bodies returned 200 with identical shape). Project tags
+                # are not a first-class concept on this endpoint.
+                tagIds:   { type: array, items: { type: string }, description: 'Accepted but not persisted; do not rely on it.' }
+      responses:
+        '200': { description: full ProjectDtoV1 echoed back }
+        '400':
+          description: |
+            name length violation -> {"code":501,"message":"Project name has to be between 2 and 250 characters long"}.
+    patch:
+      summary: NOT SUPPORTED on /projects/{id}
+      description: |
+        Observed 405 + body {"code":3000,"message":"Request method 'PATCH' is not supported"}.
+        The published OpenAPI's PATCH /projects/{id} for archived toggle is
+        incorrect. Use PUT with archived:true. go-clockify handler for
+        ArchiveProject MUST switch verb from PATCH to PUT and include
+        name+color in the body (server enforces name).
+      responses:
+        '405': { description: method not allowed }
+    delete:
+      summary: Delete project (must be archived first)
+      responses:
+        '200':
+          description: |
+            Returns the deleted ProjectDtoV1. Confirmed via
+            fixtures/projects-fresh-b/delete-after-put-archive.json.
+        '400':
+          description: |
+            If project is still active:
+            {"code":501,"message":"Cannot delete an active project"}.
+            If id is wrong workspace / missing:
+            {"code":501,"message":"Project doesn't belong to Workspace"}.
+  /workspaces/{workspaceId}/projects/{projectId}/estimate:
+    patch:
+      summary: Set time/budget estimate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeEstimate:
+                  type: object
+                  properties:
+                    estimate:    { type: string, description: 'ISO-8601 duration, e.g. PT40H' }
+                    type:        { type: string, enum: [AUTO, MANUAL] }
+                    resetOption: { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+                    active:      { type: boolean }
+                budgetEstimate:
+                  type: object
+                  properties:
+                    estimate:        { type: integer }
+                    type:            { type: string, enum: [AUTO, MANUAL] }
+                    resetOption:     { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+                    active:          { type: boolean }
+                    includeExpenses: { type: boolean }
+      responses:
+        '400':
+          description: |
+            Sending both timeEstimate.active and budgetEstimate.active true
+            -> {"code":501,"message":"Only one type of estimate can be active at a time."}.
+            Malformed duration / bad enum -> {"code":3002,"message":"JSON parse error: ..."}.
+            Implication for go-clockify: SetEstimate handler must validate
+            "at most one active estimate" client-side, or pin the error
+            string in a test.
+  /workspaces/{workspaceId}/projects/{projectId}/template:
+    patch:
+      summary: Toggle is-template flag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isTemplate]
+              properties:
+                isTemplate: { type: boolean }
+      responses:
+        '200': { description: full ProjectDtoV1 with template:true/false }
+        '400':
+          description: |
+            Non-boolean -> {"code":3002,"message":"JSON parse error: Cannot deserialize value of type `boolean` ..."}.
+  /workspaces/{workspaceId}/projects/{projectId}/memberships:
+    post:
+      summary: Assign users to project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds: { type: array, items: { type: string } }
+      responses:
+        '200': { description: full ProjectDtoV1 with memberships[] populated }
+        '400':
+          description: |
+            Non-hex id -> {"code":501,"message":"state should be: hexString has 24 characters"}.
+            Valid-shape but unknown id (this probe did not exercise; PATCH
+            variant returned "User or group not a member of workspace").
+    patch:
+      summary: Replace memberships array (with status)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberships]
+              properties:
+                memberships:
+                  type: array
+                  items:
+                    type: object
+                    required: [userId]
+                    properties:
+                      userId:           { type: string }
+                      membershipStatus: { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE] }
+                      hourlyRate:
+                        type: object
+                        properties:
+                          amount: { type: integer, minimum: 0 }
+                          since:  { type: string, format: date-time }
+      responses:
+        '200': { description: project with memberships replaced }
+        '400':
+          description: |
+            unknown 24-hex userId ->
+            {"code":501,"message":"User or group not a member of workspace"}.
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate:
+    put:
+      summary: Set per-user cost rate on project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, minimum: 0, description: 'In minor units (cents).' }
+                since:  { type: string, format: date-time }
+      responses:
+        '200': { description: full ProjectDtoV1 with membership.costRate set }
+        '400':
+          description: |
+            Negative amount -> {"code":501,"message":"Amount has to be a positive value."}.
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate:
+    put:
+      summary: Set per-user hourly rate on project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, minimum: 0 }
+                since:  { type: string, format: date-time }
+      responses:
+        '200': { description: full ProjectDtoV1 with membership.hourlyRate set }
+        '400':
+          description: |
+            Non-integer amount -> {"code":3002,"message":"JSON parse error: Cannot deserialize value of type `java.lang.Integer` ..."}.
+components:
+  schemas:
+    MembershipRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:           { type: string }
+        membershipStatus: { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE] }
+        membershipType:   { type: string, enum: [WORKSPACE, PROJECT, USERGROUP] }
+        hourlyRate:
+          type: object
+          properties:
+            amount: { type: integer, minimum: 0 }
+            since:  { type: string, format: date-time }

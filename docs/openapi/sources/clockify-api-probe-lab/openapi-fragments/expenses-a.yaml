@@ -1,0 +1,187 @@
+# Clockify Expenses — READS (Agent A)
+# Live probe against api.clockify.me, workspace 65b382b606de527a7ee2b60e
+# Date: 2026-05-12. Fixtures: fixtures/expenses-fresh-a/.
+openapi: 3.0.3
+info:
+  title: Clockify Expenses (reads)
+  version: 2026-05-12
+servers:
+  - url: https://api.clockify.me/api
+paths:
+  /v1/workspaces/{workspaceId}/expenses:
+    get:
+      summary: List expenses (hydrated)
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page-size, in: query, schema: { type: integer, default: 50, minimum: 1 } }
+        - { name: user-id, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK. NOTE shape diverges from docs: items are HYDRATED (project/category/task as objects, plus fileName), and `expenses` is nested.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseListEnvelope' }
+        "403":
+          description: 'Filtering by another user-id you cannot see returns {message:"You don''t have permission to perform this action.",code:403} (note 403 in body, 403 status).'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } }
+  /v1/workspaces/{workspaceId}/expenses/{expenseId}:
+    get:
+      summary: Get expense by id (FLAT shape, NOT hydrated)
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: expenseId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Flat expense — only ids for project/category/task, no fileName field.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ExpenseFlat' } } }
+        "404":
+          description: Bogus id returns HTTP-level 200/4xx with body {message:"Expense doesn't belong to Workspace",code:501}.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } }
+  /v1/workspaces/{workspaceId}/expenses/categories:
+    get:
+      summary: List expense categories
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page-size, in: query, schema: { type: integer, default: 50, minimum: 1 } }
+        - { name: archived, in: query, schema: { type: boolean, default: false } }
+        - { name: name, in: query, schema: { type: string }, description: 'Case-insensitive substring; misses return count:0, categories:[]' }
+        - { name: sort-column, in: query, schema: { type: string, enum: [NAME] } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+      responses:
+        "200":
+          description: '{ count, categories[] }'
+          content: { application/json: { schema: { $ref: '#/components/schemas/CategoryList' } } }
+        "400":
+          description: 'sort-column=INVALID -> {message:"... must be from the following set: NAME.",code:501}'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } }
+  /v1/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}:
+    get:
+      summary: Download receipt
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: expenseId, in: path, required: true, schema: { type: string } }
+        - { name: fileId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Binary receipt stream (application/octet-stream or image/* per upload).
+          content: { '*/*': { schema: { type: string, format: binary } } }
+        "404":
+          description: 'Body {message:"EXPENSE with ID ''…'' not found",code:501}'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } }
+components:
+  schemas:
+    ExpenseListEnvelope:
+      type: object
+      properties:
+        dailyTotals:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, example: "2025-05-06" }            # yyyy-MM-dd
+              dateAsInstant: { type: string, format: date-time }       # only on dailyTotals, NOT weekly
+              total: { type: number, format: double }
+        weeklyTotals:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, example: "2025-06-30" }            # week-start date, no dateAsInstant
+              total: { type: number, format: double }
+        expenses:
+          type: object
+          properties:
+            count: { type: integer, description: 'Total across ALL pages, not just this page.' }
+            expenses:
+              type: array
+              items: { $ref: '#/components/schemas/ExpenseHydrated' }
+    ExpenseHydrated:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        date: { type: string, format: date-time }                       # full ISO, not yyyy-MM-dd
+        project:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string }
+            color: { type: string }
+            clientId: { type: string }
+            clientName: { type: string }
+        task: { type: object, nullable: true }
+        category:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            hasUnitPrice: { type: boolean }
+            priceInCents: { type: integer }
+            unit: { type: string }
+            workspaceId: { type: string }
+            archived: { type: boolean }
+        notes: { type: string, nullable: true }
+        quantity: { type: number, format: double }
+        billable: { type: boolean }
+        fileId: { type: string, description: 'Empty string "" when no receipt (NOT null/absent).' }
+        fileName: { type: string, nullable: true, description: 'Present only on list shape, omitted on by-id.' }
+        total: { type: number, format: double }
+        locked: { type: boolean }
+    ExpenseFlat:
+      type: object
+      description: GET /expenses/{id} — flat, no project/category/task objects, no fileName.
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        date: { type: string, format: date-time }
+        projectId: { type: string }
+        taskId: { type: string, nullable: true }
+        categoryId: { type: string }
+        notes: { type: string }
+        quantity: { type: number, format: double }
+        billable: { type: boolean }
+        fileId: { type: string }
+        total: { type: number, format: double }
+        locked: { type: boolean }
+    CategoryList:
+      type: object
+      properties:
+        count: { type: integer }
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              hasUnitPrice: { type: boolean }
+              priceInCents: { type: integer }
+              unit: { type: string }
+              workspaceId: { type: string }
+              archived: { type: boolean }
+    Err:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: integer, example: 501 }
+# Notes for go-clockify:
+# - List endpoint returns HYDRATED items (project/category/task objects + fileName);
+#   GET /{id} returns FLAT (projectId/categoryId/taskId, no fileName). Handlers/tests
+#   that assume one shape for both are wrong.
+# - dailyTotals entries carry both `date` and `dateAsInstant`; weeklyTotals only `date`.
+#   Don't share a struct.
+# - fileId is "" (empty string), never null, when no receipt — JSON tag should be plain
+#   string, not *string.
+# - `count` in the envelope is the GLOBAL count (e.g., 2829), not the page size.
+# - Categories: archived=true returns count:0 on this workspace; name= filter is a
+#   substring match returning {count:0, categories:[]} on misses.
+# - sort-column accepts only "NAME"; anything else -> 400-ish body {code:501} with the
+#   "must be from the following set: NAME." message.
+# - user-id filter pointing at a foreign user returns body {message:"You don't have
+#   permission to perform this action.", code:403} (HTTP status also 403).
+# - Receipt 404 body: {message:"EXPENSE with ID '...' not found", code:501}.

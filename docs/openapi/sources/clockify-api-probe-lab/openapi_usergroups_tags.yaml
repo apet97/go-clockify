@@ -1,0 +1,376 @@
+openapi: 3.0.3
+info:
+  title: Clockify User Groups and Tags API
+  description: Validated specification for management of User Groups, Group Membership, and Workspace Tags.
+  version: 1.0.0
+servers:
+  - url: https://api.clockify.me/api/v1
+    description: Clockify API Server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    UserRedactedDtoV1:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    UserGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        workspaceId:
+          type: string
+        userIds:
+          type: array
+          items:
+            type: string
+        teamManagers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRedactedDtoV1'
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        workspaceId:
+          type: string
+        archived:
+          type: boolean
+
+    CreateNameRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+
+    UpdateTagRequest:
+      type: object
+      required:
+        - name
+        - archived
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        archived:
+          type: boolean
+
+    AddUserToGroupRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces/{workspaceId}/user-groups:
+    get:
+      summary: Find all groups on a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: project-id
+          in: query
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: sort-column
+          in: query
+          schema:
+            type: string
+            enum: [ID, NAME]
+        - name: sort-order
+          in: query
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: includeTeamManagers
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGroup'
+    post:
+      summary: Add a new group
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNameRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+
+  /workspaces/{workspaceId}/user-groups/{id}:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      summary: Update a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNameRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+    delete:
+      summary: Delete a group
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+
+  /workspaces/{workspaceId}/user-groups/{userGroupId}/users:
+    post:
+      summary: Add users to a group
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userGroupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserToGroupRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+
+  /workspaces/{workspaceId}/user-groups/{userGroupId}/users/{userId}:
+    delete:
+      summary: Remove a user from a group
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userGroupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+
+  /workspaces/{workspaceId}/tags:
+    get:
+      summary: Find tags on a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: strict-name-search
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: excluded-ids
+          in: query
+          schema:
+            type: string
+        - name: sort-column
+          in: query
+          schema:
+            type: string
+            enum: [ID, NAME]
+        - name: sort-order
+          in: query
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: archived
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+    post:
+      summary: Add a new tag
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNameRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+
+  /workspaces/{workspaceId}/tags/{id}:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a tag by ID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+    put:
+      summary: Update a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTagRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+    delete:
+      summary: Delete a tag
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'

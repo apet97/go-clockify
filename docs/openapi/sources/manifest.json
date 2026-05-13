@@ -1,0 +1,736 @@
+{
+  "generated_at": "2026-05-13T00:11:04Z",
+  "purpose": "Repo-local sanitized evidence inputs for scripts/gen-clockify-openapi.",
+  "files": [
+    {
+      "path": "AIII/openapi.yaml",
+      "bytes": 866879,
+      "sha256": "5367e5a6343ca82959dd1df37ab8b463bca6ca7084de45678a0662e15d761546"
+    },
+    {
+      "path": "clockify-api-probe-lab/APPROVALDOC.md",
+      "bytes": 20022,
+      "sha256": "56bc28c094130e4f0d340caa405d41e920c6d0ff2165130abc771bbe54e0d7dc"
+    },
+    {
+      "path": "clockify-api-probe-lab/BALANCEDOC.md",
+      "bytes": 5064,
+      "sha256": "79d0a1f0024761166d426976fa48f6bf6bacc5519442a27ad3de23a396551db8"
+    },
+    {
+      "path": "clockify-api-probe-lab/CLIENTDOC.md",
+      "bytes": 10462,
+      "sha256": "57d3f57341308ba4954b459529e203282215f1320340278ca67e593f3806146b"
+    },
+    {
+      "path": "clockify-api-probe-lab/CLIENTSDOC.md",
+      "bytes": 9140,
+      "sha256": "8a153a42b2c43f0b972e027bc2af62db6e3b2b50c605a209813e0c92a135122f"
+    },
+    {
+      "path": "clockify-api-probe-lab/CUSTOMFIELDSDOC.md",
+      "bytes": 18812,
+      "sha256": "84402a484e7a36fd3391f30b79307efdbd9d689c030740f57fce9962bbd5dcaa"
+    },
+    {
+      "path": "clockify-api-probe-lab/EXPENSESDOC.md",
+      "bytes": 15762,
+      "sha256": "77c9a45ad2ac72526e3caad0e8aa9886f012f7b992b63349836b4805b41f0d59"
+    },
+    {
+      "path": "clockify-api-probe-lab/GROUPSDOC.md",
+      "bytes": 9740,
+      "sha256": "c2c958642566f1b25b7ba308c6ba83fe19e30edff5f26a586b0ea4e379cd41a2"
+    },
+    {
+      "path": "clockify-api-probe-lab/HOLIDAYSDOC.md",
+      "bytes": 17035,
+      "sha256": "7907dfb6eb8ce048c287d1d692a95561a12bbe9ac467c2690a064651ccc36720"
+    },
+    {
+      "path": "clockify-api-probe-lab/INVOICEDOC.md",
+      "bytes": 67607,
+      "sha256": "d1cba04f6f5eece0b1e9e916eab29c9b34c8139e292d8fab82e51f081fac2874"
+    },
+    {
+      "path": "clockify-api-probe-lab/Invoiceopenapi.yaml",
+      "bytes": 22702,
+      "sha256": "59591ac7bd5276838f9394b06233a7573eae80960c8d3825da1b55a31930b28d"
+    },
+    {
+      "path": "clockify-api-probe-lab/POLICIESDOC.md",
+      "bytes": 24615,
+      "sha256": "73c7be02a85e6f5dca3d4ab91530854145150911263b4c3452e527400adbca23"
+    },
+    {
+      "path": "clockify-api-probe-lab/PROJECTSDOC.md",
+      "bytes": 75334,
+      "sha256": "4a70bc355745bb683627f49d340acc7fe88e370d316c1d5eba9bc83bc2a6cf7d"
+    },
+    {
+      "path": "clockify-api-probe-lab/SCHEDULINGDOC.md",
+      "bytes": 34031,
+      "sha256": "c9436f68cca3b216ae91844d09b45aaf53a1a5df70f285f01662fa3ab705ef4e"
+    },
+    {
+      "path": "clockify-api-probe-lab/TAGDOC.md",
+      "bytes": 6505,
+      "sha256": "30a81f9ad75d4a6f50a9adbb3e3c464e6d19c2ca2e46ae77b72642efb2abe1c5"
+    },
+    {
+      "path": "clockify-api-probe-lab/TASKDOC.md",
+      "bytes": 21219,
+      "sha256": "a0dc4a7e5d481cbc9a19621f65dea2bba242833d983af44f62e953c24d9c140d"
+    },
+    {
+      "path": "clockify-api-probe-lab/TIMEENTRYDOC.md",
+      "bytes": 38440,
+      "sha256": "570f31bf633ec7d153d7ec7c2a96260ff86bc1b9e8ad06d30144171d12cae81b"
+    },
+    {
+      "path": "clockify-api-probe-lab/TIMEOFFDOC.md",
+      "bytes": 15826,
+      "sha256": "c28f60cd8f72b502f76ed297abdcc21c117b7a0c1567fdd8bc16b0d505136937"
+    },
+    {
+      "path": "clockify-api-probe-lab/USERDOC.md",
+      "bytes": 39797,
+      "sha256": "89803d694570d3515f29ebadb9150d4f0cd6a5b3832ac8a26dc08c4fa15c2e13"
+    },
+    {
+      "path": "clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml",
+      "bytes": 38020,
+      "sha256": "2835b8699e175ad8afe9391ddb5b3e766b170fd88ce8c3389cc44467d244cc5d"
+    },
+    {
+      "path": "clockify-api-probe-lab/WEBHOOKDOC.md",
+      "bytes": 318510,
+      "sha256": "73e0ef478084770c68a6b264f1bd4d006ccd0ac0af82d4b27c2993e585851999"
+    },
+    {
+      "path": "clockify-api-probe-lab/WORKSPACESDOC.md",
+      "bytes": 796254,
+      "sha256": "02eb3c89be54d709a6b7a20acc1d89be795be16bbfadb1d9141a71380e721b0f"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/SUMMARY.md",
+      "bytes": 25866,
+      "sha256": "f40dfaab143cd0114638fe6f7f8150def721cdde4febf56e7e111fe6b128b4e5"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/custom-fields.md",
+      "bytes": 5666,
+      "sha256": "428a0b1eab6eaf78fe88c3106ba11af58e840e309eb36d8cde47d825485f6460"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/expenses.md",
+      "bytes": 10972,
+      "sha256": "a50208a7b1fe36cdfad52262659932d300ce79a1cce3d641552b7b2f35a01e57"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/holidays.md",
+      "bytes": 5001,
+      "sha256": "489d558292d498aeef4c035162e795ba265e530dd93aec6b4c25eed8ce2bf407"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/invoices.md",
+      "bytes": 6730,
+      "sha256": "0acc9339ef21a742b0c8f81e91eb086baa358d2b2b33c32e13217e54c79c9308"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/project-memberships.md",
+      "bytes": 6541,
+      "sha256": "82b742bc6b67d4d8d191e410ef5796f719708dcb132464125960c87a360ae30e"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/rates-and-reports.md",
+      "bytes": 9520,
+      "sha256": "4e6514fdf98c68d833993708dab8f51df63c07e78cdca784eaa842470cf552d8"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/scheduling.md",
+      "bytes": 7281,
+      "sha256": "2940e59bfc3b8cd8e2f0aa6ef67489fdabc97ec9f1b68792bdc70d37ae268892"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/shared-reports.md",
+      "bytes": 19777,
+      "sha256": "159eebf29fb2ce883a723df9a654e55603a42e47b514b8eabed219241f419dc9"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/time-off.md",
+      "bytes": 6505,
+      "sha256": "a7db07c2fefb8b55c8094d2d742f144e53abbbaa1cfb58dacf1c2655d707e4d7"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/webhooks.md",
+      "bytes": 6101,
+      "sha256": "dd2e4ffaad8a439ed0b84089a5f743711073ef0514271bf00934027397d3f1c7"
+    },
+    {
+      "path": "clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml",
+      "bytes": 35440,
+      "sha256": "a7f9c2cd5487db7449a6dc08c69ca7a1f874fe2cd8554e69b2d0197aaba9ecd8"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/approvals-a.yaml",
+      "bytes": 6459,
+      "sha256": "29eeea140bda2cf78ef92d990ca8b9c9401189e94afa85aaa9df5272c4d9381a"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/approvals-b.yaml",
+      "bytes": 10214,
+      "sha256": "be631b95f222480c660a8a26e637c9763bea5132ac47570cdda65a81a9234da8"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/balance-a.yaml",
+      "bytes": 4589,
+      "sha256": "8e5a9fc33f1ad6dba5140c5b82bbcb43db81bbf45fa38df919e8b513b69891fd"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/balance-b.yaml",
+      "bytes": 3120,
+      "sha256": "df152db3dc092eb119a75bdfb5fbd838eb017f2c7f1fc57149fc66a85bf8b744"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/clients-a.yaml",
+      "bytes": 4792,
+      "sha256": "1d22bb15d540eea729ae00af856125089352f805a1b4fa50712f5859de832bd2"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/clients-b.yaml",
+      "bytes": 8190,
+      "sha256": "bc1c533f3855365fe78d88a347125dba9192c3e9383ace592dd53afe596ecd00"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/expenses-a.yaml",
+      "bytes": 8693,
+      "sha256": "95dcd2c8781ea40e600af3df59f6e301b286b042e97c603db594702469a7e908"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/expenses-b.yaml",
+      "bytes": 6482,
+      "sha256": "63b706c5150d66792d62847b7fc32086709d33dba0674087b44be1c1a61d4d78"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/holidays-a.yaml",
+      "bytes": 3719,
+      "sha256": "ba33be9b52f3adad012b6e8867aa946225e96e056f5196e449222250901a4b3e"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/holidays-b.yaml",
+      "bytes": 8090,
+      "sha256": "9a9c93abb458c5c236527b4c08f45f9f4b0948df7a30c85dd941a6e72fad7ccd"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/invoices-a.yaml",
+      "bytes": 7573,
+      "sha256": "988d18093c101f0a50eafae3780f1b0fa7efaeadee3d74b0dd22bff57bc50714"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/invoices-b.yaml",
+      "bytes": 7460,
+      "sha256": "07cc4626f4220b7912dc9c840455b1485262e376323d41abfe67862bdfecca56"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/policies-a.yaml",
+      "bytes": 6792,
+      "sha256": "59812f00897f6f3db82d640cff8bfe762c79dae78f7ecca671fae93ad23ea89a"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/policies-b.yaml",
+      "bytes": 6280,
+      "sha256": "ad08f46b8572cb6e7b981df67670f9e27f75751fa82ed4244fb6deb930a73873"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/projects-a.yaml",
+      "bytes": 11918,
+      "sha256": "1efaff551289c9682eff5ff3e8519a963a936aaaf427d77fdc59c52f726e9909"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/projects-b.yaml",
+      "bytes": 10253,
+      "sha256": "ab20dd813a4a9cf52432a3aa1e3919dd06d8520d843372ff8b0271458ccc6776"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml",
+      "bytes": 12272,
+      "sha256": "465ad6ed93fc7fc3b132a087fdf82d5f80e112c03d20f871cc7da73a3e27ddb0"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml",
+      "bytes": 5808,
+      "sha256": "14496c34ff83466d0d6cc6c5488d19f77d1c5b5b956826dc237f7cd0dba8420b"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/tags-a.yaml",
+      "bytes": 3404,
+      "sha256": "c1e651eee7732fbb388bcb411ee0543eb62f423ec985ff55947732c972e8e1b7"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/tags-b.yaml",
+      "bytes": 3324,
+      "sha256": "4393e503693becf3281b100c32af435a40ae585b5c640f7d58c3cc2ac49d8e8a"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/tasks-a.yaml",
+      "bytes": 5168,
+      "sha256": "d05934c5f6e36925017d8683b69ef3b68f292e1676ce8658b1c86dbfc30ff581"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/tasks-b.yaml",
+      "bytes": 5479,
+      "sha256": "e4b08f91e148be14175f3861fde7e5a4faae6619df7e7482326ef4c61ea86979"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml",
+      "bytes": 5902,
+      "sha256": "9068a8928ada4d435e8573f8c802125f409238d6f814fdea6cad420eca9e6be1"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml",
+      "bytes": 6802,
+      "sha256": "0dbf61211fe8354d08065cf5daf5cc8dd7dad8bb128b905a34c268356ebd610a"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/time-off-a.yaml",
+      "bytes": 8506,
+      "sha256": "98c10452218a1e63cdcc965b66b84872b86c16e3171049b225f44ed2653fc02f"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/time-off-b.yaml",
+      "bytes": 7640,
+      "sha256": "7b956ed0caccdec93ef195da30746b18b6d03a1eaca1efb6bedf2506f0063b9a"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml",
+      "bytes": 4615,
+      "sha256": "1797ab08315454b820f6187bd596fc02f3ee3332d58e511958f8a9857f655b87"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml",
+      "bytes": 6920,
+      "sha256": "7b90253afb7450edd010ef781e4934f7ffedc7df0588b4d7819b567765e80cd3"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml",
+      "bytes": 6474,
+      "sha256": "79260064e488d666adb897f53a830fbad6ccbe12394efdda595397a31498d21f"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml",
+      "bytes": 8877,
+      "sha256": "c4931ebf5861a7ce26331229573276a287ab8ca0205c998bd720953c29608cf1"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml",
+      "bytes": 7663,
+      "sha256": "2d261690eed0a44afabb252146f47e84932b5aea5b15600f144545a91e13e535"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml",
+      "bytes": 16461,
+      "sha256": "6116123bfbaaa9c65ecbe95ba59dcad841391ea64946eda9d51240bb82ed0af8"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi.yaml",
+      "bytes": 126914,
+      "sha256": "e2e72e70db49a1f9f23346e23c1ae1ba71bd71d5dfc8ec5c7fe61efd78426ae1"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi_scheduling.yaml",
+      "bytes": 16848,
+      "sha256": "23f46b242ed7e36adcef8a84ff3fc5c06a60ca31f32950bf85d7e041357492c7"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi_timeentry.yaml",
+      "bytes": 9097,
+      "sha256": "b865af9c0871d97f46738ab37c5167f2f844dc83a0417c74bbd60d99ec1f8079"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi_usergroups_tags.yaml",
+      "bytes": 8613,
+      "sha256": "afef0794749fb4c4889cb539a2abe8fa08973913e8f4ccc2e696c15a3114a436"
+    },
+    {
+      "path": "newfolderwithfindings/agent-01-api-coverage-vs-openapi.md",
+      "bytes": 18149,
+      "sha256": "e7f18aea07fb96f979177c82f70ab1a1701ce2ba3b54c0a98277945ac3b22ca1"
+    },
+    {
+      "path": "newfolderwithfindings/agent-02-mcp-tool-schema-quality.md",
+      "bytes": 10846,
+      "sha256": "3a2fb99571e144c009e081a60bed20e4f8992b847b97efea0e1d50d1732b2b80"
+    },
+    {
+      "path": "newfolderwithfindings/agent-03-tool-descriptions-and-parameter-clarity.md",
+      "bytes": 13089,
+      "sha256": "538dd9e65c5ba36e4a97f980bde7d8fa2f2036acfe429a578de26a75e77523d1"
+    },
+    {
+      "path": "newfolderwithfindings/agent-04-auth-api-key-loading.md",
+      "bytes": 12588,
+      "sha256": "03213585244c44c7db6627060cf0247fb3e2760b777ab9ce58b645d4d63c9f42"
+    },
+    {
+      "path": "newfolderwithfindings/agent-05-api-key-redaction-and-secret-safety.md",
+      "bytes": 10437,
+      "sha256": "bff58ca51163bc12d93571d0a868d545916264a80da6cd2bee8a4da52c709382"
+    },
+    {
+      "path": "newfolderwithfindings/agent-06-config-env-validation.md",
+      "bytes": 14164,
+      "sha256": "0c5bbea8f085d83c21c572c9f50549068335eb26fb2f0d6ac4a67a282c582017"
+    },
+    {
+      "path": "newfolderwithfindings/agent-07-doctor-command-output.md",
+      "bytes": 10857,
+      "sha256": "fbea6813441028ab72b99fb1c8019d0bd8949f7d612686b48613883a5025a112"
+    },
+    {
+      "path": "newfolderwithfindings/agent-08-startup-failure-modes.md",
+      "bytes": 13021,
+      "sha256": "2408d8d764d4056a03d8fc1822d4cf202623ddb7f190320274de8ba0304cb42e"
+    },
+    {
+      "path": "newfolderwithfindings/agent-09-error-handling-user-facing-messages.md",
+      "bytes": 13927,
+      "sha256": "6b2137b8fe34451160c8bc8cb0b700defe370ca05379162e98c210c36b8a840b"
+    },
+    {
+      "path": "newfolderwithfindings/agent-10-clockify-workspace-isolation.md",
+      "bytes": 11025,
+      "sha256": "bb4469046c1b337ea5263b13da5581563df6422d0c02a845c9dd5e7f910788a5"
+    },
+    {
+      "path": "newfolderwithfindings/agent-11-tenant-boundary-safety.md",
+      "bytes": 11054,
+      "sha256": "e72ba757a71e56666e52264e78cfcf8ba7ca3c06a82a4f46a645cf5ff25d06f6"
+    },
+    {
+      "path": "newfolderwithfindings/agent-12-project-crud-safety.md",
+      "bytes": 13067,
+      "sha256": "1ddbc04e5d487a8462a8c04ce912ce118e05dee5b8d2782e1c34dd1622c57fce"
+    },
+    {
+      "path": "newfolderwithfindings/agent-13-client-crud-safety.md",
+      "bytes": 13294,
+      "sha256": "aba4cdd337aa7a2deb6c933787ac0b592814cd03ac1393af3f8581a02b38969f"
+    },
+    {
+      "path": "newfolderwithfindings/agent-14-task-crud-safety.md",
+      "bytes": 9908,
+      "sha256": "12cdf0b88c045f2d82117f0014a552e7f8855ef6b378db38bca7a84b15dab32a"
+    },
+    {
+      "path": "newfolderwithfindings/agent-15-tag-crud-safety.md",
+      "bytes": 11817,
+      "sha256": "abe937e562a4b56c769eecdf87bdb8446600ada7a1fe011b562ac57d82da468f"
+    },
+    {
+      "path": "newfolderwithfindings/agent-16-user-endpoint-safety.md",
+      "bytes": 13648,
+      "sha256": "a38bb95b4d90d6fa643d0c7cb6205bda50a1927a400f62b016ccb7decb5705c8"
+    },
+    {
+      "path": "newfolderwithfindings/agent-17-time-entry-read-paths.md",
+      "bytes": 14836,
+      "sha256": "7352fe06443d4d3ed8032a4aaf92b573c88f73929507efcf2cb3309013a32459"
+    },
+    {
+      "path": "newfolderwithfindings/agent-18-time-entry-mutation-safety.md",
+      "bytes": 10670,
+      "sha256": "0ee4b175918862bb7efe8a238e7047a7907133b90e524e3d82ef604013b2d683"
+    },
+    {
+      "path": "newfolderwithfindings/agent-19-timer-start-stop-flows.md",
+      "bytes": 11036,
+      "sha256": "c31705f21def10258b213a7a9ad63f21e78296c8905689950dfeb79394331b4b"
+    },
+    {
+      "path": "newfolderwithfindings/agent-20-reports-detailed-endpoint.md",
+      "bytes": 13297,
+      "sha256": "fbbb51599e0baf2b38f51ca1a48b3be26f6540f87620da591563cded4288131d"
+    },
+    {
+      "path": "newfolderwithfindings/agent-21-reports-summary-endpoint.md",
+      "bytes": 12851,
+      "sha256": "c3bdb3ffb713ce600521c648f1ab35d71b723f11c2d6132f69ac238bfa976783"
+    },
+    {
+      "path": "newfolderwithfindings/agent-22-reports-weekly-endpoint.md",
+      "bytes": 12123,
+      "sha256": "f1b32c00e30492dff84bd432091c5fb4897742fe30ca2cbdfccb39006f3e62bd"
+    },
+    {
+      "path": "newfolderwithfindings/agent-23-reports-pagination-and-large-results.md",
+      "bytes": 9702,
+      "sha256": "f920298556453bdc0f052ffc001bc142a6b146b46c18983846df886129f11c43"
+    },
+    {
+      "path": "newfolderwithfindings/agent-24-date-timezone-handling.md",
+      "bytes": 13548,
+      "sha256": "f923f0bb35a0ac6f737c39656dd3a66c8a8b2651ab3616e4ea1e79cf6f2b7ec2"
+    },
+    {
+      "path": "newfolderwithfindings/agent-25-duration-format-handling.md",
+      "bytes": 11911,
+      "sha256": "954b01031b8d137d4d3275ccf6ce17d5e7216f5514ed629afb9bed7289cf0744"
+    },
+    {
+      "path": "newfolderwithfindings/agent-26-rate-limit-retry-behavior.md",
+      "bytes": 10176,
+      "sha256": "d59f8a7a7a1b88fc566171240dc713fa0be5db26d5fd0353f3e98b983e511a1b"
+    },
+    {
+      "path": "newfolderwithfindings/agent-27-timeout-and-cancellation-behavior.md",
+      "bytes": 9849,
+      "sha256": "4fec731ff908167a665a3b1601d85284da87c6383d446ab445ea8c32ceef73dc"
+    },
+    {
+      "path": "newfolderwithfindings/agent-28-webhook-docs-and-event-behavior.md",
+      "bytes": 12897,
+      "sha256": "724d725551ca75b30d9bc347b7b3646fc17a673ba86a3945279f8b26c6b31628"
+    },
+    {
+      "path": "newfolderwithfindings/agent-29-invite-user-dummy-flow-only.md",
+      "bytes": 11024,
+      "sha256": "f914825684697c3b4910ec9074e96b1622bb100541ed05a0ef3969cdf7bec109"
+    },
+    {
+      "path": "newfolderwithfindings/agent-30-no-real-email-safety.md",
+      "bytes": 10810,
+      "sha256": "f1fb1a851b0357d1109f48d26c06cd84c84bae8eda1a0770eda261fa353eb6fe"
+    },
+    {
+      "path": "newfolderwithfindings/agent-31-logging-quality-and-noise.md",
+      "bytes": 9667,
+      "sha256": "fe6b3f2a034a3cd86681a4c40ddf7b6b37ed712b8943130516e831a1126d9a41"
+    },
+    {
+      "path": "newfolderwithfindings/agent-32-auditability-of-tool-actions.md",
+      "bytes": 11713,
+      "sha256": "236d03bb95acdb54a508a46102fae4a90fc2c81b35658996ec5a3d143ad9de64"
+    },
+    {
+      "path": "newfolderwithfindings/agent-33-build-and-install-from-clean-checkout.md",
+      "bytes": 10383,
+      "sha256": "c86f50bc503f787fdf754f82b46feb7aad27f3da2e7c79f4d3974179db2b3a7d"
+    },
+    {
+      "path": "newfolderwithfindings/agent-34-unit-tests.md",
+      "bytes": 12302,
+      "sha256": "9d59926a3af2914693f9c3cae4254db255a2907eefabcc0de875b901141cc166"
+    },
+    {
+      "path": "newfolderwithfindings/agent-35-integration-tests-mocked-only.md",
+      "bytes": 16435,
+      "sha256": "505db4626edd456d482432c0689a766060384b8a7df3dfa15ec60cd896fb1bfa"
+    },
+    {
+      "path": "newfolderwithfindings/agent-36-go-vet-static-analysis.md",
+      "bytes": 9832,
+      "sha256": "17aca1fa282918775899da61ac8e4db68143142d5b97a8bd4dbcbfec5d820f9a"
+    },
+    {
+      "path": "newfolderwithfindings/agent-37-gofmt-goimports-formatting.md",
+      "bytes": 8384,
+      "sha256": "318c6b3d59c407ef6e969e81836ba65de07d4cb1af068804707fc4adcea249d8"
+    },
+    {
+      "path": "newfolderwithfindings/agent-38-golangci-or-existing-lint-config.md",
+      "bytes": 8632,
+      "sha256": "0b7e8e26c11d76cfac1ddfc150bd4300fd1acad7221be5eeb8cd5f1c9943b218"
+    },
+    {
+      "path": "newfolderwithfindings/agent-39-docker-build-smoke.md",
+      "bytes": 11298,
+      "sha256": "71b1b0bf80c3f78db4ff31a9cb036f1b49a3b5f5973edb5e0d575426852137a7"
+    },
+    {
+      "path": "newfolderwithfindings/agent-40-docker-run-smoke.md",
+      "bytes": 10074,
+      "sha256": "4d9a8ffc7db306c749ccbe78f823e1f047362b3ef16ff41a430caf044258cc8f"
+    },
+    {
+      "path": "newfolderwithfindings/agent-41-docker-secrets-not-baked.md",
+      "bytes": 11222,
+      "sha256": "8cb4179c7f12a009cd6e180726102a5f34eb80e05d6ce7aedb748ffa9fa85985"
+    },
+    {
+      "path": "newfolderwithfindings/agent-42-readme-getting-started.md",
+      "bytes": 13457,
+      "sha256": "5a15fed76d22f335ba28f7ae691afc3a04ebc228e1e52f64dd9383de9da18ebf"
+    },
+    {
+      "path": "newfolderwithfindings/agent-43-local-internal-handoff-docs.md",
+      "bytes": 10819,
+      "sha256": "2e1f30dd232db79f14dff43a409389a4fc167283b1463c6ad65f2653b5280eb1"
+    },
+    {
+      "path": "newfolderwithfindings/agent-44-release-docs-accuracy.md",
+      "bytes": 9669,
+      "sha256": "84661e42544f93333d7d47e08209f208e7741a8709e05b078a5151deda57cfa5"
+    },
+    {
+      "path": "newfolderwithfindings/agent-45-example-env-safety.md",
+      "bytes": 13029,
+      "sha256": "ff51d495db10422dd9d354f457154056830dc8254a218d33a996ccf15133bbf9"
+    },
+    {
+      "path": "newfolderwithfindings/agent-46-cli-help-version-output.md",
+      "bytes": 11666,
+      "sha256": "0065ce277cee091ce39d76928979a100c08cdd9e309651f5c4bb0ff856a5a147"
+    },
+    {
+      "path": "newfolderwithfindings/agent-47-mcp-server-startup-smoke.md",
+      "bytes": 12513,
+      "sha256": "61c28d06dfc2f520791fff23fa642f56710ac20e26f427f6628aa40d24476081"
+    },
+    {
+      "path": "newfolderwithfindings/agent-48-mcp-client-compatibility-notes.md",
+      "bytes": 14925,
+      "sha256": "b8378e40f701c7986d20c2837629bf62487f9f2b2aaa97eee3a056c003c607ba"
+    },
+    {
+      "path": "newfolderwithfindings/agent-49-tool-profile-fullness.md",
+      "bytes": 14055,
+      "sha256": "ffa2846fdaea60c0d79da68f3631096115975788614de4ca2e8c2ede9200c9de"
+    },
+    {
+      "path": "newfolderwithfindings/agent-50-openapi-generated-code-consistency.md",
+      "bytes": 12271,
+      "sha256": "de01fe247dae74e98045927833416ed01f945596e13b20d7416788431f17f0a7"
+    },
+    {
+      "path": "newfolderwithfindings/agent-51-permissions-and-scope-documentation.md",
+      "bytes": 15897,
+      "sha256": "a5e833a807d892637a998e646be870caf26340c6e62c20f0b770fd73bb10446c"
+    },
+    {
+      "path": "newfolderwithfindings/agent-52-nil-empty-response-handling.md",
+      "bytes": 9708,
+      "sha256": "1e360eb71ef6ebcad2507ba34de699c3792c12e32b3fa179823b6891a424f75d"
+    },
+    {
+      "path": "newfolderwithfindings/agent-53-http-status-code-mapping.md",
+      "bytes": 9655,
+      "sha256": "59d271114153ff307a3bbb88df7c4c2bf1d981ea27e61d942b1ad4977f622765"
+    },
+    {
+      "path": "newfolderwithfindings/agent-54-clockify-api-edge-cases.md",
+      "bytes": 16857,
+      "sha256": "de76f820c52e8508cef1a57d574d1c76bc0d6ea83b5a65464bbda1771bb13eae"
+    },
+    {
+      "path": "newfolderwithfindings/agent-55-performance-load-sanity-local.md",
+      "bytes": 10052,
+      "sha256": "7e962633fd1d44461eff1252e1a16ae3388c9d63e7fe3603c1f05ec622922c2a"
+    },
+    {
+      "path": "newfolderwithfindings/agent-56-memory-and-goroutine-sanity.md",
+      "bytes": 11444,
+      "sha256": "289b0415527b3b3eb8bc015cd404d59fa16a649ef31b855f59b9be4bd6198b9c"
+    },
+    {
+      "path": "newfolderwithfindings/agent-57-cross-platform-macos-linux-notes.md",
+      "bytes": 13699,
+      "sha256": "3bcdff5c33df1bb0fcf483de48af6b70eeac749f0c5e38b7a864120cc0641506"
+    },
+    {
+      "path": "newfolderwithfindings/agent-58-security-local-static-grep.md",
+      "bytes": 12896,
+      "sha256": "742a18b7fff7290573b1a83693b662d095d954195f76001ef424c1b9f912e95c"
+    },
+    {
+      "path": "newfolderwithfindings/agent-59-patch-quality-and-minimalism.md",
+      "bytes": 12808,
+      "sha256": "a5aea8ac66f27d766578798ba3207daa47a7da8e9e7d225c70472bc792b0cb13"
+    },
+    {
+      "path": "newfolderwithfindings/agent-60-final-release-readiness-verdict.md",
+      "bytes": 10391,
+      "sha256": "40444cd6ee503431f1e58dc74dd5560b1e1e425480762388365ed4e7e5764c74"
+    },
+    {
+      "path": "realOPENAPI/APPROVALOPENAPI.YAML",
+      "bytes": 27189,
+      "sha256": "1e627bdeb645cdb793073128622dd23eeb02c1986b509d312cff6555bbe87bfd"
+    },
+    {
+      "path": "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml",
+      "bytes": 53884,
+      "sha256": "723ca6e672ce785e466f73ea53eb2aafde9397ece7fa7e20691af6c3c76c588b"
+    },
+    {
+      "path": "realOPENAPI/BALANCEOPEANI.yaml",
+      "bytes": 10209,
+      "sha256": "46a775df564a6eedd4578bd878ad0add2a463db5018dc6680ed278a6ba984f23"
+    },
+    {
+      "path": "realOPENAPI/CFSOPEANI.YAML",
+      "bytes": 19809,
+      "sha256": "0c8e9b947c3ede98eb9831560ae598a794a9f86028f5817fbe39364657ef17cd"
+    },
+    {
+      "path": "realOPENAPI/EXPENSESOPEAPI.YAML",
+      "bytes": 22754,
+      "sha256": "8576c2233ac9fbc2d86cbd9168231e945af96100bb0657b033bf9a49cc684d79"
+    },
+    {
+      "path": "realOPENAPI/HOLIDAYSOPEAPI.YAML",
+      "bytes": 21528,
+      "sha256": "e66d002beab21e1479d9da181086f2a2b2f36df6d4f47921955b8de45429a82d"
+    },
+    {
+      "path": "realOPENAPI/INVOICESOPEAPI.YAML",
+      "bytes": 59415,
+      "sha256": "baef05bfd53b26f75c58d7861b0f65e3471f47f03ff37ab154bf59b0151a3172"
+    },
+    {
+      "path": "realOPENAPI/POLICIESOPENAPI.YAML",
+      "bytes": 28915,
+      "sha256": "02b514c1f17f932f924c49613c27722431472c239eb558f38013f02d35121f91"
+    },
+    {
+      "path": "realOPENAPI/PROJECTSOPENAPI.YAML",
+      "bytes": 62623,
+      "sha256": "d4d8647072b6922773f7bb384a015e732c9bc752db9437457012017fd64fecdb"
+    },
+    {
+      "path": "realOPENAPI/SCHEDULINGOPENAPI.YAML",
+      "bytes": 40296,
+      "sha256": "b90d6ae6c65e35445e9aef6d1a68c038434232b14e3c89b4a61c71c0453830b1"
+    },
+    {
+      "path": "realOPENAPI/TASKOPENAPI.YAML",
+      "bytes": 18323,
+      "sha256": "8c2b1ce72bb798166e8c87e2037a42ad8b1f9994f8f2468d7b2979fac8596f20"
+    },
+    {
+      "path": "realOPENAPI/TIMEOFFOPENAPI.YAML",
+      "bytes": 17028,
+      "sha256": "6cab50175d0f212cf45c41bc766e5852d9da4700790ece3ad5684d95e44bc25c"
+    },
+    {
+      "path": "realOPENAPI/USERGROUPSOPEAPI.YAML",
+      "bytes": 12800,
+      "sha256": "1055c33c6c12c2d072f6b80ff8f6feb784b74a855146215a8cc9efec0ca614b2"
+    },
+    {
+      "path": "realOPENAPI/USEROPENAPI.YAML",
+      "bytes": 36045,
+      "sha256": "1930cb5a42fab287abb6594a7a103650736ffc4a7195ff21c4a2b75ff6308309"
+    },
+    {
+      "path": "realOPENAPI/WEBHOOKSOPENAPI.YAML",
+      "bytes": 20849,
+      "sha256": "bf4d37e84ccf4644995eefbda4c5d2edb6342da85fae3c684b56249e3eef4da7"
+    },
+    {
+      "path": "realOPENAPI/WORKSPACEOPENAPI.YAML",
+      "bytes": 36316,
+      "sha256": "6f0836610e8110d32ec0f18e3d4fb830e5c4ab8c83f8f3fcdbf17ae9fcc3c4e1"
+    }
+  ]
+}

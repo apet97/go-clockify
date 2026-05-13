@@ -1,0 +1,745 @@
+openapi: 3.0.3
+info:
+  title: Clockify Expenses API
+  version: 1.0.0
+  description: OpenAPI definition generated from the uploaded EXPENSESDOC.md Markdown
+    documentation. The receipt download operation's method/path was completed from
+    the official Clockify docs because the uploaded Markdown includes its parameters
+    and response but omits the method/path line.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+tags:
+- name: Expenses
+  description: Operations for creating, retrieving, updating, deleting, and downloading
+    expense receipts.
+- name: Expense categories
+  description: Operations for listing and managing expense categories.
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+paths:
+  /v1/workspaces/{workspaceId}/expenses:
+    get:
+      tags:
+      - Expenses
+      summary: Get all expenses on a workspace
+      operationId: getWorkspaceExpenses
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/PageQuery'
+      - $ref: '#/components/parameters/PageSizeQuery'
+      - $ref: '#/components/parameters/UserIdQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceExpensesDtoV1'
+    post:
+      tags:
+      - Expenses
+      summary: Create an expense
+      operationId: createExpense
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      requestBody:
+        $ref: '#/components/requestBodies/CreateExpenseMultipart'
+      responses:
+        '201':
+          $ref: '#/components/responses/ExpenseCreatedResponse'
+  /v1/workspaces/{workspaceId}/expenses/categories:
+    get:
+      tags:
+      - Expense categories
+      summary: Get all expense categories
+      operationId: getExpenseCategories
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CategorySortColumnQuery'
+      - $ref: '#/components/parameters/SortOrderQuery'
+      - $ref: '#/components/parameters/PageQuery'
+      - $ref: '#/components/parameters/PageSizeQuery'
+      - $ref: '#/components/parameters/CategoryArchivedQuery'
+      - $ref: '#/components/parameters/CategoryNameQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseCategoriesDtoV1'
+    post:
+      tags:
+      - Expense categories
+      summary: Add an expense category
+      operationId: addExpenseCategory
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      requestBody:
+        $ref: '#/components/requestBodies/ExpenseCategoryJson'
+      responses:
+        '201':
+          $ref: '#/components/responses/ExpenseCategoryCreatedResponse'
+  /v1/workspaces/{workspaceId}/expenses/categories/{categoryId}:
+    delete:
+      tags:
+      - Expense categories
+      summary: Delete an expense category
+      operationId: deleteExpenseCategory
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CategoryIdPath'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+    put:
+      tags:
+      - Expense categories
+      summary: Update an expense category
+      operationId: updateExpenseCategory
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CategoryIdPath'
+      requestBody:
+        $ref: '#/components/requestBodies/ExpenseCategoryJson'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExpenseCategoryResponse'
+  /v1/workspaces/{workspaceId}/expenses/categories/{categoryId}/status:
+    patch:
+      tags:
+      - Expense categories
+      summary: Archive an expense category
+      operationId: archiveExpenseCategory
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CategoryIdPath'
+      requestBody:
+        $ref: '#/components/requestBodies/ExpenseCategoryStatusJson'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExpenseCategoryResponse'
+  /v1/workspaces/{workspaceId}/expenses/{expenseId}:
+    delete:
+      tags:
+      - Expenses
+      summary: Delete an expense
+      operationId: deleteExpense
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ExpenseIdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkNoBody'
+    get:
+      tags:
+      - Expenses
+      summary: Get an expense by ID
+      operationId: getExpenseById
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ExpenseIdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExpenseResponse'
+    put:
+      tags:
+      - Expenses
+      summary: Update an expense
+      operationId: updateExpense
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ExpenseIdPath'
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateExpenseMultipart'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExpenseResponse'
+  /v1/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}:
+    get:
+      tags:
+      - Expenses
+      summary: Download a receipt
+      description: Download an expense receipt file. The uploaded Markdown includes
+        this operation's parameters and response but omits the method/path line; this
+        path is completed from the official Clockify documentation.
+      operationId: downloadExpenseReceipt
+      x-inferred-method-path: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ExpenseIdPath'
+      - $ref: '#/components/parameters/FileIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+      description: Clockify addon token/key.
+  parameters:
+    WorkspaceIdPath:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 64a687e29ae1f428e7ebe303
+    ExpenseIdPath:
+      name: expenseId
+      in: path
+      required: true
+      description: Represents an expense identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 64c777ddd3fcab07cfbb210c
+    CategoryIdPath:
+      name: categoryId
+      in: path
+      required: true
+      description: Represents a category identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 89a687e29ae1f428e7ebe567
+    FileIdPath:
+      name: fileId
+      in: path
+      required: true
+      description: Represents a file identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 745687e29ae1f428e7ebe890
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Page number.
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      example: 1
+    PageSizeQuery:
+      name: page-size
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      example: 50
+    UserIdQuery:
+      name: user-id
+      in: query
+      required: false
+      description: Filters expenses by the user ID linked to the expense.
+      schema:
+        type: string
+      example: 5a0ab5acb07987125438b60f
+    CategorySortColumnQuery:
+      name: sort-column
+      in: query
+      required: false
+      description: Column name to be used as sorting criteria.
+      schema:
+        type: string
+        enum:
+        - NAME
+      example: NAME
+    SortOrderQuery:
+      name: sort-order
+      in: query
+      required: false
+      description: Sorting order.
+      schema:
+        type: string
+        enum:
+        - ASCENDING
+        - DESCENDING
+      example: ASCENDING
+    CategoryArchivedQuery:
+      name: archived
+      in: query
+      required: false
+      description: Filters results based on whether the category is archived.
+      schema:
+        type: boolean
+        default: false
+      example: true
+    CategoryNameQuery:
+      name: name
+      in: query
+      required: false
+      description: Filters expense categories by a string matched against their name.
+      schema:
+        type: string
+        default: '##default'
+      example: procurement
+  schemas:
+    ExpenseDailyTotalsDtoV1:
+      type: object
+      description: Represents an expense daily total data transfer object.
+      properties:
+        date:
+          type: string
+          description: Date in yyyy-MM-dd format.
+          example: '2020-01-01'
+        dateAsInstant:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: double
+          description: Represents expense total.
+    ExpenseWeeklyTotalsDtoV1:
+      type: object
+      description: Represents an expense weekly total data transfer object.
+      properties:
+        date:
+          type: string
+          description: Date in yyyy-MM-dd format.
+          example: '2020-01-01'
+        total:
+          type: number
+          format: double
+          description: Represents expense total.
+    ExpenseDtoV1:
+      type: object
+      description: Represents an expense object.
+      properties:
+        billable:
+          type: boolean
+          description: Indicates whether expense is billable or not.
+          default: false
+        categoryId:
+          type: string
+          description: Represents category identifier across the system.
+          default: '##default'
+        date:
+          type: string
+          description: Represents a date in yyyy-MM-dd format.
+          default: '##default'
+          example: '2020-01-01'
+        fileId:
+          type: string
+          description: Represents file identifier across the system.
+          default: '##default'
+        id:
+          type: string
+          description: Represents expense identifier across the system.
+          default: '##default'
+        locked:
+          type: boolean
+          description: Indicates whether the expense is locked.
+        notes:
+          type: string
+          description: Represents notes for an expense.
+          default: '##default'
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+          default: '##default'
+        quantity:
+          type: number
+          format: double
+          description: Represents expense quantity as double data type.
+        taskId:
+          type: string
+          description: Represents task identifier across the system.
+          default: '##default'
+        total:
+          type: number
+          format: double
+          description: Represents expense total as double data type.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+          default: '##default'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+          default: '##default'
+      example: &id001
+        billable: false
+        categoryId: 45y687e29ae1f428e7ebe890
+        date: '2020-01-01'
+        fileId: 745687e29ae1f428e7ebe890
+        id: 64c777ddd3fcab07cfbb210c
+        locked: true
+        notes: This is a sample note for this expense.
+        projectId: 25b687e29ae1f428e7ebe123
+        quantity: 0.1
+        taskId: 25b687e29ae1f428e7ebe123
+        total: 10500.5
+        userId: 89b687e29ae1f428e7ebe912
+        workspaceId: 64a687e29ae1f428e7ebe303
+    ExpenseHydratedDtoV1:
+      allOf:
+      - $ref: '#/components/schemas/ExpenseDtoV1'
+      description: Hydrated expense object. The uploaded Markdown names ExpenseHydratedDtoV1
+        but does not enumerate fields beyond the standard expense sample.
+    ExpensesWithCountDtoV1:
+      type: object
+      description: Represents an expense with count data transfer object.
+      properties:
+        count:
+          type: integer
+          format: int32
+          description: Represents result count.
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseHydratedDtoV1'
+    WorkspaceExpensesDtoV1:
+      type: object
+      description: Response returned by the workspace expenses endpoint.
+      properties:
+        dailyTotals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseDailyTotalsDtoV1'
+        expenses:
+          $ref: '#/components/schemas/ExpensesWithCountDtoV1'
+        weeklyTotals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseWeeklyTotalsDtoV1'
+      example:
+        dailyTotals:
+        - date: '2020-01-01'
+          dateAsInstant: '2020-01-01T00:00:00Z'
+          total: 10500.5
+        expenses:
+          count: 1
+          expenses:
+          - *id001
+        weeklyTotals:
+        - date: '2020-01-01'
+          total: 10500.5
+    ExpenseCreateRequest:
+      type: object
+      description: Multipart form-data request for creating an expense.
+      required:
+      - amount
+      - categoryId
+      - date
+      - file
+      - projectId
+      - userId
+      properties:
+        amount:
+          type: number
+          format: double
+          maximum: 92233720368547760
+          description: Represents an expense amount as the double data type.
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether expense is billable or not.
+        categoryId:
+          type: string
+          description: Represents a category identifier across the system.
+          default: '##default'
+        date:
+          type: string
+          format: date-time
+          description: Provides a valid yyyy-MM-ddThh:mm:ssZ format date.
+        file:
+          type: string
+          format: binary
+        notes:
+          type: string
+          maxLength: 3000
+          description: Represents notes for an expense.
+          default: '##default'
+        projectId:
+          type: string
+          description: Represents a project identifier across the system.
+          default: '##default'
+        taskId:
+          type: string
+          description: Represents a task identifier across the system.
+          default: '##default'
+        userId:
+          type: string
+          minLength: 1
+          description: Represents a user identifier across the system.
+          default: '##default'
+      example:
+        amount: 10500.5
+        billable: false
+        categoryId: 45y687e29ae1f428e7ebe890
+        date: '2020-01-01T00:00:00Z'
+        file: receipt.pdf
+        notes: This is a sample note for this expense.
+        projectId: 25b687e29ae1f428e7ebe123
+        taskId: 25b687e29ae1f428e7ebe123
+        userId: 89b687e29ae1f428e7ebe912
+    ExpenseUpdateRequest:
+      type: object
+      description: Multipart form-data request for updating an expense.
+      required:
+      - amount
+      - categoryId
+      - changeFields
+      - date
+      - file
+      - userId
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 92233720368547760
+          description: Represents an expense amount as the double data type.
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether expense is billable or not.
+        categoryId:
+          type: string
+          description: Represents a category identifier across the system.
+          default: '##default'
+        changeFields:
+          type: array
+          description: Represents a list of expense change fields.
+          items:
+            type: string
+            enum:
+            - USER
+            - DATE
+            - PROJECT
+            - TASK
+            - CATEGORY
+            - NOTES
+            - AMOUNT
+            - BILLABLE
+            - FILE
+        date:
+          type: string
+          format: date-time
+          description: Provides a valid yyyy-MM-ddThh:mm:ssZ format date.
+        file:
+          type: string
+          format: binary
+        notes:
+          type: string
+          maxLength: 3000
+          description: Represents notes for an expense.
+          default: '##default'
+        projectId:
+          type: string
+          description: Represents a project identifier across the system.
+          default: '##default'
+        taskId:
+          type: string
+          description: Represents a task identifier across the system.
+          default: '##default'
+        userId:
+          type: string
+          minLength: 1
+          description: Represents a user identifier across the system.
+          default: '##default'
+      example:
+        amount: 10500.5
+        billable: false
+        categoryId: 45y687e29ae1f428e7ebe890
+        date: '2020-01-01T00:00:00Z'
+        file: receipt.pdf
+        notes: This is a sample note for this expense.
+        projectId: 25b687e29ae1f428e7ebe123
+        taskId: 25b687e29ae1f428e7ebe123
+        userId: 89b687e29ae1f428e7ebe912
+        changeFields:
+        - USER
+        - DATE
+        - PROJECT
+        - TASK
+        - CATEGORY
+        - NOTES
+        - AMOUNT
+        - BILLABLE
+        - FILE
+    ExpenseCategoryDtoV1:
+      type: object
+      description: Represents an expense category.
+      properties:
+        archived:
+          type: boolean
+          default: false
+          description: Flag that indicates whether the expense category is archived
+            or not.
+        hasUnitPrice:
+          type: boolean
+          default: false
+          description: Represents whether expense category has unit price or none.
+        id:
+          type: string
+          description: Represents expense category identifier across the system.
+          default: '##default'
+        name:
+          type: string
+          description: Represents expense category name.
+          default: '##default'
+        priceInCents:
+          type: integer
+          format: int32
+          description: Represents price in cents as integer.
+        unit:
+          type: string
+          description: Represents expense category unit.
+          default: '##default'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+          default: '##default'
+      example: &id002
+        archived: false
+        hasUnitPrice: false
+        id: 89a687e29ae1f428e7ebe567
+        name: Procurement
+        priceInCents: 1000
+        unit: piece
+        workspaceId: 64a687e29ae1f428e7ebe303
+    ExpenseCategoriesDtoV1:
+      type: object
+      description: Expense categories list response.
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseCategoryDtoV1'
+        count:
+          type: integer
+          format: int32
+          description: Represents the number of categories returned.
+      example:
+        categories:
+        - *id002
+        count: 20
+    ExpenseCategoryRequest:
+      type: object
+      description: Request body for adding or updating an expense category.
+      required:
+      - name
+      properties:
+        hasUnitPrice:
+          type: boolean
+          default: false
+          description: Flag whether expense category has unit price or none.
+        name:
+          type: string
+          minLength: 0
+          maxLength: 250
+          description: Represents a valid expense category name.
+          default: '##default'
+        priceInCents:
+          type: integer
+          format: int32
+          description: Represents price in cents as integer.
+        unit:
+          type: string
+          description: Represents a valid expense category unit.
+          default: '##default'
+      example:
+        hasUnitPrice: false
+        name: Procurement
+        priceInCents: 1000
+        unit: piece
+    ExpenseCategoryStatusRequest:
+      type: object
+      description: Request body for archiving or unarchiving an expense category.
+      required:
+      - archived
+      properties:
+        archived:
+          type: boolean
+          default: false
+          description: Flag whether to archive the expense category or not.
+      example:
+        archived: false
+  requestBodies:
+    CreateExpenseMultipart:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/ExpenseCreateRequest'
+          encoding:
+            file:
+              contentType: application/octet-stream
+    UpdateExpenseMultipart:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/ExpenseUpdateRequest'
+          encoding:
+            file:
+              contentType: application/octet-stream
+    ExpenseCategoryJson:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseCategoryRequest'
+    ExpenseCategoryStatusJson:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseCategoryStatusRequest'
+  responses:
+    ExpenseResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseDtoV1'
+          example: *id001
+    ExpenseCreatedResponse:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseDtoV1'
+          example: *id001
+    ExpenseCategoryResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseCategoryDtoV1'
+          example: *id002
+    ExpenseCategoryCreatedResponse:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExpenseCategoryDtoV1'
+          example: *id002
+    NoContent:
+      description: No Content
+    OkNoBody:
+      description: OK

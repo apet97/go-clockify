@@ -1,0 +1,207 @@
+# Projects GET endpoints — Agent A, live-probed against ws 65b382b606de527a7ee2b60e.
+# Source fixtures: fixtures/projects-fresh-a/*.json (154 probes).
+openapi: 3.0.3
+info:
+  title: Clockify Projects API (reads) — live-probed fragment
+  version: 2026-05-12-a
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/projects:
+    get:
+      summary: List projects (live shape confirmed)
+      parameters:
+        - { in: path,  name: workspaceId, required: true, schema: { type: string } }
+        - { in: query, name: name,                  schema: { type: string } }
+        - { in: query, name: strict-name-search,    schema: { type: boolean, default: false } }
+        - { in: query, name: archived,              schema: { type: boolean, default: false } }
+        - { in: query, name: billable,              schema: { type: boolean, default: false } }
+        - { in: query, name: clients,               schema: { type: array, items: { type: string } }, style: form, explode: true }
+        - { in: query, name: contains-client,       schema: { type: boolean, default: true } }
+        - { in: query, name: client-status,         schema: { type: string, enum: [ACTIVE, ARCHIVED, ALL] } }
+        - { in: query, name: users,                 schema: { type: array, items: { type: string } }, style: form, explode: true }
+        - { in: query, name: contains-user,         schema: { type: boolean, default: true } }
+        - { in: query, name: user-status,           schema: { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL] } }
+        - { in: query, name: userGroups,            schema: { type: array, items: { type: string } }, style: form, explode: true }
+        - { in: query, name: contains-group,        schema: { type: boolean, default: true } }
+        - { in: query, name: is-template,           schema: { type: boolean, default: false } }
+        - { in: query, name: sort-column,           schema: { type: string, enum: [ID, NAME, CLIENT_NAME, DURATION, BUDGET, PROGRESS] } }
+        - { in: query, name: sort-order,            schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { in: query, name: hydrated,              schema: { type: boolean, default: false } }
+        - { in: query, name: page,                  schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: page-size,             schema: { type: integer, minimum: 1, default: 50 } }
+        # NOTE: `access` is documented (PUBLIC|PRIVATE) but upstream silently ignores the value
+        # — `access=BOGUS` returned 200 with the unfiltered list. Treat as accepted-but-ignored.
+        - { in: query, name: access,                schema: { type: string, enum: [PUBLIC, PRIVATE] } }
+        - { in: query, name: expense-limit,         schema: { type: integer, default: 20 } }
+        - { in: query, name: expense-date,          schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Array of projects (returns [] on overflow page, e.g. page=999)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Project' } }
+        '501':
+          description: |
+            Upstream uses HTTP 501 for validation errors, not 400. Examples:
+              - {"message":"Page size must be a positive value","code":501}  (page-size<=0)
+              - sort-column=BOGUS -> "must be from the following set: ID, NAME, CLIENT_NAME, DURATION, BUDGET, PROGRESS"
+              - client-status=BOGUS -> "must be from the following set: ACTIVE, ARCHIVED, ALL"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error501' }
+
+  /workspaces/{workspaceId}/projects/{projectId}:
+    get:
+      summary: Get project by ID (live shape confirmed)
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: projectId,   required: true, schema: { type: string } }
+        - { in: query, name: hydrated, schema: { type: boolean, default: false } }
+        # Live enum is {TIMEENTRY, USER} — official doc claim of "TIMEENTRY default + others"
+        # is wrong. `PROJECT` and `EXPENSE` both 501 with the real enum exposed.
+        - in: query
+          name: custom-field-entity-type
+          schema: { type: string, enum: [TIMEENTRY, USER], default: TIMEENTRY }
+        - { in: query, name: expense-limit, schema: { type: integer, default: 20 } }
+        - { in: query, name: expense-date,  schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Project. `hydrated=true` adds `client`, `tasks`, `customFields`, `currency`, `expenses`, `favorite` fields.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '501':
+          description: |
+            Used for "project not found / not in workspace" AND for invalid query enums.
+              - bogus or malformed projectId -> {"message":"Project doesn't belong to Workspace","code":501}
+              - custom-field-entity-type=BOGUS -> "must be from the following set: TIMEENTRY, USER"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error501' }
+
+  # GETs documented but NOT supported by upstream — all returned
+  # {"message":"Request method 'GET' is not supported","code":3000}
+  /workspaces/{workspaceId}/projects/{projectId}/memberships:
+    get:
+      summary: NOT a GET endpoint upstream (returns code:3000). Memberships are inlined on the project resource instead.
+      responses: { '405': { description: "Returned as HTTP 200 body code:3000 (Spring 'method not supported')." } }
+  /workspaces/{workspaceId}/projects/{projectId}/template:
+    get:
+      summary: NOT a GET endpoint upstream (code:3000). Templates are POST-only.
+      responses: { '405': { description: "code:3000" } }
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate:
+    get:
+      summary: NOT a GET endpoint upstream (code:3000). Rate is PUT-only; read via project memberships array.
+      responses: { '405': { description: "code:3000" } }
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate:
+    get:
+      summary: NOT a GET endpoint upstream (code:3000). Rate is PUT-only; read via project memberships array.
+      responses: { '405': { description: "code:3000" } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/tasks:
+    get:
+      summary: Tasks-of-project (cross-listed under tasks API). Returns 200 [] for project with no tasks.
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: projectId,   required: true, schema: { type: string } }
+        - { in: query, name: name,               schema: { type: string } }
+        - { in: query, name: strict-name-search, schema: { type: boolean } }
+        - { in: query, name: is-active,          schema: { type: boolean } }
+        - { in: query, name: page,               schema: { type: integer, default: 1 } }
+        - { in: query, name: page-size,          schema: { type: integer, default: 50 } }
+      responses:
+        '200': { description: array of tasks }
+
+components:
+  schemas:
+    Project:
+      type: object
+      # Field set observed live; "hydrated" fields marked.
+      properties:
+        id:            { type: string }
+        name:          { type: string }
+        workspaceId:   { type: string }
+        clientId:      { type: string, description: "Empty string '' when no client (NOT null)." }
+        clientName:    { type: string, description: "Empty string '' when no client." }
+        archived:      { type: boolean }
+        billable:      { type: boolean }
+        public:        { type: boolean }
+        template:      { type: boolean }
+        color:         { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        note:          { type: string }
+        duration:      { type: string, description: "ISO-8601 duration, e.g. PT130H50M (NOT milliseconds, despite doc)." }
+        hourlyRate:    { $ref: '#/components/schemas/Rate' }
+        costRate:      { description: "Rate or null", oneOf: [ { $ref: '#/components/schemas/Rate' }, { type: 'null' } ] }
+        estimate:      { $ref: '#/components/schemas/EstimateDto' }
+        timeEstimate:  { $ref: '#/components/schemas/TimeEstimate' }
+        budgetEstimate:{ oneOf: [ { $ref: '#/components/schemas/BudgetEstimate' }, { type: 'null' } ] }
+        estimateReset: { nullable: true }
+        memberships:   { type: array, items: { $ref: '#/components/schemas/Membership' } }
+        # hydrated=true additions:
+        client:        { $ref: '#/components/schemas/Client', description: "hydrated only" }
+        tasks:         { type: array, description: "hydrated only" }
+        customFields:  { type: array, description: "hydrated only", items: { $ref: '#/components/schemas/CustomFieldValue' } }
+        currency:      { type: object, description: "hydrated only", properties: { id: { type: string }, code: { type: string } } }
+        expenses:      { type: array, description: "hydrated only" }
+        favorite:      { type: boolean, description: "hydrated only" }
+    Rate:
+      type: object
+      properties:
+        amount:   { type: integer, description: "Minor units (cents)." }
+        currency: { type: string,  description: "ISO 4217 or workspace-defined code (e.g. 'EUR', 'FAKE')." }
+    EstimateDto:
+      type: object
+      properties:
+        estimate: { type: string, description: "ISO-8601 duration (PT0S, PT22H)." }
+        type:     { type: string, enum: [AUTO, MANUAL] }
+    TimeEstimate:
+      type: object
+      properties:
+        estimate:           { type: string, description: "ISO-8601 duration." }
+        type:               { type: string, enum: [AUTO, MANUAL] }
+        resetOption:        { type: string, enum: [WEEKLY, MONTHLY, YEARLY], nullable: true }
+        active:             { type: boolean }
+        includeNonBillable: { type: boolean }
+    BudgetEstimate:
+      type: object
+      properties:
+        estimate:        { type: integer, format: int64 }
+        type:            { type: string, enum: [AUTO, MANUAL] }
+        resetOption:     { type: string, enum: [WEEKLY, MONTHLY, YEARLY], nullable: true }
+        active:          { type: boolean }
+        includeExpenses: { type: boolean }
+    Membership:
+      type: object
+      properties:
+        userId:           { type: string }
+        targetId:         { type: string }
+        membershipType:   { type: string, enum: [WORKSPACE, PROJECT, USERGROUP] }
+        membershipStatus: { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE] }
+        hourlyRate:       { oneOf: [ { $ref: '#/components/schemas/Rate' }, { type: 'null' } ] }
+        costRate:         { oneOf: [ { $ref: '#/components/schemas/Rate' }, { type: 'null' } ] }
+    Client:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        email:       { type: string, nullable: true }
+        ccEmails:    { type: array, items: { type: string }, nullable: true }
+        workspaceId: { type: string }
+        archived:    { type: boolean }
+        address:     { type: string, nullable: true }
+        note:        { type: string, nullable: true }
+        currencyId:  { type: string }
+    CustomFieldValue:
+      type: object
+      properties:
+        customFieldId: { type: string }
+        name:          { type: string }
+        type:          { type: string, description: "e.g. TXT, NUMBER, etc." }
+        value:         { nullable: true }
+        status:        { type: string, enum: [VISIBLE, INVISIBLE] }
+    Error501:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, example: 501 }

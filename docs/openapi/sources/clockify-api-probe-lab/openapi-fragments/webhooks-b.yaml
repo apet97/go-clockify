@@ -1,0 +1,206 @@
+# openapi-fragments/webhooks-b.yaml
+# Source: live probe `probes/webhooks-fresh-b.sh` against
+# workspace 65b382b606de527a7ee2b60e on 2026-05-12.
+# Covers MUTATING webhook endpoints: create, update, regenerate token,
+# delete. /test was deliberately NOT probed (no third-party POST).
+openapi: 3.0.3
+info:
+  title: Clockify Webhooks API — mutations (Agent B fragment)
+  version: 0.1.0-probe
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/webhooks:
+    post:
+      summary: Create a webhook
+      description: |
+        Verified body shape (required): `name` (2..30 chars), `url`,
+        `webhookEvent` (single enum string — NOT a `events` array),
+        `triggerSource` (array of IDs whose type matches
+        triggerSourceType), `triggerSourceType` enum. Server returns
+        201 with full webhook including a freshly-minted `authToken`.
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Webhook' }
+        '400':
+          description: |
+            Validation failure. Observed message strings:
+              - "must not be null" (missing triggerSource / triggerSourceType)
+              - "You entered invalid value for field: [webhookEvent]. …"
+                (legacy `events` array; bogus enum)
+              - "length must be between 2 and 30" (name overflow)
+            Body is `{message: string, code: 501}` — code is 501 even
+            though semantically it is a 400-class validation error.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}:
+    put:
+      summary: Update a webhook
+      description: |
+        PUT with the FULL webhook body (same required fields as create).
+        `authToken` is preserved across update (regenerate is a separate
+        endpoint). Bogus `webhookEvent` returns the same enum-list error
+        with `code: 501`.
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: webhookId,   in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookCreateRequest' }
+      responses:
+        '200':
+          description: Updated webhook
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Webhook' }
+        '400':
+          description: Validation error (see POST above).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+    delete:
+      summary: Delete a webhook
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: webhookId,   in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Empty body on success (observed).
+        '400':
+          description: |
+            For a non-existent or cross-workspace id, server returns
+            `{"message":"Webhook doesn't belong to Workspace","code":501}`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}/token:
+    patch:
+      summary: Generate a new webhook token
+      description: |
+        Verb is **PATCH only**. PUT to the same path returns
+        `{"message":"Request method 'PUT' is not supported","code":3000}`.
+        Request body is empty. Response is the full webhook with a
+        rotated `authToken`; the previous token is invalidated.
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: webhookId,   in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Webhook with new authToken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Webhook' }
+        '405':
+          description: |
+            Observed for PUT — server emits a body with
+            `{"message":"Request method 'PUT' is not supported","code":3000}`
+            (HTTP status code returned was the same 4xx envelope; only
+            PATCH is supported).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+components:
+  schemas:
+    WebhookCreateRequest:
+      type: object
+      required: [name, url, webhookEvent, triggerSource, triggerSourceType]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 30
+        url:
+          type: string
+          description: Publicly resolvable HTTPS URL. Private IPs rejected.
+        webhookEvent:
+          type: string
+          description: Single event enum (NOT an `events` array).
+          enum: [NEW_PROJECT, NEW_TASK, NEW_CLIENT, NEW_TIMER_STARTED,
+            TIMER_STOPPED, TIME_ENTRY_UPDATED, TIME_ENTRY_DELETED,
+            TIME_ENTRY_SPLIT, NEW_TIME_ENTRY, TIME_ENTRY_RESTORED,
+            NEW_TAG, USER_DELETED_FROM_WORKSPACE, USER_JOINED_WORKSPACE,
+            USER_DEACTIVATED_ON_WORKSPACE, USER_ACTIVATED_ON_WORKSPACE,
+            USER_EMAIL_CHANGED, USER_UPDATED, NEW_INVOICE,
+            INVOICE_UPDATED, NEW_APPROVAL_REQUEST,
+            APPROVAL_REQUEST_STATUS_UPDATED, TIME_OFF_REQUESTED,
+            TIME_OFF_REQUEST_UPDATED, TIME_OFF_REQUEST_APPROVED,
+            TIME_OFF_REQUEST_REJECTED, TIME_OFF_REQUEST_STARTED,
+            TIME_OFF_REQUEST_WITHDRAWN, BALANCE_UPDATED, TAG_UPDATED,
+            TAG_DELETED, TASK_UPDATED, CLIENT_UPDATED, TASK_DELETED,
+            CLIENT_DELETED, EXPENSE_RESTORED, ASSIGNMENT_CREATED,
+            ASSIGNMENT_DELETED, ASSIGNMENT_PUBLISHED, ASSIGNMENT_UPDATED,
+            EXPENSE_CREATED, EXPENSE_DELETED, EXPENSE_UPDATED,
+            PROJECT_UPDATED, PROJECT_DELETED, USER_GROUP_CREATED,
+            USER_GROUP_UPDATED, USER_GROUP_DELETED,
+            USERS_INVITED_TO_WORKSPACE, LIMITED_USERS_ADDED_TO_WORKSPACE,
+            COST_RATE_UPDATED, BILLABLE_RATE_UPDATED]
+        triggerSource:
+          type: array
+          items: { type: string }
+          description: List of IDs of the type indicated by triggerSourceType.
+        triggerSourceType:
+          type: string
+          enum: [PROJECT_ID, USER_ID, TAG_ID, TASK_ID, WORKSPACE_ID,
+                 ASSIGNMENT_ID, EXPENSE_ID]
+
+    Webhook:
+      type: object
+      properties:
+        id:                { type: string }
+        userId:            { type: string, description: "Present on create/update/regenerate responses (not documented in WEBHOOKDOC.md for list)." }
+        workspaceId:       { type: string }
+        name:              { type: string }
+        url:               { type: string }
+        authToken:         { type: string, description: "32-char shared secret sent in webhook delivery headers." }
+        webhookEvent:      { type: string }
+        triggerSourceType: { type: string }
+        triggerSource:
+          type: array
+          items: { type: string }
+        enabled:         { type: boolean }
+        deliveryEnabled: { type: boolean }
+        planEnabled:     { type: boolean }
+
+    ClockifyError:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "Observed 501 for validation, 3000 for unsupported method." }
+
+# ---------------------------------------------------------------------------
+# Deltas for go-clockify (handler/test pairs):
+#
+# 1. createWebhook handler: body MUST be {name, url, webhookEvent,
+#    triggerSource, triggerSourceType}. Current handler/test send
+#    `events:[...]` — upstream rejects with code 501 / "must not be null".
+#    Flip test from "events array" pinned-error to webhookEvent-string
+#    success path.
+#
+# 2. regenerateWebhookToken handler MUST use HTTP PATCH on
+#    /workspaces/{ws}/webhooks/{id}/token. PUT returns code 3000.
+#
+# 3. updateWebhook is PUT with the full create body; authToken is NOT
+#    accepted in update (server keeps existing token). Regeneration is
+#    only via the /token PATCH.
+#
+# 4. Delete returns empty body on success; on bogus id it returns
+#    code 501 + "Webhook doesn't belong to Workspace" — handler should
+#    treat that string as a "not found" mapping rather than server fault.
+# ---------------------------------------------------------------------------

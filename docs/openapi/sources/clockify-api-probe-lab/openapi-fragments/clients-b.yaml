@@ -1,0 +1,232 @@
+# clients-b.yaml — Clockify Clients API: MUTATION + ERROR shapes.
+# Derived from live probes against workspace 65b382b606de527a7ee2b60e on
+# 2026-05-12. Source fixtures: fixtures/clients-fresh-b/*.json.
+#
+# Scope: only mutating endpoints (POST/PUT/DELETE). Read shapes are
+# covered by Agent A's clients-a.yaml.
+
+openapi: 3.0.3
+info:
+  title: Clockify Clients API — mutations (Agent B fragment)
+  version: 2026-05-12
+  description: |
+    Live-discovered request/response shapes for mutating client
+    endpoints. Notable upstream quirks captured:
+      * Every validation error returns HTTP-level error with body
+        `{"message": "<human msg>", "code": 501}`. The numeric
+        `code` field is reused for many distinct conditions; do
+        not branch on it.
+      * The create response includes both `currencyCode` (e.g.
+        "EUR") AND `currencyId`. The PUT response **omits**
+        `currencyCode` and only returns `currencyId`. go-clockify
+        code that unmarshals PUT into the same struct as POST
+        must tolerate missing currencyCode.
+      * `ccEmails` is returned as `null` (not `[]`) when unset,
+        despite the docs typing it as `Array of strings`.
+      * There is NO dedicated archive endpoint. Archiving is done
+        by PUT-ing the full body with `archived: true`. The
+        query parameters `archive-projects` and
+        `mark-tasks-as-done` are accepted on PUT.
+      * DELETE on an un-archived client returns 400-ish body
+        `{"message":"Cannot delete an active client","code":501}`.
+        You must PUT archived=true first, then DELETE.
+      * DELETE on a non-existent or cross-workspace id returns
+        `{"message":"Client doesn't belong to Workspace","code":501}`.
+      * PUT on a non-existent id returns the same
+        "doesn't belong to Workspace" envelope (NOT a 404 JSON).
+      * Duplicate-name on POST returns
+        `{"message":"Client with name '<name>' already exists","code":501}`.
+      * Empty `name` (`""`) and missing `name` both produce
+        `{"message":"Client name is required","code":501}`.
+      * Name >100 chars returns
+        `{"message":"Client name cannot be longer than 100.","code":501}`.
+      * Invalid email returns
+        `{"message":"Please enter valid value for email","code":501}`.
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/clients:
+    post:
+      summary: Create a client
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientCreateRequest"
+            examples:
+              minimal:
+                value: { name: "mcp-probe-...-min" }
+              full:
+                value:
+                  name: "mcp-probe-...-full"
+                  address: "123 Probe Lane"
+                  email: "probe@example.com"
+                  note: "probe full body"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientCreateResponse"
+        "400":
+          description: Validation error (missing name, empty name, duplicate name, bad email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClockifyError"
+
+  /workspaces/{workspaceId}/clients/{id}:
+    put:
+      summary: Update / archive / unarchive a client
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ClientId"
+        - in: query
+          name: archive-projects
+          schema: { type: boolean }
+        - in: query
+          name: mark-tasks-as-done
+          schema: { type: boolean }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                # NOTE: response omits currencyCode (unlike POST).
+                $ref: "#/components/schemas/ClientUpdateResponse"
+        "400":
+          description: Validation error or not-found masquerading as 400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClockifyError"
+    delete:
+      summary: Delete a client (must be archived first)
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ClientId"
+      responses:
+        "200":
+          description: Deleted; returns the deleted entity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientUpdateResponse"
+        "400":
+          description: |
+            Returned when the client is still active
+            (`Cannot delete an active client`) or when the id
+            does not belong to the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClockifyError"
+
+components:
+  parameters:
+    WorkspaceId:
+      in: path
+      name: workspaceId
+      required: true
+      schema: { type: string }
+    ClientId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+
+  schemas:
+    ClientCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        address: { type: string, maxLength: 3000 }
+        email: { type: string, format: email }
+        note: { type: string, maxLength: 3000 }
+        currencyId: { type: string }
+        ccEmails:
+          type: array
+          maxItems: 3
+          items: { type: string, format: email }
+
+    ClientUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        address: { type: string, maxLength: 3000 }
+        email: { type: string, format: email }
+        note: { type: string, maxLength: 3000 }
+        currencyId: { type: string }
+        archived: { type: boolean, default: false }
+        ccEmails:
+          type: array
+          maxItems: 3
+          items: { type: string, format: email }
+
+    ClientCreateResponse:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        ccEmails:
+          type: array
+          nullable: true
+          items: { type: string }
+        workspaceId: { type: string }
+        archived: { type: boolean }
+        address: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        currencyId: { type: string }
+        currencyCode: { type: string }
+      required: [id, name, workspaceId, archived, currencyId, currencyCode]
+
+    ClientUpdateResponse:
+      # Distinct from create: NO currencyCode field in response.
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        ccEmails:
+          type: array
+          nullable: true
+          items: { type: string }
+        workspaceId: { type: string }
+        archived: { type: boolean }
+        address: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        currencyId: { type: string }
+      required: [id, name, workspaceId, archived, currencyId]
+
+    ClockifyError:
+      type: object
+      required: [message, code]
+      properties:
+        message: { type: string }
+        code:
+          type: integer
+          description: |
+            Always observed as 501 for client-validation errors,
+            including: missing name, empty name, name>100 chars,
+            duplicate name, invalid email, not-found id, and
+            "cannot delete an active client". Do NOT branch on
+            this code — branch on message or on HTTP status.
+      example:
+        message: "Client name is required"
+        code: 501

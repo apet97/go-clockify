@@ -1,0 +1,124 @@
+# Tasks mutation surface (Agent B, live-probed against workspace
+# 65b382b606de527a7ee2b60e on 2026-05-12). Host: api.clockify.me/api/v1.
+# All bodies are application/json. Verbs/paths confirmed by live calls;
+# fixtures live in fixtures/tasks-fresh-b/.
+openapi: 3.0.3
+info:
+  title: Clockify Tasks API (live-probed deltas)
+  version: 2026-05-12-b
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{wsId}/projects/{projectId}/tasks:
+    post:
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 1000 }
+                estimate: { type: string, description: ISO-8601 duration, example: PT2H }
+                assigneeIds: { type: array, items: { type: string } }
+                userGroupIds: { type: array, items: { type: string } }
+                billable: { type: boolean }
+                status: { type: string, enum: [ACTIVE, DONE] }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } }
+        "400": { description: "{message:'Task name is required',code:501}" }
+  /workspaces/{wsId}/projects/{projectId}/tasks/{taskId}:
+    put:
+      summary: Update task (also used to mark DONE / re-ACTIVATE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 1000 }
+                estimate: { type: string }
+                status: { type: string, enum: [ACTIVE, DONE] }
+                billable: { type: boolean }
+                assigneeIds: { type: array, items: { type: string } }
+      responses:
+        "200": { description: updated, content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } }
+        "400": { description: "name validation: '...between 1 and 1000 characters long'" }
+    delete:
+      summary: Delete task (REQUIRES status=DONE first; ACTIVE returns 501 'Cannot delete an active task')
+      responses:
+        "200": { description: returns deleted Task body }
+        "501": { description: "{message:'Cannot delete an active task',code:501}" }
+  /workspaces/{wsId}/projects/{projectId}/tasks/{taskId}/cost-rate:
+    put:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, description: "minor units (cents); string fails with code 3002" }
+                since: { type: string, format: date-time }
+      responses:
+        "200": { description: full Task body with costRate set }
+  /workspaces/{wsId}/projects/{projectId}/tasks/{taskId}/hourly-rate:
+    put:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, minimum: 0 }
+                since: { type: string, format: date-time }
+      responses:
+        "200": { description: full Task body with hourlyRate set }
+        "400": { description: "{message:'Amount has to be a positive value.',code:501} for negative" }
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        projectId: { type: string }
+        assigneeIds: { type: array, items: { type: string } }
+        assigneeId: { type: string, nullable: true }
+        userGroupIds: { type: array, items: { type: string } }
+        estimate: { type: string }
+        status: { type: string, enum: [ACTIVE, DONE] }
+        budgetEstimate: { type: integer }
+        duration: { type: string }
+        billable: { type: boolean }
+        hourlyRate:
+          type: object
+          nullable: true
+          properties:
+            amount: { type: integer }
+            currency: { type: string }
+        costRate:
+          type: object
+          nullable: true
+          properties:
+            amount: { type: integer }
+            currency: { type: string }
+# Findings (deltas vs typical go-clockify handler assumptions):
+# 1. There is NO PATCH on tasks. PATCH any-body -> 405 "Request method 'PATCH' is not supported", code 3000.
+#    Marking a task done uses PUT /tasks/{id} with {name, status:"DONE"}. Body MUST include name (required).
+# 2. There is NO bulk-status endpoint at /tasks/status. POST is interpreted as create (name required, 501).
+#    PUT /tasks (collection) -> 405. Bulk update must be done by N parallel PUTs.
+# 3. DELETE on an ACTIVE task returns 501 "Cannot delete an active task". Handler must first PUT status=DONE,
+#    then DELETE. Successful DELETE returns the full Task JSON (not 204).
+# 4. cost-rate / hourly-rate amount is integer (minor units). Non-integer string -> code 3002 Jackson parse error.
+#    Negative hourly-rate -> 501 "Amount has to be a positive value.".
+# 5. Update with empty name -> 501 "Task name has to be between 1 and 1000 characters long".
+# 6. There is no separate "archive" endpoint for tasks — archived semantics are the DONE status. ACTIVE<->DONE
+#    flips via PUT with full body.

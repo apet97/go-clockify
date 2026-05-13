@@ -1,0 +1,158 @@
+# Expenses (Agent B — mutations). Verified live against ws 65b382b606de527a7ee2b60e on 2026-05-12.
+# Base: https://api.clockify.me/api/v1
+openapi: 3.0.3
+info:
+  title: Clockify Expenses (mutations — observed)
+  version: 2026-05-12-b
+paths:
+  /workspaces/{workspaceId}/expenses/categories:
+    post:
+      summary: Create expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 250 }
+                hasUnitPrice: { type: boolean, default: false }
+                priceInCents: { type: integer }
+                unit: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategory' }
+        '400':
+          description: Missing name → {"message":"Category name is required","code":501}
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}:
+    delete:
+      summary: Delete category. 400 if not archived OR if archive PATCH was just issued (eventual consistency observed; retry after short delay).
+      responses:
+        '204': { description: Deleted }
+        '400': { description: '{"message":"Category must be archived to be deleted.","code":501}' }
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}/status:
+    patch:
+      summary: Archive/unarchive category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { archived: { type: boolean } }
+      responses:
+        '200':
+          description: Returns full category object (note doc says "##default" string; actually returns full ExpenseCategory).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategory' }
+  /workspaces/{workspaceId}/expenses:
+    post:
+      summary: Create expense (multipart/form-data REQUIRED; image MIME accepted for PNG receipt)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount, categoryId, date, file, projectId, userId]
+              properties:
+                amount: { type: number, format: double }
+                billable: { type: boolean }
+                categoryId: { type: string }
+                date: { type: string, format: date-time, description: "yyyy-MM-ddTHH:mm:ssZ" }
+                notes: { type: string }
+                projectId: { type: string }
+                taskId: { type: string }
+                userId: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: |
+            Created. Observed body has fields: id, workspaceId, userId, date (RFC3339 e.g. 2026-05-12T00:00:00Z),
+            projectId, taskId (nullable), categoryId, notes, quantity (number), billable, fileId, total
+            (NOTE: total = amount * 100, e.g. amount=12.34 → total=1234.0), locked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '400': { description: 'Missing required → {"message":"You entered invalid value for field : [date]...","code":501}' }
+  /workspaces/{workspaceId}/expenses/{expenseId}:
+    get:
+      responses:
+        '200':
+          content: { application/json: { schema: { $ref: '#/components/schemas/Expense' } } }
+        '400':
+          description: Invalid id returns 400 with validation message (not 404).
+    put:
+      summary: Update expense via multipart. changeFields is REQUIRED and repeats per field changed.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount, categoryId, changeFields, date, file, userId]
+              properties:
+                amount: { type: number }
+                billable: { type: boolean }
+                categoryId: { type: string }
+                changeFields:
+                  type: array
+                  description: Repeated form field; enum USER|DATE|PROJECT|TASK|CATEGORY|NOTES|AMOUNT|BILLABLE|FILE
+                  items: { type: string }
+                date: { type: string, format: date-time }
+                notes: { type: string }
+                projectId: { type: string }
+                taskId: { type: string }
+                userId: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        '200': { content: { application/json: { schema: { $ref: '#/components/schemas/Expense' } } } }
+        '200-quirk':
+          description: Observed — PUT without changeFields still returns 200 with previous body (silent no-op rather than 400).
+    delete:
+      summary: Delete expense
+      responses:
+        '204': { description: No body }
+        '400': { description: Invalid id returns 400 (not 404) }
+  /workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}:
+    get:
+      summary: Download receipt. Returns binary; Content-Type=application/octet-stream (NOT image/png even when uploaded as PNG).
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '403': { description: Invalid fileId returned 403 (not 404) }
+components:
+  schemas:
+    ExpenseCategory:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        hasUnitPrice: { type: boolean }
+        priceInCents: { type: integer }
+        unit: { type: string }
+        workspaceId: { type: string }
+        archived: { type: boolean }
+    Expense:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        date: { type: string, format: date-time }
+        projectId: { type: string }
+        taskId: { type: string, nullable: true }
+        categoryId: { type: string }
+        notes: { type: string }
+        quantity: { type: number }
+        billable: { type: boolean }
+        fileId: { type: string }
+        total: { type: number, description: "amount * 100 (cents); e.g. amount=12.34 → total=1234.0" }
+        locked: { type: boolean }

@@ -1,0 +1,926 @@
+openapi: 3.0.3
+info:
+  title: Clockify Time Off Policies API
+  version: 1.0.0
+  description: OpenAPI definition generated from POLICIESDOC.md. It covers time off policy list, create, get, delete, status
+    change, and update operations described in the source Markdown.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+tags:
+- name: Time Off Policies
+  description: Time off policy management operations.
+paths:
+  /v1/workspaces/{workspaceId}/time-off/policies:
+    get:
+      tags:
+      - Time Off Policies
+      operationId: getTimeOffPolicies
+      summary: Get policies on a workspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      - name: page
+        in: query
+        required: false
+        description: Page number.
+        schema:
+          type: string
+          maxLength: 1000
+      - name: page-size
+        in: query
+        required: false
+        description: Page size.
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 200
+          default: 50
+        example: 50
+      - name: name
+        in: query
+        required: false
+        description: Filters policies to names that contain the provided string.
+        schema:
+          type: string
+        example: Holidays
+      - name: status
+        in: query
+        required: false
+        description: Filters policies by status.
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - ALL
+        example: ACTIVE
+      - name: sort-column
+        in: query
+        required: false
+        description: Column to use for sorting policies.
+        schema:
+          type: string
+          default: DEFAULT_SORT
+      - name: sort-order
+        in: query
+        required: false
+        description: Sort order.
+        schema:
+          type: string
+          default: ASCENDING
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Policy'
+              example:
+              - allowHalfDay: false
+                allowNegativeBalance: true
+                approve:
+                  requiresApproval: true
+                  specificMembers: false
+                  teamManagers: true
+                  userIds:
+                  - 5b715612b079875110791432
+                archived: true
+                automaticAccrual:
+                  amount: 1.5
+                  period: MONTH
+                  timeUnit: DAYS
+                automaticTimeEntryCreation:
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                  enabled: true
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: Days
+                negativeBalance:
+                  amount: 3
+                  period: YEAR
+                  shouldReset: true
+                  timeUnit: DAYS
+                projectId: 65b36d3c525e243c48f9150f
+                timeUnit: DAYS
+                userGroupIds:
+                - 5b715612b079875110791342
+                - 5b715612b079875110791324
+                - 5b715612b079875110793142
+                userIds:
+                - 5b715612b079875110791432
+                - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+    post:
+      tags:
+      - Time Off Policies
+      operationId: createTimeOffPolicy
+      summary: Create a time off policy
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffPolicyRequest'
+            example:
+              allowHalfDay: false
+              allowNegativeBalance: true
+              approve:
+                requiresApproval: true
+                specificMembers: false
+                teamManagers: true
+                userIds:
+                - 5b715612b079875110791432
+              archived: true
+              automaticAccrual:
+                amount: 1.5
+                period: MONTH
+                timeUnit: DAYS
+              automaticTimeEntryCreation:
+                defaultEntities:
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+                enabled: true
+              color: '#8BC34A'
+              everyoneIncludingNew: false
+              hasExpiration: false
+              icon: UMBRELLA
+              name: Mental health days
+              negativeBalance:
+                amount: 3
+                amountValidForTimeUnit: true
+                period: YEAR
+                shouldReset: true
+                timeUnit: DAYS
+              timeUnit: DAYS
+              userGroups:
+                contains: CONTAINS
+                ids:
+                - 5b715612b079875110791342
+                status: ACTIVE
+              users:
+                contains: CONTAINS
+                ids:
+                - 5b715612b079875110791432
+                status: ACTIVE
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+              example:
+                allowHalfDay: false
+                allowNegativeBalance: true
+                approve:
+                  requiresApproval: true
+                  specificMembers: false
+                  teamManagers: true
+                  userIds:
+                  - 5b715612b079875110791432
+                archived: true
+                automaticAccrual:
+                  amount: 1.5
+                  period: MONTH
+                  timeUnit: DAYS
+                automaticTimeEntryCreation:
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                  enabled: true
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: Days
+                negativeBalance:
+                  amount: 3
+                  period: YEAR
+                  shouldReset: true
+                  timeUnit: DAYS
+                projectId: 65b36d3c525e243c48f9150f
+                timeUnit: DAYS
+                userGroupIds:
+                - 5b715612b079875110791342
+                - 5b715612b079875110791324
+                - 5b715612b079875110793142
+                userIds:
+                - 5b715612b079875110791432
+                - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+  /v1/workspaces/{workspaceId}/time-off/policies/{id}:
+    get:
+      tags:
+      - Time Off Policies
+      operationId: getTimeOffPolicy
+      summary: Get a time off policy
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      - name: id
+        in: path
+        required: true
+        description: Represents a policy identifier across the system.
+        schema:
+          type: string
+        example: 63034cd0cb0fb876a57e93ad
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+              example:
+                allowHalfDay: false
+                allowNegativeBalance: true
+                approve:
+                  requiresApproval: true
+                  specificMembers: false
+                  teamManagers: true
+                  userIds:
+                  - 5b715612b079875110791432
+                archived: true
+                automaticAccrual:
+                  amount: 1.5
+                  period: MONTH
+                  timeUnit: DAYS
+                automaticTimeEntryCreation:
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                  enabled: true
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: Days
+                negativeBalance:
+                  amount: 3
+                  period: YEAR
+                  shouldReset: true
+                  timeUnit: DAYS
+                projectId: 65b36d3c525e243c48f9150f
+                timeUnit: DAYS
+                userGroupIds:
+                - 5b715612b079875110791342
+                - 5b715612b079875110791324
+                - 5b715612b079875110793142
+                userIds:
+                - 5b715612b079875110791432
+                - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+    delete:
+      tags:
+      - Time Off Policies
+      operationId: deleteTimeOffPolicy
+      summary: Delete a policy
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      - name: id
+        in: path
+        required: true
+        description: Represents a policy identifier across the system.
+        schema:
+          type: string
+        example: 63034cd0cb0fb876a57e93ad
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags:
+      - Time Off Policies
+      operationId: changeTimeOffPolicyStatus
+      summary: Change a policy status
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      - name: id
+        in: path
+        required: true
+        description: Represents a policy identifier across the system.
+        schema:
+          type: string
+        example: 63034cd0cb0fb876a57e93ad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyStatusChangeRequest'
+            example:
+              status: ACTIVE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+              example:
+                allowHalfDay: false
+                allowNegativeBalance: true
+                approve:
+                  requiresApproval: true
+                  specificMembers: false
+                  teamManagers: true
+                  userIds:
+                  - 5b715612b079875110791432
+                archived: true
+                automaticAccrual:
+                  amount: 1.5
+                  period: MONTH
+                  timeUnit: DAYS
+                automaticTimeEntryCreation:
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                  enabled: true
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: Days
+                negativeBalance:
+                  amount: 3
+                  period: YEAR
+                  shouldReset: true
+                  timeUnit: DAYS
+                projectId: 65b36d3c525e243c48f9150f
+                timeUnit: DAYS
+                userGroupIds:
+                - 5b715612b079875110791342
+                - 5b715612b079875110791324
+                - 5b715612b079875110793142
+                userIds:
+                - 5b715612b079875110791432
+                - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+    put:
+      tags:
+      - Time Off Policies
+      operationId: updateTimeOffPolicy
+      summary: Update a policy
+      description: Updates a time off policy using the request and response schemas documented in the source Markdown.
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+        example: 60f91b3ffdaf031696ec61a8
+      - name: id
+        in: path
+        required: true
+        description: Represents a policy identifier across the system.
+        schema:
+          type: string
+        example: 63034cd0cb0fb876a57e93ad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimeOffPolicyRequest'
+            example:
+              allowHalfDay: false
+              allowNegativeBalance: true
+              approve:
+                requiresApproval: true
+                specificMembers: false
+                teamManagers: true
+                userIds:
+                - 5b715612b079875110791432
+              archived: false
+              automaticAccrual:
+                amount: 1.5
+                period: MONTH
+                timeUnit: DAYS
+              automaticTimeEntryCreation:
+                defaultEntities:
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+                enabled: true
+              color: '#8BC34A'
+              everyoneIncludingNew: false
+              hasExpiration: false
+              icon: UMBRELLA
+              name: Vacation days
+              negativeBalance:
+                amount: 3
+                amountValidForTimeUnit: true
+                period: YEAR
+                shouldReset: true
+                timeUnit: DAYS
+              timeUnit: DAYS
+              userGroups:
+                contains: CONTAINS
+                ids:
+                - 5b715612b079875110791342
+                status: ACTIVE
+              users:
+                contains: CONTAINS
+                ids:
+                - 5b715612b079875110791432
+                status: ACTIVE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+              example:
+                allowHalfDay: false
+                allowNegativeBalance: true
+                approve:
+                  requiresApproval: true
+                  specificMembers: false
+                  teamManagers: true
+                  userIds:
+                  - 5b715612b079875110791432
+                archived: true
+                automaticAccrual:
+                  amount: 1.5
+                  period: MONTH
+                  timeUnit: DAYS
+                automaticTimeEntryCreation:
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                  enabled: true
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: Days
+                negativeBalance:
+                  amount: 3
+                  period: YEAR
+                  shouldReset: true
+                  timeUnit: DAYS
+                projectId: 65b36d3c525e243c48f9150f
+                timeUnit: DAYS
+                userGroupIds:
+                - 5b715612b079875110791342
+                - 5b715612b079875110791324
+                - 5b715612b079875110793142
+                userIds:
+                - 5b715612b079875110791432
+                - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Clockify addon key.
+  schemas:
+    Policy:
+      type: object
+      description: Represents a time off policy.
+      properties:
+        allowHalfDay:
+          type: boolean
+          default: false
+          description: Indicates whether half day is allowed.
+        allowNegativeBalance:
+          type: boolean
+          default: false
+          description: Indicates whether negative balance is allowed.
+        approve:
+          $ref: '#/components/schemas/PolicyApprovalDto'
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether the policy is archived.
+        automaticAccrual:
+          $ref: '#/components/schemas/AutomaticAccrualDto'
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationDto'
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the policy is applied to future new users.
+        id:
+          type: string
+          description: Represents policy identifier across the system.
+        name:
+          type: string
+          description: Represents the name of the policy.
+        negativeBalance:
+          $ref: '#/components/schemas/NegativeBalanceDto'
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        timeUnit:
+          type: string
+          enum:
+          - DAYS
+          - HOURS
+          description: Represents the time unit of the policy.
+        userGroupIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: User group identifiers included in the policy.
+        userIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: User identifiers included in the policy.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    PolicyApprovalDto:
+      type: object
+      description: Represents policy approval settings.
+      properties:
+        requiresApproval:
+          type: boolean
+          default: false
+          description: Indicates whether approval is required.
+        specificMembers:
+          type: boolean
+          default: false
+          description: Indicates whether specific members are required to approve.
+        teamManagers:
+          type: boolean
+          default: false
+          description: Indicates whether team manager's approval is required.
+        userIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Set of user identifiers across the system.
+    AutomaticAccrualDto:
+      type: object
+      description: Represents automatic accrual settings.
+      properties:
+        amount:
+          type: number
+          format: double
+          description: Represents automatic accrual's amount.
+        period:
+          type: string
+          enum:
+          - MONTH
+          - YEAR
+          description: Represents automatic accrual's period.
+        timeUnit:
+          type: string
+          enum:
+          - DAYS
+          - HOURS
+          description: Represents automatic accrual's time unit.
+    AutomaticAccrualRequest:
+      type: object
+      description: Provide automatic accrual settings.
+      required:
+      - amount
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          description: Represents amount of automatic accrual.
+        period:
+          type: string
+          enum:
+          - MONTH
+          - YEAR
+          description: Represents automatic accrual period.
+        timeUnit:
+          type: string
+          enum:
+          - DAYS
+          - HOURS
+          description: Represents automatic accrual time unit.
+    DefaultEntitiesDto:
+      type: object
+      description: Default project and task for automatically created time entries.
+      properties:
+        projectId:
+          type: string
+        taskId:
+          type: string
+    DefaultEntitiesRequest:
+      type: object
+      description: Default project and task for automatically created time entries.
+      properties:
+        projectId:
+          type: string
+          description: Default project for automatically created time entries.
+        taskId:
+          type: string
+          description: Default task for automatically created time entries.
+    AutomaticTimeEntryCreationDto:
+      type: object
+      description: Represents automatic time entry creation settings.
+      properties:
+        defaultEntities:
+          $ref: '#/components/schemas/DefaultEntitiesDto'
+        enabled:
+          type: boolean
+          description: Indicates that automatic time entry creation is enabled.
+    AutomaticTimeEntryCreationRequest:
+      type: object
+      description: Provides automatic time entry creation settings.
+      required:
+      - defaultEntities
+      properties:
+        defaultEntities:
+          $ref: '#/components/schemas/DefaultEntitiesRequest'
+        enabled:
+          type: boolean
+          default: false
+          description: Indicates that automatic time entry creation is enabled.
+    NegativeBalanceDto:
+      type: object
+      description: Represents negative balance data including amount, time unit, and period.
+      properties:
+        amount:
+          type: number
+          format: double
+        period:
+          type: string
+        shouldReset:
+          type: boolean
+        timeUnit:
+          type: string
+    NegativeBalanceRequest:
+      type: object
+      description: Negative balance data to use for creating or updating the policy.
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          description: Represents negative balance amount.
+        amountValidForTimeUnit:
+          type: boolean
+        period:
+          type: string
+          enum:
+          - MONTH
+          - YEAR
+          description: Represents negative balance period.
+        shouldReset:
+          type: boolean
+          default: false
+          description: Indicates whether negative balance should reset at the end of the period.
+        timeUnit:
+          type: string
+          enum:
+          - DAYS
+          - HOURS
+          description: Represents negative balance time unit.
+    UserGroupIdsSchema:
+      type: object
+      description: User group filter with identifiers and status.
+      properties:
+        contains:
+          type: string
+          enum:
+          - CONTAINS
+          - DOES_NOT_CONTAIN
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Identifiers used for filtering.
+        status:
+          type: string
+          enum:
+          - ALL
+          - ACTIVE
+          - INACTIVE
+          description: Represents user status.
+    UserIdsSchema:
+      type: object
+      description: User filter with identifiers and status.
+      properties:
+        contains:
+          type: string
+          enum:
+          - CONTAINS
+          - DOES_NOT_CONTAIN
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Identifiers used for filtering.
+        status:
+          type: string
+          enum:
+          - ALL
+          - ACTIVE
+          - INACTIVE
+          description: Represents user status.
+    CreateTimeOffPolicyRequest:
+      type: object
+      description: Request body for creating a time off policy.
+      required:
+      - approve
+      - name
+      properties:
+        allowHalfDay:
+          type: boolean
+          default: false
+          description: Indicates whether policy allows half days.
+        allowNegativeBalance:
+          type: boolean
+          default: false
+          description: Indicates whether policy allows negative balances.
+        approve:
+          $ref: '#/components/schemas/PolicyApprovalDto'
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether policy is archived.
+        automaticAccrual:
+          $ref: '#/components/schemas/AutomaticAccrualRequest'
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationRequest'
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Policy color as a hex RGB value.
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether policy is applied to future new users.
+        hasExpiration:
+          type: boolean
+          default: false
+          description: Indicates whether the policy balance should have expiration.
+        icon:
+          type: string
+          enum:
+          - UMBRELLA
+          - SNOWFLAKE
+          - FAMILY
+          - PLANE
+          - STETHOSCOPE
+          - HEALTH_METRICS
+          - CHILDCARE
+          - LUGGAGE
+          - MONETIZATION
+          - CALENDAR
+          description: Policy icon.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Represents a name of the new policy.
+        negativeBalance:
+          $ref: '#/components/schemas/NegativeBalanceRequest'
+        timeUnit:
+          type: string
+          enum:
+          - DAYS
+          - HOURS
+          description: Indicates time unit of the policy.
+        userGroups:
+          $ref: '#/components/schemas/UserGroupIdsSchema'
+        users:
+          $ref: '#/components/schemas/UserIdsSchema'
+    UpdateTimeOffPolicyRequest:
+      type: object
+      description: Request body for updating a time off policy.
+      required:
+      - allowHalfDay
+      - allowNegativeBalance
+      - approve
+      - archived
+      - everyoneIncludingNew
+      - hasExpiration
+      - name
+      - userGroups
+      - users
+      properties:
+        allowHalfDay:
+          type: boolean
+          default: false
+          description: Indicates whether policy allows half day.
+        allowNegativeBalance:
+          type: boolean
+          default: false
+          description: Indicates whether policy allows negative balance.
+        approve:
+          $ref: '#/components/schemas/PolicyApprovalDto'
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether policy is archived.
+        automaticAccrual:
+          $ref: '#/components/schemas/AutomaticAccrualRequest'
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationRequest'
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Policy color as a hex RGB value.
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the policy is shown to new users.
+        hasExpiration:
+          type: boolean
+          default: false
+          description: Indicates whether the policy has expiration.
+        icon:
+          type: string
+          enum:
+          - UMBRELLA
+          - SNOWFLAKE
+          - FAMILY
+          - PLANE
+          - STETHOSCOPE
+          - HEALTH_METRICS
+          - CHILDCARE
+          - LUGGAGE
+          - MONETIZATION
+          - CALENDAR
+          description: Policy icon.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Name to use for updating the policy.
+        negativeBalance:
+          $ref: '#/components/schemas/NegativeBalanceRequest'
+        userGroups:
+          $ref: '#/components/schemas/UserGroupIdsSchema'
+        users:
+          $ref: '#/components/schemas/UserIdsSchema'
+    PolicyStatusChangeRequest:
+      type: object
+      description: Request body for changing a policy status.
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - ALL
+          description: Status to use for changing the policy.

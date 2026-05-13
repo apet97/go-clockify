@@ -1,0 +1,1210 @@
+openapi: 3.0.3
+info:
+  title: Clockify User API
+  version: 1.0.0
+  description: OpenAPI specification generated from the uploaded USERDOC.md Markdown
+    documentation. Nested schemas were normalized into reusable component schemas
+    where the Markdown repeated the same response structures.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+tags:
+- name: Files
+  description: File upload endpoints.
+- name: Users
+  description: User and workspace member endpoints.
+- name: Member profiles
+  description: Workspace member profile endpoints.
+- name: Roles
+  description: Manager role endpoints.
+paths:
+  /v1/file/image:
+    post:
+      tags:
+      - Files
+      summary: Add a photo
+      operationId: uploadImage
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image to be uploaded
+      responses:
+        '200':
+          description: Image upload response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadResponse'
+              example:
+                name: image-01234567.jpg
+                url: https://clockify.com/image-01234567.jpg
+  /v1/user:
+    get:
+      tags:
+      - Users
+      summary: Get currently logged-in user's info
+      operationId: getCurrentUser
+      security:
+      - MarketplaceKeyAuth: []
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: include-memberships
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If set to true, memberships will be included.
+        example: true
+      responses:
+        '200':
+          description: Current user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDtoV1'
+              example:
+                activeWorkspace: 64a687e29ae1f428e7ebe303
+                customFields: []
+                defaultWorkspace: 64a687e29ae1f428e7ebe303
+                email: johndoe@example.com
+                id: 5a0ab5acb07987125438b60f
+                memberships: []
+                name: John Doe
+                profilePicture: https://www.url.com/profile-picture1234567890.png
+                settings:
+                  dateFormat: yyyy-MM-dd
+                  summaryReportSettings:
+                    group: PROJECT
+                    subgroup: TASK
+                  timeFormat: HOUR24
+                  timeZone: Etc/UTC
+                status: ACTIVE
+  /v1/workspaces/{workspaceId}/member-profile/{userId}:
+    get:
+      tags:
+      - Member profiles
+      summary: Get a member's profile
+      operationId: getMemberProfile
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      responses:
+        '200':
+          description: Member profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberProfileDtoV1'
+              example:
+                email: johndoe@example.com
+                hasPassword: false
+                hasPendingApprovalRequest: false
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                name: John Doe
+                userCustomFieldValues: []
+                weekStart: MONDAY
+                workCapacity: PT7H
+                workingDays: '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'
+                workspaceNumber: 3
+    patch:
+      tags:
+      - Member profiles
+      summary: Update a member's profile
+      operationId: updateMemberProfile
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberProfileUpdateRequest'
+            example:
+              imageUrl: https://www.url.com/imageurl-1234567890.jpg
+              name: John Doe
+              removeProfileImage: false
+              userCustomFields: []
+              weekStart: MONDAY
+              workCapacity: PT7H
+              workingDays: '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'
+      responses:
+        '200':
+          description: Updated member profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberProfileDtoV1'
+              example:
+                email: johndoe@example.com
+                hasPassword: false
+                hasPendingApprovalRequest: false
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                name: John Doe
+                userCustomFieldValues: []
+                weekStart: MONDAY
+                workCapacity: PT7H
+                workingDays: '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'
+                workspaceNumber: 3
+  /v1/workspaces/{workspaceId}/users:
+    get:
+      tags:
+      - Users
+      summary: Find all users on a workspace
+      operationId: findWorkspaceUsers
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: email
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filters users by email substring.
+        example: mail@example.com
+      - name: project-id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: If provided, returns users that have access to the project.
+        example: 21a687e29ae1f428e7ebe606
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+        description: Filters users with the corresponding status.
+        example: ACTIVE
+      - name: account-statuses
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filters users with the corresponding account status filter.
+        example: LIMITED
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filters users by name substring.
+        example: John
+      - name: sort-column
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ID
+          - EMAIL
+          - NAME
+          - NAME_LOWERCASE
+          - ACCESS
+          - HOURLYRATE
+          - COSTRATE
+        description: 'Sorting column criteria. Default value: EMAIL'
+        example: ID
+      - name: sort-order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ASCENDING
+          - DESCENDING
+        description: 'Sorting mode. Default value: ASCENDING'
+        example: ASCENDING
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+        description: Page number.
+        example: 1
+      - name: page-size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 50
+        description: Page size.
+        example: 50
+      - name: memberships
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ALL
+          - NONE
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+        description: If provided, returns users along with workspaces, groups, or
+          projects they have access to. Default value is NONE.
+        example: WORKSPACE
+      - name: include-roles
+        in: query
+        required: true
+        schema:
+          type: boolean
+          default: false
+        description: If true, each user's detailed manager roles are included.
+        example: false
+      responses:
+        '200':
+          description: Array of users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDtoV1'
+              example:
+              - activeWorkspace: 64a687e29ae1f428e7ebe303
+                customFields: []
+                defaultWorkspace: 64a687e29ae1f428e7ebe303
+                email: johndoe@example.com
+                id: 5a0ab5acb07987125438b60f
+                memberships: []
+                name: John Doe
+                profilePicture: https://www.url.com/profile-picture1234567890.png
+                settings:
+                  dateFormat: yyyy-MM-dd
+                  summaryReportSettings:
+                    group: PROJECT
+                    subgroup: TASK
+                  timeFormat: HOUR24
+                  timeZone: Etc/UTC
+                status: ACTIVE
+  /v1/workspaces/{workspaceId}/users/info:
+    post:
+      tags:
+      - Users
+      summary: Filter workspace users
+      operationId: filterWorkspaceUsers
+      security:
+      - MarketplaceKeyAuth: []
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserFilterRequest'
+            example:
+              accountStatuses:
+              - LIMITED
+              - ACTIVE
+              email: mail@example.com
+              includeRoles: false
+              memberships: NONE
+              name: John
+              page: 1
+              pageSize: 50
+              projectId: 21a687e29ae1f428e7ebe606
+              roles:
+              - WORKSPACE_ADMIN
+              - OWNER
+              sortColumn: ID
+              sortOrder: ASCENDING
+              status: ACTIVE
+              userGroups:
+              - 5a0ab5acb07987125438b60f
+              - 72wab5acb07987125438b564
+      responses:
+        '200':
+          description: Array of users matching the filter.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDtoV1'
+              example:
+              - activeWorkspace: 64a687e29ae1f428e7ebe303
+                customFields: []
+                defaultWorkspace: 64a687e29ae1f428e7ebe303
+                email: johndoe@example.com
+                id: 5a0ab5acb07987125438b60f
+                memberships: []
+                name: John Doe
+                profilePicture: https://www.url.com/profile-picture1234567890.png
+                settings:
+                  dateFormat: yyyy-MM-dd
+                  summaryReportSettings:
+                    group: PROJECT
+                    subgroup: TASK
+                  timeFormat: HOUR24
+                  timeZone: Etc/UTC
+                status: ACTIVE
+  /v1/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value:
+    put:
+      tags:
+      - Users
+      summary: Update a user's custom field
+      operationId: updateUserCustomFieldValue
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      - name: customFieldId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a custom field identifier across the system.
+        example: 5e4117fe8c625f38930d57b7
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserCustomFieldValueRequest'
+            example:
+              value: 20231211-12345
+      responses:
+        '201':
+          description: Custom field value updated.
+          content:
+            application/json:
+              schema: {}
+              example: '##default'
+  /v1/workspaces/{workspaceId}/users/{userId}/managers:
+    get:
+      tags:
+      - Users
+      summary: Find user's team manager
+      operationId: findUserTeamManagers
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      - name: sort-column
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ID
+          - EMAIL
+          - NAME
+          - NAME_LOWERCASE
+          - ACCESS
+          - HOURLYRATE
+          - COSTRATE
+        description: Sorting column criteria.
+        example: ID
+      - name: sort-order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ASCENDING
+          - DESCENDING
+        description: Sorting mode.
+        example: ASCENDING
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+        description: Page number.
+        example: 1
+      - name: page-size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 50
+        description: Page size.
+        example: 50
+      responses:
+        '200':
+          description: Array of user team managers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDtoV1'
+              example:
+              - activeWorkspace: 64a687e29ae1f428e7ebe303
+                customFields: []
+                defaultWorkspace: 64a687e29ae1f428e7ebe303
+                email: johndoe@example.com
+                id: 5a0ab5acb07987125438b60f
+                memberships: []
+                name: John Doe
+                profilePicture: https://www.url.com/profile-picture1234567890.png
+                settings:
+                  dateFormat: yyyy-MM-dd
+                  summaryReportSettings:
+                    group: PROJECT
+                    subgroup: TASK
+                  timeFormat: HOUR24
+                  timeZone: Etc/UTC
+                status: ACTIVE
+  /v1/workspaces/{workspaceId}/users/{userId}/roles:
+    delete:
+      tags:
+      - Roles
+      summary: Remove user's manager role
+      operationId: removeUserManagerRole
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagerRoleRequest'
+      responses:
+        '204':
+          description: No Content
+    post:
+      tags:
+      - Roles
+      summary: Give manager role to a user
+      operationId: giveUserManagerRole
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 5a0ab5acb07987125438b60f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagerRoleRequest'
+      responses:
+        '201':
+          description: Manager role assignment response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleAssignmentDtoV1'
+              example:
+              - role: TEAM_MANAGER
+                userId: 5a0ab5acb07987125438b60f
+                workspaceId: 64a687e29ae1f428e7ebe303
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key authentication. Header name inferred from the
+        authentication scheme name in the Markdown.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Addon key authentication. Header name inferred from the authentication
+        scheme name in the Markdown.
+    MarketplaceKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Marketplace-Key
+      description: Marketplace key authentication. Header name inferred from the authentication
+        scheme name in the Markdown.
+  schemas:
+    ImageUploadResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: File name of the uploaded image.
+        url:
+          type: string
+          description: The URL of the uploaded image in the server.
+    RateDtoV1:
+      type: object
+      description: Represents hourly rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+    HourlyRateDtoV1:
+      type: object
+      description: Represents an hourly rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+    UserCustomFieldValueDtoV1:
+      type: object
+      description: Represents a user custom field value object.
+      properties:
+        customFieldId:
+          type: string
+          description: Represents custom field identifier across the system.
+        customFieldName:
+          type: string
+          description: Represents custom field name.
+        customFieldType:
+          $ref: '#/components/schemas/CustomFieldType'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        value:
+          description: Represents custom field value.
+          nullable: true
+    CustomFieldType:
+      type: string
+      enum:
+      - TXT
+      - NUMBER
+      - DROPDOWN_SINGLE
+      - DROPDOWN_MULTIPLE
+      - CHECKBOX
+      - LINK
+      description: Represents custom field type.
+    MembershipDtoV1:
+      type: object
+      description: Represents a membership object.
+      properties:
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        hourlyRate:
+          $ref: '#/components/schemas/HourlyRateDtoV1'
+        membershipStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+          description: Represents a membership status enum.
+        membershipType:
+          type: string
+          enum:
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+          description: Represents membership type enum.
+        targetId:
+          type: string
+          description: Represents target identifier across the system.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+    SummaryReportSettingsDtoV1:
+      type: object
+      description: Represents a summary report settings object.
+      required:
+      - group
+      - subgroup
+      properties:
+        group:
+          type: string
+        subgroup:
+          type: string
+    UserSettingsDtoV1:
+      type: object
+      description: Represents user settings object.
+      required:
+      - dateFormat
+      - timeFormat
+      - timeZone
+      properties:
+        alerts:
+          type: boolean
+          default: false
+        approval:
+          type: boolean
+          default: false
+        collapseAllProjectLists:
+          type: boolean
+          default: false
+        dashboardPinToTop:
+          type: boolean
+          default: false
+        dashboardSelection:
+          type: string
+          enum:
+          - ME
+          - TEAM
+        dashboardViewType:
+          type: string
+          enum:
+          - PROJECT
+          - BILLABILITY
+        dateFormat:
+          type: string
+          description: Represents a date format.
+        groupSimilarEntriesDisabled:
+          type: boolean
+          default: false
+        invoiceReminders:
+          type: boolean
+          default: false
+        isCompactViewOn:
+          type: boolean
+          default: false
+        lang:
+          type: string
+        longRunning:
+          type: boolean
+          default: false
+        multiFactorEnabled:
+          type: boolean
+          default: false
+        myStartOfDay:
+          type: string
+        onboarding:
+          type: boolean
+          default: false
+        projectListCollapse:
+          type: integer
+          format: int32
+        projectPickerTaskFilter:
+          type: boolean
+          default: false
+        pto:
+          type: boolean
+          default: false
+        reminders:
+          type: boolean
+          default: false
+        scheduledReports:
+          type: boolean
+          default: false
+        scheduling:
+          type: boolean
+          default: false
+        sendNewsletter:
+          type: boolean
+          default: false
+        showOnlyWorkingDays:
+          type: boolean
+          default: false
+        summaryReportSettings:
+          $ref: '#/components/schemas/SummaryReportSettingsDtoV1'
+        theme:
+          type: string
+          enum:
+          - DARK
+          - DEFAULT
+        timeFormat:
+          type: string
+          enum:
+          - HOUR12
+          - HOUR24
+          description: Represents a time format enum.
+        timeTrackingManual:
+          type: boolean
+          default: false
+        timeZone:
+          type: string
+          description: Represents a valid timezone ID.
+        weekStart:
+          $ref: '#/components/schemas/DayOfWeek'
+        weeklyUpdates:
+          type: boolean
+          default: false
+    DayOfWeek:
+      type: string
+      enum:
+      - MONDAY
+      - TUESDAY
+      - WEDNESDAY
+      - THURSDAY
+      - FRIDAY
+      - SATURDAY
+      - SUNDAY
+      description: Represents a day of the week.
+    AccountStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - PENDING_EMAIL_VERIFICATION
+      - DELETED
+      - NOT_REGISTERED
+      - LIMITED
+      - LIMITED_DELETED
+      description: Represents account status enum.
+    UserDtoV1:
+      type: object
+      description: Represents a user.
+      properties:
+        activeWorkspace:
+          type: string
+          description: Represents user's active workspace identifier across the system.
+        customFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserCustomFieldValueDtoV1'
+          description: Represents a list of value objects for user’s custom fields.
+        defaultWorkspace:
+          type: string
+          description: Represents user default workspace identifier across the system.
+        email:
+          type: string
+          format: email
+          description: Represents email address of the user.
+        id:
+          type: string
+          description: Represents user identifier across the system.
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembershipDtoV1'
+          description: Represents a list of membership objects.
+        name:
+          type: string
+          description: Represents name of the user.
+        profilePicture:
+          type: string
+          description: Represents profile image path of the user.
+        settings:
+          $ref: '#/components/schemas/UserSettingsDtoV1'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+    CustomFieldDefaultValuesDtoV1:
+      type: object
+      description: Represents a custom field default values object.
+      properties:
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        status:
+          type: string
+          description: Represents custom field status.
+        value:
+          description: Represents a custom field's default value.
+          nullable: true
+    CustomFieldDtoV1:
+      type: object
+      description: Represents a custom field.
+      properties:
+        allowedValues:
+          type: array
+          items:
+            type: string
+          description: Represents a list of custom field's allowed values.
+        description:
+          type: string
+          description: Represents custom field description.
+        entityType:
+          type: string
+          description: Represents custom field entity type.
+        id:
+          type: string
+          description: Represents custom field identifier across the system.
+        name:
+          type: string
+          description: Represents custom field name.
+        onlyAdminCanEdit:
+          type: boolean
+          default: false
+        placeholder:
+          type: string
+          description: Represents custom field placeholder value.
+        projectDefaultValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldDefaultValuesDtoV1'
+        required:
+          type: boolean
+          default: false
+        status:
+          type: string
+          description: Represents custom field status.
+        type:
+          $ref: '#/components/schemas/CustomFieldType'
+        workspaceDefaultValue:
+          description: Represents a custom field's default value in the workspace.
+          nullable: true
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    UserCustomFieldValueFullDtoV1:
+      type: object
+      description: Represents a full user custom field value object.
+      properties:
+        customField:
+          $ref: '#/components/schemas/CustomFieldDtoV1'
+        customFieldId:
+          type: string
+          description: Represents custom field identifier across the system.
+        name:
+          type: string
+          description: Represents user custom field name.
+        sourceType:
+          type: string
+          enum:
+          - WORKSPACE
+          - USER
+          description: Represents user custom field source type.
+        type:
+          $ref: '#/components/schemas/CustomFieldType'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        value:
+          description: Represents user custom field value.
+          nullable: true
+    MemberProfileDtoV1:
+      type: object
+      description: Represents a member profile.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Represents email address of the user.
+        hasPassword:
+          type: boolean
+          default: false
+          description: Indicates whether user has password or none.
+        hasPendingApprovalRequest:
+          type: boolean
+          default: false
+          description: Indicates whether user has pending approval request.
+        imageUrl:
+          type: string
+          description: Represents an image url.
+        name:
+          type: string
+          description: Represents name of the user.
+        userCustomFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserCustomFieldValueFullDtoV1'
+          description: Represents a list of value objects for user’s custom fields.
+        weekStart:
+          $ref: '#/components/schemas/DayOfWeek'
+        workCapacity:
+          type: string
+          description: Represents work capacity as a time duration in the ISO-8601
+            format.
+        workingDays:
+          type: string
+          description: Represents a list of days of the week.
+        workspaceNumber:
+          type: integer
+          format: int32
+          description: Represents the number of workspace(s) the user is associated
+            to.
+    UpsertUserCustomFieldRequest:
+      type: object
+      required:
+      - customFieldId
+      properties:
+        customFieldId:
+          type: string
+          description: Represents custom field identifier across the system.
+        value:
+          description: Represents custom field value.
+          nullable: true
+    MemberProfileUpdateRequest:
+      type: object
+      description: Request body for updating a member profile.
+      properties:
+        imageUrl:
+          type: string
+          description: Represents an image url. A field that can only be updated for
+            limited users.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          deprecated: true
+          description: Deprecated. Represents name of the user and can only be updated
+            for limited users.
+        removeProfileImage:
+          type: boolean
+          default: false
+          description: Indicates whether to remove profile image or not.
+        userCustomFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertUserCustomFieldRequest'
+          description: Represents a list of upsert user custom field objects.
+        weekStart:
+          $ref: '#/components/schemas/DayOfWeek'
+        workCapacity:
+          type: string
+          description: Represents work capacity as a time duration in ISO-8601 format.
+            For example, PT7H.
+        workingDays:
+          type: string
+          description: Represents a list of days of the week.
+    UserFilterRequest:
+      type: object
+      description: Request body for filtering workspace users.
+      properties:
+        accountStatuses:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AccountStatus'
+          description: Filters users with the corresponding account status filter.
+        email:
+          type: string
+          description: Filters users by email substring.
+        includeRoles:
+          type: boolean
+          default: false
+          description: If true, each user's detailed manager roles are included.
+        memberships:
+          type: string
+          default: NONE
+          enum:
+          - ALL
+          - NONE
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+          description: Returns users along with workspaces, groups, or projects they
+            have access to.
+        name:
+          type: string
+          description: Filters users by name substring.
+        page:
+          type: integer
+          format: int32
+          default: 1
+          description: Page number.
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 50
+          description: Page size.
+        projectId:
+          type: string
+          description: If provided, returns users that have access to the project.
+        roles:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - WORKSPACE_ADMIN
+            - OWNER
+            - TEAM_MANAGER
+            - PROJECT_MANAGER
+          description: Filters users that have any of the specified roles.
+        sortColumn:
+          type: string
+          enum:
+          - ID
+          - EMAIL
+          - NAME
+          - NAME_LOWERCASE
+          - ACCESS
+          - HOURLYRATE
+          - COSTRATE
+          description: Sorting criteria.
+        sortOrder:
+          type: string
+          enum:
+          - ASCENDING
+          - DESCENDING
+          description: Sorting mode.
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+          description: Filters users with the corresponding status.
+        userGroups:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Filters users that belong to the specified user group IDs.
+    UpdateUserCustomFieldValueRequest:
+      type: object
+      required:
+      - value
+      properties:
+        value:
+          description: Represents custom field value.
+          nullable: true
+    ManagerRoleRequest:
+      type: object
+      description: Request body used to add or remove a user's manager role.
+      required:
+      - entityId
+      - role
+      properties:
+        entityId:
+          type: string
+          minLength: 1
+          description: Represents an entity identifier across the system.
+        role:
+          type: string
+          enum:
+          - WORKSPACE_ADMIN
+          - TEAM_MANAGER
+          - PROJECT_MANAGER
+          description: Represents a valid role.
+        sourceType:
+          type: string
+          enum:
+          - USER_GROUP
+          description: Optional field used to indicate that the target of the operation
+            is a user group.
+    RoleAssignmentDtoV1:
+      type: object
+      properties:
+        role:
+          type: string
+          description: Represents a valid role.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.

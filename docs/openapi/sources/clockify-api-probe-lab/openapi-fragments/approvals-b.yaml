@@ -1,0 +1,239 @@
+openapi: 3.0.3
+info:
+  title: Clockify Approvals — mutations (Agent B live-probe)
+  version: 0.1.0
+  description: |
+    Probed 2026-05-12 against api.clockify.me/api/v1, workspace
+    65b382b606de527a7ee2b60e, as operator's own userId.
+    Fixtures: fixtures/approvals-fresh-b/.
+
+    Key behaviours discovered:
+      * The workspace approval period is fixed (here SEMI_MONTHLY).
+        Submitting with a non-matching `period` (e.g. WEEKLY) returns
+        HTTP 400 `{"code":501,"message":"Approval period has changed,
+        please update your app version."}` — i.e. period MUST match
+        the workspace setting; the body field is effectively constrained
+        by server config, not by the request.
+      * Missing `periodStart` returns 400 `code:501 "The periodStart
+        parameter is required."` (per-user submit endpoint).
+      * PATCH /v1/workspaces/{ws}/approval-requests/{id} is the state
+        transition verb (NOT documented in the public reference). PUT
+        and POST were not exercised because PATCH succeeded first.
+      * Allowed `state` enum: PENDING, APPROVED, WITHDRAWN_SUBMISSION,
+        WITHDRAWN_APPROVAL, REJECTED. Empty/unknown state returns 400
+        code:501 with full enum list in the message.
+      * State machine is enforced server-side: WITHDRAWN_APPROVAL →
+        REJECTED is rejected with 400 `code:4006 "Can't update status
+        from WITHDRAWN_APPROVAL to REJECTED."` Re-submit endpoint must
+        be used between APPROVED/WITHDRAWN_* and any further transition.
+      * List items are wrapped: each element is
+        `{approvalRequest:{...}, entries:[...], expenses:[...],
+        billableTime, billableAmount, costAmount, trackedTime, ...}`.
+        `approvalRequest.status.state` is the authoritative state.
+      * No DELETE endpoint exists for approval requests; lifecycle is
+        purely state transitions. Cleanup registry is therefore empty
+        for this probe (we created/modified state on existing requests
+        belonging to the operator, no prefixed entities to remove).
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/approval-requests/users/{userId}:
+    post:
+      summary: Submit approval request for a specific user (self in this probe)
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period, periodStart]
+              properties:
+                period:
+                  type: string
+                  enum: [WEEKLY, SEMI_MONTHLY, MONTHLY]
+                  description: MUST match the workspace approval period
+                    setting; mismatched value returns 400 code:501.
+                periodStart:
+                  type: string
+                  format: date-time
+                  description: yyyy-MM-ddThh:mm:ssZ. Required.
+            examples:
+              valid:
+                value: { period: WEEKLY, periodStart: "2026-05-04T00:00:00Z" }
+              invalidMissingPeriodStart:
+                value: { period: WEEKLY }
+      responses:
+        "201":
+          description: Created (when period matches workspace setting)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "400":
+          description: |
+            Returned in two observed forms:
+              - code:501 "The periodStart parameter is required."
+              - code:501 "Approval period has changed, please update
+                your app version." (period does not match workspace)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval:
+    post:
+      summary: Re-submit rejected/withdrawn entries/expenses for user
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: userId,      required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period, periodStart]
+              properties:
+                period:      { type: string, enum: [WEEKLY, SEMI_MONTHLY, MONTHLY] }
+                periodStart: { type: string, format: date-time }
+      responses:
+        "200": { description: OK }
+        "400":
+          description: Same period-mismatch envelope as submit.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /workspaces/{workspaceId}/approval-requests/{approvalRequestId}:
+    patch:
+      summary: Update approval request state (withdraw/approve/reject)
+      description: |
+        UNDOCUMENTED PATH in the public OpenAPI reference but PATCH on
+        this URL transitions state successfully (HTTP 200) and returns
+        the updated ApprovalRequest object directly (NOT wrapped).
+      parameters:
+        - { in: path, name: workspaceId,       required: true, schema: { type: string } }
+        - { in: path, name: approvalRequestId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state:
+                  type: string
+                  enum: [PENDING, APPROVED, WITHDRAWN_SUBMISSION, WITHDRAWN_APPROVAL, REJECTED]
+                note: { type: string }
+            examples:
+              withdrawSubmission: { value: { state: WITHDRAWN_SUBMISSION, note: "probe withdraw" } }
+              approve:            { value: { state: APPROVED,             note: "probe approve" } }
+              withdrawApproval:   { value: { state: WITHDRAWN_APPROVAL,   note: "probe wd-approval" } }
+              reject:             { value: { state: REJECTED,             note: "probe reject" } }
+              invalidEmpty:       { value: {} }
+              invalidEnum:        { value: { state: NOT_A_REAL_STATE, note: "x" } }
+      responses:
+        "200":
+          description: Updated ApprovalRequest (unwrapped).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "400":
+          description: |
+            Observed:
+              - code:501 "You entered invalid value for field: [state]…"
+                for empty body or unknown enum value.
+              - code:4006 "Can't update status from X to Y." when the
+                requested transition is not allowed by the state
+                machine (e.g. WITHDRAWN_APPROVAL → REJECTED requires a
+                resubmit first).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /workspaces/{workspaceId}/approval-requests:
+    get:
+      summary: List approval requests (wrapped envelope)
+      parameters:
+        - { in: path,  name: workspaceId, required: true, schema: { type: string } }
+        - { in: query, name: status,      schema: { type: string, enum: [PENDING, APPROVED, WITHDRAWN_APPROVAL] } }
+        - { in: query, name: page,        schema: { type: integer, default: 1 } }
+        - { in: query, name: page-size,   schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: Array of wrapped items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApprovalListItem" }
+
+components:
+  schemas:
+    ErrorEnvelope:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "501=validation, 4006=state-machine violation" }
+    Owner:
+      type: object
+      properties:
+        userId:       { type: string }
+        userName:     { type: string }
+        timeZone:     { type: string }
+        startOfWeek:  { type: string, enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY] }
+    Creator:
+      type: object
+      properties:
+        userId:    { type: string }
+        userName:  { type: string }
+        userEmail: { type: string }
+    Status:
+      type: object
+      properties:
+        state:             { type: string, enum: [PENDING, APPROVED, WITHDRAWN_SUBMISSION, WITHDRAWN_APPROVAL, REJECTED] }
+        updatedBy:         { type: string }
+        updatedByUserName: { type: string }
+        updatedAt:         { type: string, format: date-time }
+        note:              { type: string }
+    DateRange:
+      type: object
+      properties:
+        start: { type: string, format: date-time }
+        end:   { type: string, format: date-time }
+    ApprovalRequest:
+      type: object
+      properties:
+        id:          { type: string }
+        workspaceId: { type: string }
+        dateRange:   { $ref: "#/components/schemas/DateRange" }
+        owner:       { $ref: "#/components/schemas/Owner" }
+        status:      { $ref: "#/components/schemas/Status" }
+        creator:     { $ref: "#/components/schemas/Creator" }
+    ApprovalListItem:
+      type: object
+      description: |
+        List endpoint wraps each ApprovalRequest with aggregates and the
+        underlying entry/expense arrays.
+      properties:
+        approvalRequest: { $ref: "#/components/schemas/ApprovalRequest" }
+        entries:         { type: array, items: { type: object } }
+        expenses:        { type: array, items: { type: object } }
+        billableTime:    { type: string }
+        billableAmount:  { type: number }
+        costAmount:      { type: number }
+        trackedTime:     { type: string }
+        approvedTime:    { type: string }
+        breakTime:       { type: string }
+        pendingTime:     { type: string }
+        expenseTotal:    { type: number }

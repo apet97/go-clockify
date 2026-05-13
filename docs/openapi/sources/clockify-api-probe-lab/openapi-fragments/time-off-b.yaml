@@ -1,0 +1,178 @@
+# Time-off MUTATIONS — Agent B probe results (ws 65b382b606de527a7ee2b60e, operator self)
+# Host: https://pto.api.clockify.me (NOT api.clockify.me — /policies returns 404 there)
+# Auth: X-Api-Key. All probes were operator-on-self.
+
+openapi: 3.0.3
+info:
+  title: Clockify Time-Off mutations (probed)
+  version: 0.1.0-probe-b
+servers:
+  - url: https://pto.api.clockify.me/v1
+
+paths:
+  /workspaces/{workspaceId}/policies/{policyId}/requests:
+    post:
+      summary: Create time-off request (operator-as-self)
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: policyId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [timeOffPeriod]
+              properties:
+                note: { type: string }
+                timeOffPeriod:
+                  type: object
+                  required: [period]
+                  properties:
+                    period:
+                      type: object
+                      required: [start, end]
+                      properties:
+                        start: { type: string, format: date-time, example: "2026-07-13T09:00:00Z" }
+                        end:   { type: string, format: date-time, example: "2026-07-13T10:00:00Z" }
+                    isHalfDay: { type: boolean, default: false }
+                    halfDayPeriod:
+                      type: string
+                      enum: [FIRST_HALF, SECOND_HALF, NOT_DEFINED]
+                    timeZone: { type: string, description: "Optional; defaults to user's timeZone" }
+      responses:
+        "200":
+          description: |
+            Request created. If policy.approve.requiresApproval=false the
+            status.statusType is APPROVED immediately; otherwise PENDING.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeOffRequest"
+        "400":
+          description: |
+            Observed failure messages (real upstream wording):
+              * "Please make sure that the datetime is in following format:
+                 yyyy-MM-ddThh:mm:ssZ%n Example: 2018-11-29T13:00:46Z."
+                 — emitted when start/end is not RFC3339 (date-only `YYYY-MM-DD` is rejected).
+              * "must not be null" (code 501 in body, HTTP 400)
+                 — emitted when `timeOffPeriod` is missing.
+              * "Insufficient time off balance"
+                 — policy with allowNegativeBalance:false and 0 balance.
+              * "Value for number of days is not allowed"
+                 — observed on every DAYS-time-unit policy in this workspace
+                   regardless of request duration (1d, halfDay) or
+                   allowNegativeBalance. HOURS policies accept identical shape.
+                   Suspected workspace-level "days-per-request" config blocking
+                   all DAYS-unit POSTs. Needs config-side confirmation.
+        "403":
+          description: '"Access Denied" when policyId does not belong to workspace/user.'
+
+  /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}:
+    patch:
+      summary: Change time-off request status (approve/reject only)
+      description: |
+        This endpoint is NOT a general update. The only accepted payload
+        is a status change to APPROVED or REJECTED. PENDING is rejected.
+        There is no general "update fields" endpoint — PUT returns 405.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statusType]
+              properties:
+                statusType:
+                  type: string
+                  enum: [APPROVED, REJECTED]
+                note: { type: string }
+      responses:
+        "200": { description: Updated. Body mirrors TimeOffRequest with new status. }
+        "400":
+          description: |
+            "You entered invalid value for field : 'You entered invalid
+            value for enum type.'. Value must be from the following set:
+            [APPROVED, REJECTED]" — for PENDING or any other enum value.
+            Also returned when target request is already in the target state.
+        "405":
+          description: PUT on this path returns 405 Method Not Allowed.
+
+    delete:
+      summary: Withdraw a time-off request
+      responses:
+        "200":
+          description: Withdrawn. Body = trimmed TimeOffRequest with balanceDiff reversed.
+        "400":
+          description: |
+            "Approved time off requests cannot be withdrawn" — DELETE is
+            permitted only while statusType=PENDING. Auto-approved requests
+            (policies with requiresApproval=false) are NOT withdrawable via API.
+        "403":
+          description: '"Access Denied" for unknown requestId.'
+
+components:
+  schemas:
+    TimeOffRequest:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        policyId: { type: string }
+        policyName: { type: string }
+        timeUnit: { type: string, enum: [DAYS, HOURS] }
+        userId: { type: string }
+        userName: { type: string }
+        userEmail: { type: string }
+        userTimeZone: { type: string, nullable: true }
+        timeOffPeriod:
+          type: object
+          properties:
+            period:
+              type: object
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time }
+            halfDay: { type: boolean }
+            halfDayPeriod: { type: string, enum: [FIRST_HALF, SECOND_HALF, NOT_DEFINED] }
+            halfDayHours:
+              type: object
+              nullable: true
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time }
+        note: { type: string, nullable: true }
+        status:
+          type: object
+          properties:
+            statusType: { type: string, enum: [PENDING, APPROVED, REJECTED, ALL] }
+            changedByUserId:   { type: string, nullable: true }
+            changedByUserName: { type: string }
+            changedForUserName:{ type: string }
+            changedAt:         { type: string, format: date-time, nullable: true }
+            note:              { type: string, nullable: true }
+        balance:     { type: number, format: double }
+        balanceDiff: { type: number, format: double }
+        createdAt:   { type: string, format: date-time }
+        requesterUserId:   { type: string }
+        requesterUserName: { type: string }
+
+# Go-clockify delta (for handler fixers):
+#   1. Base URL for time-off mutations MUST be the PTO host
+#      (https://pto.api.clockify.me/v1), not api.clockify.me/api/v1.
+#   2. CreateTimeOffRequest body field is `timeOffPeriod.period.{start,end}`
+#      as RFC3339 datetime strings, NOT date-only. The doc's example "##default"
+#      is bogus.
+#   3. There is NO PUT for time-off requests; remove any UpdateTimeOff handler
+#      that does PUT. Status changes go through PATCH with body
+#      `{"statusType": "APPROVED"|"REJECTED", "note": "..."}`.
+#   4. DELETE only works on PENDING requests; handler should surface the
+#      "Approved time off requests cannot be withdrawn" 400 as a distinct
+#      ErrNotWithdrawable rather than a generic 400.
+#   5. Bogus requestId / policyId returns 403 "Access Denied" not 404.

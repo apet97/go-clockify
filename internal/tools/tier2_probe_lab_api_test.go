@@ -22,8 +22,22 @@ func TestProbeLabAPIListsDocOnlyAndOpenAPIOperations(t *testing.T) {
 		t.Fatalf("unexpected operation list type: %T", result.Data)
 	}
 	have := map[string]bool{}
+	metadataChecked := false
 	for _, op := range ops {
-		have[op["operation"].(string)] = true
+		operation := op["operation"].(string)
+		have[operation] = true
+		if operation == "POST /workspaces/{workspaceId}/invoices/{invoiceId}/items/import" {
+			if op["operation_id"] == "" || op["live_status"] == "" {
+				t.Fatalf("documented operation metadata missing canonical id/status: %+v", op)
+			}
+			if risk, ok := op["risk_class"].([]string); !ok || len(risk) == 0 {
+				t.Fatalf("documented operation metadata missing risk class: %+v", op)
+			}
+			if sources, ok := op["source_files"].([]string); !ok || len(sources) == 0 {
+				t.Fatalf("documented operation metadata missing source files: %+v", op)
+			}
+			metadataChecked = true
+		}
 	}
 	for _, want := range []string{
 		"GET /workspaces/{workspaceId}/invoices/settings",
@@ -37,6 +51,9 @@ func TestProbeLabAPIListsDocOnlyAndOpenAPIOperations(t *testing.T) {
 	}
 	if total, _ := result.Meta["total"].(int); total < 190 {
 		t.Fatalf("expected combined probe-lab allowlist to cover at least 190 operations, got meta=%+v", result.Meta)
+	}
+	if !metadataChecked {
+		t.Fatal("did not check generated documented operation metadata")
 	}
 }
 

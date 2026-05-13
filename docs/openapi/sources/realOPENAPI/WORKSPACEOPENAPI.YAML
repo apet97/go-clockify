@@ -1,0 +1,1179 @@
+openapi: 3.0.3
+info:
+  title: Clockify Workspaces API
+  version: 1.0.0
+  description: OpenAPI definition generated from WORKSPACESDOC.md. It covers the Workspaces endpoints, request parameters,
+    request bodies, and response schemas described in the source Markdown.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+tags:
+- name: Workspaces
+  description: Workspace management operations.
+paths:
+  /v1/workspaces:
+    get:
+      tags:
+      - Workspaces
+      operationId: getAllMyWorkspaces
+      summary: Get all my workspaces
+      description: Returns the current user's workspaces. Optionally filters workspaces by role.
+      security:
+      - MarketplaceKeyAuth: []
+      - ApiKeyAuth: []
+      parameters:
+      - name: roles
+        in: query
+        required: false
+        description: If provided, returns workspaces where the user has any of the specified roles. Owners are not counted
+          as admins when filtering.
+        style: form
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - WORKSPACE_ADMIN
+            - OWNER
+            - TEAM_MANAGER
+            - PROJECT_MANAGER
+        example:
+        - WORKSPACE_ADMIN
+        - OWNER
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
+              example:
+              - cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+    post:
+      tags:
+      - Workspaces
+      operationId: addWorkspace
+      summary: Add a workspace
+      security:
+      - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+            example:
+              name: Cool Company
+              organizationId: 67d471fb56aa9668b7bfa295
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}:
+    get:
+      tags:
+      - Workspaces
+      operationId: getWorkspaceInfo
+      summary: Get workspace info
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/cost-rate:
+    put:
+      tags:
+      - Workspaces
+      operationId: updateWorkspaceCostRate
+      summary: Update workspace cost rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCostRateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/hourly-rate:
+    put:
+      tags:
+      - Workspaces
+      operationId: updateWorkspaceBillableRate
+      summary: Update workspace billable rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceBillableRateRequest'
+            example:
+              amount: 2000
+              currency: USD
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/users:
+    post:
+      tags:
+      - Workspaces
+      operationId: addUserToWorkspace
+      summary: Add user to a workspace
+      description: Adds a user to a workspace. The source documentation notes that adding users via API is available only
+        if the workspace has a paid subscription and is limited by the number of paid user seats.
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      - name: send-email
+        in: query
+        required: true
+        description: Indicates whether to send an email when user is added to the workspace.
+        schema:
+          type: string
+          default: 'true'
+          enum:
+          - 'true'
+          - 'false'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserToWorkspaceRequest'
+            example:
+              email: johndoe@example.com
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/users/{userId}:
+    put:
+      tags:
+      - Workspaces
+      operationId: updateUserStatus
+      summary: Update a user's status
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        description: Represents a user identifier across the system.
+        schema:
+          type: string
+          example: 89b687e29ae1f428e7ebe912
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserStatusRequest'
+            example:
+              status: ACTIVE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/users/{userId}/cost-rate:
+    put:
+      tags:
+      - Workspaces
+      operationId: updateUserCostRate
+      summary: Update a user's cost rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        description: Represents a user identifier across the system.
+        schema:
+          type: string
+          example: 89b687e29ae1f428e7ebe912
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCostRateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+  /v1/workspaces/{workspaceId}/users/{userId}/hourly-rate:
+    put:
+      tags:
+      - Workspaces
+      operationId: updateUserHourlyRate
+      summary: Update a user's hourly rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        description: Represents a workspace identifier across the system.
+        schema:
+          type: string
+          example: 64a687e29ae1f428e7ebe303
+      - name: userId
+        in: path
+        required: true
+        description: Represents a user identifier across the system.
+        schema:
+          type: string
+          example: 89b687e29ae1f428e7ebe912
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserHourlyRateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+              example:
+                cakeOrganizationId: 67d471fb56aa9668b7bfa295
+                costRate:
+                  amount: 20000
+                  currency: USD
+                currencies:
+                - code: USD
+                  id: 33t687e29ae1f428e7ebe505
+                  isDefault: true
+                featureSubscriptionType: STANDARD_2021
+                features:
+                - ADD_TIME_FOR_OTHERS
+                - ADMIN_PANEL
+                - ALERTS
+                - APPROVAL
+                hourlyRate:
+                  amount: 2000
+                  currency: USD
+                id: 64a687e29ae1f428e7ebe303
+                imageUrl: https://www.url.com/imageurl-1234567890.jpg
+                memberships: []
+                name: Cool Company
+                subdomain:
+                  enabled: false
+                  name: cool-company
+                workspaceSettings:
+                  durationFormat: FULL
+                  workingDays:
+                  - MONDAY
+                  - TUESDAY
+                  - WEDNESDAY
+                  - THURSDAY
+                  - FRIDAY
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Addon key authorization.
+    MarketplaceKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Marketplace-Key
+      description: Marketplace key authorization.
+  schemas:
+    CreateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Represents a workspace name.
+        organizationId:
+          type: string
+          description: Represents the Cake organization identifier across the system.
+      additionalProperties: false
+    UpdateCostRateRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Represents an amount as integer.
+        since:
+          type: string
+          description: Represents a date and time in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00Z'
+      additionalProperties: false
+    UpdateWorkspaceBillableRateRequest:
+      type: object
+      required:
+      - amount
+      - currency
+      properties:
+        amount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 100
+          default: USD
+          description: Represents a currency.
+        since:
+          type: string
+          description: Represents a date and time in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00Z'
+      additionalProperties: false
+    AddUserToWorkspaceRequest:
+      type: object
+      required:
+      - email
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Represents an email address of the user.
+      additionalProperties: false
+    UpdateUserStatusRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+          description: Represents membership status.
+      additionalProperties: false
+    UpdateUserHourlyRateRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Represents an hourly rate amount as integer.
+        since:
+          type: string
+          description: Represents a date and time in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00Z'
+      additionalProperties: false
+    Workspace:
+      type: object
+      description: Workspace object.
+      properties:
+        cakeOrganizationId:
+          type: string
+          description: Represents the Cake organization identifier across the system.
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        currencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrencyWithDefaultInfoDtoV1'
+        featureSubscriptionType:
+          type: string
+          description: Represents a feature plan type enum.
+          example: STANDARD_2021
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+          description: Represents a list of features.
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        id:
+          type: string
+          description: Represents workspace identifier across the system.
+        imageUrl:
+          type: string
+          description: Represents an image url.
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembershipDtoV1'
+        name:
+          type: string
+          description: Represents workspace name.
+        subdomain:
+          $ref: '#/components/schemas/WorkspaceSubdomainDtoV1'
+        workspaceSettings:
+          $ref: '#/components/schemas/WorkspaceSettingsDtoV1'
+      additionalProperties: true
+    RateDtoV1:
+      type: object
+      description: Represents hourly rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+      additionalProperties: true
+    CurrencyWithDefaultInfoDtoV1:
+      type: object
+      description: Represents currency with default info object.
+      properties:
+        code:
+          type: string
+          description: Represents currency code.
+        id:
+          type: string
+          description: Represents currency identifier across the system.
+        isDefault:
+          type: boolean
+          default: false
+          description: Indicates whether currency should be set as default.
+      additionalProperties: true
+    Feature:
+      type: string
+      enum:
+      - ADD_TIME_FOR_OTHERS
+      - ADMIN_PANEL
+      - ALERTS
+      - APPROVAL
+      - AUDIT_LOG
+      - AUTOMATIC_LOCK
+      - BRANDED_REPORTS
+      - BULK_EDIT
+      - CUSTOM_FIELDS
+      - CUSTOM_REPORTING
+      - CUSTOM_SUBDOMAIN
+      - CREATION_PERMISSIONS
+      - DECIMAL_FORMAT
+      - DISABLE_MANUAL_MODE
+      - EDIT_MEMBER_PROFILE
+      - EXCLUDE_NON_BILLABLE_FROM_ESTIMATE
+      - EXPENSES
+      - FILE_IMPORT
+      - TIMESHEET_IMPORT
+      - USER_IMPORT
+      - HIDE_PAGES
+      - HISTORIC_RATES
+      - INVOICING
+      - INVOICE_EMAILS
+      - INVOICE_REMINDERS
+      - LABOR_COST
+      - LOCATIONS
+      - MANAGER_ROLE
+      - MULTI_FACTOR_AUTHENTICATION
+      - PROJECT_BUDGET
+      - PROJECT_TEMPLATES
+      - GRANT_PROJECT_MANAGER_ROLE
+      - PRIVATE_PROJECT_ACCESS
+      - QUICKBOOKS_INTEGRATION
+      - RECURRING_ESTIMATES
+      - RECURRING_INVOICES
+      - REQUIRED_FIELDS
+      - SCHEDULED_REPORTS
+      - SCHEDULING
+      - SCREENSHOTS
+      - SSO
+      - SUMMARY_ESTIMATE
+      - TARGETS_AND_REMINDERS
+      - TASK_RATES
+      - TIME_OFF
+      - UNLIMITED_REPORTS
+      - USER_CUSTOM_FIELDS
+      - WHO_CAN_CHANGE_TIMEENTRY_BILLABILITY
+      - BREAKS
+      - KIOSK_SESSION_DURATION
+      - KIOSK_PIN_REQUIRED
+      - WHO_CAN_SEE_ALL_TIME_ENTRIES
+      - WHO_CAN_SEE_PROJECT_STATUS
+      - WHO_CAN_SEE_PUBLIC_PROJECTS_ENTRIES
+      - WHO_CAN_SEE_TEAMS_DASHBOARD
+      - WORKSPACE_LOCK_TIMEENTRIES
+      - WORKSPACE_TIME_AUDIT
+      - WORKSPACE_TIME_ROUNDING
+      - KIOSK
+      - KIOSK_SIX_DIGIT_PIN
+      - KIOSK_QR_CODE
+      - LIMITED_USERS
+      - FORECASTING
+      - TIME_TRACKING
+      - ATTENDANCE_REPORT
+      - WORKSPACE_TRANSFER
+      - FAVORITE_ENTRIES
+      - SPLIT_TIME_ENTRY
+      - CLIENT_CURRENCY
+      - SCHEDULING_FORECASTING
+      - SCIM
+      - UNLIMITED_USER_SEATS
+      - BILLABLE_HOURS
+      - PROJECT_ESTIMATE
+      - CSV_EXPORT
+      - XLSX_EXPORT
+      - ONE_MONTH_RANGE_REPORTS
+      - ONE_YEAR_RANGE_REPORTS
+      - SHARED_REPORTS
+      description: Workspace feature identifier.
+    MembershipDtoV1:
+      type: object
+      description: Represents a membership object.
+      properties:
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        membershipStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+          description: Represents a membership status enum.
+        membershipType:
+          type: string
+          enum:
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+          description: Represents membership type enum.
+        targetId:
+          type: string
+          description: Represents target identifier across the system.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+      additionalProperties: true
+    WorkspaceSubdomainDtoV1:
+      type: object
+      description: Represents the workspace subdomain.
+      properties:
+        enabled:
+          type: boolean
+          default: false
+          description: Indicates whether subdomain is enabled on workspace.
+        name:
+          type: string
+          description: Represents subdomain name.
+      additionalProperties: true
+    AutomaticLockDtoV1:
+      type: object
+      description: Represents an automatic lock object.
+      properties:
+        changeDay:
+          type: string
+          enum:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+          - SATURDAY
+          - SUNDAY
+          description: Represents a day of the week.
+        dayOfMonth:
+          type: integer
+          format: int32
+          description: Represents a day of month as integer.
+        firstDay:
+          type: string
+          enum:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+          - SATURDAY
+          - SUNDAY
+          description: Represents a day of the week.
+        olderThanPeriod:
+          type: string
+          enum:
+          - DAYS
+          - WEEKS
+          - MONTHS
+          description: Represents a time entry automatic lock period enum.
+        olderThanValue:
+          type: integer
+          format: int32
+          description: Represents an integer as the criteria for locking time entries.
+        type:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - OLDER_THAN
+          description: Represents a time entry automatic lock type enum.
+      additionalProperties: true
+    EntityCreationPermissionsDtoV1:
+      type: object
+      description: Represents an entity creation permission object.
+      properties:
+        whoCanCreateProjectsAndClients:
+          $ref: '#/components/schemas/EntityCreationPermission'
+        whoCanCreateTags:
+          $ref: '#/components/schemas/EntityCreationPermission'
+        whoCanCreateTasks:
+          $ref: '#/components/schemas/EntityCreationPermission'
+      additionalProperties: true
+    EntityCreationPermission:
+      type: object
+      description: Represents an entity creation permission enum with optional creators.
+      properties:
+        value:
+          type: string
+          enum:
+          - ADMINS
+          - ADMINS_AND_PROJECT_MANAGERS
+          - EVERYONE
+        creators:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+      additionalProperties: true
+    RoundDto:
+      type: object
+      description: Represents a time rounding object.
+      properties:
+        minutes:
+          type: string
+        round:
+          type: string
+      additionalProperties: true
+    WorkspaceSettingsDtoV1:
+      type: object
+      description: Workspace settings. Time Duration Format can be set by durationFormat; the decimalFormat and trackTimeDownToSecond
+        booleans are deprecated in the source documentation.
+      properties:
+        activeBillableHours:
+          type: boolean
+          default: false
+          description: Indicates whether billable hours is active.
+        adminOnlyPages:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - PROJECT
+            - TEAM
+            - REPORTS
+          description: Represents a unique list of protected page enums.
+        automaticLock:
+          $ref: '#/components/schemas/AutomaticLockDtoV1'
+        canSeeTimeSheet:
+          type: boolean
+          default: false
+          description: Indicates whether timesheets are visible or not.
+        canSeeTracker:
+          type: boolean
+          default: false
+          description: Indicates whether time trackers are visible or not.
+        currencyFormat:
+          type: string
+          enum:
+          - CURRENCY_SPACE_VALUE
+          - VALUE_SPACE_CURRENCY
+          - CURRENCY_VALUE
+          - VALUE_CURRENCY
+          description: Represents a clockify currency format enum.
+        defaultBillableProjects:
+          type: boolean
+          default: false
+          description: Indicates whether projects are billable by default.
+        durationFormat:
+          type: string
+          enum:
+          - FULL
+          - COMPACT
+          - DECIMAL
+          description: Used to set Duration format instead of setting decimalFormat and trackTimeDownToSecond.
+        entityCreationPermissions:
+          $ref: '#/components/schemas/EntityCreationPermissionsDtoV1'
+        forceDescription:
+          type: boolean
+          default: false
+          description: Indicates whether description are forced or not.
+        forceProjects:
+          type: boolean
+          default: false
+          description: Indicates whether projects are forced or not.
+        forceTags:
+          type: boolean
+          default: false
+          description: Indicates whether tags are forced or not.
+        forceTasks:
+          type: boolean
+          default: false
+          description: Indicates whether tasks are forced or not.
+        isProjectPublicByDefault:
+          type: boolean
+        lockTimeEntries:
+          type: string
+        lockTimeZone:
+          type: string
+        multiFactorEnabled:
+          type: boolean
+          default: false
+          description: Indicates whether two-factor authentication is enabled or not.
+        numberFormat:
+          type: string
+          enum:
+          - COMMA_PERIOD
+          - PERIOD_COMMA
+          - QUOTATION_MARK_PERIOD
+          - SPACE_COMMA
+          description: Represents a clockify number format enum.
+        onlyAdminsCanChangeBillableStatus:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can change billable status.
+        onlyAdminsCreateProject:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can create projects.
+        onlyAdminsCreateTag:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can create tags.
+        onlyAdminsCreateTask:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can create task.
+        onlyAdminsSeeAllTimeEntries:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can see all time entries.
+        onlyAdminsSeeBillableRates:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can see billable rates.
+        onlyAdminsSeeDashboard:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can see dashboard.
+        onlyAdminsSeePublicProjectsEntries:
+          type: boolean
+          default: false
+          description: Indicates whether only admins can see public project entries.
+        projectFavorites:
+          type: boolean
+          default: false
+          description: Indicates whether project favorites are allowed.
+        projectGroupingLabel:
+          type: string
+          description: Represents a project grouping label.
+        projectLabel:
+          type: string
+          description: Represents a project label.
+        projectPickerSpecialFilter:
+          type: boolean
+          default: false
+          description: Indicates whether project picker special filter is enabled.
+        round:
+          $ref: '#/components/schemas/RoundDto'
+        taskLabel:
+          type: string
+          description: Represents a task label.
+        timeRoundingInReports:
+          type: boolean
+          default: false
+          description: Indicates whether time rounding is enabled in reports.
+        timeTrackingMode:
+          type: string
+          enum:
+          - DEFAULT
+          - STOPWATCH_ONLY
+          description: Represents a time tracking mode enum.
+        trackTimeDownToSecond:
+          type: boolean
+          default: false
+          deprecated: true
+          description: Indicates whether time tracking is seconds-accurate. Deprecated; durationFormat can now be used to
+            manage Time Duration Format.
+        workingDays:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+          description: Represents a list of working days.
+      additionalProperties: true

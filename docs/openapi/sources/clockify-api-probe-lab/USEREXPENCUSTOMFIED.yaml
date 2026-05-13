@@ -1,0 +1,1112 @@
+openapi: 3.0.3
+info:
+  title: Clockify API — User + Expense + Custom Fields (probe-verified)
+  version: "2026-05-12"
+  description: |
+    OpenAPI synthesised from live probes against workspace
+    `65b382b606de527a7ee2b60e` on 2026-05-12. Every operation here was
+    actually exercised; request/response shapes reflect real upstream
+    behaviour, not the published documentation alone. Notable deltas
+    from the public docs are recorded in the schema descriptions.
+
+    Source fixtures live under `fixtures/user-exp-cf/` in the
+    clockify-api-probe-lab repo.
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, example: 64a687e29ae1f428e7ebe303 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, example: 5a0ab5acb07987125438b60f }
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, example: 5b641568b07987035750505e }
+    CustomFieldId:
+      name: customFieldId
+      in: path
+      required: true
+      schema: { type: string, example: 26a687e29ae1f428e7ebe101 }
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema: { type: string, example: 89a687e29ae1f428e7ebe567 }
+    ExpenseId:
+      name: expenseId
+      in: path
+      required: true
+      schema: { type: string, example: 64c777ddd3fcab07cfbb210c }
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, example: 745687e29ae1f428e7ebe890 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page-size
+      in: query
+      schema: { type: integer, minimum: 1, default: 50 }
+
+  schemas:
+    # -----------------------------------------------------------------
+    # Shared enums
+    # -----------------------------------------------------------------
+    CustomFieldType:
+      type: string
+      description: |
+        Verified upstream-accepted set. The values `TEXT` and `DROPDOWN`
+        are NOT accepted — upstream rejects them with error code 3002
+        and the message: "must be from the following set: TXT, NUMBER,
+        DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK."
+      enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]
+    CustomFieldStatus:
+      type: string
+      enum: [INACTIVE, VISIBLE, INVISIBLE]
+    CustomFieldEntityType:
+      type: string
+      enum: [TIMEENTRY, USER]
+    MembershipStatus:
+      type: string
+      enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL]
+    MembershipType:
+      type: string
+      enum: [WORKSPACE, PROJECT, USERGROUP]
+    AccountStatusValue:
+      type: string
+      enum: [ACTIVE, PENDING_EMAIL_VERIFICATION, DELETED, NOT_REGISTERED, LIMITED, LIMITED_DELETED]
+    WeekDay:
+      type: string
+      enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+    SortOrder:
+      type: string
+      enum: [ASCENDING, DESCENDING]
+    UserSortColumn:
+      type: string
+      enum: [ID, EMAIL, NAME, NAME_LOWERCASE, ACCESS, HOURLYRATE, COSTRATE]
+    ManagerRole:
+      type: string
+      enum: [WORKSPACE_ADMIN, TEAM_MANAGER, PROJECT_MANAGER]
+    Role:
+      type: string
+      enum: [WORKSPACE_ADMIN, OWNER, TEAM_MANAGER, PROJECT_MANAGER]
+    ExpenseChangeField:
+      type: string
+      enum: [USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE]
+
+    ErrorResponse:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: integer }
+      example: { message: "You reached the limit of 50 custom fields.", code: 4033 }
+
+    # -----------------------------------------------------------------
+    # User-related
+    # -----------------------------------------------------------------
+    HourlyRate:
+      type: object
+      nullable: true
+      properties:
+        amount: { type: integer, format: int32 }
+        currency: { type: string }
+    Membership:
+      type: object
+      properties:
+        userId: { type: string }
+        hourlyRate: { $ref: '#/components/schemas/HourlyRate' }
+        costRate: { $ref: '#/components/schemas/HourlyRate' }
+        targetId: { type: string }
+        membershipType: { $ref: '#/components/schemas/MembershipType' }
+        membershipStatus: { $ref: '#/components/schemas/MembershipStatus' }
+    UserSettings:
+      type: object
+      description: Live shape — many fields not previously documented are present.
+      properties:
+        weekStart: { $ref: '#/components/schemas/WeekDay' }
+        timeZone: { type: string }
+        timeFormat: { type: string, enum: [HOUR12, HOUR24] }
+        dateFormat: { type: string }
+        sendNewsletter: { type: boolean }
+        weeklyUpdates: { type: boolean }
+        longRunning: { type: boolean }
+        scheduledReports: { type: boolean }
+        approval: { type: boolean }
+        pto: { type: boolean }
+        alerts: { type: boolean }
+        reminders: { type: boolean }
+        timeTrackingManual: { type: boolean }
+        onboarding: { type: boolean }
+        showOnlyWorkingDays: { type: boolean }
+        projectPickerTaskFilter: { type: boolean }
+        isCompactViewOn: { type: boolean }
+        dashboardSelection: { type: string, enum: [ME, TEAM] }
+        dashboardViewType: { type: string, enum: [PROJECT, BILLABILITY] }
+        dashboardPinToTop: { type: boolean }
+        groupSimilarEntriesDisabled: { type: boolean }
+        collapseAllProjectLists: { type: boolean }
+        projectListCollapse: { type: integer, format: int32, nullable: true }
+        myStartOfDay: { type: string }
+        theme: { type: string, enum: [DARK, DEFAULT] }
+        lang: { type: string }
+        multiFactorEnabled: { type: boolean }
+        invoiceReminders: { type: boolean }
+        scheduling: { type: boolean }
+        summaryReportSettings:
+          type: object
+          properties:
+            group: { type: string }
+            subgroup: { type: string }
+    UserCustomFieldValue:
+      type: object
+      properties:
+        customFieldId: { type: string }
+        customFieldName: { type: string }
+        customFieldType: { $ref: '#/components/schemas/CustomFieldType' }
+        userId: { type: string }
+        value: {}
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, nullable: true }
+        name: { type: string }
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/Membership' }
+        profilePicture: { type: string }
+        activeWorkspace: { type: string }
+        defaultWorkspace: { type: string }
+        settings: { $ref: '#/components/schemas/UserSettings' }
+        status:
+          oneOf:
+            - $ref: '#/components/schemas/AccountStatusValue'
+            - type: object
+        customFields:
+          type: array
+          items: { $ref: '#/components/schemas/UserCustomFieldValue' }
+    UserCustomFieldValueFull:
+      type: object
+      properties:
+        customField: { $ref: '#/components/schemas/CustomField' }
+        customFieldId: { type: string }
+        name: { type: string }
+        sourceType: { type: string, enum: [WORKSPACE, USER] }
+        type: { $ref: '#/components/schemas/CustomFieldType' }
+        userId: { type: string }
+        value: {}
+    MemberProfile:
+      type: object
+      properties:
+        email: { type: string }
+        hasPassword: { type: boolean }
+        hasPendingApprovalRequest: { type: boolean }
+        imageUrl: { type: string }
+        name: { type: string }
+        userCustomFieldValues:
+          type: array
+          items: { $ref: '#/components/schemas/UserCustomFieldValueFull' }
+        weekStart: { $ref: '#/components/schemas/WeekDay' }
+        workCapacity:
+          type: string
+          description: ISO-8601 duration (e.g. PT7H).
+        workingDays:
+          type: array
+          items: { $ref: '#/components/schemas/WeekDay' }
+        workspaceNumber: { type: integer, format: int32 }
+    UpsertUserCustomField:
+      type: object
+      required: [customFieldId]
+      properties:
+        customFieldId: { type: string }
+        value: {}
+    UpdateMemberProfileRequest:
+      type: object
+      properties:
+        imageUrl: { type: string }
+        name:
+          type: string
+          deprecated: true
+          minLength: 1
+          maxLength: 100
+        removeProfileImage: { type: boolean }
+        userCustomFields:
+          type: array
+          items: { $ref: '#/components/schemas/UpsertUserCustomField' }
+        weekStart: { $ref: '#/components/schemas/WeekDay' }
+        workCapacity: { type: string, example: PT7H }
+        workingDays:
+          type: array
+          items: { $ref: '#/components/schemas/WeekDay' }
+    FilterUsersRequest:
+      type: object
+      properties:
+        accountStatuses:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/AccountStatusValue' }
+        email: { type: string }
+        includeRoles: { type: boolean, default: false }
+        memberships:
+          type: string
+          enum: [ALL, NONE, WORKSPACE, PROJECT, USERGROUP]
+          default: NONE
+        name: { type: string }
+        page: { type: integer, format: int32, default: 1 }
+        pageSize: { type: integer, format: int32, minimum: 1, default: 50 }
+        projectId: { type: string }
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Role' }
+        sortColumn: { $ref: '#/components/schemas/UserSortColumn' }
+        sortOrder: { $ref: '#/components/schemas/SortOrder' }
+        status: { $ref: '#/components/schemas/MembershipStatus' }
+        userGroups:
+          type: array
+          uniqueItems: true
+          items: { type: string }
+    RoleAssignmentRequest:
+      type: object
+      required: [entityId, role]
+      properties:
+        entityId: { type: string, minLength: 1 }
+        role: { $ref: '#/components/schemas/ManagerRole' }
+        sourceType:
+          type: string
+          enum: [USER_GROUP]
+          description: Optional. When set to USER_GROUP, entityId is a user group ID.
+    RoleAssignmentResult:
+      type: array
+      items:
+        type: object
+        properties:
+          role: { type: string }
+          userId: { type: string }
+          workspaceId: { type: string }
+    FileImageResponse:
+      type: object
+      properties:
+        name: { type: string }
+        url: { type: string }
+      example:
+        name: probe-img.XXXXXX.SbitaVnYtd.png
+        url: https://avatar.cake.com/2026-05-12-13-18-28.e41c07c6bd5feb1be43cec378019046fbdc9400a0774019d15ae0a491d33759c.cake-avatar.png
+
+    # -----------------------------------------------------------------
+    # Custom field
+    # -----------------------------------------------------------------
+    CustomFieldProjectDefault:
+      type: object
+      properties:
+        projectId: { type: string }
+        status: { $ref: '#/components/schemas/CustomFieldStatus' }
+        value: {}
+    CustomField:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/CustomFieldType' }
+        placeholder: { type: string, nullable: true }
+        allowedValues:
+          type: array
+          items: { type: string }
+        workspaceDefaultValue: { nullable: true }
+        onlyAdminCanEdit: { type: boolean }
+        required: { type: boolean }
+        status: { $ref: '#/components/schemas/CustomFieldStatus' }
+        entityType: { $ref: '#/components/schemas/CustomFieldEntityType' }
+        projectDefaultValues:
+          type: array
+          items: { $ref: '#/components/schemas/CustomFieldProjectDefault' }
+      example:
+        id: 6a032899d9647159dc52a450
+        workspaceId: 65b382b606de527a7ee2b60e
+        name: probe-cf-DROPDOWN_SINGLE
+        description: probe
+        type: DROPDOWN_SINGLE
+        placeholder: ph
+        allowedValues: [a, b, c]
+        workspaceDefaultValue: null
+        onlyAdminCanEdit: false
+        required: false
+        status: VISIBLE
+        entityType: TIMEENTRY
+        projectDefaultValues: []
+    CreateCustomFieldRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string }
+        type: { $ref: '#/components/schemas/CustomFieldType' }
+        entityType: { $ref: '#/components/schemas/CustomFieldEntityType' }
+        description: { type: string }
+        placeholder: { type: string }
+        allowedValues:
+          type: array
+          items: { type: string }
+        onlyAdminCanEdit: { type: boolean, default: false }
+        status: { $ref: '#/components/schemas/CustomFieldStatus' }
+        workspaceDefaultValue:
+          description: |
+            Type-dependent: NUMBER → number, CHECKBOX → boolean,
+            DROPDOWN_MULTIPLE → array of strings, otherwise string.
+    UpdateCustomFieldRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 250 }
+        type: { $ref: '#/components/schemas/CustomFieldType' }
+        description: { type: string }
+        placeholder: { type: string }
+        allowedValues:
+          type: array
+          items: { type: string }
+        onlyAdminCanEdit: { type: boolean }
+        required: { type: boolean }
+        status: { $ref: '#/components/schemas/CustomFieldStatus' }
+        workspaceDefaultValue: {}
+    PatchProjectCustomFieldRequest:
+      type: object
+      properties:
+        defaultValue: {}
+        status: { $ref: '#/components/schemas/CustomFieldStatus' }
+    UserCustomFieldValuePutRequest:
+      type: object
+      properties:
+        value: {}
+    UserCustomFieldValuePutResponse:
+      type: object
+      description: |
+        Real upstream returns the upsert envelope (not the bare default
+        "##default" published in the docs).
+      properties:
+        customFieldId: { type: string }
+        userId: { type: string }
+        value: {}
+        customFieldName: { type: string }
+        customFieldType: { $ref: '#/components/schemas/CustomFieldType' }
+      example:
+        customFieldId: 6a03289d2568d3d2932f6b74
+        userId: 64621faec4d2cc53b91fce6c
+        value: hello
+        customFieldName: probe-cf-user
+        customFieldType: TXT
+
+    # -----------------------------------------------------------------
+    # Expense
+    # -----------------------------------------------------------------
+    ExpenseCategory:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        hasUnitPrice: { type: boolean }
+        priceInCents: { type: integer, format: int32 }
+        unit: { type: string }
+        workspaceId: { type: string }
+        archived: { type: boolean }
+    CreateExpenseCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 250 }
+        hasUnitPrice: { type: boolean, default: false }
+        priceInCents: { type: integer, format: int32 }
+        unit: { type: string }
+    ExpenseCategoryArchiveRequest:
+      type: object
+      properties:
+        archived: { type: boolean }
+    Expense:
+      type: object
+      description: |
+        Shape returned by POST/PUT/GET /expenses/{id}. Hydrated list
+        endpoints return ExpenseHydrated (with `project`, `category`
+        objects in place of the bare ids).
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        date: { type: string, format: date-time }
+        projectId: { type: string, nullable: true }
+        taskId: { type: string, nullable: true }
+        categoryId: { type: string }
+        notes: { type: string, nullable: true }
+        quantity: { type: number, format: double }
+        billable: { type: boolean }
+        fileId: { type: string, nullable: true }
+        total: { type: number, format: double }
+        locked: { type: boolean }
+      example:
+        id: 6a0328a3d9647159dc52a4df
+        workspaceId: 65b382b606de527a7ee2b60e
+        userId: 64621faec4d2cc53b91fce6c
+        date: 2026-05-12T13:18:26Z
+        projectId: 69f54244755f4967f81c3723
+        taskId: null
+        categoryId: 6a0328a22568d3d2932f6bd3
+        notes: probe notes
+        quantity: 1.0
+        billable: true
+        fileId: 6a0328a3d9647159dc52a4dc
+        total: 1250.0
+        locked: false
+    ExpenseProject:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        color: { type: string }
+        clientId: { type: string, nullable: true }
+        clientName: { type: string, nullable: true }
+    ExpenseHydrated:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        date: { type: string, format: date-time }
+        project: { $ref: '#/components/schemas/ExpenseProject' }
+        task: { type: object, nullable: true }
+        category: { $ref: '#/components/schemas/ExpenseCategory' }
+        notes: { type: string, nullable: true }
+        quantity: { type: number, format: double }
+        billable: { type: boolean }
+        fileId: { type: string, nullable: true }
+        total: { type: number, format: double }
+        locked: { type: boolean }
+    ExpenseDailyTotal:
+      type: object
+      properties:
+        date: { type: string, description: yyyy-MM-dd }
+        dateAsInstant: { type: string, format: date-time }
+        total: { type: number, format: double }
+    ExpenseWeeklyTotal:
+      type: object
+      properties:
+        date: { type: string }
+        total: { type: number, format: double }
+    ExpenseListResponse:
+      type: object
+      description: |
+        Live shape: `expenses` is an object {expenses: [...], count: N},
+        not an array directly. `dailyTotals`/`weeklyTotals` siblings.
+      properties:
+        expenses:
+          type: object
+          properties:
+            count: { type: integer, format: int32 }
+            expenses:
+              type: array
+              items: { $ref: '#/components/schemas/ExpenseHydrated' }
+        dailyTotals:
+          type: array
+          items: { $ref: '#/components/schemas/ExpenseDailyTotal' }
+        weeklyTotals:
+          type: array
+          items: { $ref: '#/components/schemas/ExpenseWeeklyTotal' }
+    ExpenseCategoryListResponse:
+      type: object
+      properties:
+        count: { type: integer, format: int32 }
+        categories:
+          type: array
+          items: { $ref: '#/components/schemas/ExpenseCategory' }
+
+paths:
+
+  # =====================================================================
+  # FILE
+  # =====================================================================
+  /file/image:
+    post:
+      summary: Upload a profile image
+      description: |
+        Verified: only image MIME types are accepted. Uploading
+        `text/plain` returns `4015 "Uploading files of type
+        text/plain is not allowed"`.
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FileImageResponse' }
+
+  # =====================================================================
+  # USER
+  # =====================================================================
+  /user:
+    get:
+      summary: Get currently logged-in user's info
+      parameters:
+        - name: include-memberships
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /workspaces/{workspaceId}/member-profile/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/UserId'
+    get:
+      summary: Get a member's profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberProfile' }
+    patch:
+      summary: Update a member's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberProfileRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberProfile' }
+
+  /workspaces/{workspaceId}/users:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      summary: Find all users on a workspace
+      parameters:
+        - name: email
+          in: query
+          schema: { type: string }
+        - name: project-id
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/MembershipStatus' }
+        - name: account-statuses
+          in: query
+          schema: { type: string, example: LIMITED }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: sort-column
+          in: query
+          schema: { $ref: '#/components/schemas/UserSortColumn' }
+        - name: sort-order
+          in: query
+          schema: { $ref: '#/components/schemas/SortOrder' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: memberships
+          in: query
+          schema:
+            type: string
+            enum: [ALL, NONE, WORKSPACE, PROJECT, USERGROUP]
+        - name: include-roles
+          in: query
+          required: true
+          schema: { type: string, default: "false" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /workspaces/{workspaceId}/users/info:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    post:
+      summary: Filter workspace users
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FilterUsersRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/CustomFieldId'
+    put:
+      summary: Update a user's custom field value
+      description: |
+        Verified: response is the upsert envelope (customFieldId,
+        userId, value, customFieldName, customFieldType), not the
+        bare placeholder shown in the docs. HTTP 200 in practice
+        (docs claim 201).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserCustomFieldValuePutRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserCustomFieldValuePutResponse' }
+
+  /workspaces/{workspaceId}/users/{userId}/managers:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/UserId'
+    get:
+      summary: Find user's team managers
+      parameters:
+        - name: sort-column
+          in: query
+          schema: { $ref: '#/components/schemas/UserSortColumn' }
+        - name: sort-order
+          in: query
+          schema: { $ref: '#/components/schemas/SortOrder' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /workspaces/{workspaceId}/users/{userId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/UserId'
+    post:
+      summary: Give manager role to a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleAssignmentRequest' }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleAssignmentResult' }
+    delete:
+      summary: Remove user's manager role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleAssignmentRequest' }
+      responses:
+        "204": { description: No Content }
+
+  # =====================================================================
+  # CUSTOM FIELDS
+  # =====================================================================
+  /workspaces/{workspaceId}/custom-fields:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      summary: Get custom fields on a workspace
+      parameters:
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CustomFieldStatus' }
+        - name: entity-type
+          in: query
+          description: |
+            Repeatable. Accepted values: TIMEENTRY, USER. Multiple
+            occurrences narrow the filter (e.g.
+            `entity-type=TIMEENTRY&entity-type=USER`).
+          schema: { $ref: '#/components/schemas/CustomFieldEntityType' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CustomField' }
+    post:
+      summary: Create a custom field on a workspace
+      description: |
+        Verified: workspace cap is **50** custom fields. Exceeding
+        returns `4033 "You reached the limit of 50 custom fields."`.
+        `type` enum is strictly `{TXT, NUMBER, DROPDOWN_SINGLE,
+        DROPDOWN_MULTIPLE, CHECKBOX, LINK}` — `TEXT`/`DROPDOWN`
+        return 3002.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCustomFieldRequest' }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomField' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /workspaces/{workspaceId}/custom-fields/{customFieldId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/CustomFieldId'
+    delete:
+      summary: Delete a custom field
+      responses:
+        "204": { description: No Content }
+    put:
+      summary: Update custom field on workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCustomFieldRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomField' }
+
+  /workspaces/{workspaceId}/projects/{projectId}/custom-fields:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      summary: Get custom fields on a project
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CustomFieldStatus' }
+        - name: entity-type
+          in: query
+          schema: { $ref: '#/components/schemas/CustomFieldEntityType' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CustomField' }
+
+  /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/CustomFieldId'
+    patch:
+      summary: Update custom field on a project (set project default / status)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PatchProjectCustomFieldRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomField' }
+    delete:
+      summary: Remove custom field from a project
+      description: |
+        Verified: a workspace-VISIBLE custom field cannot be removed
+        from a project — upstream returns 501 with
+        `"Can't delete workspace visible custom field"`. To detach,
+        flip workspace status first.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomField' }
+        "501":
+          description: Refused (workspace-visible CF cannot be removed)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # =====================================================================
+  # EXPENSE
+  # =====================================================================
+  /workspaces/{workspaceId}/expenses:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      summary: Get all expenses on a workspace
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: user-id
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseListResponse' }
+    post:
+      summary: Create an expense
+      description: |
+        Verified: receipt MUST be an image (e.g. image/png). Uploading
+        text/plain returns `4015 "Uploading files of type text/plain
+        is not allowed"`. The response uses bare-id form
+        (categoryId / projectId), not the hydrated form returned by
+        the list endpoint.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount, categoryId, date, file, projectId, userId]
+              properties:
+                amount: { type: number, format: double, maximum: 92233720368547760 }
+                billable: { type: boolean, default: false }
+                categoryId: { type: string }
+                date: { type: string, format: date-time }
+                file: { type: string, format: binary }
+                notes: { type: string, maxLength: 3000 }
+                projectId: { type: string }
+                taskId: { type: string }
+                userId: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+
+  /workspaces/{workspaceId}/expenses/categories:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      summary: Get all expense categories
+      parameters:
+        - name: sort-column
+          in: query
+          schema: { type: string, enum: [NAME] }
+        - name: sort-order
+          in: query
+          schema: { $ref: '#/components/schemas/SortOrder' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+        - name: name
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategoryListResponse' }
+    post:
+      summary: Add an expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExpenseCategoryRequest' }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategory' }
+
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/CategoryId'
+    delete:
+      summary: Delete an expense category
+      description: |
+        Verified: a category referenced by any expense — even after
+        the expense is deleted — cannot be removed; upstream returns
+        400. Archive instead.
+      responses:
+        "204": { description: No Content }
+        "400":
+          description: In-use category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    put:
+      summary: Update an expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExpenseCategoryRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategory' }
+
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}/status:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      summary: Archive or unarchive an expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExpenseCategoryArchiveRequest' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategory' }
+
+  /workspaces/{workspaceId}/expenses/{expenseId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ExpenseId'
+    delete:
+      summary: Delete an expense
+      responses:
+        "200": { description: OK (empty body) }
+    get:
+      summary: Get an expense by ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+    put:
+      summary: Update an expense
+      description: |
+        `changeFields` is required and must be one or more of:
+        USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE,
+        FILE. Send it as repeated form fields (`-F 'changeFields=AMOUNT'
+        -F 'changeFields=NOTES'`).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount, categoryId, changeFields, date, file, userId]
+              properties:
+                amount: { type: number, format: double, minimum: 0, maximum: 92233720368547760 }
+                billable: { type: boolean, default: false }
+                categoryId: { type: string }
+                changeFields:
+                  type: array
+                  items: { $ref: '#/components/schemas/ExpenseChangeField' }
+                date: { type: string, format: date-time }
+                file: { type: string, format: binary }
+                notes: { type: string, maxLength: 3000 }
+                projectId: { type: string }
+                taskId: { type: string }
+                userId: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+
+  /workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ExpenseId'
+      - $ref: '#/components/parameters/FileId'
+    get:
+      summary: Download a receipt
+      description: |
+        Path verified: `/expenses/{expenseId}/files/{fileId}` (not the
+        odd `fileId`-first form sketched in some doc revs). Returns
+        the raw bytes of the uploaded receipt with the upload's
+        Content-Type.
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary

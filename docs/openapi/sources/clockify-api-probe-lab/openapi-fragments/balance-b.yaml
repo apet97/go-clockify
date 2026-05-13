@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: Clockify Balance — mutations (probe B)
+  version: 0.1.0-probe
+servers:
+  - url: https://api.clockify.me/api
+paths:
+  /v1/workspaces/{workspaceId}/time-off/balance/policy/{policyId}:
+    patch:
+      summary: Adjust time-off balance for one or more users under a policy
+      description: |
+        Live-probe finding (2026-05-12, ws 65b382b606de527a7ee2b60e, policy
+        6967f523d3e5101589b5b66e, self userId 64621faec4d2cc53b91fce6c).
+
+        IMPORTANT: `value` behaves as a DELTA applied to each user's current
+        balance, not as an absolute "set to" value. Doc text ("Represents a
+        new balance value") is misleading. Verified: start=0.0 → PATCH
+        value:1 → balance=1.0 → PATCH value:-1 → balance=0.0. A second
+        PATCH value:0 was a no-op (balance unchanged at 1.0).
+
+        A request body with `userIds` and `note` but no `value` field still
+        returns 204 No Content and is a no-op (does NOT 400).
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: policyId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds, value]
+              properties:
+                note:
+                  type: string
+                  description: Free-text audit note attached to the adjustment.
+                userIds:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items: { type: string }
+                  description: Non-empty list of user IDs to adjust.
+                value:
+                  type: number
+                  format: double
+                  minimum: -10000
+                  maximum: 10000
+                  description: DELTA applied to each user's balance (not absolute).
+            examples:
+              valid_add_one_day:
+                value:
+                  note: mcp-probe-bonus
+                  userIds: ["64621faec4d2cc53b91fce6c"]
+                  value: 1
+              valid_revert_one_day:
+                value:
+                  note: mcp-probe-revert
+                  userIds: ["64621faec4d2cc53b91fce6c"]
+                  value: -1
+      responses:
+        "204":
+          description: |
+            Success, no body. Also returned when `value` is omitted entirely
+            (silent no-op — likely a server bug worth a go-clockify guard).
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  code: { type: integer }
+              examples:
+                empty_userIds:
+                  value: { message: "must not be empty", code: 501 }
+                value_out_of_range:
+                  value: { message: "Value cannot be larger than 10000", code: 501 }

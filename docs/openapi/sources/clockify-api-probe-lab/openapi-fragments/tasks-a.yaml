@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+  title: Clockify Tasks API — read endpoints (Agent A live probe)
+  version: 2026-05-12
+  description: |
+    Captured live against workspace 65b382b606de527a7ee2b60e, project
+    69f54244755f4967f81c3723. Base host: https://api.clockify.me/api/v1.
+    Auth: X-Api-Key header. Fixtures: fixtures/tasks-fresh-a/.
+servers:
+  - url: https://api.clockify.me/api/v1
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    Rate:
+      type: object
+      nullable: true
+      properties:
+        amount:   { type: integer, description: "minor units (e.g. cents)" }
+        currency: { type: string }
+    Task:
+      type: object
+      required: [id, name, projectId, status]
+      properties:
+        id:             { type: string }
+        name:           { type: string }
+        projectId:      { type: string }
+        assigneeIds:    { type: array, items: { type: string } }
+        assigneeId:     { type: string, nullable: true, description: "legacy single-assignee; null when assigneeIds drives" }
+        userGroupIds:   { type: array, items: { type: string } }
+        estimate:       { type: string, description: "ISO-8601 duration, e.g. PT3H" }
+        status:         { type: string, enum: [ACTIVE, DONE] }
+        budgetEstimate: { type: number }
+        duration:       { type: string, nullable: true, description: "ISO-8601; null in list, PT0S in get-by-id when no time logged" }
+        billable:       { type: boolean }
+        hourlyRate:     { $ref: '#/components/schemas/Rate' }
+        costRate:       { $ref: '#/components/schemas/Rate' }
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "Clockify-internal code, e.g. 501 for both 400 validation and 404-ish lookups" }
+paths:
+  /workspaces/{workspaceId}/projects/{projectId}/tasks:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: projectId
+        required: true
+        schema: { type: string }
+    get:
+      summary: List tasks on a project
+      parameters:
+        - in: query
+          name: name
+          schema: { type: string }
+          description: "Substring match (case-insensitive). `%` is treated literally, not as wildcard."
+        - in: query
+          name: strict-name-search
+          schema: { type: boolean, default: false }
+          description: "When true, name must match exactly."
+        - in: query
+          name: status
+          schema: { type: string, enum: [ACTIVE, DONE, ALL] }
+          description: "Default returns ACTIVE only. ALL returns both."
+        - in: query
+          name: is-active
+          schema: { type: boolean }
+          description: "Accepted but does not filter as expected — observed identical result-sets for true and false; prefer `status`."
+        - in: query
+          name: sort-column
+          schema: { type: string, enum: [ID, NAME] }
+          description: "Any other value returns 400 with code:501 (see error sample). Empty/null allowed."
+        - in: query
+          name: sort-order
+          schema: { type: string, enum: [ASCENDING, DESCENDING] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page-size
+          schema: { type: integer, default: 50, maximum: 5000 }
+      responses:
+        '200':
+          description: Bare JSON array of Task. No envelope, no totals; pagination is via Link header / page params only.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Task' }
+        '400':
+          description: Validation error (e.g. bad sort-column). Note Clockify returns code:501 in body even though HTTP is 400.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: projectId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: taskId
+        required: true
+        schema: { type: string }
+    get:
+      summary: Get a single task by id
+      responses:
+        '200':
+          description: Single Task object. `duration` is "PT0S" here (vs null in the list shape) when no time has been logged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '400':
+          description: |
+            Returned for both unknown task ids AND ids that exist but belong to another project.
+            Body: {"message":"Task doesn't belong to Project","code":501}. There is NO 404 — the
+            go-clockify handler must treat code 501 + this message as not-found.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

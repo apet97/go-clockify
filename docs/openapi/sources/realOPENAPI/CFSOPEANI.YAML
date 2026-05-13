@@ -1,0 +1,620 @@
+openapi: 3.0.3
+info:
+  title: Clockify Custom Fields API
+  version: 1.0.0
+  description: OpenAPI definition generated from CUSTOMFIELDSDOC.md for Clockify custom
+    field endpoints. Covers workspace-level custom fields and project-level custom
+    field defaults/status.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+tags:
+- name: Custom Fields
+  description: Manage custom fields on workspaces and projects.
+paths:
+  /v1/workspaces/{workspaceId}/custom-fields:
+    get:
+      tags:
+      - Custom Fields
+      summary: Get custom fields on a workspace
+      description: Returns custom fields on a workspace, optionally filtered by name,
+        status, and entity type.
+      operationId: listWorkspaceCustomFields
+      x-openai-isConsequential: false
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CustomFieldNameQuery'
+      - $ref: '#/components/parameters/CustomFieldStatusQuery'
+      - $ref: '#/components/parameters/CustomFieldEntityTypeQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomField'
+              example:
+              - allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+      - Custom Fields
+      summary: Create custom field on a workspace
+      description: Creates a custom field on a workspace.
+      operationId: createWorkspaceCustomField
+      x-openai-isConsequential: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomFieldRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+              example:
+                allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/workspaces/{workspaceId}/custom-fields/{customFieldId}:
+    delete:
+      tags:
+      - Custom Fields
+      summary: Delete a custom field
+      description: Deletes a custom field from a workspace.
+      operationId: deleteWorkspaceCustomField
+      x-openai-isConsequential: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CustomFieldIdPath'
+      responses:
+        '204':
+          description: No Content
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Custom Fields
+      summary: Update custom field on workspace
+      description: Updates a custom field on a workspace.
+      operationId: updateWorkspaceCustomField
+      x-openai-isConsequential: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/CustomFieldIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomFieldRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+              example:
+                allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/custom-fields:
+    get:
+      tags:
+      - Custom Fields
+      summary: Get custom fields on a project
+      description: Returns custom fields on a project, optionally filtered by status
+        and entity type.
+      operationId: listProjectCustomFields
+      x-openai-isConsequential: false
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ProjectIdPath'
+      - $ref: '#/components/parameters/CustomFieldStatusQuery'
+      - $ref: '#/components/parameters/CustomFieldEntityTypeQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomField'
+              example:
+              - allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}:
+    delete:
+      tags:
+      - Custom Fields
+      summary: Remove custom field from a project
+      description: Removes a custom field from a project and returns the custom field.
+      operationId: removeProjectCustomField
+      x-openai-isConsequential: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ProjectIdPath'
+      - $ref: '#/components/parameters/CustomFieldIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+              example:
+                allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Custom Fields
+      summary: Update custom field on a project
+      description: Updates a custom field's default value and/or status on a project.
+      operationId: updateProjectCustomField
+      x-openai-isConsequential: true
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/ProjectIdPath'
+      - $ref: '#/components/parameters/CustomFieldIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectCustomFieldRequest'
+            example:
+              defaultValue: Manila
+              status: VISIBLE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+              example:
+                allowedValues:
+                - New York
+                - London
+                - Manila
+                - Sydney
+                - Belgrade
+                description: This field contains a location.
+                entityType: USER
+                id: 44a687e29ae1f428e7ebe305
+                name: location
+                onlyAdminCanEdit: false
+                placeholder: Location
+                projectDefaultValues: []
+                required: false
+                status: VISIBLE
+                type: DROPDOWN_MULTIPLE
+                workspaceDefaultValue: Manila
+                workspaceId: 64a687e29ae1f428e7ebe303
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Clockify add-on key. Adjust the header name if your add-on environment
+        uses a different header.
+  parameters:
+    WorkspaceIdPath:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+      example: 64a687e29ae1f428e7ebe303
+    ProjectIdPath:
+      name: projectId
+      in: path
+      required: true
+      description: Represents a project identifier across the system.
+      schema:
+        type: string
+      example: 5b641568b07987035750505e
+    CustomFieldIdPath:
+      name: customFieldId
+      in: path
+      required: true
+      description: Represents a custom field identifier across the system.
+      schema:
+        type: string
+      example: 26a687e29ae1f428e7ebe101
+    CustomFieldNameQuery:
+      name: name
+      in: query
+      required: false
+      description: Filters custom fields by a string contained in the custom field
+        name.
+      schema:
+        type: string
+      example: location
+    CustomFieldStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: Filters custom fields by custom field status.
+      schema:
+        $ref: '#/components/schemas/CustomFieldStatus'
+      example: VISIBLE
+    CustomFieldEntityTypeQuery:
+      name: entity-type
+      in: query
+      required: false
+      description: Filters custom fields by custom field entity type. Use repeated
+        query parameters for more than one value, for example entity-type=TIMEENTRY&entity-type=USER.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CustomFieldEntityType'
+      example:
+      - TIMEENTRY
+      - USER
+  schemas:
+    CustomFieldStatus:
+      type: string
+      enum:
+      - INACTIVE
+      - VISIBLE
+      - INVISIBLE
+      description: Custom field status.
+    CustomFieldEntityType:
+      type: string
+      enum:
+      - TIMEENTRY
+      - USER
+      description: Custom field entity type.
+    CustomFieldType:
+      type: string
+      enum:
+      - TXT
+      - NUMBER
+      - DROPDOWN_SINGLE
+      - DROPDOWN_MULTIPLE
+      - CHECKBOX
+      - LINK
+      description: Custom field type.
+    CustomFieldValue:
+      description: Custom field default value or assigned value. For NUMBER use a
+        number; for DROPDOWN_MULTIPLE use a list; for CHECKBOX use true/false; otherwise
+        use a string.
+      nullable: true
+      oneOf:
+      - type: string
+      - type: number
+        format: double
+      - type: boolean
+      - type: array
+        items:
+          type: string
+      - type: object
+        additionalProperties: true
+    CustomFieldDefaultValue:
+      type: object
+      description: Custom field default value for a project.
+      properties:
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        status:
+          $ref: '#/components/schemas/CustomFieldStatus'
+        value:
+          $ref: '#/components/schemas/CustomFieldValue'
+    CustomField:
+      type: object
+      description: Custom field data transfer object.
+      properties:
+        allowedValues:
+          type: array
+          description: Represents a list of custom field allowed values.
+          items:
+            type: string
+        description:
+          type: string
+          description: Represents custom field description.
+        entityType:
+          $ref: '#/components/schemas/CustomFieldEntityType'
+        id:
+          type: string
+          description: Represents custom field identifier across the system.
+        name:
+          type: string
+          description: Represents custom field name.
+        onlyAdminCanEdit:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is modifiable only by admin
+            users.
+        placeholder:
+          type: string
+          description: Represents custom field placeholder value.
+        projectDefaultValues:
+          type: array
+          description: Represents custom field default values for projects.
+          items:
+            $ref: '#/components/schemas/CustomFieldDefaultValue'
+        required:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is mandatory or not.
+        status:
+          $ref: '#/components/schemas/CustomFieldStatus'
+        type:
+          $ref: '#/components/schemas/CustomFieldType'
+        workspaceDefaultValue:
+          $ref: '#/components/schemas/CustomFieldValue'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      example:
+        allowedValues:
+        - New York
+        - London
+        - Manila
+        - Sydney
+        - Belgrade
+        description: This field contains a location.
+        entityType: USER
+        id: 44a687e29ae1f428e7ebe305
+        name: location
+        onlyAdminCanEdit: false
+        placeholder: Location
+        projectDefaultValues: []
+        required: false
+        status: VISIBLE
+        type: DROPDOWN_MULTIPLE
+        workspaceDefaultValue: Manila
+        workspaceId: 64a687e29ae1f428e7ebe303
+    CreateCustomFieldRequest:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        allowedValues:
+          type: array
+          items:
+            type: string
+          description: Represents a list of custom field allowed values.
+        description:
+          type: string
+          description: Represents custom field description.
+        entityType:
+          $ref: '#/components/schemas/CustomFieldEntityType'
+        name:
+          type: string
+          description: Represents custom field name.
+        onlyAdminCanEdit:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is modifiable only by admin
+            users.
+        placeholder:
+          type: string
+          description: Represents custom field placeholder value.
+        status:
+          $ref: '#/components/schemas/CustomFieldStatus'
+        type:
+          $ref: '#/components/schemas/CustomFieldType'
+        workspaceDefaultValue:
+          $ref: '#/components/schemas/CustomFieldValue'
+      example:
+        allowedValues:
+        - New York
+        - London
+        - Manila
+        - Sydney
+        - Belgrade
+        description: This field contains a location.
+        entityType: USER
+        name: location
+        onlyAdminCanEdit: false
+        placeholder: Location
+        status: VISIBLE
+        type: DROPDOWN_MULTIPLE
+        workspaceDefaultValue:
+        - Manila
+    UpdateCustomFieldRequest:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        allowedValues:
+          type: array
+          items:
+            type: string
+          description: Represents a list of custom field allowed values.
+        description:
+          type: string
+          description: Represents a custom field description.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 250
+          description: Represents a custom field name.
+        onlyAdminCanEdit:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is modifiable only by admin
+            users.
+        placeholder:
+          type: string
+          description: Represents a custom field placeholder value.
+        required:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is mandatory or not.
+        status:
+          $ref: '#/components/schemas/CustomFieldStatus'
+        type:
+          $ref: '#/components/schemas/CustomFieldType'
+        workspaceDefaultValue:
+          $ref: '#/components/schemas/CustomFieldValue'
+      example:
+        allowedValues:
+        - New York
+        - London
+        - Manila
+        - Sydney
+        - Belgrade
+        description: This field contains a location.
+        name: location
+        onlyAdminCanEdit: false
+        placeholder: Location
+        required: false
+        status: VISIBLE
+        type: DROPDOWN_MULTIPLE
+        workspaceDefaultValue:
+        - Manila
+    UpdateProjectCustomFieldRequest:
+      type: object
+      properties:
+        defaultValue:
+          $ref: '#/components/schemas/CustomFieldValue'
+        status:
+          $ref: '#/components/schemas/CustomFieldStatus'
+      example:
+        defaultValue: Manila
+        status: VISIBLE
+    Error:
+      type: object
+      description: Generic error response.
+      additionalProperties: true
+  responses:
+    Unauthorized:
+      description: Unauthorized or missing authentication.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

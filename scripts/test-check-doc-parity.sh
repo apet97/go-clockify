@@ -816,6 +816,16 @@ MUTATOR=mut_superpowers_ghost
 run_case "Phase 1: docs/superpowers/ is excluded from scan" \
     0 'doc-parity: OK'
 
+# --- Case 5b: docs/openapi/sources/ excluded ---
+mut_openapi_source_ghost() {
+    mkdir -p "$1/docs/openapi/sources/newfolderwithfindings"
+    printf '# Captured source evidence\n\nMentions CLOCKIFY_GHOST, clockify_ghost_tool, 4 policy modes, and FIXME from an upstream audit note.\n' \
+        > "$1/docs/openapi/sources/newfolderwithfindings/source.md"
+}
+MUTATOR=mut_openapi_source_ghost
+run_case "Phase 1: docs/openapi/sources/ is excluded from scan" \
+    0 'doc-parity: OK'
+
 # --- Case 6: unknown clockify_* tool token ---
 mut_unknown_tool() {
     printf '\nNote: clockify_ghost_tool was renamed last month.\n' \

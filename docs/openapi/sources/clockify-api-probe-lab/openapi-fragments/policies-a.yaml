@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: Clockify Time-Off Policies — READS (Agent A, fresh probe)
+  version: "1.0.0"
+  description: |
+    Live-probe findings for GET endpoints on time-off policies.
+    Base: https://api.clockify.me/api/v1. Auth: X-Api-Key.
+    Probed against workspace 65b382b606de527a7ee2b60e.
+servers:
+  - url: https://api.clockify.me/api/v1
+security:
+  - ApiKeyAuth: []
+paths:
+  /workspaces/{workspaceId}/time-off/policies:
+    get:
+      summary: List time-off policies
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: page,        in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: page-size,   in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { name: name,        in: query, schema: { type: string }, description: "substring match on policy name" }
+        - { name: status,      in: query, schema: { type: string, enum: [ACTIVE, ARCHIVED, ALL], default: ACTIVE } }
+        - { name: sort-column, in: query, schema: { type: string, default: DEFAULT_SORT } }
+        - { name: sort-order,  in: query, schema: { type: string, enum: [ASCENDING, DESCENDING], default: ASCENDING } }
+      responses:
+        "200":
+          description: array of Policy
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Policy" } }
+        "400":
+          description: invalid query value (e.g. status=BOGUS)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+  /workspaces/{workspaceId}/time-off/policies/{id}:
+    get:
+      summary: Get a single time-off policy
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: id,          in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Policy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Policy" }
+        "404":
+          description: not found (observed body uses code:501, message:"Policy with id: ..., not found")
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+  /workspaces/{workspaceId}/time-off/balance/policy/{policyId}:
+    get:
+      summary: Get balances for a policy (read surface co-located with policies)
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: policyId,    in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: balances envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, balances]
+                properties:
+                  count: { type: integer }
+                  balances:
+                    type: array
+                    items: { $ref: "#/components/schemas/PolicyBalanceRow" }
+components:
+  securitySchemes:
+    ApiKeyAuth: { type: apiKey, in: header, name: X-Api-Key }
+  schemas:
+    Policy:
+      type: object
+      # Observed top-level keys from live workspace.
+      required:
+        - id
+        - workspaceId
+        - name
+        - allowNegativeBalance
+        - allowHalfDay
+        - archived
+        - timeUnit
+        - userIds
+        - userGroupIds
+        - everyoneIncludingNew
+        - approve
+      properties:
+        id:                   { type: string }
+        workspaceId:          { type: string }
+        name:                 { type: string }
+        allowNegativeBalance: { type: boolean }
+        negativeBalance:
+          nullable: true
+          $ref: "#/components/schemas/NegativeBalance"
+        allowHalfDay:         { type: boolean }
+        archived:             { type: boolean }
+        timeUnit:             { type: string, enum: [DAYS, HOURS] }
+        userIds:              { type: array, items: { type: string } }
+        userGroupIds:         { type: array, items: { type: string } }
+        everyoneIncludingNew: { type: boolean }
+        approve:              { $ref: "#/components/schemas/PolicyApproval" }
+        automaticAccrual:
+          nullable: true
+          $ref: "#/components/schemas/AutomaticAccrual"
+        projectId:            { type: string, nullable: true }
+        automaticTimeEntryCreation:
+          nullable: true
+          $ref: "#/components/schemas/AutomaticTimeEntryCreation"
+    PolicyApproval:
+      type: object
+      properties:
+        requiresApproval: { type: boolean }
+        teamManagers:     { type: boolean }
+        specificMembers:  { type: boolean }
+        userIds:          { type: array, items: { type: string } }
+    NegativeBalance:
+      type: object
+      properties:
+        amount:       { type: number, format: double }
+        period:       { type: string }
+        shouldReset:  { type: boolean }
+        timeUnit:     { type: string, enum: [DAYS, HOURS] }
+    AutomaticAccrual:
+      type: object
+      properties:
+        amount:   { type: number, format: double }
+        timeUnit: { type: string, enum: [DAYS, HOURS] }
+        period:   { type: string, enum: [MONTH, YEAR] }
+    AutomaticTimeEntryCreation:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        defaultEntities:
+          type: object
+          properties:
+            projectId: { type: string, nullable: true }
+            taskId:    { type: string, nullable: true }
+    PolicyBalanceRow:
+      type: object
+      required: [id, workspaceId, policyId, policyName, policyTimeUnit, userId, userName, balance, used, total]
+      properties:
+        id:                    { type: string }
+        workspaceId:           { type: string }
+        policyId:              { type: string }
+        policyName:            { type: string }
+        policyTimeUnit:        { type: string, enum: [DAYS, HOURS] }
+        negativeBalanceLimit:  { type: boolean }
+        negativeBalanceAmount: { type: number, format: double }
+        policyArchived:        { type: boolean }
+        userId:                { type: string }
+        userName:              { type: string }
+        balance:               { type: number, format: double }
+        used:                  { type: number, format: double }
+        total:                 { type: number, format: double }
+    ErrorEnvelope:
+      # Observed: bad status enum and not-found both return this shape,
+      # both with code:501 (NOT a 4xx code field, despite HTTP status).
+      type: object
+      required: [message, code]
+      properties:
+        message: { type: string }
+        code:    { type: integer, example: 501 }

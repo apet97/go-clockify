@@ -1,0 +1,177 @@
+# User Groups — MUTATION endpoints (Agent B)
+# Live-probed 2026-05-12 against workspace 65b382b606de527a7ee2b60e.
+# Host: https://api.clockify.me/api/v1
+# Auth: X-Api-Key (ApiKeyAuth)
+#
+# All five mutations exercised end-to-end on a single prefixed group
+# (mcp-probe-...-group2). Fixtures in fixtures/user-groups-fresh-b/.
+
+openapi: 3.0.3
+info:
+  title: Clockify User Groups (mutations)
+  version: "probe-2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/user-groups:
+    post:
+      summary: Create a user group
+      # Observed: 201 on success (NOT 200 as a few SDKs assume).
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserGroup' }
+              example:
+                id: "6a032e2a2568d3d2932fb46f"
+                name: "mcp-probe-1778593322-50879a-group2"
+                workspaceId: "65b382b606de527a7ee2b60e"
+                userIds: []
+                teamManagers: []
+        '400':
+          description: |
+            Validation error. Observed shapes:
+              - Empty body / missing name -> {"message":"User group name is required","code":501}
+              - Duplicate name           -> {"message":"User group with name '<n>' already exists","code":501}
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+  /workspaces/{workspaceId}/user-groups/{id}:
+    put:
+      summary: Update (rename) a user group
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: id,          required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserGroup' }
+        '400':
+          description: |
+            Observed for both unknown id AND empty body:
+              - unknown id  -> {"message":"User group doesn't belong to Workspace","code":501}
+              - empty body  -> {"message":"User group name is required","code":501}
+            NOTE: Clockify returns 400 (not 404) for non-existent group ids.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClockifyError' } } }
+    delete:
+      summary: Delete a user group
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: id,          required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: |
+            Deleted. Body is the deleted group (full UserGroup shape),
+            NOT 204 No Content.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserGroup' }
+        '400':
+          description: |
+            Both "already deleted" and "bogus id" collapse to:
+              {"message":"User group doesn't belong to Workspace","code":501}
+            Idempotent DELETE assumption is WRONG — second delete is 400, not 200/404.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClockifyError' } } }
+
+  /workspaces/{workspaceId}/user-groups/{userGroupId}/users:
+    post:
+      summary: Add a user to a group
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: userGroupId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: |
+            Returns updated group (userIds array now includes the added user).
+            Verb is POST (not PUT). Body must be JSON object {"userId":"..."},
+            NOT a bare string and NOT {"userIds":[...]}.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserGroup' }
+        '400':
+          description: |
+            - Bogus userId -> {"message":"User doesn't belong to Workspace","code":501}
+            - Empty body   -> {"message":"Some users do not belong to workspace with id <ws>","code":501}
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClockifyError' } } }
+
+  /workspaces/{workspaceId}/user-groups/{userGroupId}/users/{userId}:
+    delete:
+      summary: Remove a user from a group
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+        - { in: path, name: userGroupId, required: true, schema: { type: string } }
+        - { in: path, name: userId,      required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: |
+            Returns updated group. Notably also returns 200 with unchanged
+            body when the user is NOT currently a member (idempotent no-op
+            — does NOT 404 or 400 for "not member").
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserGroup' }
+        '404':
+          description: |
+            Only returned when the userId itself doesn't exist anywhere:
+              {"message":"USER with ID '<id>' not found","code":501}
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClockifyError' } } }
+
+components:
+  schemas:
+    UserGroup:
+      type: object
+      properties:
+        id:           { type: string }
+        name:         { type: string }
+        workspaceId:  { type: string }
+        userIds:
+          type: array
+          items: { type: string }
+        teamManagers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:   { type: string }
+              name: { type: string }
+      required: [id, name, workspaceId, userIds, teamManagers]
+    ClockifyError:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "Observed: always 501 even for 400/404 HTTP statuses" }
+      required: [message, code]

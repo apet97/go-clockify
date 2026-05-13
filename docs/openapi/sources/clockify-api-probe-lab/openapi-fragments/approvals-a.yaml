@@ -1,0 +1,164 @@
+# Clockify Approvals — READ endpoints (Agent A)
+# Source: live probes against ws 65b382b606de527a7ee2b60e on 2026-05-12.
+# Base: https://api.clockify.me/api/v1
+#
+# Findings vs doc (APPROVALDOC.md):
+#  - Status enum AS ENFORCED upstream: {PENDING, APPROVED, WITHDRAWN_APPROVAL}.
+#    WITHDRAWN_SUBMISSION and REJECTED are advertised in the response schema
+#    but REJECTED as a query filter returns 501 with message listing only
+#    the three valid filter values. Doc says 3, response-state enum says 5,
+#    filter is 3. go-clockify must validate against the 3-value filter set.
+#  - page-size=0 -> 501 "Page size must be a positive value" (not 400).
+#  - Invalid status -> 501 (not 400) with `code:501` envelope.
+#  - There is NO GET-by-id endpoint: /approval-requests/{id} returns
+#    "Request method 'GET' is not supported" (POST-only path; used for
+#    approve/reject). The list endpoint is the only read path.
+#  - There is NO per-user list endpoint. All tried URL shapes 404/3000:
+#      /approval-requests/users/{uid}            -> GET not supported
+#      /approval-requests/users/{uid}/requests   -> No static resource
+#      /users/{uid}/approval-requests            -> No static resource
+#    Per-user filtering must be done client-side from the list response.
+#  - Response is ARRAY at top level. Each element is an envelope:
+#      { approvalRequest:{id,workspaceId,dateRange,owner,status,...},
+#        approvedTime, billableAmount, billableTime, breakTime,
+#        costAmount, entries[], expenseTotal, expenses[],
+#        pendingTime, trackedTime }
+#    NOT a plain ApprovalRequest object as the doc table suggests.
+#  - sort-column accepts ID, USER_ID, START, UPDATED_AT (all returned 200).
+#    sort-order ASCENDING/DESCENDING both work.
+#  - start/end query params: accepted (200) but observed no filtering
+#    effect on this workspace; treat as documented best-effort.
+#  - page far (9999) returns empty array `[]`, not error.
+
+openapi: 3.0.3
+info:
+  title: Clockify Approvals (reads)
+  version: 0.1.0-probe-a
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/approval-requests:
+    get:
+      operationId: listApprovalRequests
+      summary: List approval requests in a workspace
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: {type: string}
+        - in: query
+          name: status
+          description: |
+            Filter by approval state. Upstream-enforced enum (3 values).
+            Other ApprovalState values are valid in responses but NOT as filter.
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, WITHDRAWN_APPROVAL]
+        - in: query
+          name: sort-column
+          schema:
+            type: string
+            enum: [ID, USER_ID, START, UPDATED_AT]
+        - in: query
+          name: sort-order
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+        - in: query
+          name: start
+          schema: {type: string, format: date-time}
+        - in: query
+          name: end
+          schema: {type: string, format: date-time}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1, default: 1}
+        - in: query
+          name: page-size
+          schema: {type: integer, minimum: 1, default: 50}
+      responses:
+        '200':
+          description: OK (array, possibly empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalRequestHydratedDto'
+        '501':
+          description: |
+            Returned (not 400) on invalid status value or page-size<1.
+            Body: {message,code:501}.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      required: [message, code]
+      properties:
+        message: {type: string}
+        code: {type: integer}
+    ApprovalState:
+      type: string
+      description: Full set used in response bodies.
+      enum: [PENDING, APPROVED, WITHDRAWN_SUBMISSION, WITHDRAWN_APPROVAL, REJECTED]
+    DateRangeDto:
+      type: object
+      properties:
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+    ApprovalRequestOwnerDtoV1:
+      type: object
+      properties:
+        userId: {type: string}
+        userName: {type: string}
+        timeZone: {type: string}
+        startOfWeek:
+          type: string
+          enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+    ApprovalRequestStatusDtoV1:
+      type: object
+      properties:
+        state: {$ref: '#/components/schemas/ApprovalState'}
+        note: {type: string, nullable: true}
+        updatedAt: {type: string, format: date-time}
+        updatedBy: {type: string}
+        updatedByUserName: {type: string}
+    ApprovalRequestDtoV1:
+      type: object
+      properties:
+        id: {type: string}
+        workspaceId: {type: string}
+        dateRange: {$ref: '#/components/schemas/DateRangeDto'}
+        owner: {$ref: '#/components/schemas/ApprovalRequestOwnerDtoV1'}
+        status: {$ref: '#/components/schemas/ApprovalRequestStatusDtoV1'}
+        creator:
+          type: object
+          properties:
+            userId: {type: string}
+            userName: {type: string}
+            userEmail: {type: string}
+    ApprovalRequestHydratedDto:
+      type: object
+      description: |
+        Top-level list element. NOTE the wrapper shape: ApprovalRequest is
+        nested under `approvalRequest`, alongside aggregate totals.
+      properties:
+        approvalRequest: {$ref: '#/components/schemas/ApprovalRequestDtoV1'}
+        approvedTime:   {type: string, description: ISO-8601 duration}
+        pendingTime:    {type: string, description: ISO-8601 duration}
+        trackedTime:    {type: string, description: ISO-8601 duration}
+        billableTime:   {type: string, description: ISO-8601 duration}
+        breakTime:      {type: string, description: ISO-8601 duration}
+        billableAmount: {type: number, format: double}
+        costAmount:     {type: number, format: double}
+        expenseTotal:   {type: number, format: double}
+        entries:
+          type: array
+          items: {type: object}
+        expenses:
+          type: array
+          items: {type: object}

@@ -1,0 +1,191 @@
+# Invoices — READ endpoints (Agent A live-probe, ws=65b382b606de527a7ee2b60e)
+# Host: https://api.clockify.me/api/v1
+# Auth: X-Api-Key
+# Fixtures: fixtures/invoices-fresh-a/
+
+openapi: 3.0.3
+info:
+  title: Clockify Invoices (reads, observed)
+  version: 0.1.0-probe-a
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/invoices:
+    get:
+      summary: List invoices
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - { in: query, name: page,        schema: { type: integer, default: 1 } }
+        - { in: query, name: page-size,   schema: { type: integer, default: 50, minimum: 1 } }
+        - in: query
+          name: statuses
+          description: Repeat the param for multi-select. Invalid values -> 501 with enum list.
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [UNSENT, SENT, PAID, PARTIALLY_PAID, VOID, OVERDUE]
+          style: form
+          explode: true
+        - in: query
+          name: sort-column
+          schema: { type: string, enum: [ID, CLIENT, DUE_ON, ISSUE_DATE, AMOUNT, BALANCE] }
+        - { in: query, name: sort-order, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        # NOTE: clientId / clientIds / clients were all silently ignored
+        # (no filtering). Server returns full result set regardless.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceListResponse' }
+        '501':
+          description: Invalid enum value (statuses or sort-column)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}:
+    get:
+      summary: Get invoice by id
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: OK (single InvoiceDetail; superset of list item)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceDetail' }
+        '501':
+          description: Unknown id -> "Invoice doesn't belong to Workspace"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClockifyError' }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/payments:
+    get:
+      summary: List payments for invoice
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          description: Bare JSON array (empty array when no payments).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object, additionalProperties: true }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/export:
+    get:
+      summary: Export invoice as PDF
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/InvoiceId'
+        - in: query
+          name: userLocale
+          required: true
+          description: Required. Without it, 400 code=3001 "Required request parameter 'userLocale'...".
+          schema: { type: string, example: en-US }
+      responses:
+        '200':
+          description: PDF document
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+
+  # NOT FOUND on this workspace / endpoint shape:
+  #   GET .../invoices/{id}/items    -> 405 code=3000 "Request method 'GET' is not supported"
+  #     (items only readable via GET /invoices/{id} -> .items array)
+  #   GET .../invoices/{id}/info     -> 404 code=3000 "No static resource ..."
+  #   GET .../invoices/{id}/pdf      -> 404 code=3000 "No static resource ..."
+  # These paths from earlier docs do not exist; remove from any client.
+
+components:
+  parameters:
+    WorkspaceId:
+      in: path
+      name: workspaceId
+      required: true
+      schema: { type: string }
+    InvoiceId:
+      in: path
+      name: invoiceId
+      required: true
+      schema: { type: string }
+
+  schemas:
+    InvoiceListResponse:
+      type: object
+      required: [total, invoices]
+      properties:
+        total:    { type: integer, description: Workspace-wide count, unaffected by page/page-size. }
+        invoices:
+          type: array
+          items: { $ref: '#/components/schemas/InvoiceListItem' }
+
+    InvoiceListItem:
+      type: object
+      properties:
+        id:         { type: string }
+        number:     { type: string }
+        status:     { type: string, enum: [UNSENT, SENT, PAID, PARTIALLY_PAID, VOID, OVERDUE] }
+        issuedDate: { type: string, format: date-time }
+        dueDate:    { type: string, format: date-time }
+        clientId:   { type: string }
+        clientName: { type: string }
+        amount:     { type: integer, format: int64, description: Minor units (cents). }
+        paid:       { type: integer, format: int64, nullable: true, description: May be negative for PAID. }
+        balance:    { type: integer, format: int64, description: Can be negative. }
+        currency:   { type: string, description: ISO 4217. }
+
+    InvoiceDetail:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceListItem'
+        - type: object
+          properties:
+            calculationType:          { type: string, example: ITEM_BASED }
+            subtotal:                 { type: integer, format: int64 }
+            discount:                 { type: number }
+            tax:                      { type: number }
+            tax2:                     { type: number }
+            taxType:                  { type: string, example: SIMPLE }
+            discountAmount:           { type: integer, format: int64 }
+            taxAmount:                { type: integer, format: int64 }
+            tax2Amount:               { type: integer, format: int64 }
+            subject:                  { type: string }
+            note:                     { type: string }
+            clientAddress:            { type: string }
+            userId:                   { type: string }
+            companyId:                { type: string }
+            containsImportedTimes:    { type: boolean }
+            containsImportedExpenses: { type: boolean }
+            billFrom:                 { type: string, example: WORKSPACE }
+            visibleZeroFields:
+              type: array
+              items: { type: string }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  order:         { type: integer }
+                  description:   { type: string }
+                  quantity:      { type: integer }
+                  unitPrice:     { type: integer, format: int64 }
+                  amount:        { type: integer, format: int64 }
+                  itemType:      { type: string }
+                  importType:    { type: string }
+                  timeEntryIds:  { type: array, items: { type: string } }
+                  expenseIds:    { type: array, items: { type: string } }
+                  applyTaxes:    { type: string }
+
+    ClockifyError:
+      type: object
+      required: [code, message]
+      properties:
+        code:    { type: integer, description: "3000 = no static resource (404), 3001 = missing required param, 501 = invalid value / not found by id." }
+        message: { type: string }

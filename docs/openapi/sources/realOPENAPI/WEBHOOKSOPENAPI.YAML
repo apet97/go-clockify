@@ -1,0 +1,705 @@
+openapi: 3.0.3
+info:
+  title: Clockify Webhooks API
+  version: 1.0.0
+  description: OpenAPI specification generated from the provided WEBHOOKDOC.md Markdown file.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+tags:
+- name: Webhooks
+  description: Webhook management and webhook log endpoints.
+paths:
+  /v1/workspaces/{workspaceId}/addons/{addonId}/webhooks:
+    get:
+      tags:
+      - Webhooks
+      summary: Get all webhooks for addon on a workspace
+      operationId: getAddonWebhooksOnWorkspace
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/AddonId'
+      responses:
+        '200':
+          $ref: '#/components/responses/WebhookCollectionResponse'
+  /v1/workspaces/{workspaceId}/webhooks:
+    get:
+      tags:
+      - Webhooks
+      summary: Get all webhooks on a workspace
+      operationId: getWebhooksOnWorkspace
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - name: type
+        in: query
+        required: false
+        description: Represents a webhook type.
+        schema:
+          $ref: '#/components/schemas/WebhookType'
+        example: USER_CREATED
+      responses:
+        '200':
+          $ref: '#/components/responses/WebhookCollectionResponse'
+    post:
+      tags:
+      - Webhooks
+      summary: Create a webhook
+      description: Creating a webhook generates a new token which can be used to verify that the webhook being sent was sent
+        by Clockify, as it will always be present in the header.
+      operationId: createWebhook
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+            example:
+              name: Stripe
+              triggerSource:
+              - 54a687e29ae1f428e7ebe909
+              - 87p187e29ae1f428e7ebej56
+              triggerSourceType: PROJECT_ID
+              url: https://example-clockify.com/stripeEndpoint
+              webhookEvent: NEW_PROJECT
+      responses:
+        '201':
+          $ref: '#/components/responses/WebhookResponseCreated'
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}:
+    delete:
+      tags:
+      - Webhooks
+      summary: Delete a webhook
+      operationId: deleteWebhook
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/WebhookId'
+      responses:
+        '200':
+          description: OK
+    get:
+      tags:
+      - Webhooks
+      summary: Get a specific webhook by ID
+      operationId: getWebhookById
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/WebhookId'
+      responses:
+        '200':
+          $ref: '#/components/responses/WebhookResponse'
+    put:
+      tags:
+      - Webhooks
+      summary: Update a webhook
+      operationId: updateWebhook
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/WebhookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+            example:
+              name: Stripe
+              triggerSource:
+              - 54a687e29ae1f428e7ebe909
+              - 87p187e29ae1f428e7ebej56
+              triggerSourceType: PROJECT_ID
+              url: https://example-clockify.com/stripeEndpoint
+              webhookEvent: NEW_PROJECT
+      responses:
+        '200':
+          $ref: '#/components/responses/WebhookResponse'
+  /v1/workspaces/{workspaceId}/webhooks/{webhookId}/logs:
+    post:
+      tags:
+      - Webhooks
+      summary: Get logs for a webhook
+      operationId: getWebhookLogs
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/WebhookId'
+      - name: page
+        in: query
+        required: false
+        description: Page number.
+        schema:
+          type: integer
+          format: int32
+          default: 0
+        example: 1
+      - name: size
+        in: query
+        required: false
+        description: Page size.
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 50
+        example: 50
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookLogsRequest'
+            example:
+              from: '2023-02-01T13:00:46Z'
+              sortByNewest: false
+              status: ALL
+              to: '2023-02-05T13:00:46Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookLogDtoV1'
+              example:
+              - id: 65e5b854fe0dfa24f1528ef0
+                requestBody: '{"id":"65df50f5d2dd8f23a685374e","name":"Webhook"}'
+                respondedAt: '2024-03-04T12:02:28.125+00:00'
+                responseBody: '{"id":"h73210f5d2dd8f23685374e","response":"Webhook response"}'
+                statusCode: 200
+                webhookEventStatusId: 6818c52b391aca499bf8dafc
+                webhookId: 65df5508d2dd8f23a68537af
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 64a687e29ae1f428e7ebe303
+    AddonId:
+      name: addonId
+      in: path
+      required: true
+      description: Represents an addon identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 64c777ddd3fcab07cfbb210c
+    WebhookId:
+      name: webhookId
+      in: path
+      required: true
+      description: Represents a webhook identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 5b715448b0798751107918ab
+  responses:
+    WebhookCollectionResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebhookCollectionDtoV1'
+          example:
+            webhooks:
+            - authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+              deliveryEnabled: false
+              enabled: false
+              id: 76a687e29ae1f428e7ebe101
+              name: stripe
+              planEnabled: false
+              triggerSource:
+              - 54a687e29ae1f428e7ebe909
+              - 87p187e29ae1f428e7ebej56
+              triggerSourceType: PROJECT_ID
+              url: https://example-clockify.com/stripeEndpoint
+              userId: 5a0ab5acb07987125438b60f
+              webhookEvent: NEW_PROJECT
+              workspaceId: 64a687e29ae1f428e7ebe303
+            workspaceWebhookCount: 5
+    WebhookResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebhookDtoV1'
+          example:
+            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            deliveryEnabled: false
+            enabled: false
+            id: 76a687e29ae1f428e7ebe101
+            name: stripe
+            planEnabled: false
+            triggerSource:
+            - 54a687e29ae1f428e7ebe909
+            - 87p187e29ae1f428e7ebej56
+            triggerSourceType: PROJECT_ID
+            url: https://example-clockify.com/stripeEndpoint
+            userId: 5a0ab5acb07987125438b60f
+            webhookEvent: NEW_PROJECT
+            workspaceId: 64a687e29ae1f428e7ebe303
+    WebhookResponseCreated:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebhookDtoV1'
+          example:
+            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            deliveryEnabled: false
+            enabled: false
+            id: 76a687e29ae1f428e7ebe101
+            name: stripe
+            planEnabled: false
+            triggerSource:
+            - 54a687e29ae1f428e7ebe909
+            - 87p187e29ae1f428e7ebej56
+            triggerSourceType: PROJECT_ID
+            url: https://example-clockify.com/stripeEndpoint
+            userId: 5a0ab5acb07987125438b60f
+            webhookEvent: NEW_PROJECT
+            workspaceId: 64a687e29ae1f428e7ebe303
+  schemas:
+    WebhookType:
+      type: string
+      enum:
+      - USER_CREATED
+      - SYSTEM
+      - ADDON
+    WebhookEventTriggerSourceType:
+      type: string
+      enum:
+      - PROJECT_ID
+      - USER_ID
+      - TAG_ID
+      - TASK_ID
+      - WORKSPACE_ID
+      - ASSIGNMENT_ID
+      - EXPENSE_ID
+    WebhookEventType:
+      type: string
+      enum:
+      - NEW_PROJECT
+      - NEW_TASK
+      - NEW_CLIENT
+      - NEW_TIMER_STARTED
+      - TIMER_STOPPED
+      - TIME_ENTRY_UPDATED
+      - TIME_ENTRY_DELETED
+      - TIME_ENTRY_SPLIT
+      - NEW_TIME_ENTRY
+      - TIME_ENTRY_RESTORED
+      - NEW_TAG
+      - USER_DELETED_FROM_WORKSPACE
+      - USER_JOINED_WORKSPACE
+      - USER_DEACTIVATED_ON_WORKSPACE
+      - USER_ACTIVATED_ON_WORKSPACE
+      - USER_EMAIL_CHANGED
+      - USER_UPDATED
+      - NEW_INVOICE
+      - INVOICE_UPDATED
+      - NEW_APPROVAL_REQUEST
+      - APPROVAL_REQUEST_STATUS_UPDATED
+      - TIME_OFF_REQUESTED
+      - TIME_OFF_REQUEST_UPDATED
+      - TIME_OFF_REQUEST_APPROVED
+      - TIME_OFF_REQUEST_REJECTED
+      - TIME_OFF_REQUEST_STARTED
+      - TIME_OFF_REQUEST_WITHDRAWN
+      - BALANCE_UPDATED
+      - TAG_UPDATED
+      - TAG_DELETED
+      - TASK_UPDATED
+      - CLIENT_UPDATED
+      - TASK_DELETED
+      - CLIENT_DELETED
+      - EXPENSE_RESTORED
+      - ASSIGNMENT_CREATED
+      - ASSIGNMENT_DELETED
+      - ASSIGNMENT_PUBLISHED
+      - ASSIGNMENT_UPDATED
+      - EXPENSE_CREATED
+      - EXPENSE_DELETED
+      - EXPENSE_UPDATED
+      - PROJECT_UPDATED
+      - PROJECT_DELETED
+      - USER_GROUP_CREATED
+      - USER_GROUP_UPDATED
+      - USER_GROUP_DELETED
+      - USERS_INVITED_TO_WORKSPACE
+      - LIMITED_USERS_ADDED_TO_WORKSPACE
+      - COST_RATE_UPDATED
+      - BILLABLE_RATE_UPDATED
+    WebhookEntityType:
+      type: string
+      enum:
+      - AUTH
+      - ALERT
+      - APPROVAL_REQUEST
+      - ASSIGNMENT
+      - CLIENT
+      - DOMAIN
+      - EXPENSE
+      - EXPENSE_CATEGORY
+      - EXPORT_SETTINGS
+      - INVOICE
+      - INVOICE_RECURRING_SETTINGS
+      - INVOICE_REMINDERS
+      - INVOICE_REMINDERS_INTERVALS
+      - INVOICE_ITEM_TYPE
+      - PASSWORD_RESET_TOKEN
+      - PROJECT
+      - PROJECT_FAVORITE
+      - REMINDER
+      - REPORT
+      - ORGANIZATION
+      - TEMPLATE
+      - TIMEENTRY
+      - TIMEENTRY_RATE
+      - TAG
+      - TASK
+      - TASK_FAVORITES
+      - USER
+      - WORKSPACE_USER
+      - USER_GROUP
+      - WEBHOOK
+      - WORKSPACE
+      - CUSTOM_FIELD
+      - WEBHOOK_LOG
+      - SCHEDULE_ASSIGNMENT
+      - SCHEDULE_MILESTONE
+      - COMPANY
+      - CURRENCY
+      - KIOSK_PIN_CODE
+      - KIOSK
+      - KIOSK_SESSION
+      - MARKETPLACE_ADDON
+      - INVOICE_PAYMENT
+      - DELETION_DOCUMENT
+      - FAVORITE_TIMEENTRY
+      - HOLIDAY
+      - POLICY
+      - POLICY_ASSIGNMENT
+      - EMAIL_KEY_REQUEST
+      - EMAIL_SESSION_REQUEST
+      - FEATURE_SUBSCRIPTION
+      - TIME_OFF_REQUEST
+      - LOG_BIN
+      - BALANCE_ASSIGNMENT
+      - CUSTOM_COLOR
+      - CUSTOM_COLORS_INDEX
+      - SAMPLE_DATA
+      - WEBHOOK_EVENT_STATUS
+    Feature:
+      type: string
+      enum:
+      - ADD_TIME_FOR_OTHERS
+      - ADMIN_PANEL
+      - ALERTS
+      - APPROVAL
+      - AUDIT_LOG
+      - AUTOMATIC_LOCK
+      - BRANDED_REPORTS
+      - BULK_EDIT
+      - CUSTOM_FIELDS
+      - CUSTOM_REPORTING
+      - CUSTOM_SUBDOMAIN
+      - CREATION_PERMISSIONS
+      - DECIMAL_FORMAT
+      - DISABLE_MANUAL_MODE
+      - EDIT_MEMBER_PROFILE
+      - EXCLUDE_NON_BILLABLE_FROM_ESTIMATE
+      - EXPENSES
+      - FILE_IMPORT
+      - TIMESHEET_IMPORT
+      - USER_IMPORT
+      - HIDE_PAGES
+      - HISTORIC_RATES
+      - INVOICING
+      - INVOICE_EMAILS
+      - INVOICE_REMINDERS
+      - LABOR_COST
+      - LOCATIONS
+      - MANAGER_ROLE
+      - MULTI_FACTOR_AUTHENTICATION
+      - PROJECT_BUDGET
+      - PROJECT_TEMPLATES
+      - GRANT_PROJECT_MANAGER_ROLE
+      - PRIVATE_PROJECT_ACCESS
+      - QUICKBOOKS_INTEGRATION
+      - RECURRING_ESTIMATES
+      - RECURRING_INVOICES
+      - REQUIRED_FIELDS
+      - SCHEDULED_REPORTS
+      - SCHEDULING
+      - SCREENSHOTS
+      - SSO
+      - SUMMARY_ESTIMATE
+      - TARGETS_AND_REMINDERS
+      - TASK_RATES
+      - TIME_OFF
+      - UNLIMITED_REPORTS
+      - USER_CUSTOM_FIELDS
+      - WHO_CAN_CHANGE_TIMEENTRY_BILLABILITY
+      - BREAKS
+      - KIOSK_SESSION_DURATION
+      - KIOSK_PIN_REQUIRED
+      - WHO_CAN_SEE_ALL_TIME_ENTRIES
+      - WHO_CAN_SEE_PROJECT_STATUS
+      - WHO_CAN_SEE_PUBLIC_PROJECTS_ENTRIES
+      - WHO_CAN_SEE_TEAMS_DASHBOARD
+      - WORKSPACE_LOCK_TIMEENTRIES
+      - WORKSPACE_TIME_AUDIT
+      - WORKSPACE_TIME_ROUNDING
+      - KIOSK
+      - KIOSK_SIX_DIGIT_PIN
+      - KIOSK_QR_CODE
+      - LIMITED_USERS
+      - FORECASTING
+      - TIME_TRACKING
+      - ATTENDANCE_REPORT
+      - WORKSPACE_TRANSFER
+      - FAVORITE_ENTRIES
+      - SPLIT_TIME_ENTRY
+      - CLIENT_CURRENCY
+      - SCHEDULING_FORECASTING
+      - SCIM
+      - UNLIMITED_USER_SEATS
+      - BILLABLE_HOURS
+      - PROJECT_ESTIMATE
+      - CSV_EXPORT
+      - XLSX_EXPORT
+      - ONE_MONTH_RANGE_REPORTS
+      - ONE_YEAR_RANGE_REPORTS
+      - SHARED_REPORTS
+    WebhookPayloadType:
+      type: string
+      enum:
+      - PROJECT
+      - TIME_ENTRY
+      - TIME_ENTRY_PLAKY_INTEGRATION
+      - CLIENT
+      - TAG
+      - TASK
+      - WEBHOOK
+      - WEBHOOK_LOG
+      - NO_PAYLOAD
+      - DOMAIN_DETAILS
+      - WORKSPACE_DELETED_DETAILS
+      - USER
+      - USER_GROUP
+      - FILE_IMPORT_RESULTS
+      - APPROVAL_REQUEST
+      - INVOICE
+      - TIME_OFF_REQUEST
+      - BALANCE_UPDATED
+      - ASSIGNMENT_WEBHOOK
+      - ASSIGNMENT
+      - TIME_ENTRY_WITH_CUSTOM_FIELD
+      - TIME_ENTRY_BATCH_DELETED_IDS
+      - ADDITIONAL_WORKSPACE
+      - EXPENSE
+      - WORKSPACE_TRANSFER_DETAILS
+      - PROJECT_STATUS_FAILED
+      - INVITED_USERS
+      - ADDED_LIMITED_USERS
+      - RATE_UPDATED
+      - JIRA_INSTALLED_PAYLOAD_WITH_JWT
+      - JIRA_UNINSTALLED_PAYLOAD_WITH_JWT
+      - JIRA_WORKLOG_PAYLOAD_WITH_JWT
+      - JIRA_DATA_CENTER_INSTALLED_PAYLOAD_WITH_JWT
+      - JIRA_DATA_CENTER_UNINSTALLED_PAYLOAD_WITH_JWT
+      - JIRA_PLUGIN_CONFIG_SAVE_PAYLOAD_WITH_JWT
+      - REMINDER_TO_START_TIMER
+      - REMINDER_TO_STOP_TIMER
+    WebhookCollectionDtoV1:
+      type: object
+      properties:
+        webhooks:
+          type: array
+          description: Represents a list of webhook objects for the workspace.
+          items:
+            $ref: '#/components/schemas/WebhookDtoV1'
+          x-sourceDefault: '##default'
+        workspaceWebhookCount:
+          type: integer
+          format: int32
+          description: Represents number of webhooks for the workspace.
+          example: 5
+    WebhookDtoV1:
+      type: object
+      properties:
+        authToken:
+          type: string
+          description: Represents an authentication token.
+          x-sourceDefault: '##default'
+        deliveryEnabled:
+          type: boolean
+          description: Indicates whether webhook delivery is enabled or not. It can be disabled if delivery failed for too
+            many times.
+          default: false
+        enabled:
+          type: boolean
+          description: Indicates whether webhook is enabled or not.
+          default: false
+        id:
+          type: string
+          description: Represents webhook identifier across the system.
+          x-sourceDefault: '##default'
+        name:
+          type: string
+          description: Represents webhook name.
+          x-sourceDefault: '##default'
+        planEnabled:
+          type: boolean
+          description: Indicates whether webhook is supported by current plan. It can be disabled if number of webhooks exceeds
+            plan limit or if the feature is not supported on current plan.
+          default: false
+        triggerSource:
+          type: array
+          description: Represents a list of trigger sources.
+          items:
+            type: string
+          x-sourceDefault: '##default'
+        triggerSourceType:
+          $ref: '#/components/schemas/WebhookEventTriggerSourceType'
+        entityType:
+          $ref: '#/components/schemas/WebhookEntityType'
+        url:
+          type: string
+          description: Represents a webhook target URL.
+          format: uri
+          x-sourceDefault: '##default'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+          x-sourceDefault: '##default'
+        webhookEvent:
+          $ref: '#/components/schemas/WebhookEventType'
+        feature:
+          $ref: '#/components/schemas/Feature'
+        payloadType:
+          $ref: '#/components/schemas/WebhookPayloadType'
+        validSourceTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookEventTriggerSourceType'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+          x-sourceDefault: '##default'
+    WebhookRequest:
+      type: object
+      required:
+      - name
+      - triggerSource
+      - triggerSourceType
+      - url
+      - webhookEvent
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 30
+          description: Represents a webhook name.
+          x-sourceDefault: '##default'
+        triggerSource:
+          type: array
+          description: Represents a list of trigger sources.
+          items:
+            type: string
+          x-sourceDefault: '##default'
+        triggerSourceType:
+          $ref: '#/components/schemas/WebhookEventTriggerSourceType'
+        url:
+          type: string
+          minLength: 1
+          description: Represents a webhook target url.
+          format: uri
+          x-sourceDefault: '##default'
+        webhookEvent:
+          $ref: '#/components/schemas/WebhookEventType'
+    WebhookLogsRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: Represents date and time in yyyy-MM-ddThh:mm:ssZ format. If provided, results will include logs which
+            occurred after this value.
+        sortByNewest:
+          type: boolean
+          description: If set to true, logs will be sorted with most recent first.
+          default: false
+        status:
+          type: string
+          description: Filters logs by status.
+          enum:
+          - ALL
+          - SUCCEEDED
+          - FAILED
+          x-sourceDefault: '##default'
+        to:
+          type: string
+          format: date-time
+          description: Represents date and time in yyyy-MM-ddThh:mm:ssZ format. If provided, results will include logs which
+            occurred before this value.
+    WebhookLogDtoV1:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Represents log identifier across the system.
+          x-sourceDefault: '##default'
+        requestBody:
+          type: string
+          description: Represents request body.
+          x-sourceDefault: '##default'
+        respondedAt:
+          type: string
+          description: Represents date and time of response.
+          format: date-time
+          x-sourceDefault: '##default'
+        responseBody:
+          type: string
+          description: Represents response body.
+          x-sourceDefault: '##default'
+        statusCode:
+          type: integer
+          format: int32
+          description: Represents response status code.
+        webhookEventStatusId:
+          type: string
+          description: Represents webhook event status identifier across the system.
+          x-sourceDefault: '##default'
+        webhookId:
+          type: string
+          description: Represents webhook identifier across the system.
+          x-sourceDefault: '##default'
+x-incompleteOperations:
+- title: Generate a new token
+  description: Generates a new webhook token and invalidates previous one.
+  reason: The source Markdown includes this section but does not include an HTTP method or path, so it cannot be represented
+    as an OpenAPI path operation without inventing information.
+  pathParameters:
+  - workspaceId
+  - webhookId
+  responseSchema: '#/components/schemas/WebhookDtoV1'

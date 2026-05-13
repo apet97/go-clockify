@@ -1,0 +1,108 @@
+# Clockify Time Entries — READ probes (Agent A)
+# Workspace: 65b382b606de527a7ee2b60e  User: 64621faec4d2cc53b91fce6c
+# Base: https://api.clockify.me/api/v1   Auth: X-Api-Key
+# Fixtures: fixtures/time-entries-fresh-a/
+openapi: 3.0.3
+info: { title: Clockify TimeEntries READ (live), version: 0.1.0 }
+servers: [{ url: https://api.clockify.me/api/v1 }]
+paths:
+  /user:
+    get:
+      summary: Current user (used for {userId})
+      responses: { '200': { description: User } }
+  /workspaces/{workspaceId}/user/{userId}/time-entries:
+    get:
+      summary: List user's time entries
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string, format: date-time } }   # RFC3339 Z
+        - { name: end, in: query, schema: { type: string, format: date-time } }
+        - { name: description, in: query, schema: { type: string } }                 # substring filter
+        - { name: project, in: query, schema: { type: string } }
+        - { name: task, in: query, schema: { type: string } }
+        - { name: tags, in: query, explode: true, schema: { type: array, items: { type: string } } }
+        - { name: billable, in: query, schema: { type: boolean } }                   # NOTE: filter accepted but observed not strictly applied in fixture set
+        - { name: hydrated, in: query, schema: { type: boolean } }                   # expands project/task/tags/user
+        - { name: in-progress, in: query, schema: { type: boolean } }                # entries with null end
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page-size, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: sort-column, in: query, schema: { type: string, enum: [START] } }  # INVALID silently ignored (200)
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { name: consider-duration-format, in: query, schema: { type: boolean } }
+        - { name: get-week-before, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: array of TimeEntry (or HydratedTimeEntry when hydrated=true) }
+  /workspaces/{workspaceId}/time-entries/{id}:
+    get:
+      summary: Get single time entry
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: hydrated, in: query, schema: { type: boolean } }
+        - { name: consider-duration-format, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: TimeEntry }
+        '404':
+          description: 'Body: {"message":"Time entry doesn'"'"'t belong to Workspace","code":501}  (HTTP 404, body.code 501)'
+
+components:
+  schemas:
+    TimeEntry:
+      # Observed superset of go-clockify TimeEntry. Bold additions:
+      #   costRate, hourlyRate (Rate objects), kioskId (nullable string),
+      #   customFieldValues[].name + .type, tagIds is null when empty (not []).
+      type: object
+      properties:
+        id: { type: string }
+        description: { type: string }
+        tagIds:
+          type: array
+          nullable: true   # null when no tags (NOT empty array)
+          items: { type: string }
+        userId: { type: string }
+        billable: { type: boolean }
+        taskId: { type: string, nullable: true }
+        projectId: { type: string, nullable: true }
+        workspaceId: { type: string }
+        isLocked: { type: boolean }
+        type: { type: string, enum: [REGULAR, BREAK, HOLIDAY, TIME_OFF] }
+        kioskId: { type: string, nullable: true }
+        hourlyRate: { $ref: '#/components/schemas/Rate' }    # may be null
+        costRate:   { $ref: '#/components/schemas/Rate' }    # may be null
+        timeInterval: { $ref: '#/components/schemas/TimeInterval' }
+        customFieldValues:
+          type: array
+          items: { $ref: '#/components/schemas/CustomFieldValue' }
+    HydratedTimeEntry:
+      # When hydrated=true, server adds project/task/tags/user/kiosk
+      # alongside the *Id fields (does not remove them).
+      allOf:
+        - $ref: '#/components/schemas/TimeEntry'
+        - type: object
+          properties:
+            project: { type: object, nullable: true }   # full Project (clientId, clientName, color, billable, archived, public, template, memberships, hourlyRate, costRate, budgetEstimate, timeEstimate, estimate, estimateReset, duration, note, workspaceId, name, id)
+            task:    { type: object, nullable: true }
+            tags:    { type: array, items: { type: object } }
+            user:    { type: object }                   # full User incl. memberships, settings, customFields
+            kiosk:   { type: object, nullable: true }
+    TimeInterval:
+      type: object
+      properties:
+        start:    { type: string, format: date-time }   # RFC3339 with 'Z'
+        end:      { type: string, format: date-time, nullable: true }
+        duration: { type: string, nullable: true }      # ISO-8601, e.g. "PT2H"; null while in-progress
+    Rate:
+      type: object
+      nullable: true
+      properties:
+        amount:   { type: integer }    # minor units (e.g. 999900 == 9999.00)
+        currency: { type: string }
+    CustomFieldValue:
+      type: object
+      properties:
+        customFieldId: { type: string }
+        timeEntryId:   { type: string }
+        name:          { type: string }                  # present on read (not in docs swagger)
+        value:         { nullable: true }                # type varies by .type
+        type:          { type: string, enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK] }  # observed: TXT, DROPDOWN_SINGLE

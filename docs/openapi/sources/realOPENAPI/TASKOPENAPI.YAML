@@ -1,0 +1,635 @@
+openapi: 3.0.3
+info:
+  title: Clockify Tasks API
+  version: 1.0.0
+  description: OpenAPI definition generated from TASKDOC.md for Clockify task endpoints.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+tags:
+- name: Tasks
+  description: Task endpoints for Clockify projects.
+paths:
+  /v1/workspaces/{workspaceId}/projects/{projectId}/tasks:
+    get:
+      tags:
+      - Tasks
+      summary: Find tasks on a project
+      operationId: findTasksOnProject
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+          default: '##default'
+        description: If provided, you'll get a filtered list of tasks that matches the provided string in their name.
+        example: Bugfixing
+      - name: strict-name-search
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Flag to toggle strict search mode. When true, search by name returns only exact matches.
+        example: false
+      - name: is-active
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Filters search results whether task is active or not.
+        example: false
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/SortColumnTask'
+      - $ref: '#/components/parameters/SortOrder'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskArrayResponse'
+    post:
+      tags:
+      - Tasks
+      summary: Add a new task on a project
+      operationId: addTaskOnProject
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ContainsAssignee'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+            example:
+              assigneeId: '##default'
+              assigneeIds:
+              - 45b687e29ae1f428e7ebe123
+              - 67s687e29ae1f428e7ebe678
+              budgetEstimate: 10000
+              estimate: PT1H30M
+              id: 57a687e29ae1f428e7ebe107
+              name: Bugfixing
+              status: DONE
+              userGroupIds:
+              - 67b687e29ae1f428e7ebe123
+              - 12s687e29ae1f428e7ebe678
+      responses:
+        '201':
+          $ref: '#/components/responses/CreatedTaskResponse'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}:
+    get:
+      tags:
+      - Tasks
+      summary: Get a task by id
+      operationId: getTaskById
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskResponse'
+    put:
+      tags:
+      - Tasks
+      summary: Update a task on a project
+      operationId: updateTaskOnProject
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      description: Inferred as PUT on the task-by-id path because the uploaded Markdown includes the update operation details
+        but omits its method/path line.
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/ContainsAssignee'
+      - $ref: '#/components/parameters/MembershipStatus'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+            example:
+              assigneeId: '##default'
+              assigneeIds:
+              - 45b687e29ae1f428e7ebe123
+              - 67s687e29ae1f428e7ebe678
+              billable: false
+              budgetEstimate: 10000
+              estimate: PT1H30M
+              name: Bugfixing
+              status: DONE
+              userGroupIds:
+              - 67b687e29ae1f428e7ebe123
+              - 12s687e29ae1f428e7ebe678
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskResponse'
+    delete:
+      tags:
+      - Tasks
+      summary: Delete a task from a project
+      operationId: deleteTaskFromProject
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskResponse'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/cost-rate:
+    put:
+      tags:
+      - Tasks
+      summary: Update a task's cost rate
+      operationId: updateTaskCostRate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskIdAsId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateUpdateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskResponse'
+  /v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/hourly-rate:
+    put:
+      tags:
+      - Tasks
+      summary: Update a task's billable rate
+      operationId: updateTaskBillableRate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskIdAsId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateUpdateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Clockify addon key, for addon-authenticated requests.
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: 64a687e29ae1f428e7ebe303
+      description: Represents a workspace identifier across the system.
+      example: 64a687e29ae1f428e7ebe303
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: 25b687e29ae1f428e7ebe123
+      description: Represents a project identifier across the system.
+      example: 25b687e29ae1f428e7ebe123
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: 57a687e29ae1f428e7ebe107
+      description: Represents a task identifier across the system.
+      example: 57a687e29ae1f428e7ebe107
+    TaskIdAsId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: 57a687e29ae1f428e7ebe107
+      description: Represents a task identifier across the system.
+      example: 57a687e29ae1f428e7ebe107
+    ContainsAssignee:
+      name: contains-assignee
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: true
+      description: Flag to set whether task will have assignee or none.
+      example: true
+    MembershipStatus:
+      name: membership-status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - PENDING
+        - ACTIVE
+        - DECLINED
+        - INACTIVE
+        - ALL
+      description: Represents a membership status.
+      example: ACTIVE
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      description: Page number.
+      example: 1
+    PageSize:
+      name: page-size
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      description: Page size.
+      example: 50
+    SortColumnTask:
+      name: sort-column
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - ID
+        - NAME
+      description: Represents the column as criteria for sorting tasks.
+      example: ID
+    SortOrder:
+      name: sort-order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - ASCENDING
+        - DESCENDING
+      description: Sorting mode.
+      example: ASCENDING
+  schemas:
+    TaskStatus:
+      type: string
+      description: Represents task status.
+      enum:
+      - ACTIVE
+      - DONE
+      - ALL
+    MembershipStatus:
+      type: string
+      enum:
+      - PENDING
+      - ACTIVE
+      - DECLINED
+      - INACTIVE
+      - ALL
+    RateDtoV1:
+      type: object
+      description: Represents hourly or cost rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+    Task:
+      type: object
+      description: Represents a Clockify task on a project.
+      properties:
+        assigneeId:
+          type: string
+          description: Deprecated task assignee identifier.
+          deprecated: true
+        assigneeIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of assignee ids for the task.
+          uniqueItems: true
+        billable:
+          type: boolean
+          description: Indicates whether a task is billable or not.
+          default: false
+        budgetEstimate:
+          type: integer
+          format: int64
+          description: Represents a task budget estimate as long.
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        duration:
+          type: string
+          description: Represents a task duration.
+        estimate:
+          type: string
+          description: Represents a task duration estimate.
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        id:
+          type: string
+          description: Represents task identifier across the system.
+        name:
+          type: string
+          description: Represents task name.
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        active:
+          type: boolean
+          description: Indicates whether the task is active.
+        userGroupIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of user group ids for the task.
+          uniqueItems: true
+      example:
+        assigneeId: string
+        assigneeIds:
+        - 45b687e29ae1f428e7ebe123
+        - 67s687e29ae1f428e7ebe678
+        billable: false
+        budgetEstimate: 10000
+        costRate:
+          amount: 20000
+          currency: USD
+        duration: PT1H30M
+        estimate: PT1H30M
+        hourlyRate:
+          amount: 20000
+          currency: USD
+        id: 57a687e29ae1f428e7ebe107
+        name: Bugfixing
+        projectId: 25b687e29ae1f428e7ebe123
+        status: DONE
+        userGroupIds:
+        - 67b687e29ae1f428e7ebe123
+        - 12s687e29ae1f428e7ebe678
+    TaskCreateRequest:
+      type: object
+      required:
+      - name
+      properties:
+        assigneeId:
+          type: string
+          description: Deprecated task assignee identifier.
+          default: '##default'
+          deprecated: true
+        assigneeIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of assignee ids for the task.
+          uniqueItems: true
+        budgetEstimate:
+          type: integer
+          format: int64
+          description: Represents a task budget estimate as long.
+          minimum: 0
+        estimate:
+          type: string
+          description: Represents a task duration estimate in ISO-8601 format.
+        id:
+          type: string
+          description: Represents task identifier across the system.
+        name:
+          type: string
+          description: Represents task name.
+          minLength: 1
+          maxLength: 1000
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        userGroupIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of user group ids for the task.
+          uniqueItems: true
+      example:
+        assigneeId: '##default'
+        assigneeIds:
+        - 45b687e29ae1f428e7ebe123
+        - 67s687e29ae1f428e7ebe678
+        budgetEstimate: 10000
+        estimate: PT1H30M
+        id: 57a687e29ae1f428e7ebe107
+        name: Bugfixing
+        status: DONE
+        userGroupIds:
+        - 67b687e29ae1f428e7ebe123
+        - 12s687e29ae1f428e7ebe678
+    TaskUpdateRequest:
+      type: object
+      required:
+      - name
+      properties:
+        assigneeId:
+          type: string
+          description: Deprecated task assignee identifier.
+          default: '##default'
+          deprecated: true
+        assigneeIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of assignee ids for the task.
+          uniqueItems: true
+        billable:
+          type: boolean
+          description: Indicates whether a task is billable or not.
+          default: false
+        budgetEstimate:
+          type: integer
+          format: int64
+          description: Represents a task budget estimate as integer.
+          minimum: 0
+        estimate:
+          type: string
+          description: Represents a task duration estimate.
+        name:
+          type: string
+          description: Represents task name.
+          minLength: 1
+          maxLength: 1000
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        userGroupIds:
+          type: array
+          items:
+            type: string
+          description: Represents list of user group ids for the task.
+          uniqueItems: true
+      example:
+        assigneeId: '##default'
+        assigneeIds:
+        - 45b687e29ae1f428e7ebe123
+        - 67s687e29ae1f428e7ebe678
+        billable: false
+        budgetEstimate: 10000
+        estimate: PT1H30M
+        name: Bugfixing
+        status: DONE
+        userGroupIds:
+        - 67b687e29ae1f428e7ebe123
+        - 12s687e29ae1f428e7ebe678
+    RateUpdateRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+          minimum: 0
+        since:
+          type: string
+          format: date-time
+          description: Represents a date and time in yyyy-MM-ddThh:mm:ssZ format.
+      example:
+        amount: 20000
+        since: '2020-01-01T00:00:00Z'
+  responses:
+    TaskResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Task'
+          example:
+            assigneeId: string
+            assigneeIds:
+            - 45b687e29ae1f428e7ebe123
+            - 67s687e29ae1f428e7ebe678
+            billable: false
+            budgetEstimate: 10000
+            costRate:
+              amount: 20000
+              currency: USD
+            duration: PT1H30M
+            estimate: PT1H30M
+            hourlyRate:
+              amount: 20000
+              currency: USD
+            id: 57a687e29ae1f428e7ebe107
+            name: Bugfixing
+            projectId: 25b687e29ae1f428e7ebe123
+            status: DONE
+            userGroupIds:
+            - 67b687e29ae1f428e7ebe123
+            - 12s687e29ae1f428e7ebe678
+    TaskArrayResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Task'
+          example:
+          - assigneeId: string
+            assigneeIds:
+            - 45b687e29ae1f428e7ebe123
+            - 67s687e29ae1f428e7ebe678
+            billable: false
+            budgetEstimate: 10000
+            costRate:
+              amount: 20000
+              currency: USD
+            duration: PT1H30M
+            estimate: PT1H30M
+            hourlyRate:
+              amount: 20000
+              currency: USD
+            id: 57a687e29ae1f428e7ebe107
+            name: Bugfixing
+            projectId: 25b687e29ae1f428e7ebe123
+            status: DONE
+            userGroupIds:
+            - 67b687e29ae1f428e7ebe123
+            - 12s687e29ae1f428e7ebe678
+    CreatedTaskResponse:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Task'
+          example:
+            assigneeId: string
+            assigneeIds:
+            - 45b687e29ae1f428e7ebe123
+            - 67s687e29ae1f428e7ebe678
+            billable: false
+            budgetEstimate: 10000
+            costRate:
+              amount: 20000
+              currency: USD
+            duration: PT1H30M
+            estimate: PT1H30M
+            hourlyRate:
+              amount: 20000
+              currency: USD
+            id: 57a687e29ae1f428e7ebe107
+            name: Bugfixing
+            projectId: 25b687e29ae1f428e7ebe123
+            status: DONE
+            userGroupIds:
+            - 67b687e29ae1f428e7ebe123
+            - 12s687e29ae1f428e7ebe678

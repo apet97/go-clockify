@@ -1,0 +1,172 @@
+# Clockify Invoices — MUTATIONS (Agent B live probe, 2026-05-12)
+# Workspace 65b382b606de527a7ee2b60e. All entities prefixed mcp-probe-*
+# and cleaned up after the run. Base: https://api.clockify.me/api/v1
+openapi: 3.0.3
+info:
+  title: Clockify Invoices — mutations (probe-confirmed)
+  version: 2026-05-12-b
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/invoices:
+    post:
+      summary: Create invoice
+      description: |
+        OBSERVED: returns 201 with a SLIM body (no `status`, no items, no
+        amounts) — only {id, clientId, currency, issuedDate, dueDate,
+        number, billFrom}. The full InvoiceDto only appears after a
+        subsequent GET /invoices/{id} or any mutating sub-call. The
+        upstream doc lists more fields but they are NOT populated here.
+        Invalid body (missing `currency`) → 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, currency, dueDate, issuedDate, number]
+              properties:
+                clientId:    { type: string }
+                currency:    { type: string, example: USD }
+                dueDate:     { type: string, format: date-time }
+                issuedDate:  { type: string, format: date-time }
+                number:      { type: string }
+      responses:
+        "201":
+          description: Created — slim shape
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:         { type: string }
+                  clientId:   { type: string }
+                  currency:   { type: string }
+                  issuedDate: { type: string, format: date-time }
+                  dueDate:    { type: string, format: date-time }
+                  number:     { type: string }
+                  billFrom:   { type: string, example: WORKSPACE }
+        "400": { description: validation error }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}:
+    delete:
+      summary: Delete invoice
+      description: 200 OK with EMPTY body (not the full invoice). Doc shows full body — actual is "".
+      responses:
+        "200": { description: deleted, empty body }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/items:
+    post:
+      summary: Add line item
+      description: |
+        CRITICAL: `itemType` is NOT a free string. Sending
+        `"itemType":"Service"` → 404 `{"code":501,"message":"Invoice item
+        type with name Service not found."}`. Must reference an existing
+        InvoiceItemType id from /invoices/settings. Empty body → 400.
+        Other accepted fields: applyTaxes (TAX1|TAX2|TAX1TAX2|NONE),
+        description, quantity (int), unitPrice (int, minor units).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity, unitPrice]
+              properties:
+                applyTaxes:  { type: string, enum: [TAX1, TAX2, TAX1TAX2, NONE] }
+                description: { type: string }
+                itemType:    { type: string, description: "existing InvoiceItemType id, not a free label" }
+                quantity:    { type: integer }
+                unitPrice:   { type: integer, description: "minor units (e.g. cents)" }
+      responses:
+        "200": { description: full InvoiceDto }
+        "400": { description: missing required fields }
+        "404": { description: "code 501, itemType not found" }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/payments:
+    post:
+      summary: Add payment
+      description: |
+        201 returns the FULL invoice (not just the payment). Observed body
+        contains paid/balance/status/items/etc. `amount` must be >= 1 —
+        0 → 400. `paymentDate` accepts ISO-8601 with Z.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:      { type: integer, minimum: 1 }
+                note:        { type: string, maxLength: 1000 }
+                paymentDate: { type: string, format: date-time }
+      responses:
+        "201": { description: full updated InvoiceDto }
+        "400": { description: amount<1 or missing }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/status:
+    patch:
+      summary: Change invoice status
+      description: |
+        Returns 200 with EMPTY body (doc implies a body — actual is "").
+        Accepted enum: UNSENT, SENT, PAID, PARTIALLY_PAID, VOID, OVERDUE.
+        Invalid enum value → 400. Transitions observed end-to-end:
+        UNSENT → SENT → PAID → VOID all returned 200.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceStatus]
+              properties:
+                invoiceStatus:
+                  type: string
+                  enum: [UNSENT, SENT, PAID, PARTIALLY_PAID, VOID, OVERDUE]
+      responses:
+        "200": { description: empty body }
+        "400": { description: invalid enum value }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/export:
+    get:
+      summary: Export invoice (PDF bytes)
+      description: |
+        `userLocale` is REQUIRED — omitting it → 400
+        `{"code":3001,"message":"Required request parameter 'userLocale'
+        for method parameter type String is not present"}`. Successful
+        response is a binary PDF (~75 KB observed). Content-Type is
+        application/pdf despite doc saying `*/*` with `<byte>` schema.
+      parameters:
+        - in: query
+          name: userLocale
+          required: true
+          schema: { type: string, example: en }
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "400": { description: missing userLocale }
+
+  # ---- Endpoint INTENTIONALLY NOT probed ----------------------------------
+  # POST /workspaces/{workspaceId}/invoices/{invoiceId}/send
+  # Skipped per probe-lab CLAUDE.md hard limit #5 (no real customer email).
+  # Documented from INVOICEDOC.md only, not live-confirmed.
+
+# ---- Client cleanup quirk (out-of-domain but worth noting) ----------------
+# DELETE /workspaces/{ws}/clients/{id} on an ACTIVE client returns 400
+#   {"code":501,"message":"Cannot delete an active client"}
+# Required sequence: PUT /clients/{id} {archived:true} then DELETE.
+# This affects any go-clockify test that creates+tears-down a client
+# attached to an invoice.
+
+# ---- go-clockify deltas (reviewer's first question) ----------------------
+# 1. Create-invoice handler: do NOT expect a full InvoiceDto in the 201
+#    response. The pinned test in go-clockify should assert only the slim
+#    shape; if richer data is needed, follow with GET /invoices/{id}.
+# 2. Add-line-item handler: stop sending `itemType` as a free label. Either
+#    drop it (server defaults) or resolve to an InvoiceItemType id from
+#    /workspaces/{ws}/invoices/settings.
+# 3. Status-change & delete handlers: response body is empty. Tests that
+#    decode into InvoiceDto will fail with EOF; switch to status-only check.
+# 4. Export handler: enforce `userLocale` at the client level; current
+#    pinned-error contract should flip to success when locale is supplied.

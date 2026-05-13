@@ -87,12 +87,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - mcp-catalog
+      - permission-gated
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-live-status: permission-gated
+      x-clockify-mcp-tools:
+      - clockify_upload_image
+      x-clockify-notes:
+      - 'This group is an allowlisted escape hatch for documented routes that do not
+        yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers
+        must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}`
+        res'
+      - "| `clockify_upload_image` | mutating | `TestUploadImageSendsMultipartFile`;
+        `TestEncodeMultipartWithFiles` |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -24626,6 +24636,10 @@ components:
       type: object
 x-clockify-generation:
   generator: scripts/gen-clockify-openapi
+  sourceManifest:
+    path: manifest.json
+    sha256: 6d600e3eb56bf896aceed0fc8d8869ea99f51157a098c696d4cf2bebffe8073c
+    files: 146
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies
@@ -24652,33 +24666,32 @@ x-clockify-generation:
     - x-addon-token
 x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi-fragments/expenses-a.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/expenses-a.yaml):
-    mapping values are not allowed in this context at line 21 column 57"
+  reason: "(clockify-api-probe-lab/openapi-fragments/expenses-a.yaml): mapping values
+    are not allowed in this context at line 21 column 57"
 - source: clockify-api-probe-lab/openapi-fragments/policies-a.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/policies-a.yaml):
-    mapping values are not allowed in this context at line 49 column 87"
+  reason: "(clockify-api-probe-lab/openapi-fragments/policies-a.yaml): mapping values
+    are not allowed in this context at line 49 column 87"
 - source: clockify-api-probe-lab/openapi-fragments/policies-b.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/policies-b.yaml):
-    mapping values are not allowed in this context at line 21 column 40"
+  reason: "(clockify-api-probe-lab/openapi-fragments/policies-b.yaml): mapping values
+    are not allowed in this context at line 21 column 40"
 - source: clockify-api-probe-lab/openapi-fragments/projects-a.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/projects-a.yaml):
-    did not find expected key while parsing a block mapping at line 122 column 9"
+  reason: "(clockify-api-probe-lab/openapi-fragments/projects-a.yaml): did not find
+    expected key while parsing a block mapping at line 122 column 9"
 - source: clockify-api-probe-lab/openapi-fragments/projects-b.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/projects-b.yaml):
-    found unexpected ':' while scanning a plain scalar at line 145 column 31"
+  reason: "(clockify-api-probe-lab/openapi-fragments/projects-b.yaml): found unexpected
+    ':' while scanning a plain scalar at line 145 column 31"
 - source: clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml):
-    found unexpected ':' while scanning a plain scalar at line 7 column 18"
+  reason: "(clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml): found unexpected
+    ':' while scanning a plain scalar at line 7 column 18"
 - source: clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml):
-    did not find expected ',' or '}' while parsing a flow mapping at line 45 column
-    16"
+  reason: "(clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml): did not
+    find expected ',' or '}' while parsing a flow mapping at line 45 column 16"
 - source: clockify-api-probe-lab/openapi-fragments/time-off-a.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi-fragments/time-off-a.yaml):
-    mapping values are not allowed in this context at line 61 column 53"
+  reason: "(clockify-api-probe-lab/openapi-fragments/time-off-a.yaml): mapping values
+    are not allowed in this context at line 61 column 53"
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
-  reason: "(/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi_scheduling.yaml):
-    mapping values are not allowed in this context at line 4 column 154"
+  reason: "(clockify-api-probe-lab/openapi_scheduling.yaml): mapping values are not
+    allowed in this context at line 4 column 154"

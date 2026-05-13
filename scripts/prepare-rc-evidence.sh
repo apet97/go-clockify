@@ -158,6 +158,7 @@ EOF
 Group 7 release asset evidence:
   - gh release view ${tag} --repo ${repo} --json tagName,targetCommitish,isDraft,isPrerelease,url,assets
   - validate the GitHub Release asset names with scripts/check-release-assets.sh
+  - confirm clockify-openapi.yaml, clockify-openapi.sha256, and clockify-openapi.sources.manifest.json are attached
 EOF
     cat <<'EOF'
 
@@ -265,6 +266,15 @@ capture_release_assets() {
 
         printf '\n$ scripts/check-release-assets.sh <github-release-asset-list>\n\n'
         scripts/check-release-assets.sh "$asset_dir"
+
+        printf '\n$ verify OpenAPI release evidence assets\n\n'
+        for asset in clockify-openapi.yaml clockify-openapi.sha256 clockify-openapi.sources.manifest.json; do
+            if [ ! -e "${asset_dir}/${asset}" ]; then
+                printf 'missing OpenAPI release evidence asset: %s\n' "$asset" >&2
+                exit 1
+            fi
+            printf 'present: %s\n' "$asset"
+        done
     } >"$log" 2>&1
 
     rm -rf "$asset_dir"

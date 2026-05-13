@@ -1,0 +1,78 @@
+# Clockify Balance — READS (Agent A, live-verified 2026-05-12)
+# Base: https://api.clockify.me/api  (NOT reports.api / scheduling)
+# Auth: X-Api-Key header
+openapi: 3.0.3
+info:
+  title: Clockify Balance (reads)
+  version: 2026-05-12-a
+servers:
+  - url: https://api.clockify.me/api
+paths:
+  /v1/workspaces/{workspaceId}/time-off/balance/policy/{policyId}:
+    get:
+      summary: Get balances for a policy
+      parameters:
+        - {in: path, name: workspaceId, required: true, schema: {type: string}}
+        - {in: path, name: policyId,    required: true, schema: {type: string}}
+        - {in: query, name: page,        schema: {type: integer, default: 1, maximum: 1000}}
+        - {in: query, name: page-size,   schema: {type: integer, default: 50, minimum: 1, maximum: 200}}
+        - {in: query, name: sort,        schema: {type: string, enum: [USER, POLICY, USED, BALANCE, TOTAL]}}
+        - {in: query, name: sort-order,  schema: {type: string, enum: [ASCENDING, DESCENDING]}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BalanceListV1'}}}}
+        '400': {description: Invalid sort enum or page-size>200, content: {application/json: {schema: {$ref: '#/components/schemas/ClockifyError'}}}}
+  /v1/workspaces/{workspaceId}/time-off/balance/user/{userId}:
+    get:
+      summary: Get balance for a user (all policies)
+      parameters:
+        - {in: path, name: workspaceId, required: true, schema: {type: string}}
+        - {in: path, name: userId,      required: true, schema: {type: string}}
+        - {in: query, name: page,        schema: {type: integer, default: 1, maximum: 1000}}
+        - {in: query, name: page-size,   schema: {type: integer, default: 50, minimum: 1, maximum: 200}}
+        - {in: query, name: sort,        schema: {type: string, enum: [USER, POLICY, USED, BALANCE, TOTAL]}}
+        - {in: query, name: sort-order,  schema: {type: string, enum: [ASCENDING, DESCENDING]}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BalanceListV1'}}}}
+        '400': {description: Invalid sort enum or page-size>200, content: {application/json: {schema: {$ref: '#/components/schemas/ClockifyError'}}}}
+components:
+  schemas:
+    BalanceListV1:
+      # NOTE: docs say "Response Schema: */*" but live shape is an OBJECT
+      # with {count, balances:[]}, NOT a bare array.
+      type: object
+      required: [count, balances]
+      properties:
+        count:    {type: integer, format: int32, description: Total balances matching, not page length}
+        balances: {type: array, items: {$ref: '#/components/schemas/BalanceDtoV1'}}
+    BalanceDtoV1:
+      type: object
+      properties:
+        id:                    {type: string}
+        workspaceId:           {type: string}
+        policyId:              {type: string}
+        policyName:            {type: string}
+        policyTimeUnit:        {type: string, enum: [DAYS, HOURS]}
+        policyArchived:        {type: boolean, default: false}
+        negativeBalanceLimit:  {type: boolean, default: false}
+        negativeBalanceAmount: {type: number, format: double}
+        userId:                {type: string}
+        userName:              {type: string}
+        balance:               {type: number, format: double, description: May be negative}
+        used:                  {type: number, format: double}
+        total:                 {type: number, format: double}
+    ClockifyError:
+      type: object
+      properties:
+        message: {type: string}
+        code:    {type: integer, description: Clockify internal code (501 observed for validation)}
+# Live observations (fixtures/balance-fresh-a/):
+# - All sort enums (USER,POLICY,USED,BALANCE,TOTAL) x (ASCENDING,DESCENDING) -> 200.
+# - sort=INVALID -> 400 {code:501, message:"... Value must be from the following set: [USER, POLICY, USED, BALANCE, TOTAL]"}.
+# - page=0 -> 200 (treated as page 1; no validation).
+# - page-size=201 -> 400 {code:501,"Page size cannot be larger than 200"}.
+# - page-size=1 and 200 -> 200.
+# - /policy/{id}: count=5 (one row per workspace user even if balance=0).
+# - /user/{id}:   count=912 (one row per policy the user is on, includes archived policies).
+# - Field order in response is stable: id, workspaceId, policyId, policyName, policyTimeUnit,
+#   negativeBalanceLimit, negativeBalanceAmount, policyArchived, userId, userName, balance, used, total.
+# - Discovery: workspace policies live at GET /v1/workspaces/{ws}/time-off/policies (not /policies, not /pto-policies).

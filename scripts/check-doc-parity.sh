@@ -101,13 +101,10 @@ if [ -f "$OPT_OUT" ]; then
 fi
 
 # Find every MCP_* / CLOCKIFY_* token in docs/README.
-# `docs/superpowers/` is excluded — that subtree holds AI-assisted design
-# specs which by definition describe future state (env vars to be added in
-# upcoming PRs). They are planning artifacts, not operator documentation,
-# and including them would force every brainstorm-spec commit to land
-# alongside its corresponding implementation, defeating the point of writing
-# the spec first.
-referenced_vars=$(grep -rhoE --exclude-dir=superpowers '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' \
+# `docs/superpowers/` and `docs/openapi/sources/` are excluded — those
+# subtrees hold planning/source-evidence artifacts, not operator-facing
+# documentation whose future-state tokens should become public contracts.
+referenced_vars=$(grep -rhoE --exclude-dir=superpowers --exclude-dir=sources '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' \
                    "${DOC_DIRS[@]}" 2>/dev/null | sort -u || true)
 referenced_vars="$referenced_vars"$'\n'"$(grep -hoE '\b(MCP|CLOCKIFY)_[A-Z0-9_]{2,}' "${DOC_FILES_TOP[@]}" 2>/dev/null | sort -u || true)"
 referenced_vars=$(printf "%s\n" "$referenced_vars" | sort -u | sed '/^$/d')
@@ -143,7 +140,7 @@ if [ -f "$CATALOG_FILE" ]; then
   strict_tool_files=(README.md)
   while IFS= read -r -d '' file; do
     strict_tool_files+=("$file")
-  done < <(find docs -type f -name '*.md' ! -path 'docs/adr/*' ! -path 'docs/superpowers/*' -print0)
+  done < <(find docs -type f -name '*.md' ! -path 'docs/adr/*' ! -path 'docs/superpowers/*' ! -path 'docs/openapi/sources/*' -print0)
 
   referenced_tools=$(
     grep -hoE '\bclockify_[a-z0-9_]{3,}' "${strict_tool_files[@]}" 2>/dev/null \
@@ -211,7 +208,7 @@ banned_strings=(
 
 banned_scan_files=("${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" AGENTS.md .github/workflows/docker-image.yml .github/workflows/release.yml)
 for needle in "${banned_strings[@]}"; do
-  hits=$(grep -rnF "$needle" "${banned_scan_files[@]}" 2>/dev/null || true)
+  hits=$(grep -rnF --exclude-dir=superpowers --exclude-dir=sources "$needle" "${banned_scan_files[@]}" 2>/dev/null || true)
   if [ -n "$hits" ]; then
     while IFS= read -r line; do
       err "banned stale public-surface string found: $line"
@@ -1261,7 +1258,7 @@ for file in "${required_monitoring_files[@]}"; do
   fi
 done
 
-dangling=$(grep -rnE --exclude-dir=superpowers '\b(TODO|TBD|FIXME|XXX)\b' "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null \
+dangling=$(grep -rnE --exclude-dir=superpowers --exclude-dir=sources '\b(TODO|TBD|FIXME|XXX)\b' "${DOC_DIRS[@]}" "${DOC_FILES_TOP[@]}" 2>/dev/null \
             | grep -v "^docs/adr/.*superseded" \
             | grep -v "check-doc-parity" || true)
 

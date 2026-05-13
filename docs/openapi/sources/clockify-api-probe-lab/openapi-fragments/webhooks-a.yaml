@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Clockify Webhooks — READ endpoints (Agent A live-probe)
+  version: 2026-05-12
+  description: |
+    Live-observed shapes against workspace 65b382b606de527a7ee2b60e on
+    https://api.clockify.me/api/v1 with X-Api-Key auth. See
+    fixtures/webhooks-fresh-a/ for raw redacted responses.
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    Webhook:
+      type: object
+      # Observed flat object; the WEBHOOKDOC.md "WebhookDtoV1" nested
+      # triggerSourceType-as-object shape is WRONG. triggerSourceType
+      # is a plain string enum on the wire.
+      required: [id, workspaceId, userId, name, url, webhookEvent,
+                 triggerSourceType, triggerSource, enabled,
+                 deliveryEnabled, planEnabled]
+      properties:
+        id: {type: string, example: "69e8df48f102e192ba5a12e3"}
+        userId: {type: string}
+        workspaceId: {type: string}
+        name: {type: string}
+        url: {type: string, format: uri}
+        authToken: {type: string, description: "Header value Clockify sends as Clockify-Signature-Token; rotate via /token endpoint."}
+        webhookEvent:
+          type: string
+          description: |
+            Event that triggers delivery. Live values observed include
+            NEW_TIMER_STARTED, NEW_TIME_ENTRY, TIME_ENTRY_DELETED.
+            Full enum lives in /Clockify_Webhook_JSON_Samples.md.
+        triggerSourceType:
+          type: string
+          enum: [PROJECT_ID, USER_ID, TAG_ID, TASK_ID, WORKSPACE_ID, ASSIGNMENT_ID, EXPENSE_ID]
+        triggerSource:
+          type: array
+          items: {type: string}
+        enabled: {type: boolean}
+        deliveryEnabled: {type: boolean}
+        planEnabled: {type: boolean}
+    WebhookList:
+      type: object
+      required: [workspaceWebhookCount, webhooks]
+      properties:
+        workspaceWebhookCount: {type: integer, example: 7}
+        webhooks:
+          type: array
+          items: {$ref: '#/components/schemas/Webhook'}
+    ErrorEnvelope:
+      type: object
+      properties:
+        message: {type: string}
+        code: {type: integer, description: "Clockify domain code, NOT HTTP status. Mostly 501 even when HTTP is 400."}
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces/{workspaceId}/webhooks:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: {type: string}
+    get:
+      summary: List webhooks on a workspace
+      description: |
+        Returns an envelope object, NOT a bare array.
+        Live shape: {workspaceWebhookCount, webhooks[]}.
+      parameters:
+        - in: query
+          name: type
+          required: false
+          description: |
+            Filter by category of webhook (NOT by webhook event).
+            Accepted values: USER_CREATED, SYSTEM, ADDON.
+            - Empty string ("") returns full list (acts as unset).
+            - Any other value (including valid event names like
+              NEW_TIMER_STARTED) yields HTTP 400, code 501,
+              "must be from the following set: USER_CREATED, SYSTEM, ADDON".
+          schema:
+            type: string
+            enum: [USER_CREATED, SYSTEM, ADDON]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebhookList'}
+        '400':
+          description: Invalid 'type' value
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: webhookId
+        required: true
+        schema: {type: string}
+    get:
+      summary: Get a webhook by id
+      description: |
+        Returns the flat Webhook object (not wrapped in an envelope,
+        unlike the list endpoint).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Webhook'}
+        '400':
+          description: |
+            Returned for both nonexistent ObjectId (24-hex zeros) AND
+            malformed ids ("not-an-id"). Body: code 501,
+            message "Webhook doesn't belong to Workspace".
+            There is no real 404 path on this endpoint.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+
+  /workspaces/{workspaceId}/addons/{addonId}/webhooks:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: addonId
+        required: true
+        schema: {type: string}
+    get:
+      summary: List webhooks scoped to an addon
+      description: |
+        Same envelope as workspace list. A non-matching/bogus addonId
+        returns HTTP 200 with an empty list (workspaceWebhookCount=0,
+        webhooks=[]) — NOT a 404. Callers must not rely on status to
+        detect "addon not found" here.
+      responses:
+        '200':
+          description: OK (may be empty)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebhookList'}
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}/logs:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: webhookId
+        required: true
+        schema: {type: string}
+    get:
+      summary: (DOCUMENTED BUT BROKEN) Get logs for a webhook
+      description: |
+        WEBHOOKDOC.md lists this endpoint. Live response is HTTP 405
+        "Request method 'GET' is not supported" (code 3000) on every
+        variant probed:
+          - no params
+          - page=1&size=10
+          - page=1&size=200
+          - page=999&size=10
+          - page=0&size=10
+          - page=1&size=-1
+        The endpoint either requires a different verb or has been
+        retired. go-clockify should NOT model this as a working GET
+        and any handler that calls it will fail in prod.
+      responses:
+        '405':
+          description: Method Not Allowed (observed on every variant)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}

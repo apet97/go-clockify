@@ -4,7 +4,7 @@
         doctor-strict-smoke verify-doctor-strict \
         secret-scan config-parity bench verify-bench bench-baseline-check \
         build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
-        gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
+        gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-probe-lab-allowlist probe-lab-allowlist-drift gen-coverage-matrix coverage-matrix-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
         grpc-release-parity \
 	repo-hygiene script-tests actionlint shellcheck live-contract-local \
 	release-check rc-evidence rc-evidence-plan launch-external-status public-content-audit \
@@ -46,7 +46,7 @@ check: fmt vet test
 # checks `make verify` runs locally versus the full CI set.
 verify: verify-core verify-vuln verify-k8s verify-fips
 
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift coverage-matrix-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
+verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift probe-lab-allowlist-drift coverage-matrix-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
 
 # doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
 # in docs/ exists in the source, every tool name surfaces in the
@@ -248,17 +248,16 @@ gen-tool-catalog:
 	go run ./scripts/gen-tool-catalog -out docs
 
 # gen-openapi regenerates the unified Clockify OpenAPI artifact from
-# the local evidence bundle: /Users/15x/Downloads/realOPENAPI,
-# /Users/15x/Downloads/WORKING/clockify-api-probe-lab, this repo's
-# coverage/catalog docs, and the QA finding reports. The generator is
-# deterministic and validates refs, operation IDs, path params, security,
-# and reports-host routing before writing.
+# the repo-local docs/openapi/sources evidence bundle, this repo's
+# coverage/catalog docs, and the pinned QA finding reports. The
+# generator verifies the source manifest, then validates refs,
+# operation IDs, path params, security, and reports-host routing before
+# writing.
 gen-openapi:
 	scripts/gen-clockify-openapi --out docs/openapi/clockify-openapi.yaml
 
 # openapi-drift re-runs the OpenAPI generator and fails if the committed
-# artifact drifted. This is a local evidence-bundle gate rather than part
-# of verify-core because the source API-doc bundle lives outside the repo.
+# artifact drifted.
 openapi-drift:
 	@test -f docs/openapi/clockify-openapi.yaml || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml missing — run \`make gen-openapi\`"; exit 1; }
 	@tmpdir="$$(mktemp -d)"; \
@@ -269,6 +268,24 @@ openapi-drift:
 	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
 	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale — run \`make gen-openapi\` and commit"; \
 	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
+
+# gen-probe-lab-allowlist regenerates the raw documented-API allowlist
+# from docs/openapi/clockify-openapi.yaml, including operation IDs,
+# provenance, risk metadata, and typed-tool promotion hints.
+gen-probe-lab-allowlist:
+	python3 scripts/gen-probe-lab-allowlist
+	gofmt -w internal/tools/tier2_probe_lab_api_gen.go
+
+# probe-lab-allowlist-drift fails when the generated raw API allowlist
+# is stale relative to the committed OpenAPI artifact.
+probe-lab-allowlist-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp internal/tools/tier2_probe_lab_api_gen.go "$$tmpdir/tier2_probe_lab_api_gen.go.before"; \
+	 $(MAKE) --no-print-directory gen-probe-lab-allowlist >/dev/null; \
+	 diff -q internal/tools/tier2_probe_lab_api_gen.go "$$tmpdir/tier2_probe_lab_api_gen.go.before" >/dev/null \
+	  || { echo "[probe-lab-allowlist-drift] internal/tools/tier2_probe_lab_api_gen.go is stale — run \`make gen-probe-lab-allowlist\` and commit"; \
+	       diff -u "$$tmpdir/tier2_probe_lab_api_gen.go.before" internal/tools/tier2_probe_lab_api_gen.go | head -80; exit 1; }
 
 # catalog-drift re-runs gen-tool-catalog and fails if the generated
 # docs change relative to the current working tree contents. Wired
@@ -427,7 +444,7 @@ release-check:
 	@echo "== release-check: tests + coverage floors =="
 	$(MAKE) cover-check
 	@echo "== release-check: config + doc parity =="
-	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift coverage-matrix-drift openapi-drift grpc-release-parity
+	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift probe-lab-allowlist-drift coverage-matrix-drift openapi-drift grpc-release-parity
 	@echo "== release-check: hygiene + build-tag wiring =="
 	$(MAKE) repo-hygiene script-tests go-version-parity actionlint shellcheck build-tags http-smoke stdio-smoke
 	@echo "== release-check: strict doctor smoke =="

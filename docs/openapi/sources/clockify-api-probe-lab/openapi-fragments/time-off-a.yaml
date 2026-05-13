@@ -1,0 +1,204 @@
+# Clockify Time-Off READ surface — Agent A
+# Workspace 65b382b606de527a7ee2b60e, host https://api.clockify.me/api
+# Auth: X-Api-Key (header). All endpoints below returned 200 OK live.
+openapi: 3.0.3
+info:
+  title: Clockify Time-Off (reads)
+  version: probe-a-2026-05-12
+servers:
+  - url: https://api.clockify.me/api
+paths:
+  /v1/workspaces/{workspaceId}/time-off/policies:
+    get:
+      summary: List time-off policies
+      parameters:
+        - {in: path,  name: workspaceId, required: true, schema: {type: string}}
+        - {in: query, name: page,        schema: {type: integer, default: 1}}
+        - {in: query, name: page-size,   schema: {type: integer, default: 50, minimum: 1, maximum: 200}}
+        - {in: query, name: name,        schema: {type: string}}
+        - {in: query, name: status,      schema: {type: string, enum: [ACTIVE, ARCHIVED, ALL]}}
+        - {in: query, name: sort-column, schema: {type: string, default: DEFAULT_SORT}}
+        - {in: query, name: sort-order,  schema: {type: string, default: ASCENDING}}
+      responses:
+        '200':
+          description: Bare JSON array (NOT wrapped in object)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Policy'}
+  /v1/workspaces/{workspaceId}/time-off/policies/{id}:
+    get:
+      summary: Get one policy
+      parameters:
+        - {in: path, name: workspaceId, required: true, schema: {type: string}}
+        - {in: path, name: id,          required: true, schema: {type: string}}
+      responses:
+        '200':
+          content: {application/json: {schema: {$ref: '#/components/schemas/Policy'}}}
+  /v1/workspaces/{workspaceId}/time-off/balance/policy/{policyId}:
+    get:
+      summary: List balances for a policy
+      parameters:
+        - {in: path,  name: workspaceId, required: true, schema: {type: string}}
+        - {in: path,  name: policyId,    required: true, schema: {type: string}}
+        - {in: query, name: page,        schema: {type: integer, default: 1, maximum: 1000}}
+        - {in: query, name: page-size,   schema: {type: integer, default: 50, minimum: 1, maximum: 200}}
+        - {in: query, name: sort,        schema: {type: string, enum: [USER, POLICY, USED, BALANCE, TOTAL]}}
+        - {in: query, name: sort-order,  schema: {type: string, enum: [ASCENDING, DESCENDING]}}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [balances, count]
+                properties:
+                  count:    {type: integer}
+                  balances: {type: array, items: {$ref: '#/components/schemas/Balance'}}
+  /v1/workspaces/{workspaceId}/time-off/requests:
+    post:
+      summary: List time-off requests (search). NOTE: This is a POST with JSON body, not GET.
+      description: |
+        Defaults: when `statuses` omitted, server returns PENDING only.
+        Use `statuses:["ALL"]` to fetch every status (count includes APPROVED+PENDING+REJECTED).
+        page is 1-based; oversize page returns {count, requests: []}.
+      parameters:
+        - {in: path, name: workspaceId, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                page:       {type: integer, default: 1, maximum: 1000}
+                pageSize:   {type: integer, default: 50, minimum: 1, maximum: 200}
+                start:      {type: string, format: date-time}
+                end:        {type: string, format: date-time}
+                statuses:   {type: array, uniqueItems: true, items: {type: string, enum: [PENDING, APPROVED, REJECTED, ALL]}}
+                users:      {type: array, uniqueItems: true, items: {type: string}}
+                userGroups: {type: array, uniqueItems: true, items: {type: string}}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, requests]
+                properties:
+                  count:    {type: integer}
+                  requests: {type: array, items: {$ref: '#/components/schemas/TimeOffRequest'}}
+components:
+  securitySchemes:
+    ApiKeyAuth: {type: apiKey, in: header, name: X-Api-Key}
+  schemas:
+    Policy:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+        workspaceId: {type: string}
+        projectId: {type: string, nullable: true}
+        timeUnit: {type: string, enum: [DAYS, HOURS]}
+        archived: {type: boolean}
+        allowHalfDay: {type: boolean}
+        allowNegativeBalance: {type: boolean}
+        everyoneIncludingNew: {type: boolean}
+        userIds: {type: array, items: {type: string}}
+        userGroupIds: {type: array, items: {type: string}}
+        approve:
+          type: object
+          properties:
+            requiresApproval: {type: boolean}
+            specificMembers:  {type: boolean}
+            teamManagers:     {type: boolean}
+            userIds: {type: array, items: {type: string}}
+        automaticAccrual:
+          type: object
+          nullable: true
+          properties:
+            amount: {type: number}
+            period: {type: string, enum: [MONTH, YEAR]}
+            timeUnit: {type: string, enum: [DAYS, HOURS]}
+        automaticTimeEntryCreation:
+          type: object
+          nullable: true
+          properties:
+            enabled: {type: boolean}
+            defaultEntities:
+              type: object
+              properties: {projectId: {type: string}, taskId: {type: string}}
+        negativeBalance:
+          type: object
+          nullable: true
+          properties:
+            amount: {type: number}
+            period: {type: string}
+            shouldReset: {type: boolean}
+            timeUnit: {type: string}
+    Balance:
+      type: object
+      properties:
+        id: {type: string}
+        workspaceId: {type: string}
+        policyId: {type: string}
+        policyName: {type: string}
+        policyTimeUnit: {type: string, enum: [DAYS, HOURS]}
+        policyArchived: {type: boolean}
+        userId: {type: string}
+        userName: {type: string}
+        balance: {type: number}
+        used: {type: number}
+        total: {type: number}
+        negativeBalanceLimit: {type: boolean}
+        negativeBalanceAmount: {type: number}
+    TimeOffRequestStatus:
+      type: object
+      properties:
+        statusType: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        changedAt: {type: string, format: date-time}
+        changedByUserId: {type: string}
+        changedByUserName: {type: string}
+        changedForUserName: {type: string}
+        note: {type: string}
+    TimeOffPeriod:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            start: {type: string, format: date-time}
+            end:   {type: string, format: date-time}
+        halfDay: {type: boolean}
+        halfDayPeriod: {type: string, enum: [FIRST_HALF, SECOND_HALF, NOT_DEFINED]}
+        halfDayHours:
+          type: object
+          nullable: true
+          properties:
+            start: {type: string, format: date-time}
+            end:   {type: string, format: date-time}
+    TimeOffRequest:
+      type: object
+      properties:
+        id: {type: string}
+        workspaceId: {type: string}
+        policyId: {type: string}
+        policyName: {type: string}
+        timeUnit: {type: string, enum: [DAYS, HOURS]}
+        userId: {type: string}
+        userName: {type: string}
+        userEmail: {type: string}
+        userTimeZone: {type: string}
+        requesterUserId: {type: string}
+        requesterUserName: {type: string}
+        note: {type: string}
+        createdAt: {type: string, format: date-time}
+        balance: {type: number}
+        balanceDiff: {type: number}
+        status: {$ref: '#/components/schemas/TimeOffRequestStatus'}
+        timeOffPeriod: {$ref: '#/components/schemas/TimeOffPeriod'}
+# Negative findings (not in spec):
+#   GET /v1/workspaces/{ws}/time-off/policies/{policyId}/requests/{requestId}     -> 401 "Multiple or none auth tokens" (route not registered)
+#   GET /v1/workspaces/{ws}/time-off/requests/{requestId}                          -> 401 (route not registered)
+#   => There is NO GET-by-id for a time-off request. The PATCH/DELETE-by-id paths exist for writes only.

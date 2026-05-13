@@ -1,0 +1,158 @@
+# Clockify time-entry MUTATIONS — Agent B live probe (workspace 65b382b606de527a7ee2b60e).
+# Fixtures: fixtures/time-entries-fresh-b/. Operator-self userId only.
+openapi: 3.0.3
+info:
+  title: Clockify Time-Entry Mutations (probed)
+  version: "2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/user/{userId}/time-entries:
+    post:
+      summary: Start timer OR create entry (running if `end` omitted)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start]   # NOTE: probe 01b showed body without `start` still 201s; server defaults `start` to now. Treat `start` as required in client to avoid surprise.
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time, nullable: true }
+                description: { type: string }
+                billable: { type: boolean }
+                projectId: { type: string, nullable: true }
+                taskId: { type: string, nullable: true }
+                tagIds: { type: array, items: { type: string } }
+                type: { type: string, enum: [REGULAR, BREAK, HOLIDAY, TIME_OFF] }
+                customFields: { type: array }
+      responses:
+        "201": { description: TimeEntry (see schema TimeEntry) }
+        "501":
+          description: end < start -> {"message":"Start datetime ... is greater than end datetime ...","code":501}
+    patch:
+      summary: Stop currently running timer (body= {end})
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [end]
+              properties: { end: { type: string, format: date-time } }
+      responses:
+        "200": { description: stopped TimeEntry }
+        "404": { description: '{"message":"Currently running time entry doesn'"'"'t exist ...","code":404}' }
+    put:
+      summary: Bulk update entries (tags/billable/desc/window)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [id, start]
+                properties:
+                  id: { type: string }
+                  start: { type: string, format: date-time }
+                  end:   { type: string, format: date-time, nullable: true }
+                  description: { type: string }
+                  billable: { type: boolean }
+                  tagIds: { type: array, items: { type: string } }
+      responses:
+        "200": { description: array of updated TimeEntry }
+        "400":
+          description: 'non-array body -> {"message":"JSON parse error: Cannot deserialize ... ArrayList<UpdateTimeEntryBulkRequest> from Object value","code":3002}'
+  /workspaces/{workspaceId}/time-entries/{id}:
+    put:
+      summary: Update single entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start]
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time, nullable: true }
+                description: { type: string }
+                billable: { type: boolean }
+                tagIds: { type: array, items: { type: string } }
+                type: { type: string }
+      responses:
+        "200": { description: updated TimeEntry }
+        "501":
+          description: 'missing start -> {"message":"You entered invalid value for field : [start]. ...","code":501}'
+    delete:
+      summary: Delete time entry
+      responses:
+        "204": { description: empty body on success }
+        "501":
+          description: 'unknown id -> {"message":"Time entry doesn'"'"'t belong to Workspace","code":501}'
+    # PATCH is NOT supported on this path. Probe 07/07b returned
+    # {"message":"Request method 'PATCH' is not supported","code":3000}.
+    # There is no per-entry status-change endpoint in v1; status flips
+    # ride on approvals API or the invoiced endpoint below.
+  /workspaces/{workspaceId}/time-entries/invoiced:
+    patch:
+      summary: Mark/unmark entries as invoiced
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiced, timeEntryIds]
+              properties:
+                invoiced: { type: boolean }
+                timeEntryIds:
+                  type: array
+                  minItems: 1
+                  items: { type: string }
+      responses:
+        "200": { description: empty body on success (no JSON returned) }
+        "501":
+          description: 'empty list -> {"message":"At least one time entry must be provided.","code":501}'
+  /workspaces/{workspaceId}/time-entries/status/in-progress:
+    get:
+      summary: List in-progress entries (NOT a status-change endpoint despite the path)
+      responses:
+        "200": { description: array of running TimeEntry }
+components:
+  schemas:
+    TimeEntry:
+      type: object
+      properties:
+        id: { type: string }
+        description: { type: string }
+        tagIds: { type: array, nullable: true, items: { type: string } }
+        userId: { type: string }
+        billable: { type: boolean }
+        taskId: { type: string, nullable: true }
+        projectId: { type: string, nullable: true }
+        timeInterval:
+          type: object
+          properties:
+            start: { type: string, format: date-time }
+            end:   { type: string, format: date-time, nullable: true }
+            duration: { type: string, nullable: true, description: ISO-8601 duration, null while running }
+        workspaceId: { type: string }
+        isLocked: { type: boolean }
+        customFieldValues: { type: array }
+        type: { type: string, enum: [REGULAR, BREAK, HOLIDAY, TIME_OFF] }
+        kioskId: { type: string, nullable: true }
+# Notes for go-clockify handlers:
+#   - DELETE and PATCH /invoiced return EMPTY body (not JSON). Handlers
+#     that json.Unmarshal the response will fail; treat 200/204 as success
+#     without parsing.
+#   - POST user/time-entries auto-fills `start=now` when omitted. Pin
+#     handler to require `start` client-side; do not rely on server 4xx.
+#   - PUT user/time-entries (bulk) REQUIRES top-level JSON array; sending
+#     an object yields 3002 parse error.
+#   - PATCH /{id} returns 3000 "method not supported". There is no
+#     per-entry status mutation; remove any such handler.
+#   - Error envelope is uniform: {"message": "...", "code": <int>}; code
+#     501 is used for validation errors (not 400).

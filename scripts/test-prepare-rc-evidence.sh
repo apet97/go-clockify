@@ -43,6 +43,7 @@ assert_contains "$plan_output" "semgrep, gh, npm, and FIPS-capable" "plan requir
 assert_contains "$plan_output" "make release-check" "plan includes Group 7 release-check"
 assert_contains "$plan_output" "gh release view v1.2.3-rc.1" "plan includes GitHub release asset view"
 assert_contains "$plan_output" "scripts/check-release-assets.sh" "plan includes release asset contract validation"
+assert_contains "$plan_output" "clockify-openapi.yaml, clockify-openapi.sha256, and clockify-openapi.sources.manifest.json" "plan includes OpenAPI release evidence assets"
 assert_contains "$plan_output" "release-smoke.yml" "plan includes release-smoke evidence"
 assert_contains "$plan_output" "release-smoke-doctor-output" "plan includes release-smoke doctor output artifact"
 assert_contains "$plan_output" "release-doctor-postgres-ok.txt" "plan names Postgres doctor output file"

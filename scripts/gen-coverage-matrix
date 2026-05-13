@@ -5,7 +5,7 @@ Joins:
   - docs/openapi/clockify-openapi.yaml (the contract)
   - docs/tool-catalog.json             (the MCP tool inventory)
   - docs/api-coverage.md               (tool → endpoint → test ledger)
-  - internal/tools/tier2_probe_lab_api.go (raw documented-API allowlist)
+  - internal/tools/tier2_probe_lab_api_gen.go (raw documented-API allowlist)
   - tests/e2e_live*.go                 (live test → tool name index)
 
 Outputs:
@@ -29,7 +29,7 @@ REPO = Path(__file__).resolve().parent.parent
 OPENAPI = REPO / "docs/openapi/clockify-openapi.yaml"
 CATALOG = REPO / "docs/tool-catalog.json"
 COVERAGE_MD = REPO / "docs/api-coverage.md"
-PROBE_GO = REPO / "internal/tools/tier2_probe_lab_api.go"
+PROBE_GO = REPO / "internal/tools/tier2_probe_lab_api_gen.go"
 TESTS = sorted((REPO / "tests").glob("e2e_live*.go"))
 OUT_JSON = REPO / "docs/openapi/coverage-matrix.json"
 OUT_MD = REPO / "docs/openapi/coverage-matrix.md"
@@ -42,7 +42,9 @@ METHOD_RE = re.compile(
 )
 TOOL_RE = re.compile(r"`(clockify_[A-Za-z0-9_]+)`")
 TEST_RE = re.compile(r"`(Test[A-Za-z0-9_]+)`")
-PROBE_OP_RE = re.compile(r'\{Method:\s+http\.Method(\w+),\s+Path:\s+"([^"]+)"')
+PROBE_OP_RE = re.compile(
+    r"Method:\s+http\.Method(\w+),\s+Path:\s+\"([^\"]+)\"", re.DOTALL
+)
 COVERAGE_CLASS_ORDER = [
     "typed-tool-live-success",
     "typed-tool-mapped",

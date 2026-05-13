@@ -1,0 +1,133 @@
+# User Groups — READ endpoints (Agent A)
+# Live-probed 2026-05-12 against workspace 65b382b606de527a7ee2b60e.
+# Host: https://api.clockify.me/api/v1
+# Auth: X-Api-Key (ApiKeyAuth)
+
+openapi: 3.0.3
+info:
+  title: Clockify User Groups (reads)
+  version: "probe-2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+
+paths:
+  /workspaces/{workspaceId}/user-groups:
+    get:
+      summary: List user groups on a workspace
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: name
+          description: |
+            Substring filter on group name. Observed: case-sensitive substring
+            (filter "test" against group "mcp-probe-...-group" returned []).
+            Returns [] (HTTP 200) when no match.
+          schema: { type: string }
+        - in: query
+          name: projectId
+          description: |
+            Filter by project membership. Both `projectId` (camel) and
+            `project-id` (kebab) returned HTTP 400 with
+            `{"code":501,"message":"Project doesn't belong to Workspace"}`
+            for a non-existent id; the kebab variant is also accepted by
+            the dispatcher (same error => same parameter).
+          schema: { type: string }
+        - in: query
+          name: sort-column
+          schema:
+            type: string
+            enum: [NAME]
+        - in: query
+          name: sort-order
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+        - in: query
+          name: page
+          schema: { type: integer, default: 1, minimum: 1 }
+        - in: query
+          name: page-size
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200":
+          description: Array of UserGroup. Empty array when no matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserGroup" }
+              example:
+                - id: "6a032e09385b9fac0881fa9c"
+                  name: "mcp-probe-1778593289-23313f-group"
+                  workspaceId: "65b382b606de527a7ee2b60e"
+                  userIds: []
+                  teamManagers: []
+        "400":
+          description: Project filter validation error.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { code: 501, message: "Project doesn't belong to Workspace" }
+
+  /workspaces/{workspaceId}/user-groups/{id}:
+    get:
+      summary: Get user group by id
+      description: |
+        NOT SUPPORTED upstream. Returns HTTP 405 with body
+        `{"code":3000,"message":"Request method 'GET' is not supported"}`
+        for BOTH a valid id and a non-existent id. There is no
+        single-resource GET for user-groups.
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "405":
+          description: Method not allowed (no GET-by-id endpoint exists).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { code: 3000, message: "Request method 'GET' is not supported" }
+
+  /workspaces/{workspaceId}/user-groups/{id}/users:
+    get:
+      summary: List users in group (DOES NOT EXIST)
+      description: |
+        Probed; returns HTTP 405 (`code:3000, "Request method 'GET' is
+        not supported"`). To enumerate members of a user-group, use
+        `GET /workspaces/{workspaceId}/users?user-groups={groupId}`
+        (verified 200, returns full User objects).
+      responses:
+        "405":
+          description: Endpoint not implemented.
+
+components:
+  schemas:
+    UserGroup:
+      type: object
+      required: [id, name, workspaceId, userIds, teamManagers]
+      properties:
+        id:           { type: string, description: "24-char hex group id" }
+        name:         { type: string }
+        workspaceId:  { type: string }
+        userIds:
+          type: array
+          items: { type: string }
+          description: "Member user ids. Empty array when group has no members."
+        teamManagers:
+          type: array
+          items: { type: string }
+          description: "Always present; empty array when none assigned."
+    Error:
+      type: object
+      properties:
+        code:    { type: integer }
+        message: { type: string }

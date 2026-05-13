@@ -1,0 +1,847 @@
+openapi: 3.0.3
+info:
+  title: Clockify Approval API
+  version: 1.0.0
+  description: OpenAPI definition generated from APPROVALDOC.md. The uploaded Markdown
+    contains Clockify approval request endpoints, request bodies, response schemas,
+    and API key/addon key authorization references.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+tags:
+- name: Approval
+  description: Approval request operations
+paths:
+  /v1/workspaces/{workspaceId}/approval-requests:
+    get:
+      tags:
+      - Approval
+      summary: Get approval requests
+      operationId: getApprovalRequests
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - name: status
+        in: query
+        description: Filters results based on the provided approval state.
+        required: false
+        schema:
+          $ref: '#/components/schemas/ApprovalRequestFilterState'
+        example: PENDING
+      - name: sort-column
+        in: query
+        description: Column name to use as sorting criteria.
+        required: false
+        schema:
+          $ref: '#/components/schemas/ApprovalRequestSortColumn'
+        example: START
+      - $ref: '#/components/parameters/sortOrderQuery'
+      - $ref: '#/components/parameters/pageQuery'
+      - $ref: '#/components/parameters/pageSizeQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalRequestListItem'
+              example:
+              - approvalRequest:
+                  creator:
+                    userEmail: johhndoe@example.com
+                    userId: 5a0ab5acb07987125438b60f
+                    userName: johhndoe
+                  dateRange:
+                    end: '2019-08-24T14:15:22Z'
+                    start: '2019-08-24T14:15:22Z'
+                  id: 567687e29ae1f428e7ebf564
+                  owner:
+                    startOfWeek: MONDAY
+                    timeZone: Europe/Budapest
+                    userId: 5a0ab5acb07987125438b60f
+                    userName: johndoe
+                  status:
+                    note: This is a sample approval request note.
+                    state: APPROVED
+                    updatedAt: '2020-01-01T08:00:00Z'
+                    updatedBy: 5a0ab5acb07987125438b60f
+                    updatedByUserName: juandelacruz
+                  workspaceId: 64a687e29ae1f428e7ebe303
+                approvedTime: PT1H30M
+                billableAmount: 2500
+                billableTime: PT1H30M
+                breakTime: PT1H30M
+                costAmount: 5000
+                entries:
+                - approvalRequestId: 5e4117fe8c625f38930d57b7
+                  billable: false
+                  costRate:
+                    amount: 10500
+                    currency: USD
+                  customFieldValues:
+                  - customFieldId: 44a687e29ae1f428e7ebe305
+                    sourceType: WORKSPACE
+                    timeEntryId: 64c777ddd3fcab07cfbb210c
+                    value: 20231211-12345
+                  description: This is a sample time entry description.
+                  hourlyRate:
+                    amount: 10500
+                    currency: USD
+                  id: 5b715448b0798751107918ab
+                  isLocked: false
+                  project:
+                    clientId: 64c777ddd3fcab07cfbb210c
+                    clientName: Client X
+                    color: '#000000'
+                    id: 5b641568b07987035750505e
+                    name: Software Development
+                  tags:
+                  - archived: false
+                    id: 64c777ddd3fcab07cfbb210c
+                    name: Sprint1
+                    workspaceId: 64a687e29ae1f428e7ebe303
+                  task:
+                    id: 5b715448b0798751107918ab
+                    name: Bugfixing
+                  timeInterval:
+                    duration: PT1H30M
+                    end: '2019-08-24T14:15:22Z'
+                    offsetEnd: 0
+                    offsetStart: 0
+                    start: '2019-08-24T14:15:22Z'
+                    timeZone: string
+                    zonedEnd: '2019-08-24T14:15:22Z'
+                    zonedStart: '2019-08-24T14:15:22Z'
+                  type: REGULAR
+                expenseTotal: 7500
+                expenses:
+                - approvalRequestId: 445687e29ae1f428e7ebe893
+                  approvalStatus: PENDING
+                  billable: false
+                  category:
+                    archived: false
+                    hasUnitPrice: false
+                    id: 89a687e29ae1f428e7ebe303
+                    name: Procurement
+                    priceInCents: 1000
+                    unit: piece
+                    workspaceId: 64a687e29ae1f428e7ebe303
+                  currency: USD
+                  date: '2020-01-01'
+                  detailedApprovalStatus: PENDING
+                  fileId: 745687e29ae1f428e7ebe890
+                  fileName: file_12345.csv
+                  fileUrl: string
+                  id: 64c777ddd3fcab07cfbb210c
+                  locked: true
+                  notes: This is a sample note for this expense.
+                  project:
+                    clientId: 64c777ddd3fcab07cfbb210c
+                    clientName: Client X
+                    color: '#000000'
+                    id: 5b641568b07987035750505e
+                    name: Software Development
+                  quantity: 0.1
+                  task:
+                    id: 5b715448b0798751107918ab
+                    name: Bugfixing
+                  total: 10500.5
+                  userId: 89b687e29ae1f428e7ebe912
+                  workspaceId: 64a687e29ae1f428e7ebe303
+                pendingTime: PT1H30M
+                trackedTime: PT1H30M
+    post:
+      tags:
+      - Approval
+      summary: Submit approval request
+      operationId: submitApprovalRequest
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitApprovalRequestRequest'
+            example:
+              period: MONTHLY
+              periodStart: '2020-01-01T00:00:00.000Z'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+              example:
+                creator:
+                  userEmail: johhndoe@example.com
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johhndoe
+                dateRange:
+                  end: '2019-08-24T14:15:22Z'
+                  start: '2019-08-24T14:15:22Z'
+                id: 567687e29ae1f428e7ebf564
+                owner:
+                  startOfWeek: MONDAY
+                  timeZone: Europe/Budapest
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johndoe
+                status:
+                  note: This is a sample approval request note.
+                  state: APPROVED
+                  updatedAt: '2020-01-01T08:00:00Z'
+                  updatedBy: 5a0ab5acb07987125438b60f
+                  updatedByUserName: juandelacruz
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval:
+    post:
+      tags:
+      - Approval
+      summary: Submit non pending/approved entries/expenses for approval to an existing
+        approval request
+      operationId: resubmitEntriesForApproval
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitApprovalRequestRequest'
+            example:
+              period: MONTHLY
+              periodStart: '2020-01-01T00:00:00.000Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+              example:
+                creator:
+                  userEmail: johhndoe@example.com
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johhndoe
+                dateRange:
+                  end: '2019-08-24T14:15:22Z'
+                  start: '2019-08-24T14:15:22Z'
+                id: 567687e29ae1f428e7ebf564
+                owner:
+                  startOfWeek: MONDAY
+                  timeZone: Europe/Budapest
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johndoe
+                status:
+                  note: This is a sample approval request note.
+                  state: APPROVED
+                  updatedAt: '2020-01-01T08:00:00Z'
+                  updatedBy: 5a0ab5acb07987125438b60f
+                  updatedByUserName: juandelacruz
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/approval-requests/users/{userId}:
+    post:
+      tags:
+      - Approval
+      summary: Submit an approval request for a user
+      operationId: submitApprovalRequestForUser
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/userId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitApprovalRequestRequest'
+            example:
+              period: MONTHLY
+              periodStart: '2020-01-01T00:00:00.000Z'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+              example:
+                creator:
+                  userEmail: johhndoe@example.com
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johhndoe
+                dateRange:
+                  end: '2019-08-24T14:15:22Z'
+                  start: '2019-08-24T14:15:22Z'
+                id: 567687e29ae1f428e7ebf564
+                owner:
+                  startOfWeek: MONDAY
+                  timeZone: Europe/Budapest
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johndoe
+                status:
+                  note: This is a sample approval request note.
+                  state: APPROVED
+                  updatedAt: '2020-01-01T08:00:00Z'
+                  updatedBy: 5a0ab5acb07987125438b60f
+                  updatedByUserName: juandelacruz
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval:
+    post:
+      tags:
+      - Approval
+      summary: Re-submit rejected/withdrawn entries/expenses for an approval of a
+        user
+      operationId: resubmitEntriesForApprovalForUser
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/userId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitApprovalRequestRequest'
+            example:
+              period: MONTHLY
+              periodStart: '2020-01-01T00:00:00.000Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+              example:
+                creator:
+                  userEmail: johhndoe@example.com
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johhndoe
+                dateRange:
+                  end: '2019-08-24T14:15:22Z'
+                  start: '2019-08-24T14:15:22Z'
+                id: 567687e29ae1f428e7ebf564
+                owner:
+                  startOfWeek: MONDAY
+                  timeZone: Europe/Budapest
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johndoe
+                status:
+                  note: This is a sample approval request note.
+                  state: APPROVED
+                  updatedAt: '2020-01-01T08:00:00Z'
+                  updatedBy: 5a0ab5acb07987125438b60f
+                  updatedByUserName: juandelacruz
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/approval-requests/{approvalRequestId}:
+    patch:
+      tags:
+      - Approval
+      summary: Update an approval request
+      operationId: updateApprovalRequest
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/approvalRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApprovalRequestRequest'
+            example:
+              note: Approved after review.
+              state: APPROVED
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+              example:
+                creator:
+                  userEmail: johhndoe@example.com
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johhndoe
+                dateRange:
+                  end: '2019-08-24T14:15:22Z'
+                  start: '2019-08-24T14:15:22Z'
+                id: 567687e29ae1f428e7ebf564
+                owner:
+                  startOfWeek: MONDAY
+                  timeZone: Europe/Budapest
+                  userId: 5a0ab5acb07987125438b60f
+                  userName: johndoe
+                status:
+                  note: This is a sample approval request note.
+                  state: APPROVED
+                  updatedAt: '2020-01-01T08:00:00Z'
+                  updatedBy: 5a0ab5acb07987125438b60f
+                  updatedByUserName: juandelacruz
+                workspaceId: 64a687e29ae1f428e7ebe303
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+      description: Clockify add-on token.
+  parameters:
+    workspaceId:
+      name: workspaceId
+      in: path
+      description: Represents a workspace identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 64a687e29ae1f428e7ebe303
+    userId:
+      name: userId
+      in: path
+      description: Represents a user identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 5a0ab5acb07987125438b60f
+    approvalRequestId:
+      name: approvalRequestId
+      in: path
+      description: Represents an approval request identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 940ab5acb07987125438b65y
+    sortOrderQuery:
+      name: sort-order
+      in: query
+      description: Represents the sorting order.
+      required: false
+      schema:
+        $ref: '#/components/schemas/SortOrder'
+      example: ASCENDING
+    pageQuery:
+      name: page
+      in: query
+      description: Page number.
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      example: 1
+    pageSizeQuery:
+      name: page-size
+      in: query
+      description: Page size.
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      example: 50
+  schemas:
+    ApprovalRequestFilterState:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - WITHDRAWN_APPROVAL
+    ApprovalRequestSortColumn:
+      type: string
+      enum:
+      - ID
+      - USER_ID
+      - START
+      - UPDATED_AT
+    SortOrder:
+      type: string
+      enum:
+      - ASCENDING
+      - DESCENDING
+    ApprovalPeriod:
+      type: string
+      description: Approval period. It must match the workspace approval period setting.
+      enum:
+      - WEEKLY
+      - SEMI_MONTHLY
+      - MONTHLY
+    ApprovalRequestState:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - WITHDRAWN_SUBMISSION
+      - WITHDRAWN_APPROVAL
+      - REJECTED
+    DayOfWeek:
+      type: string
+      enum:
+      - MONDAY
+      - TUESDAY
+      - WEDNESDAY
+      - THURSDAY
+      - FRIDAY
+      - SATURDAY
+      - SUNDAY
+    SubmitApprovalRequestRequest:
+      type: object
+      required:
+      - period
+      - periodStart
+      properties:
+        period:
+          $ref: '#/components/schemas/ApprovalPeriod'
+        periodStart:
+          type: string
+          minLength: 1
+          description: Approval period start date in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00.000Z'
+    UpdateApprovalRequestRequest:
+      type: object
+      required:
+      - state
+      properties:
+        note:
+          type: string
+          description: Additional notes for the approval request.
+        state:
+          $ref: '#/components/schemas/ApprovalRequestState'
+    ApprovalRequestDtoV1:
+      type: object
+      description: Represents a valid approval request data transfer object.
+      properties:
+        creator:
+          $ref: '#/components/schemas/ApprovalRequestCreatorDtoV1'
+        dateRange:
+          $ref: '#/components/schemas/DateRangeDto'
+        id:
+          type: string
+          description: Represents approval request identifier across the workspace.
+        owner:
+          $ref: '#/components/schemas/ApprovalRequestOwnerDtoV1'
+        status:
+          $ref: '#/components/schemas/ApprovalRequestStatusDtoV1'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    ApprovalRequestCreatorDtoV1:
+      type: object
+      description: Represents approval request creator object.
+      properties:
+        userEmail:
+          type: string
+          description: Represents user email.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        userName:
+          type: string
+          description: Represents user name.
+    DateRangeDto:
+      type: object
+      description: Represents date range object.
+      properties:
+        end:
+          type: string
+          format: date-time
+        start:
+          type: string
+          format: date-time
+    ApprovalRequestOwnerDtoV1:
+      type: object
+      description: Represents approval request owner object.
+      properties:
+        startOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+        timeZone:
+          type: string
+          description: Represents time zone.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        userName:
+          type: string
+          description: Represents user name.
+    ApprovalRequestStatusDtoV1:
+      type: object
+      description: Represents approval request status object.
+      properties:
+        note:
+          type: string
+          description: Represents an approval request note.
+        state:
+          $ref: '#/components/schemas/ApprovalRequestState'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Represents a date in yyyy-MM-ddThh:mm:ssZ format.
+        updatedBy:
+          type: string
+          description: Represents user identifier across the system.
+        updatedByUserName:
+          type: string
+          description: Represents user name.
+    ApprovalRequestListItem:
+      type: object
+      properties:
+        approvalRequest:
+          $ref: '#/components/schemas/ApprovalRequestDtoV1'
+        approvedTime:
+          $ref: '#/components/schemas/DurationString'
+        billableAmount:
+          type: number
+          format: double
+        billableTime:
+          $ref: '#/components/schemas/DurationString'
+        breakTime:
+          $ref: '#/components/schemas/DurationString'
+        costAmount:
+          type: number
+          format: double
+          description: Represents an amount.
+        entries:
+          type: array
+          description: Represents a list of time entry info data transfer objects.
+          items:
+            $ref: '#/components/schemas/TimeEntryInfoDto'
+        expenseTotal:
+          type: number
+          format: double
+          description: Represents an amount.
+        expenses:
+          type: array
+          description: Represents a list of expense hydrated data transfer objects.
+          items:
+            $ref: '#/components/schemas/ExpenseHydratedDto'
+        pendingTime:
+          $ref: '#/components/schemas/DurationString'
+        trackedTime:
+          $ref: '#/components/schemas/DurationString'
+    DurationString:
+      type: string
+      description: Represents a time duration.
+      example: PT1H30M
+    RateDto:
+      type: object
+      description: Represents hourly rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+    CustomFieldValueDto:
+      type: object
+      description: Represents a custom field value object.
+      properties:
+        customFieldId:
+          type: string
+          description: Represents custom field identifier across the system.
+        sourceType:
+          type: string
+          enum:
+          - WORKSPACE
+          - PROJECT
+          - TIMEENTRY
+          description: Represents a custom field value source type.
+        timeEntryId:
+          type: string
+          description: Represents time entry identifier across the system.
+        value:
+          description: Represents custom field value.
+    ProjectInfoDto:
+      type: object
+      description: Represents a project info object.
+      properties:
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+        clientName:
+          type: string
+          description: Represents client name.
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: RGB hexadecimal color code.
+        id:
+          type: string
+          description: Represents project identifier across the system.
+        name:
+          type: string
+          description: Represents a project name.
+    TagDto:
+      type: object
+      description: Represents a tag object.
+      properties:
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether tag is archived or not.
+        id:
+          type: string
+          description: Represents tag identifier across the system.
+        name:
+          type: string
+          description: Represents tag name.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    TaskInfoDto:
+      type: object
+      description: Represents a task info object.
+      properties:
+        id:
+          type: string
+          description: Represents task identifier across the system.
+        name:
+          type: string
+          description: Represents task name.
+    TimeIntervalDto:
+      type: object
+      description: Represents a time interval object.
+      properties:
+        duration:
+          $ref: '#/components/schemas/DurationString'
+        end:
+          type: string
+          format: date-time
+        offsetEnd:
+          type: integer
+          format: int32
+        offsetStart:
+          type: integer
+          format: int32
+        start:
+          type: string
+          format: date-time
+        timeZone:
+          type: string
+        zonedEnd:
+          type: string
+          format: date-time
+        zonedStart:
+          type: string
+          format: date-time
+    TimeEntryType:
+      type: string
+      enum:
+      - REGULAR
+      - BREAK
+      - HOLIDAY
+      - TIME_OFF
+    TimeEntryInfoDto:
+      type: object
+      description: Represents a time entry info data transfer object.
+      properties:
+        approvalRequestId:
+          type: string
+          description: Represents approval identifier across the system.
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether time entry is billable or not.
+        costRate:
+          $ref: '#/components/schemas/RateDto'
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValueDto'
+        description:
+          type: string
+          description: Represents a time entry description.
+        hourlyRate:
+          $ref: '#/components/schemas/RateDto'
+        id:
+          type: string
+          description: Represents time entry identifier across the system.
+        isLocked:
+          type: boolean
+          default: false
+          description: Indicates whether time entry is locked or not.
+        project:
+          $ref: '#/components/schemas/ProjectInfoDto'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagDto'
+        task:
+          $ref: '#/components/schemas/TaskInfoDto'
+        timeInterval:
+          $ref: '#/components/schemas/TimeIntervalDto'
+        type:
+          $ref: '#/components/schemas/TimeEntryType'
+    ExpenseCategoryDto:
+      type: object
+      properties:
+        archived:
+          type: boolean
+        hasUnitPrice:
+          type: boolean
+        id:
+          type: string
+        name:
+          type: string
+        priceInCents:
+          type: integer
+          format: int64
+        unit:
+          type: string
+        workspaceId:
+          type: string
+    ExpenseHydratedDto:
+      type: object
+      description: Represents an expense hydrated data transfer object.
+      properties:
+        approvalRequestId:
+          type: string
+        approvalStatus:
+          type: string
+        billable:
+          type: boolean
+        category:
+          $ref: '#/components/schemas/ExpenseCategoryDto'
+        currency:
+          type: string
+        date:
+          type: string
+          format: date
+        detailedApprovalStatus:
+          type: string
+        fileId:
+          type: string
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        id:
+          type: string
+        locked:
+          type: boolean
+        notes:
+          type: string
+        project:
+          $ref: '#/components/schemas/ProjectInfoDto'
+        quantity:
+          type: number
+          format: double
+        task:
+          $ref: '#/components/schemas/TaskInfoDto'
+        total:
+          type: number
+          format: double
+        userId:
+          type: string
+        workspaceId:
+          type: string

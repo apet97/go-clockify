@@ -1,0 +1,217 @@
+# Clockify Holidays — MUTATION endpoints (Agent B live probe)
+# Workspace: 65b382b606de527a7ee2b60e
+# Base: https://api.clockify.me/api/v1
+# Auth: X-Api-Key
+# Fixtures: fixtures/holidays-fresh-b/
+openapi: 3.0.3
+info:
+  title: Clockify Holidays (mutations, live-verified)
+  version: "2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/holidays:
+    post:
+      summary: Create holiday
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, datePeriod, occursAnnually]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                datePeriod:
+                  type: object
+                  required: [startDate, endDate]
+                  properties:
+                    startDate: { type: string, example: "2027-01-15" }
+                    endDate: { type: string, example: "2027-01-15" }
+                occursAnnually: { type: boolean }
+                everyoneIncludingNew: { type: boolean }
+                color: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+                users:
+                  $ref: '#/components/schemas/UserFilter'
+                userGroups:
+                  $ref: '#/components/schemas/UserFilter'
+                automaticTimeEntryCreation:
+                  $ref: '#/components/schemas/AutoTimeEntry'
+      responses:
+        '200':
+          description: created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Holiday' }
+        '400':
+          description: validation error (returns code 501 in body)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HolidayError' }
+  /workspaces/{workspaceId}/holidays/{holidayId}:
+    put:
+      summary: Update holiday
+      description: |
+        IMPORTANT: live probe shows `users` (or `userGroups`) filter
+        object is REQUIRED on PUT even if `everyoneIncludingNew:true`.
+        Missing it -> 400 "At least one user or user group must be assigned".
+        Doc shows it as optional; it is not for updates.
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: holidayId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, datePeriod, occursAnnually]
+              properties:
+                name: { type: string }
+                datePeriod:
+                  type: object
+                  required: [startDate, endDate]
+                  properties:
+                    startDate: { type: string }
+                    endDate: { type: string }
+                occursAnnually: { type: boolean }
+                everyoneIncludingNew: { type: boolean }
+                color: { type: string }
+                users:
+                  $ref: '#/components/schemas/UserFilter'
+                userGroups:
+                  $ref: '#/components/schemas/UserFilter'
+      responses:
+        '200':
+          description: updated (same shape as POST)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Holiday' }
+        '400':
+          description: validation error
+    delete:
+      summary: Delete holiday
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: holidayId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: |
+            Returns RICHER shape than POST/PUT:
+            includes `users` (array of {id,name}), `userGroups` (array),
+            `automaticTimeEntryCreation` as OBJECT
+            ({enabled, defaultEntities:{projectId,taskId}}),
+            and `color` (whereas POST/PUT response omits color
+            when not set on entity).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HolidayDeleteResp' }
+        '404':
+          description: not found (body code=501, HTTP=404)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HolidayError' }
+components:
+  schemas:
+    UserFilter:
+      type: object
+      properties:
+        contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+        ids: { type: array, items: { type: string } }
+        status: { type: string, enum: [ALL, ACTIVE, INACTIVE, PENDING, DECLINED] }
+    AutoTimeEntry:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        defaultEntities:
+          type: object
+          properties:
+            projectId: { type: string, nullable: true }
+            taskId: { type: string, nullable: true }
+    Holiday:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        name: { type: string }
+        userIds: { type: array, items: { type: string } }
+        userGroupIds: { type: array, items: { type: string } }
+        datePeriod:
+          type: object
+          properties:
+            startDate: { type: string }
+            endDate: { type: string }
+        occursAnnually: { type: boolean }
+        everyoneIncludingNew: { type: boolean }
+        automaticTimeEntryCreation: { type: boolean }
+        projectId: { type: string, nullable: true }
+        taskId: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+    HolidayDeleteResp:
+      allOf:
+        - $ref: '#/components/schemas/Holiday'
+        - type: object
+          properties:
+            users:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+            userGroups:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+            automaticTimeEntryCreation:
+              $ref: '#/components/schemas/AutoTimeEntry'
+    HolidayError:
+      type: object
+      properties:
+        message: { type: string }
+        code:
+          type: integer
+          description: |
+            Always 501 across all validation/404 errors
+            regardless of actual HTTP status (400, 404).
+            Do NOT use this as an HTTP-status proxy.
+# Live evidence (status codes):
+#   POST valid                         -> 200
+#   POST {}                            -> 400 {message:"must not be blank", code:501}
+#   POST color="notacolor"             -> 400 {message:"Color not valid", code:501}
+#   PUT valid (no users)               -> 400 {message:"At least one user or user group must be assigned", code:501}
+#   PUT with users:{contains,ids,status}-> 200
+#   PUT missing occursAnnually         -> 400 (same "user/group" msg, code:501)
+#   DELETE valid id                    -> 200 (rich shape with users[], userGroups[], autoTimeEntry obj)
+#   DELETE bogus 24-hex id             -> 404 {message:"HOLIDAY with ID '...' not found", code:501}
+# Handler deltas for go-clockify:
+#   - UpdateHoliday MUST send users or userGroups filter object; do not
+#     omit them when only everyoneIncludingNew=true.
+#   - DeleteHoliday response model differs from Create/Update; decode
+#     into a superset type (users[], userGroups[], automaticTimeEntryCreation
+#     as object). Tests that assert identical shapes on create vs delete
+#     should be flipped.
+#   - Error decoder must NOT treat body `code` as HTTP status; it is
+#     constant 501 across 400/404 responses.

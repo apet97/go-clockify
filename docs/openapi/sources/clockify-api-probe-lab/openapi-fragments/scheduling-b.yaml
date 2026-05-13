@@ -1,0 +1,144 @@
+# Clockify Scheduling — mutations (Agent B, live-probed 2026-05-12)
+# Workspace 65b382b606de527a7ee2b60e. All assignments created DRAFT
+# (published=false), never published (notifyUsers never sent).
+# Host: https://api.clockify.me/api/v1 (NOT a separate scheduling host).
+openapi: 3.0.3
+info:
+  title: Clockify Scheduling — mutations (live shapes)
+  version: "2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/scheduling/assignments/recurring:
+    post:
+      summary: Create recurring assignment (one-off when repeat=false)
+      responses:
+        "201": { description: Created; body is ARRAY of assignment objects }
+        "400":
+          description: |
+            { "message": "Assignment hours per day is required.", "code": 501 }
+            Note: HTTP 400 but body.code=501 (Clockify internal error code, not HTTP).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end, hoursPerDay, projectId, userId]
+              properties:
+                billable: { type: boolean, default: false }
+                start: { type: string, example: "2027-01-04T00:00:00Z" }
+                end: { type: string, example: "2027-01-08T00:00:00Z" }
+                hoursPerDay: { type: number, format: double }
+                projectId: { type: string }
+                userId: { type: string }
+                taskId: { type: string, nullable: true }
+                note: { type: string, maxLength: 100 }
+                startTime: { type: string, example: "10:00:00" }
+                includeNonWorkingDays: { type: boolean, default: false }
+                recurringAssignment:
+                  type: object
+                  required: [weeks]
+                  properties:
+                    repeat: { type: boolean, default: false }
+                    weeks: { type: integer, minimum: 1, maximum: 99 }
+  /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}:
+    patch:
+      summary: Update recurring assignment
+      responses:
+        "200":
+          description: |
+            Observed body: [] (EMPTY ARRAY) — not the per-doc populated array.
+            Handlers must not require non-empty array.
+        "400":
+          description: |
+            { "message": "Start datetime ... is greater than end datetime ...", "code": 501 }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                billable: { type: boolean }
+                start: { type: string }
+                end: { type: string }
+                hoursPerDay: { type: number }
+                note: { type: string }
+                seriesUpdateOption:
+                  type: string
+                  enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL]
+                startTime: { type: string }
+                includeNonWorkingDays: { type: boolean }
+                taskId: { type: string }
+    delete:
+      summary: Delete recurring assignment
+      parameters:
+        - in: query
+          name: seriesUpdateOption
+          schema: { type: string, enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL] }
+      responses:
+        "200": { description: Array of deleted assignment objects }
+        "404":
+          description: |
+            { "message": "SCHEDULE_ASSIGNMENT with ID '<id>' not found", "code": 501 }
+  /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy:
+    post:
+      summary: Copy scheduled assignment
+      responses:
+        "200": { description: Array of copied assignment objects (NOT 201) }
+        "400":
+          description: |
+            { "message": "must not be null", "code": 501 } when userId missing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string }
+                seriesUpdateOption:
+                  type: string
+                  enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL]
+components:
+  schemas:
+    AssignmentLive:
+      type: object
+      description: Live response shape observed; differs from doc.
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        projectId: { type: string }
+        taskId: { type: string, nullable: true }
+        period:
+          type: object
+          properties:
+            start: { type: string }
+            end: { type: string }
+        hoursPerDay: { type: number }
+        startTime: { type: string }
+        note: { type: string }
+        excludeDays: { type: array, items: { type: object } }
+        includeNonWorkingDays: { type: boolean }
+        published: { type: boolean }
+        billable: { type: boolean }
+        recurring:
+          type: object
+          properties:
+            repeat: { type: boolean }
+            weeks: { type: integer }
+            seriesId: { type: string, nullable: true }
+# Findings vs doc:
+#   - Create/Copy/Delete responses are ARRAYS even for single ops.
+#   - PATCH update returns 200 with EMPTY ARRAY (no per-doc payload).
+#   - Live object has `recurring` (not `recurringAssignment`) and includes
+#     `seriesId` (nullable). Doc field `seriesId` lives at top level — live
+#     puts it inside `recurring`.
+#   - Error envelope: { message, code:501 } regardless of actual HTTP
+#     status (400/404). Handlers should key on HTTP status, not body.code.
+#   - Field `taskId` is nullable in responses.
+#   - For non-recurring assignment, send recurringAssignment:{repeat:false,weeks:1};
+#     server stores weeks=0 when repeat=false.

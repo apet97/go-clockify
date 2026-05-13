@@ -1,0 +1,542 @@
+openapi: 3.0.3
+info:
+  title: Clockify Time Off API
+  version: 1.0.0
+  description: OpenAPI specification generated from the uploaded TIMEOFFDOC.md Markdown documentation.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+tags:
+- name: Time Off
+  description: Time off request operations
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+paths:
+  /v1/workspaces/{workspaceId}/time-off/policies/{policyId}/requests:
+    post:
+      tags:
+      - Time Off
+      summary: Create a time off request
+      operationId: createTimeOffRequest
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/PolicyIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestFullV1Dto'
+  /v1/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}:
+    delete:
+      tags:
+      - Time Off
+      summary: Delete a time off request
+      operationId: deleteTimeOffRequest
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/PolicyIdPath'
+      - $ref: '#/components/parameters/RequestIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestDto'
+    patch:
+      tags:
+      - Time Off
+      summary: Change a time off request status
+      operationId: changeTimeOffRequestStatus
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/PolicyIdPath'
+      - $ref: '#/components/parameters/RequestIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeTimeOffRequestStatusRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestDto'
+  /v1/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests:
+    post:
+      tags:
+      - Time Off
+      summary: Create a time off request for a user
+      operationId: createTimeOffRequestForUser
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      - $ref: '#/components/parameters/PolicyIdPath'
+      - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestFullV1Dto'
+  /v1/workspaces/{workspaceId}/time-off/requests:
+    post:
+      tags:
+      - Time Off
+      summary: Get all time off requests on a workspace
+      operationId: getAllTimeOffRequestsOnWorkspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeOffRequestSearchRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestsResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+  parameters:
+    WorkspaceIdPath:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 60f91b3ffdaf031696ec61a8
+    PolicyIdPath:
+      name: policyId
+      in: path
+      required: true
+      description: Represents a policy identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 63034cd0cb0fb876a57e93ad
+    RequestIdPath:
+      name: requestId
+      in: path
+      required: true
+      description: Represents a time off request identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 6308850156b7d75ea8fd3fbd
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      description: Represents a user identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 60f924bafdaf031696ec6218
+  schemas:
+    HalfDayPeriod:
+      type: string
+      enum:
+      - FIRST_HALF
+      - SECOND_HALF
+      - NOT_DEFINED
+      description: Represents the half day period.
+    RequestStatusType:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      - ALL
+    TimeUnit:
+      type: string
+      enum:
+      - DAYS
+      - HOURS
+      description: Represents the time unit of the time off request.
+    Period:
+      type: object
+      description: Represents a period with date-time start and end values.
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    PeriodV1Request:
+      type: object
+      description: Represents period of time off request including start and end date.
+      properties:
+        days:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999
+          description: Provide number of days.
+        end:
+          type: string
+          format: date
+          description: Provide end date in YYYY-MM-DD format.
+          x-clockify-default: '##default'
+        start:
+          type: string
+          format: date
+          description: Provide start date in YYYY-MM-DD format.
+          x-clockify-default: '##default'
+    TimeOffRequestPeriodV1Request:
+      type: object
+      description: Provide the period you would like to use for creating the time off request. If timeZone isn't set, should
+        be aligned with time zone for user in settings. Can be shifted from user time zone with explicit setting of timeZone.
+      required:
+      - period
+      properties:
+        halfDayPeriod:
+          allOf:
+          - $ref: '#/components/schemas/HalfDayPeriod'
+          x-clockify-default: '##default'
+        isHalfDay:
+          type: boolean
+          default: false
+          description: Indicates whether time off is half day.
+        period:
+          $ref: '#/components/schemas/PeriodV1Request'
+        timeOffHalfDayPeriod:
+          $ref: '#/components/schemas/HalfDayPeriod'
+    CreateTimeOffRequest:
+      type: object
+      required:
+      - note
+      - timeOffPeriod
+      properties:
+        note:
+          type: string
+          description: Provide the note you would like to use for creating the time off request.
+          x-clockify-default: '##default'
+        timeOffPeriod:
+          $ref: '#/components/schemas/TimeOffRequestPeriodV1Request'
+      example:
+        note: Create Time Off Note
+        timeOffPeriod:
+          isHalfDay: false
+          halfDayPeriod: NOT_DEFINED
+          period:
+            start: '2022-08-26'
+            end: '2022-08-26'
+            days: 1
+    ChangeTimeOffRequestStatusRequest:
+      type: object
+      required:
+      - note
+      - status
+      properties:
+        note:
+          type: string
+          description: Provide the note you would like to use for changing the time off request.
+          x-clockify-default: '##default'
+        status:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+          description: Provide the status you would like to use for changing the time off request.
+          x-clockify-default: '##default'
+      example:
+        note: Time Off Request Note
+        status: APPROVED
+    TimeOffRequestSearchRequest:
+      type: object
+      description: Filters used to return time off requests on a workspace.
+      properties:
+        end:
+          type: string
+          format: date-time
+          description: Return time off requests created before the specified time in requester's time zone. Provide end in
+            format YYYY-MM-DDTHH:MM:SS.ssssssZ
+        page:
+          type: integer
+          format: int32
+          maximum: 1000
+          default: 1
+          description: Page number.
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 200
+          default: 50
+          description: Page size.
+        start:
+          type: string
+          format: date-time
+          description: Return time off requests created after the specified time in requester's time zone. Provide start in
+            format YYYY-MM-DDTHH:MM:SS.ssssssZ
+        statuses:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RequestStatusType'
+          description: Filters time off requests by status.
+          x-clockify-default: '##default'
+        userGroups:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Provide the user group ids of time off requests.
+          x-clockify-default: '##default'
+        users:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Provide the user ids of time off requests. If empty, will return time off requests of all users (with
+            a maximum of 5000 users).
+          x-clockify-default: '##default'
+      example:
+        end: '2022-08-26T23:55:06.281873Z'
+        page: 1
+        pageSize: 50
+        start: '2022-08-26T08:00:06.281873Z'
+        statuses:
+        - APPROVED
+        - PENDING
+        userGroups:
+        - 5b715612b079875110791342
+        - 5b715612b079875110791324
+        - 5b715612b079875110793142
+        users:
+        - 5b715612b079875110791432
+        - b715612b079875110791234
+    TimeOffRequestStatus:
+      type: object
+      description: Represents the status of the time off request.
+      properties:
+        changedAt:
+          type: string
+          format: date-time
+        changedByUserId:
+          type: string
+        changedByUserName:
+          type: string
+        changedForUserName:
+          type: string
+        note:
+          type: string
+        statusType:
+          $ref: '#/components/schemas/RequestStatusType'
+    TimeOffRequestPeriodDto:
+      type: object
+      description: Represents the period of the time off request.
+      properties:
+        halfDay:
+          type: boolean
+        halfDayHours:
+          $ref: '#/components/schemas/Period'
+        halfDayPeriod:
+          $ref: '#/components/schemas/HalfDayPeriod'
+        period:
+          $ref: '#/components/schemas/Period'
+    TimeOffRequestFullV1Dto:
+      type: object
+      description: Represents a full time off request response.
+      properties:
+        balance:
+          type: number
+          format: double
+          description: Represents the time off balance.
+        balanceDiff:
+          type: number
+          format: double
+          description: Represents the balance difference.
+        createdAt:
+          type: string
+          format: date-time
+          description: Represents the date when time off request is created. It is in format YYYY-MM-DDTHH:MM:SS.ssssssZ
+        id:
+          type: string
+          description: Represents time off requester identifier across the system.
+          x-clockify-default: '##default'
+        note:
+          type: string
+          description: Represents the note of the time off request.
+          x-clockify-default: '##default'
+        policyId:
+          type: string
+          description: Represents policy identifier across the system.
+          x-clockify-default: '##default'
+        policyName:
+          type: string
+          description: Represents the policy name of the time off request.
+          x-clockify-default: '##default'
+        requesterUserId:
+          type: string
+          description: Represents requester user's id.
+          x-clockify-default: '##default'
+        requesterUserName:
+          type: string
+          description: Represents requester user's username.
+          x-clockify-default: '##default'
+        status:
+          $ref: '#/components/schemas/TimeOffRequestStatus'
+        timeOffPeriod:
+          $ref: '#/components/schemas/TimeOffRequestPeriodDto'
+        timeUnit:
+          $ref: '#/components/schemas/TimeUnit'
+        userEmail:
+          type: string
+          description: Represents user's email
+          x-clockify-default: '##default'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+          x-clockify-default: '##default'
+        userName:
+          type: string
+          description: Represents user's username.
+          x-clockify-default: '##default'
+        userTimeZone:
+          type: string
+          description: Represents user's time zone
+          x-clockify-default: '##default'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+          x-clockify-default: '##default'
+      example:
+        balance: 10
+        balanceDiff: 1
+        createdAt: '2022-08-26T08:32:01.640708Z'
+        id: 5b715612b079875110791111
+        note: Time Off Request Note
+        policyId: 5b715612b079875110792333
+        policyName: Days
+        requesterUserId: 5b715612b079875110794444
+        requesterUserName: John Doe
+        status:
+          statusType: PENDING
+        timeOffPeriod:
+          halfDay: false
+          halfDayPeriod: NOT_DEFINED
+          period:
+            start: '2022-08-26T08:00:00Z'
+            end: '2022-08-26T17:00:00Z'
+        timeUnit: DAYS
+        userEmail: johndoe@example.com
+        userId: 5b715612b079875110794444
+        userName: John Doe
+        userTimeZone: UTC
+        workspaceId: 5b715612b079875110792222
+    TimeOffRequestDto:
+      type: object
+      description: Represents a time off request response.
+      properties:
+        balanceDiff:
+          type: number
+          format: double
+          description: Represents the balance difference.
+        createdAt:
+          type: string
+          format: date-time
+          description: Represents the date when time off request is created. Date is in format YYYY-MM-DDTHH:MM:SS.ssssssZ
+        id:
+          type: string
+          description: Represents time off requester identifier across the system.
+          x-clockify-default: '##default'
+        note:
+          type: string
+          description: Represents the note of the time off request.
+          x-clockify-default: '##default'
+        policyId:
+          type: string
+          description: Represents policy identifier across the system.
+          x-clockify-default: '##default'
+        status:
+          $ref: '#/components/schemas/TimeOffRequestStatus'
+        timeOffPeriod:
+          $ref: '#/components/schemas/TimeOffRequestPeriodDto'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+          x-clockify-default: '##default'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+          x-clockify-default: '##default'
+      example:
+        balanceDiff: 1
+        createdAt: '2022-08-26T08:32:01.640708Z'
+        id: 5b715612b079875110791111
+        note: Time Off Request Note
+        policyId: 5b715612b079875110792333
+        status:
+          statusType: PENDING
+        timeOffPeriod:
+          halfDay: false
+          period:
+            start: '2022-08-26T08:00:00Z'
+            end: '2022-08-26T17:00:00Z'
+        userId: 5b715612b079875110794444
+        workspaceId: 5b715612b079875110792222
+    TimeOffRequestsResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+          description: Total count of time off requests.
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffRequestFullV1Dto'
+          x-clockify-default: '##default'
+      example:
+        count: 1
+        requests: []

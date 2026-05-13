@@ -1,0 +1,80 @@
+# Clockify Holidays — READ endpoints (Agent A live probe)
+# Workspace: 65b382b606de527a7ee2b60e
+# Base: https://api.clockify.me/api/v1
+# Auth: X-Api-Key
+# Fixtures: fixtures/holidays-fresh-a/
+openapi: 3.0.3
+info:
+  title: Clockify Holidays (reads, live-verified)
+  version: "2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/holidays:
+    get:
+      summary: List holidays on a workspace
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: assigned-to
+          required: false
+          description: |
+            Filters holidays assigned to the given userId.
+            VERIFIED quirks:
+              - valid userId -> 200 list (may include holidays where everyoneIncludingNew=true even if user not in userIds).
+              - non-existent 24-hex ObjectId -> 500 {"message":"Internal server error.","code":500}.
+              - literal "##default" -> 400 {"message":"Invalid ObjectId provided for field 'assigned-to'","code":501}.
+              - omitted -> returns all holidays.
+          schema: { type: string, example: 6480555b7279f003c5707323 }
+      responses:
+        "200":
+          description: Array of holidays
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Holiday' }
+        "400": { description: Invalid ObjectId (code 501 in body) }
+        "500": { description: Returned when assigned-to is a syntactically valid ObjectId that does not exist }
+  # NOTE (live-verified, contradicts docs):
+  # GET /workspaces/{workspaceId}/holidays/{holidayId} is NOT implemented.
+  # Tested with real id, non-existent 24-hex id, and malformed id — all
+  # return HTTP 405 {"message":"Request method 'GET' is not supported","code":3000}.
+  # Implication for go-clockify: do NOT expose a GetHoliday(id) handler that
+  # calls GET /holidays/{id}; "get by id" must be implemented client-side by
+  # filtering the list response.
+components:
+  schemas:
+    DatePeriod:
+      type: object
+      properties:
+        startDate: { type: string, format: date, example: "2026-12-25" }
+        endDate:   { type: string, format: date, example: "2026-12-25" }
+    Holiday:
+      type: object
+      # Field order observed in live response (informational):
+      # id, workspaceId, name, userIds, userGroupIds, datePeriod,
+      # occursAnnually, everyoneIncludingNew, automaticTimeEntryCreation,
+      # projectId, taskId
+      properties:
+        id:            { type: string, example: 6967ed48d3e5101589b553ae }
+        workspaceId:   { type: string }
+        name:          { type: string }
+        userIds:
+          type: array
+          items: { type: string }
+          description: Always present as an array (possibly empty). Not nullable in observed responses.
+        userGroupIds:
+          type: array
+          items: { type: string }
+          description: Always present as an array (possibly empty). Not nullable in observed responses.
+        datePeriod:    { $ref: '#/components/schemas/DatePeriod' }
+        occursAnnually:             { type: boolean }
+        everyoneIncludingNew:       { type: boolean }
+        automaticTimeEntryCreation: { type: boolean, description: "Observed as bare boolean on reads, NOT the object shape shown for create requests." }
+        projectId:     { type: string, nullable: true, example: null }
+        taskId:        { type: string, nullable: true, example: null }
+      required: [id, workspaceId, name, userIds, userGroupIds, datePeriod, occursAnnually, everyoneIncludingNew, automaticTimeEntryCreation]

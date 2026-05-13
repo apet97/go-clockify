@@ -1,0 +1,261 @@
+# Scheduling — READS (Agent A). Live-probed 2026-05-12.
+# Host: https://api.clockify.me/api/v1   (single host; NO separate scheduling host)
+# Auth: X-Api-Key
+openapi: 3.0.3
+info:
+  title: Clockify Scheduling — read endpoints (live-verified)
+  version: "2026-05-12-a"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/scheduling/assignments/all:
+    get:
+      summary: List all scheduled assignments
+      parameters:
+        - { in: path,  name: workspaceId, required: true,  schema: { type: string } }
+        - { in: query, name: start,       required: true,  schema: { type: string, example: "2025-01-01T00:00:00Z" } }
+        - { in: query, name: end,         required: true,  schema: { type: string, example: "2026-12-31T23:59:59Z" } }
+        - { in: query, name: name,        required: false, schema: { type: string } }
+        - { in: query, name: sort-column, required: false, schema: { type: string, enum: [PROJECT, USER, ID] } }
+        - { in: query, name: sort-order,  required: false, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { in: query, name: page,        required: false, schema: { type: integer, default: 1 } }
+        - { in: query, name: page-size,   required: false, schema: { type: integer, default: 50, minimum: 1 } }
+      responses:
+        "200":
+          description: Array of assignments
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AssignmentDto" } }
+        "400": { $ref: "#/components/responses/Err3001MissingStart" }
+        "400_invalid_sort": { $ref: "#/components/responses/Err501InvalidSortColumn" }
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals:
+    post:
+      summary: Per-project totals (paged). Body uses camelCase pageSize, NOT page-size.
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                start:        { type: string, format: date-time }
+                end:          { type: string, format: date-time }
+                page:         { type: integer, default: 1 }
+                pageSize:     { type: integer, default: 50, maximum: 200 }
+                search:       { type: string }
+                statusFilter: { type: string, enum: [PUBLISHED, UNPUBLISHED, ALL] }
+      responses:
+        "200":
+          description: Array of project totals
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ProjectTotalDto" } }
+        "400": { $ref: "#/components/responses/Err501MissingEnd" }
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}:
+    get:
+      summary: Per-project totals for one project. NOTE — verified live returns 200 with EMPTY body, not the doc-promised object. Treat empty body as "no assignments in range".
+      parameters:
+        - { in: path,  name: workspaceId, required: true, schema: { type: string } }
+        - { in: path,  name: projectId,   required: true, schema: { type: string } }
+        - { in: query, name: start,       required: true, schema: { type: string, format: date-time } }
+        - { in: query, name: end,         required: true, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: ProjectTotalDto OR empty body when nothing scheduled.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ProjectTotalDto"
+                  - type: string
+                    description: empty body
+        "501_project_mismatch": { $ref: "#/components/responses/Err501ProjectNotInWorkspace" }
+
+  /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals:
+    post:
+      summary: Per-user capacity totals (paged). Body uses pageSize.
+      parameters:
+        - { in: path, name: workspaceId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                start:        { type: string, format: date-time }
+                end:          { type: string, format: date-time }
+                page:         { type: integer, default: 1 }
+                pageSize:     { type: integer, default: 50, maximum: 200 }
+                search:       { type: string }
+                statusFilter: { type: string, enum: [PUBLISHED, UNPUBLISHED, ALL] }
+                userFilter:
+                  type: object
+                  properties:
+                    contains:   { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+                    ids:        { type: array, items: { type: string }, uniqueItems: true }
+                    sourceType: { type: string, enum: [USER_GROUP] }
+                    status:     { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL] }
+                    statuses:   { type: array, items: { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL] } }
+                userGroupFilter:
+                  type: object
+                  properties:
+                    contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+                    ids:      { type: array, items: { type: string }, uniqueItems: true }
+                    status:   { type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL] }
+      responses:
+        "200":
+          description: Array of user capacity totals
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/UserCapacityDto" } }
+        "400": { $ref: "#/components/responses/Err501MissingEnd" }
+
+  /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals:
+    get:
+      summary: Single-user capacity totals.
+      parameters:
+        - { in: path,  name: workspaceId, required: true, schema: { type: string } }
+        - { in: path,  name: userId,      required: true, schema: { type: string } }
+        - { in: query, name: start,       required: true, schema: { type: string, format: date-time } }
+        - { in: query, name: end,         required: true, schema: { type: string, format: date-time } }
+        - { in: query, name: page,        required: false, schema: { type: integer, default: 1 } }
+        - { in: query, name: page-size,   required: false, schema: { type: integer, default: 50, minimum: 1 } }
+      responses:
+        "200":
+          description: UserCapacityDto (single object, NOT array — differs from list variant).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserCapacityDto" }
+        "400": { $ref: "#/components/responses/Err3001MissingStart" }
+        "501_user_mismatch": { $ref: "#/components/responses/Err501UserNotInWorkspace" }
+
+components:
+  schemas:
+    AssignmentDto:
+      type: object
+      properties:
+        id:              { type: string }
+        workspaceId:     { type: string }
+        userId:          { type: string }
+        userName:        { type: string }
+        projectId:       { type: string }
+        projectName:     { type: string }
+        clientId:        { type: string }     # "" when no client (NOT null)
+        clientName:      { type: string }     # "" when no client (NOT null)
+        projectColor:    { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        period:
+          type: object
+          properties:
+            start: { type: string, format: date-time }
+            end:   { type: string, format: date-time }   # NOTE end may include millis: "...:59.999Z"
+        hoursPerDay:     { type: number, format: double }
+        startTime:       { type: string, nullable: true }   # hh:mm:ss or null
+        note:            { type: string, nullable: true }
+        billable:        { type: boolean }
+        taskId:          { type: string, nullable: true }
+        taskName:        { type: string, nullable: true }
+        projectBillable: { type: boolean }
+        projectArchived: { type: boolean }
+    ProjectTotalDto:
+      type: object
+      properties:
+        workspaceId:     { type: string }
+        projectId:       { type: string }
+        projectName:     { type: string }
+        projectColor:    { type: string }
+        projectArchived: { type: boolean }
+        projectBillable: { type: boolean }
+        clientName:      { type: string, nullable: true }
+        taskId:          { type: string, nullable: true }
+        taskName:        { type: string, nullable: true }
+        totalHours:      { type: number, format: double }
+        assignments:
+          type: array
+          items:
+            type: object
+            properties:
+              date:          { type: string, format: date-time }
+              hasAssignment: { type: boolean }
+        milestones:
+          type: array
+          items:
+            type: object
+            properties:
+              id:          { type: string }
+              name:        { type: string }
+              date:        { type: string, format: date-time }
+              projectId:   { type: string }
+              workspaceId: { type: string }
+    UserCapacityDto:
+      type: object
+      properties:
+        userId:          { type: string }
+        workspaceId:     { type: string }
+        userName:        { type: string }
+        userImage:       { type: string }
+        userStatus:      { type: string, enum: [ACTIVE, PENDING, INACTIVE, DECLINED] }
+        capacityPerDay:  { type: number, format: double, description: "Seconds per day (e.g. 25200 for 7h). LIVE: also returns 3600/36000 — units appear to be seconds, but workspace settings may distort. Verify per response." }
+        workingDays:
+          type: array
+          description: "LIVE returns ARRAY of day strings, NOT a single string as doc claims."
+          items: { type: string, enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY] }
+        totalHoursPerDay:
+          type: array
+          items:
+            type: object
+            properties:
+              date:       { type: string, format: date-time }
+              totalHours: { type: number, format: double }
+  responses:
+    Err3001MissingStart:
+      description: code 3001 — missing required query param (start/end)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:    { type: integer, example: 3001 }
+              message: { type: string, example: "Required request parameter 'start' for method parameter type String is not present" }
+    Err501MissingEnd:
+      description: code 501 — body param missing
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:    { type: integer, example: 501 }
+              message: { type: string }
+    Err501InvalidSortColumn:
+      description: code 501 — sort-column outside enum
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:    { type: integer, example: 501 }
+              message: { type: string, example: "You entered invalid value for field: [sort-column]..." }
+    Err501ProjectNotInWorkspace:
+      description: code 501 — projectId does not belong to workspace
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:    { type: integer, example: 501 }
+              message: { type: string, example: "Project doesn't belong to Workspace" }
+    Err501UserNotInWorkspace:
+      description: code 501 — userId does not belong to workspace
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:    { type: integer, example: 501 }
+              message: { type: string, example: "User doesn't belong to Workspace" }

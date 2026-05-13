@@ -1,0 +1,2025 @@
+openapi: 3.0.3
+info:
+  title: Clockify Projects API
+  version: 1.0.0
+  description: OpenAPI definition generated from PROJECTSDOC.md. It covers Clockify project listing, creation, templates,
+    project detail, estimates, memberships, and project user rate endpoints described in the source Markdown.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API
+tags:
+- name: Projects
+  description: Project management operations.
+paths:
+  /v1/workspaces/{workspaceId}/projects:
+    get:
+      tags:
+      - Projects
+      operationId: getWorkspaceProjects
+      summary: Get all projects on a workspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+        description: If provided, returns projects whose name contains the provided string.
+        example: Software Development
+      - name: strict-name-search
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: When true, search by name returns only projects whose name exactly matches the name parameter.
+        example: false
+      - name: archived
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If true, returns only archived projects. If omitted, returns both archived and non-archived projects.
+        example: false
+      - name: billable
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If true, returns only billable projects. If omitted, returns both billable and non-billable projects.
+        example: false
+      - name: clients
+        in: query
+        required: false
+        schema:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        description: If provided, returns projects that contain clients matching any provided ids.
+        example:
+        - 5a0ab5acb07987125438b60f
+        - 64c777ddd3fcab07cfbb210c
+        style: form
+        explode: true
+      - name: contains-client
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Controls whether the clients filter includes or excludes matching client ids.
+        example: true
+      - name: client-status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - ARCHIVED
+          - ALL
+        description: Filters projects based on client status.
+        example: ACTIVE
+      - name: users
+        in: query
+        required: false
+        schema:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        description: If provided, returns projects that contain users matching any provided ids.
+        example:
+        - 5a0ab5acb07987125438b60f
+        - 64c777ddd3fcab07cfbb210c
+        style: form
+        explode: true
+      - name: contains-user
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Controls whether the users filter includes or excludes matching user ids.
+        example: true
+      - name: user-status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+        description: Filters projects based on user status.
+        example: ALL
+      - name: is-template
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Filters projects based on whether they are used as a template or not.
+        example: false
+      - name: sort-column
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ID
+          - NAME
+          - CLIENT_NAME
+          - DURATION
+          - BUDGET
+          - PROGRESS
+        description: Sorts the results by the given column/field.
+        example: NAME
+      - name: sort-order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ASCENDING
+          - DESCENDING
+        description: Sorting mode.
+        example: ASCENDING
+      - name: hydrated
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If true, results contain additional information about the project.
+        example: false
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+        description: Page number.
+        example: 1
+      - name: page-size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 50
+        description: Page size.
+        example: 50
+      - name: access
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PUBLIC
+          - PRIVATE
+        description: If provided, returns projects that match the provided access.
+        example: PUBLIC
+      - name: expense-limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+        description: Represents the maximum number of expenses to fetch.
+        example: 10
+      - name: expense-date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: If provided, returns expenses dated before the provided yyyy-MM-dd date.
+        example: '2024-12-31'
+      - name: userGroups
+        in: query
+        required: false
+        schema:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        description: If provided, returns projects that contain groups matching any provided ids.
+        example:
+        - 5a0ab5acb07987125438b60f
+        - 64c777ddd3fcab07cfbb210c
+        style: form
+        explode: true
+      - name: contains-group
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Controls whether the userGroups filter includes or excludes matching group ids.
+        example: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+              example:
+              - archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+    post:
+      tags:
+      - Projects
+      operationId: createProject
+      summary: Add a new project
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            example:
+              billable: false
+              clientId: 9t641568b07987035750704
+              color: '#000000'
+              costRate:
+                amount: 20000
+                since: '2020-01-01T00:00:00Z'
+              estimate:
+                estimate: PT1H30M
+                type: AUTO
+              hourlyRate:
+                amount: 20000
+                since: '2020-01-01T00:00:00Z'
+              isPublic: false
+              memberships:
+              - hourlyRate:
+                  amount: 20000
+                  since: '2020-01-01T00:00:00Z'
+                membershipStatus: ACTIVE
+                membershipType: PROJECT
+                userId: 45b687e29ae1f428e7ebe123
+              name: Software Development
+              note: This is a sample note for the project.
+              tasks:
+              - assigneeIds:
+                - 45b687e29ae1f428e7ebe123
+                billable: false
+                budgetEstimate: 10000
+                estimate: PT1H30M
+                name: Bugfixing
+                status: ACTIVE
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/from-template:
+    post:
+      tags:
+      - Projects
+      operationId: createProjectFromTemplate
+      summary: Create project from a template
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectFromTemplateRequest'
+            example:
+              clientId: 9t641568b07987035750704
+              color: '#000000'
+              isPublic: false
+              name: Software Development
+              templateProjectId: 5b641568b07987035750505e
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}:
+    get:
+      tags:
+      - Projects
+      operationId: getProjectById
+      summary: Find a project by ID
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      - name: hydrated
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If true, results contain additional information about the project.
+        example: false
+      - name: custom-field-entity-type
+        in: query
+        required: false
+        schema:
+          type: string
+          default: TIMEENTRY
+        description: Filters custom fields by custom field entity type.
+        example: TIMEENTRY
+      - name: expense-limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+        description: Represents the maximum number of expenses to fetch.
+        example: 10
+      - name: expense-date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: If provided, returns expenses dated before the provided yyyy-MM-dd date.
+        example: '2024-12-31'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+    put:
+      tags:
+      - Projects
+      operationId: updateProject
+      summary: Update a project on a workspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+            example:
+              archived: false
+              billable: false
+              clientId: 9t641568b07987035750704
+              color: '#000000'
+              costRate:
+                amount: 20000
+                since: '2020-01-01T00:00:00Z'
+              hourlyRate:
+                amount: 20000
+                since: '2020-01-01T00:00:00Z'
+              isPublic: false
+              name: Software Development
+              note: This is a sample note for the project.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+    delete:
+      tags:
+      - Projects
+      operationId: deleteProject
+      summary: Delete a project from a workspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}/estimate:
+    patch:
+      tags:
+      - Projects
+      operationId: updateProjectEstimate
+      summary: Update project estimate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectEstimateRequest'
+            example:
+              budgetEstimate:
+                active: true
+                estimate: 10000
+                includeExpenses: false
+                resetOption: MONTHLY
+                type: AUTO
+              estimateReset:
+                active: true
+                dayOfMonth: 1
+                dayOfWeek: MONDAY
+                hour: 0
+                interval: MONTHLY
+                isActive: true
+                month: JANUARY
+              timeEstimate:
+                active: true
+                estimate: PT1H30M
+                includeNonBillable: false
+                resetOption: MONTHLY
+                type: AUTO
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}/memberships:
+    patch:
+      tags:
+      - Projects
+      operationId: updateProjectMemberships
+      summary: Update project memberships
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectMembershipsRequest'
+            example:
+              memberships:
+              - costRate:
+                  amount: 20000
+                  since: '2020-01-01T00:00:00Z'
+                hourlyRate:
+                  amount: 20000
+                  since: '2020-01-01T00:00:00Z'
+                userId: 45b687e29ae1f428e7ebe123
+              userGroups:
+                contains: CONTAINS
+                ids:
+                - 67b687e29ae1f428e7ebe123
+                status: ACTIVE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+    post:
+      tags:
+      - Projects
+      operationId: assignOrRemoveProjectUsers
+      summary: Assign/remove users to/from the project
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRemoveUsersRequest'
+            example:
+              remove: false
+              userGroups:
+                contains: CONTAINS
+                ids:
+                - 67b687e29ae1f428e7ebe123
+                status: ACTIVE
+              userIds:
+              - 45b687e29ae1f428e7ebe123
+              - 67s687e29ae1f428e7ebe678
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}/template:
+    patch:
+      tags:
+      - Projects
+      operationId: updateProjectTemplate
+      summary: Update a project template
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectTemplateRequest'
+            example:
+              isTemplate: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate:
+    put:
+      tags:
+      - Projects
+      operationId: updateProjectUserCostRate
+      summary: Update project user's cost rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 4a0ab5acb07987125438b60f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate:
+    put:
+      tags:
+      - Projects
+      operationId: updateProjectUserHourlyRate
+      summary: Update a project user's billable rate
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a project identifier across the system.
+        example: 5b641568b07987035750505e
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Represents a user identifier across the system.
+        example: 4a0ab5acb07987125438b60f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateRequest'
+            example:
+              amount: 20000
+              since: '2020-01-01T00:00:00Z'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                archived: false
+                billable: false
+                budgetEstimate:
+                  active: true
+                  estimate: 10000
+                  includeExpenses: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                clientId: 9t641568b07987035750704
+                clientName: Client X
+                color: '#000000'
+                costRate:
+                  amount: 20000
+                  currency: USD
+                duration: '60000'
+                estimate:
+                  estimate: PT1H30M
+                  type: AUTO
+                estimateReset:
+                  dayOfMonth: 1
+                  dayOfWeek: MONDAY
+                  hour: 0
+                  interval: MONTHLY
+                  month: JANUARY
+                hourlyRate:
+                  amount: 20000
+                  currency: USD
+                id: 5b641568b07987035750505e
+                memberships:
+                - costRate:
+                    amount: 20000
+                    currency: USD
+                  hourlyRate:
+                    amount: 20000
+                    currency: USD
+                  membershipStatus: ACTIVE
+                  membershipType: PROJECT
+                  targetId: 5b641568b07987035750505e
+                  userId: 45b687e29ae1f428e7ebe123
+                name: Software Development
+                note: This is a sample note for the project.
+                public: false
+                template: false
+                timeEstimate:
+                  active: true
+                  estimate: PT1H30M
+                  includeNonBillable: false
+                  resetOption: MONTHLY
+                  type: AUTO
+                workspaceId: 64a687e29ae1f428e7ebe303
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Addon key authorization.
+  schemas:
+    RateDtoV1:
+      type: object
+      description: Represents an hourly or cost rate object.
+      properties:
+        amount:
+          type: integer
+          format: int32
+          description: Represents an amount as integer.
+        currency:
+          type: string
+          description: Represents a currency.
+      additionalProperties: false
+    RateRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Represents an amount as integer.
+        since:
+          type: string
+          format: date-time
+          description: Represents a date and time in yyyy-MM-ddThh:mm:ssZ format.
+      additionalProperties: false
+    EstimateDtoV1:
+      type: object
+      description: Represents a project estimate object.
+      properties:
+        estimate:
+          type: string
+          description: Represents a task duration estimate.
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+          description: Represents an estimate type enum.
+      additionalProperties: false
+    EstimateRequest:
+      type: object
+      description: Represents an estimate request object.
+      properties:
+        estimate:
+          type: string
+          description: Represents a time duration in ISO-8601 format.
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+          description: Represents an estimate type enum.
+      additionalProperties: false
+    EstimateWithOptionsDto:
+      type: object
+      description: Represents a project budget estimate object.
+      properties:
+        active:
+          type: boolean
+        estimate:
+          type: integer
+          format: int64
+          description: Represents an estimate as long.
+        includeExpenses:
+          type: boolean
+          default: false
+          description: Indicates whether estimate includes expenses.
+        resetOption:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+          description: Represents a reset option enum.
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+          description: Represents an estimate type enum.
+      additionalProperties: false
+    EstimateWithOptionsRequest:
+      type: object
+      description: Represents estimate with options request object.
+      properties:
+        active:
+          type: boolean
+          default: false
+          description: Flag whether to set estimate as active or not.
+        estimate:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Represents an estimate as long.
+        includeExpenses:
+          type: boolean
+          default: false
+          description: Flag whether to include billable expenses.
+        resetOption:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+          description: Represents a reset option enum.
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+          description: Represents an estimate type enum.
+      additionalProperties: false
+    EstimateResetDto:
+      type: object
+      description: Represents project estimate reset object.
+      properties:
+        dayOfMonth:
+          type: integer
+          format: int32
+        dayOfWeek:
+          type: string
+          enum:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+          - SATURDAY
+          - SUNDAY
+        hour:
+          type: integer
+          format: int32
+        interval:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+        month:
+          type: string
+          enum:
+          - JANUARY
+          - FEBRUARY
+          - MARCH
+          - APRIL
+          - MAY
+          - JUNE
+          - JULY
+          - AUGUST
+          - SEPTEMBER
+          - OCTOBER
+          - NOVEMBER
+          - DECEMBER
+      additionalProperties: false
+    EstimateResetRequest:
+      type: object
+      description: Represents estimate reset request object.
+      properties:
+        active:
+          type: boolean
+        dayOfMonth:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 31
+          description: Represents a day of the month.
+        dayOfWeek:
+          type: string
+          enum:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+          - SATURDAY
+          - SUNDAY
+          description: Represents a day of the week.
+        hour:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 23
+          description: Represents an hour of the day in 24-hour time format.
+        interval:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+          description: Represents a reset option enum.
+        isActive:
+          type: boolean
+        month:
+          type: string
+          enum:
+          - JANUARY
+          - FEBRUARY
+          - MARCH
+          - APRIL
+          - MAY
+          - JUNE
+          - JULY
+          - AUGUST
+          - SEPTEMBER
+          - OCTOBER
+          - NOVEMBER
+          - DECEMBER
+          description: Represents a month enum.
+      additionalProperties: false
+    TimeEstimateDto:
+      type: object
+      description: Represents a project time estimate object.
+      properties:
+        active:
+          type: boolean
+        estimate:
+          type: string
+          description: Represents project duration in milliseconds or ISO-8601 duration.
+        includeNonBillable:
+          type: boolean
+        resetOption:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+      additionalProperties: false
+    TimeEstimateRequest:
+      type: object
+      description: Represents project time estimate request object.
+      properties:
+        active:
+          type: boolean
+          default: false
+          description: Flag whether to include only active or inactive estimates.
+        estimate:
+          type: string
+          description: Represents a time duration in ISO-8601 format.
+        includeNonBillable:
+          type: boolean
+          default: false
+          description: Flag whether to include non-billable expenses.
+        resetOption:
+          type: string
+          enum:
+          - WEEKLY
+          - MONTHLY
+          - YEARLY
+        type:
+          type: string
+          enum:
+          - AUTO
+          - MANUAL
+      additionalProperties: false
+    MembershipDtoV1:
+      type: object
+      description: Represents a membership object.
+      properties:
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        membershipStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+          description: Represents a membership status enum.
+        membershipType:
+          type: string
+          enum:
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+          description: Represents membership type enum.
+        targetId:
+          type: string
+          description: Represents target identifier across the system.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+      additionalProperties: false
+    MembershipRequest:
+      type: object
+      description: Represents a membership request object.
+      properties:
+        hourlyRate:
+          $ref: '#/components/schemas/RateRequest'
+        membershipStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - DECLINED
+          - INACTIVE
+          - ALL
+        membershipType:
+          type: string
+          enum:
+          - WORKSPACE
+          - PROJECT
+          - USERGROUP
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+      additionalProperties: false
+    UserIdWithRatesRequest:
+      type: object
+      required:
+      - userId
+      description: Represents a user id with cost and hourly rates.
+      properties:
+        costRate:
+          $ref: '#/components/schemas/RateRequest'
+        hourlyRate:
+          $ref: '#/components/schemas/RateRequest'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+      additionalProperties: false
+    UserGroupIdsSchema:
+      type: object
+      description: Provide list with user group ids and corresponding status.
+      properties:
+        contains:
+          type: string
+          enum:
+          - CONTAINS
+          - DOES_NOT_CONTAIN
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents ids upon which filtering is performed.
+        status:
+          type: string
+          enum:
+          - ALL
+          - ACTIVE
+          - INACTIVE
+          description: Represents user status.
+      additionalProperties: false
+    TaskRequest:
+      type: object
+      description: Represents a task request object used when creating a project.
+      required:
+      - name
+      properties:
+        assigneeId:
+          type: string
+          deprecated: true
+        assigneeIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents list of assignee ids for the task.
+        billable:
+          type: boolean
+          default: false
+          description: Flag to set whether task is billable or not.
+        budgetEstimate:
+          type: integer
+          format: int64
+          minimum: 0
+        costRate:
+          $ref: '#/components/schemas/RateRequest'
+        estimate:
+          type: string
+          description: Represents a task duration estimate.
+        hourlyRate:
+          $ref: '#/components/schemas/RateRequest'
+        id:
+          type: string
+          description: Represents task identifier across the system.
+        name:
+          type: string
+          description: Represents task name.
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - DONE
+          - ALL
+          description: Represents task status.
+        userGroupIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents list of user group ids for the task.
+      additionalProperties: false
+    Project:
+      type: object
+      description: Represents a Clockify project.
+      properties:
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether project is archived or not.
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether project is billable or not.
+        budgetEstimate:
+          $ref: '#/components/schemas/EstimateWithOptionsDto'
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+        clientName:
+          type: string
+          description: Represents client name.
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        duration:
+          type: string
+          description: Represents project duration in milliseconds.
+        estimate:
+          $ref: '#/components/schemas/EstimateDtoV1'
+        estimateReset:
+          $ref: '#/components/schemas/EstimateResetDto'
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        id:
+          type: string
+          description: Represents project identifier across the system.
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembershipDtoV1'
+          description: Represents a list of membership objects.
+        name:
+          type: string
+          description: Represents a project name.
+        note:
+          type: string
+          description: Represents project note.
+        public:
+          type: boolean
+          default: false
+          description: Indicates whether project is public or not.
+        template:
+          type: boolean
+          default: false
+          description: Indicates whether project is a template or not.
+        timeEstimate:
+          $ref: '#/components/schemas/TimeEstimateDto'
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false
+    CreateProjectRequest:
+      type: object
+      required:
+      - name
+      properties:
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether project is billable or not.
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        costRate:
+          $ref: '#/components/schemas/RateRequest'
+        estimate:
+          $ref: '#/components/schemas/EstimateRequest'
+        hourlyRate:
+          $ref: '#/components/schemas/RateRequest'
+        isPublic:
+          type: boolean
+          default: false
+          description: Indicates whether project is public or not.
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembershipRequest'
+          description: Represents a list of membership request objects.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 250
+          description: Represents a project name.
+        note:
+          type: string
+          maxLength: 16384
+          description: Represents project note.
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskRequest'
+          description: Represents a list of task request objects.
+      additionalProperties: false
+    CreateProjectFromTemplateRequest:
+      type: object
+      required:
+      - name
+      - templateProjectId
+      properties:
+        clientId:
+          type: string
+          description: Represents a client identifier across the system.
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        isPublic:
+          type: boolean
+          default: false
+          description: Indicates whether the project is public or not.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 250
+          description: Represents a project name.
+        templateProjectId:
+          type: string
+          minLength: 1
+          description: Represents a project identifier across the system.
+      additionalProperties: false
+    UpdateProjectRequest:
+      type: object
+      properties:
+        archived:
+          type: boolean
+          default: false
+          description: Indicates whether project is archived or not.
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether project is billable or not.
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        costRate:
+          $ref: '#/components/schemas/RateRequest'
+        hourlyRate:
+          $ref: '#/components/schemas/RateRequest'
+        isPublic:
+          type: boolean
+          default: false
+          description: Indicates whether project is public or not.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 250
+          description: Represents a project name.
+        note:
+          type: string
+          maxLength: 16384
+          description: Represents project note.
+      additionalProperties: false
+    UpdateProjectEstimateRequest:
+      type: object
+      properties:
+        budgetEstimate:
+          $ref: '#/components/schemas/EstimateWithOptionsRequest'
+        estimateReset:
+          $ref: '#/components/schemas/EstimateResetRequest'
+        timeEstimate:
+          $ref: '#/components/schemas/TimeEstimateRequest'
+      additionalProperties: false
+    UpdateProjectMembershipsRequest:
+      type: object
+      required:
+      - memberships
+      properties:
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserIdWithRatesRequest'
+          description: Represents a list of users with id and rates request objects.
+        userGroups:
+          $ref: '#/components/schemas/UserGroupIdsSchema'
+      additionalProperties: false
+    AssignRemoveUsersRequest:
+      type: object
+      properties:
+        remove:
+          type: boolean
+          default: false
+          description: Setting this flag to true will remove the given users from the project.
+        userGroups:
+          $ref: '#/components/schemas/UserGroupIdsSchema'
+        userIds:
+          type: array
+          items:
+            type: string
+          description: Represents array of user ids which should be added/removed.
+      additionalProperties: false
+    UpdateProjectTemplateRequest:
+      type: object
+      required:
+      - isTemplate
+      properties:
+        isTemplate:
+          type: boolean
+          default: false
+          description: Indicates whether project is a template or not.
+      additionalProperties: false

@@ -1,0 +1,3390 @@
+openapi: 3.0.3
+info:
+  title: Clockify API — Probe-Verified Comprehensive Specification
+  version: "2026-05-12"
+  description: |
+    Comprehensive OpenAPI 3.0.3 specification synthesised from live probes
+    against workspace `65b382b606de527a7ee2b60e` plus the public *DOC.md
+    files in `clockify-api-probe-lab/`. Every operation listed has at
+    least one source of evidence — either a captured fixture under
+    `fixtures/<domain>/` or a cross-checked supplementary OpenAPI file
+    (Invoiceopenapi.yaml, inveoice+Balance+Policies+TimeOff.yaml,
+    openapi_scheduling.yaml, openapi_timeentry.yaml,
+    openapi_usergroups_tags.yaml, USEREXPENCUSTOMFIED.yaml).
+
+    Known verified deltas from the public docs are recorded inline in
+    operation descriptions and schema descriptions. See `findings/`
+    directory for narrative evidence and `findings/SUMMARY.md` for the
+    prioritised go-clockify change list.
+
+    Authentication
+    --------------
+    All operations use `X-Api-Key`. Add-on contexts use `X-Addon-Token`
+    instead (separate JWT-bound flow). `Authorization: Bearer` is NOT
+    accepted on the v1 surface.
+
+    Host map
+    --------
+    - Default: https://api.clockify.me/api/v1
+    - Reports (shared-reports + summary/detailed/weekly/attendance):
+      https://reports.api.clockify.me/v1
+    - Time-off requests and balance/policy endpoints live on the default
+      host under `/workspaces/{ws}/time-off/...` and `/workspaces/{ws}/policies/...`.
+
+servers:
+  - url: https://api.clockify.me/api/v1
+    description: Main Clockify API (default host for all operations except reports)
+  - url: https://reports.api.clockify.me/v1
+    description: Reports API host — for /workspaces/{ws}/reports/{summary,detailed,weekly,attendance} and /shared-reports
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - { name: User,        description: "Current user, user list, role management" }
+  - { name: Workspace,   description: "Workspaces and workspace settings" }
+  - { name: Client,      description: "Workspace clients" }
+  - { name: Project,     description: "Projects, memberships, estimates, rates" }
+  - { name: Task,        description: "Project tasks" }
+  - { name: Tag,         description: "Workspace tags" }
+  - { name: TimeEntry,   description: "Time entries — log, edit, bulk update" }
+  - { name: Group,       description: "User groups (teams)" }
+  - { name: CustomField, description: "Workspace + project custom fields" }
+  - { name: Holiday,     description: "Workspace holidays" }
+  - { name: Approval,    description: "Timesheet approval requests" }
+  - { name: TimeOff,     description: "Time-off requests + policies + balances" }
+  - { name: Policy,      description: "Time-off policies" }
+  - { name: Balance,     description: "Time-off balances" }
+  - { name: Invoice,     description: "Invoices, line items, payments, settings" }
+  - { name: Expense,     description: "Expenses + categories (multipart)" }
+  - { name: Webhook,     description: "User-defined webhooks (do not invoke /test against prod)" }
+  - { name: Scheduling,  description: "Scheduling assignments + capacity" }
+  - { name: Report,      description: "Summary / Detailed / Weekly / Attendance reports" }
+  - { name: SharedReport, description: "Shared reports (different host + path prefix)" }
+  - { name: Attendance,  description: "Per-user attendance and time totals" }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string, example: 65b382b606de527a7ee2b60e }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string }
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema: { type: string }
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      schema: { type: string }
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema: { type: string }
+    HolidayId:
+      name: holidayId
+      in: path
+      required: true
+      schema: { type: string }
+    CustomFieldId:
+      name: customFieldId
+      in: path
+      required: true
+      schema: { type: string }
+    InvoiceId:
+      name: invoiceId
+      in: path
+      required: true
+      schema: { type: string }
+    ExpenseId:
+      name: expenseId
+      in: path
+      required: true
+      schema: { type: string }
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema: { type: string }
+    WebhookId:
+      name: webhookId
+      in: path
+      required: true
+      schema: { type: string }
+    ApprovalId:
+      name: approvalId
+      in: path
+      required: true
+      schema: { type: string }
+    PolicyId:
+      name: policyId
+      in: path
+      required: true
+      schema: { type: string }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string }
+    TimeEntryId:
+      name: timeEntryId
+      in: path
+      required: true
+      schema: { type: string }
+    SharedReportId:
+      name: sharedReportId
+      in: path
+      required: true
+      schema: { type: string }
+    PageQuery:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSizeHyphen:
+      name: page-size
+      in: query
+      description: |
+        Hyphenated `page-size` is the documented spelling for v1 listing
+        endpoints. Note: shared-reports uses `pageSize` (camelCase); the
+        hyphenated form is silently ignored there.
+      schema: { type: integer, minimum: 1, default: 50 }
+    PageSizeCamel:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, default: 50 }
+
+  schemas:
+    # ---------- shared enums ----------
+    Currency:
+      type: string
+      description: ISO 4217 currency code
+      example: EUR
+
+    RateDto:
+      type: object
+      properties:
+        amount:    { type: integer, description: "Rate in minor units (cents). e.g. 12000 = 120.00" }
+        currency:  { $ref: "#/components/schemas/Currency" }
+
+    HourlyRateDto:
+      allOf:
+        - $ref: "#/components/schemas/RateDto"
+
+    CostRateDto:
+      allOf:
+        - $ref: "#/components/schemas/RateDto"
+
+    DatePeriod:
+      type: object
+      required: [startDate, endDate]
+      properties:
+        startDate: { type: string, format: date, example: "2026-05-01" }
+        endDate:   { type: string, format: date, example: "2026-05-01" }
+
+    DateTimeInterval:
+      type: object
+      properties:
+        start: { type: string, format: date-time }
+        end:   { type: string, format: date-time, nullable: true }
+        duration: { type: string, nullable: true, description: "ISO 8601 duration, e.g. PT1H30M" }
+        timeZone: { type: string, nullable: true }
+        zonedStart: { type: string, nullable: true }
+        zonedEnd:   { type: string, nullable: true }
+        offStart:   { type: integer, nullable: true }
+        offEnd:     { type: integer, nullable: true }
+
+    # ---------- error envelope ----------
+    ClockifyError:
+      type: object
+      description: |
+        Clockify error envelope. Body shape is `{message, code}` where
+        `code` is an internal *application* error code (commonly 501,
+        3000, 3001, 3002, 4006, 4033) and is NOT the HTTP status. The
+        HTTP status conveys the transport-level outcome (400, 403, 404,
+        405, 409); the inner `code` disambiguates the upstream cause:
+          • 501 → generic validation failure (often paired with HTTP 400)
+          • 3000 → method not supported on this sub-resource (HTTP 405)
+          • 3001 / 3002 → resource not found / not in this workspace
+          • 4006 → approval-request state-machine violation
+          • 4033 → permission / role insufficient
+        Many mutation endpoints reply with HTTP 400 + body `code:501` for
+        any validation failure; many GET-on-sub-resource paths reply with
+        HTTP 405 + body `code:3000`.
+      required: [message, code]
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "Internal app code, not HTTP status" }
+
+    ErrorResponse:
+      description: "Alias of ClockifyError (operator-specified canonical name)."
+      allOf: [{ $ref: "#/components/schemas/ClockifyError" }]
+
+    # ---------- user ----------
+    UserMembership:
+      type: object
+      properties:
+        userId:      { type: string }
+        hourlyRate:  { $ref: "#/components/schemas/RateDto", nullable: true }
+        costRate:    { $ref: "#/components/schemas/RateDto", nullable: true }
+        targetId:    { type: string }
+        membershipType:   { type: string, enum: [WORKSPACE, PROJECT, TASK, USERGROUP] }
+        membershipStatus: { type: string, enum: [PENDING, ACTIVE, INACTIVE, DECLINED] }
+
+    User:
+      type: object
+      properties:
+        id:                 { type: string }
+        email:              { type: string, format: email }
+        name:               { type: string }
+        memberships:        { type: array, items: { $ref: "#/components/schemas/UserMembership" } }
+        profilePicture:     { type: string }
+        activeWorkspace:    { type: string }
+        defaultWorkspace:   { type: string }
+        settings:           { type: object, additionalProperties: true }
+        status:             { type: string, enum: [ACTIVE, PENDING_EMAIL_VERIFICATION, DELETED] }
+        customFields:       { type: array, items: { type: object, additionalProperties: true } }
+
+    UserRole:
+      type: object
+      properties:
+        workspaceId: { type: string }
+        userId:      { type: string }
+        role:
+          type: object
+          properties:
+            name:   { type: string, enum: [WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, OWNER] }
+            id:     { type: string }
+            source: { type: string, nullable: true, enum: [USER_GROUP, null] }
+
+    RoleAssignRequest:
+      type: object
+      required: [role, entityId]
+      description: |
+        Role assignment semantics (verified live):
+          • role=WORKSPACE_ADMIN  → entityId is the workspaceId
+          • role=PROJECT_MANAGER  → entityId is the projectId
+          • role=TEAM_MANAGER     → entityId is the userId of the managed user
+                                    (no `sourceType`) OR
+                                    entityId is the user-group id with
+                                    `sourceType=USER_GROUP`
+        Re-adding an existing role returns HTTP 400 with
+        `{message: "Roles were not updated because role already exists.", code:501}`.
+        Adding `WORKSPACE_ADMIN` for the first time returns 201 with an
+        array of UserRole objects.
+      properties:
+        role:       { type: string, enum: [WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER] }
+        entityId:   { type: string }
+        sourceType: { type: string, enum: [USER_GROUP] }
+
+    # ---------- workspace ----------
+    WorkspaceSettings:
+      type: object
+      additionalProperties: true
+      description: |
+        Workspace settings is a large, mostly-flat dictionary (~80 keys)
+        controlling features (timeRoundingInReports, lockTimeEntries,
+        timeFormat, decimalFormat, projectFavorites, etc.). The exact
+        keys are tied to the workspace's plan tier and are stable but
+        not enumerated here; treat as `additionalProperties: true`.
+
+    Workspace:
+      type: object
+      properties:
+        id:                { type: string }
+        name:              { type: string }
+        hourlyRate:        { $ref: "#/components/schemas/RateDto" }
+        memberships:       { type: array, items: { $ref: "#/components/schemas/UserMembership" } }
+        workspaceSettings: { $ref: "#/components/schemas/WorkspaceSettings" }
+        imageUrl:          { type: string, nullable: true }
+        featureSubscriptionType: { type: string }
+        currencies:        { type: array, items: { $ref: "#/components/schemas/Currency" } }
+        subdomain:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    # ---------- client ----------
+    Client:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        email:       { type: string, format: email, nullable: true }
+        workspaceId: { type: string }
+        archived:    { type: boolean }
+        address:     { type: string, nullable: true }
+        note:        { type: string, nullable: true }
+        currencyCode: { $ref: "#/components/schemas/Currency" }
+
+    ClientCreate:
+      type: object
+      required: [name]
+      properties:
+        name:    { type: string }
+        email:   { type: string, format: email }
+        address: { type: string }
+        note:    { type: string }
+        currencyCode: { $ref: "#/components/schemas/Currency" }
+
+    ClientUpdate: { $ref: "#/components/schemas/ClientCreate" }
+
+    # ---------- project ----------
+    EstimateDto:
+      type: object
+      properties:
+        estimate: { type: string, description: "ISO 8601 duration string, e.g. PT8H" }
+        type:     { type: string, enum: [AUTO, MANUAL] }
+
+    BudgetEstimateDto:
+      type: object
+      properties:
+        estimate: { type: number }
+        type:     { type: string, enum: [AUTO, MANUAL] }
+        resetOption: { type: string, nullable: true, enum: [MONTHLY, QUARTERLY, YEARLY, null] }
+        active:   { type: boolean }
+
+    Project:
+      type: object
+      properties:
+        id:           { type: string }
+        name:         { type: string }
+        hourlyRate:   { $ref: "#/components/schemas/RateDto" }
+        costRate:     { $ref: "#/components/schemas/RateDto", nullable: true }
+        clientId:     { type: string, nullable: true }
+        workspaceId:  { type: string }
+        billable:     { type: boolean }
+        memberships:  { type: array, items: { $ref: "#/components/schemas/UserMembership" } }
+        color:        { type: string }
+        estimate:     { $ref: "#/components/schemas/EstimateDto" }
+        archived:     { type: boolean }
+        duration:     { type: string, nullable: true }
+        clientName:   { type: string, nullable: true }
+        note:         { type: string, nullable: true }
+        timeEstimate: { type: object, additionalProperties: true }
+        budgetEstimate: { $ref: "#/components/schemas/BudgetEstimateDto" }
+        estimateReset: { type: object, nullable: true, additionalProperties: true }
+        template:     { type: boolean }
+        public:       { type: boolean }
+
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:       { type: string }
+        clientId:   { type: string }
+        isPublic:   { type: boolean, default: false }
+        billable:   { type: boolean, default: false }
+        color:      { type: string }
+        note:       { type: string }
+        hourlyRate: { $ref: "#/components/schemas/RateDto" }
+        costRate:   { $ref: "#/components/schemas/RateDto" }
+
+    ProjectMembershipsPatch:
+      type: object
+      description: |
+        REPLACE semantics confirmed live (May 2026). PATCH with an
+        explicit array of member objects replaces the project's current
+        membership list — callers must send the full desired list.
+        The legacy `PUT /projects/{id}/memberships` returns 405.
+      required: [memberships]
+      properties:
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [userId]
+            properties:
+              userId:           { type: string }
+              membershipStatus: { type: string, enum: [PENDING, ACTIVE, INACTIVE, DECLINED] }
+              hourlyRate:       { $ref: "#/components/schemas/RateDto" }
+              costRate:         { $ref: "#/components/schemas/RateDto" }
+
+    # ---------- task ----------
+    Task:
+      type: object
+      properties:
+        id:              { type: string }
+        name:            { type: string }
+        projectId:       { type: string }
+        assigneeIds:     { type: array, items: { type: string } }
+        userGroupIds:    { type: array, items: { type: string } }
+        estimate:        { type: string, nullable: true, description: "ISO 8601 duration" }
+        status:          { type: string, enum: [ACTIVE, DONE] }
+        budgetEstimate:  { type: number, nullable: true }
+        billable:        { type: boolean }
+        hourlyRate:      { $ref: "#/components/schemas/RateDto", nullable: true }
+        costRate:        { $ref: "#/components/schemas/RateDto", nullable: true }
+        duration:        { type: string, nullable: true }
+
+    TaskCreate:
+      type: object
+      required: [name]
+      properties:
+        name:         { type: string }
+        assigneeIds:  { type: array, items: { type: string } }
+        userGroupIds: { type: array, items: { type: string } }
+        billable:     { type: boolean }
+        estimate:     { type: string }
+        status:       { type: string, enum: [ACTIVE, DONE] }
+
+    # ---------- tag ----------
+    Tag:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        workspaceId: { type: string }
+        archived:    { type: boolean }
+
+    TagCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    # ---------- time entry ----------
+    TimeEntry:
+      type: object
+      properties:
+        id:                { type: string }
+        description:       { type: string }
+        tagIds:            { type: array, nullable: true, items: { type: string } }
+        userId:            { type: string }
+        billable:          { type: boolean }
+        taskId:            { type: string, nullable: true }
+        projectId:         { type: string, nullable: true }
+        workspaceId:       { type: string }
+        timeInterval:      { $ref: "#/components/schemas/DateTimeInterval" }
+        customFieldValues: { type: array, items: { type: object, additionalProperties: true } }
+        type:              { type: string, enum: [REGULAR, BREAK, TIMEOFF, HOLIDAY, OVERTIME] }
+        kioskId:           { type: string, nullable: true }
+        hourlyRate:        { $ref: "#/components/schemas/RateDto", nullable: true }
+        costRate:          { $ref: "#/components/schemas/RateDto", nullable: true }
+        isLocked:          { type: boolean }
+        approvalRequestId: { type: string, nullable: true }
+
+    TimeEntryCreate:
+      type: object
+      required: [start]
+      properties:
+        start:        { type: string, format: date-time, description: "Required ISO 8601" }
+        end:          { type: string, format: date-time, description: "Omit to start a running timer" }
+        billable:     { type: boolean }
+        description:  { type: string }
+        projectId:    { type: string }
+        taskId:       { type: string }
+        tagIds:       { type: array, items: { type: string } }
+        customFields:
+          type: array
+          items:
+            type: object
+            properties:
+              customFieldId: { type: string }
+              sourceType:    { type: string, enum: [WORKSPACE, PROJECT] }
+              value:         { description: "Polymorphic — string/number/array depending on custom-field type" }
+        type:         { type: string, enum: [REGULAR, BREAK] }
+
+    TimeEntryUpdate:
+      allOf:
+        - $ref: "#/components/schemas/TimeEntryCreate"
+
+    # ---------- group ----------
+    UserGroup:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        workspaceId: { type: string }
+        userIds:     { type: array, items: { type: string } }
+
+    UserGroupCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    # ---------- holiday ----------
+    Holiday:
+      type: object
+      properties:
+        id:              { type: string }
+        name:            { type: string }
+        workspaceId:     { type: string }
+        datePeriod:      { $ref: "#/components/schemas/DatePeriod" }
+        occursAnnually:  { type: boolean }
+        users:
+          type: object
+          properties:
+            ids:      { type: array, items: { type: string } }
+            contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+            status:   { type: string, enum: [ALL, ACTIVE, INACTIVE] }
+        userGroups:
+          type: object
+          properties:
+            ids:      { type: array, items: { type: string } }
+            contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+
+    HolidayCreate:
+      type: object
+      required: [name, datePeriod]
+      description: |
+        VERIFIED LIVE:
+          • `date` flat field is rejected (400). MUST use `datePeriod.{startDate,endDate}` in `yyyy-MM-dd`.
+          • Body MUST include at least one of `users.ids` or `userGroups.ids`
+            (server returns `400 code:501 "At least one user or user group must be assigned"`).
+          • The docs say `recurring`; upstream accepts `occursAnnually`.
+      properties:
+        name:           { type: string }
+        datePeriod:     { $ref: "#/components/schemas/DatePeriod" }
+        occursAnnually: { type: boolean }
+        users:
+          type: object
+          properties:
+            ids: { type: array, items: { type: string } }
+        userGroups:
+          type: object
+          properties:
+            ids: { type: array, items: { type: string } }
+
+    # ---------- custom fields ----------
+    CustomField:
+      type: object
+      properties:
+        id:            { type: string }
+        name:          { type: string }
+        type:
+          type: string
+          description: "VERIFIED ENUM (live-rejected `TEXT`/`DROPDOWN` aliases)."
+          enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]
+        workspaceId:   { type: string }
+        description:   { type: string, nullable: true }
+        allowedValues: { type: array, items: { type: string }, nullable: true }
+        status:        { type: string, enum: [VISIBLE, INVISIBLE, INACTIVE] }
+        onlyAdminCanEdit: { type: boolean }
+        projectDefaultValues: { type: array, nullable: true, items: { type: object, additionalProperties: true } }
+        entityType:    { type: string, enum: [WORKSPACE, USER, TIMEENTRY, EXPENSE] }
+
+    CustomFieldCreate:
+      type: object
+      required: [name, type]
+      properties:
+        name:          { type: string }
+        type:          { $ref: "#/components/schemas/CustomField/properties/type" }
+        description:   { type: string }
+        allowedValues: { type: array, items: { type: string } }
+        onlyAdminCanEdit: { type: boolean }
+        entityType:    { type: string, enum: [WORKSPACE, USER, TIMEENTRY, EXPENSE] }
+
+    # ---------- expenses ----------
+    ExpenseCategory:
+      type: object
+      properties:
+        id:          { type: string }
+        name:        { type: string }
+        unit:        { type: string }
+        priceInCents: { type: integer }
+        archived:    { type: boolean }
+        workspaceId: { type: string }
+        hasUnitPrice: { type: boolean }
+        priority:    { type: integer }
+
+    Expense:
+      type: object
+      properties:
+        id:         { type: string }
+        userId:     { type: string }
+        workspaceId: { type: string }
+        date:       { type: string, format: date-time }
+        projectId:  { type: string, nullable: true }
+        taskId:     { type: string, nullable: true }
+        categoryId: { type: string }
+        notes:      { type: string, nullable: true }
+        quantity:   { type: number, nullable: true }
+        total:      { type: number, description: "Stored in minor units. Input 1.50 → total 150.0." }
+        billable:   { type: boolean }
+        fileId:     { type: string, nullable: true }
+        fileName:   { type: string, nullable: true }
+        locked:     { type: boolean }
+        approvalRequestId: { type: string, nullable: true }
+        customFieldValues: { type: array, items: { type: object, additionalProperties: true } }
+        budgetEstimate: { type: number, nullable: true }
+        category:   { $ref: "#/components/schemas/ExpenseCategory" }
+
+    ExpenseListEnvelope:
+      type: object
+      description: |
+        Double-nested envelope; the outer `expenses` is an OBJECT and
+        the inner `expenses` is the array. `weeklyTotals` and
+        `dailyTotals` ride alongside.
+      properties:
+        expenses:
+          type: object
+          properties:
+            expenses: { type: array, items: { $ref: "#/components/schemas/Expense" } }
+            count:    { type: integer }
+        weeklyTotals: { type: array, items: { type: object, additionalProperties: true } }
+        dailyTotals:  { type: array, items: { type: object, additionalProperties: true } }
+
+    # ---------- approvals ----------
+    Approval:
+      type: object
+      description: "Approval request envelope (timesheet submission for a date range)."
+      properties:
+        id:              { type: string }
+        workspaceId:     { type: string }
+        ownerName:       { type: string }
+        ownerEmail:      { type: string, format: email }
+        owner:
+          type: object
+          properties:
+            userId: { type: string }
+        dateRange:       { $ref: "#/components/schemas/DateTimeInterval" }
+        creator:         { type: object, additionalProperties: true }
+        updatedBy:       { type: object, nullable: true, additionalProperties: true }
+        status:
+          type: object
+          properties:
+            state: { type: string, enum: [PENDING, APPROVED, WITHDRAWN_SUBMISSION, REJECTED, WITHDRAWN_APPROVAL] }
+            updatedAt: { type: string, format: date-time }
+            note: { type: string, nullable: true }
+
+    # ---------- time off ----------
+    TimeOffPolicy:
+      type: object
+      properties:
+        id:              { type: string }
+        name:            { type: string }
+        workspaceId:     { type: string }
+        archived:        { type: boolean }
+        timeUnit:        { type: string, enum: [DAYS, HOURS] }
+        color:           { type: string }
+        amount:          { type: number }
+        approve:         { type: object, additionalProperties: true }
+        automaticAccrual: { type: object, nullable: true, additionalProperties: true }
+        allowHalfDay:    { type: boolean }
+        allowNegativeBalance: { type: boolean }
+        negativeBalance: { type: object, nullable: true, additionalProperties: true }
+        userAllowanceType: { type: string, nullable: true }
+        users:           { type: object, additionalProperties: true }
+        userGroups:      { type: object, additionalProperties: true }
+        everyoneIncludingNew: { type: boolean }
+        accountingPeriod: { type: object, nullable: true, additionalProperties: true }
+        carryOver:       { type: object, nullable: true, additionalProperties: true }
+
+    TimeOffRequest:
+      type: object
+      properties:
+        id:          { type: string }
+        userId:      { type: string }
+        policyId:    { type: string }
+        workspaceId: { type: string }
+        note:        { type: string, nullable: true }
+        timeUnit:    { type: string, enum: [DAYS, HOURS] }
+        balanceDiff: { type: number }
+        requesterUserId: { type: string }
+        status:
+          type: object
+          properties:
+            statusType: { type: string, enum: [PENDING, APPROVED, REJECTED, WITHDRAWN] }
+            note:       { type: string, nullable: true }
+            createdAt:  { type: string, format: date-time }
+            createdBy:  { type: string }
+            changedAt:  { type: string, format: date-time, nullable: true }
+            changedBy:  { type: string, nullable: true }
+        timeOffPeriod:
+          type: object
+          properties:
+            period:   { $ref: "#/components/schemas/DateTimeInterval" }
+            halfDay:  { type: boolean }
+            halfDayHours: { type: object, nullable: true, additionalProperties: true }
+
+    TimeOffRequestCreate:
+      type: object
+      required: [policyId, timeOffPeriod]
+      properties:
+        policyId: { type: string }
+        note:     { type: string }
+        timeOffPeriod:
+          type: object
+          required: [period]
+          properties:
+            period:  { $ref: "#/components/schemas/DateTimeInterval" }
+            halfDay: { type: boolean }
+
+    Balance:
+      type: object
+      properties:
+        userId:           { type: string }
+        policyId:         { type: string }
+        balance:          { type: number }
+        usedThisPeriod:   { type: number }
+        carriedOver:      { type: number }
+        period:
+          type: object
+          properties:
+            start: { type: string, format: date }
+            end:   { type: string, format: date }
+
+    # ---------- invoice ----------
+    InvoiceLineItem:
+      type: object
+      properties:
+        id:        { type: string }
+        description: { type: string }
+        quantity:  { type: number }
+        unitPrice: { type: integer, description: "Minor units (cents). 100000 = 1000.00." }
+        amount:    { type: integer }
+        taxRate:   { type: number, nullable: true }
+        taxRate2:  { type: number, nullable: true }
+        discount:  { type: number, nullable: true }
+
+    Invoice:
+      type: object
+      properties:
+        id:           { type: string }
+        number:       { type: string }
+        clientId:     { type: string }
+        clientName:   { type: string }
+        workspaceId:  { type: string }
+        status:       { type: string, enum: [UNSENT, SENT, PAID, VOID, PARTIALLY_PAID] }
+        currency:     { $ref: "#/components/schemas/Currency" }
+        amount:       { type: integer }
+        paidAmount:   { type: integer }
+        issuedDate:   { type: string, format: date }
+        dueDate:      { type: string, format: date }
+        note:         { type: string, nullable: true }
+        subject:      { type: string, nullable: true }
+        items:        { type: array, items: { $ref: "#/components/schemas/InvoiceLineItem" } }
+        tax:          { type: object, additionalProperties: true, nullable: true }
+        discount:     { type: object, additionalProperties: true, nullable: true }
+        payments:     { type: array, items: { type: object, additionalProperties: true } }
+        notes:        { type: string, nullable: true }
+        clientAddress: { type: string, nullable: true }
+        companyName:  { type: string, nullable: true }
+        companyAddress: { type: string, nullable: true }
+        containsImportedEntries: { type: boolean }
+
+    InvoiceListResponse:
+      type: object
+      properties:
+        total:    { type: integer }
+        invoices: { type: array, items: { $ref: "#/components/schemas/Invoice" } }
+
+    # ---------- webhook ----------
+    Webhook:
+      type: object
+      properties:
+        id:            { type: string }
+        workspaceId:   { type: string }
+        userId:        { type: string }
+        url:           { type: string, format: uri }
+        triggerSource:
+          type: array
+          items: { type: string }
+        triggerSourceType:
+          type: string
+          enum: [USER_ID, PROJECT_ID, TAG_ID, TASK_ID, CLIENT_ID, USER_GROUP_ID, WORKSPACE_ID]
+        webhookEvent:
+          type: string
+          enum:
+            # 52-value live enum (subset shown; matches findings/webhooks.md)
+            [NEW_PROJECT, PROJECT_DELETED, PROJECT_UPDATED, NEW_TASK, TASK_UPDATED, TASK_DELETED,
+             NEW_CLIENT, CLIENT_UPDATED, CLIENT_DELETED, NEW_TAG, TAG_UPDATED, TAG_DELETED,
+             NEW_TIME_ENTRY, TIME_ENTRY_UPDATED, TIME_ENTRY_DELETED, TIMER_STARTED, TIMER_STOPPED,
+             NEW_INVOICE, INVOICE_UPDATED, INVOICE_DELETED, INVOICE_PAID, INVOICE_SENT,
+             NEW_APPROVAL_REQUEST, APPROVAL_REQUEST_STATUS_UPDATED,
+             NEW_TIME_OFF_REQUEST, TIME_OFF_REQUEST_APPROVED, TIME_OFF_REQUEST_REJECTED, TIME_OFF_REQUEST_WITHDRAWN,
+             USER_DELETED_FROM_WORKSPACE, USER_JOINED_WORKSPACE, USER_DEACTIVATED_ON_WORKSPACE, USER_ACTIVATED_ON_WORKSPACE,
+             USER_EMAIL_CHANGED, USER_UPDATED,
+             NEW_EXPENSE, EXPENSE_UPDATED, EXPENSE_DELETED,
+             ASSIGNMENT_CREATED, ASSIGNMENT_UPDATED, ASSIGNMENT_DELETED, ASSIGNMENT_PUBLISHED,
+             NEW_USER_GROUP, USER_GROUP_UPDATED, USER_GROUP_DELETED,
+             KIOSK_NEW_PIN, KIOSK_PIN_RESET,
+             BALANCE_UPDATED, POLICY_CREATED, POLICY_UPDATED, POLICY_DELETED,
+             HOLIDAY_CREATED, HOLIDAY_UPDATED, HOLIDAY_DELETED]
+        name:          { type: string, nullable: true }
+        authToken:     { type: string, description: "HMAC secret. Treat as a credential; never log." }
+        enabled:       { type: boolean }
+        addonId:       { type: string, nullable: true }
+
+    WebhookCreate:
+      type: object
+      required: [url, webhookEvent]
+      properties:
+        url:              { type: string, format: uri, example: "https://example.com/clockify-probe" }
+        name:             { type: string }
+        webhookEvent:     { $ref: "#/components/schemas/Webhook/properties/webhookEvent" }
+        triggerSource:    { type: array, items: { type: string } }
+        triggerSourceType: { $ref: "#/components/schemas/Webhook/properties/triggerSourceType" }
+
+    WebhookListEnvelope:
+      type: object
+      properties:
+        workspaceWebhookCount: { type: integer }
+        webhooks: { type: array, items: { $ref: "#/components/schemas/Webhook" } }
+
+    # ---------- scheduling ----------
+    SchedulingAssignment:
+      type: object
+      properties:
+        id:           { type: string }
+        userId:       { type: string }
+        projectId:    { type: string }
+        taskId:       { type: string, nullable: true }
+        workspaceId:  { type: string }
+        period:       { $ref: "#/components/schemas/DateTimeInterval" }
+        hoursPerDay:  { type: number }
+        note:         { type: string, nullable: true }
+        published:    { type: boolean }
+        seriesId:     { type: string, nullable: true }
+        billable:     { type: boolean }
+        includeNonWorkingDays: { type: boolean }
+
+    # ---------- reports ----------
+    ReportTotalsItem:
+      type: object
+      properties:
+        totalTime:         { type: integer }
+        totalBillableTime: { type: integer }
+        entriesCount:      { type: integer }
+        amounts:
+          type: array
+          items:
+            type: object
+            properties:
+              type:  { type: string, enum: [EARNED, COST, REMAINING] }
+              value: { type: number }
+              amountByCurrency:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    currency: { $ref: "#/components/schemas/Currency" }
+                    amount:   { type: number }
+        numOfCurrencies:        { type: integer }
+        _id:                    { type: string }
+        totalAmount:            { type: number }
+        totalAmountByCurrency:  { type: array, items: { type: object, additionalProperties: true } }
+
+    SummaryFilter:
+      type: object
+      description: |
+        VERIFIED: only `summaryFilter` is accepted on the summary
+        endpoint (NOT `detailedFilter`/`weeklyFilter`/`attendanceFilter`).
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+            enum: [CLIENT, PROJECT, TASK, DATE, WEEK, MONTH, TIMEENTRY, USER, TAG]
+        sortColumn: { type: string }
+
+    DetailedFilter:
+      type: object
+      description: "VERIFIED: only `detailedFilter` accepted on detailed endpoint."
+      properties:
+        page:        { type: integer, default: 1 }
+        pageSize:    { type: integer, default: 50 }
+        sortColumn:  { type: string }
+        sortOrder:   { type: string, enum: [ASCENDING, DESCENDING] }
+        auditFilter: { type: object, additionalProperties: true }
+        options:     { type: object, additionalProperties: true }
+
+    WeeklyFilter:
+      type: object
+      description: |
+        VERIFIED: only `weeklyFilter` accepted on weekly endpoint.
+        Date range MUST be exactly 7 days or upstream returns
+        `{code:501, message:"Please select date range of exactly 7 days for weekly report"}`.
+      required: [group, subgroup]
+      properties:
+        group:    { type: string, enum: [PROJECT, USER] }
+        subgroup: { type: string, enum: [TIME] }
+
+    AttendanceFilter:
+      type: object
+      description: "VERIFIED: only `attendanceFilter` accepted on attendance endpoint."
+      properties:
+        page:     { type: integer, default: 1 }
+        pageSize: { type: integer, default: 50 }
+        users:
+          type: object
+          properties:
+            ids:      { type: array, items: { type: string } }
+            contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN, CONTAINS_ONLY] }
+            status:   { type: string, enum: [ALL, ACTIVE, INACTIVE] }
+
+    BaseReportRequest:
+      type: object
+      required: [dateRangeStart, dateRangeEnd]
+      properties:
+        dateRangeStart: { type: string, format: date-time }
+        dateRangeEnd:   { type: string, format: date-time }
+        users:          { type: object, additionalProperties: true }
+        userGroups:     { type: object, additionalProperties: true }
+        clients:        { type: object, additionalProperties: true }
+        projects:       { type: object, additionalProperties: true }
+        tasks:          { type: object, additionalProperties: true }
+        tags:           { type: object, additionalProperties: true }
+        billable:       { type: boolean }
+        description:    { type: string }
+        timeZone:       { type: string }
+        exportType:     { type: string, enum: [JSON_V1, JSON, CSV, XLSX, PDF] }
+
+    SummaryReportRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseReportRequest"
+        - type: object
+          required: [summaryFilter]
+          properties:
+            summaryFilter: { $ref: "#/components/schemas/SummaryFilter" }
+
+    DetailedReportRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseReportRequest"
+        - type: object
+          required: [detailedFilter]
+          properties:
+            detailedFilter: { $ref: "#/components/schemas/DetailedFilter" }
+
+    WeeklyReportRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseReportRequest"
+        - type: object
+          required: [weeklyFilter]
+          properties:
+            weeklyFilter: { $ref: "#/components/schemas/WeeklyFilter" }
+
+    AttendanceReportRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseReportRequest"
+        - type: object
+          required: [attendanceFilter]
+          properties:
+            attendanceFilter: { $ref: "#/components/schemas/AttendanceFilter" }
+
+    SummaryReportResponse:
+      type: object
+      description: "Live capture: fixtures/reports-final/report-summary.json"
+      properties:
+        totals:      { type: array, items: { $ref: "#/components/schemas/ReportTotalsItem" } }
+        donutChart:  { type: array, items: { type: object, additionalProperties: true } }
+        groupTotals:
+          type: object
+          properties:
+            groupOneTotalCount: { type: integer }
+            groupTwoTotalCount: { type: integer }
+        groupOne:    { type: array, items: { type: object, additionalProperties: true } }
+
+    DetailedReportResponse:
+      type: object
+      description: "Live capture: fixtures/reports-final/report-detailed.json"
+      properties:
+        totals:      { type: array, items: { $ref: "#/components/schemas/ReportTotalsItem" } }
+        timeentries: { type: array, items: { type: object, additionalProperties: true } }
+
+    WeeklyReportResponse:
+      type: object
+      description: "Live capture: fixtures/reports-final/report-weekly.json"
+      properties:
+        totals:      { type: array, items: { $ref: "#/components/schemas/ReportTotalsItem" } }
+        totalsByDay:
+          type: array
+          items:
+            type: object
+            properties:
+              date:      { type: string, format: date }
+              duration:  { type: integer }
+              amount:    { type: number }
+              amountByCurrency:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    currency: { $ref: "#/components/schemas/Currency" }
+                    amount:   { type: number }
+        groupOne:    { type: array, items: { type: object, additionalProperties: true } }
+
+    AttendanceReportResponse:
+      type: object
+      description: "Live capture: fixtures/reports-final/report-attendance.json"
+      properties:
+        entities:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:        { type: string }
+              userName:      { type: string }
+              date:          { type: string, format: date-time }
+              totalDuration: { type: integer }
+              break:         { type: integer }
+              hasRunningEntry: { type: boolean }
+              capacity:      { type: integer }
+              imageUrl:      { type: string }
+              timeOff:       { type: integer }
+              overtime:      { type: integer }
+              remainingCapacity: { type: integer }
+              zonedStart:    { type: string, nullable: true }
+              zonedEnd:      { type: string, nullable: true }
+
+    # ---------- shared reports ----------
+    SharedReportFilter:
+      type: object
+      required: [exportType, dateRangeStart, dateRangeEnd]
+      properties:
+        exportType:     { type: string, enum: [JSON_V1, JSON, CSV, XLSX, PDF] }
+        dateRangeStart: { type: string, format: date-time }
+        dateRangeEnd:   { type: string, format: date-time }
+        summaryFilter:  { $ref: "#/components/schemas/SummaryFilter" }
+        detailedFilter: { $ref: "#/components/schemas/DetailedFilter" }
+        weeklyFilter:   { $ref: "#/components/schemas/WeeklyFilter" }
+        attendanceFilter: { $ref: "#/components/schemas/AttendanceFilter" }
+
+    SharedReportCreate:
+      type: object
+      required: [name, type, filter]
+      description: |
+        Body keys: `type` (NOT reportType) and `filter` (NOT filters,
+        singular). Required nested fields:
+          filter.exportType, filter.dateRangeStart, filter.dateRangeEnd.
+      properties:
+        name:       { type: string }
+        type:
+          type: string
+          enum:
+            [SUMMARY, DETAILED, WEEKLY, EXPENSE_DETAILED, INVOICE_TIME,
+             KIOSK_PIN_LIST, ATTENDANCE_DETAILED, ATTENDANCE_SUMMARY,
+             ASSIGNMENT_LIST, ASSIGNMENT_SCHEDULE, APPROVAL_DETAILED,
+             APPROVAL_SUMMARY, BALANCE_LIST, INVOICE_AMOUNT_LIST,
+             INVOICE_DETAILED, TIMEOFF_DETAILED, TIMEOFF_HOLIDAY,
+             TIMEOFF_BALANCE, EXPENSE_SUMMARY]
+        filter:     { $ref: "#/components/schemas/SharedReportFilter" }
+        public:     { type: boolean }
+
+    SharedReport:
+      type: object
+      properties:
+        id:        { type: string }
+        name:      { type: string }
+        type:      { $ref: "#/components/schemas/SharedReportCreate/properties/type" }
+        filter:    { $ref: "#/components/schemas/SharedReportFilter" }
+        workspace:
+          type: object
+          properties:
+            id:   { type: string }
+            name: { type: string }
+            workspaceSettings: { $ref: "#/components/schemas/WorkspaceSettings" }
+        public:    { type: boolean }
+        url:       { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    SharedReportListEnvelope:
+      type: object
+      properties:
+        count:   { type: integer }
+        reports: { type: array, items: { $ref: "#/components/schemas/SharedReport" } }
+
+    SharedReportExportEnvelope:
+      type: object
+      description: |
+        Binary-aware envelope: PDF/XLSX bodies are binary, CSV is text.
+        `body` is base64-encoded raw bytes; `filename` parsed from
+        `Content-Disposition` header.
+      properties:
+        contentType: { type: string }
+        filename:    { type: string }
+        body:        { type: string, format: byte }
+
+paths:
+
+  # ===========================================================================
+  # USER
+  # ===========================================================================
+
+  /user:
+    get:
+      tags: [User]
+      summary: Get current user (the authenticated principal)
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+
+  /workspaces/{workspaceId}/users:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [User]
+      summary: List users in the workspace
+      parameters:
+        - name: email
+          in: query
+          schema: { type: string }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, PENDING_EMAIL_VERIFICATION, DELETED, NOT_INTEGRATED, INACTIVE] }
+        - name: account-statuses
+          in: query
+          schema: { type: array, items: { type: string } }
+        - name: roles
+          in: query
+          schema: { type: array, items: { type: string } }
+        - name: includeRoles
+          in: query
+          schema: { type: boolean }
+        - name: memberships
+          in: query
+          schema: { type: string, enum: [ALL, NONE, WORKSPACE, PROJECT, USERGROUP] }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+
+  /workspaces/{workspaceId}/users/{userId}/roles:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    post:
+      tags: [User]
+      summary: Grant a role to a user
+      description: |
+        VERIFIED LIVE (2026-05-12). See `RoleAssignRequest` for the
+        entityId semantics. GET is not supported (405).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleAssignRequest" }
+      responses:
+        '201':
+          description: Returns the new roles array.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserRole" }
+        '400':
+          description: Role already exists, or invalid entityId for role type.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockifyError" }
+    delete:
+      tags: [User]
+      summary: Revoke a role from a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleAssignRequest" }
+      responses:
+        '204': { description: Role revoked }
+
+  # ===========================================================================
+  # WORKSPACE
+  # ===========================================================================
+
+  /workspaces:
+    get:
+      tags: [Workspace]
+      summary: List workspaces visible to the principal
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Workspace" }
+
+  /workspaces/{workspaceId}:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Workspace]
+      summary: Get workspace by id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+
+  /workspaces/{workspaceId}/cost-rate:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    put:
+      tags: [Workspace]
+      summary: Set workspace-wide cost rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RateDto" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+
+  /workspaces/{workspaceId}/hourly-rate:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    put:
+      tags: [Workspace]
+      summary: Set workspace-wide hourly rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RateDto" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+
+  # ===========================================================================
+  # CLIENT
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/clients:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Client]
+      summary: List clients
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+        - { name: archived, in: query, schema: { type: boolean } }
+        - { name: address, in: query, schema: { type: string } }
+        - { name: note, in: query, schema: { type: string } }
+        - { name: sort-column, in: query, schema: { type: string, enum: [NAME, EMAIL, NOTE] } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Client" } }
+    post:
+      tags: [Client]
+      summary: Create client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+
+  /workspaces/{workspaceId}/clients/{clientId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ClientId" }
+    get:
+      tags: [Client]
+      summary: Get client
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+    put:
+      tags: [Client]
+      summary: Update client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientUpdate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+    delete:
+      tags: [Client]
+      summary: Delete client
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/clients/{clientId}/archive:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ClientId" }
+    put:
+      tags: [Client]
+      summary: Archive / unarchive client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                archived: { type: boolean }
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # PROJECT
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/projects:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Project]
+      summary: List projects
+      parameters:
+        - { name: hydrated, in: query, schema: { type: boolean } }
+        - { name: archived, in: query, schema: { type: boolean } }
+        - { name: billable, in: query, schema: { type: boolean } }
+        - { name: name, in: query, schema: { type: string } }
+        - { name: clients, in: query, schema: { type: array, items: { type: string } } }
+        - { name: containsClient, in: query, schema: { type: boolean } }
+        - { name: clientStatus, in: query, schema: { type: string, enum: [ACTIVE, ARCHIVED] } }
+        - { name: users, in: query, schema: { type: array, items: { type: string } } }
+        - { name: containsUser, in: query, schema: { type: boolean } }
+        - { name: userStatus, in: query, schema: { type: string, enum: [PENDING, ACTIVE, INACTIVE] } }
+        - { name: is-template, in: query, schema: { type: boolean } }
+        - { name: sort-column, in: query, schema: { type: string, enum: [NAME, CLIENT_NAME, DURATION] } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Project" } }
+    post:
+      tags: [Project]
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+
+  /workspaces/{workspaceId}/projects/{projectId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    get:
+      tags: [Project]
+      summary: Get project
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+    put:
+      tags: [Project]
+      summary: Update project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCreate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+    delete:
+      tags: [Project]
+      summary: Delete project (must be archived first)
+      responses:
+        '200': { description: Deleted }
+        '400': { description: Must archive before delete }
+
+  /workspaces/{workspaceId}/projects/{projectId}/archive:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    put:
+      tags: [Project]
+      summary: Archive / unarchive project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                archived: { type: boolean }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/memberships:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    patch:
+      tags: [Project]
+      summary: Replace project memberships (REPLACE semantics)
+      description: |
+        VERIFIED LIVE: PUT is 405. Use PATCH with the FULL desired
+        membership list — the server replaces the list. Response is
+        the full Project object; callers must extract `.memberships`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectMembershipsPatch" }
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+
+  /workspaces/{workspaceId}/projects/{projectId}/estimate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    patch:
+      tags: [Project]
+      summary: Update project time/budget estimate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeEstimate:   { $ref: "#/components/schemas/EstimateDto" }
+                budgetEstimate: { $ref: "#/components/schemas/BudgetEstimateDto" }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/template:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    patch:
+      tags: [Project]
+      summary: Convert project to/from template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { isTemplate: { type: boolean } }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/cost-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    put:
+      tags: [Project]
+      summary: Set project cost rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:   { type: integer }
+                since:    { type: string, format: date }
+                sinceAsInstant: { type: string, format: date-time }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/hourly-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    put:
+      tags: [Project]
+      summary: Set project hourly rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:   { type: integer }
+                since:    { type: string, format: date }
+                sinceAsInstant: { type: string, format: date-time }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/UserId" }
+    put:
+      tags: [Project]
+      summary: Set per-user cost rate on a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RateDto" }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/UserId" }
+    put:
+      tags: [Project]
+      summary: Set per-user hourly rate on a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RateDto" }
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # TASK
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/projects/{projectId}/tasks:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    get:
+      tags: [Task]
+      summary: List tasks on a project
+      parameters:
+        - { name: is-active, in: query, schema: { type: boolean } }
+        - { name: name, in: query, schema: { type: string } }
+        - { name: strict-name-search, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Task" } }
+    post:
+      tags: [Task]
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+
+  /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/TaskId" }
+    get:
+      tags: [Task]
+      summary: Get task
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+    put:
+      tags: [Task]
+      summary: Update task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskCreate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+    delete:
+      tags: [Task]
+      summary: Delete task
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/TaskId" }
+    put:
+      tags: [Task]
+      summary: Set task cost rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer }
+                since:  { type: string, format: date }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/TaskId" }
+    put:
+      tags: [Task]
+      summary: Set task hourly rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer }
+                since:  { type: string, format: date }
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # TAG
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/tags:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Tag]
+      summary: List tags
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+        - { name: archived, in: query, schema: { type: boolean } }
+        - { name: sort-column, in: query, schema: { type: string, enum: [NAME] } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Tag" } }
+    post:
+      tags: [Tag]
+      summary: Create tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TagCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tag" }
+
+  /workspaces/{workspaceId}/tags/{tagId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/TagId" }
+    get:
+      tags: [Tag]
+      summary: Get tag
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tag" }
+    put:
+      tags: [Tag]
+      summary: Update tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:     { type: string }
+                archived: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tag" }
+    delete:
+      tags: [Tag]
+      summary: Delete tag
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # TIME ENTRY
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/user/{userId}/time-entries:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    get:
+      tags: [TimeEntry]
+      summary: List time entries for a user
+      parameters:
+        - { name: description, in: query, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string, format: date-time } }
+        - { name: end, in: query, schema: { type: string, format: date-time } }
+        - { name: project, in: query, schema: { type: string } }
+        - { name: task, in: query, schema: { type: string } }
+        - { name: tags, in: query, schema: { type: array, items: { type: string } } }
+        - { name: project-required, in: query, schema: { type: boolean } }
+        - { name: task-required, in: query, schema: { type: boolean } }
+        - { name: hydrated, in: query, schema: { type: boolean } }
+        - { name: in-progress, in: query, schema: { type: boolean } }
+        - { name: get-week-before, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/TimeEntry" } }
+    post:
+      tags: [TimeEntry]
+      summary: Create time entry for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimeEntryCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeEntry" }
+
+  /workspaces/{workspaceId}/time-entries/{timeEntryId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/TimeEntryId" }
+    get:
+      tags: [TimeEntry]
+      summary: Get time entry
+      parameters:
+        - { name: hydrated, in: query, schema: { type: boolean } }
+        - { name: consider-duration-format, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeEntry" }
+    put:
+      tags: [TimeEntry]
+      summary: Update time entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimeEntryUpdate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeEntry" }
+    delete:
+      tags: [TimeEntry]
+      summary: Delete time entry
+      responses: { '204': { description: Deleted } }
+
+  /workspaces/{workspaceId}/time-entries/invoiced/bulk:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    patch:
+      tags: [TimeEntry]
+      summary: Mark time entries as invoiced (bulk)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoiced: { type: boolean }
+                ids:      { type: array, items: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/user/{userId}/time-entries/stop:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    patch:
+      tags: [TimeEntry]
+      summary: Stop currently running timer for user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [end]
+              properties: { end: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Stopped entry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeEntry" }
+
+  # ===========================================================================
+  # USER GROUP
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/user-groups:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Group]
+      summary: List user groups
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+        - { name: projectId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/UserGroup" } }
+    post:
+      tags: [Group]
+      summary: Create user group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserGroupCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserGroup" }
+
+  /workspaces/{workspaceId}/user-groups/{groupId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/GroupId" }
+    put:
+      tags: [Group]
+      summary: Update user group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserGroupCreate" }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/UserGroup" } } } } }
+    delete:
+      tags: [Group]
+      summary: Delete user group
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/user-groups/{groupId}/users:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/GroupId" }
+    post:
+      tags: [Group]
+      summary: Add user to group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties: { userId: { type: string } }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/GroupId" }
+      - { $ref: "#/components/parameters/UserId" }
+    delete:
+      tags: [Group]
+      summary: Remove user from group
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # CUSTOM FIELD
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/custom-fields:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [CustomField]
+      summary: List workspace custom fields
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [VISIBLE, INVISIBLE, INACTIVE] } }
+        - { name: name, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/CustomField" } }
+    post:
+      tags: [CustomField]
+      summary: Create workspace custom field
+      description: |
+        VERIFIED LIVE: The `type` enum is {TXT, NUMBER, DROPDOWN_SINGLE,
+        DROPDOWN_MULTIPLE, CHECKBOX, LINK}. Legacy `TEXT` and `DROPDOWN`
+        are rejected. Workspace 50-cap on custom fields is enforced
+        (live error code 501).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomFieldCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomField" }
+
+  /workspaces/{workspaceId}/custom-fields/{customFieldId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/CustomFieldId" }
+    put:
+      tags: [CustomField]
+      summary: Update custom field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomFieldCreate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomField" }
+    delete:
+      tags: [CustomField]
+      summary: Delete custom field
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/custom-fields:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    get:
+      tags: [CustomField]
+      summary: List project-level custom fields
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/CustomField" } }
+
+  /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { $ref: "#/components/parameters/CustomFieldId" }
+    patch:
+      tags: [CustomField]
+      summary: Toggle project custom-field activation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { status: { type: string, enum: [VISIBLE, INVISIBLE, INACTIVE] } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [CustomField]
+      summary: Remove custom field override on project
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # HOLIDAY
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/holidays:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Holiday]
+      summary: List holidays
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string, format: date } }
+        - { name: end, in: query, schema: { type: string, format: date } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Holiday" } }
+    post:
+      tags: [Holiday]
+      summary: Create holiday
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HolidayCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Holiday" }
+        '400':
+          description: |
+            Validation error — most commonly:
+              • flat `date` field instead of `datePeriod`
+              • no `users.ids` or `userGroups.ids` ("At least one user or user group must be assigned")
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockifyError" }
+
+  /workspaces/{workspaceId}/holidays/{holidayId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/HolidayId" }
+    put:
+      tags: [Holiday]
+      summary: Update holiday
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HolidayCreate" }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Holiday" } } } } }
+    delete:
+      tags: [Holiday]
+      summary: Delete holiday
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # APPROVAL
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/approval-requests:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Approval]
+      summary: List approval requests (admin view)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, WITHDRAWN_SUBMISSION, REJECTED, WITHDRAWN_APPROVAL] } }
+        - { name: sort-column, in: query, schema: { type: string } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Approval" } }
+
+  /workspaces/{workspaceId}/approval-requests/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    post:
+      tags: [Approval]
+      summary: Submit timesheet for approval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dateRange]
+              properties:
+                dateRange: { $ref: "#/components/schemas/DateTimeInterval" }
+                status:    { type: object, properties: { note: { type: string } } }
+      responses: { '201': { description: Submitted, content: { application/json: { schema: { $ref: "#/components/schemas/Approval" } } } } }
+
+  /workspaces/{workspaceId}/approval-requests/{approvalId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ApprovalId" }
+    patch:
+      tags: [Approval]
+      summary: Update approval status (approve/reject/withdraw)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: object
+                  properties:
+                    state: { type: string, enum: [APPROVED, REJECTED, WITHDRAWN_SUBMISSION, WITHDRAWN_APPROVAL, PENDING] }
+                    note:  { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Approval" }
+
+  # ===========================================================================
+  # TIME OFF
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/policies:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Policy]
+      summary: List time-off policies
+      parameters:
+        - { name: archived, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/TimeOffPolicy" } }
+    post:
+      tags: [Policy]
+      summary: Create time-off policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimeOffPolicy" }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/TimeOffPolicy" } } } } }
+
+  /workspaces/{workspaceId}/policies/{policyId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/PolicyId" }
+    get:
+      tags: [Policy]
+      summary: Get policy
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimeOffPolicy" } } } } }
+    put:
+      tags: [Policy]
+      summary: Update policy
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TimeOffPolicy" } } } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Policy]
+      summary: Delete (archive) policy
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/policies/{policyId}/archive:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/PolicyId" }
+    patch:
+      tags: [Policy]
+      summary: Archive / unarchive policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { archived: { type: boolean } }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/balance:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Balance]
+      summary: Get balances (admin)
+      parameters:
+        - { name: policyId, in: query, schema: { type: string } }
+        - { name: userId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Balance" } }
+    patch:
+      tags: [Balance]
+      summary: Adjust user balance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:   { type: string }
+                policyId: { type: string }
+                amount:   { type: number }
+                note:     { type: string }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/time-off/requests:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [TimeOff]
+      summary: List time-off requests (POST body required)
+      description: |
+        VERIFIED LIVE: this endpoint is POST, not GET. `Content-Type: application/json`. Empty body `{}` is accepted; response envelope is `{count, requests:[]}`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                page:     { type: integer, default: 1 }
+                pageSize: { type: integer, default: 50 }
+                status:
+                  type: object
+                  properties:
+                    statusType: { type: array, items: { type: string, enum: [PENDING, APPROVED, REJECTED, WITHDRAWN] } }
+                users:    { type: object, additionalProperties: true }
+                policies: { type: object, additionalProperties: true }
+                start:    { type: string, format: date-time }
+                end:      { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:    { type: integer }
+                  requests: { type: array, items: { $ref: "#/components/schemas/TimeOffRequest" } }
+
+  /workspaces/{workspaceId}/time-off/requests/{requestId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/RequestId" }
+    get:
+      tags: [TimeOff]
+      summary: Get a time-off request
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeOffRequest" }
+    delete:
+      tags: [TimeOff]
+      summary: Delete a time-off request
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/time-off/requests/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    post:
+      tags: [TimeOff]
+      summary: Create time-off request for user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimeOffRequestCreate" }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/TimeOffRequest" } } } } }
+
+  /workspaces/{workspaceId}/time-off/requests/{requestId}/status:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/RequestId" }
+    patch:
+      tags: [TimeOff]
+      summary: Update request status (approve/reject/withdraw)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                statusType: { type: string, enum: [APPROVED, REJECTED, WITHDRAWN] }
+                note:       { type: string }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimeOffRequest" } } } } }
+
+  # ===========================================================================
+  # INVOICE
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/invoices:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Invoice]
+      summary: List invoices
+      description: |
+        VERIFIED LIVE: Envelope `{total, invoices:[]}`. `statuses` (plural,
+        repeatable) is the correct filter; singular `status` is silently
+        ignored.
+      parameters:
+        - { name: statuses, in: query, schema: { type: array, items: { type: string, enum: [UNSENT, SENT, PAID, VOID, PARTIALLY_PAID] } } }
+        - { name: clients, in: query, schema: { type: array, items: { type: string } } }
+        - { name: sort-column, in: query, schema: { type: string } }
+        - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceListResponse" }
+    post:
+      tags: [Invoice]
+      summary: Create invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, currency]
+              properties:
+                clientId: { type: string }
+                currency: { $ref: "#/components/schemas/Currency" }
+                number:   { type: string }
+                issuedDate: { type: string, format: date }
+                dueDate:    { type: string, format: date }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Invoice" } } } } }
+
+  /workspaces/{workspaceId}/invoices/info:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Invoice]
+      summary: Invoice report (envelope query)
+      description: |
+        Filter by `statuses`, returns the same `{total, invoices}` envelope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                statuses: { type: array, items: { type: string, enum: [UNSENT, SENT, PAID, VOID, PARTIALLY_PAID] } }
+                clients:  { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceListResponse" }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/InvoiceId" }
+    get:
+      tags: [Invoice]
+      summary: Get invoice (embeds `items` array; do NOT call separate /items endpoint — returns 405)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+    put:
+      tags: [Invoice]
+      summary: Update invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Invoice" }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Invoice]
+      summary: Delete invoice
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/items:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/InvoiceId" }
+    post:
+      tags: [Invoice]
+      summary: Add invoice line item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/InvoiceLineItem" }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/payments:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/InvoiceId" }
+    post:
+      tags: [Invoice]
+      summary: Record a payment against the invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:  { type: integer, description: "Minor units" }
+                date:    { type: string, format: date }
+                note:    { type: string }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/status:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/InvoiceId" }
+    patch:
+      tags: [Invoice]
+      summary: Change invoice status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { status: { type: string, enum: [UNSENT, SENT, PAID, VOID, PARTIALLY_PAID] } }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/invoices/{invoiceId}/export:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/InvoiceId" }
+    get:
+      tags: [Invoice]
+      summary: Export invoice as PDF
+      responses:
+        '200':
+          description: PDF binary
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  # ===========================================================================
+  # EXPENSE
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/expenses:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Expense]
+      summary: List expenses
+      description: VERIFIED LIVE — double-nested envelope (see `ExpenseListEnvelope`).
+      parameters:
+        - { name: project, in: query, schema: { type: string } }
+        - { name: user, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string, format: date-time } }
+        - { name: end, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeHyphen" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExpenseListEnvelope" }
+    post:
+      tags: [Expense]
+      summary: Create expense (MULTIPART required)
+      description: |
+        VERIFIED LIVE: `application/json` returns 415. Required form fields:
+        `userId`, `amount` (string, decimal in major units), `date`
+        (ISO 8601 `yyyy-MM-ddTHH:mm:ssZ`), `categoryId`. `file` is
+        documented required but server tolerates absence (response
+        `fileId: ""`). `projectId` accepted as absent.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [userId, amount, date, categoryId]
+              properties:
+                userId:     { type: string }
+                amount:     { type: string, example: "1.50" }
+                date:       { type: string, format: date-time }
+                categoryId: { type: string }
+                notes:      { type: string }
+                projectId:  { type: string }
+                taskId:     { type: string }
+                billable:   { type: boolean }
+                file:       { type: string, format: binary }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Expense" }
+
+  /workspaces/{workspaceId}/expenses/{expenseId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ExpenseId" }
+    get:
+      tags: [Expense]
+      summary: Get expense
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } } }
+    put:
+      tags: [Expense]
+      summary: Update expense (multipart, with `changeFields`)
+      description: |
+        VERIFIED LIVE: multipart. Required `changeFields` array
+        listing which fields to mutate. Valid values:
+        `USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE`.
+        Omitting `changeFields` silently ignores changes.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [changeFields]
+              properties:
+                changeFields:
+                  type: array
+                  items: { type: string, enum: [USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE] }
+                userId:     { type: string }
+                date:       { type: string, format: date-time }
+                projectId:  { type: string }
+                taskId:     { type: string }
+                categoryId: { type: string }
+                notes:      { type: string }
+                amount:     { type: string }
+                billable:   { type: boolean }
+                file:       { type: string, format: binary }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Expense]
+      summary: Delete expense
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/expenses/categories:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Expense]
+      summary: List expense categories
+      description: |
+        VERIFIED LIVE: returns `{count, categories:[]}` envelope, NOT
+        a bare array.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:      { type: integer }
+                  categories: { type: array, items: { $ref: "#/components/schemas/ExpenseCategory" } }
+    post:
+      tags: [Expense]
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:        { type: string }
+                unit:        { type: string }
+                priceInCents: { type: integer }
+                hasUnitPrice: { type: boolean }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseCategory" } } } } }
+
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/CategoryId" }
+    put:
+      tags: [Expense]
+      summary: Update category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExpenseCategory" }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Expense]
+      summary: Delete category
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # WEBHOOK
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/webhooks:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Webhook]
+      summary: List user webhooks
+      description: VERIFIED — envelope `{workspaceWebhookCount, webhooks:[]}`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebhookListEnvelope" }
+    post:
+      tags: [Webhook]
+      summary: Create webhook
+      description: |
+        Register only against placeholder URLs (e.g. https://example.com/...)
+        from probe contexts. Do NOT call `/test` on a created webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookCreate" }
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Webhook" }
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/WebhookId" }
+    put:
+      tags: [Webhook]
+      summary: Update webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookCreate" }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Webhook]
+      summary: Delete webhook
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/WebhookId" }
+    patch:
+      tags: [Webhook]
+      summary: Regenerate the per-webhook HMAC token
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Webhook" }
+
+  # ===========================================================================
+  # SCHEDULING
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/scheduling/assignments/all:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Scheduling]
+      summary: List all assignments in a window
+      description: |
+        VERIFIED LIVE: path requires `/all` suffix and mandatory `start`
+        + `end` query params (ISO 8601 with `Z`).
+      parameters:
+        - { name: start, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: end,   in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: userId, in: query, schema: { type: string } }
+        - { name: projectId, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeCamel" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SchedulingAssignment" }
+
+  /workspaces/{workspaceId}/scheduling/assignments:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Scheduling]
+      summary: Create scheduling assignment
+      description: |
+        For a single one-off assignment, use the recurring path with
+        `repeat=false`, `weeks=1`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, projectId, period, hoursPerDay]
+              properties:
+                userId:      { type: string }
+                projectId:   { type: string }
+                taskId:      { type: string }
+                period:      { $ref: "#/components/schemas/DateTimeInterval" }
+                hoursPerDay: { type: number }
+                note:        { type: string }
+                billable:    { type: boolean }
+                includeNonWorkingDays: { type: boolean }
+                published:   { type: boolean, default: false, description: "Probes MUST keep published=false (draft) to avoid notifying other users." }
+                repeat:      { type: boolean }
+                weeks:       { type: integer }
+                excludeDays:
+                  type: array
+                  items: { type: object, additionalProperties: true }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/SchedulingAssignment" } } } } }
+
+  /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/AssignmentId" }
+    put:
+      tags: [Scheduling]
+      summary: Update assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SchedulingAssignment" }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Scheduling]
+      summary: Delete assignment
+      responses: { '204': { description: Deleted } }
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Scheduling]
+      summary: Project totals over date window
+      description: VERIFIED LIVE — note `/assignments/projects/totals` path segment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                start:    { type: string, format: date-time }
+                end:      { type: string, format: date-time }
+                pageSize: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    workspaceId:    { type: string }
+                    projectId:      { type: string }
+                    projectName:    { type: string }
+                    projectColor:   { type: string }
+                    projectArchived: { type: boolean }
+                    clientName:     { type: string, nullable: true }
+                    totalHours:     { type: number }
+                    assignments:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          date:          { type: string, format: date }
+                          hasAssignment: { type: boolean }
+                    milestones:     { type: array, items: { type: object, additionalProperties: true } }
+                    projectBillable: { type: boolean }
+                    taskId:         { type: string, nullable: true }
+                    taskName:       { type: string, nullable: true }
+
+  /workspaces/{workspaceId}/scheduling/assignments/users/totals:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Scheduling]
+      summary: User totals over date window
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/scheduling/capacity:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    get:
+      tags: [Scheduling]
+      summary: User capacity for a window
+      parameters:
+        - { name: start, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: end,   in: query, required: true, schema: { type: string, format: date-time } }
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # REPORTS (host: reports.api.clockify.me)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/reports/summary:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    servers:
+      - url: https://reports.api.clockify.me/v1
+    post:
+      tags: [Report]
+      summary: Summary report
+      description: |
+        Body MUST contain `summaryFilter` only. Live-verified
+        2026-05-12. Filter groups up to 3 levels.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SummaryReportRequest" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SummaryReportResponse" }
+
+  /workspaces/{workspaceId}/reports/detailed:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    post:
+      tags: [Report]
+      summary: Detailed report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DetailedReportRequest" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DetailedReportResponse" }
+
+  /workspaces/{workspaceId}/reports/weekly:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    post:
+      tags: [Report]
+      summary: Weekly report (date range MUST be exactly 7 days)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WeeklyReportRequest" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeeklyReportResponse" }
+        '400':
+          description: e.g. `{code:501, message:"Please select date range of exactly 7 days for weekly report"}`
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockifyError" }
+
+  /workspaces/{workspaceId}/reports/attendance:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    post:
+      tags: [Report]
+      summary: Attendance report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AttendanceReportRequest" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AttendanceReportResponse" }
+
+  # ===========================================================================
+  # SHARED REPORTS (host: reports.api.clockify.me, no /api/ prefix)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/shared-reports:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    get:
+      tags: [SharedReport]
+      summary: List shared reports
+      description: |
+        VERIFIED LIVE: uses `pageSize` (camelCase). Hyphenated
+        `page-size` is silently ignored. Response envelope is
+        `{reports:[], count}`.
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeCamel" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedReportListEnvelope" }
+    post:
+      tags: [SharedReport]
+      summary: Create shared report
+      description: |
+        Body uses `type` (not `reportType`) and `filter` (singular,
+        not `filters`). Required nested keys:
+        `filter.exportType`, `filter.dateRangeStart`, `filter.dateRangeEnd`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SharedReportCreate" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedReport" }
+
+  /shared-reports/{sharedReportId}:
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    parameters: [{ $ref: "#/components/parameters/SharedReportId" }]
+    get:
+      tags: [SharedReport]
+      summary: Public/bare GET of a shared report or export
+      description: |
+        Bare path (no workspace segment). Pass `?exportType=PDF|CSV|XLSX|JSON_V1`
+        to receive a binary export with `Content-Disposition` filename. Without
+        `exportType`, returns the shared-report JSON envelope.
+      parameters:
+        - name: exportType
+          in: query
+          schema: { type: string, enum: [JSON_V1, JSON, CSV, XLSX, PDF] }
+      responses:
+        '200':
+          description: OK — JSON envelope when `exportType` omitted; binary export otherwise.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/SharedReport" } }
+            application/pdf:  { schema: { type: string, format: binary } }
+            text/csv:         { schema: { type: string } }
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+
+  /workspaces/{workspaceId}/shared-reports/{sharedReportId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/SharedReportId" }
+    servers: [{ url: "https://reports.api.clockify.me/v1" }]
+    put:
+      tags: [SharedReport]
+      summary: Update shared report (merge semantics)
+      description: |
+        Workspace-prefixed PUT works (bare-id PUT/PATCH return 405).
+        Body uses `type` and `filter` (per create). PUT is MERGE — sending
+        `{name}` alone preserves the existing filter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SharedReportCreate" }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedReport" }
+    delete:
+      tags: [SharedReport]
+      summary: Delete shared report
+      responses: { '204': { description: Deleted } }
+
+  # ===========================================================================
+  # APPROVALS — additional endpoints (verified live)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    post:
+      tags: [Approval]
+      summary: Resubmit time entries for approval after rejection
+      description: |
+        Verified: requires the workspace's pinned approval period in the body
+        (start/end). State-machine 4006 enforced — the targeted request must
+        be in REJECTED state. Returns the refreshed approval request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dateRangeStart, dateRangeEnd]
+              properties:
+                dateRangeStart: { type: string, format: date-time }
+                dateRangeEnd:   { type: string, format: date-time }
+      responses:
+        '200': { description: OK }
+        '400':
+          description: "code:4006 if approval state-machine forbids this transition"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockifyError" }
+
+  # ===========================================================================
+  # SCHEDULING — additional endpoints (verified live; host = api.clockify.me/api/v1)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/scheduling/assignments/recurring:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Scheduling]
+      summary: Create recurring scheduling assignment
+      description: |
+        Verified: returns an array (often single-element) of created
+        assignment objects. PATCH on the same path may return `[]`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: OK — array of created/updated assignments
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+
+  /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/AssignmentId" }
+    put:
+      tags: [Scheduling]
+      summary: Update recurring assignment series
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: true } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+    delete:
+      tags: [Scheduling]
+      summary: Delete recurring assignment series
+      responses: { '204': { description: Deleted } }
+
+  /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/AssignmentId" }
+    post:
+      tags: [Scheduling]
+      summary: Copy an assignment to a new date range
+      description: |
+        Verified: returns an array of newly-created assignments. May return
+        `[]` if the target range collides with existing assignments.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startDate, endDate]
+              properties:
+                startDate: { type: string, format: date }
+                endDate:   { type: string, format: date }
+                userIds:   { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/ProjectId" }
+    get:
+      tags: [Scheduling]
+      summary: Per-project scheduling totals
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+
+  /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    get:
+      tags: [Scheduling]
+      summary: Per-user scheduling totals
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+
+  /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals:
+    parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+    post:
+      tags: [Scheduling]
+      summary: Filtered totals across users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userIds:    { type: array, items: { type: string } }
+                startDate:  { type: string, format: date }
+                endDate:    { type: string, format: date }
+                projectIds: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+
+  # ===========================================================================
+  # EXPENSES — additional sub-resources (verified)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/expenses/categories/{categoryId}/status:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/CategoryId" }
+    patch:
+      tags: [Expense]
+      summary: Archive / unarchive an expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              properties: { archived: { type: boolean } }
+      responses: { '200': { description: OK } }
+
+  # ===========================================================================
+  # USER ADMIN — member profile + per-user CF write (from USEREXPENCUSTOMFIED)
+  # ===========================================================================
+
+  /workspaces/{workspaceId}/member-profile/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+    put:
+      tags: [User]
+      summary: Update workspace-scoped member profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses: { '200': { description: OK } }
+
+  /workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - { $ref: "#/components/parameters/UserId" }
+      - { $ref: "#/components/parameters/CustomFieldId" }
+    put:
+      tags: [CustomField]
+      summary: Set a user-level custom field value
+      description: |
+        PREREQUISITE: the target customFieldId MUST already exist with
+        `entityType: USER`. Setting a value against a TIMEENTRY-scoped
+        custom field via this endpoint is not supported — you must
+        first create a CF via `POST /workspaces/{wsId}/custom-fields`
+        with `{"entityType":"USER","type":<TXT|NUMBER|DROPDOWN_SINGLE|
+        DROPDOWN_MULTIPLE|CHECKBOX|LINK>}` and use the returned `id`
+        here.
+
+        VERIFIED LIVE (fixtures/user-exp-cf/):
+          1. POST /workspaces/{ws}/custom-fields
+             body `{"name":"mcp-probe-...-cf-user","type":"TXT",
+                    "entityType":"USER","status":"VISIBLE"}` -> 201
+             id `6a03289d2568d3d2932f6b74` (cf-create-user-entity.json).
+          2. PUT /workspaces/{ws}/users/{userId}/custom-field/
+             6a03289d2568d3d2932f6b74/value body `{"value":"hello"}`
+             -> 200 returning `{customFieldId, userId, value,
+             customFieldName, customFieldType}` (cf-user-value-put.json).
+
+        Note: response is 200 in practice (the public doc claims 201).
+        Type-of-`value` must match the parent CF's `type`:
+          - TXT / LINK    -> string
+          - NUMBER        -> number
+          - CHECKBOX      -> boolean
+          - DROPDOWN_*    -> one of the parent CF's `allowedValues`
+                             (DROPDOWN_MULTIPLE accepts an array).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  description: |
+                    Type-dependent value. See description for the rules
+                    keyed off the parent CF's `type`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customFieldId:    { type: string }
+                  userId:           { type: string }
+                  value:            {}
+                  customFieldName:  { type: string }
+                  customFieldType:
+                    type: string
+                    enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]
+              example:
+                customFieldId: "6a03289d2568d3d2932f6b74"
+                userId: "64621faec4d2cc53b91fce6c"
+                value: "hello"
+                customFieldName: "mcp-probe-1778591892-86ea17-cf-user"
+                customFieldType: "TXT"
+
+  # ===========================================================================
+  # FILE IMAGE (account-level avatar / asset upload — from USEREXPENCUSTOMFIED)
+  # ===========================================================================
+
+  /file/image:
+    post:
+      tags: [User]
+      summary: Upload an image asset (multipart)
+      description: "Verified: requires multipart/form-data with image MIME."
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }

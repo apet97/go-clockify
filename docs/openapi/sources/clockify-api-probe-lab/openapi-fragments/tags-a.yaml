@@ -1,0 +1,69 @@
+# Tags read endpoints — derived from live probe fixtures/tags-fresh-a/
+# Host: https://api.clockify.me/api/v1   Auth: X-Api-Key
+# Workspace probed: 65b382b606de527a7ee2b60e
+openapi: 3.0.3
+info:
+  title: Clockify Tags (reads) — empirical
+  version: "2026-05-12"
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/tags:
+    get:
+      summary: List tags on a workspace
+      parameters:
+        - {in: path,  name: workspaceId, required: true, schema: {type: string}}
+        - {in: query, name: name, schema: {type: string}, description: substring match unless strict-name-search=true}
+        - {in: query, name: strict-name-search, schema: {type: boolean, default: false}}
+        - {in: query, name: excluded-ids, schema: {type: array, items: {type: string}}, style: form, explode: true}
+        - {in: query, name: sort-column, schema: {type: string, enum: [ID, NAME]}}
+        - {in: query, name: sort-order, schema: {type: string, enum: [ASCENDING, DESCENDING]}}
+        - {in: query, name: page, schema: {type: integer, format: int32, default: 1, minimum: 1}}
+        - {in: query, name: page-size, schema: {type: integer, format: int32, default: 50, minimum: 1}}
+        - {in: query, name: archived, schema: {type: boolean, default: false}}
+      responses:
+        "200":
+          description: OK — array (may be empty `[]`)
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/Tag"}}
+              example:
+                - {id: "686a626dccb8b35162a8f8f4", name: "10138", workspaceId: "65b382b606de527a7ee2b60e", archived: false}
+  /workspaces/{workspaceId}/tags/{id}:
+    get:
+      summary: Get a tag by ID
+      parameters:
+        - {in: path, name: workspaceId, required: true, schema: {type: string}}
+        - {in: path, name: id, required: true, schema: {type: string}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Tag"}}}}
+        "4xx":
+          description: Not found / not in workspace (observed status body, HTTP code not captured by probe)
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+              example: {message: "Tag doesn't belong to Workspace", code: 501}
+components:
+  schemas:
+    Tag:
+      type: object
+      required: [id, name, workspaceId, archived]
+      properties:
+        id:          {type: string}
+        name:        {type: string, maxLength: 100}
+        workspaceId: {type: string}
+        archived:    {type: boolean}
+    Error:
+      type: object
+      properties:
+        message: {type: string}
+        code:    {type: integer}
+# Observations vs TAGDOC.md:
+#  - Field order on the wire is {id, name, workspaceId, archived}; doc lists archived first.
+#  - archived=true returned [] (no archived tags in ws); archived=false returns active set.
+#  - page-size=1 honored (returned 1 item); page-size=200 honored.
+#  - sort-column/sort-order both required to take effect (ID and NAME work).
+#  - strict-name-search=true vs false toggles substring vs exact match against `name`.
+#  - excluded-ids accepted repeated; bogus id silently ignored, full list returned.
+#  - Unknown id returns JSON {"message":"Tag doesn't belong to Workspace","code":501}
+#    — note `code:501` is an app-level code, not HTTP status.

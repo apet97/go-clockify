@@ -1,0 +1,675 @@
+openapi: 3.0.3
+info:
+  title: Clockify Scheduling API
+  description: Comprehensive specification for Scheduling Assignments, Projects, and User Capacity based on documentation and verified live probing. Note: creating 1 assignment utilizes the recurring path with repeat=false, weeks=1.
+  version: 1.0.0
+servers:
+  - url: https://api.clockify.me/api/v1
+    description: Clockify API Server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    DateRangeDto:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+
+    SchedulingExcludeDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [WEEKEND, HOLIDAY, TIME_OFF]
+
+    RecurringAssignmentDto:
+      type: object
+      properties:
+        repeat:
+          type: boolean
+        seriesId:
+          type: string
+        weeks:
+          type: integer
+
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: string
+        billable:
+          type: boolean
+        clientId:
+          type: string
+        clientName:
+          type: string
+        hoursPerDay:
+          type: number
+          format: double
+        note:
+          type: string
+        period:
+          $ref: '#/components/schemas/DateRangeDto'
+        projectArchived:
+          type: boolean
+        projectBillable:
+          type: boolean
+        projectColor:
+          type: string
+          pattern: "^#(?:[0-9a-fA-F]{6}){1}$"
+        projectId:
+          type: string
+        projectName:
+          type: string
+        published:
+          type: boolean
+        startTime:
+          type: string
+          example: "10:00:00"
+        taskId:
+          type: string
+          nullable: true
+        taskName:
+          type: string
+          nullable: true
+        userId:
+          type: string
+        userName:
+          type: string
+        workspaceId:
+          type: string
+        excludeDays:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchedulingExcludeDay'
+        recurring:
+          $ref: '#/components/schemas/RecurringAssignmentDto'
+
+    AssignmentPerDayDto:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        hasAssignment:
+          type: boolean
+        clientName:
+          type: string
+
+    MilestoneDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        projectId:
+          type: string
+        workspaceId:
+          type: string
+
+    ProjectTotalsResponse:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentPerDayDto'
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/MilestoneDto'
+        projectArchived:
+          type: boolean
+        projectBillable:
+          type: boolean
+        projectColor:
+          type: string
+        projectId:
+          type: string
+        projectName:
+          type: string
+        taskId:
+          type: string
+          nullable: true
+        taskName:
+          type: string
+          nullable: true
+        totalHours:
+          type: number
+          format: double
+        workspaceId:
+          type: string
+
+    TotalsPerDayDto:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        totalHours:
+          type: number
+          format: double
+
+    UserCapacityResponse:
+      type: object
+      properties:
+        capacityPerDay:
+          type: number
+          format: double
+        totalHoursPerDay:
+          type: array
+          items:
+            $ref: '#/components/schemas/TotalsPerDayDto'
+        userId:
+          type: string
+        userImage:
+          type: string
+        userName:
+          type: string
+        userStatus:
+          type: string
+        workingDays:
+          type: string
+          description: "Serialized array string e.g. [\"MONDAY\", \"TUESDAY\"]"
+        workspaceId:
+          type: string
+
+    CreateRecurringAssignmentRequest:
+      type: object
+      required:
+        - projectId
+        - userId
+        - hoursPerDay
+        - start
+        - end
+      properties:
+        billable:
+          type: boolean
+        end:
+          type: string
+          format: date-time
+        hoursPerDay:
+          type: number
+          format: double
+        includeNonWorkingDays:
+          type: boolean
+        note:
+          type: string
+          maxLength: 100
+        projectId:
+          type: string
+        start:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+        taskId:
+          type: string
+        userId:
+          type: string
+        recurringAssignment:
+          type: object
+          required:
+            - repeat
+            - weeks
+          description: To create a single assignment, set repeat: false, weeks: 1.
+          properties:
+            repeat:
+              type: boolean
+            weeks:
+              type: integer
+              minimum: 1
+              maximum: 99
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces/{workspaceId}/scheduling/assignments/all:
+    get:
+      summary: Get all assignments
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: sort-column
+          in: query
+          schema:
+            type: string
+            enum: [PROJECT, USER, ID]
+        - name: sort-order
+          in: query
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals:
+    post:
+      summary: Get all scheduled assignments per project
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+                search:
+                  type: string
+                statusFilter:
+                  type: string
+                  enum: [PUBLISHED, UNPUBLISHED, ALL]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectTotalsResponse'
+
+  /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}:
+    get:
+      summary: Get all scheduled assignments on specific project
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTotalsResponse'
+
+  /workspaces/{workspaceId}/scheduling/assignments/publish:
+    put:
+      summary: Publish assignments
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                notifyUsers:
+                  type: boolean
+                search:
+                  type: string
+      responses:
+        '200':
+          description: OK
+
+  /workspaces/{workspaceId}/scheduling/assignments/recurring:
+    post:
+      summary: Create assignment(s) (Single or Recurring)
+      description: "To create 1 single assignment, execute with recurringAssignment.repeat = false and recurringAssignment.weeks = 1."
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecurringAssignmentRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+
+  /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Delete recurring assignment
+      parameters:
+        - name: seriesUpdateOption
+          in: query
+          schema:
+            type: string
+            enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+    patch:
+      summary: Update recurring assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                billable:
+                  type: boolean
+                hoursPerDay:
+                  type: number
+                  format: double
+                note:
+                  type: string
+                  maxLength: 100
+                seriesUpdateOption:
+                  type: string
+                  enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL]
+                startTime:
+                  type: string
+                taskId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+
+  /workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}:
+    put:
+      summary: Change recurring period
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repeat
+                - weeks
+              properties:
+                repeat:
+                  type: boolean
+                weeks:
+                  type: integer
+                  minimum: 1
+                  maximum: 99
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+
+  /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals:
+    post:
+      summary: Get total of users capacity on workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+                search:
+                  type: string
+                statusFilter:
+                  type: string
+                  enum: [PUBLISHED, UNPUBLISHED, ALL]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserCapacityResponse'
+
+  /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals:
+    get:
+      summary: Get total capacity of a specific user
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCapacityResponse'
+
+  /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy:
+    post:
+      summary: Copy a scheduled assignment to another user
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - seriesUpdateOption
+                - userId
+              properties:
+                seriesUpdateOption:
+                  type: string
+                  enum: [THIS_ONE, THIS_AND_FOLLOWING, ALL]
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'

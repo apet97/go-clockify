@@ -1,0 +1,384 @@
+openapi: 3.0.3
+info:
+  title: Clockify Time Entry API
+  description: Validated against live workspace testing. Includes empirical constraints derived from runtime interaction.
+  version: 1.0.0
+servers:
+  - url: https://api.clockify.me/api/v1
+    description: Clockify API Server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    TimeEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        tagIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+        userId:
+          type: string
+        billable:
+          type: boolean
+        taskId:
+          type: string
+          nullable: true
+        projectId:
+          type: string
+          nullable: true
+        workspaceId:
+          type: string
+        isLocked:
+          type: boolean
+        type:
+          type: string
+          enum: [REGULAR, BREAK, HOLIDAY, TIME_OFF]
+        timeInterval:
+          $ref: '#/components/schemas/TimeIntervalDto'
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValueDto'
+
+    TimeIntervalDto:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+          nullable: true
+        duration:
+          type: string
+
+    CustomFieldValueDto:
+      type: object
+      properties:
+        customFieldId:
+          type: string
+        timeEntryId:
+          type: string
+        name:
+          type: string
+        value:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [WORKSPACE, PROJECT, TIMEENTRY]
+
+    CreateTimeEntryRequest:
+      type: object
+      required:
+        - start
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        billable:
+          type: boolean
+        description:
+          type: string
+        projectId:
+          type: string
+        taskId:
+          type: string
+        tagIds:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [REGULAR, BREAK]
+
+    BulkEditTimeEntryRequest:
+      type: object
+      required:
+        - id
+        - start
+        - end
+      description: LIVE VERIFICATION REVEALED - Field 'end' is mandatory for bulk edits on live system, contrary to single-update documentation.
+      properties:
+        id:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        billable:
+          type: boolean
+        description:
+          type: string
+        projectId:
+          type: string
+        taskId:
+          type: string
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces/{workspaceId}/time-entries:
+    post:
+      summary: Add a new time entry
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeEntryRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+
+  /workspaces/{workspaceId}/time-entries/{id}:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a specific time entry
+      parameters:
+        - name: hydrated
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+    put:
+      summary: Update time entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeEntryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+    delete:
+      summary: Delete a time entry
+      responses:
+        '204':
+          description: No Content
+
+  /workspaces/{workspaceId}/time-entries/invoiced:
+    patch:
+      summary: Mark time entries as invoiced
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - invoiced
+                - timeEntryIds
+              properties:
+                invoiced:
+                  type: boolean
+                timeEntryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: OK
+
+  /workspaces/{workspaceId}/time-entries/status/in-progress:
+    get:
+      summary: Get all in progress time entries
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeEntry'
+
+  /workspaces/{workspaceId}/user/{userId}/time-entries:
+    parameters:
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get time entries for user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeEntry'
+    post:
+      summary: Add time entry for another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeEntryRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+    patch:
+      summary: Stop running timer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - end
+              properties:
+                end:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+    put:
+      summary: Bulk edit time entries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BulkEditTimeEntryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeEntry'
+
+  /workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate:
+    post:
+      summary: Duplicate time entry
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'

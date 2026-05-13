@@ -143,6 +143,25 @@ jobs:
         # with no arguments (it defaults to ./dist).
         # See docs/runbooks/release-asset-count.md for triage.
         run: bash scripts/check-release-assets.sh
+      - name: Publish OpenAPI contract evidence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.resolve-release-tag.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p openapi-release
+          cp docs/openapi/clockify-openapi.yaml openapi-release/clockify-openapi.yaml
+          cp docs/openapi/sources/manifest.json openapi-release/clockify-openapi.sources.manifest.json
+          (
+            cd openapi-release
+            sha256sum clockify-openapi.yaml clockify-openapi.sources.manifest.json > clockify-openapi.sha256
+          )
+          gh release upload "${RELEASE_VERSION}" \
+            openapi-release/clockify-openapi.yaml \
+            openapi-release/clockify-openapi.sources.manifest.json \
+            openapi-release/clockify-openapi.sha256 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
       - name: Stage release binaries for attestation
         run: |
           set -euo pipefail

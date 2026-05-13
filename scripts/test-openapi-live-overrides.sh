@@ -12,8 +12,23 @@ end
 doc = YAML.load_file("docs/openapi/clockify-openapi.yaml")
 paths = doc.fetch("paths")
 schemas = doc.fetch("components").fetch("schemas")
+generation = doc.fetch("x-clockify-generation")
 
 assert(!paths.key?("/workspaces/{workspaceId}/scheduling/capacity"), "phantom scheduling capacity path must stay quarantined")
+assert(generation.dig("sourceManifest", "path") == "manifest.json", "OpenAPI artifact must record the repo-local source manifest")
+assert(generation.dig("sourceManifest", "files").to_i > 0, "OpenAPI source manifest must pin input files")
+assert(File.exist?("docs/openapi/sources/manifest.json"), "repo-local OpenAPI source manifest must exist")
+
+stable_ids = {
+  ["/file/image", "post"] => "uploadImage",
+  ["/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals", "get"] => "getUserCapacityTotal",
+  ["/workspaces/{workspaceId}/time-off/balance/policy/{policyId}", "patch"] => "updateBalance",
+  ["/workspaces/{workspaceId}/users/{userId}/roles", "post"] => "giveUserManagerRole",
+  ["/workspaces/{workspaceId}/users/{userId}/roles", "delete"] => "removeUserManagerRole"
+}
+stable_ids.each do |(path, method), operation_id|
+  assert(paths.dig(path, method, "operationId") == operation_id, "#{method.upcase} #{path} operationId must stay stable")
+end
 
 summary = schemas.fetch("SummaryReportResponse").fetch("properties")
 assert(!summary.key?("chart"), "SummaryReportResponse must not expose stale chart")

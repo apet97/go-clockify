@@ -1,0 +1,1241 @@
+openapi: 3.0.3
+info:
+  title: Clockify Scheduling API
+  version: 1.0.0
+  description: OpenAPI definition generated from SCHEDULINGDOC.md. It describes Clockify Scheduling assignment, recurring
+    assignment, publishing, project total, and capacity total endpoints.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+tags:
+- name: Scheduling
+  description: Scheduling assignment and capacity operations
+paths:
+  /v1/workspaces/{workspaceId}/scheduling/assignments/all:
+    get:
+      tags:
+      - Scheduling
+      summary: Get all assignments
+      operationId: getAllSchedulingAssignments
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - name: name
+        in: query
+        description: If provided, assignments will be filtered by name.
+        required: false
+        schema:
+          type: string
+          default: ''
+        example: Bugfixing
+      - $ref: '#/components/parameters/startQuery'
+      - $ref: '#/components/parameters/endQuery'
+      - name: sort-column
+        in: query
+        description: Represents the column as the sorting criteria.
+        required: false
+        schema:
+          $ref: '#/components/schemas/AssignmentSortColumn'
+        example: USER
+      - name: sort-order
+        in: query
+        description: Represents the sorting mode.
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortOrder'
+        example: ASCENDING
+      - $ref: '#/components/parameters/pageQuery'
+      - $ref: '#/components/parameters/pageSizeQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentListItem'
+              example:
+              - billable: false
+                clientId: 36b687e29ae1f428e7ebe109
+                clientName: Software Development
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectArchived: true
+                projectBillable: true
+                projectColor: '#000000'
+                projectId: 56b687e29ae1f428e7ebe504
+                projectName: Software Development
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                taskName: Bugfixing
+                userId: 72k687e29ae1f428e7ebe109
+                userName: John Doe
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/projects/totals:
+    post:
+      tags:
+      - Scheduling
+      summary: Get all scheduled assignments per project
+      operationId: getScheduledAssignmentsPerProject
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectTotalsRequest'
+            example:
+              start: '2020-01-01T00:00:00Z'
+              end: '2021-01-01T00:00:00Z'
+              page: 1
+              pageSize: 50
+              search: Software
+              statusFilter: ALL
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectAssignmentsTotal'
+              example:
+              - assignments:
+                - date: '2020-01-01T00:00:00Z'
+                  hasAssignment: true
+                clientName: Software Development
+                milestones:
+                - date: '2020-06-01T00:00:00Z'
+                  id: 74a687e29ae1f428e7ebe506
+                  name: Milestone 1
+                  projectId: 56b687e29ae1f428e7ebe504
+                  workspaceId: 64a687e29ae1f428e7ebe303
+                projectArchived: false
+                projectBillable: false
+                projectColor: '#000000'
+                projectId: 56b687e29ae1f428e7ebe504
+                projectName: Software Development
+                taskId: 36b687e29ae1f428e7ebe109
+                taskName: Bugfixing
+                totalHours: 490.5
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}:
+    get:
+      tags:
+      - Scheduling
+      summary: Get all scheduled assignments on project
+      operationId: getScheduledAssignmentsOnProject
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/projectId'
+      - $ref: '#/components/parameters/startQuery'
+      - $ref: '#/components/parameters/endQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectAssignmentsTotal'
+              example:
+                assignments:
+                - date: '2020-01-01T00:00:00Z'
+                  hasAssignment: true
+                clientName: Software Development
+                milestones:
+                - date: '2020-06-01T00:00:00Z'
+                  id: 74a687e29ae1f428e7ebe506
+                  name: Milestone 1
+                  projectId: 56b687e29ae1f428e7ebe504
+                  workspaceId: 64a687e29ae1f428e7ebe303
+                projectArchived: false
+                projectBillable: false
+                projectColor: '#000000'
+                projectId: 56b687e29ae1f428e7ebe504
+                projectName: Software Development
+                taskId: 36b687e29ae1f428e7ebe109
+                taskName: Bugfixing
+                totalHours: 490.5
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/publish:
+    put:
+      tags:
+      - Scheduling
+      summary: Publish assignments
+      operationId: publishAssignments
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishAssignmentsRequest'
+            example:
+              start: '2020-01-01T00:00:00Z'
+              end: '2021-01-01T00:00:00Z'
+              notifyUsers: false
+              search: John
+              viewType: ALL
+      responses:
+        '200':
+          description: OK
+  /v1/workspaces/{workspaceId}/scheduling/assignments/recurring:
+    post:
+      tags:
+      - Scheduling
+      summary: Create a recurring assignment
+      operationId: createRecurringAssignment
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecurringAssignmentRequest'
+            example:
+              billable: false
+              end: '2021-01-01T00:00:00Z'
+              hoursPerDay: 7.5
+              includeNonWorkingDays: false
+              note: This is a sample note for an assignment.
+              projectId: 56b687e29ae1f428e7ebe504
+              recurringAssignment:
+                repeat: true
+                weeks: 2
+              start: '2020-01-01T00:00:00Z'
+              startTime: '10:00:00'
+              taskId: 36b687e29ae1f428e7ebe109
+              userId: 72k687e29ae1f428e7ebe109
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchedulingAssignment'
+              example:
+              - billable: false
+                excludeDays:
+                - date: '2020-01-04T00:00:00Z'
+                  type: WEEKEND
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                includeNonWorkingDays: false
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectId: 56b687e29ae1f428e7ebe504
+                published: false
+                recurring:
+                  repeat: true
+                  seriesId: 74a687e29ae1f428e7ebe999
+                  weeks: 2
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                userId: 72k687e29ae1f428e7ebe109
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}:
+    delete:
+      tags:
+      - Scheduling
+      summary: Delete a recurring assignment
+      operationId: deleteRecurringAssignment
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/assignmentId'
+      - $ref: '#/components/parameters/seriesUpdateOptionQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchedulingAssignment'
+              example:
+              - billable: false
+                excludeDays:
+                - date: '2020-01-04T00:00:00Z'
+                  type: WEEKEND
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                includeNonWorkingDays: false
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectId: 56b687e29ae1f428e7ebe504
+                published: false
+                recurring:
+                  repeat: true
+                  seriesId: 74a687e29ae1f428e7ebe999
+                  weeks: 2
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                userId: 72k687e29ae1f428e7ebe109
+                workspaceId: 64a687e29ae1f428e7ebe303
+    patch:
+      tags:
+      - Scheduling
+      summary: Update a recurring assignment
+      operationId: updateRecurringAssignment
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/assignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecurringAssignmentRequest'
+            example:
+              billable: false
+              end: '2021-01-01T00:00:00Z'
+              hoursPerDay: 7.5
+              includeNonWorkingDays: false
+              note: This is a sample note for an assignment.
+              seriesUpdateOption: THIS_ONE
+              start: '2020-01-01T00:00:00Z'
+              startTime: '10:00:00'
+              taskId: 36b687e29ae1f428e7ebe109
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchedulingAssignment'
+              example:
+              - billable: false
+                excludeDays:
+                - date: '2020-01-04T00:00:00Z'
+                  type: WEEKEND
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                includeNonWorkingDays: false
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectId: 56b687e29ae1f428e7ebe504
+                published: false
+                recurring:
+                  repeat: true
+                  seriesId: 74a687e29ae1f428e7ebe999
+                  weeks: 2
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                userId: 72k687e29ae1f428e7ebe109
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}:
+    put:
+      tags:
+      - Scheduling
+      summary: Change the recurring period
+      operationId: changeRecurringPeriod
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/assignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRecurringPeriodRequest'
+            example:
+              repeat: true
+              weeks: 2
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchedulingAssignment'
+              example:
+              - billable: false
+                excludeDays:
+                - date: '2020-01-04T00:00:00Z'
+                  type: WEEKEND
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                includeNonWorkingDays: false
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectId: 56b687e29ae1f428e7ebe504
+                published: false
+                recurring:
+                  repeat: true
+                  seriesId: 74a687e29ae1f428e7ebe999
+                  weeks: 2
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                userId: 72k687e29ae1f428e7ebe109
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals:
+    post:
+      tags:
+      - Scheduling
+      summary: Get total of users' capacity on workspace
+      operationId: getUsersCapacityTotals
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCapacityTotalsRequest'
+            example:
+              start: '2020-01-01T00:00:00Z'
+              end: '2021-01-01T00:00:00Z'
+              page: 1
+              pageSize: 50
+              search: John
+              statusFilter: ALL
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserCapacityTotal'
+              example:
+              - capacityPerDay: 25200
+                totalHoursPerDay:
+                - date: '2020-01-01T00:00:00Z'
+                  totalHours: 7.5
+                userId: 72k687e29ae1f428e7ebe109
+                userImage: '##default'
+                userName: John Doe
+                userStatus: ACTIVE
+                workingDays:
+                - MONDAY
+                - TUESDAY
+                - WEDNESDAY
+                - THURSDAY
+                - FRIDAY
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals:
+    get:
+      tags:
+      - Scheduling
+      summary: Get total capacity of a user
+      operationId: getUserCapacityTotal
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/pageQuery'
+      - $ref: '#/components/parameters/pageSizeQuery'
+      - $ref: '#/components/parameters/startQuery'
+      - $ref: '#/components/parameters/endQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCapacityTotal'
+              example:
+                capacityPerDay: 25200
+                totalHoursPerDay:
+                - date: '2020-01-01T00:00:00Z'
+                  totalHours: 7.5
+                userId: 72k687e29ae1f428e7ebe109
+                userImage: '##default'
+                userName: John Doe
+                userStatus: ACTIVE
+                workingDays:
+                - MONDAY
+                - TUESDAY
+                - WEDNESDAY
+                - THURSDAY
+                - FRIDAY
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy:
+    post:
+      tags:
+      - Scheduling
+      summary: Copy a scheduled assignment
+      operationId: copyScheduledAssignment
+      parameters:
+      - $ref: '#/components/parameters/workspaceId'
+      - $ref: '#/components/parameters/assignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyAssignmentRequest'
+            example:
+              seriesUpdateOption: THIS_ONE
+              userId: 72k687e29ae1f428e7ebe109
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchedulingAssignment'
+              example:
+              - billable: false
+                excludeDays:
+                - date: '2020-01-04T00:00:00Z'
+                  type: WEEKEND
+                hoursPerDay: 7.5
+                id: 74a687e29ae1f428e7ebe505
+                includeNonWorkingDays: false
+                note: This is a sample note for an assignment.
+                period:
+                  start: '2020-01-01T00:00:00Z'
+                  end: '2021-01-01T00:00:00Z'
+                projectId: 56b687e29ae1f428e7ebe504
+                published: false
+                recurring:
+                  repeat: true
+                  seriesId: 74a687e29ae1f428e7ebe999
+                  weeks: 2
+                startTime: '10:00:00'
+                taskId: 36b687e29ae1f428e7ebe109
+                userId: 72k687e29ae1f428e7ebe109
+                workspaceId: 64a687e29ae1f428e7ebe303
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+      description: Clockify add-on token.
+  parameters:
+    workspaceId:
+      name: workspaceId
+      in: path
+      description: Represents a workspace identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 64a687e29ae1f428e7ebe303
+    projectId:
+      name: projectId
+      in: path
+      description: Represents a project identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 56b687e29ae1f428e7ebe504
+    assignmentId:
+      name: assignmentId
+      in: path
+      description: Represents an assignment identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 5b641568b07987035750505e
+    userId:
+      name: userId
+      in: path
+      description: Represents a user identifier across the system.
+      required: true
+      schema:
+        type: string
+      example: 5a0ab5acb07987125438b60f
+    pageQuery:
+      name: page
+      in: query
+      description: Page number.
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      example: 1
+    pageSizeQuery:
+      name: page-size
+      in: query
+      description: Page size.
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      example: 50
+    startQuery:
+      name: start
+      in: query
+      description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
+      required: true
+      schema:
+        type: string
+        format: date-time
+      example: '2020-01-01T00:00:00Z'
+    endQuery:
+      name: end
+      in: query
+      description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+      required: true
+      schema:
+        type: string
+        format: date-time
+      example: '2021-01-01T00:00:00Z'
+    seriesUpdateOptionQuery:
+      name: seriesUpdateOption
+      in: query
+      description: Represents a series option.
+      required: false
+      schema:
+        $ref: '#/components/schemas/SeriesUpdateOption'
+      example: ALL
+  schemas:
+    SortOrder:
+      type: string
+      enum:
+      - ASCENDING
+      - DESCENDING
+    AssignmentSortColumn:
+      type: string
+      enum:
+      - PROJECT
+      - USER
+      - ID
+    StatusFilter:
+      type: string
+      enum:
+      - PUBLISHED
+      - UNPUBLISHED
+      - ALL
+    SeriesUpdateOption:
+      type: string
+      enum:
+      - THIS_ONE
+      - THIS_AND_FOLLOWING
+      - ALL
+    ContainsFilterType:
+      type: string
+      enum:
+      - CONTAINS
+      - DOES_NOT_CONTAIN
+      - CONTAINS_ONLY
+    MembershipStatus:
+      type: string
+      enum:
+      - PENDING
+      - ACTIVE
+      - DECLINED
+      - INACTIVE
+      - ALL
+    SchedulingViewType:
+      type: string
+      enum:
+      - PROJECTS
+      - TEAM
+      - ALL
+    SchedulingExcludeDayType:
+      type: string
+      enum:
+      - WEEKEND
+      - HOLIDAY
+      - TIME_OFF
+    DayOfWeek:
+      type: string
+      enum:
+      - MONDAY
+      - TUESDAY
+      - WEDNESDAY
+      - THURSDAY
+      - FRIDAY
+      - SATURDAY
+      - SUNDAY
+    DateRangeDto:
+      type: object
+      description: Represents date range object.
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+      additionalProperties: false
+    AssignmentPerDayDto:
+      type: object
+      description: Represents an assignment-per-day object.
+      properties:
+        date:
+          type: string
+          format: date-time
+        hasAssignment:
+          type: boolean
+      additionalProperties: false
+    MilestoneDto:
+      type: object
+      description: Represents a milestone object.
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Represents a date in yyyy-MM-ddThh:mm:ssZ format.
+        id:
+          type: string
+          description: Represents milestone identifier across the system.
+        name:
+          type: string
+          description: Represents milestone name.
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false
+    ProjectAssignmentsTotal:
+      type: object
+      description: Represents scheduled assignment totals for a project.
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentPerDayDto'
+          description: Represents a list of assignment per day objects.
+        clientName:
+          type: string
+          description: Represents project name.
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/MilestoneDto'
+          description: Represents a list of milestone objects.
+        projectArchived:
+          type: boolean
+          default: false
+          description: Indicates whether project is archived or not.
+        projectBillable:
+          type: boolean
+          default: false
+          description: Indicates whether project is billable or not.
+        projectColor:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        projectName:
+          type: string
+          description: Represents project name.
+        taskId:
+          type: string
+          description: Represents task identifier across the system.
+        taskName:
+          type: string
+          description: Represents task name.
+        totalHours:
+          type: number
+          format: double
+          description: Represents project total hours as double.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false
+    AssignmentListItem:
+      type: object
+      description: Represents a scheduled assignment returned by the list endpoint.
+      properties:
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is billable or not.
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+        clientName:
+          type: string
+          description: Represents project name.
+        hoursPerDay:
+          type: number
+          format: double
+          description: Represents number of hours per day as double.
+        id:
+          type: string
+          description: Represents assignment identifier across the system.
+        note:
+          type: string
+          description: Represents assignment note.
+        period:
+          $ref: '#/components/schemas/DateRangeDto'
+        projectArchived:
+          type: boolean
+        projectBillable:
+          type: boolean
+        projectColor:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Color value in standard RGB hexadecimal format.
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        projectName:
+          type: string
+          description: Represents project name.
+        startTime:
+          type: string
+          description: Represents start time in hh:mm:ss format.
+          example: '10:00:00'
+        taskId:
+          type: string
+          description: Represents task identifier across the system.
+        taskName:
+          type: string
+          description: Represents task name.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        userName:
+          type: string
+          description: Represents user name.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false
+    SchedulingExcludeDay:
+      type: object
+      description: Represents a scheduling excluded day.
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Represents a datetime in yyyy-MM-ddThh:mm:ssZ format.
+        type:
+          $ref: '#/components/schemas/SchedulingExcludeDayType'
+      additionalProperties: false
+    RecurringAssignmentDto:
+      type: object
+      description: Represents recurring assignment object.
+      properties:
+        repeat:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is recurring or not.
+        seriesId:
+          type: string
+          description: Represents series identifier.
+        weeks:
+          type: integer
+          format: int32
+          description: Represents number of weeks for this assignment.
+      additionalProperties: false
+    SchedulingAssignment:
+      type: object
+      description: Represents a scheduled assignment.
+      properties:
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is billable or not.
+        excludeDays:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchedulingExcludeDay'
+          uniqueItems: true
+          description: Represents a list of excluded days objects.
+        hoursPerDay:
+          type: number
+          format: double
+          description: Represents assignment total hours per day.
+        id:
+          type: string
+          description: Represents assignment identifier across the system.
+        includeNonWorkingDays:
+          type: boolean
+          default: false
+          description: Indicates whether assignment should include non-working days or not.
+        note:
+          type: string
+          description: Represents assignment note.
+        period:
+          $ref: '#/components/schemas/DateRangeDto'
+        projectId:
+          type: string
+          description: Represents project identifier across the system.
+        published:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is published or not.
+        recurring:
+          $ref: '#/components/schemas/RecurringAssignmentDto'
+        startTime:
+          type: string
+          description: Represents start time in hh:mm:ss format.
+          example: '10:00:00'
+        taskId:
+          type: string
+          description: Represents task identifier across the system.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false
+    RecurringAssignmentRequestV1:
+      type: object
+      description: Recurring assignment settings.
+      required:
+      - weeks
+      properties:
+        repeat:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is recurring or not.
+        weeks:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 99
+          description: Indicates number of weeks for assignment.
+      additionalProperties: false
+    ProjectTotalsRequest:
+      type: object
+      description: Request for scheduled assignments per project.
+      required:
+      - start
+      - end
+      properties:
+        end:
+          type: string
+          format: date-time
+          description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+        page:
+          type: integer
+          format: int32
+          default: 1
+          description: Page number.
+        pageSize:
+          type: integer
+          format: int32
+          maximum: 200
+          default: 50
+          description: Page size.
+        search:
+          type: string
+          description: Represents a term for searching projects and clients by name.
+        start:
+          type: string
+          format: date-time
+          description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
+        statusFilter:
+          $ref: '#/components/schemas/StatusFilter'
+      additionalProperties: false
+    PublishAssignmentsRequest:
+      type: object
+      description: Request for publishing assignments.
+      required:
+      - start
+      - end
+      properties:
+        end:
+          type: string
+          format: date-time
+          description: Represents end date in yyyy-MM-ddThh:mm:ssZ format.
+        notifyUsers:
+          type: boolean
+          default: false
+          description: Indicates whether to notify users when assignment is published.
+        search:
+          type: string
+          description: Represents a search string.
+        start:
+          type: string
+          format: date-time
+          description: Represents start date in yyyy-MM-ddThh:mm:ssZ format.
+        userFilter:
+          $ref: '#/components/schemas/ContainsUsersFilterRequestV1'
+        userGroupFilter:
+          $ref: '#/components/schemas/ContainsUserGroupFilterRequestV1'
+        viewType:
+          $ref: '#/components/schemas/SchedulingViewType'
+      additionalProperties: false
+    CreateRecurringAssignmentRequest:
+      type: object
+      description: Request for creating a recurring assignment.
+      required:
+      - end
+      - hoursPerDay
+      - projectId
+      - start
+      - userId
+      properties:
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is billable or not.
+        end:
+          type: string
+          format: date-time
+          description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+        hoursPerDay:
+          type: number
+          format: double
+          description: Represents assignment total hours per day.
+        includeNonWorkingDays:
+          type: boolean
+          default: false
+          description: Indicates whether to include non-working days or not.
+        note:
+          type: string
+          maxLength: 100
+          description: Represents an assignment note.
+        projectId:
+          type: string
+          minLength: 1
+          description: Represents a project identifier across the system.
+        recurringAssignment:
+          $ref: '#/components/schemas/RecurringAssignmentRequestV1'
+        start:
+          type: string
+          format: date-time
+          description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
+        startTime:
+          type: string
+          description: Represents a start time in the hh:mm:ss format.
+          example: '10:00:00'
+        taskId:
+          type: string
+          description: Represents a task identifier across the system.
+        userId:
+          type: string
+          minLength: 1
+          description: Represents a user identifier across the system.
+      additionalProperties: false
+    UpdateRecurringAssignmentRequest:
+      type: object
+      description: Request for updating a recurring assignment.
+      required:
+      - start
+      - end
+      properties:
+        billable:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is billable or not.
+        end:
+          type: string
+          format: date-time
+          description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+        hoursPerDay:
+          type: number
+          format: double
+          description: Represents assignment total hours per day.
+        includeNonWorkingDays:
+          type: boolean
+          default: false
+          description: Indicates whether to include non-working days or not.
+        note:
+          type: string
+          maxLength: 100
+          description: Represents an assignment note.
+        seriesUpdateOption:
+          $ref: '#/components/schemas/SeriesUpdateOption'
+        start:
+          type: string
+          format: date-time
+          description: Represents start date in yyyy-MM-ddThh:mm:ssZ format.
+        startTime:
+          type: string
+          description: Represents a start time in the hh:mm:ss format.
+          example: '10:00:00'
+        taskId:
+          type: string
+          description: Represents task identifier across the system.
+      additionalProperties: false
+    ChangeRecurringPeriodRequest:
+      type: object
+      description: Request for changing a recurring assignment period.
+      required:
+      - repeat
+      - weeks
+      properties:
+        repeat:
+          type: boolean
+          default: false
+          description: Indicates whether assignment is recurring or not.
+        weeks:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 99
+          description: Indicates number of weeks for assignment.
+      additionalProperties: false
+    CopyAssignmentRequest:
+      type: object
+      description: Request for copying a scheduled assignment.
+      required:
+      - seriesUpdateOption
+      - userId
+      properties:
+        seriesUpdateOption:
+          $ref: '#/components/schemas/SeriesUpdateOption'
+        userId:
+          type: string
+          description: Represents a user identifier across the system.
+      additionalProperties: false
+    UserCapacityTotalsRequest:
+      type: object
+      description: Request for total capacity of users on a workspace.
+      required:
+      - start
+      - end
+      properties:
+        end:
+          type: string
+          format: date-time
+          description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+        page:
+          type: integer
+          format: int32
+          default: 1
+          description: Page number.
+        pageSize:
+          type: integer
+          format: int32
+          maximum: 200
+          default: 50
+          description: Page size.
+        search:
+          type: string
+          description: Represents the keyword for searching users by name or email.
+        start:
+          type: string
+          format: date-time
+          description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
+        statusFilter:
+          $ref: '#/components/schemas/StatusFilter'
+        userFilter:
+          $ref: '#/components/schemas/ContainsUsersFilterRequestV1'
+        userGroupFilter:
+          $ref: '#/components/schemas/ContainsUserGroupFilterRequestV1'
+      additionalProperties: false
+    ContainsUsersFilterRequestV1:
+      type: object
+      description: Represents a user filter request object.
+      properties:
+        contains:
+          $ref: '#/components/schemas/ContainsFilterType'
+        ids:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: Represents a list of filter identifiers.
+        sourceType:
+          type: string
+          enum:
+          - USER_GROUP
+          description: Valid authorization source type.
+        status:
+          $ref: '#/components/schemas/MembershipStatus'
+        statuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembershipStatus'
+          description: Valid array of membership statuses.
+      additionalProperties: false
+    ContainsUserGroupFilterRequestV1:
+      type: object
+      description: Represents a user group filter request object.
+      properties:
+        contains:
+          $ref: '#/components/schemas/ContainsFilterType'
+        ids:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: Represents a list of filter identifiers.
+        status:
+          $ref: '#/components/schemas/MembershipStatus'
+      additionalProperties: false
+    TotalsPerDayDto:
+      type: object
+      description: Represents total hours per day object.
+      properties:
+        date:
+          type: string
+          format: date-time
+        totalHours:
+          type: number
+          format: double
+      additionalProperties: false
+    UserCapacityTotal:
+      type: object
+      description: Represents capacity totals for a user.
+      properties:
+        capacityPerDay:
+          type: number
+          format: double
+          description: Represents capacity per day in seconds. For a 7hr work day, value is 25200.
+        totalHoursPerDay:
+          type: array
+          items:
+            $ref: '#/components/schemas/TotalsPerDayDto'
+          description: Represents total hours per day object.
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+        userImage:
+          type: string
+          description: Represents url path to user image.
+        userName:
+          type: string
+          description: Represents user name.
+        userStatus:
+          type: string
+          description: Represents user status.
+        workingDays:
+          description: Represents list of days of the week. The source sample shows a JSON-stringified array, so this schema
+            allows both an array and a string representation.
+          oneOf:
+          - type: array
+            items:
+              $ref: '#/components/schemas/DayOfWeek'
+          - type: string
+          example:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+      additionalProperties: false

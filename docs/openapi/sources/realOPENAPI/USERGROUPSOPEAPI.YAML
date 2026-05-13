@@ -1,0 +1,419 @@
+openapi: 3.0.3
+info:
+  title: Clockify User Groups API
+  version: 1.0.0
+  description: OpenAPI specification generated from the uploaded GROUPSDOC.md Markdown documentation.
+servers:
+  - url: https://api.clockify.me/api
+    description: Clockify API
+tags:
+  - name: User Groups
+    description: User group operations
+security:
+  - ApiKeyAuth: []
+  - AddonKeyAuth: []
+paths:
+  /v1/workspaces/{workspaceId}/user-groups:
+    get:
+      tags:
+        - User Groups
+      summary: Find all groups on a workspace
+      operationId: findAllGroupsOnWorkspace
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+        - $ref: '#/components/parameters/ProjectIdQuery'
+        - $ref: '#/components/parameters/UserGroupNameQuery'
+        - $ref: '#/components/parameters/UserGroupSortColumnQuery'
+        - $ref: '#/components/parameters/SortOrderQuery'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/PageSizeQuery'
+        - $ref: '#/components/parameters/IncludeTeamManagersQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                - id: 76a687e29ae1f428e7ebe101
+                  name: development_team
+                  teamManagers:
+                    - id: 672323eb0024343a1585e8a7
+                      name: Jane Doe
+                  userIds:
+                    - 5a0ab5acb07987125438b60f
+                    - 98j4b5acb07987125437y32
+                  workspaceId: 64a687e29ae1f428e7ebe303
+    post:
+      tags:
+        - User Groups
+      summary: Add a new group
+      operationId: addNewGroup
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroupRequest'
+            example:
+              name: development_team
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                id: 76a687e29ae1f428e7ebe101
+                name: development_team
+                teamManagers:
+                  - id: 672323eb0024343a1585e8a7
+                    name: Jane Doe
+                userIds:
+                  - 5a0ab5acb07987125438b60f
+                  - 98j4b5acb07987125437y32
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/user-groups/{id}:
+    delete:
+      tags:
+        - User Groups
+      summary: Delete a group
+      operationId: deleteGroup
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+        - $ref: '#/components/parameters/UserGroupIdPathById'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                id: 76a687e29ae1f428e7ebe101
+                name: development_team
+                teamManagers:
+                  - id: 672323eb0024343a1585e8a7
+                    name: Jane Doe
+                userIds:
+                  - 5a0ab5acb07987125438b60f
+                  - 98j4b5acb07987125437y32
+                workspaceId: 64a687e29ae1f428e7ebe303
+    put:
+      tags:
+        - User Groups
+      summary: Update a group
+      operationId: updateGroup
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+        - $ref: '#/components/parameters/UserGroupIdPathById'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroupRequest'
+            example:
+              name: development_team
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                id: 76a687e29ae1f428e7ebe101
+                name: development_team
+                teamManagers:
+                  - id: 672323eb0024343a1585e8a7
+                    name: Jane Doe
+                userIds:
+                  - 5a0ab5acb07987125438b60f
+                  - 98j4b5acb07987125437y32
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/user-groups/{userGroupId}/users:
+    post:
+      tags:
+        - User Groups
+      summary: Add users to a group
+      operationId: addUsersToGroup
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+        - $ref: '#/components/parameters/UserGroupIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserToGroupRequest'
+            example:
+              userId: 5a0ab5acb07987125438b60f
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                id: 76a687e29ae1f428e7ebe101
+                name: development_team
+                teamManagers:
+                  - id: 672323eb0024343a1585e8a7
+                    name: Jane Doe
+                userIds:
+                  - 5a0ab5acb07987125438b60f
+                  - 98j4b5acb07987125437y32
+                workspaceId: 64a687e29ae1f428e7ebe303
+  /v1/workspaces/{workspaceId}/user-groups/{userGroupId}/users/{userId}:
+    delete:
+      tags:
+        - User Groups
+      summary: Remove a user from a group
+      operationId: removeUserFromGroup
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdPath'
+        - $ref: '#/components/parameters/UserGroupIdPath'
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupDtoV1'
+              example:
+                id: 76a687e29ae1f428e7ebe101
+                name: development_team
+                teamManagers:
+                  - id: 672323eb0024343a1585e8a7
+                    name: Jane Doe
+                userIds:
+                  - 5a0ab5acb07987125438b60f
+                  - 98j4b5acb07987125437y32
+                workspaceId: 64a687e29ae1f428e7ebe303
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+  parameters:
+    WorkspaceIdPath:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 64a687e29ae1f428e7ebe303
+    UserGroupIdPathById:
+      name: id
+      in: path
+      required: true
+      description: Represents a user group identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 76a687e29ae1f428e7ebe101
+    UserGroupIdPath:
+      name: userGroupId
+      in: path
+      required: true
+      description: Represents a user group identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 76a687e29ae1f428e7ebe101
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      description: Represents a user identifier across the system.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: 5a0ab5acb07987125438b60f
+    ProjectIdQuery:
+      name: project-id
+      in: query
+      required: false
+      description: If provided, you'll get a filtered list of groups that matches the string provided in their project id.
+      schema:
+        type: string
+      example: 5a0ab5acb07987125438b60f
+    UserGroupNameQuery:
+      name: name
+      in: query
+      required: false
+      description: If provided, you'll get a filtered list of groups that matches the string provided in their name.
+      schema:
+        type: string
+        x-clockify-default: '##default'
+      example: development_team
+    UserGroupSortColumnQuery:
+      name: sort-column
+      in: query
+      required: false
+      description: Column to be used as the sorting criteria.
+      schema:
+        $ref: '#/components/schemas/UserGroupSortColumn'
+      example: NAME
+    SortOrderQuery:
+      name: sort-order
+      in: query
+      required: false
+      description: Sorting mode.
+      schema:
+        $ref: '#/components/schemas/SortOrder'
+      example: ASCENDING
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Page number.
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      example: 1
+    PageSizeQuery:
+      name: page-size
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      example: 50
+    IncludeTeamManagersQuery:
+      name: includeTeamManagers
+      in: query
+      required: false
+      description: If provided, you'll get a list of team managers assigned to this user group.
+      schema:
+        type: boolean
+        default: false
+      example: true
+  schemas:
+    UserGroupSortColumn:
+      type: string
+      enum:
+        - ID
+        - NAME
+      description: Column to be used as the sorting criteria.
+    SortOrder:
+      type: string
+      enum:
+        - ASCENDING
+        - DESCENDING
+      description: Sorting mode.
+    UserRedactedDtoV1:
+      type: object
+      description: Represents a redacted user object.
+      properties:
+        id:
+          type: string
+          description: Represents a user identifier across the system.
+        name:
+          type: string
+          description: Represents a user name.
+      example:
+        id: 672323eb0024343a1585e8a7
+        name: Jane Doe
+    UserGroupDtoV1:
+      type: object
+      description: Represents a user group.
+      properties:
+        id:
+          type: string
+          description: Represents a user group identifier across the system.
+          x-clockify-default: '##default'
+        name:
+          type: string
+          description: Represents a user group name.
+          x-clockify-default: '##default'
+        teamManagers:
+          type: array
+          description: Represents a list of assigned team managers for this user group.
+          items:
+            $ref: '#/components/schemas/UserRedactedDtoV1'
+          x-clockify-default: '##default'
+        userIds:
+          type: array
+          description: Represents a list of users' identifiers across the system.
+          items:
+            type: string
+          x-clockify-default: '##default'
+        workspaceId:
+          type: string
+          description: Represents a workspace identifier across the system.
+          x-clockify-default: '##default'
+      example:
+        id: 76a687e29ae1f428e7ebe101
+        name: development_team
+        teamManagers:
+          - id: 672323eb0024343a1585e8a7
+            name: Jane Doe
+        userIds:
+          - 5a0ab5acb07987125438b60f
+          - 98j4b5acb07987125437y32
+        workspaceId: 64a687e29ae1f428e7ebe303
+    UserGroupRequest:
+      type: object
+      description: Request body for creating or updating a user group.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 0
+          maxLength: 100
+          description: Represents a user group name.
+          x-clockify-default: '##default'
+      example:
+        name: development_team
+    AddUserToGroupRequest:
+      type: object
+      description: Request body for adding a user to a group.
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: Represents a user identifier across the system.
+          x-clockify-default: '##default'
+      example:
+        userId: 5a0ab5acb07987125438b60f

@@ -1,0 +1,108 @@
+# Clockify time-off policies — mutation fragment (Agent B, live-verified 2026-05-12).
+# Workspace: 65b382b606de527a7ee2b60e. Host: https://api.clockify.me/api/v1.
+openapi: 3.0.3
+info:
+  title: Clockify Time-off Policies (mutations)
+  version: 2026-05-12-b
+servers:
+  - url: https://api.clockify.me/api/v1
+paths:
+  /workspaces/{workspaceId}/time-off/policies:
+    post:
+      summary: Create policy. Requires at least one assignee (users.ids non-empty, userGroups.ids non-empty, or everyoneIncludingNew=true) else 400 "At least one user or user group must be assigned".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PolicyWriteRequest' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/PolicyDto' } } } }
+        '501':
+          description: Validation. Live: missing required `name` returns `{"message":"must not be blank","code":501}` (yes, 501 not 400).
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  /workspaces/{workspaceId}/time-off/policies/{id}:
+    put:
+      summary: Full update. Body must satisfy the same assignee rule as POST; otherwise 400 "At least one user or user group must be assigned" (this masks other body errors like invalid timeUnit).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PolicyWriteRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PolicyDto' } } } }
+        '400': { description: Assignee or shape error, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+    patch:
+      summary: Change status. Body `{"status":"ACTIVE"|"ARCHIVED"}`. Empty body returns 400 "Invalid status". Unknown enum returns 3002 JSON parse error citing accepted values `[ALL, ARCHIVED, ACTIVE]`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, ARCHIVED, ALL] }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PolicyDto' } } } }
+        '400': { content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+    delete:
+      summary: Delete policy. Policy MUST be archived first; otherwise 400 "Policy must be archived in order to be deleted". Unknown id returns code 501 "Policy with id: X, not found".
+      responses:
+        '200': { description: Deleted (empty body) }
+        '400': { content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '501': { content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+components:
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: integer, description: "Observed: 400, 501 (validation/not-found), 3002 (JSON parse)." }
+    UserIdsSchema:
+      type: object
+      properties:
+        contains: { type: string, enum: [CONTAINS, DOES_NOT_CONTAIN] }
+        ids:      { type: array, items: { type: string } }
+        status:   { type: string, enum: [ALL, ACTIVE, INACTIVE] }
+    PolicyApprovalDto:
+      type: object
+      properties:
+        requiresApproval: { type: boolean }
+        specificMembers:  { type: boolean }
+        teamManagers:     { type: boolean }
+        userIds:          { type: array, items: { type: string } }
+    PolicyWriteRequest:
+      type: object
+      required: [allowHalfDay, allowNegativeBalance, approve, archived, everyoneIncludingNew, hasExpiration, name, userGroups, users]
+      properties:
+        allowHalfDay:           { type: boolean }
+        allowNegativeBalance:   { type: boolean }
+        approve:                { $ref: '#/components/schemas/PolicyApprovalDto' }
+        archived:               { type: boolean }
+        automaticAccrual:       { type: object, nullable: true }
+        automaticTimeEntryCreation: { type: object, nullable: true }
+        color:                  { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        everyoneIncludingNew:   { type: boolean }
+        hasExpiration:          { type: boolean }
+        icon:                   { type: string, enum: [UMBRELLA, SNOWFLAKE, FAMILY, PLANE, STETHOSCOPE, HEALTH_METRICS, CHILDCARE, LUGGAGE, MONETIZATION, CALENDAR] }
+        name:                   { type: string, minLength: 2, maxLength: 100 }
+        negativeBalance:        { type: object, nullable: true }
+        timeUnit:               { type: string, enum: [DAYS, HOURS] }
+        userGroups:             { $ref: '#/components/schemas/UserIdsSchema' }
+        users:                  { $ref: '#/components/schemas/UserIdsSchema' }
+    PolicyDto:
+      type: object
+      description: "Live response includes: id, workspaceId, name, allowNegativeBalance, negativeBalance(nullable), allowHalfDay, archived, timeUnit, everyoneIncludingNew, approve, automaticAccrual(nullable), automaticTimeEntryCreation(nullable). userIds/userGroupIds omitted from server when empty; doc lists them but live response did not include them when assignees were empty."
+      properties:
+        id:                    { type: string }
+        workspaceId:           { type: string }
+        name:                  { type: string }
+        allowHalfDay:          { type: boolean }
+        allowNegativeBalance:  { type: boolean }
+        archived:              { type: boolean }
+        timeUnit:              { type: string, enum: [DAYS, HOURS] }
+        everyoneIncludingNew:  { type: boolean }
+        approve:               { $ref: '#/components/schemas/PolicyApprovalDto' }
+        automaticAccrual:      { type: object, nullable: true }
+        automaticTimeEntryCreation: { type: object, nullable: true }
+        negativeBalance:       { type: object, nullable: true }
+        userIds:               { type: array, items: { type: string } }
+        userGroupIds:          { type: array, items: { type: string } }

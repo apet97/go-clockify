@@ -1,0 +1,439 @@
+openapi: 3.0.3
+info:
+  title: Clockify Workspaces — Mutations + Error Paths (Agent B)
+  version: 0.1.0
+  description: |
+    Live-probe results for every documented POST/PUT/PATCH/DELETE on the
+    `workspaces` domain against `https://api.clockify.me/api/v1`.
+    Workspace `65b382b606de527a7ee2b60e`, operator user `64621faec4d2cc53b91fce6c`.
+
+    SKIPPED (workspace-level destructive / external email):
+      - POST /workspaces                           valid body (would create org workspace)
+      - PUT  /workspaces/{wsId}                    valid body (mutates workspace settings)
+      - PUT  /workspaces/{wsId}/cost-rate          valid body (changes labor-cost baseline)
+      - PUT  /workspaces/{wsId}/hourly-rate        valid body (changes billing baseline)
+      - POST /workspaces/{wsId}/users              valid body (would email a real user)
+    All five had INVALID-body probes executed (capture error envelope).
+
+    KEY FINDINGS:
+      1. PUT /v1/workspaces/{wsId} returns 405 "Request method 'PUT' is not supported"
+         on the standard api host. Doc lists the URL but the verb is not bound here.
+         (Suggests the canonical Update-Workspace lives elsewhere — possibly under
+         /workspaces/{wsId}/settings or on a different host.)
+      2. PUT /workspaces/{wsId}/hourly-rate accepts ANY currency string whose code
+         is already registered on the workspace (`FAKE` was accepted because the
+         workspace had a `FAKE` currency configured). It does NOT validate against
+         ISO-4217.
+      3. Error envelope is a single shape: {"message": string, "code": int}
+         - code 501  = business-rule / domain validation failure
+         - code 1004 = banned-email-domain / disallowed email
+         - code 3000 = HTTP method or route not bound
+         - code 3002 = JSON deserialization failure
+         The post-workspaces-invalid-bad-email response also adds a
+         `bannedEmailAddress: []` array.
+      4. POST /workspaces requires `organizationId` (a Cake ObjectId) — the doc
+         shows it but does not mark it required. Empty body returns
+         `"Invalid ObjectId provided for field 'organizationId'"`.
+      5. PUT /workspaces/{wsId}/users/{userId} returns 403 "Access Denied" when
+         the operator attempts to change their OWN status (even to a no-op).
+         Self-update of status is not permitted.
+      6. Integer fields reject string coercion (code 3002 jackson error) — not
+         silently coerced.
+      7. Workspace cost-rate / hourly-rate response is the full WorkspaceDto,
+         including all memberships with `userId`, `hourlyRate`, `costRate`,
+         `targetId`, `membershipType: WORKSPACE`, `membershipStatus`.
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    Rate:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int32
+        currency:
+          type: string
+    Membership:
+      type: object
+      properties:
+        userId: { type: string }
+        targetId: { type: string }
+        membershipType: { type: string, enum: [WORKSPACE, PROJECT, USERGROUP] }
+        membershipStatus: { type: string, enum: [ACTIVE, INACTIVE, PENDING, DECLINED] }
+        hourlyRate: { $ref: '#/components/schemas/Rate', nullable: true }
+        costRate: { $ref: '#/components/schemas/Rate', nullable: true }
+    Workspace:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        hourlyRate: { $ref: '#/components/schemas/Rate' }
+        costRate: { $ref: '#/components/schemas/Rate' }
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/Membership' }
+        workspaceSettings: { type: object }
+        imageUrl: { type: string }
+        featureSubscriptionType: { type: string }
+        features:
+          type: array
+          items: { type: string }
+        currencies:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              code: { type: string }
+              isDefault: { type: boolean }
+        subdomain:
+          type: object
+          properties:
+            name: { type: string, nullable: true }
+            enabled: { type: boolean }
+        cakeOrganizationId: { type: string }
+    ErrorEnvelope:
+      type: object
+      required: [message, code]
+      properties:
+        message: { type: string }
+        code:
+          type: integer
+          description: |
+            501  = business/domain validation
+            1004 = banned email domain
+            3000 = method or route not bound
+            3002 = JSON deserialization error
+        bannedEmailAddress:
+          type: array
+          items: { type: string }
+          description: present on banned-email errors
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces:
+    post:
+      summary: Create workspace (REQUIRES organizationId)
+      description: |
+        Probed with invalid bodies only. Even an empty body fails BEFORE
+        name-validation with an organizationId error, proving organizationId
+        is the first-validated required field even though the doc payload
+        sample shows it as optional-looking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, organizationId]
+              properties:
+                name: { type: string, minLength: 1 }
+                organizationId:
+                  type: string
+                  description: Cake organization ObjectId (24-char hex)
+            examples:
+              missing-name:
+                value: {}
+              empty-name:
+                value: { name: "" }
+      responses:
+        "400":
+          description: validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-organizationId:
+                  value:
+                    message: "Invalid ObjectId provided for field 'organizationId'"
+                    code: 501
+                empty-name-still-hits-orgid-first:
+                  value:
+                    message: "Invalid ObjectId provided for field 'organizationId'"
+                    code: 501
+
+  /workspaces/{workspaceId}:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+    put:
+      summary: (DOC-LISTED) Update workspace — NOT BOUND on api.clockify.me
+      description: |
+        The doc lists PUT /v1/workspaces/{workspaceId} but the host returns
+        405 "Request method 'PUT' is not supported". Either the doc is wrong
+        or this endpoint lives on a different host. Tested both empty body
+        and a name+currency body; both 405.
+      responses:
+        "405":
+          description: method not supported on this host
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                message: "Request method 'PUT' is not supported"
+                code: 3000
+
+  /workspaces/{workspaceId}/cost-rate:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+    put:
+      summary: Update workspace default cost-rate (workspace-wide labor cost)
+      description: |
+        Valid body NOT exercised (workspace-level destructive). Invalid-body
+        probes only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, format: int32, minimum: 0 }
+                since: { type: string, format: date-time }
+      responses:
+        "200":
+          description: returns full Workspace (memberships + settings + features)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        "400":
+          description: validation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-amount:
+                  value: { message: "Amount is required", code: 501 }
+                negative-amount:
+                  value: { message: "Amount has to be a positive value.", code: 501 }
+                string-amount:
+                  value:
+                    message: 'JSON parse error: Cannot deserialize value of type `java.lang.Integer` from String "abc": not a valid `java.lang.Integer` value'
+                    code: 3002
+
+  /workspaces/{workspaceId}/hourly-rate:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+    put:
+      summary: Update workspace default hourly-rate
+      description: |
+        Valid body NOT exercised (workspace-wide billing change). However, an
+        invalid-currency body `{"amount":100,"currency":"FAKE"}` returned 200
+        because `FAKE` was already a registered currency on the workspace.
+        Conclusion: `currency` is validated against workspace's currency list,
+        NOT ISO-4217.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, format: int32, minimum: 0 }
+                currency:
+                  type: string
+                  description: must be a code present in workspace.currencies[].code
+                since: { type: string, format: date-time }
+      responses:
+        "200":
+          description: returns full Workspace
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        "400":
+          description: validation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example: { message: "Amount is required", code: 501 }
+
+  /workspaces/{workspaceId}/users:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+    post:
+      summary: Invite/add user by email
+      description: |
+        Valid body NOT exercised (would email a real address). Invalid-body
+        probes captured banned-domain handling (`code: 1004`) which is distinct
+        from the standard `501` validation envelope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "400":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-email:
+                  value: { message: "must not be blank", code: 501 }
+                invalid-email-domain:
+                  value:
+                    message: "Domain of your email address is not valid."
+                    code: 1004
+                    bannedEmailAddress: []
+
+  /workspaces/{workspaceId}/users/{userId}:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string }
+    put:
+      summary: Update user's membership status
+      description: |
+        Body shape (despite doc showing literal "##default") is `{status}`.
+        Cannot update SELF — even valid `{"status":"ACTIVE"}` against own
+        userId returns 403 `"Access Denied"` (envelope: code 501).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        "200":
+          description: returns full Workspace
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        "400":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-status:
+                  value:
+                    message: "You entered invalid value for field: [status]. This field can't be empty and can't be null. Make sure that every value representing: [status] must be from the following set: ACTIVE, INACTIVE."
+                    code: 501
+                invalid-enum:
+                  value:
+                    message: "You entered invalid value for field: [status]. This field can't be empty and can't be null. Make sure that every value representing: [status] must be from the following set: ACTIVE, INACTIVE."
+                    code: 501
+        "403":
+          description: cannot update self
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example: { message: "Access Denied", code: 501 }
+
+  /workspaces/{workspaceId}/users/{userId}/cost-rate:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string }
+    put:
+      summary: Update a single user's cost rate
+      description: |
+        Probed valid: `{"amount":0,"since":"2020-01-01T00:00:00Z"}` against self
+        returned 200 and mutated `memberships[me].costRate.amount` to 0.
+        Restored to prior value (999900) post-probe.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, format: int32, minimum: 0 }
+                since: { type: string, format: date-time }
+      responses:
+        "200":
+          description: returns full Workspace (with mutated membership)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        "400":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-amount:
+                  value: { message: "Amount is required", code: 501 }
+                negative-amount:
+                  value: { message: "Amount has to be a positive value.", code: 501 }
+
+  /workspaces/{workspaceId}/users/{userId}/hourly-rate:
+    parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string }
+    put:
+      summary: Update a single user's hourly rate
+      description: |
+        Same shape as user cost-rate. Valid probe of amount=0 returned 200 and
+        mutated state; restored to prior 20000 post-probe.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, format: int32, minimum: 0 }
+                since: { type: string, format: date-time }
+      responses:
+        "200":
+          description: returns full Workspace
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        "400":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              examples:
+                missing-amount:
+                  value: { message: "Amount is required", code: 501 }
+                string-amount:
+                  value:
+                    message: 'JSON parse error: Cannot deserialize value of type `java.lang.Integer` from String "x": not a valid `java.lang.Integer` value'
+                    code: 3002

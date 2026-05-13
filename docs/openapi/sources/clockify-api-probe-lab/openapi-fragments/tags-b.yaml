@@ -1,0 +1,76 @@
+# Clockify Tags — mutations (Agent B)
+# Live probe against api.clockify.me, workspace 65b382b606de527a7ee2b60e
+# Date: 2026-05-12. Fixtures: fixtures/tags-fresh-b/.
+openapi: 3.0.3
+info:
+  title: Clockify Tags (mutations)
+  version: 2026-05-12
+servers:
+  - url: https://api.clockify.me/api
+paths:
+  /v1/workspaces/{workspaceId}/tags:
+    post:
+      summary: Create tag
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Tag' } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } } }
+  /v1/workspaces/{workspaceId}/tags/{id}:
+    put:
+      summary: Update / archive tag
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]   # observed: omitting name -> 400 even when only archiving
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                archived: { type: boolean, default: false }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Tag' } } } }
+        "400": { description: Validation error }
+    delete:
+      summary: Delete tag (works on archived OR active; no archive-first required)
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Deleted, returns last state, content: { application/json: { schema: { $ref: '#/components/schemas/Tag' } } } }
+        "400":
+          description: 'Tag doesn''t belong to Workspace (also returned when id already deleted)'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Err' } } }
+components:
+  schemas:
+    Tag:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        workspaceId: { type: string }
+        archived: { type: boolean }
+    Err:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: integer, example: 501 }   # observed: 400 status uses body code:501
+# Notes for go-clockify handler:
+# - PUT requires `name` even when only flipping archived; sending {"archived":true} alone -> 400.
+# - DELETE is idempotent-ish: second delete returns 400 "Tag doesn't belong to Workspace" code:501.
+# - DELETE on non-archived returns 200; archive-first is NOT a precondition (contrary to some docs).
+# - Validation errors always 400 status + JSON body {message,code:501}.
+# - name length cap 100; over-length -> 400 "Tag name cannot be longer than 100."

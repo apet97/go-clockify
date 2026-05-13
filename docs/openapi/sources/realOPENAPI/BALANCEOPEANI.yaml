@@ -1,0 +1,339 @@
+openapi: 3.0.3
+info:
+  title: Clockify Balance API
+  version: 1.0.0
+  description: >-
+    OpenAPI specification generated from BALANCEDOC.md for Clockify time-off
+    balance endpoints.
+servers:
+  - url: https://api.clockify.me/api
+    description: Clockify global API server
+security:
+  - ApiKeyAuth: []
+  - AddonKeyAuth: []
+tags:
+  - name: Balance
+    description: Time-off balance operations
+paths:
+  /v1/workspaces/{workspaceId}/time-off/balance/policy/{policyId}:
+    get:
+      tags:
+        - Balance
+      summary: Get balances for a policy
+      description: Get time-off balances for a specific policy in a workspace.
+      operationId: getBalancesForPolicy
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PolicyId'
+        - name: page
+          in: query
+          description: Page number.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+            maximum: 1000
+          example: 1
+        - name: page-size
+          in: query
+          description: Page size.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 50
+            minimum: 1
+            maximum: 200
+          example: 50
+        - name: sort
+          in: query
+          description: If provided, the result is sorted by this column.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BalanceSortColumn'
+          example: USER
+        - name: sort-order
+          in: query
+          description: Sort results in ascending or descending order.
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          example: ASCENDING
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceListResponse'
+              examples:
+                default:
+                  value:
+                    balances:
+                      - id: 5b715448b079875110792222
+                        balance: 10
+                        negativeBalanceAmount: 0
+                        negativeBalanceLimit: false
+                        policyArchived: false
+                        policyId: 63034cd0cb0fb876a57e93ad
+                        policyName: Vacation
+                        policyTimeUnit: DAYS
+                        total: 15
+                        used: 5
+                        userId: 60f924bafdaf031696ec6218
+                        userName: John Doe
+                        workspaceId: 60f91b3ffdaf031696ec61a8
+                    count: 1
+    patch:
+      tags:
+        - Balance
+      summary: Update a balance
+      description: Update time-off balances for one or more users under a policy.
+      operationId: updateBalance
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/PolicyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBalanceRequest'
+            examples:
+              default:
+                value:
+                  note: Bonus days added.
+                  userIds:
+                    - 5b715448b079875110792222
+                    - 5b715448b079875110791111
+                  value: 22
+      responses:
+        '204':
+          description: No Content
+  /v1/workspaces/{workspaceId}/time-off/balance/user/{userId}:
+    get:
+      tags:
+        - Balance
+      summary: Get balance for a user
+      description: Get time-off balances for a specific user in a workspace.
+      operationId: getBalanceForUser
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/UserId'
+        - name: page
+          in: query
+          description: Page number.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            maximum: 1000
+          example: 1
+        - name: page-size
+          in: query
+          description: Page size.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+          example: 50
+        - name: sort
+          in: query
+          description: Sort result based on given criteria.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BalanceSortColumn'
+          example: POLICY
+        - name: sort-order
+          in: query
+          description: Sort result by providing sort order.
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          example: ASCENDING
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceListResponse'
+              examples:
+                default:
+                  value:
+                    balances:
+                      - id: 5b715448b079875110792222
+                        balance: 10
+                        negativeBalanceAmount: 0
+                        negativeBalanceLimit: false
+                        policyArchived: false
+                        policyId: 63034cd0cb0fb876a57e93ad
+                        policyName: Vacation
+                        policyTimeUnit: DAYS
+                        total: 15
+                        used: 5
+                        userId: 60f924bafdaf031696ec6218
+                        userName: John Doe
+                        workspaceId: 60f91b3ffdaf031696ec61a8
+                    count: 1
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Token
+      description: Clockify add-on token.
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 60f91b3ffdaf031696ec61a8
+    PolicyId:
+      name: policyId
+      in: path
+      required: true
+      description: Represents a policy identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 63034cd0cb0fb876a57e93ad
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Represents a user identifier across the system.
+      schema:
+        type: string
+        default: '##default'
+      example: 60f924bafdaf031696ec6218
+  schemas:
+    BalanceSortColumn:
+      type: string
+      description: Valid column for sorting balance results.
+      enum:
+        - USER
+        - POLICY
+        - USED
+        - BALANCE
+        - TOTAL
+    SortOrder:
+      type: string
+      description: Sort order.
+      enum:
+        - ASCENDING
+        - DESCENDING
+    PolicyTimeUnit:
+      type: string
+      description: Represents policy time unit.
+      enum:
+        - DAYS
+        - HOURS
+    BalanceDtoV1:
+      type: object
+      description: Balance data transfer object.
+      properties:
+        balance:
+          type: number
+          format: double
+          description: Represents the balance amount of the time unit.
+        id:
+          type: string
+          description: Represents balance identifier across the system.
+        negativeBalanceAmount:
+          type: number
+          format: double
+          description: Represents negative balance amount.
+        negativeBalanceLimit:
+          type: boolean
+          default: false
+          description: Indicates whether the negative balance limit is allowed.
+        policyArchived:
+          type: boolean
+          default: false
+          description: Indicates whether the policy is archived.
+        policyId:
+          type: string
+          default: '##default'
+          description: Represents policy identifier across the system.
+        policyName:
+          type: string
+          default: '##default'
+          description: Represents policy name.
+        policyTimeUnit:
+          $ref: '#/components/schemas/PolicyTimeUnit'
+        total:
+          type: number
+          format: double
+          description: Represents the total amount.
+        used:
+          type: number
+          format: double
+          description: Represents the balance used amount.
+        userId:
+          type: string
+          default: '##default'
+          description: Represents user identifier across the system.
+        userName:
+          type: string
+          default: '##default'
+          description: Represents user's username.
+        workspaceId:
+          type: string
+          default: '##default'
+          description: Represents workspace identifier across the system.
+    BalanceListResponse:
+      type: object
+      description: Paginated balance list response.
+      properties:
+        balances:
+          type: array
+          description: List of balances.
+          items:
+            $ref: '#/components/schemas/BalanceDtoV1'
+        count:
+          type: integer
+          format: int32
+          description: Represents the count of balances.
+    UpdateBalanceRequest:
+      type: object
+      required:
+        - note
+        - userIds
+        - value
+      properties:
+        note:
+          type: string
+          default: '##default'
+          description: Represents a new balance note value.
+        userIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          description: Represents the list of users' identifiers whose balance is to be updated.
+          items:
+            type: string
+        value:
+          type: number
+          format: double
+          minimum: -10000
+          maximum: 10000
+          description: Represents a new balance value.
+      example:
+        note: Bonus days added.
+        userIds:
+          - 5b715448b079875110792222
+          - 5b715448b079875110791111
+        value: 22

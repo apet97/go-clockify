@@ -85,7 +85,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/time-entries`,
 
 ### Reports API document ledger
 
-Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/ATTENDANCEANDTIMEREPORTS.md` plus the expense detailed report excerpt. MCP inputs use snake_case and the handlers emit the upstream camelCase JSON body. All rows return the upstream JSON object directly in `data` with `meta.source="reports-api"` and `meta.workspaceId`.
+Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPORTS.md` plus the expense detailed report excerpt. MCP inputs use snake_case and the handlers emit the upstream camelCase JSON body. All rows return the upstream JSON object directly in `data` with `meta.source="reports-api"` and `meta.workspaceId`.
 
 | Document row | Upstream endpoint | MCP tool / required filter | Documented params and enums covered | Example values covered | Unit coverage | Live evidence |
 |--------------|-------------------|----------------------------|-------------------------------------|------------------------|---------------|---------------|
@@ -215,7 +215,7 @@ Clockify endpoints: `GET/POST/PUT/DELETE /workspaces/{ws}/invoices/*`
 
 ### `probe_lab_api` (5 tools)
 
-Clockify endpoints: allowlisted union of `realOPENAPI`, `/Users/15x/Downloads/AIII/openapi.yaml`, `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/openapi.yaml`, probe-lab OpenAPI fragments, and all 19 `*DOC*.md` source files. The allowlist currently contains 207 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, entity-change reads, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense detailed report, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes. `GET /workspaces/{workspaceId}/scheduling/capacity` was removed on 2026-05-12 as a probe-lab guess that Clockify rejects with `{"code":3000,"message":"No static resource …"}`; the real per-user capacity surface is `/scheduling/assignments/users/{userId}/totals` via `clockify_filter_schedule_capacity`.
+Clockify endpoints: allowlisted union of `docs/openapi/sources/realOPENAPI`, `docs/openapi/sources/AIII/openapi.yaml`, `docs/openapi/sources/clockify-api-probe-lab/openapi.yaml`, probe-lab OpenAPI fragments, and all 19 `*DOC*.md` source files. The allowlist currently contains 207 method/path templates, including OpenAPI routes and doc-only routes such as invoice settings/duplicate/import/payments, entity-change reads, time-off policy path aliases, top-level/user-scoped time-entry variants, scheduling publish/series/copy/totals, workspace/user rates, managers/member-profile, expense detailed report, expense receipt files, add-on/user-group/webhook reads, webhook token/log routes, holiday in-period, and project/task/client archive/rate/admin routes. `GET /workspaces/{workspaceId}/scheduling/capacity` was removed on 2026-05-12 as a probe-lab guess that Clockify rejects with `{"code":3000,"message":"No static resource …"}`; the real per-user capacity surface is `/scheduling/assignments/users/{userId}/totals` via `clockify_filter_schedule_capacity`.
 
 This group is an allowlisted escape hatch for documented routes that do not yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}` resolves from the configured workspace unless `workspace_id` is supplied; non-workspace placeholders must be provided through `path_params`; `query` object values become query parameters; `json_body` is sent as upstream JSON; `form_body` is sent as multipart form fields; `files` sends base64-decoded multipart file parts for documented upload endpoints; `raw_response` returns base64 payloads for export endpoints. The method-class caller tools are separated so read, write, and destructive policy/risk handling remains visible; the write/delete callers carry broad billing/admin/permission-change/external-side-effect risk bits because the allowlist includes those route families. `clockify_upload_image` is a typed wrapper for `POST /file/image` with a dedicated base64 file input so image upload clients do not have to use the generic documented write caller.
 
@@ -256,7 +256,7 @@ Clockify endpoints: `GET/POST/PUT/PATCH/DELETE /workspaces/{ws}/projects/*`, `/w
 
 ### Client / Project / Task Doc Parity Ledger (2026-05-12)
 
-Source docs: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLIENTSDOC.md`, `PROJECTSDOC.md`, and `TASKDOC.md`. MCP inputs stay snake_case; handlers translate to Clockify camelCase body fields and hyphenated query parameters. Rate amounts are forwarded as raw upstream integers with no currency scaling.
+Source docs: `docs/openapi/sources/clockify-api-probe-lab/CLIENTSDOC.md`, `PROJECTSDOC.md`, and `TASKDOC.md`. MCP inputs stay snake_case; handlers translate to Clockify camelCase body fields and hyphenated query parameters. Rate amounts are forwarded as raw upstream integers with no currency scaling.
 
 Live evidence command run locally against the confirmed sacrificial workspace on 2026-05-12:
 

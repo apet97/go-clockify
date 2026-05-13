@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Clockify Clients (READ probe — Agent A)
+  version: 0.1.0
+  description: |
+    Derived from live probes against api.clockify.me on 2026-05-12,
+    workspace 65b382b606de527a7ee2b60e. Read-only endpoints only.
+    Fixtures: clockify-api-probe-lab/fixtures/clients-fresh-a/
+
+servers:
+  - url: https://api.clockify.me/api/v1
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /workspaces/{workspaceId}/clients:
+    get:
+      summary: List clients on a workspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: name
+          in: query
+          schema: { type: string }
+          description: Substring filter on client name (case-insensitive observed).
+        - name: sort-column
+          in: query
+          schema:
+            type: string
+            # Real upstream rejects everything except ID and NAME with code 501
+            # ("You entered invalid value for field: [sortColumn] ... must be
+            # from the following set: ID, NAME"). EMAIL is NOT accepted, despite
+            # the public docs listing only "NAME" as default.
+            enum: [ID, NAME]
+            default: NAME
+        - name: sort-order
+          in: query
+          schema:
+            type: string
+            enum: [ASCENDING, DESCENDING]
+            default: ASCENDING
+        - name: page
+          in: query
+          schema: { type: integer, format: int32, default: 1, minimum: 1 }
+        - name: page-size
+          in: query
+          schema: { type: integer, format: int32, default: 50, minimum: 1 }
+        - name: archived
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: |
+            Omitted = both archived and active returned. "true" = only archived,
+            "false" = only active. Sent as a string in query.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Client' }
+        '400':
+          description: Validation error (returned as code 501 in envelope; HTTP 400).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /workspaces/{workspaceId}/clients/{id}:
+    get:
+      summary: Get a client by ID
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '400':
+          description: |
+            Returned (HTTP 400) when id is malformed or belongs to a different
+            workspace. Envelope `code` is 501; `message` is human text such as
+            "Client doesn't belong to Workspace".
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema: { type: string }
+
+  schemas:
+    Client:
+      type: object
+      # All fields below were observed in real responses. `ccEmails`,
+      # `address`, and `note` come back as JSON null on the test
+      # workspace — NOT empty string and NOT "##default". The public
+      # docs claim ccEmails is `Array of strings` but the wire shape
+      # is `null` when unset (and is a single string in the doc
+      # sample). Be permissive on read.
+      properties:
+        id:           { type: string }
+        name:         { type: string }
+        email:        { type: string, nullable: true }
+        ccEmails:
+          # Observed: null. Docs sample shows a single string. Docs schema
+          # says "Array of strings". Treat as nullable array; tolerate string.
+          nullable: true
+          oneOf:
+            - { type: array, items: { type: string } }
+            - { type: string }
+        workspaceId:  { type: string }
+        archived:     { type: boolean }
+        address:      { type: string, nullable: true }
+        note:         { type: string, nullable: true }
+        currencyId:   { type: string, nullable: true }
+        currencyCode: { type: string, nullable: true }
+      required: [id, name, workspaceId, archived]
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        # Upstream returns numeric `code` (e.g. 501) even on HTTP 400.
+        # Do NOT assume code mirrors the HTTP status.
+        code:    { type: integer }
+      required: [message, code]

@@ -1,0 +1,656 @@
+openapi: 3.0.3
+info:
+  title: Clockify Holidays API
+  version: 1.0.0
+  description: >-
+    OpenAPI specification generated from the uploaded HOLIDAYSDOC.md Markdown
+    documentation. It covers workspace holiday listing, creation, period filtering,
+    deletion, and updating.
+servers:
+  - url: https://api.clockify.me/api
+    description: Clockify API base URL
+tags:
+  - name: Holidays
+    description: Workspace holiday endpoints.
+paths:
+  /v1/workspaces/{workspaceId}/holidays:
+    get:
+      tags:
+        - Holidays
+      summary: Get holidays on a workspace
+      operationId: getWorkspaceHolidays
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: assigned-to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: If provided, returns a filtered list of holidays assigned to the user.
+          example: 60f924bafdaf031696ec6218
+      responses:
+        '200':
+          description: List of holidays on the workspace.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HolidayDto'
+              example:
+                - automaticTimeEntryCreation: false
+                  datePeriod:
+                    startDate: '2024-01-01'
+                    endDate: '2024-01-01'
+                  everyoneIncludingNew: false
+                  id: 5b715612b079875110791111
+                  name: New Year's Day
+                  occursAnnually: true
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+                  userGroupIds:
+                    - 5b715612b079875110791342
+                    - 5b715612b079875110791324
+                    - 5b715612b079875110793142
+                  userIds:
+                    - 5b715612b079875110791432
+                    - 5b715612b079875110791234
+                  workspaceId: 5b715612b079875110792222
+    post:
+      tags:
+        - Holidays
+      summary: Create a holiday
+      operationId: createHoliday
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHolidayRequest'
+            example:
+              automaticTimeEntryCreation:
+                enabled: false
+                defaultEntities:
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+              color: '#8BC34A'
+              datePeriod:
+                startDate: '2024-05-01'
+                endDate: '2024-05-01'
+              everyoneIncludingNew: true
+              name: Labour Day
+              occursAnnually: true
+              userGroups:
+                contains: CONTAINS
+                ids:
+                  - 5b715612b079875110791342
+                status: ACTIVE
+              users:
+                contains: CONTAINS
+                ids:
+                  - 5b715612b079875110791432
+                status: ACTIVE
+      responses:
+        '200':
+          description: Created holiday.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayDto'
+              example:
+                automaticTimeEntryCreation: false
+                datePeriod:
+                  startDate: '2024-01-01'
+                  endDate: '2024-01-01'
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: New Year's Day
+                occursAnnually: true
+                projectId: 65b36d3c525e243c48f9150f
+                taskId: 65b36d46fa3df8607e42d21a
+                userGroupIds:
+                  - 5b715612b079875110791342
+                  - 5b715612b079875110791324
+                  - 5b715612b079875110793142
+                userIds:
+                  - 5b715612b079875110791432
+                  - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+  /v1/workspaces/{workspaceId}/holidays/in-period:
+    get:
+      tags:
+        - Holidays
+      summary: Get holidays in a specific period
+      operationId: getWorkspaceHolidaysInPeriod
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: assigned-to
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Filter list of holidays assigned to user.
+          example: 60f924bafdaf031696ec6218
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Filter list of holidays starting from start date. Expected date format yyyy-MM-ddThh:mm:ssZ.
+          example: '2022-12-03T10:59:59.999Z'
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Filter list of holidays ending by end date. Expected date format yyyy-MM-ddThh:mm:ssZ.
+          example: '2022-12-05T23:59:59.999Z'
+      responses:
+        '200':
+          description: List of holidays in the requested period.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HolidayDto'
+              example:
+                - automaticTimeEntryCreation: false
+                  datePeriod:
+                    startDate: '2024-01-01'
+                    endDate: '2024-01-01'
+                  everyoneIncludingNew: false
+                  id: 5b715612b079875110791111
+                  name: New Year's Day
+                  occursAnnually: true
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+                  userGroupIds:
+                    - 5b715612b079875110791342
+                    - 5b715612b079875110791324
+                    - 5b715612b079875110793142
+                  userIds:
+                    - 5b715612b079875110791432
+                    - 5b715612b079875110791234
+                  workspaceId: 5b715612b079875110792222
+  /v1/workspaces/{workspaceId}/holidays/{holidayId}:
+    delete:
+      tags:
+        - Holidays
+      summary: Delete a holiday
+      operationId: deleteHoliday
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/HolidayId'
+      responses:
+        '200':
+          description: Deleted holiday.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayDetailsDto'
+              example:
+                automaticTimeEntryCreation:
+                  enabled: false
+                  defaultEntities:
+                    projectId: 65b36d3c525e243c48f9150f
+                    taskId: 65b36d46fa3df8607e42d21a
+                color: '#8BC34A'
+                datePeriod:
+                  startDate: '2024-01-01'
+                  endDate: '2024-01-01'
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: New Year's Day
+                occursAnnually: true
+                userGroupIds:
+                  - 5b715612b079875110791342
+                  - 5b715612b079875110791324
+                  - 5b715612b079875110793142
+                userGroups:
+                  - id: 5b715612b079875110791342
+                    name: Developers
+                userIds:
+                  - 5b715612b079875110791432
+                  - 5b715612b079875110791234
+                users:
+                  - id: 5b715612b079875110791432
+                    name: John Doe
+                workspaceId: 5b715612b079875110792222
+    put:
+      tags:
+        - Holidays
+      summary: Update a holiday
+      operationId: updateHoliday
+      security:
+        - ApiKeyAuth: []
+        - AddonKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/HolidayId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHolidayRequest'
+            example:
+              automaticTimeEntryCreation:
+                enabled: false
+                defaultEntities:
+                  projectId: 65b36d3c525e243c48f9150f
+                  taskId: 65b36d46fa3df8607e42d21a
+              color: '#8BC34A'
+              datePeriod:
+                startDate: '2024-01-01'
+                endDate: '2024-01-01'
+              everyoneIncludingNew: false
+              name: New Year's Day
+              occursAnnually: true
+              userGroups:
+                contains: CONTAINS
+                ids:
+                  - 5b715612b079875110791342
+                status: ACTIVE
+              users:
+                contains: CONTAINS
+                ids:
+                  - 5b715612b079875110791432
+                status: ACTIVE
+      responses:
+        '200':
+          description: Updated holiday.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayDto'
+              example:
+                automaticTimeEntryCreation: false
+                datePeriod:
+                  startDate: '2024-01-01'
+                  endDate: '2024-01-01'
+                everyoneIncludingNew: false
+                id: 5b715612b079875110791111
+                name: New Year's Day
+                occursAnnually: true
+                projectId: 65b36d3c525e243c48f9150f
+                taskId: 65b36d46fa3df8607e42d21a
+                userGroupIds:
+                  - 5b715612b079875110791342
+                  - 5b715612b079875110791324
+                  - 5b715612b079875110793142
+                userIds:
+                  - 5b715612b079875110791432
+                  - 5b715612b079875110791234
+                workspaceId: 5b715612b079875110792222
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clockify API key authentication. Header name inferred from the authentication scheme name in the Markdown.
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+      description: Addon key authentication. Header name inferred from the authentication scheme name in the Markdown.
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Represents a workspace identifier across the system.
+      example: 60f91b3ffdaf031696ec61a8
+    HolidayId:
+      name: holidayId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Represents a holiday identifier across the system.
+      example: 60f927920658241e3cf35e02
+  schemas:
+    DatePeriod:
+      type: object
+      description: Represents startDate and endDate of the holiday. Date is in format yyyy-mm-dd.
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+    DatePeriodRequest:
+      type: object
+      description: Provide startDate and endDate for the holiday.
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          minLength: 1
+          description: yyyy-MM-dd format date.
+        endDate:
+          type: string
+          minLength: 1
+          description: yyyy-MM-dd format date.
+    DefaultEntitiesRequest:
+      type: object
+      description: Provides information about default project and task for automatically created time entries.
+      properties:
+        projectId:
+          type: string
+          description: Default project for automatically created time entries.
+        taskId:
+          type: string
+          description: Default task for automatically created time entries.
+    DefaultEntitiesDto:
+      type: object
+      properties:
+        projectId:
+          type: string
+        taskId:
+          type: string
+    AutomaticTimeEntryCreationRequest:
+      type: object
+      description: Provides automatic time entry creation settings.
+      required:
+        - defaultEntities
+      properties:
+        defaultEntities:
+          $ref: '#/components/schemas/DefaultEntitiesRequest'
+        enabled:
+          type: boolean
+          default: false
+          description: Indicates that automatic time entry creation is enabled.
+    AutomaticTimeEntryCreationDto:
+      type: object
+      description: Represents automatic time entry creation settings.
+      properties:
+        defaultEntities:
+          $ref: '#/components/schemas/DefaultEntitiesDto'
+        enabled:
+          type: boolean
+    UserGroupIdsSchema:
+      type: object
+      description: Provide list with user group ids and corresponding status.
+      properties:
+        contains:
+          type: string
+          enum:
+            - CONTAINS
+            - DOES_NOT_CONTAIN
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents ids upon which filtering is performed.
+        status:
+          type: string
+          enum:
+            - ALL
+            - ACTIVE
+            - INACTIVE
+          description: Represents user status.
+    UserIdsSchema:
+      type: object
+      description: Provide list with user ids and corresponding status.
+      properties:
+        contains:
+          type: string
+          enum:
+            - CONTAINS
+            - DOES_NOT_CONTAIN
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents ids upon which filtering is performed.
+        status:
+          type: string
+          enum:
+            - ALL
+            - ACTIVE
+            - INACTIVE
+          description: Represents user status.
+    ContainsUserGroupFilterRequest:
+      type: object
+      description: Provide list with user group ids and corresponding status.
+      properties:
+        contains:
+          type: string
+          enum:
+            - CONTAINS
+            - DOES_NOT_CONTAIN
+            - CONTAINS_ONLY
+          description: Filter type.
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents a list of filter identifiers.
+        status:
+          type: string
+          enum:
+            - PENDING
+            - ACTIVE
+            - DECLINED
+            - INACTIVE
+            - ALL
+          description: Filters entities by status.
+    ContainsUsersFilterRequestForHoliday:
+      type: object
+      description: Provide list with user ids and corresponding status.
+      properties:
+        contains:
+          type: string
+          enum:
+            - CONTAINS
+            - DOES_NOT_CONTAIN
+            - CONTAINS_ONLY
+          description: Filter type.
+        ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Represents a list of filter identifiers.
+        status:
+          type: string
+          enum:
+            - ALL
+            - ACTIVE
+            - INACTIVE
+          description: Filters entities by status.
+        statuses:
+          type: array
+          items:
+            type: string
+    CreateHolidayRequest:
+      type: object
+      required:
+        - datePeriod
+        - name
+      properties:
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationRequest'
+        color:
+          type: string
+          pattern: '^#(?:[0-9a-fA-F]{6}){1}$'
+          description: Color value in standard RGB hexadecimal format.
+        datePeriod:
+          $ref: '#/components/schemas/DatePeriodRequest'
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday is shown to new users.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Provide the name of the holiday.
+        occursAnnually:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday occurs annually.
+        userGroups:
+          $ref: '#/components/schemas/UserGroupIdsSchema'
+        users:
+          $ref: '#/components/schemas/UserIdsSchema'
+    UpdateHolidayRequest:
+      type: object
+      required:
+        - datePeriod
+        - name
+        - occursAnnually
+      properties:
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationRequest'
+        color:
+          type: string
+          pattern: '^#(?:[0-9a-fA-F]{6}){1}$'
+          description: Color value in standard RGB hexadecimal format.
+        datePeriod:
+          $ref: '#/components/schemas/DatePeriodRequest'
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday is shown to new users.
+        name:
+          type: string
+          minLength: 1
+          description: Provide the name you would like to use for updating the holiday.
+        occursAnnually:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday occurs annually.
+        userGroups:
+          $ref: '#/components/schemas/ContainsUserGroupFilterRequest'
+        users:
+          $ref: '#/components/schemas/ContainsUsersFilterRequestForHoliday'
+    HolidayDto:
+      type: object
+      description: Represents a holiday on a workspace.
+      properties:
+        automaticTimeEntryCreation:
+          type: boolean
+          default: false
+          description: Indicates that time entries will be automatically created for this holiday.
+        datePeriod:
+          $ref: '#/components/schemas/DatePeriod'
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday is shown to new users.
+        id:
+          type: string
+          description: Represents holiday identifier across the system.
+        name:
+          type: string
+          description: Represents the name of the holiday.
+        occursAnnually:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday occurs annually.
+        projectId:
+          type: string
+          description: Represents projectId for automatic time entry creation.
+        taskId:
+          type: string
+          description: Represents taskId for automatic time entry creation.
+        userGroupIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Indicates which user groups are included.
+        userIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Indicates which users are included.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    HolidayDetailsDto:
+      type: object
+      description: Represents a holiday with detailed user and user group assignments.
+      properties:
+        automaticTimeEntryCreation:
+          $ref: '#/components/schemas/AutomaticTimeEntryCreationDto'
+        color:
+          type: string
+          pattern: '^#(?:[0-9a-fA-F]{6}){1}$'
+          description: Color value in standard RGB hexadecimal format.
+        datePeriod:
+          $ref: '#/components/schemas/DatePeriod'
+        everyoneIncludingNew:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday is shown to new users.
+        id:
+          type: string
+          description: Represents holiday identifier across the system.
+        name:
+          type: string
+          description: Represents the name of the holiday.
+        occursAnnually:
+          type: boolean
+          default: false
+          description: Indicates whether the holiday occurs annually.
+        userGroupIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Indicates which user groups are included.
+        userGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityIdNameDto'
+          description: Contains names of user groups that are assigned to holiday.
+        userIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Indicates which users are included.
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityIdNameDto'
+          description: Contains names of users that are assigned to holiday.
+        workspaceId:
+          type: string
+          description: Represents workspace identifier across the system.
+    EntityIdNameDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string

@@ -17,18 +17,20 @@
       "evidence": [
         "aiii-openapi",
         "doc-md",
+        "mcp-catalog",
+        "permission-gated",
         "probe-openapi",
         "probe-supplement",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "probe-documented",
+      "live_status": "permission-gated",
       "live_test_names": [
         "TestLiveFullSurfaceDocCoverage",
         "TestLiveTier2ReadOnlySweep"
       ],
       "method": "POST",
-      "notes_count": 0,
+      "notes_count": 2,
       "operationId": "uploadImage",
       "path": "/file/image",
       "raw_allowlisted": true,

@@ -1,0 +1,1940 @@
+openapi: 3.0.3
+info:
+  title: Clockify Invoices API
+  version: 1.0.0
+  description: OpenAPI specification generated from the provided INVOICEDOC.md Markdown
+    file.
+servers:
+- url: https://api.clockify.me/api
+  description: Clockify API base URL
+security:
+- ApiKeyAuth: []
+- AddonKeyAuth: []
+tags:
+- name: Invoices
+  description: Invoice retrieval, creation, filtering, status, export, duplicate,
+    and delete endpoints.
+- name: Invoice settings
+  description: Invoice default settings and label customization endpoints.
+- name: Invoice items
+  description: Invoice item creation, import, and deletion endpoints.
+- name: Invoice payments
+  description: Invoice payment retrieval, creation, and deletion endpoints.
+paths:
+  /v1/workspaces/{workspaceId}/invoices:
+    get:
+      tags:
+      - Invoices
+      summary: Get all invoices on a workspace
+      operationId: getWorkspaceInvoices
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/InvoiceStatusesQuery'
+      - $ref: '#/components/parameters/InvoiceSortColumnQuery'
+      - $ref: '#/components/parameters/SortOrderQuery'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceListResponse'
+    post:
+      tags:
+      - Invoices
+      summary: Add an invoice
+      operationId: addInvoice
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreateRequest'
+            example:
+              clientId: 34p687e29ae1f428e7ebe562
+              currency: USD
+              dueDate: '2020-06-01T08:00:00Z'
+              issuedDate: '2020-01-01T08:00:00Z'
+              number: '202306121129'
+              timeViewMode: AGGREGATED_TIME_VIEW
+      responses:
+        '201':
+          $ref: '#/components/responses/InvoiceCreatedResponse'
+  /v1/workspaces/{workspaceId}/invoices/info:
+    post:
+      tags:
+      - Invoices
+      summary: Filter out invoices
+      operationId: filterInvoices
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceFilterRequest'
+            example:
+              clients:
+                contains: CONTAINS
+                ids:
+                - 44a687e29ae1f428e7ebe305
+                status: ACTIVE
+              companies:
+                contains: CONTAINS
+                ids:
+                - 04g687e29ae1f428e7ebe123
+              exactAmount: 1000
+              exactBalance: 1000
+              greaterThanAmount: 500
+              greaterThanBalance: 500
+              invoiceNumber: Invoice-01
+              issueDate:
+                issue-date-start: '2024-01-01'
+                issue-date-end: '2024-12-31'
+              lessThanAmount: 500
+              lessThanBalance: 500
+              page: 1
+              pageSize: 50
+              sortColumn: ID
+              sortOrder: ASCENDING
+              statuses:
+              - SENT
+              - PAID
+              - PARTIALLY_PAID
+              strictSearch: false
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceInfoListResponse'
+  /v1/workspaces/{workspaceId}/invoices/settings:
+    get:
+      tags:
+      - Invoice settings
+      summary: Get invoice settings
+      description: The source Markdown labels this operation as “Get an invoice in
+        another language” and exposes it on the invoice settings endpoint.
+      operationId: getInvoiceSettings
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceSettingsResponse'
+    put:
+      tags:
+      - Invoice settings
+      summary: Change an invoice language
+      operationId: updateInvoiceSettings
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceSettingsRequest'
+            example:
+              defaults: {}
+              exportFields: {}
+              labels:
+                amount: amount
+                billFrom: billFrom
+                billTo: billTo
+                description: description
+                discount: discount
+                dueDate: dueDate
+                issueDate: issueDate
+                itemType: itemType
+                notes: notes
+                paid: paid
+                quantity: quantity
+                subtotal: subtotal
+                tax: tax
+                tax2: tax2
+                total: total
+                totalAmountDue: totalAmountDue
+                unitPrice: unitPrice
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}:
+    delete:
+      tags:
+      - Invoices
+      summary: Delete an invoice
+      operationId: deleteInvoice
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+    get:
+      tags:
+      - Invoices
+      summary: Get an invoice by ID
+      operationId: getInvoiceById
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+    put:
+      tags:
+      - Invoices
+      summary: Update an invoice
+      operationId: updateInvoice
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInvoiceRequest'
+            example:
+              clientId: 98h687e29ae1f428e7ebe707
+              companyId: 04g687e29ae1f428e7ebe123
+              currency: USD
+              discountPercent: 10.5
+              dueDate: '2020-06-01T08:00:00Z'
+              issuedDate: '2020-01-01T08:00:00Z'
+              note: This is a sample note for this invoice.
+              number: '202306121129'
+              subject: January salary
+              tax2Percent: 0
+              taxPercent: 1.5
+              taxType: SIMPLE
+              visibleZeroFields:
+              - TAX
+              - TAX_2
+              - DISCOUNT
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate:
+    post:
+      tags:
+      - Invoices
+      summary: Duplicate an invoice
+      operationId: duplicateInvoice
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      responses:
+        '201':
+          $ref: '#/components/responses/InvoiceDuplicatedResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/export:
+    get:
+      tags:
+      - Invoices
+      summary: Export an invoice
+      operationId: exportInvoice
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/UserLocaleQuery'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceExportResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/items:
+    post:
+      tags:
+      - Invoice items
+      summary: Add item to an invoice
+      operationId: addInvoiceItem
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddInvoiceItemRequest'
+            example:
+              applyTaxes: TAX1TAX2
+              description: This is a description of an invoice item.
+              itemType: Service
+              quantity: 10000
+              unitPrice: 500
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/items/import:
+    post:
+      tags:
+      - Invoice items
+      summary: Import time entries and expenses to an invoice
+      operationId: importInvoiceItems
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportInvoiceItemsRequest'
+            example:
+              expenseFieldsForDetailedGroup:
+              - NOTE
+              expensesGroupBy: CATEGORY
+              expensesGroupType: GROUPED
+              from: '2025-06-01T00:00:00Z'
+              importExpenses: false
+              projectFilter:
+                contains: CONTAINS
+                ids:
+                - 25b687e29ae1f428e7ebe123
+                status: ACTIVE
+              roundTimeEntryDuration: false
+              timeEntryFieldsForDetailedGroup:
+              - PROJECT
+              - DESCRIPTION
+              timeEntryGroupType: GROUPED
+              timeEntryPrimaryGroupBy: PROJECT
+              timeEntrySecondaryGroupBy: TASK
+              to: '2025-06-07T00:00:00Z'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}:
+    delete:
+      tags:
+      - Invoice items
+      summary: Delete item from an invoice
+      operationId: deleteInvoiceItem
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/Order'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/payments:
+    get:
+      tags:
+      - Invoice payments
+      summary: Get payments for an invoice
+      operationId: getInvoicePayments
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoicePaymentsResponse'
+    post:
+      tags:
+      - Invoice payments
+      summary: Add payment to an invoice
+      operationId: addInvoicePayment
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddInvoicePaymentRequest'
+            example:
+              amount: 100
+              note: This is a sample note for this invoice payment.
+              paymentDate: '2021-01-01T12:00:00Z'
+      responses:
+        '201':
+          $ref: '#/components/responses/InvoiceDuplicatedResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}:
+    delete:
+      tags:
+      - Invoice payments
+      summary: Delete payment from an invoice
+      operationId: deleteInvoicePayment
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceResponse'
+  /v1/workspaces/{workspaceId}/invoices/{invoiceId}/status:
+    patch:
+      tags:
+      - Invoices
+      summary: Change an invoice status
+      operationId: changeInvoiceStatus
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/InvoiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceStatusRequest'
+            example:
+              invoiceStatus: PAID
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    AddonKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Addon-Key
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      description: Represents a workspace identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 64a687e29ae1f428e7ebe303
+    InvoiceId:
+      name: invoiceId
+      in: path
+      required: true
+      description: Represents an invoice identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 78a687e29ae1f428e7ebe303
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      description: Represents a payment identifier across the system.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: 56p687e29ae1f428e7ebe456
+    Order:
+      name: order
+      in: path
+      required: true
+      description: Represents an invoice item order.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      example: 3
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Page number.
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      example: 1
+    PageSize:
+      name: page-size
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 50
+      example: 50
+    InvoiceStatusesQuery:
+      name: statuses
+      in: query
+      required: false
+      description: Filter invoices by one or more invoice statuses.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/InvoiceStatus'
+      example:
+      - UNSENT
+      - PAID
+    InvoiceSortColumnQuery:
+      name: sort-column
+      in: query
+      required: false
+      description: 'Valid column name as sorting criteria. Default: ID.'
+      schema:
+        $ref: '#/components/schemas/InvoiceSortColumn'
+      example: CLIENT
+    SortOrderQuery:
+      name: sort-order
+      in: query
+      required: false
+      description: 'Sort order. Default: ASCENDING.'
+      schema:
+        $ref: '#/components/schemas/SortOrder'
+      example: ASCENDING
+    UserLocaleQuery:
+      name: userLocale
+      in: query
+      required: true
+      description: Represents a locale.
+      schema:
+        type: string
+        x-sourceDefault: '##default'
+      example: en
+  responses:
+    Ok:
+      description: OK
+    InvoiceListResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceListResponse'
+          example:
+            invoices: []
+            total: 100
+    InvoiceCreatedResponse:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceCreateResponse'
+          example:
+            billFrom: Business X
+            clientId: 34p687e29ae1f428e7ebe562
+            currency: USD
+            dueDate: '2020-06-01T08:00:00Z'
+            id: 78a687e29ae1f428e7ebe303
+            issuedDate: '2020-01-01T08:00:00Z'
+            number: '202306121129'
+    InvoiceInfoListResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceInfoListResponse'
+          example:
+            invoices: []
+            total: 100
+    InvoiceSettingsResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceSettingsResponse'
+          example:
+            defaults: {}
+            exportFields: {}
+            labels: {}
+    InvoiceResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceDtoFull'
+          example:
+            amount: 100
+            balance: 50
+            billFrom: Business X
+            calculationType: INVOICE_BASED
+            clientAddress: Ground Floor, ABC Bldg., Palo Alto, California, USA 94020
+            clientId: 98h687e29ae1f428e7ebe707
+            clientName: Client X
+            companyId: 04g687e29ae1f428e7ebe123
+            containsImportedExpenses: false
+            containsImportedTimes: false
+            currency: USD
+            discount: 10.5
+            discountAmount: 11
+            dueDate: '2020-06-01T08:00:00Z'
+            id: 78a687e29ae1f428e7ebe303
+            issuedDate: '2020-01-01T08:00:00Z'
+            items: []
+            note: This is a sample note for this invoice.
+            number: '202306121129'
+            paid: 50
+            status: PAID
+            subject: January salary
+            subtotal: 5000
+            tax: 1.5
+            tax2: 0
+            tax2Amount: 0
+            taxAmount: 1
+            taxType: SIMPLE
+            userId: 12t687e29ae1f428e7ebe202
+            visibleZeroFields:
+            - TAX
+            - TAX_2
+            - DISCOUNT
+    InvoiceDuplicatedResponse:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvoiceDtoFull'
+          example:
+            amount: 100
+            balance: 50
+            billFrom: Business X
+            calculationType: INVOICE_BASED
+            clientAddress: Ground Floor, ABC Bldg., Palo Alto, California, USA 94020
+            clientId: 98h687e29ae1f428e7ebe707
+            clientName: Client X
+            companyId: 04g687e29ae1f428e7ebe123
+            containsImportedExpenses: false
+            containsImportedTimes: false
+            currency: USD
+            discount: 10.5
+            discountAmount: 11
+            dueDate: '2020-06-01T08:00:00Z'
+            id: 78a687e29ae1f428e7ebe303
+            issuedDate: '2020-01-01T08:00:00Z'
+            items: []
+            note: This is a sample note for this invoice.
+            number: '202306121129'
+            paid: 50
+            status: PAID
+            subject: January salary
+            subtotal: 5000
+            tax: 1.5
+            tax2: 0
+            tax2Amount: 0
+            taxAmount: 1
+            taxType: SIMPLE
+            userId: 12t687e29ae1f428e7ebe202
+            visibleZeroFields:
+            - TAX
+            - TAX_2
+            - DISCOUNT
+    InvoicePaymentsResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/InvoicePaymentDto'
+          example:
+          - amount: 100
+            author: John Doe
+            date: '2021-01-01T12:00:00Z'
+            id: 78a687e29ae1f428e7ebe303
+            note: This is a sample note for this invoice payment.
+    InvoiceExportResponse:
+      description: OK
+      content:
+        '*/*':
+          schema:
+            type: string
+            format: byte
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+  schemas:
+    InvoiceStatus:
+      type: string
+      enum:
+      - UNSENT
+      - SENT
+      - PAID
+      - PARTIALLY_PAID
+      - VOID
+      - OVERDUE
+      description: Represents the status of an invoice.
+    InvoiceSortColumn:
+      type: string
+      enum:
+      - ID
+      - CLIENT
+      - DUE_ON
+      - ISSUE_DATE
+      - AMOUNT
+      - BALANCE
+      description: Invoice sorting column.
+    SortOrder:
+      type: string
+      enum:
+      - ASCENDING
+      - DESCENDING
+      description: Sorting order.
+    TaxType:
+      type: string
+      enum:
+      - COMPOUND
+      - SIMPLE
+      - NONE
+      description: Represents an invoice taxation type.
+    CalculationType:
+      type: string
+      enum:
+      - INVOICE_BASED
+      - ITEM_BASED
+      description: Represents whether tax is calculated as item based or invoice based.
+    ApplyTaxes:
+      type: string
+      enum:
+      - TAX1
+      - TAX2
+      - TAX1TAX2
+      - NONE
+      description: Represents item applyTaxes type.
+    VisibleZeroFieldsInvoice:
+      type: string
+      enum:
+      - TAX
+      - TAX_2
+      - DISCOUNT
+      description: Represents a zero-value invoice field that will be visible.
+    InvoiceImportType:
+      type: string
+      enum:
+      - NOT_IMPORTED
+      - TIME_ENTRY_IMPORT
+      - EXPENSE_IMPORT
+      description: Represents the invoice item import type.
+    ContainsOperator:
+      type: string
+      enum:
+      - CONTAINS
+      - DOES_NOT_CONTAIN
+      - CONTAINS_ONLY
+      description: Filter type.
+    EntityStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - ARCHIVED
+      - ALL
+      description: Filters entities by status.
+    TimeViewMode:
+      type: string
+      enum:
+      - TIME_SENSITIVE_VIEW
+      - AGGREGATED_TIME_VIEW
+    ExpenseFieldsForDetailedGroup:
+      type: string
+      enum:
+      - PROJECT
+      - TASK
+      - CATEGORY
+      - NOTE
+      - DATE
+      - USER
+    ExpensesGroupBy:
+      type: string
+      enum:
+      - CATEGORY
+      - PROJECT
+      - USER
+    ExpensesGroupType:
+      type: string
+      enum:
+      - GROUPED
+      - DETAILED
+    TimeEntryFieldsForDetailedGroup:
+      type: string
+      enum:
+      - PROJECT
+      - TASK
+      - TAGS
+      - DESCRIPTION
+      - DATE
+      - USER
+    TimeEntryGroupType:
+      type: string
+      enum:
+      - SINGLE_ITEM
+      - GROUPED
+      - DETAILED
+    TimeEntryPrimaryGroupBy:
+      type: string
+      enum:
+      - USER
+      - PROJECT
+      - DATE
+    TimeEntrySecondaryGroupBy:
+      type: string
+      enum:
+      - PROJECT
+      - USER
+      - TASK
+      - DATE
+      - DESCRIPTION
+      - NONE
+    ContainsArchivedFilterRequest:
+      type: object
+      description: Represents a filter for imported items that can include archived
+        entities.
+      properties:
+        contains:
+          $ref: '#/components/schemas/ContainsOperator'
+        ids:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: Represents a list of filter identifiers.
+        status:
+          $ref: '#/components/schemas/EntityStatus'
+    BaseFilterRequest:
+      type: object
+      description: Represents a base filter object.
+      properties:
+        contains:
+          $ref: '#/components/schemas/ContainsOperator'
+        ids:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: Represents a list of filter identifiers.
+    TimeRangeRequestDtoV1:
+      type: object
+      description: Represents a time range object for invoice issue dates.
+      properties:
+        issue-date-start:
+          type: string
+          description: Represents a date in yyyy-MM-dd format.
+          default: '##default'
+          example: '2024-01-01'
+        issue-date-end:
+          type: string
+          description: Represents a date in yyyy-MM-dd format.
+          default: '##default'
+          example: '2024-12-31'
+    InvoiceDtoV1:
+      type: object
+      description: Represents an invoice summary.
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents an invoice amount as long.
+        balance:
+          type: integer
+          format: int64
+          description: Represents an invoice balance amount as long.
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+          default: '##default'
+        clientName:
+          type: string
+          description: Represents client name for an invoice.
+          default: '##default'
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        id:
+          type: string
+          description: Represents invoice identifier across the system.
+          default: '##default'
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+        paid:
+          type: integer
+          format: int64
+          description: Represents an invoice paid amount as long.
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+    InvoiceListResponse:
+      type: object
+      properties:
+        invoices:
+          type: array
+          description: Represents a list of invoices.
+          items:
+            $ref: '#/components/schemas/InvoiceDtoV1'
+          x-sourceDefault: '##default'
+        total:
+          type: integer
+          format: int64
+          description: Represents the total invoice count.
+    InvoiceCreateRequest:
+      type: object
+      required:
+      - clientId
+      - currency
+      - dueDate
+      - issuedDate
+      - number
+      properties:
+        clientId:
+          type: string
+          description: Represents a client identifier across the system.
+          default: '##default'
+          minLength: 1
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+          minLength: 1
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+          minLength: 1
+        timeViewMode:
+          $ref: '#/components/schemas/TimeViewMode'
+      example:
+        clientId: 34p687e29ae1f428e7ebe562
+        currency: USD
+        dueDate: '2020-06-01T08:00:00Z'
+        issuedDate: '2020-01-01T08:00:00Z'
+        number: '202306121129'
+        timeViewMode: AGGREGATED_TIME_VIEW
+    InvoiceCreateResponse:
+      type: object
+      properties:
+        billFrom:
+          type: string
+          description: Represents to whom the invoice should be billed from.
+          default: '##default'
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+          default: '##default'
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        id:
+          type: string
+          description: Represents invoice identifier across the system.
+          default: '##default'
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+    InvoiceFilterRequest:
+      type: object
+      description: Request body for filtering invoices.
+      properties:
+        clients:
+          $ref: '#/components/schemas/ContainsArchivedFilterRequest'
+        companies:
+          $ref: '#/components/schemas/BaseFilterRequest'
+        exactAmount:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with the exact amount.
+        exactBalance:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with the exact balance.
+        greaterThanAmount:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with amount greater than specified.
+        greaterThanBalance:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with balance greater than specified.
+        invoiceNumber:
+          type: string
+          description: If provided, filters invoices that contain the provided string
+            in their invoice number.
+          default: '##default'
+        issueDate:
+          $ref: '#/components/schemas/TimeRangeRequestDtoV1'
+        lessThanAmount:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with amount less than specified.
+        lessThanBalance:
+          type: integer
+          format: int64
+          description: If provided, filters invoices with balance less than specified.
+        page:
+          type: integer
+          format: int32
+          description: Page number.
+          default: 1
+        pageSize:
+          type: integer
+          format: int32
+          description: Page size.
+          default: 50
+        sortColumn:
+          $ref: '#/components/schemas/InvoiceSortColumn'
+        sortOrder:
+          $ref: '#/components/schemas/SortOrder'
+        statuses:
+          type: array
+          description: Represents a list of invoice statuses.
+          items:
+            $ref: '#/components/schemas/InvoiceStatus'
+        strictSearch:
+          type: boolean
+          description: When true, search by invoice number only returns invoices whose
+            number exactly matches the provided string.
+          default: false
+      example:
+        clients:
+          contains: CONTAINS
+          ids:
+          - 44a687e29ae1f428e7ebe305
+          status: ACTIVE
+        companies:
+          contains: CONTAINS
+          ids:
+          - 04g687e29ae1f428e7ebe123
+        exactAmount: 1000
+        exactBalance: 1000
+        greaterThanAmount: 500
+        greaterThanBalance: 500
+        invoiceNumber: Invoice-01
+        issueDate:
+          issue-date-start: '2024-01-01'
+          issue-date-end: '2024-12-31'
+        lessThanAmount: 500
+        lessThanBalance: 500
+        page: 1
+        pageSize: 50
+        sortColumn: ID
+        sortOrder: ASCENDING
+        statuses:
+        - SENT
+        - PAID
+        - PARTIALLY_PAID
+        strictSearch: false
+    InvoiceInfoV1:
+      type: object
+      description: Represents invoice info returned by filtered invoice search.
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents an invoice amount as long.
+        balance:
+          type: integer
+          format: int64
+          description: Represents an invoice balance amount as long.
+        billFrom:
+          type: string
+          description: Represents to whom an invoice is billed from.
+          default: '##default'
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+          default: '##default'
+        clientName:
+          type: string
+          description: Represents client name for an invoice.
+          default: '##default'
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+        daysOverdue:
+          type: integer
+          format: int64
+          description: Represents the number of days an invoice is overdue.
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        id:
+          type: string
+          description: Represents invoice identifier across the system.
+          default: '##default'
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+        paid:
+          type: integer
+          format: int64
+          description: Represents an invoice paid amount as long.
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        visibleZeroFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisibleZeroFieldsInvoice'
+          description: Represents a list of zero value invoice fields that will be
+            visible.
+    InvoiceInfoListResponse:
+      type: object
+      properties:
+        invoices:
+          type: array
+          description: Represents a list of invoice info.
+          items:
+            $ref: '#/components/schemas/InvoiceInfoV1'
+          x-sourceDefault: '##default'
+        total:
+          type: integer
+          format: int64
+          description: Represents the total invoice count.
+    InvoiceDefaultSettingsDto:
+      type: object
+      description: Represents an invoice default settings object.
+      properties:
+        companyId:
+          type: string
+          description: Represents company identifier across the system.
+          default: '##default'
+        defaultImportExpenseItemTypeId:
+          type: string
+          description: Represents item type identifier across the system.
+          default: '##default'
+        defaultImportTimeItemTypeId:
+          type: string
+          description: Represents item type identifier across the system.
+          default: '##default'
+        dueDays:
+          type: integer
+          format: int32
+          description: Represents an invoice number of due days.
+        itemTypeId:
+          type: string
+          description: Represents item type identifier across the system.
+          default: '##default'
+        notes:
+          type: string
+          description: Represents an invoice note.
+          default: '##default'
+        subject:
+          type: string
+          description: Represents an invoice subject.
+          default: '##default'
+        tax:
+          type: integer
+          format: int64
+          description: Deprecated tax value.
+          deprecated: true
+        tax2:
+          type: integer
+          format: int64
+          description: Deprecated secondary tax value.
+          deprecated: true
+        tax2Percent:
+          type: number
+          format: double
+          description: Represents a tax amount in percentage.
+        taxPercent:
+          type: number
+          format: double
+          description: Represents a tax amount in percentage.
+        taxType:
+          $ref: '#/components/schemas/TaxType'
+    InvoiceExportFields:
+      type: object
+      description: Represents an invoice export fields object.
+      properties:
+        itemType:
+          type: boolean
+        quantity:
+          type: boolean
+        rtl:
+          type: boolean
+        tax:
+          type: boolean
+        tax2:
+          type: boolean
+        unitPrice:
+          type: boolean
+    LabelsCustomization:
+      type: object
+      description: Represents a label customization object.
+      properties:
+        amount:
+          type: string
+          description: Represents invoice amount.
+          default: '##default'
+        billFrom:
+          type: string
+          description: Represents a string an invoice is billed from.
+          default: '##default'
+        billTo:
+          type: string
+          description: Represents a string an invoice is billed to.
+          default: '##default'
+        description:
+          type: string
+          description: Represents a description of an invoice.
+          default: '##default'
+        discount:
+          type: string
+          description: Represents invoice discount amount.
+          default: '##default'
+        dueDate:
+          type: string
+          description: Represents a due date in yyyy-MM-dd format.
+          default: '##default'
+        issueDate:
+          type: string
+          description: Represents an issue date in yyyy-MM-dd format.
+          default: '##default'
+        itemType:
+          type: string
+          description: Represents an item type.
+          default: '##default'
+        notes:
+          type: string
+          description: Represents notes for an invoice.
+          default: '##default'
+        paid:
+          type: string
+          description: Represents invoice paid amount.
+          default: '##default'
+        quantity:
+          type: string
+          description: Represents quantity.
+          default: '##default'
+        subtotal:
+          type: string
+          description: Represents invoice subtotal.
+          default: '##default'
+        tax:
+          type: string
+          description: Represents invoice tax amount.
+          default: '##default'
+        tax2:
+          type: string
+          description: Represents invoice tax amount.
+          default: '##default'
+        total:
+          type: string
+          description: Represents invoice total amount.
+          default: '##default'
+        totalAmount:
+          type: string
+          description: Represents invoice total amount.
+          default: '##default'
+        unitPrice:
+          type: string
+          description: Represents unit price.
+          default: '##default'
+    InvoiceSettingsResponse:
+      type: object
+      properties:
+        defaults:
+          $ref: '#/components/schemas/InvoiceDefaultSettingsDto'
+        exportFields:
+          $ref: '#/components/schemas/InvoiceExportFields'
+        labels:
+          $ref: '#/components/schemas/LabelsCustomization'
+    InvoiceDefaultSettingsRequestV1:
+      type: object
+      description: Represents an invoice default settings request object.
+      required:
+      - notes
+      - subject
+      properties:
+        companyId:
+          type: string
+          description: Represents company identifier across the system.
+          default: '##default'
+        dueDays:
+          type: integer
+          format: int32
+          description: Represents an invoice number of due days.
+        itemTypeId:
+          type: string
+          description: Represents item type identifier across the system.
+          default: '##default'
+        notes:
+          type: string
+          description: Represents an invoice note.
+          default: '##default'
+        subject:
+          type: string
+          description: Represents an invoice subject.
+          default: '##default'
+        tax2Percent:
+          type: number
+          format: double
+          description: Represents a tax amount in percentage.
+        taxPercent:
+          type: number
+          format: double
+          description: Represents a tax amount in percentage.
+        taxType:
+          $ref: '#/components/schemas/TaxType'
+    InvoiceExportFieldsRequest:
+      type: object
+      description: Represents an invoice export fields request object.
+      properties:
+        itemType:
+          type: boolean
+          description: Indicates whether to export item type.
+          default: false
+        quantity:
+          type: boolean
+          description: Indicates whether to export quantity.
+          default: false
+        rtl:
+          type: boolean
+          description: Indicates whether to export RTL.
+          default: false
+        tax:
+          type: boolean
+          description: Indicates whether to export tax.
+          default: false
+        tax2:
+          type: boolean
+          description: Indicates whether to export tax2.
+          default: false
+        unitPrice:
+          type: boolean
+          description: Indicates whether to export unit price.
+          default: false
+    LabelsCustomizationRequest:
+      type: object
+      description: Represents a label customization request object.
+      required:
+      - amount
+      - billFrom
+      - billTo
+      - description
+      - discount
+      - dueDate
+      - issueDate
+      - itemType
+      - notes
+      - paid
+      - quantity
+      - subtotal
+      - tax
+      - tax2
+      - total
+      - totalAmountDue
+      - unitPrice
+      properties:
+        amount:
+          type: string
+          description: Represents invoice amount label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        billFrom:
+          type: string
+          description: Represents invoice billFrom label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        billTo:
+          type: string
+          description: Represents invoice billTo label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        description:
+          type: string
+          description: Represents invoice description label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        discount:
+          type: string
+          description: Represents invoice discount label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        dueDate:
+          type: string
+          description: Represents invoice dueDate label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        issueDate:
+          type: string
+          description: Represents invoice issueDate label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        itemType:
+          type: string
+          description: Represents invoice itemType label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        notes:
+          type: string
+          description: Represents invoice notes label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        paid:
+          type: string
+          description: Represents invoice paid label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        quantity:
+          type: string
+          description: Represents invoice quantity label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        subtotal:
+          type: string
+          description: Represents invoice subtotal label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        tax:
+          type: string
+          description: Represents invoice tax label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        tax2:
+          type: string
+          description: Represents invoice tax2 label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        total:
+          type: string
+          description: Represents invoice total label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        totalAmountDue:
+          type: string
+          description: Represents invoice totalAmountDue label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+        unitPrice:
+          type: string
+          description: Represents invoice unitPrice label.
+          default: '##default'
+          minLength: 0
+          maxLength: 20
+    InvoiceSettingsRequest:
+      type: object
+      description: Request body for updating invoice settings/language labels.
+      required:
+      - labels
+      properties:
+        defaults:
+          $ref: '#/components/schemas/InvoiceDefaultSettingsRequestV1'
+        exportFields:
+          $ref: '#/components/schemas/InvoiceExportFieldsRequest'
+        labels:
+          $ref: '#/components/schemas/LabelsCustomizationRequest'
+      example:
+        defaults: {}
+        exportFields: {}
+        labels:
+          amount: amount
+          billFrom: billFrom
+          billTo: billTo
+          description: description
+          discount: discount
+          dueDate: dueDate
+          issueDate: issueDate
+          itemType: itemType
+          notes: notes
+          paid: paid
+          quantity: quantity
+          subtotal: subtotal
+          tax: tax
+          tax2: tax2
+          total: total
+          totalAmountDue: totalAmountDue
+          unitPrice: unitPrice
+    InvoiceItemDto:
+      type: object
+      description: Represents an invoice item data transfer object.
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents item amount.
+        applyTaxes:
+          $ref: '#/components/schemas/ApplyTaxes'
+        description:
+          type: string
+          description: Represents an invoice item description.
+          default: '##default'
+        expenseIds:
+          type: array
+          items:
+            type: string
+          description: Represents a list of imported expense ids.
+        importType:
+          $ref: '#/components/schemas/InvoiceImportType'
+        itemType:
+          type: string
+          description: Represents item type.
+          default: '##default'
+        order:
+          type: integer
+          format: int32
+          description: Represents an integer.
+        quantity:
+          type: integer
+          format: int64
+          description: Represents item quantity.
+        timeEntryIds:
+          type: array
+          items:
+            type: string
+          description: Represents a list of imported time entry ids.
+        unitPrice:
+          type: integer
+          format: int64
+          description: Represents item unit price.
+    InvoiceDtoFull:
+      type: object
+      description: Represents a complete invoice object.
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents an invoice amount as long.
+        balance:
+          type: integer
+          format: int64
+          description: Represents an invoice balance amount as long.
+        billFrom:
+          type: string
+          description: Represents to whom the invoice should be billed from.
+          default: '##default'
+        calculationType:
+          $ref: '#/components/schemas/CalculationType'
+        clientAddress:
+          type: string
+          description: Represents client address.
+          default: '##default'
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+          default: '##default'
+        clientName:
+          type: string
+          description: Represents client name for an invoice.
+          default: '##default'
+        companyId:
+          type: string
+          description: Represents company identifier across the system.
+          default: '##default'
+        containsImportedExpenses:
+          type: boolean
+          description: Indicates whether invoice contains imported expenses.
+          default: false
+        containsImportedTimes:
+          type: boolean
+          description: Indicates whether invoice contains imported items.
+          default: false
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+        discount:
+          type: number
+          format: double
+          description: Represents an invoice discount amount as double.
+        discountAmount:
+          type: integer
+          format: int64
+          description: Represents an invoice discount amount as long.
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        id:
+          type: string
+          description: Represents invoice identifier across the system.
+          default: '##default'
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        items:
+          type: array
+          description: Represents a list of invoice item datatransfer objects.
+          items:
+            $ref: '#/components/schemas/InvoiceItemDto'
+          x-sourceDefault: '##default'
+        note:
+          type: string
+          description: Represents an invoice note.
+          default: '##default'
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+        paid:
+          type: integer
+          format: int64
+          description: Represents an invoice paid amount as long.
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        subject:
+          type: string
+          description: Represents an invoice subject.
+          default: '##default'
+        subtotal:
+          type: integer
+          format: int64
+          description: Represents an invoice subtotal as long.
+        tax:
+          type: number
+          format: double
+          description: Represents an invoice tax amount as double.
+        tax2:
+          type: number
+          format: double
+          description: Represents an invoice tax amount as double.
+        tax2Amount:
+          type: integer
+          format: int64
+          description: Represents an invoice tax amount as long.
+        taxAmount:
+          type: integer
+          format: int64
+          description: Represents an invoice tax amount as long.
+        taxType:
+          $ref: '#/components/schemas/TaxType'
+        userId:
+          type: string
+          description: Represents user identifier across the system.
+          default: '##default'
+        visibleZeroFields:
+          type: array
+          description: Represents a list of zero value invoice fields that will be
+            visible.
+          items:
+            $ref: '#/components/schemas/VisibleZeroFieldsInvoice'
+      example:
+        amount: 100
+        balance: 50
+        billFrom: Business X
+        calculationType: INVOICE_BASED
+        clientAddress: Ground Floor, ABC Bldg., Palo Alto, California, USA 94020
+        clientId: 98h687e29ae1f428e7ebe707
+        clientName: Client X
+        companyId: 04g687e29ae1f428e7ebe123
+        containsImportedExpenses: false
+        containsImportedTimes: false
+        currency: USD
+        discount: 10.5
+        discountAmount: 11
+        dueDate: '2020-06-01T08:00:00Z'
+        id: 78a687e29ae1f428e7ebe303
+        issuedDate: '2020-01-01T08:00:00Z'
+        items: []
+        note: This is a sample note for this invoice.
+        number: '202306121129'
+        paid: 50
+        status: PAID
+        subject: January salary
+        subtotal: 5000
+        tax: 1.5
+        tax2: 0
+        tax2Amount: 0
+        taxAmount: 1
+        taxType: SIMPLE
+        userId: 12t687e29ae1f428e7ebe202
+        visibleZeroFields:
+        - TAX
+        - TAX_2
+        - DISCOUNT
+    UpdateInvoiceRequest:
+      type: object
+      required:
+      - currency
+      - discountPercent
+      - dueDate
+      - issuedDate
+      - number
+      - tax2Percent
+      - taxPercent
+      properties:
+        clientId:
+          type: string
+          description: Represents client identifier across the system.
+          default: '##default'
+        companyId:
+          type: string
+          description: Represents company identifier across the system.
+          default: '##default'
+        currency:
+          type: string
+          description: Represents the currency used by the invoice.
+          default: '##default'
+          minLength: 1
+          maxLength: 100
+        discountPercent:
+          type: number
+          format: double
+          description: Represents an invoice discount percent as double.
+        dueDate:
+          type: string
+          format: date-time
+          description: Represents an invoice due date in yyyy-MM-ddThh:mm:ssZ format.
+        issuedDate:
+          type: string
+          format: date-time
+          description: Represents an invoice issued date in yyyy-MM-ddThh:mm:ssZ format.
+        note:
+          type: string
+          description: Represents an invoice note.
+          default: '##default'
+        number:
+          type: string
+          description: Represents an invoice number.
+          default: '##default'
+          minLength: 1
+        subject:
+          type: string
+          description: Represents an invoice subject.
+          default: '##default'
+        tax2Percent:
+          type: number
+          format: double
+          description: Represents an invoice tax 2 percent as double.
+        taxPercent:
+          type: number
+          format: double
+          description: Represents an invoice tax percent as double.
+        taxType:
+          $ref: '#/components/schemas/TaxType'
+        visibleZeroFields:
+          description: Represents one or more zero value invoice fields that will
+            be visible.
+          oneOf:
+          - $ref: '#/components/schemas/VisibleZeroFieldsInvoice'
+          - type: array
+            items:
+              $ref: '#/components/schemas/VisibleZeroFieldsInvoice'
+      example:
+        clientId: 98h687e29ae1f428e7ebe707
+        companyId: 04g687e29ae1f428e7ebe123
+        currency: USD
+        discountPercent: 10.5
+        dueDate: '2020-06-01T08:00:00Z'
+        issuedDate: '2020-01-01T08:00:00Z'
+        note: This is a sample note for this invoice.
+        number: '202306121129'
+        subject: January salary
+        tax2Percent: 0
+        taxPercent: 1.5
+        taxType: SIMPLE
+        visibleZeroFields:
+        - TAX
+        - TAX_2
+        - DISCOUNT
+    AddInvoiceItemRequest:
+      type: object
+      required:
+      - applyTaxes
+      - description
+      - itemType
+      - quantity
+      - unitPrice
+      properties:
+        applyTaxes:
+          $ref: '#/components/schemas/ApplyTaxes'
+        description:
+          type: string
+          description: Represents an invoice item description.
+          default: '##default'
+        itemType:
+          type: string
+          description: Represents an item type.
+          default: '##default'
+          minLength: 1
+        quantity:
+          type: integer
+          format: int64
+          description: Represents an item quantity.
+        unitPrice:
+          type: integer
+          format: int64
+          description: Represents an item unit price.
+      example:
+        applyTaxes: TAX1TAX2
+        description: This is a description of an invoice item.
+        itemType: Service
+        quantity: 10000
+        unitPrice: 500
+    ImportInvoiceItemsRequest:
+      type: object
+      required:
+      - from
+      - importExpenses
+      - projectFilter
+      - timeEntryGroupType
+      - to
+      properties:
+        expenseFieldsForDetailedGroup:
+          type: array
+          uniqueItems: true
+          default:
+          - NOTE
+          items:
+            $ref: '#/components/schemas/ExpenseFieldsForDetailedGroup'
+          description: A set of expense fields to include when using the DETAILED
+            expense grouping type.
+        expensesGroupBy:
+          allOf:
+          - $ref: '#/components/schemas/ExpensesGroupBy'
+          default: PROJECT
+          description: Represents a group field when using the GROUPED expense group
+            type.
+        expensesGroupType:
+          allOf:
+          - $ref: '#/components/schemas/ExpensesGroupType'
+          default: DETAILED
+          description: Represents an expense group type.
+        from:
+          type: string
+          description: Represents date and time in the yyyy-MM-ddThh:mm:ssZ format.
+          default: '##default'
+          example: '2025-06-01T00:00:00Z'
+        importExpenses:
+          type: boolean
+          description: Indicates if billable expenses should be imported alongside
+            time entries.
+          default: false
+        projectFilter:
+          $ref: '#/components/schemas/ContainsArchivedFilterRequest'
+        roundTimeEntryDuration:
+          type: boolean
+          description: Indicates if imported time entry durations should be rounded
+            to the nearest 15 minute interval.
+          default: false
+        timeEntryFieldsForDetailedGroup:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/TimeEntryFieldsForDetailedGroup'
+          description: A set of time entry fields to include when using DETAILED time
+            entry grouping type.
+        timeEntryGroupType:
+          $ref: '#/components/schemas/TimeEntryGroupType'
+        timeEntryPrimaryGroupBy:
+          $ref: '#/components/schemas/TimeEntryPrimaryGroupBy'
+        timeEntrySecondaryGroupBy:
+          $ref: '#/components/schemas/TimeEntrySecondaryGroupBy'
+        to:
+          type: string
+          description: Represents date and time in the yyyy-MM-ddThh:mm:ssZ format.
+          default: '##default'
+          example: '2025-06-07T00:00:00Z'
+      example:
+        expenseFieldsForDetailedGroup:
+        - NOTE
+        expensesGroupBy: CATEGORY
+        expensesGroupType: GROUPED
+        from: '2025-06-01T00:00:00Z'
+        importExpenses: false
+        projectFilter:
+          contains: CONTAINS
+          ids:
+          - 25b687e29ae1f428e7ebe123
+          status: ACTIVE
+        roundTimeEntryDuration: false
+        timeEntryFieldsForDetailedGroup:
+        - PROJECT
+        - DESCRIPTION
+        timeEntryGroupType: GROUPED
+        timeEntryPrimaryGroupBy: PROJECT
+        timeEntrySecondaryGroupBy: TASK
+        to: '2025-06-07T00:00:00Z'
+    InvoicePaymentDto:
+      type: object
+      description: Represents an invoice payment.
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents an invoice payment amount as long.
+        author:
+          type: string
+          description: Represents an invoice payment author.
+          default: '##default'
+        date:
+          type: string
+          format: date-time
+          description: Represents an invoice payment date in yyyy-MM-ddThh:mm:ssZ
+            format.
+        id:
+          type: string
+          description: Represents invoice payment identifier across the system.
+          default: '##default'
+        note:
+          type: string
+          description: Represents an invoice payment note.
+          default: '##default'
+    AddInvoicePaymentRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Represents an invoice payment amount as long.
+          minimum: 1
+        note:
+          type: string
+          description: Represents an invoice payment note.
+          default: '##default'
+          minLength: 0
+          maxLength: 1000
+        paymentDate:
+          type: string
+          description: Represents an invoice payment date in yyyy-MM-ddThh:mm:ssZ
+            format.
+          default: '##default'
+      example:
+        amount: 100
+        note: This is a sample note for this invoice payment.
+        paymentDate: '2021-01-01T12:00:00Z'
+    InvoiceStatusRequest:
+      type: object
+      required:
+      - invoiceStatus
+      properties:
+        invoiceStatus:
+          $ref: '#/components/schemas/InvoiceStatus'
+      example:
+        invoiceStatus: PAID
