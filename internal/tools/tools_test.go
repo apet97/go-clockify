@@ -234,6 +234,8 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 				UserID:      "u-self",
 				Description: "Old description",
 				ProjectID:   "p-old",
+				TaskID:      "t-old",
+				TagIDs:      []string{"tag-old"},
 				Billable:    false,
 				TimeInterval: clockify.TimeInterval{
 					Start: "2026-04-01T09:00:00Z",
@@ -254,6 +256,8 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 		"entry_id":        "entry-1",
 		"new_description": "New description",
 		"project_id":      "p-new",
+		"task_id":         "t-new",
+		"tag_ids":         []any{"tag-new"},
 		"start":           "2026-04-01T09:15:00Z",
 		"end":             "2026-04-01T10:15:00Z",
 		"billable":        true,
@@ -277,18 +281,24 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 		t.Fatalf("matched_entry_id = %q", data.MatchedEntryID)
 	}
 	if data.Current == nil || data.Current.Description != "Old description" || data.Current.ProjectID != "p-old" ||
+		data.Current.TaskID != "t-old" || len(data.Current.TagIDs) != 1 || data.Current.TagIDs[0] != "tag-old" ||
 		data.Current.Start != "2026-04-01T09:00:00Z" || data.Current.End != "2026-04-01T10:00:00Z" {
 		t.Fatalf("unexpected current preview: %+v", data.Current)
 	}
 	if data.Proposed["description"] != "New description" || data.Proposed["project_id"] != "p-new" ||
+		data.Proposed["task_id"] != "t-new" ||
 		data.Proposed["start"] != "2026-04-01T09:15:00Z" || data.Proposed["end"] != "2026-04-01T10:15:00Z" ||
 		data.Proposed["billable"] != true {
 		t.Fatalf("unexpected proposed changes: %+v", data.Proposed)
+	}
+	if proposedTags, ok := data.Proposed["tag_ids"].([]string); !ok || len(proposedTags) != 1 || proposedTags[0] != "tag-new" {
+		t.Fatalf("unexpected proposed tag_ids: %+v", data.Proposed)
 	}
 	if !data.DryRun || data.Note == "" {
 		t.Fatalf("expected dry-run note, got %+v", data)
 	}
 	if data.Entry.Description != "New description" || data.Entry.ProjectID != "p-new" ||
+		data.Entry.TaskID != "t-new" || len(data.Entry.TagIDs) != 1 || data.Entry.TagIDs[0] != "tag-new" ||
 		data.Entry.TimeInterval.Start != "2026-04-01T09:15:00Z" || data.Entry.TimeInterval.End != "2026-04-01T10:15:00Z" ||
 		!data.Entry.Billable {
 		t.Fatalf("entry should show proposed state, got %+v", data.Entry)
@@ -990,6 +1000,8 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	result, err := svc.UpdateEntry(context.Background(), map[string]any{
 		"entry_id":    "abc123def456789012345678",
 		"description": "Updated description",
+		"task_id":     "task2",
+		"tag_ids":     []any{"tag3"},
 		"billable":    true,
 	})
 	if err != nil {
@@ -1011,12 +1023,12 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	if gotPutBody["billable"] != true {
 		t.Fatalf("PUT should carry new billable=true, got %v", gotPutBody["billable"])
 	}
-	if gotPutBody["taskId"] != "task1" {
-		t.Fatalf("PUT should preserve taskId, got %v", gotPutBody["taskId"])
+	if gotPutBody["taskId"] != "task2" {
+		t.Fatalf("PUT should update taskId, got %v", gotPutBody["taskId"])
 	}
 	tagIDs, ok := gotPutBody["tagIds"].([]any)
-	if !ok || len(tagIDs) != 2 || tagIDs[0] != "tag1" || tagIDs[1] != "tag2" {
-		t.Fatalf("PUT should preserve tagIds, got %#v", gotPutBody["tagIds"])
+	if !ok || len(tagIDs) != 1 || tagIDs[0] != "tag3" {
+		t.Fatalf("PUT should replace tagIds, got %#v", gotPutBody["tagIds"])
 	}
 	if _, ok := gotPutBody["customFields"]; !ok {
 		t.Fatalf("PUT should preserve custom fields, got body %#v", gotPutBody)
@@ -1026,8 +1038,8 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected changedFields in meta, got %T", result.Meta["changedFields"])
 	}
-	if len(changedFields) != 2 {
-		t.Fatalf("expected 2 changed fields, got %d: %v", len(changedFields), changedFields)
+	if len(changedFields) != 4 {
+		t.Fatalf("expected 4 changed fields, got %d: %v", len(changedFields), changedFields)
 	}
 }
 

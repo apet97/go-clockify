@@ -3,7 +3,7 @@
 // input schemas actually use. It is intentionally narrow:
 //
 // Supported keywords:
-//   - type: object, string, integer, number, boolean, array
+//   - type: object, string, integer, number, boolean, array, null
 //   - required (array of strings on objects)
 //   - additionalProperties: false (true is a no-op)
 //   - properties (recursive)
@@ -37,6 +37,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -85,7 +86,32 @@ func validate(schema map[string]any, value any, ptr string) error {
 		}
 	}
 
-	typ, _ := schema["type"].(string)
+	types := schemaTypes(schema["type"])
+	if len(types) > 1 {
+		for _, typ := range types {
+			if err := validateType(typ, schema, value, ptr); err == nil {
+				if raw, ok := schema["anyOf"]; ok {
+					return checkAnyOf(raw, value, ptr)
+				}
+				return nil
+			}
+		}
+		return typeError(ptr, strings.Join(types, " or "), value)
+	}
+	typ := ""
+	if len(types) == 1 {
+		typ = types[0]
+	}
+	if err := validateType(typ, schema, value, ptr); err != nil {
+		return err
+	}
+	if raw, ok := schema["anyOf"]; ok {
+		return checkAnyOf(raw, value, ptr)
+	}
+	return nil
+}
+
+func validateType(typ string, schema map[string]any, value any, ptr string) error {
 	var err error
 	switch typ {
 	case "":
@@ -109,6 +135,10 @@ func validate(schema map[string]any, value any, ptr string) error {
 		if _, ok := value.(bool); !ok {
 			err = typeError(ptr, "boolean", value)
 		}
+	case "null":
+		if value != nil {
+			err = typeError(ptr, "null", value)
+		}
 	default:
 		// Unknown type keyword — treat as no-op to stay forward-compatible
 		// with tightenings that introduce new type strings we don't know
@@ -117,8 +147,24 @@ func validate(schema map[string]any, value any, ptr string) error {
 	if err != nil {
 		return err
 	}
-	if raw, ok := schema["anyOf"]; ok {
-		return checkAnyOf(raw, value, ptr)
+	return nil
+}
+
+func schemaTypes(raw any) []string {
+	if typ, ok := raw.(string); ok {
+		return []string{typ}
+	}
+	if types, ok := raw.([]any); ok {
+		out := make([]string, 0, len(types))
+		for _, item := range types {
+			if typ, ok := item.(string); ok && typ != "" {
+				out = append(out, typ)
+			}
+		}
+		return out
+	}
+	if types, ok := raw.([]string); ok {
+		return append([]string(nil), types...)
 	}
 	return nil
 }

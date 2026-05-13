@@ -108,6 +108,29 @@ func TestAssignmentReportJoinsScheduledAndTrackedMoney(t *testing.T) {
 	}
 }
 
+func TestReportEntitiesDoNotReuseGenericGroupIDForEveryEntity(t *testing.T) {
+	entities := reportEntities(map[string]any{
+		"id":          "user-group-id",
+		"name":        "Alice",
+		"projectName": "Build",
+		"clientName":  "Acme",
+	})
+	project, ok := entities["project"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected project entity map, got %#v", entities["project"])
+	}
+	if project["id"] == "user-group-id" {
+		t.Fatalf("generic report group id leaked into project entity: %#v", entities)
+	}
+	client, ok := entities["client"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected client entity map, got %#v", entities["client"])
+	}
+	if client["id"] == "user-group-id" {
+		t.Fatalf("generic report group id leaked into client entity: %#v", entities)
+	}
+}
+
 func TestAssignmentReportReportFailureDoesNotFail(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {

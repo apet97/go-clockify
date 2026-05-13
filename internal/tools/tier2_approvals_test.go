@@ -43,6 +43,34 @@ func TestSubmitForApprovalBodyUsesCamelCaseKeys(t *testing.T) {
 	}
 }
 
+func TestSubmitForApprovalDryRunDoesNotPost(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("approval dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.submitForApproval(context.Background(), map[string]any{
+		"period":       "WEEKLY",
+		"period_start": "2026-05-04T00:00:00.000Z",
+		"dry_run":      true,
+	})
+	if err != nil {
+		t.Fatalf("submit dry-run failed: %v", err)
+	}
+	if result.Action != "clockify_submit_for_approval" {
+		t.Fatalf("expected submit action, got %q", result.Action)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("expected dry-run data, got %#v", result.Data)
+	}
+	payload, ok := data["payload"].(map[string]any)
+	if !ok || payload["periodStart"] != "2026-05-04T00:00:00.000Z" {
+		t.Fatalf("expected camelCase dry-run payload, got %#v", data["payload"])
+	}
+}
+
 func TestSubmitForApprovalLegacyStartMapsToWeekly(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

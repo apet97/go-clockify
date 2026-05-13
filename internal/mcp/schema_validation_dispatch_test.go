@@ -30,7 +30,7 @@ func (e *schemaValidationEnforcement) AfterCall(r any) (any, error) { return r, 
 func TestToolsCallInvalidParamsErrorMapsTo32602(t *testing.T) {
 	enf := &schemaValidationEnforcement{
 		beforeCall: func(_ context.Context, _ string, _ map[string]any, _ ToolHints, _ map[string]any, _ func(string) (ToolHandler, bool)) (any, func(), error) {
-			return nil, nil, &InvalidParamsError{Pointer: "/start", Message: "missing required property"}
+			return nil, nil, &InvalidParamsError{Pointer: "/start", Message: "missing required property", DidYouMean: "start_time"}
 		},
 	}
 	handler := func(context.Context, map[string]any) (any, error) {
@@ -73,6 +73,9 @@ func TestToolsCallInvalidParamsErrorMapsTo32602(t *testing.T) {
 	}
 	if got, _ := resp.Error.Data["pointer"].(string); got != "/start" {
 		t.Errorf("error.data.pointer = %q, want /start", got)
+	}
+	if got, _ := resp.Error.Data["did_you_mean"].(string); got != "start_time" {
+		t.Errorf("error.data.did_you_mean = %q, want start_time", got)
 	}
 	if resp.Result != nil {
 		t.Errorf("resp.Result should be nil on -32602 path, got %#v", resp.Result)

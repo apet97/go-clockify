@@ -31,8 +31,8 @@ func TestReportToolSchemasExposeOnlyTheirDocumentedFilters(t *testing.T) {
 				t.Fatalf("%s missing %s in schema properties", tc.tool, tc.want)
 			}
 			required, _ := toStringSliceAny(schema["required"])
-			if !stringSliceContains(required, tc.wantKey) {
-				t.Fatalf("%s required fields = %v, want %s", tc.tool, required, tc.wantKey)
+			if stringSliceContains(required, tc.wantKey) {
+				t.Fatalf("%s required fields = %v, want %s optional", tc.tool, required, tc.wantKey)
 			}
 			for _, key := range tc.forbid {
 				if _, ok := props[key]; ok {

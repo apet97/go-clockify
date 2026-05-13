@@ -129,13 +129,18 @@
             "type": "boolean"
           },
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to inherit the project/workspace default.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "end": {
@@ -767,6 +772,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "billable_state",
               "billable_present",
               "timeInterval",
@@ -953,10 +959,12 @@
                 "type": "array"
               },
               "page": {
+                "description": "Page number, starting at 1.",
                 "minimum": 1,
                 "type": "integer"
               },
               "page_size": {
+                "description": "Items per page. Default 50, maximum 200.",
                 "maximum": 200,
                 "minimum": 1,
                 "type": "integer"
@@ -1424,9 +1432,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "attendance_filter"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -1472,6 +1477,19 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "billable": {
+            "description": "Filter detailed report rows by billable state.",
+            "type": "boolean"
+          },
+          "client_id": {
+            "description": "Filter detailed report rows to one client ID.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Filter detailed report rows by description text.",
+            "maxLength": 2000,
+            "type": "string"
+          },
           "financial_date_range_type": {
             "description": "Optional Reports API dateRangeType override for project/task financial enrichment.",
             "enum": [
@@ -1500,14 +1518,39 @@
             "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
             "type": "string"
           },
+          "invoicing_state": {
+            "description": "Filter by invoicing state, e.g. INVOICED or UNINVOICED.",
+            "type": "string"
+          },
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "project_id": {
+            "description": "Filter detailed report rows to one project ID.",
+            "type": "string"
+          },
+          "tag_ids": {
+            "description": "Filter detailed report rows to entries with these tag IDs.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "task_id": {
+            "description": "Filter detailed report rows to one task ID.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Filter detailed report rows to one user ID.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -5186,6 +5229,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "email": {
@@ -5741,6 +5785,7 @@
             "type": "object"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "estimate": {
@@ -7145,6 +7190,7 @@
         "additionalProperties": false,
         "properties": {
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "name": {
@@ -7251,6 +7297,7 @@
             "type": "boolean"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "estimate": {
@@ -8052,6 +8099,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           }
         },
@@ -8112,6 +8160,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "entry_id": {
@@ -8175,6 +8224,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
@@ -8239,6 +8289,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "tag": {
@@ -8303,6 +8354,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
@@ -8549,6 +8601,7 @@
           },
           "detailed_filter": {
             "additionalProperties": false,
+            "description": "Optional; omit or pass {} for the default detailed report filter.",
             "properties": {
               "audit_filter": {
                 "additionalProperties": false,
@@ -8583,10 +8636,12 @@
                 "type": "object"
               },
               "page": {
+                "description": "Page number, starting at 1.",
                 "minimum": 1,
                 "type": "integer"
               },
               "page_size": {
+                "description": "Items per page. Default 50, maximum 200.",
                 "maximum": 200,
                 "minimum": 1,
                 "type": "integer"
@@ -8883,9 +8938,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "detailed_filter"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -10767,13 +10819,18 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to leave the existing value unchanged.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description_contains": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "end": {
@@ -10807,6 +10864,16 @@
           },
           "start_before": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "tag_ids": {
+            "description": "Replace the entry's tag IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "task_id": {
             "type": "string"
           },
           "timezone": {
@@ -10848,6 +10915,15 @@
                     "type": "string"
                   },
                   "start": {
+                    "type": "string"
+                  },
+                  "tag_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "task_id": {
                     "type": "string"
                   }
                 },
@@ -11439,6 +11515,7 @@
                   "id",
                   "description",
                   "projectId",
+                  "billable",
                   "billable_state",
                   "billable_present",
                   "timeInterval",
@@ -12667,6 +12744,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "billable_state",
               "billable_present",
               "timeInterval",
@@ -14778,7 +14856,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -15252,7 +15330,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -15859,6 +15937,7 @@
                 "id",
                 "description",
                 "projectId",
+                "billable",
                 "billable_state",
                 "billable_present",
                 "timeInterval",
@@ -15916,7 +15995,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -16511,6 +16590,7 @@
                 "id",
                 "description",
                 "projectId",
+                "billable",
                 "billable_state",
                 "billable_present",
                 "timeInterval",
@@ -16650,7 +16730,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -17878,7 +17958,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -18002,7 +18082,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -18575,7 +18655,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -19003,7 +19083,7 @@
     },
     {
       "name": "clockify_log_time",
-      "description": "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed.",
+      "description": "Create a finished time entry for a project. Preferred helper for logging past work; validates overlaps unless allow_overlap:true is passed. Omit billable or pass null to inherit Clockify's project/workspace default.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
@@ -19021,13 +19101,18 @@
             "type": "boolean"
           },
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to inherit the project/workspace default.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "end": {
@@ -19659,6 +19744,7 @@
                   "id",
                   "description",
                   "projectId",
+                  "billable",
                   "billable_state",
                   "billable_present",
                   "timeInterval",
@@ -20486,6 +20572,7 @@
             "type": "string"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -21278,6 +21365,7 @@
                     "id",
                     "description",
                     "projectId",
+                    "billable",
                     "billable_state",
                     "billable_present",
                     "timeInterval",
@@ -21886,6 +21974,7 @@
                     "id",
                     "description",
                     "projectId",
+                    "billable",
                     "billable_state",
                     "billable_present",
                     "timeInterval",
@@ -22249,6 +22338,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
@@ -22854,6 +22944,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "billable_state",
               "billable_present",
               "timeInterval",
@@ -22904,6 +22995,7 @@
         "additionalProperties": false,
         "properties": {
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           }
         },
@@ -23495,6 +23587,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "billable_state",
               "billable_present",
               "timeInterval",
@@ -23792,6 +23885,7 @@
           },
           "summary_filter": {
             "additionalProperties": false,
+            "description": "Optional; defaults to groups:[PROJECT] when omitted.",
             "properties": {
               "groups": {
                 "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE. Summary Reports does not support USER; use clockify_assignment_report or clockify_detailed_report for user-grouped analysis.",
@@ -23829,9 +23923,6 @@
                 "type": "string"
               }
             },
-            "required": [
-              "groups"
-            ],
             "type": "object"
           },
           "tags": {
@@ -24044,9 +24135,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "summary_filter"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -25024,7 +25112,7 @@
     },
     {
       "name": "clockify_switch_project",
-      "description": "Stop the current timer if one is running, then start a new one on a different project. Response includes stop_outcome.",
+      "description": "Stop the current timer if one is running, then start a new one on a different project. Response includes previous_entry_action/stop_outcome and the stopped entry when one was finalized.",
       "group": "tier1",
       "tier": 1,
       "read_only": false,
@@ -25038,26 +25126,32 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to inherit the project/workspace default.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
             "description": "Project name or ID to switch to",
             "type": "string"
           },
+          "project_id": {
+            "description": "Project ID alias for project; bypasses name resolution when supplied",
+            "type": "string"
+          },
           "task_id": {
             "type": "string"
           }
         },
-        "required": [
-          "project"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -25696,6 +25790,7 @@
                   "id",
                   "description",
                   "projectId",
+                  "billable",
                   "billable_state",
                   "billable_present",
                   "timeInterval",
@@ -25759,13 +25854,18 @@
             "type": "boolean"
           },
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to inherit the project/workspace default.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "end": {
@@ -26395,6 +26495,7 @@
                   "id",
                   "description",
                   "projectId",
+                  "billable",
                   "billable_state",
                   "billable_present",
                   "timeInterval",
@@ -27301,6 +27402,7 @@
                     "id",
                     "description",
                     "projectId",
+                    "billable",
                     "billable_state",
                     "billable_present",
                     "timeInterval",
@@ -27480,7 +27582,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -28079,6 +28181,7 @@
                 "id",
                 "description",
                 "projectId",
+                "billable",
                 "billable_state",
                 "billable_present",
                 "timeInterval",
@@ -28155,6 +28258,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "email": {
@@ -28648,13 +28752,18 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
-            "type": "boolean"
+            "description": "Optional billable flag. Omit or pass null to leave the existing value unchanged.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "description": {
             "maxLength": 2000,
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "end": {
@@ -28672,6 +28781,16 @@
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "tag_ids": {
+            "description": "Replace the entry's tag IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "task_id": {
             "type": "string"
           },
           "timezone": {
@@ -29278,6 +29397,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "billable_state",
               "billable_present",
               "timeInterval",
@@ -29397,6 +29517,7 @@
             "type": "object"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "estimate": {
@@ -30867,6 +30988,7 @@
             "type": "boolean"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "name": {
@@ -30977,6 +31099,7 @@
             "type": "boolean"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "estimate": {
@@ -31965,6 +32088,7 @@
           },
           "weekly_filter": {
             "additionalProperties": false,
+            "description": "Optional; defaults to group:PROJECT, subgroup:TIME when omitted.",
             "properties": {
               "group": {
                 "enum": [
@@ -31980,10 +32104,6 @@
                 "type": "string"
               }
             },
-            "required": [
-              "group",
-              "subgroup"
-            ],
             "type": "object"
           },
           "without_description": {
@@ -31998,9 +32118,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "weekly_filter"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -33284,7 +33401,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "If true, preview the approval without executing it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "note": {
@@ -35160,7 +35277,7 @@
             "type": "string"
           },
           "page_size": {
-            "description": "Page size for the documented list scan (default 100, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -37039,7 +37156,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -38934,7 +39051,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "If true, preview the rejection without executing it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "note": {
@@ -40803,13 +40920,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "period": {
             "description": "Approval period; must match workspace approval settings",
             "enum": [
@@ -42668,7 +42789,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -42686,13 +42807,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "period": {
             "description": "Approval period; must match workspace approval settings",
             "enum": [
@@ -44556,7 +44681,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -44574,13 +44699,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "period": {
             "description": "Approval period; must match workspace approval settings",
             "enum": [
@@ -46439,7 +46568,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -46457,13 +46586,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "period": {
             "description": "Approval period; must match workspace approval settings",
             "enum": [
@@ -48327,7 +48460,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -48356,7 +48489,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "If true, preview the withdrawal without executing it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "note": {
@@ -50253,6 +50386,7 @@
             "type": "integer"
           },
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
@@ -50261,8 +50395,17 @@
             "type": "string"
           },
           "types": {
-            "description": "Clockify entity types, e.g. TIME_ENTRY, PROJECT, TASK, CLIENT",
+            "description": "Clockify entity types accepted by the entity-change feed.",
             "items": {
+              "enum": [
+                "TIME_ENTRY",
+                "PROJECTS",
+                "TASKS",
+                "CLIENTS",
+                "SCHEDULED_ASSIGNMENT",
+                "TAGS",
+                "TIME_ENTRY_CUSTOM_FIELD_VALUE"
+              ],
               "type": "string"
             },
             "type": "array"
@@ -50384,6 +50527,15 @@
           "required": {
             "description": "Whether the field is required",
             "type": "boolean"
+          },
+          "status": {
+            "description": "Custom-field visibility; defaults to VISIBLE so values can be set immediately",
+            "enum": [
+              "VISIBLE",
+              "INVISIBLE",
+              "INACTIVE"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -50440,7 +50592,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without deleting",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "field_id": {
@@ -50557,7 +50709,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -50700,6 +50852,15 @@
           },
           "required": {
             "type": "boolean"
+          },
+          "status": {
+            "description": "Custom-field visibility",
+            "enum": [
+              "VISIBLE",
+              "INVISIBLE",
+              "INACTIVE"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -50736,8 +50897,83 @@
       }
     },
     {
+      "name": "clockify_archive_expense_category",
+      "description": "Archive or unarchive an expense category via PATCH /expenses/categories/{categoryId}/status.",
+      "group": "expenses",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "category_id",
+        "archived"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "description": "Archive flag. Defaults to true.",
+            "type": "boolean"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "category_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_archive_expense_category",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "billing"
+        ],
+        "title": "Archive Expense Category"
+      }
+    },
+    {
       "name": "clockify_create_expense",
-      "description": "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.",
+      "description": "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
@@ -50751,8 +50987,16 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
-            "description": "Raw upstream expense amount value; no client-side currency scaling is applied",
+            "description": "Expense amount. Defaults to major currency units, e.g. 125.00 for $125.00; use amount_unit:\"minor\" for cents/minor units.",
             "type": "number"
+          },
+          "amount_unit": {
+            "description": "Unit for amount. major (default) sends the value as entered; minor divides by 100 before sending to Clockify.",
+            "enum": [
+              "major",
+              "minor"
+            ],
+            "type": "string"
           },
           "billable": {
             "description": "Whether the expense is billable",
@@ -50820,22 +51064,50 @@
     },
     {
       "name": "clockify_create_expense_category",
-      "description": "Create a new expense category",
+      "description": "Create a new expense category, optionally including upstream unit-price fields.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "name",
+        "has_unit_price",
+        "price_in_cents",
+        "unit"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
+          "has_unit_price": {
+            "description": "Whether this category has a unit price.",
+            "type": "boolean"
+          },
           "name": {
             "description": "Category name",
             "maxLength": 150,
+            "type": "string"
+          },
+          "price_in_cents": {
+            "description": "Unit price in minor currency units/cents.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unit": {
+            "description": "Unit label for unit-priced categories.",
             "type": "string"
           }
         },
@@ -50861,13 +51133,19 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Create Expense Category"
       }
@@ -50892,6 +51170,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "expense_id": {
@@ -50958,6 +51237,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           }
         },
@@ -51176,10 +51456,12 @@
             "type": "string"
           },
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -51546,7 +51828,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -51615,7 +51897,16 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
+            "description": "Expense amount. Defaults to major currency units; use amount_unit:\"minor\" for cents/minor units.",
             "type": "number"
+          },
+          "amount_unit": {
+            "description": "Unit for amount when AMOUNT is included in change_fields.",
+            "enum": [
+              "major",
+              "minor"
+            ],
+            "type": "string"
           },
           "billable": {
             "type": "boolean"
@@ -51698,24 +51989,58 @@
     },
     {
       "name": "clockify_update_expense_category",
-      "description": "Update an expense category",
+      "description": "Update an expense category, including upstream unit-price fields.",
       "group": "expenses",
       "tier": 2,
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "category_id",
+        "name",
+        "has_unit_price",
+        "price_in_cents",
+        "unit",
+        "archived"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "archived": {
+            "description": "Archive state to apply via the category status endpoint.",
+            "type": "boolean"
+          },
           "category_id": {
             "type": "string"
           },
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
+          "has_unit_price": {
+            "description": "Whether this category has a unit price.",
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 150,
+            "type": "string"
+          },
+          "price_in_cents": {
+            "description": "Unit price in minor currency units/cents.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unit": {
+            "description": "Unit label for unit-priced categories.",
             "type": "string"
           }
         },
@@ -51741,13 +52066,19 @@
         "type": "object"
       },
       "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "billing"
+        ],
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
+        "requiresConfirmationToken": true,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Update Expense Category"
       }
@@ -51928,7 +52259,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without deleting",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "holiday_id": {
@@ -51992,7 +52323,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without deleting",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "group_id": {
@@ -52227,7 +52558,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -52335,7 +52666,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -52367,6 +52698,10 @@
           "description": {
             "maxLength": 2000,
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
           },
           "invoice_id": {
             "type": "string"
@@ -52411,7 +52746,7 @@
           "billing"
         ],
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -52446,6 +52781,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "bill_from": {
+            "description": "Invoice bill-from label/address",
+            "type": "string"
+          },
+          "client_address": {
+            "description": "Client address text to print on the invoice",
+            "type": "string"
+          },
           "client_id": {
             "description": "Client ID (required)",
             "type": "string"
@@ -52458,8 +52801,12 @@
             "description": "Currency code (e.g. USD, EUR)",
             "type": "string"
           },
+          "discount_percent": {
+            "description": "Invoice discount percent",
+            "type": "number"
+          },
           "dry_run": {
-            "description": "Preview the invoice payload without creating it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "due_date": {
@@ -52477,6 +52824,27 @@
           },
           "number": {
             "description": "Invoice number (required by live API)",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Invoice subject",
+            "type": "string"
+          },
+          "tax2_percent": {
+            "description": "Second invoice tax percent",
+            "type": "number"
+          },
+          "tax_percent": {
+            "description": "Invoice tax percent",
+            "type": "number"
+          },
+          "tax_type": {
+            "description": "Invoice tax calculation type",
+            "enum": [
+              "COMPOUND",
+              "SIMPLE",
+              "NONE"
+            ],
             "type": "string"
           }
         },
@@ -52546,6 +52914,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "invoice_id": {
@@ -52617,6 +52986,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "invoice_id": {
@@ -52875,7 +53245,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -53213,7 +53583,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -53290,7 +53660,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -53376,7 +53746,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview only; returns the current invoice without updating status",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "invoice_id": {
@@ -53447,6 +53817,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "invoice_id": {
@@ -53542,10 +53913,12 @@
             "type": "string"
           },
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -55015,6 +55388,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "bill_from": {
+            "description": "Invoice bill-from label/address",
+            "type": "string"
+          },
+          "client_address": {
+            "description": "Client address text to print on the invoice",
+            "type": "string"
+          },
           "client_id": {
             "type": "string"
           },
@@ -55025,8 +55406,12 @@
           "currency": {
             "type": "string"
           },
+          "discount_percent": {
+            "description": "Invoice discount percent",
+            "type": "number"
+          },
           "dry_run": {
-            "description": "Preview the invoice update payload without applying it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "due_date": {
@@ -55056,6 +55441,27 @@
               "PARTIALLY_PAID",
               "VOID",
               "OVERDUE"
+            ],
+            "type": "string"
+          },
+          "subject": {
+            "description": "Invoice subject",
+            "type": "string"
+          },
+          "tax2_percent": {
+            "description": "Second invoice tax percent",
+            "type": "number"
+          },
+          "tax_percent": {
+            "description": "Invoice tax percent",
+            "type": "number"
+          },
+          "tax_type": {
+            "description": "Invoice tax calculation type",
+            "enum": [
+              "COMPOUND",
+              "SIMPLE",
+              "NONE"
             ],
             "type": "string"
           }
@@ -55107,7 +55513,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -55141,6 +55547,10 @@
           "description": {
             "maxLength": 2000,
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
           },
           "invoice_id": {
             "type": "string"
@@ -55193,7 +55603,7 @@
           "billing"
         ],
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -55247,7 +55657,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the resolved request without sending it upstream.",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "files": {
@@ -55538,7 +55948,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the resolved request without sending it upstream.",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "files": {
@@ -55746,7 +56156,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the upload metadata without sending bytes upstream.",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "filename": {
@@ -55871,6 +56281,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project_id": {
@@ -55980,6 +56391,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "is_public": {
@@ -56170,7 +56582,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -56500,6 +56912,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "memberships": {
@@ -56660,6 +57073,7 @@
         "additionalProperties": false,
         "properties": {
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "is_template": {
@@ -56735,6 +57149,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project_id": {
@@ -56823,6 +57238,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project_id": {
@@ -56910,6 +57326,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
@@ -57003,6 +57420,7 @@
             "type": "string"
           },
           "dry_run": {
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "project": {
@@ -57114,7 +57532,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200 upstream for user totals)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58026,7 +58444,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview deletion without making changes",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "series_update_option": {
@@ -58101,7 +58519,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58187,7 +58605,7 @@
             "type": "string"
           },
           "page_size": {
-            "description": "Upstream page size to scan per request (default 200); response meta includes pagesFetched and entriesScanned",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58303,7 +58721,7 @@
             "type": "string"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58470,7 +58888,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50, max 200 upstream)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58581,7 +58999,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -58914,7 +59332,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "If true, preview the deletion without executing it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "report_id": {
@@ -59094,7 +59512,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -59359,13 +59777,17 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
             "type": "string"
@@ -59417,7 +59839,7 @@
       },
       "annotations": {
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -59447,7 +59869,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview deletion without making changes",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "policy_id": {
@@ -59704,10 +60126,12 @@
         "additionalProperties": false,
         "properties": {
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -59772,10 +60196,12 @@
         "additionalProperties": false,
         "properties": {
           "page": {
+            "description": "Page number, starting at 1.",
             "minimum": 1,
             "type": "integer"
           },
           "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -60054,7 +60480,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -60069,6 +60495,10 @@
           "confirmation_token": {
             "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
           },
           "group_id": {
             "description": "User group ID",
@@ -60107,7 +60537,7 @@
           "admin"
         ],
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
@@ -60143,7 +60573,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the user group payload without creating it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "name": {
@@ -60215,7 +60645,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without making changes",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "user_id": {
@@ -60286,7 +60716,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without making changes",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "group_id": {
@@ -60391,6 +60821,87 @@
       }
     },
     {
+      "name": "clockify_invite_user",
+      "description": "Invite/add a user to the workspace by email. Supports dry_run:true before sending an invitation email.",
+      "group": "user_admin",
+      "tier": 2,
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "admin",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "email",
+        "send_email"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation_token": {
+            "description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
+          "email": {
+            "description": "Email address to add to the workspace",
+            "format": "email",
+            "maxLength": 254,
+            "type": "string"
+          },
+          "send_email": {
+            "description": "Whether Clockify should send an invitation email. Defaults to true.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "action": {
+            "const": "clockify_invite_user",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "confirmationRiskClass": [
+          "write",
+          "admin",
+          "external_side_effect"
+        ],
+        "destructiveHint": false,
+        "dryRun": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "requiresConfirmationToken": true,
+        "riskClass": [
+          "write",
+          "admin",
+          "external_side_effect"
+        ],
+        "title": "Invite User"
+      }
+    },
+    {
       "name": "clockify_list_user_groups",
       "description": "List user groups in the workspace",
       "group": "user_admin",
@@ -60414,7 +60925,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -60472,7 +60983,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -60559,7 +61070,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview without making changes",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "group_id": {
@@ -60627,7 +61138,7 @@
         "additionalProperties": false,
         "properties": {
           "dry_run": {
-            "description": "Preview the profile payload without applying it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "image_url": {
@@ -60822,7 +61333,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the role change without applying it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "role": {
@@ -60914,7 +61425,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Validate and preview the webhook payload without creating it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "name": {
@@ -61018,7 +61529,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview the webhook without deleting",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "webhook_id": {
@@ -61196,7 +61707,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -61279,7 +61790,7 @@
             "type": "integer"
           },
           "page_size": {
-            "description": "Items per page (default 50)",
+            "description": "Items per page. Default 50, maximum 200.",
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
@@ -61340,7 +61851,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Preview only; returns the webhook record without sending the test delivery",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "webhook_id": {
@@ -61420,7 +61931,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Validate and preview the webhook update without applying it",
+            "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
           "name": {

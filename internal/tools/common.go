@@ -304,13 +304,15 @@ type FindAndUpdateEntryData struct {
 // TimeEntryUpdatePreview is the projected "current" shape of a time
 // entry shown alongside a proposed-change diff during a dry-run update.
 type TimeEntryUpdatePreview struct {
-	Description     string `json:"description"`
-	ProjectID       string `json:"project_id,omitempty"`
-	Start           string `json:"start,omitempty"`
-	End             string `json:"end,omitempty"`
-	Billable        bool   `json:"billable"`
-	BillableState   string `json:"billable_state,omitempty"`
-	BillablePresent bool   `json:"billable_present,omitempty"`
+	Description     string   `json:"description"`
+	ProjectID       string   `json:"project_id,omitempty"`
+	TaskID          string   `json:"task_id,omitempty"`
+	TagIDs          []string `json:"tag_ids,omitempty"`
+	Start           string   `json:"start,omitempty"`
+	End             string   `json:"end,omitempty"`
+	Billable        bool     `json:"billable"`
+	BillableState   string   `json:"billable_state,omitempty"`
+	BillablePresent bool     `json:"billable_present,omitempty"`
 }
 
 // DateRange is the inclusive [Start, End] window used by every summary
@@ -363,10 +365,24 @@ type findAndUpdateArgs struct {
 	NewDescription      string
 	ProjectID           string
 	Project             string
+	TaskID              string
+	TagIDs              []string
 	Start               string
 	End                 string
 	Billable            *bool
 	DryRun              bool
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func New(client *clockify.Client, workspaceID string) *Service {
@@ -704,6 +720,9 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 		if _, set := prop["minimum"]; !set {
 			prop["minimum"] = 1
 		}
+		if _, set := prop["description"]; !set {
+			prop["description"] = "Page number, starting at 1."
+		}
 	case "page_size":
 		if _, set := prop["minimum"]; !set {
 			prop["minimum"] = 1
@@ -711,6 +730,9 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 		if _, set := prop["maximum"]; !set {
 			prop["maximum"] = 200
 		}
+		prop["description"] = "Items per page. Default 50, maximum 200."
+	case "dry_run":
+		prop["description"] = "Preview the resolved request without making changes."
 	case "color":
 		if desc, _ := prop["description"].(string); strings.Contains(strings.ToLower(desc), "hex") {
 			if _, set := prop["pattern"]; !set {
@@ -816,6 +838,14 @@ func schemaString(desc string) map[string]any {
 func schemaEnum(desc string, values ...string) map[string]any {
 	out := schemaString(desc)
 	out["enum"] = values
+	return out
+}
+
+func nullableBoolSchema(desc string) map[string]any {
+	out := map[string]any{"type": []any{"boolean", "null"}}
+	if desc != "" {
+		out["description"] = desc
+	}
 	return out
 }
 

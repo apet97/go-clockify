@@ -402,6 +402,32 @@ func TestCreateTimeOffRequest(t *testing.T) {
 	}
 }
 
+func TestCreateTimeOffRequestDryRunDoesNotPost(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("create time-off dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.createTimeOffRequest(context.Background(), map[string]any{
+		"policy_id": "pol1",
+		"start":     "2026-05-01",
+		"end":       "2026-05-05",
+		"note":      "Family vacation",
+		"dry_run":   true,
+	})
+	if err != nil {
+		t.Fatalf("create time off dry-run failed: %v", err)
+	}
+	if result.Action != "clockify_create_time_off_request" {
+		t.Fatalf("expected action clockify_create_time_off_request, got %s", result.Action)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("expected dry-run payload, got %#v", result.Data)
+	}
+}
+
 func TestCreateTimeOffRequestRejectsMissingNote(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("create time-off missing note must not reach upstream; got %s %s", r.Method, r.URL.Path)
@@ -447,6 +473,108 @@ func TestTimeOffRequestDaysBoundaryCases(t *testing.T) {
 				t.Fatalf("days=%d, want %d", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGetTimeOffRequestUsesBareRequestEndpointAndNormalizesStructuredStatus(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/time-off/requests/"+requestID {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{
+			"id":       requestID,
+			"policyId": policyID,
+			"status":   map[string]any{"statusType": "pending"},
+		})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.getTimeOffRequest(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	if err != nil {
+		t.Fatalf("get time off request failed: %v", err)
+	}
+	data, ok := result.Data.(TimeOffRequestView)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	request, ok := data["request"].(map[string]any)
+	if !ok || request["status"] != "PENDING" {
+		t.Fatalf("expected normalized request status PENDING, got %#v", data["request"])
+	}
+}
+
+func TestDeleteTimeOffRequestDryRunUsesBareRequestEndpoint(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/time-off/requests/"+requestID {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "PENDING"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.deleteTimeOffRequest(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+		"dry_run":    true,
+	})
+	if err != nil {
+		t.Fatalf("delete time off dry-run failed: %v", err)
+	}
+	if result.Action != "clockify_delete_time_off_request" {
+		t.Fatalf("expected action clockify_delete_time_off_request, got %s", result.Action)
+	}
+}
+
+func TestTimeOffBalanceUsesUserBalanceEndpointAndFiltersPolicy(t *testing.T) {
+	const (
+		userID   = "abc123def456789012345678"
+		policyID = "abc123def456789012345679"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/time-off/balance/user/"+userID {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if r.URL.Query().Get("page-size") != "200" {
+			t.Fatalf("expected page-size=200, got %s", r.URL.RawQuery)
+		}
+		respondJSON(t, w, map[string]any{
+			"count": 2,
+			"balances": []map[string]any{
+				{"policyId": "abc123def456789012345670", "available": 1},
+				{"policyId": policyID, "available": 5, "timeUnit": "DAYS"},
+			},
+		})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.timeOffBalance(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"user_id":   userID,
+	})
+	if err != nil {
+		t.Fatalf("time off balance failed: %v", err)
+	}
+	data, ok := result.Data.(TimeOffBalanceView)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	policy, ok := data["policy"].(map[string]any)
+	if !ok || policy["id"] != policyID {
+		t.Fatalf("expected selected policy %s, got %#v", policyID, data["policy"])
 	}
 }
 

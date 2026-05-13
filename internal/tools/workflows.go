@@ -67,6 +67,10 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 				preview["blocked"] = true
 				preview["warning"] = fmt.Sprintf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 				preview["overlaps"] = overlaps
+				preview["computed"] = logTimeComputedPreview(start, end)
+				if warnings := entryTemporalWarnings(start, end); len(warnings) > 0 {
+					preview["temporal_warnings"] = warnings
+				}
 				attachValidationToPreview(preview, validationFailed("overlap_check", ValidationProblem{
 					Code:        "overlap",
 					Field:       "start,end",
@@ -82,6 +86,10 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 		preview := dryrunPreviewPayloadValidated("clockify_log_time", payload, validationOK("overlap_check"))
 		if len(overlaps) > 0 {
 			preview["overlaps"] = overlaps
+		}
+		preview["computed"] = logTimeComputedPreview(start, end)
+		if warnings := entryTemporalWarnings(start, end); len(warnings) > 0 {
+			preview["temporal_warnings"] = warnings
 		}
 		return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
 	}
@@ -106,6 +114,42 @@ func logTimePreviewMeta(wsID, userID, projectID string) map[string]any {
 		meta["projectId"] = projectID
 	}
 	return meta
+}
+
+func logTimeComputedPreview(start, end time.Time) map[string]any {
+	seconds := int64(end.Sub(start).Seconds())
+	minutesRounded := int64(0)
+	if seconds > 0 {
+		minutesRounded = (seconds + 59) / 60
+	}
+	return map[string]any{
+		"duration_seconds":        seconds,
+		"duration_minutes_exact":  float64(seconds) / 60,
+		"duration_minutes_billed": minutesRounded,
+		"rounding_applied":        seconds > 0 && seconds%60 != 0,
+		"financials": map[string]any{
+			"source": "not_computed_in_dry_run",
+			"reason": "Clockify computes final billing/rate enrichment after write; use the real response or a report tool for authoritative money.",
+		},
+	}
+}
+
+func entryTemporalWarnings(start, end time.Time) []map[string]any {
+	now := time.Now().UTC()
+	warnings := []map[string]any{}
+	if start.After(now.AddDate(1, 0, 0)) {
+		warnings = append(warnings, map[string]any{
+			"code":    "far_future_start",
+			"message": "entry start is more than one year in the future; confirm the date before executing",
+		})
+	}
+	if seconds := int64(end.Sub(start).Seconds()); seconds > 0 && seconds < 60 {
+		warnings = append(warnings, map[string]any{
+			"code":    "sub_minute_duration",
+			"message": "Clockify may round sub-minute durations up in UI/reporting; dry-run exposes exact and rounded minutes under computed",
+		})
+	}
+	return warnings
 }
 
 func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (any, error) {
@@ -143,6 +187,14 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 			entry.ProjectID = projectID
 			updatedFields = append(updatedFields, "projectId")
 		}
+	}
+	if parsed.TaskID != "" && parsed.TaskID != entry.TaskID {
+		entry.TaskID = parsed.TaskID
+		updatedFields = append(updatedFields, "taskId")
+	}
+	if parsed.TagIDs != nil && !stringSlicesEqual(parsed.TagIDs, entry.TagIDs) {
+		entry.TagIDs = parsed.TagIDs
+		updatedFields = append(updatedFields, "tagIds")
 	}
 	if parsed.Start != "" {
 		if entry.TimeInterval.Start != parsed.Start {
@@ -197,6 +249,8 @@ func timeEntryUpdatePreview(entry clockify.TimeEntry) *TimeEntryUpdatePreview {
 	return &TimeEntryUpdatePreview{
 		Description:     entry.Description,
 		ProjectID:       entry.ProjectID,
+		TaskID:          entry.TaskID,
+		TagIDs:          entry.TagIDs,
 		Start:           entry.TimeInterval.Start,
 		End:             entry.TimeInterval.End,
 		Billable:        entry.Billable,
@@ -213,6 +267,10 @@ func proposedEntryChanges(entry clockify.TimeEntry, fields []string) map[string]
 			out["description"] = entry.Description
 		case "projectId":
 			out["project_id"] = entry.ProjectID
+		case "taskId":
+			out["task_id"] = entry.TaskID
+		case "tagIds":
+			out["tag_ids"] = entry.TagIDs
 		case "start":
 			out["start"] = entry.TimeInterval.Start
 		case "end":
@@ -225,9 +283,13 @@ func proposedEntryChanges(entry clockify.TimeEntry, fields []string) map[string]
 }
 
 func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	projectRef := stringArg(args, "project")
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
+	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		projectRef = projectID
+	}
+	if projectRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("project or project_id is required")
 	}
 	description := stringArg(args, "description")
 	if dryrun.Enabled(args) {
@@ -235,15 +297,18 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
-		projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
-		if err != nil {
-			return ResultEnvelope{}, err
+		resolvedProjectID := projectID
+		if resolvedProjectID == "" {
+			resolvedProjectID, err = s.resolveProjectID(ctx, wsID, projectRef)
+			if err != nil {
+				return ResultEnvelope{}, err
+			}
 		}
 		payload := map[string]any{
 			"description": description,
-			"projectId":   projectID,
+			"projectId":   resolvedProjectID,
 		}
-		return ok("clockify_switch_project", dryrunPreviewPayload("clockify_switch_project", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+		return ok("clockify_switch_project", dryrunPreviewPayload("clockify_switch_project", payload), map[string]any{"workspaceId": wsID, "projectId": resolvedProjectID}), nil
 	}
 
 	// Stop the current timer; ignore "no running timer" errors.
@@ -263,15 +328,21 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	}
 
 	// Start a new timer with the given project.
-	startResult, startErr := s.StartTimerArgs(ctx, map[string]any{"project": projectRef, "description": description})
+	startArgs := map[string]any{"project": projectRef, "description": description}
+	if projectID != "" {
+		startArgs = map[string]any{"project_id": projectID, "description": description}
+	}
+	startResult, startErr := s.StartTimerArgs(ctx, startArgs)
 	if startErr != nil {
 		return ResultEnvelope{}, fmt.Errorf("start timer: %w", startErr)
 	}
 
 	return ok("clockify_switch_project", map[string]any{
-		"stop_outcome": stopOutcome,
-		"stopped":      stoppedEntry,
-		"started":      startResult.Data,
+		"stop_outcome":          stopOutcome,
+		"previous_entry_action": stopOutcome,
+		"previous_entry":        stoppedEntry,
+		"stopped":               stoppedEntry,
+		"started":               startResult.Data,
 	}, startResult.Meta), nil
 }
 
@@ -285,9 +356,13 @@ func parseFindAndUpdateArgs(args map[string]any, loc *time.Location) (findAndUpd
 		NewDescription:      stringArg(args, "new_description"),
 		ProjectID:           stringArg(args, "project_id"),
 		Project:             stringArg(args, "project"),
+		TaskID:              stringArg(args, "task_id"),
 		Start:               stringArg(args, "start"),
 		End:                 stringArg(args, "end"),
 		DryRun:              boolArg(args, "dry_run"),
+	}
+	if _, ok := args["tag_ids"]; ok {
+		out.TagIDs = stringSliceArg(args, "tag_ids")
 	}
 	if v, ok := args["billable"].(bool); ok {
 		out.Billable = &v
@@ -295,7 +370,7 @@ func parseFindAndUpdateArgs(args map[string]any, loc *time.Location) (findAndUpd
 	if out.EntryID == "" && out.DescriptionContains == "" && out.ExactDescription == "" {
 		return out, fmt.Errorf("provide entry_id, exact_description, or description_contains to find an entry")
 	}
-	if out.NewDescription == "" && out.ProjectID == "" && out.Project == "" && out.Start == "" && out.End == "" && out.Billable == nil {
+	if out.NewDescription == "" && out.ProjectID == "" && out.Project == "" && out.TaskID == "" && out.TagIDs == nil && out.Start == "" && out.End == "" && out.Billable == nil {
 		return out, fmt.Errorf("provide at least one update field")
 	}
 	for _, pair := range []struct {

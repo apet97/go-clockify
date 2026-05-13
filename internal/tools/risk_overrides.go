@@ -138,6 +138,18 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskDestructive | mcp.RiskBilling,
 		auditKeys: []string{"invoice_id", "item_index", "item_id"},
 	},
+	"clockify_create_expense_category": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"name", "has_unit_price", "price_in_cents", "unit"},
+	},
+	"clockify_update_expense_category": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"category_id", "name", "has_unit_price", "price_in_cents", "unit", "archived"},
+	},
+	"clockify_archive_expense_category": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"category_id", "archived"},
+	},
 
 	// Admin / permission changes — user_admin.
 	"clockify_update_user_role": {
@@ -161,6 +173,10 @@ var riskOverrides = map[string]riskOverride{
 	"clockify_delete_user_group": {
 		class:     mcp.RiskDestructive | mcp.RiskAdmin,
 		auditKeys: []string{"group_id"},
+	},
+	"clockify_invite_user": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskExternalSideEffect,
+		auditKeys: []string{"email", "send_email"},
 	},
 	"clockify_add_user_to_group": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,

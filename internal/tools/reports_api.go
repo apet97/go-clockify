@@ -125,7 +125,7 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 			return nil, err
 		}
 		if !ok {
-			return nil, fmt.Errorf("%s is required", filterKey)
+			filter = defaultReportFilter(filterKey)
 		}
 		normalized, err := normalizeReportSpecificFilter(filterKey, filter)
 		if err != nil {
@@ -139,6 +139,17 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 		}
 	}
 	return body, nil
+}
+
+func defaultReportFilter(filterKey string) map[string]any {
+	switch filterKey {
+	case "summary_filter":
+		return map[string]any{"groups": []any{"PROJECT"}}
+	case "weekly_filter":
+		return map[string]any{"group": "PROJECT", "subgroup": "TIME"}
+	default:
+		return map[string]any{}
+	}
 }
 
 func buildExpenseReportBody(args map[string]any) (map[string]any, error) {
@@ -371,25 +382,26 @@ func normalizeSummaryFilter(raw map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok {
-		if len(groups) < 1 || len(groups) > 3 {
-			return nil, fmt.Errorf("summary_filter.groups must contain 1 to 3 values")
-		}
-		normalized := make([]string, 0, len(groups))
-		for _, group := range groups {
-			switch strings.ToUpper(strings.TrimSpace(group)) {
-			case "DAY":
-				normalized = append(normalized, "DATE")
-			case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY":
-				normalized = append(normalized, strings.ToUpper(strings.TrimSpace(group)))
-			case "USER":
-				return nil, fmt.Errorf("summary_filter.groups does not support USER; use clockify_assignment_report for user-grouped scheduled-vs-tracked joins or clockify_detailed_report for user rows")
-			default:
-				return nil, fmt.Errorf("summary_filter.groups contains unsupported value %q", group)
-			}
-		}
-		out["groups"] = normalized
+	if !ok || len(groups) == 0 {
+		groups = []string{"PROJECT"}
 	}
+	if len(groups) < 1 || len(groups) > 3 {
+		return nil, fmt.Errorf("summary_filter.groups must contain 1 to 3 values")
+	}
+	normalized := make([]string, 0, len(groups))
+	for _, group := range groups {
+		switch strings.ToUpper(strings.TrimSpace(group)) {
+		case "DAY":
+			normalized = append(normalized, "DATE")
+		case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY":
+			normalized = append(normalized, strings.ToUpper(strings.TrimSpace(group)))
+		case "USER":
+			return nil, fmt.Errorf("summary_filter.groups does not support USER; use clockify_assignment_report for user-grouped scheduled-vs-tracked joins or clockify_detailed_report for user rows")
+		default:
+			return nil, fmt.Errorf("summary_filter.groups contains unsupported value %q", group)
+		}
+	}
+	out["groups"] = normalized
 	if v := stringFromMap(raw, "sort_column"); v != "" {
 		out["sortColumn"] = v
 	}
@@ -402,6 +414,12 @@ func normalizeSummaryFilter(raw map[string]any) (map[string]any, error) {
 func normalizeWeeklyFilter(raw map[string]any) (map[string]any, error) {
 	group := strings.ToUpper(strings.TrimSpace(stringFromMap(raw, "group")))
 	subgroup := strings.ToUpper(strings.TrimSpace(stringFromMap(raw, "subgroup")))
+	if group == "" {
+		group = "PROJECT"
+	}
+	if subgroup == "" {
+		subgroup = "TIME"
+	}
 	if group != "PROJECT" && group != "USER" {
 		return nil, fmt.Errorf("weekly_filter.group must be PROJECT or USER")
 	}

@@ -50,7 +50,7 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 			if got := r.URL.Query().Get("userLocale"); got != "en-US" {
 				t.Fatalf("expected export userLocale=en-US, got %q", got)
 			}
-			w.Header().Set("Content-Type", "application/pdf")
+			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte("%PDF invoice"))
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/invoices":
 			respondJSON(t, w, map[string]any{"id": "inv-new", "clientId": "c1", "status": "UNSENT"})
@@ -103,6 +103,9 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	if !ok || raw["body"] != base64.StdEncoding.EncodeToString([]byte("%PDF invoice")) {
 		t.Fatalf("exportInvoice data = %#v", res.Data)
 	}
+	if raw["contentType"] != "application/pdf" || raw["filename"] != "document.pdf" {
+		t.Fatalf("exportInvoice MIME inference failed: %#v", raw)
+	}
 
 	// 2c. getInvoice — validation error (empty id)
 	if _, err := svc.getInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
@@ -111,12 +114,19 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 
 	// 3. createInvoice — happy
 	res, err = svc.createInvoice(ctx, map[string]any{
-		"client_id":   "c1",
-		"number":      "INV-NEW",
-		"issued_date": "2026-04-01T00:00:00Z",
-		"currency":    "USD",
-		"due_date":    "2026-05-01T00:00:00Z",
-		"note":        "Q2 invoice",
+		"client_id":        "c1",
+		"number":           "INV-NEW",
+		"issued_date":      "2026-04-01T00:00:00Z",
+		"currency":         "USD",
+		"due_date":         "2026-05-01T00:00:00Z",
+		"note":             "Q2 invoice",
+		"subject":          "Design sprint",
+		"bill_from":        "Studio LLC",
+		"client_address":   "Client HQ",
+		"tax_percent":      10.0,
+		"tax2_percent":     2.5,
+		"discount_percent": 5.0,
+		"tax_type":         "SIMPLE",
 	})
 	mustOK(t, res, err, "clockify_create_invoice")
 
@@ -380,22 +390,36 @@ func TestCreateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 
 	svc := New(client, "ws1")
 	res, err := svc.createInvoice(context.Background(), map[string]any{
-		"client_id":   "client1",
-		"number":      "INV-NEW",
-		"issued_date": "2026-04-01T00:00:00Z",
-		"currency":    "USD",
-		"due_date":    "2026-05-01T00:00:00Z",
-		"note":        "Q2 invoice",
+		"client_id":        "client1",
+		"number":           "INV-NEW",
+		"issued_date":      "2026-04-01T00:00:00Z",
+		"currency":         "USD",
+		"due_date":         "2026-05-01T00:00:00Z",
+		"note":             "Q2 invoice",
+		"subject":          "Design sprint",
+		"bill_from":        "Studio LLC",
+		"client_address":   "Client HQ",
+		"tax_percent":      10.0,
+		"tax2_percent":     2.5,
+		"discount_percent": 5.0,
+		"tax_type":         "SIMPLE",
 	})
 	mustOK(t, res, err, "clockify_create_invoice")
 
 	want := map[string]any{
-		"clientId":   "client1",
-		"number":     "INV-NEW",
-		"issuedDate": "2026-04-01T00:00:00Z",
-		"currency":   "USD",
-		"dueDate":    "2026-05-01T00:00:00Z",
-		"note":       "Q2 invoice",
+		"clientId":        "client1",
+		"number":          "INV-NEW",
+		"issuedDate":      "2026-04-01T00:00:00Z",
+		"currency":        "USD",
+		"dueDate":         "2026-05-01T00:00:00Z",
+		"note":            "Q2 invoice",
+		"subject":         "Design sprint",
+		"billFrom":        "Studio LLC",
+		"clientAddress":   "Client HQ",
+		"taxPercent":      float64(10),
+		"tax2Percent":     float64(2.5),
+		"discountPercent": float64(5),
+		"taxType":         "SIMPLE",
 	}
 	for key, wantValue := range want {
 		if gotBody[key] != wantValue {
@@ -413,6 +437,23 @@ func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 	var gotBody, gotPatchBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1":
+			respondJSON(t, w, map[string]any{
+				"id":              "inv1",
+				"clientId":        "client1",
+				"number":          "INV-1",
+				"issuedDate":      "2026-04-01T00:00:00Z",
+				"currency":        "USD",
+				"dueDate":         "2026-05-01T00:00:00Z",
+				"note":            "old",
+				"subject":         "Retainer",
+				"billFrom":        "Old Studio",
+				"clientAddress":   "Old Client HQ",
+				"taxPercent":      25.0,
+				"tax2Percent":     5.0,
+				"discountPercent": 10.0,
+				"taxType":         "SIMPLE",
+			})
 		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1":
 			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 				t.Fatalf("decode body: %v", err)
@@ -443,12 +484,19 @@ func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 	mustOK(t, res, err, "clockify_update_invoice")
 
 	want := map[string]any{
-		"clientId":   "client1",
-		"number":     "INV-1A",
-		"issuedDate": "2026-04-02T00:00:00Z",
-		"currency":   "EUR",
-		"dueDate":    "2026-06-01T00:00:00Z",
-		"note":       "updated",
+		"clientId":        "client1",
+		"number":          "INV-1A",
+		"issuedDate":      "2026-04-02T00:00:00Z",
+		"currency":        "EUR",
+		"dueDate":         "2026-06-01T00:00:00Z",
+		"note":            "updated",
+		"subject":         "Retainer",
+		"billFrom":        "Old Studio",
+		"clientAddress":   "Old Client HQ",
+		"taxPercent":      float64(25),
+		"tax2Percent":     float64(5),
+		"discountPercent": float64(10),
+		"taxType":         "SIMPLE",
 	}
 	for key, wantValue := range want {
 		if gotBody[key] != wantValue {
@@ -651,6 +699,44 @@ func TestUpdateInvoiceItemRejectsMissingItemType(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected missing item_type error")
+	}
+}
+
+func TestInvoiceItemDryRunsDoNotMutate(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invoice item dry-run must not reach upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.addInvoiceItem(context.Background(), map[string]any{
+		"invoice_id":  "inv1",
+		"description": "Consulting",
+		"quantity":    8,
+		"unit_price":  150,
+		"item_type":   "NEW DEFAULT",
+		"dry_run":     true,
+	})
+	mustOK(t, res, err, "clockify_add_invoice_item")
+	addData, ok := res.Data.(map[string]any)
+	if !ok || addData["dry_run"] != true {
+		t.Fatalf("expected add dry-run data, got %#v", res.Data)
+	}
+
+	res, err = svc.updateInvoiceItem(context.Background(), map[string]any{
+		"invoice_id":  "inv1",
+		"item_index":  "2",
+		"description": "Updated",
+		"item_type":   "NEW DEFAULT",
+		"dry_run":     true,
+	})
+	mustOK(t, res, err, "clockify_update_invoice_item")
+	updateData, ok := res.Data.(map[string]any)
+	if !ok || updateData["dry_run"] != true {
+		t.Fatalf("expected update dry-run data, got %#v", res.Data)
+	}
+	if res.Meta["itemIndex"] != "2" || res.Meta["itemId"] != "2" {
+		t.Fatalf("expected item index aliases in meta, got %#v", res.Meta)
 	}
 }
 

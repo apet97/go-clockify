@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
 // TestTier2_CustomFields_FullSweep covers the custom_fields Tier 2 group:
 // list/get/create/update/delete plus the SetCustomFieldValue helper.
 func TestTier2_CustomFields_FullSweep(t *testing.T) {
+	var createBody map[string]any
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -18,6 +20,9 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
 			t.Fatalf("single custom-field GET must not be used; live Clockify returns 405 for this path")
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/custom-fields":
+			if err := json.NewDecoder(r.Body).Decode(&createBody); err != nil {
+				t.Fatalf("decode create body: %v", err)
+			}
 			respondJSON(t, w, map[string]any{"id": "f-new", "name": "Priority"})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/custom-fields/f1":
 			var body map[string]any
@@ -68,6 +73,9 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 		"required":       true,
 	})
 	mustOK(t, res, err, "clockify_create_custom_field")
+	if createBody["status"] != "VISIBLE" {
+		t.Fatalf("new custom fields should default status=VISIBLE, got %#v", createBody)
+	}
 	if _, err := svc.CreateCustomField(ctx, map[string]any{"field_type": "TEXT"}); err == nil {
 		t.Fatal("expected error for missing name")
 	}
@@ -126,5 +134,27 @@ func TestTier2_CustomFields_FullSweep(t *testing.T) {
 	}
 	if _, err := svc.SetCustomFieldValue(ctx, map[string]any{"field_id": "f1", "value": "x"}); err == nil {
 		t.Fatal("expected error: must specify project_id or entry_id")
+	}
+}
+
+func TestSetCustomFieldValueRejectsInactiveField(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/custom-fields":
+			respondJSON(t, w, []map[string]any{{"id": "f1", "name": "Region", "type": "TXT", "status": "INACTIVE"}})
+		default:
+			t.Fatalf("inactive field must fail before value write; got %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.SetCustomFieldValue(context.Background(), map[string]any{
+		"field_id":   "f1",
+		"project_id": "p1",
+		"value":      "North",
+	})
+	if err == nil || !strings.Contains(err.Error(), "status INACTIVE") {
+		t.Fatalf("expected inactive custom-field error, got %v", err)
 	}
 }

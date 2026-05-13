@@ -12,8 +12,8 @@ func TestConfigFromEnvDefault(t *testing.T) {
 	os.Unsetenv("CLOCKIFY_TOKEN_BUDGET")
 	os.Unsetenv("CLOCKIFY_TRUNCATION_FAIL_CLOSED")
 	cfg := ConfigFromEnv()
-	if cfg.TokenBudget != 8000 {
-		t.Errorf("expected default budget 8000, got %d", cfg.TokenBudget)
+	if cfg.TokenBudget != 24000 {
+		t.Errorf("expected default budget 24000, got %d", cfg.TokenBudget)
 	}
 	if !cfg.Enabled {
 		t.Error("expected Enabled=true for default budget")
@@ -425,8 +425,20 @@ func TestInjectEnvelopeMetaUsesExistingFetched(t *testing.T) {
 	if meta["returned"] != 2 {
 		t.Fatalf("expected returned=2, got %#v", meta["returned"])
 	}
+	if meta["count_returned"] != 2 {
+		t.Fatalf("expected count_returned=2, got %#v", meta["count_returned"])
+	}
 	if meta["fetched"] != 99 {
 		t.Fatalf("existing fetched should win, got %#v", meta["fetched"])
+	}
+	if meta["count_total"] != 99 {
+		t.Fatalf("expected count_total=99, got %#v", meta["count_total"])
+	}
+	if meta["more_truncated"] != true {
+		t.Fatalf("expected more_truncated=true, got %#v", meta["more_truncated"])
+	}
+	if meta["suggested_page_size_for_full_data"] != 2 {
+		t.Fatalf("expected suggested page size 2, got %#v", meta["suggested_page_size_for_full_data"])
 	}
 }
 
@@ -462,6 +474,52 @@ func TestInjectEnvelopeMetaNoopsForNonEnvelopeOrUnreducedData(t *testing.T) {
 				t.Fatalf("case %d should not annotate meta: %#v", i, meta)
 			}
 		}
+	}
+}
+
+func TestMetadataIncludesSuggestedCallToFit(t *testing.T) {
+	cfg := Config{TokenBudget: 1, Enabled: true}
+	items := make([]any, 20)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "text": strings.Repeat("x", 40)}
+	}
+	result, truncated := cfg.Truncate(map[string]any{
+		"data": items,
+		"meta": map[string]any{"count": len(items)},
+	})
+	if !truncated {
+		t.Fatal("expected truncation")
+	}
+	m := result.(map[string]any)
+	data := m["data"].([]any)
+	meta := m["_truncation"].(map[string]any)
+	suggestion := meta["suggested_call_to_fit"].(map[string]any)
+	if suggestion["page_size"] != len(data) {
+		t.Fatalf("suggested page_size = %#v, want %d", suggestion["page_size"], len(data))
+	}
+	if meta["summary"] == "" {
+		t.Fatalf("expected human summary, got %#v", meta)
+	}
+}
+
+func TestReduceArraysPreservesSchemaTypeArrays(t *testing.T) {
+	input := map[string]any{
+		"data": map[string]any{
+			"request": map[string]any{
+				"types": []any{"boolean", "null"},
+			},
+			"types": []any{"string", "null"},
+		},
+	}
+	rep := &TruncationReport{}
+	result := reduceArrays(input, "", rep).(map[string]any)
+	data := result["data"].(map[string]any)
+	if got := data["types"].([]any); len(got) != 2 {
+		t.Fatalf("data.types should be preserved, got %#v", got)
+	}
+	request := data["request"].(map[string]any)
+	if got := request["types"].([]any); len(got) != 2 {
+		t.Fatalf("data.request.types should be preserved, got %#v", got)
 	}
 }
 

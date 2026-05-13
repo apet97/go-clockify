@@ -270,6 +270,41 @@ func TestTier2Dispatch_Scheduling_CreateAssignment(t *testing.T) {
 	}
 }
 
+func TestTier2Dispatch_Scheduling_CreateAssignment500HasDiagnostic(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/workspaces/test-workspace/users", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"id":"aaaaaaaaaaaaaaaaaaaaaaa1","name":"Alice"}]`))
+	})
+	mux.HandleFunc("/workspaces/test-workspace/projects", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"id":"bbbbbbbbbbbbbbbbbbbbbbb1","name":"Active project"}]`))
+	})
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/recurring", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"message":"upstream scheduling failed"}`, http.StatusInternalServerError)
+	})
+	upstream := testharness.NewFakeClockify(t, mux)
+
+	res := dispatchTier2(t, tier2InvokeOpts{
+		Group: "scheduling",
+		Tool:  "clockify_create_assignment",
+		Args: map[string]any{
+			"user_id":       "aaaaaaaaaaaaaaaaaaaaaaa1",
+			"project_id":    "bbbbbbbbbbbbbbbbbbbbbbb1",
+			"start":         "2026-04-01T00:00:00Z",
+			"end":           "2026-04-07T23:59:59Z",
+			"hours_per_day": 8.0,
+		},
+		Upstream: upstream,
+	})
+	if res.Outcome != testharness.OutcomeToolError {
+		t.Fatalf("create outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
+	}
+	if !strings.Contains(res.ErrorMessage, "scheduling_capacity_unavailable") {
+		t.Fatalf("missing scheduling diagnostic: %q", res.ErrorMessage)
+	}
+}
+
 func TestTier2Dispatch_Scheduling_UpdateAssignment(t *testing.T) {
 	upstream := newSchedulingUpstream(t)
 

@@ -27,6 +27,7 @@ func init() {
 			"clockify_list_expense_categories",
 			"clockify_create_expense_category",
 			"clockify_update_expense_category",
+			"clockify_archive_expense_category",
 			"clockify_delete_expense_category",
 			"clockify_expense_report",
 		},
@@ -59,11 +60,12 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Create expense
-		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount, date, and category_id are required; user_id defaults to the calling user.", map[string]any{
+		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents.", map[string]any{
 			"type":     "object",
 			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{
-				"amount":      map[string]any{"type": "number", "description": "Raw upstream expense amount value; no client-side currency scaling is applied"},
+				"amount":      map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units, e.g. 125.00 for $125.00; use amount_unit:\"minor\" for cents/minor units."},
+				"amount_unit": map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount. major (default) sends the value as entered; minor divides by 100 before sending to Clockify."},
 				"date":        map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"category_id": map[string]any{"type": "string", "description": "Expense category ID (required)"},
 				"user_id":     map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
@@ -83,7 +85,8 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"properties": map[string]any{
 				"expense_id":    map[string]any{"type": "string"},
 				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE", "FILE"}}, "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. FILE is not supported."},
-				"amount":        map[string]any{"type": "number"},
+				"amount":        map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units; use amount_unit:\"minor\" for cents/minor units."},
+				"amount_unit":   map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount when AMOUNT is included in change_fields."},
 				"date":          map[string]any{"type": "string", "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ"},
 				"category_id":   map[string]any{"type": "string"},
 				"project_id":    map[string]any{"type": "string"},
@@ -116,29 +119,51 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 7. Create expense category
-		{Tool: toolRW("clockify_create_expense_category", "Create a new expense category", map[string]any{
+		{Tool: toolRW("clockify_create_expense_category", "Create a new expense category, optionally including upstream unit-price fields.", map[string]any{
 			"type":     "object",
 			"required": []string{"name"},
 			"properties": map[string]any{
-				"name": map[string]any{"type": "string", "description": "Category name"},
+				"name":           map[string]any{"type": "string", "description": "Category name"},
+				"has_unit_price": map[string]any{"type": "boolean", "description": "Whether this category has a unit price."},
+				"price_in_cents": map[string]any{"type": "integer", "minimum": 0, "description": "Unit price in minor currency units/cents."},
+				"unit":           map[string]any{"type": "string", "description": "Unit label for unit-priced categories."},
+				"dry_run":        map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createExpenseCategory(ctx, args)
 		}},
 
 		// 8. Update expense category
-		{Tool: toolRW("clockify_update_expense_category", "Update an expense category", map[string]any{
+		{Tool: toolRW("clockify_update_expense_category", "Update an expense category, including upstream unit-price fields.", map[string]any{
 			"type":     "object",
 			"required": []string{"category_id"},
 			"properties": map[string]any{
-				"category_id": map[string]any{"type": "string"},
-				"name":        map[string]any{"type": "string"},
+				"category_id":    map[string]any{"type": "string"},
+				"name":           map[string]any{"type": "string"},
+				"has_unit_price": map[string]any{"type": "boolean", "description": "Whether this category has a unit price."},
+				"price_in_cents": map[string]any{"type": "integer", "minimum": 0, "description": "Unit price in minor currency units/cents."},
+				"unit":           map[string]any{"type": "string", "description": "Unit label for unit-priced categories."},
+				"archived":       map[string]any{"type": "boolean", "description": "Archive state to apply via the category status endpoint."},
+				"dry_run":        map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateExpenseCategory(ctx, args)
 		}},
 
-		// 9. Delete expense category
+		// 9. Archive / unarchive expense category
+		{Tool: toolRW("clockify_archive_expense_category", "Archive or unarchive an expense category via PATCH /expenses/categories/{categoryId}/status.", map[string]any{
+			"type":     "object",
+			"required": []string{"category_id"},
+			"properties": map[string]any{
+				"category_id": map[string]any{"type": "string"},
+				"archived":    map[string]any{"type": "boolean", "description": "Archive flag. Defaults to true."},
+				"dry_run":     map[string]any{"type": "boolean"},
+			},
+		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.archiveExpenseCategory(ctx, args)
+		}},
+
+		// 10. Delete expense category
 		{Tool: toolDestructive("clockify_delete_expense_category", "Delete an expense category", map[string]any{
 			"type":     "object",
 			"required": []string{"category_id"},
@@ -150,7 +175,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			return s.deleteExpenseCategory(ctx, args)
 		}},
 
-		// 10. Expense report
+		// 11. Expense report
 		{Tool: withOutputSchema(toolRO("clockify_expense_report", "Generate a Clockify expense detailed report via the Reports API", expenseReportInputSchema()), envelopeOpenMap("clockify_expense_report")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.expenseReport(ctx, args)
 		}},
@@ -257,7 +282,11 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 
 	form := url.Values{}
 	form.Set("userId", userID)
-	form.Set("amount", strconv.FormatFloat(amount, 'f', -1, 64))
+	normalizedAmount, err := expenseAmountForClockify(args, amount)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	form.Set("amount", strconv.FormatFloat(normalizedAmount, 'f', -1, 64))
 	form.Set("date", date)
 	form.Set("categoryId", categoryID)
 	if v := stringArg(args, "project_id"); v != "" {
@@ -377,6 +406,17 @@ func validateUpdateExpenseChangedValues(changeFields []string, args map[string]a
 	return nil
 }
 
+func expenseAmountForClockify(args map[string]any, amount float64) (float64, error) {
+	switch strings.ToLower(strings.TrimSpace(stringArg(args, "amount_unit"))) {
+	case "", "major":
+		return amount, nil
+	case "minor":
+		return amount / 100, nil
+	default:
+		return 0, fmt.Errorf("amount_unit must be major or minor")
+	}
+}
+
 func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	expenseID := stringArg(args, "expense_id")
 	if err := resolve.ValidateID(expenseID, "expense_id"); err != nil {
@@ -408,7 +448,11 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		form.Add("changeFields", token)
 	}
 	if v, ok := args["amount"].(float64); ok {
-		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
+		normalized, err := expenseAmountForClockify(args, v)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		form.Set("amount", strconv.FormatFloat(normalized, 'f', -1, 64))
 	} else if v, ok := existing["amount"].(float64); ok {
 		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
 	}
@@ -526,7 +570,11 @@ func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{"name": name}
+	body := expenseCategoryBody(args)
+	body["name"] = name
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_expense_category", dryrun.Preview("clockify_create_expense_category", body), map[string]any{"workspaceId": wsID}), nil
+	}
 	path, err := paths.Workspace(wsID, "expenses", "categories")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -536,6 +584,25 @@ func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_create_expense_category", created, map[string]any{"workspaceId": wsID}), nil
+}
+
+func expenseCategoryBody(args map[string]any) map[string]any {
+	body := map[string]any{}
+	if v := stringArg(args, "name"); v != "" {
+		body["name"] = v
+	}
+	if v, ok := args["has_unit_price"].(bool); ok {
+		body["hasUnitPrice"] = v
+	}
+	if v, ok := args["price_in_cents"].(float64); ok {
+		body["priceInCents"] = int(v)
+	} else if v, ok := args["price_in_cents"].(int); ok {
+		body["priceInCents"] = v
+	}
+	if v := stringArg(args, "unit"); v != "" {
+		body["unit"] = v
+	}
+	return body
 }
 
 func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -548,9 +615,20 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{}
-	if v := stringArg(args, "name"); v != "" {
-		body["name"] = v
+	if archived, ok := args["archived"].(bool); ok {
+		args["archived"] = archived
+		return s.archiveExpenseCategory(ctx, args)
+	}
+
+	body := expenseCategoryBody(args)
+	if len(body) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("at least one of name, has_unit_price, price_in_cents, unit, or archived is required")
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_expense_category", dryrun.Preview("clockify_update_expense_category", map[string]any{
+			"category_id": catID,
+			"body":        body,
+		}), map[string]any{"workspaceId": wsID, "categoryId": catID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
@@ -564,6 +642,41 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 	return ok("clockify_update_expense_category", updated, map[string]any{
 		"workspaceId": wsID,
 		"categoryId":  catID,
+	}), nil
+}
+
+func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	catID := stringArg(args, "category_id")
+	if err := resolve.ValidateID(catID, "category_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	archived := true
+	if v, ok := args["archived"].(bool); ok {
+		archived = v
+	}
+	body := map[string]any{"archived": archived}
+	if dryrun.Enabled(args) {
+		return ok("clockify_archive_expense_category", dryrun.Preview("clockify_archive_expense_category", map[string]any{
+			"category_id": catID,
+			"body":        body,
+		}), map[string]any{"workspaceId": wsID, "categoryId": catID}), nil
+	}
+	path, err := paths.Workspace(wsID, "expenses", "categories", catID, "status")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var updated map[string]any
+	if err := s.Client.Patch(ctx, path, body, &updated); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_archive_expense_category", updated, map[string]any{
+		"workspaceId": wsID,
+		"categoryId":  catID,
+		"archived":    archived,
 	}), nil
 }
 

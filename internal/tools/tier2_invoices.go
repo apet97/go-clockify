@@ -85,7 +85,17 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"currency":    map[string]any{"type": "string", "description": "Currency code (e.g. USD, EUR)"},
 				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"note":        map[string]any{"type": "string", "description": "Invoice note"},
-				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice payload without creating it"},
+				"subject":     map[string]any{"type": "string", "description": "Invoice subject"},
+				"bill_from":   map[string]any{"type": "string", "description": "Invoice bill-from label/address"},
+				"client_address": map[string]any{
+					"type":        "string",
+					"description": "Client address text to print on the invoice",
+				},
+				"tax_percent":      map[string]any{"type": "number", "description": "Invoice tax percent"},
+				"tax2_percent":     map[string]any{"type": "number", "description": "Second invoice tax percent"},
+				"discount_percent": map[string]any{"type": "number", "description": "Invoice discount percent"},
+				"tax_type":         map[string]any{"type": "string", "enum": []string{"COMPOUND", "SIMPLE", "NONE"}, "description": "Invoice tax calculation type"},
+				"dry_run":          map[string]any{"type": "boolean", "description": "Preview the invoice payload without creating it"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createInvoice(ctx, args)
@@ -103,8 +113,21 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"currency":    map[string]any{"type": "string"},
 				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"note":        map[string]any{"type": "string"},
-				"status":      invoiceStatusSchema("Invoice status. DRAFT is not a live value; use UNSENT for draft-like invoices."),
-				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice update payload without applying it"},
+				"subject":     map[string]any{"type": "string", "description": "Invoice subject"},
+				"bill_from":   map[string]any{"type": "string", "description": "Invoice bill-from label/address"},
+				"client_address": map[string]any{
+					"type":        "string",
+					"description": "Client address text to print on the invoice",
+				},
+				"tax_percent": map[string]any{"type": "number", "description": "Invoice tax percent"},
+				"tax2_percent": map[string]any{
+					"type":        "number",
+					"description": "Second invoice tax percent",
+				},
+				"discount_percent": map[string]any{"type": "number", "description": "Invoice discount percent"},
+				"tax_type":         map[string]any{"type": "string", "enum": []string{"COMPOUND", "SIMPLE", "NONE"}, "description": "Invoice tax calculation type"},
+				"status":           invoiceStatusSchema("Invoice status. DRAFT is not a live value; use UNSENT for draft-like invoices."),
+				"dry_run":          map[string]any{"type": "boolean", "description": "Preview the invoice update payload without applying it"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoice(ctx, args)
@@ -193,6 +216,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
 				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
 				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)"},
+				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice item request without making changes"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.addInvoiceItem(ctx, args)
@@ -211,6 +235,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
 				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
 				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API)"},
+				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice item update without making changes"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoiceItem(ctx, args)
@@ -461,6 +486,7 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 	if v := stringArg(args, "note"); v != "" {
 		body["note"] = v
 	}
+	applyInvoiceOptionalFields(body, args)
 	if dryrun.Enabled(args) {
 		return ok("clockify_create_invoice", dryrunPreviewPayload("clockify_create_invoice", body), map[string]any{"workspaceId": wsID}), nil
 	}
@@ -505,6 +531,7 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 	if v := stringArg(args, "note"); v != "" {
 		body["note"] = v
 	}
+	applyInvoiceOptionalFields(body, args)
 	status, hasStatus, err := invoiceStatusFromArgs(args)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -520,7 +547,7 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 		return ok("clockify_update_invoice", dryrunPreviewPayload("clockify_update_invoice", preview), map[string]any{"workspaceId": wsID, "invoiceId": invoiceID}), nil
 	}
 	if len(body) == 0 && !hasStatus {
-		return ResultEnvelope{}, fmt.Errorf("at least one field (client_id, number, issued_date, currency, due_date, note, status) must be provided for update")
+		return ResultEnvelope{}, fmt.Errorf("at least one field (client_id, number, issued_date, currency, due_date, note, subject, bill_from, client_address, tax_percent, tax2_percent, discount_percent, tax_type, status) must be provided for update")
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
@@ -529,7 +556,15 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 	}
 	updated := map[string]any{"id": invoiceID}
 	if len(body) > 0 {
-		if err := s.Client.Put(ctx, path, body, &updated); err != nil {
+		var existing map[string]any
+		if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
+			return ResultEnvelope{}, err
+		}
+		merged := invoiceUpdateBodyFromExisting(existing)
+		for key, value := range body {
+			merged[key] = value
+		}
+		if err := s.Client.Put(ctx, path, merged, &updated); err != nil {
 			return ResultEnvelope{}, err
 		}
 	}
@@ -540,6 +575,75 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 		updated["status"] = status
 	}
 	return ok("clockify_update_invoice", invoiceViewFromRaw(updated), map[string]any{"workspaceId": wsID}), nil
+}
+
+func applyInvoiceOptionalFields(body map[string]any, args map[string]any) {
+	if v := stringArg(args, "subject"); v != "" {
+		body["subject"] = v
+	}
+	if v := stringArg(args, "bill_from"); v != "" {
+		body["billFrom"] = v
+	}
+	if v := stringArg(args, "client_address"); v != "" {
+		body["clientAddress"] = v
+	}
+	if v, ok := numberArg(args, "tax_percent"); ok {
+		body["taxPercent"] = v
+	}
+	if v, ok := numberArg(args, "tax2_percent"); ok {
+		body["tax2Percent"] = v
+	}
+	if v, ok := numberArg(args, "discount_percent"); ok {
+		body["discountPercent"] = v
+	}
+	if v := stringArg(args, "tax_type"); v != "" {
+		body["taxType"] = v
+	}
+}
+
+func invoiceUpdateBodyFromExisting(existing map[string]any) map[string]any {
+	body := map[string]any{}
+	copyString := func(dst string, keys ...string) {
+		for _, key := range keys {
+			if value := firstReportString(existing, key); value != "" {
+				body[dst] = value
+				return
+			}
+		}
+	}
+	copyNumber := func(dst string, fallback float64, keys ...string) {
+		for _, key := range keys {
+			if value, ok := reportNumber(existing[key]); ok {
+				body[dst] = value
+				return
+			}
+		}
+		body[dst] = fallback
+	}
+
+	copyString("clientId", "clientId", "client_id")
+	copyString("companyId", "companyId", "company_id")
+	copyString("currency", "currency")
+	copyString("dueDate", "dueDate", "due_date")
+	copyString("issuedDate", "issuedDate", "issued_date")
+	copyString("billFrom", "billFrom", "bill_from")
+	copyString("clientAddress", "clientAddress", "client_address")
+	copyString("note", "note")
+	copyString("number", "number")
+	copyString("subject", "subject")
+	copyString("taxType", "taxType", "tax_type")
+	copyNumber("discountPercent", 0, "discountPercent", "discount_percent", "discount")
+	copyNumber("tax2Percent", 0, "tax2Percent", "tax2_percent", "tax2")
+	copyNumber("taxPercent", 0, "taxPercent", "tax_percent", "tax")
+	switch visible := firstPresent(existing, "visibleZeroFields", "visible_zero_fields").(type) {
+	case string:
+		body["visibleZeroFields"] = visible
+	case []any:
+		body["visibleZeroFields"] = visible
+	case []string:
+		body["visibleZeroFields"] = visible
+	}
+	return body
 }
 
 func invoiceStatusFromArgs(args map[string]any) (string, bool, error) {
@@ -741,6 +845,12 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_add_invoice_item", dryrunPreviewPayload("clockify_add_invoice_item", body), map[string]any{
+			"workspaceId": wsID,
+			"invoiceId":   invoiceID,
+		}), nil
+	}
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
@@ -799,6 +909,14 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemIndex)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_invoice_item", dryrunPreviewPayload("clockify_update_invoice_item", body), map[string]any{
+			"workspaceId": wsID,
+			"invoiceId":   invoiceID,
+			"itemIndex":   itemIndex,
+			"itemId":      itemIndex,
+		}), nil
 	}
 	var updated map[string]any
 	if err := s.Client.Put(ctx, path, body, &updated); err != nil {

@@ -28,7 +28,7 @@ type EntryView struct {
 	ProjectName       string                 `json:"projectName,omitempty"`
 	TaskID            string                 `json:"taskId,omitempty"`
 	TagIDs            []string               `json:"tagIds,omitempty"`
-	Billable          bool                   `json:"billable,omitempty"`
+	Billable          bool                   `json:"billable"`
 	BillableState     string                 `json:"billable_state"`
 	BillablePresent   bool                   `json:"billable_present"`
 	CostRate          *clockify.Rate         `json:"costRate,omitempty"`

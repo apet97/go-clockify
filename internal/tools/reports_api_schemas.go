@@ -19,7 +19,6 @@ func reportInputSchema(reportFilterKey string, reportFilterSchema map[string]any
 	props[reportFilterKey] = reportFilterSchema
 	return map[string]any{
 		"type":       "object",
-		"required":   []string{reportFilterKey},
 		"properties": props,
 		"anyOf": []any{
 			map[string]any{"required": []string{"start", "end"}},
@@ -34,7 +33,6 @@ func weeklyReportInputSchema() map[string]any {
 	props["include_future"] = map[string]any{"type": "boolean", "description": "Include normalized weekly day rows after today. Defaults to false; raw Reports API payload is still preserved."}
 	return map[string]any{
 		"type":       "object",
-		"required":   []string{"weekly_filter"},
 		"properties": props,
 	}
 }
@@ -141,7 +139,8 @@ func attendanceFilterSchema() map[string]any {
 
 func detailedFilterSchema() map[string]any {
 	return map[string]any{
-		"type": "object",
+		"type":        "object",
+		"description": "Optional; omit or pass {} for the default detailed report filter.",
 		"properties": map[string]any{
 			"audit_filter": auditReportFilterSchema(),
 			"options":      detailedOptionsSchema(),
@@ -154,8 +153,8 @@ func detailedFilterSchema() map[string]any {
 
 func summaryFilterSchema() map[string]any {
 	return map[string]any{
-		"type":     "object",
-		"required": []string{"groups"},
+		"type":        "object",
+		"description": "Optional; defaults to groups:[PROJECT] when omitted.",
 		"properties": map[string]any{
 			"groups":             map[string]any{"type": "array", "minItems": 1, "description": "1 to 3 values. DATE is the upstream group; legacy DAY input is still accepted and sent as DATE. Summary Reports does not support USER; use clockify_assignment_report or clockify_detailed_report for user-grouped analysis.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY"}}},
 			"sort_column":        map[string]any{"type": "string", "enum": []string{"GROUP", "DURATION", "AMOUNT", "EARNED", "COST", "PROFIT"}},
@@ -166,8 +165,8 @@ func summaryFilterSchema() map[string]any {
 
 func weeklyFilterSchema() map[string]any {
 	return map[string]any{
-		"type":     "object",
-		"required": []string{"group", "subgroup"},
+		"type":        "object",
+		"description": "Optional; defaults to group:PROJECT, subgroup:TIME when omitted.",
 		"properties": map[string]any{
 			"group":    map[string]any{"type": "string", "enum": []string{"PROJECT", "USER"}},
 			"subgroup": map[string]any{"type": "string", "enum": []string{"TIME"}},

@@ -971,6 +971,9 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				if ipe.Pointer != "" {
 					data["pointer"] = ipe.Pointer
 				}
+				if ipe.DidYouMean != "" {
+					data["did_you_mean"] = ipe.DidYouMean
+				}
 				resp.Error = &RPCError{
 					Code:    -32602,
 					Message: ipe.Error(),

@@ -19,8 +19,8 @@ func TestUserAdminHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("user_admin group not found")
 	}
-	if len(descriptors) != 11 {
-		t.Fatalf("expected 11 user_admin tools, got %d", len(descriptors))
+	if len(descriptors) != 12 {
+		t.Fatalf("expected 12 user_admin tools, got %d", len(descriptors))
 	}
 }
 
@@ -360,6 +360,72 @@ func TestCreateUserGroupDryRun(t *testing.T) {
 	}
 }
 
+func TestAddUserToGroupDryRun(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("add user to group dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.AddUserToGroup(context.Background(), map[string]any{
+		"group_id": "abc123def456789012345678",
+		"user_id":  "abc123def456789012345679",
+		"dry_run":  true,
+	})
+	if err != nil {
+		t.Fatalf("add user to group dry-run failed: %v", err)
+	}
+	if result.Action != "clockify_add_user_to_group" {
+		t.Fatalf("expected action clockify_add_user_to_group, got %s", result.Action)
+	}
+	dataMap, ok := result.Data.(map[string]any)
+	if !ok || dataMap["dry_run"] != true {
+		t.Fatalf("expected dry-run data map, got %#v", result.Data)
+	}
+	payload, ok := dataMap["payload"].(map[string]any)
+	if !ok || payload["userId"] != "abc123def456789012345679" {
+		t.Fatalf("unexpected dry-run payload: %#v", dataMap["payload"])
+	}
+}
+
+func TestInviteUserDryRunAndExecute(t *testing.T) {
+	var gotBody map[string]any
+	var gotSendEmail string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/users" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotSendEmail = r.URL.Query().Get("send-email")
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": "ws1", "users": []any{map[string]any{"email": gotBody["email"]}}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	dry, err := svc.InviteUser(context.Background(), map[string]any{
+		"email":   "invitee@example.com",
+		"dry_run": true,
+	})
+	mustOK(t, dry, err, "clockify_invite_user")
+	if data, ok := dry.Data.(map[string]any); !ok || data["dry_run"] != true || data["send_email"] != true {
+		t.Fatalf("expected dry-run invite preview, got %#v", dry.Data)
+	}
+
+	res, err := svc.InviteUser(context.Background(), map[string]any{
+		"email":      "invitee@example.com",
+		"send_email": false,
+	})
+	mustOK(t, res, err, "clockify_invite_user")
+	if gotSendEmail != "false" {
+		t.Fatalf("expected send-email=false query, got %q", gotSendEmail)
+	}
+	if gotBody["email"] != "invitee@example.com" {
+		t.Fatalf("expected email body, got %#v", gotBody)
+	}
+}
+
 // TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA exercises
 // audit finding 10: with WebhookValidateDNS=true (set automatically
 // by hosted profiles), a hostname that resolves to a private or
@@ -414,6 +480,26 @@ func TestValidateWebhookURLRejectsPrivateIPv6Literals(t *testing.T) {
 		t.Run(raw, func(t *testing.T) {
 			if err := validateWebhookURL(raw); err == nil {
 				t.Fatalf("expected private/reserved IPv6 literal to be rejected: %s", raw)
+			}
+		})
+	}
+}
+
+func TestValidateWebhookURLReportsCIDRClass(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want string
+	}{
+		{"https://127.0.0.1/hook", "rejected_by=loopback"},
+		{"https://10.0.0.1/hook", "rejected_by=private"},
+		{"https://169.254.169.254/hook", "rejected_by=link-local"},
+		{"https://localhost/hook", "rejected_by=localhost"},
+	}
+	for _, c := range cases {
+		t.Run(c.raw, func(t *testing.T) {
+			err := validateWebhookURL(c.raw)
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("err = %v, want %s", err, c.want)
 			}
 		})
 	}

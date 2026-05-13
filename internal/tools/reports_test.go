@@ -612,6 +612,43 @@ func TestWeeklyReportRejectsInvalidSubgroup(t *testing.T) {
 	}
 }
 
+func TestReportsAPIBodyDefaultsMissingFilterWrappers(t *testing.T) {
+	detailed, err := buildReportsAPIBody(map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-30T00:00:00Z",
+	}, "detailed_filter", false, time.UTC)
+	if err != nil {
+		t.Fatalf("build detailed body: %v", err)
+	}
+	if filter, ok := detailed["detailedFilter"].(map[string]any); !ok || len(filter) != 0 {
+		t.Fatalf("detailedFilter default = %#v, want empty object", detailed["detailedFilter"])
+	}
+
+	summary, err := buildReportsAPIBody(map[string]any{
+		"start": "2026-04-01T00:00:00Z",
+		"end":   "2026-04-30T00:00:00Z",
+	}, "summary_filter", false, time.UTC)
+	if err != nil {
+		t.Fatalf("build summary body: %v", err)
+	}
+	summaryFilter := summary["summaryFilter"].(map[string]any)
+	groups := summaryFilter["groups"].([]string)
+	if len(groups) != 1 || groups[0] != "PROJECT" {
+		t.Fatalf("summaryFilter default groups = %#v, want PROJECT", groups)
+	}
+
+	weekly, err := buildReportsAPIBody(map[string]any{
+		"week_start": "2026-04-06",
+	}, "weekly_filter", true, time.UTC)
+	if err != nil {
+		t.Fatalf("build weekly body: %v", err)
+	}
+	weeklyFilter := weekly["weeklyFilter"].(map[string]any)
+	if weeklyFilter["group"] != "PROJECT" || weeklyFilter["subgroup"] != "TIME" {
+		t.Fatalf("weeklyFilter default = %#v, want PROJECT/TIME", weeklyFilter)
+	}
+}
+
 func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

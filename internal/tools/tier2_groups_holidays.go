@@ -443,7 +443,22 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
+	out["date_period"] = holidayDatePeriodSnake(out, startDate, endDate)
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
+}
+
+func holidayDatePeriodSnake(out map[string]any, fallbackStart, fallbackEnd string) map[string]any {
+	start := fallbackStart
+	end := fallbackEnd
+	if raw, ok := out["datePeriod"].(map[string]any); ok {
+		if v := firstReportString(raw, "startDate", "start_date"); v != "" {
+			start = v
+		}
+		if v := firstReportString(raw, "endDate", "end_date"); v != "" {
+			end = v
+		}
+	}
+	return map[string]any{"start_date": start, "end_date": end}
 }
 
 func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

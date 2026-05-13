@@ -19,11 +19,11 @@ safety classification, and test coverage. Generated from
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
 | Read-only | 33 | 47 | 80 |
-| Mutating (non-destructive) | 20 | 56 | 76 |
+| Mutating (non-destructive) | 20 | 58 | 78 |
 | Destructive | 5 | 14 | 19 |
-| Billing | 0 | 14 | 14 |
-| Admin | 0 | 14 | 14 |
-| **Total tools** | **58** | **117** | **175** |
+| Billing | 0 | 17 | 17 |
+| Admin | 0 | 15 | 15 |
+| **Total tools** | **58** | **119** | **177** |
 
 ## Evidence types
 
@@ -133,7 +133,7 @@ Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPOR
 
 ---
 
-## Tier 2 — Domain groups (117 tools)
+## Tier 2 — Domain groups (119 tools)
 
 ### `approvals` (9 tools)
 

@@ -1093,13 +1093,25 @@ func mergeAssignmentEntities(a, b map[string]any) map[string]any {
 }
 
 func nestedReportEntity(row map[string]any, kind string) map[string]any {
-	id := reportGroupID(row, kind)
+	id := reportEntityID(row, kind)
 	name := cleanReportID(firstPresent(row, kind+"Name", kind+"_name"))
 	if nested, ok := row[kind].(map[string]any); ok {
 		id = firstNonEmptyString(id, cleanReportID(firstPresent(nested, "id", "_id")))
 		name = firstNonEmptyString(name, cleanReportID(firstPresent(nested, "name", "title")))
 	}
 	return map[string]any{"id": id, "name": name}
+}
+
+func reportEntityID(row map[string]any, kind string) string {
+	for _, key := range []string{kind + "Id", kind + "_id"} {
+		if id := cleanReportID(row[key]); id != "" {
+			return id
+		}
+	}
+	if nested, ok := row[kind].(map[string]any); ok {
+		return cleanReportID(firstPresent(nested, "id", "_id"))
+	}
+	return ""
 }
 
 func materializeAssignmentReportRows(rowsByKey map[string]*assignmentReportAccumulator) []AssignmentReportRow {

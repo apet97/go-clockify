@@ -328,7 +328,7 @@ Large workspace report hygiene:
 
 **Tier 1 (58 tools, always loaded):** timer, entries, projects (incl. create/update/delete/archive), clients (full CRUD plus client report), tags (full CRUD), tasks (full CRUD), users, workspaces, governance, reports, read-only business briefs, workflows, search, activation, context.
 
-**Tier 2 (117 tools, 13 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin, change tracking, and `probe_lab_api` documented-API escape hatch tools.
+**Tier 2 (119 tools, 13 groups, on demand):** invoices, expenses, scheduling, time off, approvals, shared reports, user admin, webhooks, custom fields, groups/holidays, project admin, change tracking, and `probe_lab_api` documented-API escape hatch tools.
 
 Call `clockify_list_tools` to discover a Tier 2 group or specific tool, `clockify_activate_group` / `clockify_activate_tool` to widen the current session, and `clockify_deactivate_group` to shrink the visible surface after a task. Activation updates `tools/list` at runtime, and `activated_tools` only lists names that are visible after bootstrap and policy filtering. `clockify_search_tools` remains as a deprecated compatibility shim for older clients.
 

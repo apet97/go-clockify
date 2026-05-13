@@ -321,12 +321,28 @@ func documentedRequestBody(hasBody bool, body any) any {
 }
 
 func documentedRawResponse(header http.Header, body []byte) map[string]any {
+	contentType := strings.TrimSpace(header.Get("Content-Type"))
+	inferred := inferRawContentType(body)
+	if contentType == "" || (inferred != "" && strings.Contains(strings.ToLower(contentType), "json")) {
+		contentType = inferred
+	}
+	filename := parseExportFilename(header.Get("Content-Disposition"))
+	if filename == "" && contentType == "application/pdf" {
+		filename = "document.pdf"
+	}
 	return map[string]any{
-		"contentType": header.Get("Content-Type"),
-		"filename":    parseExportFilename(header.Get("Content-Disposition")),
+		"contentType": contentType,
+		"filename":    filename,
 		"bytes":       len(body),
 		"body":        base64.StdEncoding.EncodeToString(body),
 	}
+}
+
+func inferRawContentType(body []byte) string {
+	if len(body) >= 4 && string(body[:4]) == "%PDF" {
+		return "application/pdf"
+	}
+	return http.DetectContentType(body)
 }
 
 func documentedOperationFromArgs(args map[string]any) (documentedAPIOperation, error) {

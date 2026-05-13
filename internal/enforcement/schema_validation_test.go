@@ -59,6 +59,29 @@ func TestBeforeCall_SchemaValidation_UnknownKey(t *testing.T) {
 	}
 }
 
+func TestBeforeCall_SchemaValidation_UnknownKeySuggestsSnakeCase(t *testing.T) {
+	p := newSchemaTestPipeline()
+	args := map[string]any{
+		"start":     "2026-04-11T09:00:00Z",
+		"end":       "2026-04-11T10:00:00Z",
+		"projectId": "p1",
+	}
+	_, _, err := p.BeforeCall(context.Background(), "clockify_log_time", args, mcp.ToolHints{}, logTimeSchema(), noLookup)
+	if err == nil {
+		t.Fatal("expected rejection for camelCase key")
+	}
+	var ipe *mcp.InvalidParamsError
+	if !errors.As(err, &ipe) {
+		t.Fatalf("want *mcp.InvalidParamsError, got %T: %v", err, err)
+	}
+	if ipe.Pointer != "/projectId" {
+		t.Errorf("pointer = %q, want /projectId", ipe.Pointer)
+	}
+	if ipe.DidYouMean != "project_id" {
+		t.Errorf("did_you_mean = %q, want project_id", ipe.DidYouMean)
+	}
+}
+
 func TestBeforeCall_SchemaValidation_WrongType(t *testing.T) {
 	p := newSchemaTestPipeline()
 	args := map[string]any{

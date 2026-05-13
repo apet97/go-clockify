@@ -100,8 +100,9 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 			var ve *jsonschema.ValidationError
 			if errors.As(err, &ve) {
 				return nil, nil, &mcp.InvalidParamsError{
-					Pointer: ve.Pointer,
-					Message: ve.Message,
+					Pointer:    ve.Pointer,
+					Message:    ve.Message,
+					DidYouMean: schemaDidYouMean(schema, ve),
 				}
 			}
 			return nil, nil, &mcp.InvalidParamsError{Pointer: "", Message: err.Error()}
@@ -187,18 +188,108 @@ func (p *Pipeline) BeforeCall(ctx context.Context, name string, args map[string]
 	}
 	if p.Confirmation != nil && highRisk && dryRunRequested && !hints.Destructive {
 		// Non-destructive high-risk dry-run: CheckDryRun left the flag
-		// in args for the handler, but we cannot let the handler run
-		// without first minting. Strip the flag here and produce a
-		// minimal preview envelope wrapped with the confirmation
-		// metadata. Operators that want a richer preview can call the
-		// read counterpart of the tool explicitly.
-		delete(args, "dry_run")
-		minimal := dryrun.MinimalResult(name, args)
+		// in args for the handler. Prefer the tool-specific handler so
+		// it can run validation/preflight without mutating state (for
+		// example webhook SSRF validation) before we mint a token.
+		if lookupHandler != nil {
+			if handler, ok := lookupHandler(name); ok {
+				result, err := handler(ctx, args)
+				if err != nil {
+					if release != nil {
+						release()
+					}
+					return nil, nil, err
+				}
+				preview := result
+				if generic, ok := normalizeJSONTree(result); ok {
+					preview = generic
+				}
+				envelope := p.mintConfirmationEnvelope(ctx, preview, name, args, hints)
+				return envelope, release, nil
+			}
+		}
+		minimalArgs := maps.Clone(args)
+		delete(minimalArgs, "dry_run")
+		minimal := dryrun.MinimalResult(name, minimalArgs)
 		envelope := p.mintConfirmationEnvelope(ctx, minimal, name, args, hints)
 		return envelope, release, nil
 	}
 
 	return nil, release, nil
+}
+
+func schemaDidYouMean(schema map[string]any, ve *jsonschema.ValidationError) string {
+	if schema == nil || ve == nil || ve.Message != "unknown property" {
+		return ""
+	}
+	key := strings.TrimPrefix(ve.Pointer, "/")
+	if key == "" || strings.Contains(key, "/") {
+		return ""
+	}
+	key = strings.ReplaceAll(strings.ReplaceAll(key, "~1", "/"), "~0", "~")
+	props, _ := schema["properties"].(map[string]any)
+	if len(props) == 0 {
+		return ""
+	}
+	best := ""
+	bestDistance := 99
+	for known := range props {
+		dist := schemaNameDistance(key, known)
+		if dist < bestDistance {
+			best = known
+			bestDistance = dist
+		}
+	}
+	if best == "" || bestDistance > 3 {
+		return ""
+	}
+	return best
+}
+
+func schemaNameDistance(a, b string) int {
+	return min(
+		levenshtein(strings.ToLower(a), strings.ToLower(b)),
+		levenshtein(schemaNameCanonical(a), schemaNameCanonical(b)),
+	)
+}
+
+func schemaNameCanonical(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r == '_' || r == '-' || r == ' ' {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return strings.ToLower(b.String())
+}
+
+func levenshtein(a, b string) int {
+	ar := []rune(a)
+	br := []rune(b)
+	if len(ar) == 0 {
+		return len(br)
+	}
+	if len(br) == 0 {
+		return len(ar)
+	}
+	prev := make([]int, len(br)+1)
+	cur := make([]int, len(br)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i, ra := range ar {
+		cur[0] = i + 1
+		for j, rb := range br {
+			cost := 0
+			if ra != rb {
+				cost = 1
+			}
+			cur[j+1] = min(min(cur[j]+1, prev[j+1]+1), prev[j]+cost)
+		}
+		prev, cur = cur, prev
+	}
+	return prev[len(br)]
 }
 
 // verifyConfirmationToken extracts the confirmation_token from args,
@@ -269,6 +360,10 @@ func (p *Pipeline) mintConfirmationEnvelope(ctx context.Context, preview any, na
 	envelope["confirmation_expires_at"] = expiresAt.UTC().Format(time.RFC3339)
 	envelope["confirmation_risk_class"] = riskClassNames(hints.RiskClass)
 	envelope["confirmation_note"] = "Re-submit the same arguments with dry_run:false and confirmation_token to execute."
+	if p.Confirmation.Ephemeral() {
+		envelope["confirmation_token_volatile"] = true
+		envelope["confirmation_token_volatile_reason"] = "CLOCKIFY_CONFIRMATION_TOKEN_SECRET is unset; this token will not survive process restarts or cross-replica requests."
+	}
 	return envelope
 }
 

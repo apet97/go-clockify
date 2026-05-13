@@ -250,8 +250,8 @@ func (s *Service) validateWebhookURLForService(ctx context.Context, url string) 
 		return fmt.Errorf("webhook host %q resolved to no addresses", host)
 	}
 	for _, a := range addrs {
-		if !isPublicWebhookAddr(a) {
-			return fmt.Errorf("webhook host %q resolves to private/reserved address %s", host, a.String())
+		if reason := webhookAddrRejectionReason(a); reason != "" {
+			return fmt.Errorf("webhook host %q resolves to private/reserved address %s (rejected_by=%s)", host, a.String(), reason)
 		}
 	}
 	return nil
@@ -324,49 +324,78 @@ func validateWebhookURL(url string) error {
 
 	host := strings.ToLower(parsed.Hostname())
 	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
-		return fmt.Errorf("webhook URL cannot target private/loopback addresses")
+		return fmt.Errorf("webhook URL cannot target private/loopback addresses (rejected_by=localhost)")
 	}
-	if addr, err := netip.ParseAddr(host); err == nil && !isPublicWebhookAddr(addr) {
-		return fmt.Errorf("webhook URL cannot target private, loopback, link-local, or reserved addresses")
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if reason := webhookAddrRejectionReason(addr); reason != "" {
+			return fmt.Errorf("webhook URL cannot target private, loopback, link-local, or reserved addresses (rejected_by=%s)", reason)
+		}
 	}
 	return nil
 }
 
-func isPublicWebhookAddr(addr netip.Addr) bool {
+func webhookAddrRejectionReason(addr netip.Addr) string {
 	addr = addr.Unmap()
 	if !addr.IsValid() || !addr.IsGlobalUnicast() {
-		return false
+		if addr.IsLoopback() {
+			return "loopback"
+		}
+		if addr.IsUnspecified() {
+			return "unspecified"
+		}
+		if addr.IsMulticast() {
+			return "multicast"
+		}
+		if addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
+			return "link-local"
+		}
+		return "not-global-unicast"
 	}
-	if addr.IsPrivate() || addr.IsLoopback() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsUnspecified() {
-		return false
+	if addr.IsLoopback() {
+		return "loopback"
+	}
+	if addr.IsPrivate() {
+		return "private"
+	}
+	if addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
+		return "link-local"
+	}
+	if addr.IsMulticast() {
+		return "multicast"
+	}
+	if addr.IsUnspecified() {
+		return "unspecified"
 	}
 
-	blockedPrefixes := []string{
-		"0.0.0.0/8",
-		"100.64.0.0/10",
-		"169.254.0.0/16",
-		"192.0.0.0/24",
-		"192.0.2.0/24",
-		"198.18.0.0/15",
-		"198.51.100.0/24",
-		"203.0.113.0/24",
-		"224.0.0.0/4",
-		"240.0.0.0/4",
-		"::/128",
-		"::1/128",
-		"fe80::/10",
-		"fc00::/7",
-		"ff00::/8",
-		"2001:db8::/32",
+	blockedPrefixes := []struct {
+		cidr   string
+		reason string
+	}{
+		{"0.0.0.0/8", "current-network"},
+		{"100.64.0.0/10", "carrier-grade-nat"},
+		{"169.254.0.0/16", "link-local"},
+		{"192.0.0.0/24", "ietf-protocol-assignment"},
+		{"192.0.2.0/24", "documentation"},
+		{"198.18.0.0/15", "benchmarking"},
+		{"198.51.100.0/24", "documentation"},
+		{"203.0.113.0/24", "documentation"},
+		{"224.0.0.0/4", "multicast"},
+		{"240.0.0.0/4", "reserved"},
+		{"::/128", "unspecified"},
+		{"::1/128", "loopback"},
+		{"fe80::/10", "link-local"},
+		{"fc00::/7", "private"},
+		{"ff00::/8", "multicast"},
+		{"2001:db8::/32", "documentation"},
 	}
 	for _, prefix := range blockedPrefixes {
-		p := netip.MustParsePrefix(prefix)
+		p := netip.MustParsePrefix(prefix.cidr)
 		if p.Contains(addr) {
-			return false
+			return prefix.reason
 		}
 	}
 
-	return true
+	return ""
 }
 
 // stringSliceArg extracts a []string from args. Handles both []string and

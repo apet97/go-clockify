@@ -252,6 +252,19 @@ func (s *Service) detailedPayloadForRange(ctx context.Context, wsID string, finR
 			body[key] = value
 		}
 	}
+	setContainsFilterFromID(body, args, "client_id", "clients", false)
+	setContainsFilterFromID(body, args, "project_id", "projects", false)
+	setContainsFilterFromID(body, args, "task_id", "tasks", false)
+	setContainsFilterFromID(body, args, "user_id", "users", true)
+	if tagIDs := anyStringSlice(firstPresent(args, "tag_ids")); len(tagIDs) > 0 {
+		body["tags"] = map[string]any{"contains": "CONTAINS", "ids": tagIDs, "containedInTimeentry": "CONTAINS"}
+	}
+	if v, ok := args["billable"].(bool); ok {
+		body["billable"] = v
+	}
+	if description := strings.TrimSpace(stringArg(args, "description")); description != "" {
+		body["description"] = description
+	}
 	if state := strings.TrimSpace(stringArg(args, "invoicing_state")); state != "" {
 		body["invoicingState"] = strings.ToUpper(state)
 	}
@@ -260,6 +273,18 @@ func (s *Service) detailedPayloadForRange(ctx context.Context, wsID string, finR
 		return nil, err
 	}
 	return out, nil
+}
+
+func setContainsFilterFromID(body map[string]any, args map[string]any, argKey, bodyKey string, userStatus bool) {
+	id := strings.TrimSpace(stringArg(args, argKey))
+	if id == "" {
+		return
+	}
+	filter := map[string]any{"contains": "CONTAINS", "ids": []string{id}}
+	if userStatus {
+		filter["status"] = "ALL"
+	}
+	body[bodyKey] = filter
 }
 
 func compositeFinancialRange(args map[string]any, now time.Time) FinancialRangeView {
@@ -419,8 +444,16 @@ func monthlyBriefInputSchema() map[string]any {
 
 func auditEntriesInputSchema() map[string]any {
 	props := map[string]any{
-		"page":      map[string]any{"type": "integer", "minimum": 1},
-		"page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
+		"page":            map[string]any{"type": "integer", "minimum": 1},
+		"page_size":       map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
+		"client_id":       map[string]any{"type": "string", "description": "Filter detailed report rows to one client ID."},
+		"project_id":      map[string]any{"type": "string", "description": "Filter detailed report rows to one project ID."},
+		"task_id":         map[string]any{"type": "string", "description": "Filter detailed report rows to one task ID."},
+		"user_id":         map[string]any{"type": "string", "description": "Filter detailed report rows to one user ID."},
+		"tag_ids":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Filter detailed report rows to entries with these tag IDs."},
+		"billable":        map[string]any{"type": "boolean", "description": "Filter detailed report rows by billable state."},
+		"description":     map[string]any{"type": "string", "description": "Filter detailed report rows by description text."},
+		"invoicing_state": map[string]any{"type": "string", "description": "Filter by invoicing state, e.g. INVOICED or UNINVOICED."},
 	}
 	addFinancialRangeInputProperties(props)
 	return map[string]any{"type": "object", "properties": props}

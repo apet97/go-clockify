@@ -162,8 +162,9 @@ type VerifyInput struct {
 // TTL. It does not own the Enabled flag — that belongs to Config and
 // is enforced by the call site.
 type Signer struct {
-	secret []byte
-	ttl    time.Duration
+	secret    []byte
+	ttl       time.Duration
+	ephemeral bool
 	// now is overridable for tests; production callers leave it nil
 	// and the signer uses time.Now.
 	now func() time.Time
@@ -180,7 +181,13 @@ func NewSigner(cfg Config) (*Signer, error) {
 	if ttl <= 0 {
 		ttl = DefaultTTL
 	}
-	return &Signer{secret: append([]byte(nil), cfg.Secret...), ttl: ttl}, nil
+	return &Signer{secret: append([]byte(nil), cfg.Secret...), ttl: ttl, ephemeral: cfg.Ephemeral}, nil
+}
+
+// Ephemeral reports whether this signer uses a process-local random
+// secret, which makes minted tokens invalid after restart or replica hop.
+func (s *Signer) Ephemeral() bool {
+	return s != nil && s.ephemeral
 }
 
 // withClock returns a copy of s using the supplied clock. Test-only.

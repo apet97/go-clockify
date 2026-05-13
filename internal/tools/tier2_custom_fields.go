@@ -75,6 +75,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 						},
 						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE"},
 						"required":       map[string]any{"type": "boolean", "description": "Whether the field is required"},
+						"status":         customFieldStatusSchema("Custom-field visibility; defaults to VISIBLE so values can be set immediately"),
 					},
 				}),
 			ReadOnlyHint: false,
@@ -99,6 +100,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 						},
 						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 						"required":       map[string]any{"type": "boolean"},
+						"status":         customFieldStatusSchema("Custom-field visibility"),
 					},
 				}),
 			ReadOnlyHint: false,
@@ -231,6 +233,31 @@ var validCustomFieldTypes = map[string]bool{
 	"LINK":              true,
 }
 
+var validCustomFieldStatuses = map[string]bool{
+	"VISIBLE":   true,
+	"INVISIBLE": true,
+	"INACTIVE":  true,
+}
+
+func customFieldStatusSchema(description string) map[string]any {
+	return map[string]any{
+		"type":        "string",
+		"description": description,
+		"enum":        []string{"VISIBLE", "INVISIBLE", "INACTIVE"},
+	}
+}
+
+func customFieldStatusArg(args map[string]any, fallback string) (string, error) {
+	status := strings.ToUpper(strings.TrimSpace(firstNonEmptyString(stringArg(args, "status"), fallback)))
+	if status == "" {
+		return "", nil
+	}
+	if !validCustomFieldStatuses[status] {
+		return "", fmt.Errorf("status %q is not one of VISIBLE, INVISIBLE, INACTIVE", status)
+	}
+	return status, nil
+}
+
 func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -254,8 +281,14 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 	}
 
 	body := map[string]any{
-		"name": name,
-		"type": fieldType,
+		"name":   name,
+		"type":   fieldType,
+		"status": "VISIBLE",
+	}
+	if status, err := customFieldStatusArg(args, "VISIBLE"); err != nil {
+		return ResultEnvelope{}, err
+	} else if status != "" {
+		body["status"] = status
 	}
 	if len(allowedVals) > 0 {
 		body["allowedValues"] = allowedVals
@@ -311,6 +344,11 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 	}
 	if req, ok := existing["required"].(bool); ok {
 		body["required"] = req
+	}
+	if status, err := customFieldStatusArg(args, firstReportString(existing, "status")); err != nil {
+		return ResultEnvelope{}, err
+	} else if status != "" {
+		body["status"] = status
 	}
 	if name := stringArg(args, "name"); name != "" {
 		body["name"] = name
@@ -398,6 +436,13 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	field, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if status := strings.ToUpper(firstReportString(field, "status")); status != "" && status != "VISIBLE" {
+		return ResultEnvelope{}, fmt.Errorf("custom field %s has status %s; make it VISIBLE before setting values", fieldID, status)
 	}
 
 	if projectID != "" {

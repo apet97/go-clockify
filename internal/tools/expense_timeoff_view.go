@@ -256,7 +256,7 @@ func timeOffPolicyViewsFromRaw(items []map[string]any) []TimeOffPolicyView {
 
 func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 	view := TimeOffRequestView(maps.Clone(raw))
-	status := strings.ToUpper(firstReportString(raw, "status", "state"))
+	status := timeOffRequestStatus(raw)
 	requestID := firstReportString(raw, "id", "_id", "requestId", "request_id")
 	view["request"] = map[string]any{
 		"id":        requestID,
@@ -291,6 +291,13 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 	view["suggestedActions"] = timeOffSuggestions(requestID, firstReportString(raw, "policyId", "policy_id"), status)
 	view["raw"] = maps.Clone(raw)
 	return view
+}
+
+func timeOffRequestStatus(raw map[string]any) string {
+	if status, ok := firstPresent(raw, "status", "state").(map[string]any); ok {
+		return strings.ToUpper(firstReportString(status, "statusType", "status_type", "type", "state", "name"))
+	}
+	return strings.ToUpper(firstReportString(raw, "status", "state", "statusType", "status_type"))
 }
 
 func timeOffRequestViewsFromRaw(items []map[string]any) []TimeOffRequestView {

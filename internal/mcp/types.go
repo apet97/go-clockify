@@ -48,8 +48,9 @@ const (
 // Pointer is an RFC 6901 JSON Pointer (e.g. "/workspace_id"). An empty
 // pointer means the root value itself was rejected.
 type InvalidParamsError struct {
-	Pointer string
-	Message string
+	Pointer    string
+	Message    string
+	DidYouMean string
 }
 
 func (e *InvalidParamsError) Error() string {

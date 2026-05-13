@@ -37,11 +37,11 @@ type ArrayReduction struct {
 const maxArrayReductions = 50
 
 // ConfigFromEnv reads CLOCKIFY_TOKEN_BUDGET from the environment.
-// Default is 8000. Setting it to 0 disables truncation. Hosted
+// Default is 24000. Setting it to 0 disables truncation. Hosted
 // profiles force fail-closed truncation errors; non-hosted profiles can
 // opt into the same behavior with CLOCKIFY_TRUNCATION_FAIL_CLOSED=1.
 func ConfigFromEnv(hosted ...bool) Config {
-	budget := 8000
+	budget := 24000
 	if v := os.Getenv("CLOCKIFY_TOKEN_BUDGET"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			budget = n
@@ -124,6 +124,12 @@ func injectMetadata(v any, originalEstimate, budget int, rep *TruncationReport) 
 	if rep != nil && len(rep.ArrayReductions) > 0 {
 		info["array_reductions"] = rep.ArrayReductions
 	}
+	if original, ok := originalArrayLen(rep, "data"); ok {
+		if data, ok := m["data"].([]any); ok {
+			info["suggested_call_to_fit"] = map[string]any{"page_size": max(len(data), 1)}
+			info["summary"] = fmt.Sprintf("data: %d -> %d returned; pass page_size:%d to iterate without response truncation", original, len(data), max(len(data), 1))
+		}
+	}
 	m["_truncation"] = info
 	injectEnvelopeMeta(m, rep)
 	return m
@@ -143,15 +149,25 @@ func injectEnvelopeMeta(m map[string]any, rep *TruncationReport) {
 	}
 	meta["truncated"] = true
 	meta["returned"] = len(data)
+	meta["count_returned"] = len(data)
 	if _, ok := meta["fetched"]; ok {
+		meta["count_total"] = meta["fetched"]
+		meta["more_truncated"] = true
+		meta["suggested_page_size_for_full_data"] = max(len(data), 1)
 		return
 	}
 	if count, ok := meta["count"]; ok {
 		meta["fetched"] = count
+		meta["count_total"] = count
+		meta["more_truncated"] = true
+		meta["suggested_page_size_for_full_data"] = max(len(data), 1)
 		return
 	}
 	if original, ok := originalArrayLen(rep, "data"); ok {
 		meta["fetched"] = original
+		meta["count_total"] = original
+		meta["more_truncated"] = true
+		meta["suggested_page_size_for_full_data"] = max(len(data), 1)
 	}
 }
 
@@ -279,6 +295,12 @@ func reduceArrays(v any, path string, rep *TruncationReport) any {
 		}
 		return val
 	case []any:
+		if preserveArrayPath(path) {
+			for i, child := range val {
+				val[i] = reduceArrays(child, fmt.Sprintf("%s[%d]", path, i), rep)
+			}
+			return val
+		}
 		if len(val) <= 1 {
 			// Don't halve single-element or empty arrays, but recurse into children.
 			for i, child := range val {
@@ -303,6 +325,15 @@ func reduceArrays(v any, path string, rep *TruncationReport) any {
 		return result
 	default:
 		return v
+	}
+}
+
+func preserveArrayPath(path string) bool {
+	switch path {
+	case "types", "data.types", "meta.types", "data.request.types", "request.types":
+		return true
+	default:
+		return false
 	}
 }
 

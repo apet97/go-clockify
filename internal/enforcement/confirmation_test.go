@@ -129,6 +129,76 @@ func TestBeforeCall_HighRiskDryRun_MintsTokenAndSkipsHandler(t *testing.T) {
 	}
 }
 
+func TestBeforeCall_HighRiskDryRunWarnsForEphemeralConfirmationSecret(t *testing.T) {
+	secret, err := confirmation.NewRandomSecret()
+	if err != nil {
+		t.Fatalf("NewRandomSecret: %v", err)
+	}
+	signer, err := confirmation.NewSigner(confirmation.Config{
+		Enabled:   true,
+		Secret:    secret,
+		TTL:       5 * time.Minute,
+		Ephemeral: true,
+	})
+	if err != nil {
+		t.Fatalf("NewSigner: %v", err)
+	}
+	p := &Pipeline{
+		Policy:       standardPolicy(),
+		DryRun:       dryrun.Config{Enabled: true},
+		Confirmation: signer,
+	}
+
+	result, _, err := p.BeforeCall(
+		context.Background(),
+		"clockify_delete_invoice",
+		map[string]any{"invoice_id": "inv-1", "dry_run": true},
+		highRiskHints(mcp.RiskDestructive|mcp.RiskBilling),
+		nil,
+		lookupWith(map[string]mcp.ToolHandler{}),
+	)
+	if err != nil {
+		t.Fatalf("BeforeCall err = %v", err)
+	}
+	envelope, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("result must be a map, got %T", result)
+	}
+	if envelope["confirmation_token_volatile"] != true {
+		t.Fatalf("confirmation_token_volatile = %#v, want true", envelope["confirmation_token_volatile"])
+	}
+	if envelope["confirmation_token_volatile_reason"] == "" {
+		t.Fatalf("missing volatility reason: %#v", envelope)
+	}
+}
+
+func TestBeforeCall_HighRiskNonDestructiveDryRunUsesHandlerPreflight(t *testing.T) {
+	signer := newConfirmationSigner(t)
+	p := &Pipeline{
+		Policy:       standardPolicy(),
+		DryRun:       dryrun.Config{Enabled: true},
+		Confirmation: signer,
+	}
+	handler := func(_ context.Context, args map[string]any) (any, error) {
+		if args["dry_run"] != true {
+			t.Fatalf("dry_run flag not passed to handler: %#v", args)
+		}
+		return nil, errors.New("webhook URL cannot target private/reserved address (rejected_by=private)")
+	}
+
+	_, _, err := p.BeforeCall(
+		context.Background(),
+		"clockify_create_webhook",
+		map[string]any{"url": "https://10.0.0.1/hook", "dry_run": true},
+		highRiskHints(mcp.RiskWrite|mcp.RiskExternalSideEffect),
+		nil,
+		lookupWith(map[string]mcp.ToolHandler{"clockify_create_webhook": handler}),
+	)
+	if err == nil || !strings.Contains(err.Error(), "rejected_by=private") {
+		t.Fatalf("expected handler preflight error before token mint, got %v", err)
+	}
+}
+
 // TestBeforeCall_HighRiskWithValidToken_AllowsExecution verifies the
 // happy execution path: re-submit with the minted token + dry_run
 // removed, the gate passes through and the handler runs.

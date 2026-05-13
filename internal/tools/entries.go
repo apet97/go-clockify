@@ -419,6 +419,17 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		existing.ProjectID = projectID
 		changedFields = append(changedFields, "projectId")
 	}
+	if taskID := stringArg(args, "task_id"); taskID != "" && taskID != existing.TaskID {
+		existing.TaskID = taskID
+		changedFields = append(changedFields, "taskId")
+	}
+	if _, ok := args["tag_ids"]; ok {
+		tagIDs := stringSliceArg(args, "tag_ids")
+		if !stringSlicesEqual(tagIDs, existing.TagIDs) {
+			existing.TagIDs = tagIDs
+			changedFields = append(changedFields, "tagIds")
+		}
+	}
 
 	// Merge start
 	loc, err := s.locationFromArgs(args)

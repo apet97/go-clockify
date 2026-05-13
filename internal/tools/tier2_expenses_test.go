@@ -2,10 +2,20 @@ package tools
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 )
+
+func readBody(t *testing.T, r *http.Request) string {
+	t.Helper()
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return string(body)
+}
 
 // TestTier2_Expenses_FullSweep covers the complete expenses Tier 2
 // surface — expense CRUD plus expense-category CRUD — through a mocked
@@ -66,9 +76,22 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 				"categories": []map[string]any{{"id": "cat1", "name": "Travel"}},
 			})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses/categories":
-			respondJSON(t, w, map[string]any{"id": "cat-new", "name": "Software"})
+			if !strings.Contains(readBody(t, r), `"priceInCents":1250`) {
+				t.Fatalf("create expense category body missing priceInCents")
+			}
+			respondJSON(t, w, map[string]any{"id": "cat-new", "name": "Software", "priceInCents": 1250})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
-			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated"})
+			body := readBody(t, r)
+			if !strings.Contains(body, `"hasUnitPrice":true`) || !strings.Contains(body, `"unit":"mile"`) {
+				t.Fatalf("update expense category body missing unit-price fields: %s", body)
+			}
+			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "hasUnitPrice": true, "unit": "mile"})
+		case r.Method == "PATCH" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1/status":
+			body := readBody(t, r)
+			if !strings.Contains(body, `"archived":true`) {
+				t.Fatalf("archive expense category body missing archived=true: %s", body)
+			}
+			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "archived": true})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -153,16 +176,29 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_list_expense_categories")
 
 	// createExpenseCategory + missing-name validation
-	res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software"})
+	res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "has_unit_price": true, "price_in_cents": 1250, "unit": "seat"})
+	mustOK(t, res, err, "clockify_create_expense_category")
+	res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "dry_run": true})
 	mustOK(t, res, err, "clockify_create_expense_category")
 	if _, err := svc.createExpenseCategory(ctx, map[string]any{"name": ""}); err == nil {
 		t.Fatal("expected error for missing category name")
 	}
 
 	// updateExpenseCategory + validation
-	res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Updated"})
+	res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Updated", "has_unit_price": true, "unit": "mile"})
+	mustOK(t, res, err, "clockify_update_expense_category")
+	res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Preview", "dry_run": true})
 	mustOK(t, res, err, "clockify_update_expense_category")
 	if _, err := svc.updateExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
+		t.Fatal("expected validation error for empty category_id")
+	}
+
+	// archiveExpenseCategory — dry-run, executed, validation
+	res, err = svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "dry_run": true})
+	mustOK(t, res, err, "clockify_archive_expense_category")
+	res, err = svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "archived": true})
+	mustOK(t, res, err, "clockify_archive_expense_category")
+	if _, err := svc.archiveExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty category_id")
 	}
 

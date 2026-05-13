@@ -22,6 +22,7 @@ func init() {
 			"clockify_create_user_group",
 			"clockify_update_user_group",
 			"clockify_delete_user_group",
+			"clockify_invite_user",
 			"clockify_add_user_to_group",
 			"clockify_remove_user_from_group",
 			"clockify_update_user_role",
@@ -96,7 +97,23 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.DeleteUserGroup(ctx, args)
 			},
 		},
-		// 5. Add user to group (RW)
+		// 5. Invite user to workspace (RW + external side effect)
+		{
+			Tool: toolRW("clockify_invite_user", "Invite/add a user to the workspace by email. Supports dry_run:true before sending an invitation email.", map[string]any{
+				"type":     "object",
+				"required": []string{"email"},
+				"properties": map[string]any{
+					"email":      map[string]any{"type": "string", "format": "email", "description": "Email address to add to the workspace"},
+					"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send an invitation email. Defaults to true."},
+					"dry_run":    map[string]any{"type": "boolean", "description": "Preview the invitation payload without adding a user or sending email"},
+				},
+			}),
+			ReadOnlyHint: false,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.InviteUser(ctx, args)
+			},
+		},
+		// 6. Add user to group (RW)
 		{
 			Tool: toolRW("clockify_add_user_to_group", "Add a user to a user group", map[string]any{
 				"type":     "object",
@@ -104,6 +121,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				"properties": map[string]any{
 					"group_id": map[string]any{"type": "string", "description": "User group ID"},
 					"user_id":  map[string]any{"type": "string", "description": "User ID to add"},
+					"dry_run":  map[string]any{"type": "boolean", "description": "Preview adding the user without making changes"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -111,7 +129,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.AddUserToGroup(ctx, args)
 			},
 		},
-		// 6. Remove user from group (destructive)
+		// 7. Remove user from group (destructive)
 		{
 			Tool: toolDestructive("clockify_remove_user_from_group", "Remove a user from a user group", map[string]any{
 				"type":     "object",
@@ -393,6 +411,37 @@ func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (Res
 	return ok("clockify_delete_user_group", map[string]any{"deleted": true, "groupId": groupID}, map[string]any{"workspaceId": wsID}), nil
 }
 
+func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	email := strings.TrimSpace(stringArg(args, "email"))
+	if email == "" {
+		return ResultEnvelope{}, fmt.Errorf("email is required")
+	}
+	sendEmail := true
+	if v, ok := args["send_email"].(bool); ok {
+		sendEmail = v
+	}
+
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	payload := map[string]any{"email": email}
+	if dryrun.Enabled(args) {
+		preview := dryrunPreviewPayload("clockify_invite_user", payload)
+		preview["send_email"] = sendEmail
+		return ok("clockify_invite_user", preview, map[string]any{"workspaceId": wsID, "sendEmail": sendEmail}), nil
+	}
+	path, err := paths.Workspace(wsID, "users")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var result map[string]any
+	if err := s.Client.PostWithQuery(ctx, path, map[string]string{"send-email": strconv.FormatBool(sendEmail)}, payload, &result); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_invite_user", result, map[string]any{"workspaceId": wsID, "sendEmail": sendEmail}), nil
+}
+
 // AddUserToGroup adds a user to a user group.
 func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	groupID := stringArg(args, "group_id")
@@ -413,6 +462,13 @@ func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (Resu
 	path, err := paths.Workspace(wsID, "user-groups", groupID, "users")
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_add_user_to_group", dryrunPreviewPayload("clockify_add_user_to_group", payload), map[string]any{
+			"workspaceId": wsID,
+			"groupId":     groupID,
+			"userId":      userID,
+		}), nil
 	}
 	var result map[string]any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {

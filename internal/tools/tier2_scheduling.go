@@ -2,9 +2,11 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
@@ -437,6 +439,10 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
+		var apiErr *clockify.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode >= 500 {
+			return ResultEnvelope{}, fmt.Errorf("scheduling_capacity_unavailable: scheduling assignment create returned upstream %d; verify the workspace subscription/scheduling capacity and try clockify_list_assignments as a preflight: %w", apiErr.StatusCode, err)
+		}
 		return ResultEnvelope{}, err
 	}
 

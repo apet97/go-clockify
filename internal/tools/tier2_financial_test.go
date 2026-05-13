@@ -55,8 +55,8 @@ func TestExpenseHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("expenses group not registered")
 	}
-	if len(descs) != 10 {
-		t.Fatalf("expected 10 expense tools, got %d", len(descs))
+	if len(descs) != 11 {
+		t.Fatalf("expected 11 expense tools, got %d", len(descs))
 	}
 
 	names := map[string]bool{}
@@ -72,6 +72,7 @@ func TestExpenseHandlersCount(t *testing.T) {
 		"clockify_list_expense_categories",
 		"clockify_create_expense_category",
 		"clockify_update_expense_category",
+		"clockify_archive_expense_category",
 		"clockify_delete_expense_category",
 		"clockify_expense_report",
 	} {
@@ -439,6 +440,36 @@ func TestTier2CatalogRegistration(t *testing.T) {
 	}
 	if g := Tier2Groups["expenses"]; len(g.Keywords) == 0 {
 		t.Fatal("expenses group should have keywords")
+	}
+}
+
+func TestCreateExpenseMinorUnitAmountScalesToMajorUnits(t *testing.T) {
+	var gotAmount string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/expenses" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			t.Fatalf("parse multipart: %v", err)
+		}
+		gotAmount = r.FormValue("amount")
+		respondJSON(t, w, map[string]any{"id": "exp1", "amount": 12500})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.createExpense(context.Background(), map[string]any{
+		"user_id":     "u1",
+		"amount":      12500.0,
+		"amount_unit": "minor",
+		"date":        "2026-04-01T00:00:00Z",
+		"category_id": "cat1",
+	})
+	if err != nil {
+		t.Fatalf("create expense minor amount failed: %v", err)
+	}
+	if gotAmount != "125" {
+		t.Fatalf("expected minor-unit amount 12500 to send amount=125, got %q", gotAmount)
 	}
 }
 

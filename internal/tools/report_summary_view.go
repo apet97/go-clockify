@@ -221,18 +221,20 @@ func summarizeReportRollups(rollups []ReportRollupView) ReportGroupTotalsSummary
 	summary := ReportGroupTotalsSummary{Count: len(rollups), ByGroupType: map[string]int{}}
 	var seconds int64
 	var money reportEntryMoney
-	var walk func([]ReportRollupView)
-	walk = func(items []ReportRollupView) {
+	var walkCounts func([]ReportRollupView)
+	walkCounts = func(items []ReportRollupView) {
 		for _, item := range items {
-			seconds += item.Duration.Seconds
 			if item.Group != "" {
 				summary.ByGroupType[item.Group]++
 			}
-			money = mergeEntryFinancials(money, item.Financials)
-			walk(item.Children)
+			walkCounts(item.Children)
 		}
 	}
-	walk(rollups)
+	walkCounts(rollups)
+	for _, item := range rollups {
+		seconds += item.Duration.Seconds
+		money = mergeEntryFinancials(money, item.Financials)
+	}
 	summary.Duration = entryDurationView(seconds, "reports_api")
 	if money.hasMoney() {
 		summary.Financials = money.financials()

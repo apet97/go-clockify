@@ -75,6 +75,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"note":      map[string]any{"type": "string", "description": "Required note/reason"},
 					"half_day":  map[string]any{"type": "boolean", "description": "Request half day"},
 					"timezone":  timezoneInputProperty(),
+					"dry_run":   map[string]any{"type": "boolean", "description": "Preview request creation without making changes"},
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -288,12 +289,8 @@ func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 
-	var request map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
+	request, err := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
 	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Get(ctx, path, nil, &request); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -348,6 +345,12 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests")
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_time_off_request", dryrunPreviewPayload("clockify_create_time_off_request", payload), map[string]any{
+			"workspaceId": wsID,
+			"policyId":    policyID,
+		}), nil
 	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
@@ -454,8 +457,8 @@ func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any)
 	}
 
 	if dryrun.Enabled(args) {
-		var request map[string]any
-		if err := s.Client.Get(ctx, path, nil, &request); err != nil {
+		request, err := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
+		if err != nil {
 			return ResultEnvelope{}, err
 		}
 		return ResultEnvelope{
@@ -475,6 +478,38 @@ func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any)
 		"requestId": requestID,
 		"policyId":  policyID,
 	}, map[string]any{"workspaceId": wsID}), nil
+}
+
+func (s *Service) fetchTimeOffRequest(ctx context.Context, wsID, policyID, requestID string) (map[string]any, error) {
+	path, err := paths.Workspace(wsID, "time-off", "requests", requestID)
+	if err != nil {
+		return nil, err
+	}
+	var request map[string]any
+	if err := s.Client.Get(ctx, path, nil, &request); err == nil {
+		return request, nil
+	}
+
+	searchPath, err := paths.Workspace(wsID, "time-off", "requests")
+	if err != nil {
+		return nil, err
+	}
+	var envelope struct {
+		Requests []map[string]any `json:"requests"`
+	}
+	body := map[string]any{"page": 1, "pageSize": 200}
+	if err := s.Client.Post(ctx, searchPath, body, &envelope); err != nil {
+		return nil, err
+	}
+	for _, candidate := range envelope.Requests {
+		if firstReportString(candidate, "id", "_id", "requestId", "request_id") != requestID {
+			continue
+		}
+		if policyID == "" || firstReportString(candidate, "policyId", "policy_id") == policyID {
+			return candidate, nil
+		}
+	}
+	return nil, fmt.Errorf("time off request %s not found", requestID)
 }
 
 func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -736,18 +771,43 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	var balance map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "balances", userID)
+	var envelope struct {
+		Count    int              `json:"count"`
+		Balances []map[string]any `json:"balances"`
+	}
+	path, err := paths.Workspace(wsID, "time-off", "balance", "user", userID)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.Client.Get(ctx, path, nil, &balance); err != nil {
+	query := map[string]string{"page": "1", "page-size": "200"}
+	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
+	}
+	var balance map[string]any
+	for _, candidate := range envelope.Balances {
+		if timeOffBalancePolicyID(candidate) == policyID {
+			balance = candidate
+			break
+		}
+	}
+	if balance == nil {
+		return ResultEnvelope{}, fmt.Errorf("time off balance for policy_id %s and user_id %s not found", policyID, userID)
 	}
 
 	return ok("clockify_time_off_balance", timeOffBalanceViewFromRaw(balance), map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"userId":      userID,
+		"total":       envelope.Count,
 	}), nil
+}
+
+func timeOffBalancePolicyID(raw map[string]any) string {
+	if id := firstReportString(raw, "policyId", "policy_id"); id != "" {
+		return id
+	}
+	if policy, ok := raw["policy"].(map[string]any); ok {
+		return firstReportString(policy, "id", "_id", "policyId", "policy_id")
+	}
+	return ""
 }

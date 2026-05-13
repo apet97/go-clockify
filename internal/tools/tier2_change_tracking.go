@@ -20,6 +20,24 @@ type EntityChangesData struct {
 
 type EntityChangeView map[string]any
 
+var entityChangeTypes = []string{
+	"TIME_ENTRY",
+	"PROJECTS",
+	"TASKS",
+	"CLIENTS",
+	"SCHEDULED_ASSIGNMENT",
+	"TAGS",
+	"TIME_ENTRY_CUSTOM_FIELD_VALUE",
+}
+
+var entityChangeTypeAllowed = func() map[string]bool {
+	out := make(map[string]bool, len(entityChangeTypes))
+	for _, typ := range entityChangeTypes {
+		out[typ] = true
+	}
+	return out
+}()
+
 func init() {
 	registerTier2Group(Tier2Group{
 		Name:        "change_tracking",
@@ -39,11 +57,15 @@ func changeTrackingHandlers(s *Service) []mcp.ToolDescriptor {
 			"required": []string{"change_kind", "start", "end"},
 			"properties": map[string]any{
 				"change_kind": map[string]any{"type": "string", "enum": []string{"created", "updated", "deleted"}},
-				"types":       stringArraySchema("Clockify entity types, e.g. TIME_ENTRY, PROJECT, TASK, CLIENT"),
-				"start":       map[string]any{"type": "string", "description": "Start timestamp/date for the change window"},
-				"end":         map[string]any{"type": "string", "description": "End timestamp/date for the change window"},
-				"page":        map[string]any{"type": "integer", "minimum": 1},
-				"limit":       map[string]any{"type": "integer", "minimum": 1, "maximum": 1000},
+				"types": map[string]any{
+					"type":        "array",
+					"description": "Clockify entity types accepted by the entity-change feed.",
+					"items":       map[string]any{"type": "string", "enum": entityChangeTypes},
+				},
+				"start": map[string]any{"type": "string", "description": "Start timestamp/date for the change window"},
+				"end":   map[string]any{"type": "string", "description": "End timestamp/date for the change window"},
+				"page":  map[string]any{"type": "integer", "minimum": 1},
+				"limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 1000},
 			},
 		}), envelopeSchemaFor[EntityChangesData]("clockify_entity_changes")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.entityChanges(ctx, args)
@@ -87,6 +109,9 @@ func (s *Service) entityChanges(ctx context.Context, args map[string]any) (Resul
 	for i := range types {
 		types[i] = strings.ToUpper(strings.TrimSpace(types[i]))
 		if types[i] != "" {
+			if !entityChangeTypeAllowed[types[i]] {
+				return ResultEnvelope{}, fmt.Errorf("types contains unsupported value %q; valid values are %s", types[i], strings.Join(entityChangeTypes, ", "))
+			}
 			query.Add("type", types[i])
 		}
 	}

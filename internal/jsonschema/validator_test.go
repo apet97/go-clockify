@@ -36,6 +36,27 @@ func TestValidateTypeSuccess(t *testing.T) {
 	}
 }
 
+func TestValidateTypeArraySupportsNullables(t *testing.T) {
+	schema := map[string]any{"type": []any{"boolean", "null"}}
+	if err := Validate(schema, true); err != nil {
+		t.Fatalf("boolean should pass nullable boolean schema: %v", err)
+	}
+	if err := Validate(schema, nil); err != nil {
+		t.Fatalf("nil should pass nullable boolean schema: %v", err)
+	}
+	err := Validate(schema, "true")
+	if err == nil {
+		t.Fatal("string should not pass nullable boolean schema")
+	}
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("want *ValidationError, got %T", err)
+	}
+	if !strings.Contains(ve.Message, "boolean or null") {
+		t.Fatalf("message should name allowed types, got %q", ve.Message)
+	}
+}
+
 func TestValidateTypeMismatch(t *testing.T) {
 	cases := []struct {
 		name   string

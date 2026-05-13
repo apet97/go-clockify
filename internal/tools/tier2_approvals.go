@@ -197,6 +197,9 @@ func (s *Service) postApprovalPeriod(ctx context.Context, args map[string]any, a
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	if dryrun.Enabled(args) {
+		return ok(action, dryrunPreviewPayload(action, body), map[string]any{"workspaceId": wsID}), nil
+	}
 	var created any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
@@ -232,6 +235,9 @@ func (s *Service) postUserApprovalPeriod(ctx context.Context, args map[string]an
 	path, err := paths.Workspace(wsID, parts...)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	if dryrun.Enabled(args) {
+		return ok(action, dryrunPreviewPayload(action, body), map[string]any{"workspaceId": wsID, "userId": userID}), nil
 	}
 	var created any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
@@ -305,6 +311,7 @@ func approvalPeriodInputSchema(forUser bool) map[string]any {
 		},
 		"period_start": map[string]any{"type": "string", "description": "Period start in RFC3339/millisecond form, e.g. 2026-05-01T00:00:00.000Z"},
 		"start":        map[string]any{"type": "string", "description": "Legacy alias for period_start; when used alone the period defaults to WEEKLY"},
+		"dry_run":      map[string]any{"type": "boolean", "description": "Preview the approval submission without making changes"},
 	}
 	if forUser {
 		required = append([]string{"user_id"}, required...)
