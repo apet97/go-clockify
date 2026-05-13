@@ -4,8 +4,8 @@
   "files": [
     {
       "path": "AIII/openapi.yaml",
-      "bytes": 866879,
-      "sha256": "5367e5a6343ca82959dd1df37ab8b463bca6ca7084de45678a0662e15d761546"
+      "bytes": 866604,
+      "sha256": "044e2d2e3de91325c0ac26ab84dfe676d6a36432d678cced8ea8f37a3a640de2"
     },
     {
       "path": "clockify-api-probe-lab/APPROVALDOC.md",
@@ -104,8 +104,8 @@
     },
     {
       "path": "clockify-api-probe-lab/WEBHOOKDOC.md",
-      "bytes": 318510,
-      "sha256": "73e0ef478084770c68a6b264f1bd4d006ccd0ac0af82d4b27c2993e585851999"
+      "bytes": 317625,
+      "sha256": "12ea81becbdb105b7f25a133fd414be7e16b9bd0da505cb69ead204265d92a2e"
     },
     {
       "path": "clockify-api-probe-lab/WORKSPACESDOC.md",
@@ -369,18 +369,18 @@
     },
     {
       "path": "newfolderwithfindings/agent-04-auth-api-key-loading.md",
-      "bytes": 12588,
-      "sha256": "03213585244c44c7db6627060cf0247fb3e2760b777ab9ce58b645d4d63c9f42"
+      "bytes": 12348,
+      "sha256": "fc0ac21f1476e9eaee0fc50f34cacbab59eb2bae035cae43b95b8c296af8a6c3"
     },
     {
       "path": "newfolderwithfindings/agent-05-api-key-redaction-and-secret-safety.md",
-      "bytes": 10437,
-      "sha256": "bff58ca51163bc12d93571d0a868d545916264a80da6cd2bee8a4da52c709382"
+      "bytes": 10396,
+      "sha256": "1b46242645b2b11a16dadef843fb2735c624c4794f2a6ecadd39447af10daed4"
     },
     {
       "path": "newfolderwithfindings/agent-06-config-env-validation.md",
-      "bytes": 14164,
-      "sha256": "0c5bbea8f085d83c21c572c9f50549068335eb26fb2f0d6ac4a67a282c582017"
+      "bytes": 14033,
+      "sha256": "ece8b490d9c96fc6b0259f42a659b26b80e5dbc518c27fb6e6f57e22fdf27e9a"
     },
     {
       "path": "newfolderwithfindings/agent-07-doctor-command-output.md",
@@ -519,8 +519,8 @@
     },
     {
       "path": "newfolderwithfindings/agent-34-unit-tests.md",
-      "bytes": 12302,
-      "sha256": "9d59926a3af2914693f9c3cae4254db255a2907eefabcc0de875b901141cc166"
+      "bytes": 12191,
+      "sha256": "94ea624e4185282194a7a4554002f475a2c111ba02f6b0d36a867ebbbf8d76e4"
     },
     {
       "path": "newfolderwithfindings/agent-35-integration-tests-mocked-only.md",
@@ -544,8 +544,8 @@
     },
     {
       "path": "newfolderwithfindings/agent-39-docker-build-smoke.md",
-      "bytes": 11298,
-      "sha256": "71b1b0bf80c3f78db4ff31a9cb036f1b49a3b5f5973edb5e0d575426852137a7"
+      "bytes": 11189,
+      "sha256": "ebb74c4cd9898c96312ebd6e01ffc063efeb65acc720c5d94d91c325965b90dc"
     },
     {
       "path": "newfolderwithfindings/agent-40-docker-run-smoke.md",
@@ -724,8 +724,8 @@
     },
     {
       "path": "realOPENAPI/WEBHOOKSOPENAPI.YAML",
-      "bytes": 20849,
-      "sha256": "bf4d37e84ccf4644995eefbda4c5d2edb6342da85fae3c684b56249e3eef4da7"
+      "bytes": 20738,
+      "sha256": "86a5bee79ec34a0092e2c42fe946c5815df77198c18a7239947335e89da8f6f6"
     },
     {
       "path": "realOPENAPI/WORKSPACEOPENAPI.YAML",

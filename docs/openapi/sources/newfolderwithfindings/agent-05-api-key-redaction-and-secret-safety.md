@@ -39,16 +39,16 @@ go test ./internal/authn/ -v -count=1
 go test ./internal/enforcement/ -v -count=1
 
 # Doctor with real API key (CLOCKIFY_API_KEY displayed as "set (redacted)")
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
   go run ./cmd/clockify-mcp doctor
 
 # Valid key probe
-curl -s -H "X-Api-Key: <REDACTED>" \
+curl -s -H "X-Api-Key: " \
   "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e"
 # -> 200, workspace data
 
 # Invalid key probe
-curl -s -w "\nHTTP:%{http_code}" -H "X-Api-Key: INVALID-KEY-12345" \
+curl -s -w "\nHTTP:%{http_code}" -H "X-Api-Key: " \
   "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e"
 # -> 401, {"message":"Api key does not exist","code":4003}
 
@@ -118,7 +118,7 @@ The `MCP_CONTROL_PLANE_DSN` env var is already correctly marked `Sensitive: true
 
 ### DSN password leak
 1. Set `MCP_CONTROL_PLANE_DSN=postgres://user:password@localhost:5432/db`
-2. Set `CLOCKIFY_API_KEY=<any valid key>` and `MCP_TRANSPORT=streamable_http`
+2. Set `CLOCKIFY_API_KEY= valid key>` and `MCP_TRANSPORT=streamable_http`
 3. Start the server: `go run ./cmd/clockify-mcp`
 4. Observe the `server_start` log line — before the fix, the config map contains the raw DSN with password
 

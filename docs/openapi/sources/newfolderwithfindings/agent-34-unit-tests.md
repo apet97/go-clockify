@@ -55,17 +55,17 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | /tmp/clockify-mcp
 # -> serverInfo: {name:"clockify-go-mcp", version:"dev"}, protocolVersion:"2025-03-26"
 
 # Live API probes
-curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/projects?page-size=2"
-curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "https://api.clockify.me/api/v1/user"
-curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/tags?page-size=3"
-curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/clients?page-size=2"
-curl -s -X POST -H "X-Api-Key: $CLOCKIFY_API_KEY" -H "Content-Type: application/json" \
+curl -s -H "X-Api-Key: " "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/projects?page-size=2"
+curl -s -H "X-Api-Key: " "https://api.clockify.me/api/v1/user"
+curl -s -H "X-Api-Key: " "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/tags?page-size=3"
+curl -s -H "X-Api-Key: " "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/clients?page-size=2"
+curl -s -X POST -H "X-Api-Key: " -H "Content-Type: application/json" \
   -d '{"page-size":2}' "https://api.clockify.me/api/v1/workspaces/$CLOCKIFY_WORKSPACE_ID/time-entries"
 
 # Error handling probes
-curl -s -H "X-Api-Key: wrong-key" "..."  # -> {"message":"Api key does not exist","code":4003}
+curl -s -H "X-Api-Key: " "..."  # -> {"message":"Api key does not exist","code":4003}
 curl -s "..."                             # -> {"message":"Multiple or none auth tokens present","code":1000}
-curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "...?page-size=-1"  # -> code 501
+curl -s -H "X-Api-Key: " "...?page-size=-1"  # -> code 501
 ```
 
 Key: `$CLOCKIFY_API_KEY` and `$CLOCKIFY_WORKSPACE_ID` source from `/tmp/clockify-livetest.env` (redacted).

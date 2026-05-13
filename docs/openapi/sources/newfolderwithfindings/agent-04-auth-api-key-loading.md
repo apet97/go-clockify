@@ -36,32 +36,32 @@ Completed UTC: 2026-05-10T21:20:00Z
 go build -o /tmp/clockify-mcp-qa04 ./cmd/clockify-mcp/
 
 # Doctor (vanilla)
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # Doctor --strict
-CLOCKIFY_API_KEY=test-key-12345 CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!! \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!! \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor --strict
 
 # Doctor --check-backends
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor --check-backends
 
 # Missing key (stdio)
-CLOCKIFY_API_KEY="" CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # Invalid workspace ID
-CLOCKIFY_API_KEY=test-key-12345 CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!! \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!! \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # Empty base URL (should default)
-CLOCKIFY_API_KEY=test-key-12345 CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
   CLOCKIFY_BASE_URL="" MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # --version / --help (check for secret leaks)
 /tmp/clockify-mcp-qa04 --version
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   /tmp/clockify-mcp-qa04 --help
 
 # Test suite
@@ -73,17 +73,17 @@ go test ./internal/vault/... -count=1
 
 # MCP stdio smoke: initialize + tools/list
 printf '{"jsonrpc":"2.0","id":1,"method":"initialize",...}\n{"jsonrpc":"2.0","id":2,"method":"tools/list",...}\n' | \
-  CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> \
+  CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04
 
 # MCP stdio smoke: tools/call with valid key
 printf '...initialize...\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_get_workspace",...}}\n' | \
-  CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> \
+  CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04
 
 # MCP stdio smoke: tools/call with bad key
 printf '...initialize...\n...tools/call clockify_get_workspace...\n' | \
-  CLOCKIFY_API_KEY=bad-key-invalid-12345 CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04
 ```
 
@@ -91,20 +91,20 @@ printf '...initialize...\n...tools/call clockify_get_workspace...\n' | \
 
 ```sh
 # Valid key
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/workspaces          → 200, 25 workspaces
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/workspaces/<REDACTED> → 200
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/user                  → 200, active user
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces          → 200, 25 workspaces
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/<REDACTED> → 200
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/user                  → 200, active user
 
 # Invalid key
-curl -H "X-Api-Key: this-is-an-invalid-key-12345" .../workspaces  → 401
-curl -H "X-Api-Key: <script>alert(1)</script>"     .../workspaces  → 401
+curl -H "X-Api-Key: " .../workspaces  → 401
+curl -H "X-Api-Key: "     .../workspaces  → 401
 
 # Missing key
 curl .../workspaces                                  → 401
 curl -H "X-Api-Key:" .../workspaces                  → 401
 
 # Paginated list
-curl -H "X-Api-Key: <REDACTED>" .../workspaces/<REDACTED>/projects?page-size=5 → 200
+curl -H "X-Api-Key: " .../workspaces/<REDACTED>/projects?page-size=5 → 200
 ```
 
 ## Findings
@@ -141,7 +141,7 @@ curl -H "X-Api-Key: <REDACTED>" .../workspaces/<REDACTED>/projects?page-size=5 �
 
 ### Finding 5 (Verified safe): Invalid API key produces clean error at tool-call time
 
-**What**: MCP server with `CLOCKIFY_API_KEY=bad-key-invalid-12345` starts and initializes successfully. On `tools/call clockify_get_workspace`, returns `isError: true` with: `"clockify GET failed: 401 Unauthorized: Api key does not exist (upstream_code=4003)"`. The error does NOT echo the actual key value.
+**What**: MCP server with `CLOCKIFY_API_KEY=` starts and initializes successfully. On `tools/call clockify_get_workspace`, returns `isError: true` with: `"clockify GET failed: 401 Unauthorized: Api key does not exist (upstream_code=4003)"`. The error does NOT echo the actual key value.
 
 ### Finding 6 (Verified safe): Base URL defaults correctly when empty
 
@@ -173,7 +173,7 @@ None. No code changes were required — the auth-api-key-loading area is solid.
 ## Reproduction steps for each issue
 
 ### P3: Permissive workspace ID validation
-1. Set `CLOCKIFY_API_KEY=<any-value>` and `CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!!`
+1. Set `CLOCKIFY_API_KEY=` and `CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!!`
 2. Run `clockify-mcp doctor`
 3. Observe: config load passes (exit 0)
 4. Start MCP server, call `clockify_get_workspace`

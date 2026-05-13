@@ -21665,7 +21665,7 @@ components:
         authToken:
           type: string
           description: Represents an authentication token.
-          example: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI2NGI3YmU3YmUwODM1Yjc2ZDYzOTY5YTciLCJtdWx0aUZhY3RvciI6dHJ1ZSwiaXNzIjoiY2xvY2tpZnkiLCJuYW1lIjoiTWFydGluIExsb3lkIiwiZXhwIjoxNjkzMzY5MzEwLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjkzMzI2MTEwLCJqdGkiOiJZVGcxT0Raak9XTXRPRGRsWVMwME5qZ3hMVGxpTlRndE5UQmlOVEprTmpOaE
+          example: REDACTED_JWT_EXAMPLE
         deliveryEnabled:
           type: boolean
           description: Indicates whether webhook delivery is enabled or not. It can be disabled if delivery failed for too many times.

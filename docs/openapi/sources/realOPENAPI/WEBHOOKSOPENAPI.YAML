@@ -220,7 +220,7 @@ components:
             $ref: '#/components/schemas/WebhookCollectionDtoV1'
           example:
             webhooks:
-            - authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            - authToken: ""
               deliveryEnabled: false
               enabled: false
               id: 76a687e29ae1f428e7ebe101
@@ -242,7 +242,7 @@ components:
           schema:
             $ref: '#/components/schemas/WebhookDtoV1'
           example:
-            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            authToken: ""
             deliveryEnabled: false
             enabled: false
             id: 76a687e29ae1f428e7ebe101
@@ -263,7 +263,7 @@ components:
           schema:
             $ref: '#/components/schemas/WebhookDtoV1'
           example:
-            authToken: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+            authToken: ""
             deliveryEnabled: false
             enabled: false
             id: 76a687e29ae1f428e7ebe101

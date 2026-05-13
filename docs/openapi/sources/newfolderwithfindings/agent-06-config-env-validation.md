@@ -37,15 +37,15 @@ PASS WITH CONCERNS
 go build ./cmd/clockify-mcp/
 
 # Doctor — no API key
-CLOCKIFY_API_KEY="" CLOCKIFY_WORKSPACE_ID="" MCP_TRANSPORT=stdio ./clockify-mcp doctor
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID="" MCP_TRANSPORT=stdio ./clockify-mcp doctor
 # Exit: 2, "CLOCKIFY_API_KEY is required"
 
 # Doctor — valid config
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
 # Exit: 0, OK: transport=stdio
 
 # Doctor — invalid workspace ID
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID="INVALID/WORKSPACE" ./clockify-mcp doctor
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID="INVALID/WORKSPACE" ./clockify-mcp doctor
 # Exit: 2, "CLOCKIFY_WORKSPACE_ID contains invalid characters"
 
 # Doctor — insecure base URL
@@ -101,7 +101,7 @@ MCP_PROFILE=local-stdio ... ./clockify-mcp doctor --strict
 # Exit: 3, 3 strict findings flagged
 
 # Doctor — streamable_http without API key (required OIDC config)
-MCP_TRANSPORT=streamable_http CLOCKIFY_API_KEY="" ... ./clockify-mcp doctor
+MCP_TRANSPORT=streamable_http CLOCKIFY_API_KEY= ... ./clockify-mcp doctor
 # Exit: 2, "MCP_OIDC_ISSUER is required when MCP_TRANSPORT=streamable_http and MCP_AUTH_MODE=oidc"
 
 # Doctor — happy path streamable_http + static_bearer + dev backend
@@ -133,28 +133,28 @@ go test ./internal/config/... ./internal/bootstrap/... ./internal/runtime/... ./
 
 ```bash
 # Probe 1: Valid API key → whoami
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/user
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/user
 # HTTP 200 — returns user object
 
 # Probe 2: Invalid API key
-curl -H "X-Api-Key: INVALID_KEY_12345" https://api.clockify.me/api/v1/user
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/user
 # HTTP 401 — {"message":"Api key does not exist","code":4003}
 
 # Probe 3: Valid workspace ID
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/workspaces/<REDACTED>
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/<REDACTED>
 # HTTP 200 — returns workspace "WORKSPACE" with full settings
 
 # Probe 4: Nonexistent workspace (valid format, wrong ID)
-curl -H "X-Api-Key: <REDACTED>" https://api.clockify.me/api/v1/workspaces/000000000000000000000000
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/000000000000000000000000
 # HTTP 404
 
 # Probe 5: Create and delete test time entry
-curl -X POST -H "X-Api-Key: <REDACTED>" -H "Content-Type: application/json" \
+curl -X POST -H "X-Api-Key: " -H "Content-Type: application/json" \
   https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries \
   -d '{"start":"...","end":"...","description":"qa-agent-06-config-test-..."}'
 # HTTP 200 — created entry
 
-curl -X DELETE -H "X-Api-Key: <REDACTED>" \
+curl -X DELETE -H "X-Api-Key: " \
   https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/6a00f5d5d9647159dc102df0
 # HTTP 204 — deleted successfully
 ```
@@ -167,9 +167,9 @@ curl -X DELETE -H "X-Api-Key: <REDACTED>" \
 
 **Repro:**
 ```bash
-CLOCKIFY_BOOTSTRAP_MODE=invalid_mode CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
+CLOCKIFY_BOOTSTRAP_MODE=invalid_mode CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
 # Exit: 0, "Load() result: OK"
-CLOCKIFY_BOOTSTRAP_MODE=invalid_mode CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp
+CLOCKIFY_BOOTSTRAP_MODE=invalid_mode CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp
 # Exit: 1, error about invalid bootstrap mode
 ```
 
@@ -183,9 +183,9 @@ CLOCKIFY_BOOTSTRAP_MODE=invalid_mode CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSP
 
 **Repro:**
 ```bash
-CLOCKIFY_POLICY=invalid_policy CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
+CLOCKIFY_POLICY=invalid_policy CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp doctor
 # Exit: 0, "Load() result: OK"
-CLOCKIFY_POLICY=invalid_policy CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp
+CLOCKIFY_POLICY=invalid_policy CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> ./clockify-mcp
 # Exit: 1, "invalid CLOCKIFY_POLICY: invalid_policy"
 ```
 

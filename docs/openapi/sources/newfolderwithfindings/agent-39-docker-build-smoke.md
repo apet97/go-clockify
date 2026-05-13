@@ -31,14 +31,14 @@ docker run --rm clockify-mcp:qa-smoke-39 --help       # full help output
 
 # Doctor (with live creds)
 docker run --rm \
-  -e CLOCKIFY_API_KEY=<REDACTED> \
+  -e CLOCKIFY_API_KEY= \
   -e CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   -e MCP_TRANSPORT=stdio \
   clockify-mcp:qa-smoke-39 doctor --strict
 
 # Streamable HTTP server
 docker run --rm -d --name clockify-mcp-smoke-39 \
-  -e CLOCKIFY_API_KEY=<REDACTED> \
+  -e CLOCKIFY_API_KEY= \
   -e CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   -e MCP_TRANSPORT=streamable_http \
   -e MCP_HTTP_BIND=0.0.0.0:8080 \
@@ -56,7 +56,7 @@ curl http://127.0.0.1:9080/ready    # {"status":"ok"}
 
 # MCP initialize (succeeded — sessionId, capabilities, serverInfo)
 curl -X POST http://127.0.0.1:9080/mcp \
-  -H "Authorization: Bearer qa-smoke-39-test-token-16chars" \
+  -H "Authorization: Bearer " \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize",...}'
 
@@ -70,7 +70,7 @@ curl -X POST http://127.0.0.1:9080/mcp \
 
 # SSE endpoint (establishes session, streams keepalive)
 curl -s -N --max-time 3 \
-  -H "Authorization: Bearer qa-smoke-39-test-token-16chars" \
+  -H "Authorization: Bearer " \
   -H "Accept: text/event-stream" \
   -H "Mcp-Session-Id: <session>" \
   http://127.0.0.1:9080/mcp
@@ -82,7 +82,7 @@ docker compose -f deploy/docker-compose.yml config   # validates OK
 # Cleanup
 docker stop clockify-mcp-smoke-39
 curl -X DELETE "https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/6a00fc23385b9fac085a7b31" \
-  -H "X-Api-Key: <REDACTED>"   # HTTP 204
+  -H "X-Api-Key: "   # HTTP 204
 ```
 
 ## Live API probes run
@@ -105,7 +105,7 @@ The comment says `# Stage 2: Minimal runtime image (~10MB)` but the actual image
 **Recommendation:** Update comment to `(~18 MB)` or similar.
 
 ### 2. [P3] docker-compose.yml references env file that is easy to miss
-**Location:** `deploy/docker-compose.yml` references `CLOCKIFY_API_KEY=${CLOCKIFY_API_KEY}` etc., but the example `.env` file lives at `examples/docker-compose.env` (repo root), not inside `deploy/`. The `deploy/examples/` directory contains profile-specific env templates but no direct docker-compose env template.
+**Location:** `deploy/docker-compose.yml` references `CLOCKIFY_API_KEY=` etc., but the example `.env` file lives at `examples/docker-compose.env` (repo root), not inside `deploy/`. The `deploy/examples/` directory contains profile-specific env templates but no direct docker-compose env template.
 
 The README at `examples/docker-compose.env` correctly documents `cp examples/docker-compose.env deploy/.env`, but the docker-compose.yml itself has no comment pointing there. A new user running `docker compose up` from `deploy/` gets warnings about unset variables with no immediate pointer to the env template.
 
