@@ -20,8 +20,8 @@ func TestPromptsListReturnsBuiltins(t *testing.T) {
 	}
 	result := resp.Result.(map[string]any)
 	prompts, _ := result["prompts"].([]Prompt)
-	if len(prompts) != 5 {
-		t.Fatalf("expected 5 builtin prompts, got %d", len(prompts))
+	if len(prompts) != 10 {
+		t.Fatalf("expected 10 builtin prompts, got %d", len(prompts))
 	}
 	wantOrder := []string{
 		"log-week-from-calendar",
@@ -29,6 +29,11 @@ func TestPromptsListReturnsBuiltins(t *testing.T) {
 		"find-unbilled-hours",
 		"find-duplicate-entries",
 		"generate-timesheet-report",
+		"invoice-review-and-send",
+		"approval-cycle",
+		"time-off-review",
+		"scheduling-capacity-review",
+		"webhook-rollout-check",
 	}
 	for i, want := range wantOrder {
 		if prompts[i].Name != want {
@@ -90,6 +95,35 @@ func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 			want:        []string{"clockify_timesheet_review", "overlap issues"},
 			notWant:     []string{"clockify_list_entries", "{{lookback_days}}"},
 			description: "duplicate scan should use review issues instead of manual entry loops",
+		},
+		{
+			name: "invoice-review-and-send",
+			args: map[string]any{"client": "Acme", "since": "2026-05-01", "until": "2026-05-31"},
+			want: []string{"clockify_send_invoice", "dry-run preview", "external side effect"},
+		},
+		{
+			name:        "approval-cycle",
+			args:        map[string]any{"period": "2026-W19"},
+			want:        []string{"clockify_list_approval_requests", "dry_run:true"},
+			description: "approval recipe should require read-before-write and previews",
+		},
+		{
+			name:        "time-off-review",
+			args:        map[string]any{"user": "Ada"},
+			want:        []string{"policies", "balances", "dry_run:true"},
+			description: "time-off recipe should review balance context before writes",
+		},
+		{
+			name:        "scheduling-capacity-review",
+			args:        map[string]any{"user": "Ada", "week_start": "2026-05-11"},
+			want:        []string{"per-user capacity totals", "dry_run:true"},
+			description: "scheduling recipe should prefer typed capacity tools",
+		},
+		{
+			name:        "webhook-rollout-check",
+			args:        map[string]any{"url": "https://hooks.example.com/clockify", "event": "TIME_ENTRY_CREATED"},
+			want:        []string{"DNS validation", "mask any auth token", "external side effect"},
+			description: "webhook recipe should foreground DNS and token safety",
 		},
 	}
 	for _, tt := range tests {

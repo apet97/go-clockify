@@ -4813,10 +4813,17 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "discover available tools",
+          "preflight Tier-2 activation"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
+        "preferOver": [
+          "clockify_search_tools"
+        ],
         "readOnlyHint": true,
         "riskClass": [
           "read"
@@ -5322,10 +5329,17 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "log finished past work",
+          "create a complete time entry"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
+        "preferOver": [
+          "clockify_add_entry"
+        ],
         "readOnlyHint": false,
         "riskClass": [
           "write"
@@ -5844,10 +5858,12 @@
         "type": "object"
       },
       "annotations": {
+        "compatibilityShim": true,
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
+        "primaryTool": "clockify_resolve_name",
         "readOnlyHint": true,
         "riskClass": [
           "read"
@@ -5916,10 +5932,16 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "resolve human names to Clockify IDs"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
+        "preferOver": [
+          "clockify_resolve_debug"
+        ],
         "readOnlyHint": true,
         "riskClass": [
           "read"
@@ -5974,10 +5996,12 @@
         "type": "object"
       },
       "annotations": {
+        "compatibilityShim": true,
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": true,
         "openWorldHint": true,
+        "primaryTool": "clockify_list_tools",
         "readOnlyHint": false,
         "riskClass": [
           "write"
@@ -7139,10 +7163,16 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "fill a reviewed timesheet gap"
+        ],
         "destructiveHint": false,
         "dryRun": true,
         "idempotentHint": false,
         "openWorldHint": true,
+        "preferAfter": [
+          "clockify_timesheet_review"
+        ],
         "readOnlyHint": false,
         "riskClass": [
           "write"
@@ -7525,6 +7555,10 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "find gaps and overlaps",
+          "plan timesheet cleanup"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "idempotentHint": true,
@@ -13865,6 +13899,7 @@
         "type": "object"
       },
       "annotations": {
+        "compatibilityShim": true,
         "confirmationRiskClass": [
           "write",
           "admin",
@@ -13874,6 +13909,7 @@
         "dryRun": false,
         "idempotentHint": false,
         "openWorldHint": true,
+        "primaryTool": "clockify_update_project_memberships",
         "readOnlyHint": false,
         "requiresConfirmationToken": true,
         "riskClass": [

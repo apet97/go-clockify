@@ -37,7 +37,7 @@ type Prompt struct {
 	Messages    []PromptMessage  `json:"messages"`
 }
 
-// promptRegistry stores the five built-in Clockify prompts. Registration is
+// promptRegistry stores the built-in Clockify prompts. Registration is
 // done in init() and guarded by a mutex so tests can add fixture prompts
 // without racing reads from the dispatch path.
 type promptRegistry struct {
@@ -163,6 +163,60 @@ func builtinPrompts() []Prompt {
 			},
 			Messages: []PromptMessage{
 				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` with `weekly_filter:{\"group\":\"PROJECT\",\"subgroup\":\"TIME\"}` for Reports API totals, then use `clockify_timesheet_review` to flag gaps or overlaps before rendering every day of the week including zero-hour days."}},
+			},
+		},
+		{
+			Name:        "invoice-review-and-send",
+			Description: "Review invoice readiness, draft invoice changes, and require dry-run/confirmation before external invoice actions.",
+			Arguments: []PromptArgument{
+				{Name: "client", Description: "Client name or ID to invoice.", Required: true},
+				{Name: "since", Description: "ISO date lower bound.", Required: true},
+				{Name: "until", Description: "ISO date upper bound.", Required: true},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review invoice readiness for client {{client}} from {{since}} through {{until}}. Use invoice and report tools to identify billable entries, draft invoice line items, and surface missing client/project metadata. Do not call `clockify_send_invoice` until a dry-run preview is shown and I explicitly confirm the external side effect."}},
+			},
+		},
+		{
+			Name:        "approval-cycle",
+			Description: "Plan an approval workflow by listing approval requests and previewing approve/reject actions before execution.",
+			Arguments: []PromptArgument{
+				{Name: "period", Description: "Approval period or date range to inspect.", Required: true},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Plan the approval cycle for {{period}}. Use `clockify_list_approval_requests` and `clockify_get_approval_request` first, summarize pending/blocked requests, and use dry_run:true for any `clockify_approve_timesheet`, `clockify_reject_timesheet`, or `clockify_withdraw_approval` proposal before execution."}},
+			},
+		},
+		{
+			Name:        "time-off-review",
+			Description: "Review time-off policies, balances, and requests before drafting safe request/status changes.",
+			Arguments: []PromptArgument{
+				{Name: "user", Description: "User name or ID whose time-off state should be reviewed.", Required: true},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review time-off state for {{user}}. Resolve the user, inspect policies, balances, and existing requests, then explain any plan/role limits. Draft create/status/delete request tool calls only with dry_run:true first and require explicit confirmation before any write."}},
+			},
+		},
+		{
+			Name:        "scheduling-capacity-review",
+			Description: "Review scheduling assignments and per-user capacity totals before proposing schedule changes.",
+			Arguments: []PromptArgument{
+				{Name: "user", Description: "User name or ID to inspect.", Required: true},
+				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the week to inspect.", Required: true},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review scheduling capacity for {{user}} in the week starting {{week_start}}. Prefer typed scheduling tools, including per-user capacity totals, and avoid raw documented API writes unless the operator has enabled them. Summarize overloads, gaps, and any proposed assignment writes with dry_run:true before execution."}},
+			},
+		},
+		{
+			Name:        "webhook-rollout-check",
+			Description: "Plan a webhook rollout with DNS validation, dry-run payload review, and token-safe output handling.",
+			Arguments: []PromptArgument{
+				{Name: "url", Description: "Webhook delivery URL to validate.", Required: true},
+				{Name: "event", Description: "Clockify webhook event to configure.", Required: true},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Plan a webhook rollout for {{event}} to {{url}}. Use webhook list/get tools to avoid duplicates, verify that DNS validation will pass, mask any auth token, and preview create/update/test/delete operations with dry_run:true before execution. Treat `clockify_test_webhook` as an external side effect requiring confirmation."}},
 			},
 		},
 	}

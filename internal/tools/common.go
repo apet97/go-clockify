@@ -445,8 +445,58 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 			tightenInputSchema(in[i].Tool.InputSchema)
 		}
 		applyRiskMetadata(&in[i])
+		applyAgentToolMetadata(&in[i])
 	}
 	return in
+}
+
+var agentToolMetadata = map[string]map[string]any{
+	"clockify_log_time": {
+		"bestToolFor": []string{"log finished past work", "create a complete time entry"},
+		"preferOver":  []string{"clockify_add_entry"},
+	},
+	"clockify_timesheet_review": {
+		"bestToolFor": []string{"find gaps and overlaps", "plan timesheet cleanup"},
+	},
+	"clockify_timesheet_fill_gap": {
+		"bestToolFor": []string{"fill a reviewed timesheet gap"},
+		"preferAfter": []string{"clockify_timesheet_review"},
+	},
+	"clockify_list_tools": {
+		"bestToolFor": []string{"discover available tools", "preflight Tier-2 activation"},
+		"preferOver":  []string{"clockify_search_tools"},
+	},
+	"clockify_resolve_name": {
+		"bestToolFor": []string{"resolve human names to Clockify IDs"},
+		"preferOver":  []string{"clockify_resolve_debug"},
+	},
+	"clockify_resolve_debug": {
+		"compatibilityShim": true,
+		"primaryTool":       "clockify_resolve_name",
+	},
+	"clockify_search_tools": {
+		"compatibilityShim": true,
+		"primaryTool":       "clockify_list_tools",
+	},
+	"clockify_set_project_memberships": {
+		"compatibilityShim": true,
+		"primaryTool":       "clockify_update_project_memberships",
+	},
+}
+
+func applyAgentToolMetadata(d *mcp.ToolDescriptor) {
+	meta, ok := agentToolMetadata[d.Tool.Name]
+	if !ok {
+		return
+	}
+	if d.Tool.Annotations == nil {
+		d.Tool.Annotations = map[string]any{}
+	}
+	for key, value := range meta {
+		if _, exists := d.Tool.Annotations[key]; !exists {
+			d.Tool.Annotations[key] = value
+		}
+	}
 }
 
 // applyRiskMetadata populates RiskClass and AuditKeys for a descriptor.

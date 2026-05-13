@@ -14,7 +14,7 @@ Works with **Claude Code**, **Claude Desktop**, **Cursor**, **Codex**, and anyth
 ## Highlights
 
 - **156 tools** — 52 always-on (timer, entries, projects, clients, tags, tasks, reports, agent workflows, tool activation, …) plus 104 on-demand (invoices, scheduling, approvals, admin, documented API helpers, …) across 12 activatable groups.
-- **Resources & prompts** — six `clockify://` URI templates and five built-in prompt templates alongside the tool surface.
+- **Resources & prompts** — six `clockify://` URI templates and ten built-in prompt templates alongside the tool surface.
 - **Five policy modes** — `read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full` — plus dry-run previews on every write tool and HMAC confirmation tokens for high-risk tool calls (ADR 0018).
 - **Three transports** — stdio (default), streamable HTTP 2025-03-26 (shared services), opt-in gRPC behind a build tag. Cancellation, `tools/list_changed`, size limits, and malformed-JSON boundaries pinned with cross-transport parity tests.
 - **Stdlib-only default build** — zero external runtime dependencies; the default binary links no OpenTelemetry, gRPC, or protobuf symbols (verified in CI).
@@ -213,10 +213,12 @@ For longer intent-keyed examples, see the
 Built-in prompt templates are available through MCP `prompts/list` and
 `prompts/get`: `log-week-from-calendar`, `weekly-review`,
 `find-unbilled-hours`, `find-duplicate-entries`, and
-`generate-timesheet-report`. They are short planning prompts that point
-clients at the current structured tools, including `clockify_log_time`
-for finished past entries and `clockify_timesheet_review` for gaps,
-overlaps, and suggested next-tool actions.
+`generate-timesheet-report`, plus recipes for invoices, approvals,
+time off, scheduling, and webhook rollout. They are short planning
+prompts that point clients at the current structured tools, including
+`clockify_log_time` for finished past entries and
+`clockify_timesheet_review` for gaps, overlaps, and suggested
+next-tool actions.
 
 Start and stop a timer:
 
