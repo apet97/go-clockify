@@ -22579,6 +22579,842 @@
       }
     },
     {
+      "name": "clockify_assignment_report",
+      "description": "Generate a scheduled-vs-tracked assignment report with scheduling capacity, tracked hours, earned amount, cost, profit, and variance. group_by accepts USER, PROJECT, CLIENT, TASK, DATE, WEEK, MONTH and defaults to USER,PROJECT,TASK.",
+      "group": "scheduling",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "clients": {
+            "description": "Client IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "group_by": {
+            "description": "1 to 3 grouping levels",
+            "items": {
+              "enum": [
+                "USER",
+                "PROJECT",
+                "CLIENT",
+                "TASK",
+                "DATE",
+                "WEEK",
+                "MONTH"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50, max 200 upstream for user totals)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Convenience single-project filter; ID or name",
+            "type": "string"
+          },
+          "projects": {
+            "description": "Project IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "search": {
+            "description": "Search users/projects where supported by scheduling endpoints",
+            "type": "string"
+          },
+          "start": {
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "status_filter": {
+            "enum": [
+              "PUBLISHED",
+              "UNPUBLISHED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "tasks": {
+            "description": "Task IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "user_groups": {
+            "description": "User group IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_id": {
+            "description": "Convenience single-user filter; ID, name, or email",
+            "type": "string"
+          },
+          "users": {
+            "description": "User IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_assignment_report",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "groups": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "range": {
+                "additionalProperties": false,
+                "properties": {
+                  "date_range_type": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "raw": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "rows": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount_difference": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "amount_scheduled": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "amount_tracked": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "available": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display": {
+                          "type": "string"
+                        },
+                        "hours": {
+                          "type": "number"
+                        },
+                        "seconds": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "seconds",
+                        "hours"
+                      ],
+                      "type": "object"
+                    },
+                    "cost_difference": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "cost_scheduled": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "cost_tracked": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "difference": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display": {
+                          "type": "string"
+                        },
+                        "hours": {
+                          "type": "number"
+                        },
+                        "seconds": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "seconds",
+                        "hours"
+                      ],
+                      "type": "object"
+                    },
+                    "entities": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "expected_profit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "financials": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "earned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "profit": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount_cents": {
+                              "type": "integer"
+                            },
+                            "amount_decimal": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "display": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amount_cents",
+                            "amount_decimal"
+                          ],
+                          "type": "object"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "type": "object"
+                    },
+                    "group_key": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "raw": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "realized_profit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_cents": {
+                          "type": "integer"
+                        },
+                        "amount_decimal": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "display": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amount_cents",
+                        "amount_decimal"
+                      ],
+                      "type": "object"
+                    },
+                    "scheduled": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display": {
+                          "type": "string"
+                        },
+                        "hours": {
+                          "type": "number"
+                        },
+                        "seconds": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "seconds",
+                        "hours"
+                      ],
+                      "type": "object"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "tracked": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display": {
+                          "type": "string"
+                        },
+                        "hours": {
+                          "type": "number"
+                        },
+                        "seconds": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "seconds",
+                        "hours"
+                      ],
+                      "type": "object"
+                    },
+                    "warnings": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "group_key",
+                    "scheduled",
+                    "available",
+                    "tracked",
+                    "difference",
+                    "financials",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "totals": {
+                "additionalProperties": false,
+                "properties": {
+                  "amount_difference": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "amount_scheduled": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "amount_tracked": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "available": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "display": {
+                        "type": "string"
+                      },
+                      "hours": {
+                        "type": "number"
+                      },
+                      "seconds": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "seconds",
+                      "hours"
+                    ],
+                    "type": "object"
+                  },
+                  "cost_difference": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "cost_scheduled": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "cost_tracked": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "difference": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "display": {
+                        "type": "string"
+                      },
+                      "hours": {
+                        "type": "number"
+                      },
+                      "seconds": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "seconds",
+                      "hours"
+                    ],
+                    "type": "object"
+                  },
+                  "expected_profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "realized_profit": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount_cents": {
+                        "type": "integer"
+                      },
+                      "amount_decimal": {
+                        "type": "string"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "display": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_cents",
+                      "amount_decimal"
+                    ],
+                    "type": "object"
+                  },
+                  "scheduled": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "display": {
+                        "type": "string"
+                      },
+                      "hours": {
+                        "type": "number"
+                      },
+                      "seconds": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "seconds",
+                      "hours"
+                    ],
+                    "type": "object"
+                  },
+                  "tracked": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "display": {
+                        "type": "string"
+                      },
+                      "hours": {
+                        "type": "number"
+                      },
+                      "seconds": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "seconds",
+                      "hours"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "scheduled",
+                  "available",
+                  "tracked",
+                  "difference"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "range",
+              "groups",
+              "rows",
+              "totals"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Assignment Report"
+      }
+    },
+    {
       "name": "clockify_create_assignment",
       "description": "Create a recurring scheduling assignment for a user on a project",
       "group": "scheduling",
@@ -22755,7 +23591,7 @@
     },
     {
       "name": "clockify_filter_schedule_capacity",
-      "description": "Get a user's scheduling capacity totals for a date range",
+      "description": "Get a user's scheduling capacity totals for a date range, enriched with tracked amount/cost/profit comparison when available",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -22891,7 +23727,46 @@
             "type": "string"
           },
           "data": {
-            "additionalProperties": {},
+            "additionalProperties": true,
+            "properties": {
+              "entities": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "financials": {
+                "additionalProperties": true,
+                "properties": {
+                  "source": {
+                    "enum": [
+                      "reports_api",
+                      "derived_rates",
+                      "unavailable",
+                      "mixed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "scheduled": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "tracked": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "variance": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "warnings": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
             "type": "object"
           },
           "meta": {
@@ -22923,7 +23798,7 @@
     },
     {
       "name": "clockify_get_project_schedule_totals",
-      "description": "Get scheduling totals per project across a date range",
+      "description": "Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available",
       "group": "scheduling",
       "tier": 2,
       "read_only": true,
@@ -23007,6 +23882,194 @@
       }
     },
     {
+      "name": "clockify_get_single_project_schedule_totals",
+      "description": "Get scheduling totals for one project across a date range, enriched with tracked amount/cost/profit comparison when available",
+      "group": "scheduling",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID or name",
+            "type": "string"
+          },
+          "start": {
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_get_single_project_schedule_totals",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Get Single Project Schedule Totals"
+      }
+    },
+    {
+      "name": "clockify_get_workspace_schedule_user_totals",
+      "description": "Get workspace scheduling totals per user across a date range",
+      "group": "scheduling",
+      "tier": 2,
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page (default 50, max 200 upstream)",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "search": {
+            "type": "string"
+          },
+          "start": {
+            "description": "Range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "status_filter": {
+            "enum": [
+              "PUBLISHED",
+              "UNPUBLISHED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Optional IANA timezone; defaults to CLOCKIFY_TIMEZONE or the local/server timezone.",
+            "type": "string"
+          },
+          "user_groups": {
+            "description": "User group IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "users": {
+            "description": "User IDs to include",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_get_workspace_schedule_user_totals",
+            "type": "string"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "action",
+          "data"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Get Workspace Schedule User Totals"
+      }
+    },
+    {
       "name": "clockify_list_assignments",
       "description": "List scheduling assignments within a date range",
       "group": "scheduling",
@@ -23068,7 +24131,46 @@
           },
           "data": {
             "items": {
-              "additionalProperties": {},
+              "additionalProperties": true,
+              "properties": {
+                "entities": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "financials": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "source": {
+                      "enum": [
+                        "reports_api",
+                        "derived_rates",
+                        "unavailable",
+                        "mixed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "scheduled": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "tracked": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "variance": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "warnings": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
               "type": "object"
             },
             "type": "array"

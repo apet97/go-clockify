@@ -78,7 +78,7 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`[{"id":"a-1","userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","period":{"start":"2026-04-01T00:00:00Z","end":"2026-04-07T23:59:59Z"}}]`))
+		_, _ = w.Write([]byte(`[{"id":"a-1","userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","taskId":"task-1","period":{"start":"2026-04-01T00:00:00Z","end":"2026-04-07T23:59:59Z"}}]`))
 	})
 
 	// Project totals — POST with JSON body, returns bare array per
@@ -96,6 +96,54 @@ func newSchedulingUpstream(t *testing.T) *testharness.FakeClockify {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","projectName":"Active project","totalHours":36.0,"assignments":[]}]`))
+	})
+
+	// Single-project totals — GET with range query params.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/projects/totals/bbbbbbbbbbbbbbbbbbbbbbb1", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.URL.Query().Get("start") == "" || r.URL.Query().Get("end") == "" {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","projectName":"Active project","totalHours":36.0}`))
+	})
+
+	// Workspace user schedule totals — POST with filters, returns bare array.
+	mux.HandleFunc("/workspaces/test-workspace/scheduling/assignments/user-filter/totals", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body["start"] == nil || body["end"] == nil {
+			http.Error(w, `{"message":"missing range"}`, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","userName":"Alice","totalHoursPerDay":[{"date":"2026-04-01T00:00:00Z","totalHours":7.0}]}]`))
+	})
+
+	mux.HandleFunc("/workspaces/test-workspace/reports/summary", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		body := map[string]any{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		filter, _ := body["summaryFilter"].(map[string]any)
+		if filter["groups"] == nil {
+			t.Fatalf("summary report missing grouping body: %#v", body)
+		}
+		if body["amountShown"] != "EARNED" {
+			t.Fatalf("summary report amountShown = %#v, want EARNED", body["amountShown"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"rows":[{"userId":"aaaaaaaaaaaaaaaaaaaaaaa1","projectId":"bbbbbbbbbbbbbbbbbbbbbbb1","taskId":"task-1","duration":43200,"amounts":[{"type":"EARNED","value":72000,"currency":"USD"},{"type":"COST","value":10800,"currency":"USD"},{"type":"PROFIT","value":61200,"currency":"USD"}]}]}`))
 	})
 
 	// Recurring per-assignment endpoint — PATCH update / DELETE.
@@ -316,6 +364,64 @@ func TestTier2Dispatch_Scheduling_ProjectScheduleTotalsAndCapacity(t *testing.T)
 	}
 	if !strings.Contains(res.ResultText, `"userId":"aaaaaaaaaaaaaaaaaaaaaaa1"`) {
 		t.Fatalf("capacity result must echo resolved userId: %q", res.ResultText)
+	}
+}
+
+func TestTier2Dispatch_Scheduling_AssignmentReportAndTotalsWrappers(t *testing.T) {
+	upstream := newSchedulingUpstream(t)
+
+	res := dispatchTier2(t, tier2InvokeOpts{
+		Group: "scheduling",
+		Tool:  "clockify_assignment_report",
+		Args: map[string]any{
+			"start":     "2026-04-01T00:00:00Z",
+			"end":       "2026-04-30T23:59:59Z",
+			"group_by":  []string{"USER", "PROJECT", "TASK"},
+			"page_size": 25,
+		},
+		Upstream:              upstream,
+		EntryFinancialReports: true,
+	})
+	if res.Outcome != testharness.OutcomeSuccess {
+		t.Fatalf("assignment report outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
+	}
+	for _, want := range []string{"amount_tracked", "cost_tracked", "realized_profit", "amount_difference", "cost_difference", "scheduled", "tracked"} {
+		if !strings.Contains(res.ResultText, want) {
+			t.Fatalf("assignment report result missing %q: %q", want, res.ResultText)
+		}
+	}
+
+	res = dispatchTier2(t, tier2InvokeOpts{
+		Group: "scheduling",
+		Tool:  "clockify_get_workspace_schedule_user_totals",
+		Args: map[string]any{
+			"start": "2026-04-01T00:00:00Z",
+			"end":   "2026-04-30T23:59:59Z",
+		},
+		Upstream: upstream,
+	})
+	if res.Outcome != testharness.OutcomeSuccess {
+		t.Fatalf("user totals outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
+	}
+	if !strings.Contains(res.ResultText, "totalHoursPerDay") {
+		t.Fatalf("user totals result missing daily totals: %q", res.ResultText)
+	}
+
+	res = dispatchTier2(t, tier2InvokeOpts{
+		Group: "scheduling",
+		Tool:  "clockify_get_single_project_schedule_totals",
+		Args: map[string]any{
+			"project_id": "bbbbbbbbbbbbbbbbbbbbbbb1",
+			"start":      "2026-04-01T00:00:00Z",
+			"end":        "2026-04-30T23:59:59Z",
+		},
+		Upstream: upstream,
+	})
+	if res.Outcome != testharness.OutcomeSuccess {
+		t.Fatalf("single project totals outcome=%q err=%q raw=%s", res.Outcome, res.ErrorMessage, string(res.Raw))
+	}
+	if !strings.Contains(res.ResultText, "Active project") {
+		t.Fatalf("single project totals result missing project: %q", res.ResultText)
 	}
 }
 

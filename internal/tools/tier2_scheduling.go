@@ -18,12 +18,15 @@ func init() {
 		Description: "Resource scheduling and capacity planning",
 		Keywords:    []string{"schedule", "assignment", "capacity", "resource"},
 		ToolNames: []string{
+			"clockify_assignment_report",
 			"clockify_list_assignments",
 			"clockify_get_assignment",
 			"clockify_create_assignment",
 			"clockify_update_assignment",
 			"clockify_delete_assignment",
 			"clockify_get_project_schedule_totals",
+			"clockify_get_single_project_schedule_totals",
+			"clockify_get_workspace_schedule_user_totals",
 			"clockify_filter_schedule_capacity",
 		},
 		Builder: schedulingHandlers,
@@ -32,7 +35,17 @@ func init() {
 
 func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		// 1. clockify_list_assignments (RO)
+		// 1. clockify_assignment_report (RO)
+		{
+			Tool: withOutputSchema(toolRO("clockify_assignment_report",
+				"Generate a scheduled-vs-tracked assignment report with scheduling capacity, tracked hours, earned amount, cost, profit, and variance. group_by accepts USER, PROJECT, CLIENT, TASK, DATE, WEEK, MONTH and defaults to USER,PROJECT,TASK.",
+				assignmentReportInputSchema()), envelopeSchemaFor[AssignmentReportData]("clockify_assignment_report")),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.AssignmentReport(ctx, args)
+			},
+		},
+		// 2. clockify_list_assignments (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_list_assignments",
 				"List scheduling assignments within a date range",
@@ -48,13 +61,13 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 						"page_size":  map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 						"timezone":   timezoneInputProperty(),
 					},
-				}), envelopeOpenMapSlice("clockify_list_assignments")),
+				}), assignmentViewEnvelope("clockify_list_assignments", true)),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listAssignments(ctx, args)
 			},
 		},
-		// 2. clockify_get_assignment (RO)
+		// 3. clockify_get_assignment (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_get_assignment",
 				"Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward.",
@@ -64,13 +77,13 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"end":           map[string]any{"type": "string", "description": "Optional range end used to locate the assignment. " + flexibleDatetimeDescription + ". Defaults to now plus 1 year"},
 					"page_size":     map[string]any{"type": "integer", "description": "Upstream page size to scan per request (default 200); response meta includes pagesFetched and entriesScanned"},
 					"timezone":      timezoneInputProperty(),
-				}}), envelopeOpenMap("clockify_get_assignment")),
+				}}), assignmentViewEnvelope("clockify_get_assignment", false)),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.getAssignment(ctx, args)
 			},
 		},
-		// 3. clockify_create_assignment (RW)
+		// 4. clockify_create_assignment (RW)
 		{
 			Tool: toolRW("clockify_create_assignment",
 				"Create a recurring scheduling assignment for a user on a project",
@@ -94,7 +107,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.createAssignment(ctx, args)
 			},
 		},
-		// 4. clockify_update_assignment (RW)
+		// 5. clockify_update_assignment (RW)
 		{
 			Tool: toolRW("clockify_update_assignment",
 				"Update a recurring scheduling assignment by ID",
@@ -116,7 +129,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.updateAssignment(ctx, args)
 			},
 		},
-		// 5. clockify_delete_assignment (destructive)
+		// 6. clockify_delete_assignment (destructive)
 		{
 			Tool: toolDestructive("clockify_delete_assignment",
 				"Delete a recurring scheduling assignment by ID (supports dry_run preview)",
@@ -131,10 +144,10 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.deleteAssignment(ctx, args)
 			},
 		},
-		// 6. clockify_get_project_schedule_totals (RO)
+		// 7. clockify_get_project_schedule_totals (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_get_project_schedule_totals",
-				"Get scheduling totals per project across a date range",
+				"Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"start", "end"},
@@ -151,10 +164,30 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.getProjectScheduleTotals(ctx, args)
 			},
 		},
-		// 7. clockify_filter_schedule_capacity (RO)
+		// 8. clockify_get_single_project_schedule_totals (RO)
+		{
+			Tool: withOutputSchema(toolRO("clockify_get_single_project_schedule_totals",
+				"Get scheduling totals for one project across a date range, enriched with tracked amount/cost/profit comparison when available",
+				singleProjectScheduleTotalsInputSchema()), envelopeOpenMap("clockify_get_single_project_schedule_totals")),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.getSingleProjectScheduleTotals(ctx, args)
+			},
+		},
+		// 9. clockify_get_workspace_schedule_user_totals (RO)
+		{
+			Tool: withOutputSchema(toolRO("clockify_get_workspace_schedule_user_totals",
+				"Get workspace scheduling totals per user across a date range",
+				userScheduleTotalsInputSchema()), envelopeOpenMapSlice("clockify_get_workspace_schedule_user_totals")),
+			ReadOnlyHint: true, IdempotentHint: true,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.getWorkspaceScheduleUserTotals(ctx, args)
+			},
+		},
+		// 10. clockify_filter_schedule_capacity (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_filter_schedule_capacity",
-				"Get a user's scheduling capacity totals for a date range",
+				"Get a user's scheduling capacity totals for a date range, enriched with tracked amount/cost/profit comparison when available",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"user_id", "start", "end"},
@@ -190,11 +223,13 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_assignments", assignments, map[string]any{
+	views, enrichment := s.enrichAssignmentViews(ctx, wsID, assignments, args)
+	return ok("clockify_list_assignments", views, map[string]any{
 		"workspaceId": wsID,
 		"count":       len(assignments),
 		"page":        page,
 		"pageSize":    pageSize,
+		"enrichment":  enrichment,
 	}), nil
 }
 
@@ -290,7 +325,12 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 		entriesScanned += len(assignments)
 		for _, assignment := range assignments {
 			if id, _ := assignment["id"].(string); id == aID {
-				return ok("clockify_get_assignment", assignment, map[string]any{
+				views, enrichment := s.enrichAssignmentViews(ctx, wsID, []map[string]any{assignment}, scanArgs)
+				data := any(assignment)
+				if len(views) > 0 {
+					data = views[0]
+				}
+				return ok("clockify_get_assignment", data, map[string]any{
 					"workspaceId":        wsID,
 					"pagesFetched":       pagesFetched,
 					"entriesScanned":     entriesScanned,
@@ -300,6 +340,7 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 					"scanStart":          stringArg(scanArgs, "start"),
 					"scanEnd":            stringArg(scanArgs, "end"),
 					"scanRangeDefaulted": scanRangeDefaulted,
+					"enrichment":         enrichment,
 				}), nil
 			}
 		}
@@ -536,10 +577,25 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 		return ResultEnvelope{}, err
 	}
 
+	totals, pageSize, err := s.getProjectScheduleTotalsRaw(ctx, wsID, args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	enriched, enrichment := s.enrichProjectScheduleTotals(ctx, wsID, totals, args)
+
+	return ok("clockify_get_project_schedule_totals", enriched, map[string]any{
+		"workspaceId": wsID,
+		"count":       len(totals),
+		"pageSize":    pageSize,
+		"enrichment":  enrichment,
+	}), nil
+}
+
+func (s *Service) getProjectScheduleTotalsRaw(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, int, error) {
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return nil, 0, err
 	}
 	pageSize := intArg(args, "page_size", 50)
 
@@ -551,7 +607,7 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 	if pid := stringArg(args, "project_id"); pid != "" {
 		resolved, err := s.resolveProjectID(ctx, wsID, pid)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return nil, 0, err
 		}
 		body["projectId"] = resolved
 	}
@@ -559,17 +615,13 @@ func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]
 	var totals []map[string]any
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "projects", "totals")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return nil, 0, err
 	}
 	if err := s.Client.Post(ctx, path, body, &totals); err != nil {
-		return ResultEnvelope{}, err
+		return nil, 0, err
 	}
 
-	return ok("clockify_get_project_schedule_totals", totals, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(totals),
-		"pageSize":    pageSize,
-	}), nil
+	return totals, pageSize, nil
 }
 
 func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -612,8 +664,9 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 	if err := s.Client.Get(ctx, path, query, &capacity); err != nil {
 		return ResultEnvelope{}, err
 	}
+	enriched, enrichment := s.enrichScheduleCapacity(ctx, wsID, capacity, args)
 
-	return ok("clockify_filter_schedule_capacity", capacity, map[string]any{
+	return ok("clockify_filter_schedule_capacity", enriched, map[string]any{
 		"workspaceId": wsID,
 		"userId":      userID,
 		"start":       start,
@@ -621,5 +674,6 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 		// capacityPerDay is reported in seconds upstream (probe-lab
 		// fixture: 3600 = 1 hr/day, 25200 = 7 hr/day default).
 		"capacityUnit": "seconds",
+		"enrichment":   enrichment,
 	}), nil
 }

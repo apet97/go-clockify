@@ -14,8 +14,8 @@ import (
 func TestSchedulingHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := schedulingHandlers(svc)
-	if len(descs) != 7 {
-		t.Fatalf("expected 7 scheduling tools, got %d", len(descs))
+	if len(descs) != 10 {
+		t.Fatalf("expected 10 scheduling tools, got %d", len(descs))
 	}
 
 	names := make(map[string]bool, len(descs))
@@ -24,12 +24,15 @@ func TestSchedulingHandlersCount(t *testing.T) {
 	}
 
 	want := []string{
+		"clockify_assignment_report",
 		"clockify_list_assignments",
 		"clockify_get_assignment",
 		"clockify_create_assignment",
 		"clockify_update_assignment",
 		"clockify_delete_assignment",
 		"clockify_get_project_schedule_totals",
+		"clockify_get_single_project_schedule_totals",
+		"clockify_get_workspace_schedule_user_totals",
 		"clockify_filter_schedule_capacity",
 	}
 	for _, name := range want {
@@ -103,7 +106,7 @@ func TestListAssignments(t *testing.T) {
 	if result.Action != "clockify_list_assignments" {
 		t.Fatalf("expected action clockify_list_assignments, got %s", result.Action)
 	}
-	items, ok := result.Data.([]map[string]any)
+	items, ok := result.Data.([]AssignmentView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
@@ -255,7 +258,7 @@ func TestGetAssignmentScansPastFirstPage(t *testing.T) {
 	if result.Action != "clockify_get_assignment" {
 		t.Fatalf("expected action clockify_get_assignment, got %s", result.Action)
 	}
-	data, ok := result.Data.(map[string]any)
+	data, ok := result.Data.(AssignmentView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}

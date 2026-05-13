@@ -18,12 +18,12 @@ safety classification, and test coverage. Generated from
 
 | Classification | Tier 1 | Tier 2 | Total |
 |----------------|--------|--------|-------|
-| Read-only | 27 | 37 | 64 |
+| Read-only | 27 | 40 | 67 |
 | Mutating (non-destructive) | 20 | 53 | 73 |
 | Destructive | 5 | 14 | 19 |
 | Billing | 0 | 14 | 14 |
 | Admin | 0 | 14 | 14 |
-| **Total tools** | **52** | **104** | **156** |
+| **Total tools** | **52** | **107** | **159** |
 
 ## Evidence types
 
@@ -132,7 +132,7 @@ Source docs: `docs/openapi/sources/clockify-api-probe-lab/ATTENDANCEANDTIMEREPOR
 
 ---
 
-## Tier 2 — Domain groups (104 tools)
+## Tier 2 — Domain groups (107 tools)
 
 ### `approvals` (6 tools)
 
@@ -305,13 +305,24 @@ The Tier 1 `TestLiveClientProjectTaskDocCoverage` path succeeded end-to-end. The
 | Delete task | `DELETE /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}` | Path `projectId`, `taskId`; active tasks are first fetched and updated to `status=DONE` because Clockify requires completed tasks before deletion | `clockify_delete_task`: `project`, `task`; dry-run previews GET, optional mark-done, DELETE steps | `TestDeleteTaskMarksActiveTaskDoneThenDeletes`; `TestDeleteTaskAlreadyDoneDeletesWithoutPut`; live `TestLiveClientProjectTaskDocCoverage` |
 | Get task | `GET /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}` | Path `projectId`, `taskId`; response fields `assigneeId`, `assigneeIds`, `billable`, `budgetEstimate`, `costRate`, `duration`, `estimate`, `hourlyRate`, `id`, `name`, `projectId`, `status`, `userGroupIds` | `clockify_get_task`: `project`, `task` | `TestGetTaskByID`; live `TestLiveClientProjectTaskDocCoverage` |
 
-### `scheduling` (7 tools)
+### `scheduling` (10 tools)
 
 Clockify endpoints: `GET /workspaces/{ws}/scheduling/assignments/all`,
 `POST /workspaces/{ws}/scheduling/assignments/projects/totals`,
+`GET /workspaces/{ws}/scheduling/assignments/projects/totals/{projectId}`,
+`POST /workspaces/{ws}/scheduling/assignments/user-filter/totals`,
 `GET /workspaces/{ws}/scheduling/assignments/users/{userId}/totals`,
+`POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`
+for tracked amount/cost/profit enrichment,
 and recurring-assignment write routes under
 `/workspaces/{ws}/scheduling/assignments/recurring`.
+
+`clockify_assignment_report` mirrors the Clockify Assignments UI/export:
+scheduled, available, amount scheduled, cost scheduled, expected profit,
+tracked, amount tracked, cost tracked, difference, amount/cost difference,
+realized profit, and status. Supported grouping values are `USER`,
+`PROJECT`, `CLIENT`, `TASK`, `DATE`, `WEEK`, and `MONTH`; the default
+is `USER,PROJECT,TASK`.
 
 Two phantom schedule tools (`get` and `create`) were removed alongside
 the earlier `list_schedules` removal once the probe lab confirmed
@@ -320,11 +331,14 @@ Clockify has no `/scheduling/{id}` or `POST /scheduling` surface (only
 
 | Tool | Classification | Tests |
 |------|---------------|-------|
+| `clockify_assignment_report` | read-only | unit |
 | `clockify_create_assignment` | mutating | unit + live (`TestLiveT2SchedulingRecurringCRUD`) |
 | `clockify_delete_assignment` | destructive | unit + live (`TestLiveT2SchedulingRecurringCRUD`) |
 | `clockify_filter_schedule_capacity` | read-only | unit + live |
 | `clockify_get_assignment` | read-only | unit + live (`TestLiveT2SchedulingRecurringCRUD`; scans list endpoint because no single GET exists) |
 | `clockify_get_project_schedule_totals` | read-only | unit |
+| `clockify_get_single_project_schedule_totals` | read-only | unit |
+| `clockify_get_workspace_schedule_user_totals` | read-only | unit |
 | `clockify_list_assignments` | read-only | unit |
 | `clockify_update_assignment` | mutating | unit + live (`TestLiveT2SchedulingRecurringCRUD`) |
 
@@ -525,7 +539,7 @@ surface and surface latent handler / upstream bugs.
 
 **Live-test coverage (manual campaign expansion + hooks):** the
 API-backed catalog surface is named in `tests/e2e_live*.go`; the
-current 156-tool catalog is 52 Tier 1 tools + 104 Tier 2 tools, with
+current 159-tool catalog is 52 Tier 1 tools + 107 Tier 2 tools, with
 local discovery/activation/name-resolution helpers covered by unit
 tests instead of live Clockify calls. `scripts/check-live-tool-coverage.sh` is the
 static guard for this inventory: it fails when a Tier-2 catalog tool or
@@ -628,7 +642,7 @@ upstream limitation:
 
 ## Gaps
 
-1. **Full-success live coverage:** the current 156-tool catalog has a
+1. **Full-success live coverage:** the current 159-tool catalog has a
    manual probe, live-test hook, or local unit coverage path, but some
    API-backed tools remain asserted as upstream unsupported,
    permission-gated, plan-gated, or workspace-state limited rather

@@ -135,11 +135,12 @@ rules live in this file and the docs above.
     in [`docs/api-coverage.md`](docs/api-coverage.md).
     PR #62 adds the documented invite-user route as a no-email raw
     route validation probe because no dedicated catalog tool exists.
-    The current catalog has 156 tools after two agent-facing
+    The current catalog has 159 tools after two agent-facing
     timesheet workflow helpers, five local discovery/activation
     and name-resolution helpers, expanded client/project/task/admin
     and reports coverage, invoice export/status, member-profile tools,
-    and the latest documented probe-lab route refresh were added on top
+    scheduling assignment reporting/totals tools, and the latest
+    documented probe-lab route refresh were added on top
     of the raw API coverage surface; those
     helpers are covered by unit tests, and API-backed additions have
     live-test hooks where the upstream workspace permits them.

@@ -86,7 +86,7 @@ internal/
   mcp/                Protocol core — pure JSON-RPC/MCP engine (server, tools, resources, audit, prompts)
   runtime/            Process wiring — selects transport, builds Server (extracted in C2.2)
   clockify/           HTTP client (connection pooling, retry/backoff, pagination)
-  tools/              All 156 tool handlers (52 Tier 1 + 104 Tier 2 lazy groups)
+  tools/              All 159 tool handlers (52 Tier 1 + 107 Tier 2 lazy groups)
   enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
   config/             EnvSpec + profile system + fail-fast validation
   policy/             Policy modes (read_only/time_tracking_safe/safe_core/standard/full)

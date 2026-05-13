@@ -3213,11 +3213,14 @@
     {
       "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
@@ -3245,20 +3248,26 @@
       "summary": "Get all assignments",
       "tag": "Scheduling",
       "typed_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
       "typed_tools_in_catalog": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
@@ -3267,11 +3276,14 @@
     {
       "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
@@ -3300,28 +3312,45 @@
       "summary": "Get all scheduled assignments per project",
       "tag": "Scheduling",
       "typed_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
       "typed_tools_in_catalog": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3331,7 +3360,10 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveT2SchedulingRecurringCRUD",
+        "TestLiveTier2ReadOnlySweep"
+      ],
       "method": "GET",
       "notes_count": 0,
       "operationId": "getScheduledAssignmentsOnProject",
@@ -3342,8 +3374,30 @@
       ],
       "summary": "Get all scheduled assignments on project",
       "tag": "Scheduling",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -3374,6 +3428,7 @@
     {
       "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_filter_schedule_capacity"
       ],
@@ -3401,10 +3456,12 @@
       "summary": "Create a recurring assignment",
       "tag": "Scheduling",
       "typed_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_filter_schedule_capacity"
       ],
       "typed_tools_in_catalog": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_filter_schedule_capacity"
       ],
@@ -3512,8 +3569,19 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
-      "coverage_md_tools": [],
+      "coverage_class": "typed-tool-live-success",
+      "coverage_md_tools": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3523,7 +3591,10 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveT2SchedulingRecurringCRUD",
+        "TestLiveTier2ReadOnlySweep"
+      ],
       "method": "POST",
       "notes_count": 0,
       "operationId": "getUsersCapacityTotals",
@@ -3534,8 +3605,30 @@
       ],
       "summary": "Get total of users' capacity on workspace",
       "tag": "Scheduling",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_assignment_report",
+        "clockify_create_assignment",
+        "clockify_delete_assignment",
+        "clockify_filter_schedule_capacity",
+        "clockify_get_assignment",
+        "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
+        "clockify_list_assignments",
+        "clockify_update_assignment"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -3564,11 +3657,14 @@
     {
       "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
@@ -3596,20 +3692,26 @@
       "summary": "Get total capacity of a user",
       "tag": "Scheduling",
       "typed_tools": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
       "typed_tools_in_catalog": [
+        "clockify_assignment_report",
         "clockify_create_assignment",
         "clockify_delete_assignment",
         "clockify_filter_schedule_capacity",
         "clockify_get_assignment",
         "clockify_get_project_schedule_totals",
+        "clockify_get_single_project_schedule_totals",
+        "clockify_get_workspace_schedule_user_totals",
         "clockify_list_assignments",
         "clockify_update_assignment"
       ],
@@ -5641,8 +5743,8 @@
   "summary": {
     "by_class": {
       "raw-tool-live-success": 15,
-      "raw-tool-only": 127,
-      "typed-tool-live-success": 49,
+      "raw-tool-only": 125,
+      "typed-tool-live-success": 51,
       "typed-tool-mapped": 0,
       "uncovered": 0,
       "unsupported": 1
@@ -5715,8 +5817,8 @@
         "raw-tool-only": 2
       },
       "Scheduling": {
-        "raw-tool-only": 12,
-        "typed-tool-live-success": 4
+        "raw-tool-only": 10,
+        "typed-tool-live-success": 6
       },
       "SharedReport": {
         "raw-tool-live-success": 2,
@@ -5778,6 +5880,6 @@
   },
   "tool_catalog": {
     "tier1": 52,
-    "tier2": 104
+    "tier2": 107
   }
 }

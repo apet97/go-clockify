@@ -29,12 +29,13 @@ import (
 // tier2InvokeOpts is a strict subset of testharness.InvokeOpts plus the
 // Tier 2 group name that must be activated before the call.
 type tier2InvokeOpts struct {
-	Group       string
-	Tool        string
-	Args        map[string]any
-	PolicyMode  policy.Mode
-	Upstream    *testharness.FakeClockify
-	WorkspaceID string
+	Group                 string
+	Tool                  string
+	Args                  map[string]any
+	PolicyMode            policy.Mode
+	Upstream              *testharness.FakeClockify
+	WorkspaceID           string
+	EntryFinancialReports bool
 }
 
 // dispatchTier2 builds a one-shot dispatch path that includes both the Tier 1
@@ -63,6 +64,7 @@ func dispatchTier2(t *testing.T, opts tier2InvokeOpts) testharness.InvokeResult 
 	defer client.Close()
 
 	svc := tools.New(client, opts.WorkspaceID)
+	svc.EntryFinancialReports = opts.EntryFinancialReports
 
 	tier2Descs, ok := svc.Tier2Handlers(opts.Group)
 	if !ok {

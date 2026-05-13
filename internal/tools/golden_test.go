@@ -134,21 +134,24 @@ func TestTier2OutputSchemasPresent(t *testing.T) {
 func TestTier2ReadOutputSchemaCoverage(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	wantTyped := map[string]struct{}{
-		"clockify_list_invoices":               {},
-		"clockify_get_invoice":                 {},
-		"clockify_list_expenses":               {},
-		"clockify_get_expense":                 {},
-		"clockify_list_expense_categories":     {},
-		"clockify_expense_report":              {},
-		"clockify_list_assignments":            {},
-		"clockify_get_assignment":              {},
-		"clockify_get_project_schedule_totals": {},
-		"clockify_filter_schedule_capacity":    {},
-		"clockify_list_time_off_requests":      {},
-		"clockify_get_time_off_request":        {},
-		"clockify_list_time_off_policies":      {},
-		"clockify_get_time_off_policy":         {},
-		"clockify_time_off_balance":            {},
+		"clockify_list_invoices":                      {},
+		"clockify_get_invoice":                        {},
+		"clockify_list_expenses":                      {},
+		"clockify_get_expense":                        {},
+		"clockify_list_expense_categories":            {},
+		"clockify_expense_report":                     {},
+		"clockify_assignment_report":                  {},
+		"clockify_list_assignments":                   {},
+		"clockify_get_assignment":                     {},
+		"clockify_get_project_schedule_totals":        {},
+		"clockify_get_single_project_schedule_totals": {},
+		"clockify_get_workspace_schedule_user_totals": {},
+		"clockify_filter_schedule_capacity":           {},
+		"clockify_list_time_off_requests":             {},
+		"clockify_get_time_off_request":               {},
+		"clockify_list_time_off_policies":             {},
+		"clockify_get_time_off_policy":                {},
+		"clockify_time_off_balance":                   {},
 	}
 	readOnlyTotal := 0
 	typedRead := 0
@@ -218,8 +221,8 @@ func TestTier2TotalToolCount(t *testing.T) {
 		total += len(handlers)
 		t.Logf("group %s: %d tools", name, len(handlers))
 	}
-	if total != 104 {
-		t.Fatalf("expected 104 Tier 2 tools, got %d", total)
+	if total != 107 {
+		t.Fatalf("expected 107 Tier 2 tools, got %d", total)
 	}
 }
 
@@ -230,7 +233,7 @@ func TestTier2PerGroupToolCounts(t *testing.T) {
 		"approvals":       6,
 		"expenses":        10,
 		"custom_fields":   6,
-		"scheduling":      7,
+		"scheduling":      10,
 		"user_admin":      10,
 		"webhooks":        7,
 		"shared_reports":  6,
@@ -510,7 +513,7 @@ func TestTier1CatalogGoldenCount(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 10. Total tool count (Tier 1 + Tier 2 = 156)
+// 10. Total tool count (Tier 1 + Tier 2 = 159)
 // ---------------------------------------------------------------------------
 
 func TestTotalToolCount(t *testing.T) {
@@ -521,7 +524,7 @@ func TestTotalToolCount(t *testing.T) {
 		tier2 += len(group.Builder(svc))
 	}
 	total := tier1 + tier2
-	if total != 156 {
-		t.Fatalf("expected 156 total tools (52 Tier1 + 104 Tier2), got %d (%d + %d)", total, tier1, tier2)
+	if total != 159 {
+		t.Fatalf("expected 159 total tools (52 Tier1 + 107 Tier2), got %d (%d + %d)", total, tier1, tier2)
 	}
 }
