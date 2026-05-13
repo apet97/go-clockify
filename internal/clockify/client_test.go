@@ -176,6 +176,81 @@ func TestRetryOn429ThenSuccess(t *testing.T) {
 	}
 }
 
+func TestCircuitBreakerOpensAfterFinal5xx(t *testing.T) {
+	var count atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"message":"down"}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	c.SetCircuitBreaker(CircuitBreakerConfig{
+		Enabled:          true,
+		FailureThreshold: 2,
+		OpenDuration:     time.Minute,
+		HalfOpenProbes:   1,
+	})
+	for i := 0; i < 2; i++ {
+		var out map[string]any
+		if err := c.Get(context.Background(), "/test", nil, &out); err == nil {
+			t.Fatalf("call %d: expected upstream error", i+1)
+		}
+	}
+	var out map[string]any
+	err := c.Get(context.Background(), "/test", nil, &out)
+	if !errors.Is(err, ErrCircuitBreakerOpen) {
+		t.Fatalf("third call error = %v, want ErrCircuitBreakerOpen", err)
+	}
+	if got := count.Load(); got != 2 {
+		t.Fatalf("breaker should fast-fail before wire call, upstream requests = %d", got)
+	}
+}
+
+func TestCircuitBreakerHalfOpenSuccessCloses(t *testing.T) {
+	var count atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := count.Add(1)
+		if n <= 2 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"message":"down"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	c.SetCircuitBreaker(CircuitBreakerConfig{
+		Enabled:          true,
+		FailureThreshold: 2,
+		OpenDuration:     10 * time.Second,
+		HalfOpenProbes:   1,
+	})
+	now := time.Unix(1700000000, 0)
+	c.breaker.now = func() time.Time { return now }
+
+	for i := 0; i < 2; i++ {
+		var out map[string]any
+		if err := c.Get(context.Background(), "/test", nil, &out); err == nil {
+			t.Fatalf("call %d: expected upstream error", i+1)
+		}
+	}
+	now = now.Add(11 * time.Second)
+	var out map[string]any
+	if err := c.Get(context.Background(), "/test", nil, &out); err != nil {
+		t.Fatalf("half-open probe should close breaker on success: %v", err)
+	}
+	if out["ok"] != true {
+		t.Fatalf("unexpected response: %#v", out)
+	}
+	if got := c.breaker.StateValue("/test", http.MethodGet); got != 0 {
+		t.Fatalf("breaker state = %v, want closed", got)
+	}
+}
+
 func TestEncodeMultipartWithFiles(t *testing.T) {
 	payload, contentType, err := encodeMultipartWithFiles(url.Values{"kind": []string{"avatar"}}, []MultipartFile{{
 		FieldName:   "file",

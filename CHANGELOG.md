@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-endpoint upstream 5xx circuit breaker.** ADR 0025 is now
+  accepted and implemented as an outer wrapper around the existing
+  retry loop. `CLOCKIFY_CIRCUIT_BREAKER=auto` enables the breaker for
+  hosted profiles, emits breaker state/rejection/transition metrics,
+  and lets `/ready` degrade when the core upstream probe is locally
+  fast-failed.
+
 ## [1.2.5] - 2026-05-13
 
 ### Added

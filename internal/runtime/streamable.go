@@ -56,6 +56,7 @@ func (r *Runtime) runStreamableHTTP(ctx context.Context) error {
 	if r.cfg.APIKey != "" {
 		client := clockify.NewClient(r.cfg.APIKey, r.cfg.BaseURL, r.cfg.RequestTimeout, r.cfg.MaxRetries)
 		defer client.Close()
+		configureClockifyClient(client, r.cfg)
 		readyChecker = func(ctx context.Context) error {
 			var user struct{ ID string }
 			return client.Get(ctx, "/user", nil, &user)

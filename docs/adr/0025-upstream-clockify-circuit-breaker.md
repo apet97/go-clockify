@@ -2,23 +2,15 @@
 
 ## Status
 
-Proposed — captured here because adding a circuit breaker above the
-existing retry loop changes the observable contract for every tool
-call: a call that would have eventually succeeded after retry may
-now fast-fail under an open breaker, and a call that would have
-returned a 5xx error to the agent may now return an MCP-level
-"upstream unavailable" envelope before any HTTP attempt is made.
-That is a deliberate trade — burn less quota and amplify less load
-during an outage, at the cost of *some* successful calls being
-short-circuited during the open / half-open window — and the
-operator must pick the trade explicitly. Strict-rule #2 in
-`CLAUDE.md` forbids that change without an ADR. This ADR records
-the questions a maintainer / operator must resolve before that
-implementation can ship; it does **not** record an accepted
-decision. When a decision lands, this file moves to Accepted, the
-`(proposed)` suffix drops from the index in
-[`README.md`](README.md), and the implementation wave (formerly
-known as "Wave B.13 — upstream-5xx breaker") can proceed.
+Accepted — 2026-05-13.
+
+The implementation uses a per-endpoint circuit breaker, wraps the
+existing retry loop, and opens after a configurable number of
+consecutive final upstream 5xx outcomes. The default
+`CLOCKIFY_CIRCUIT_BREAKER=auto` enables the breaker for hosted
+profiles (`shared-service`, `prod-postgres`) and leaves local
+profiles disabled unless operators explicitly set
+`CLOCKIFY_CIRCUIT_BREAKER=enabled`.
 
 ## Context
 
@@ -95,8 +87,23 @@ concern tracked separately under ADR 0024.
 
 ## Decision
 
-**Proposed.** The questions below frame the design space; each
-must have an explicit answer before this ADR moves to Accepted.
+**Accepted shape: Q1-B + Q2-A + Q3-A.**
+
+- **Scope:** per normalised endpoint and HTTP method. This aligns
+  with the existing upstream metric labels and avoids a reports
+  outage opening the breaker for unrelated time-entry calls.
+- **Threshold:** consecutive final upstream 5xx outcomes. The
+  default threshold is 5, the default open duration is 45 seconds,
+  and the default half-open probe count is 1.
+- **Composition:** the breaker wraps the existing retry loop. A
+  closed or half-open breaker permits the normal retry budget to run;
+  only the final outcome of that logical request updates breaker
+  state. An open breaker fast-fails locally before any HTTP attempt.
+
+Operators can tune the accepted shape with
+`CLOCKIFY_CIRCUIT_BREAKER`, `CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD`,
+`CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION`, and
+`CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES`.
 
 ### Q1: What is the breaker's scope?
 
@@ -238,8 +245,6 @@ share. Operators tuning dashboards must know which.
 
 ## Consequences
 
-Once a decision lands:
-
 - A new file under `internal/clockify/` (likely
   `internal/clockify/breaker.go`) carries the breaker state
   machine; the Client struct gains one breaker pointer (Q1-A),
@@ -275,22 +280,21 @@ land on the choice without having to re-derive it.
 
 ## Migration
 
-When a decision lands:
+Implemented in the `v1.3.0-rc.1` hardening wave:
 
-1. Pick A / B / C for each Q.
-2. Implement the breaker under `internal/clockify/`.
-3. Add the env-var family to `internal/config/spec.go`,
-   regenerate config-docs and `help_generated.go`, edit Helm +
-   k8s configmap defaults, all in one commit per the
-   `config-doc-parity` gate.
-4. Add the state-machine + per-key isolation tests; drift-check
-   the closed→open and half-open→closed transitions in the
-   commit body.
-5. Write or amend the upstream-outage runbook.
-6. Flip this ADR's Status to `Accepted — <YYYY-MM-DD>` and drop
-   the `(proposed)` suffix from the index in `README.md`.
-7. Update `CHANGELOG.md` under `### Hardening` to describe the
-   chosen breaker shape; cross-link this ADR.
+1. Picked B / A / A for Q1-Q3: per-endpoint scope,
+   consecutive final 5xx threshold, breaker wrapping retry.
+2. Implemented the breaker under `internal/clockify/` and wired
+   it into process-level clients, streamable-HTTP ready checks, and
+   per-tenant session clients.
+3. Added the env-var family to `internal/config/spec.go` and
+   regenerated config/help docs through the normal parity flow.
+4. Added state-machine tests for closed→open and
+   open→half-open→closed transitions.
+5. Amended `docs/runbooks/clockify-upstream-outage.md`.
+6. Flipped this ADR to Accepted and removed the `(proposed)`
+   suffix from the ADR index.
+7. Updated `CHANGELOG.md` under Unreleased.
 
 ## References
 

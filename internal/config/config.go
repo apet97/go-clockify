@@ -25,6 +25,14 @@ type Config struct {
 	MaxRetries     int
 	Insecure       bool
 	Timezone       string
+	// CircuitBreakerMode is auto/enabled/disabled from
+	// CLOCKIFY_CIRCUIT_BREAKER. Auto enables the breaker for hosted
+	// profiles and leaves local profiles unchanged.
+	CircuitBreakerMode             string
+	CircuitBreakerEnabled          bool
+	CircuitBreakerFailureThreshold int
+	CircuitBreakerOpenDuration     time.Duration
+	CircuitBreakerHalfOpenProbes   int
 
 	// Profile is the resolved value of MCP_PROFILE for this load cycle
 	// (empty when unset). Surfaces the deployment posture to packages
@@ -323,6 +331,47 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("invalid CLOCKIFY_MAX_RETRIES %q: must be an integer between 0 and 10", v)
 		}
 		cfg.MaxRetries = n
+	}
+	cfg.CircuitBreakerMode = strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_CIRCUIT_BREAKER")))
+	if cfg.CircuitBreakerMode == "" {
+		cfg.CircuitBreakerMode = "auto"
+	}
+	switch cfg.CircuitBreakerMode {
+	case "auto":
+		cfg.CircuitBreakerEnabled = isHostedProfile(profileName)
+	case "enabled":
+		cfg.CircuitBreakerEnabled = true
+	case "disabled":
+		cfg.CircuitBreakerEnabled = false
+	default:
+		return Config{}, fmt.Errorf("invalid CLOCKIFY_CIRCUIT_BREAKER %q: must be auto, enabled, or disabled", cfg.CircuitBreakerMode)
+	}
+	cfg.CircuitBreakerFailureThreshold = 5
+	if raw := strings.TrimSpace(os.Getenv("CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > 100 {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD %q: must be an integer between 1 and 100", raw)
+		}
+		cfg.CircuitBreakerFailureThreshold = n
+	}
+	cfg.CircuitBreakerOpenDuration = 45 * time.Second
+	if raw := strings.TrimSpace(os.Getenv("CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION")); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION %q: %w", raw, err)
+		}
+		if d < time.Second || d > 10*time.Minute {
+			return Config{}, fmt.Errorf("CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION must be between 1s and 10m, got %s", d)
+		}
+		cfg.CircuitBreakerOpenDuration = d
+	}
+	cfg.CircuitBreakerHalfOpenProbes = 1
+	if raw := strings.TrimSpace(os.Getenv("CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > 10 {
+			return Config{}, fmt.Errorf("invalid CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES %q: must be an integer between 1 and 10", raw)
+		}
+		cfg.CircuitBreakerHalfOpenProbes = n
 	}
 
 	// Timezone
@@ -970,6 +1019,8 @@ func (c Config) Fingerprint() map[string]any {
 		"metrics_bind":                  c.MetricsBind,
 		"metrics_auth_mode":             c.MetricsAuthMode,
 		"clockify_base_url":             c.BaseURL,
+		"clockify_circuit_breaker":      c.CircuitBreakerMode,
+		"circuit_breaker_enabled":       c.CircuitBreakerEnabled,
 		"workspace_id":                  c.WorkspaceID,
 		"timezone":                      c.Timezone,
 		"policy_claim_tenant":           c.TenantClaim,

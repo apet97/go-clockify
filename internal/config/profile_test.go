@@ -116,6 +116,9 @@ func TestProfile_LocalStdioDefaults(t *testing.T) {
 	if cfg.AuditDurabilityMode != "best_effort" {
 		t.Errorf("AuditDurabilityMode = %q, want best_effort", cfg.AuditDurabilityMode)
 	}
+	if cfg.CircuitBreakerEnabled {
+		t.Errorf("CircuitBreakerEnabled = true, want false for local-stdio auto default")
+	}
 	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
 		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe", got)
 	}
@@ -476,6 +479,9 @@ func TestProfile_SharedServiceIsStrict(t *testing.T) {
 	if cfg.HTTPRateLimitGETPerSession != 4 {
 		t.Errorf("HTTPRateLimitGETPerSession = %d, want 4", cfg.HTTPRateLimitGETPerSession)
 	}
+	if !cfg.CircuitBreakerEnabled {
+		t.Errorf("CircuitBreakerEnabled = false, want true for hosted auto default")
+	}
 	if got := os.Getenv("CLOCKIFY_POLICY"); got != "time_tracking_safe" {
 		t.Errorf("CLOCKIFY_POLICY = %q, want time_tracking_safe (broader policies require explicit operator opt-in)", got)
 	}
@@ -534,6 +540,9 @@ func TestProfile_ProdPostgresIsStrict(t *testing.T) {
 	if cfg.HTTPRateLimitGETPerSession != 4 {
 		t.Errorf("HTTPRateLimitGETPerSession = %d, want 4", cfg.HTTPRateLimitGETPerSession)
 	}
+	if !cfg.CircuitBreakerEnabled {
+		t.Errorf("CircuitBreakerEnabled = false, want true for hosted auto default")
+	}
 	if got := os.Getenv("ENVIRONMENT"); got != "prod" {
 		t.Errorf("ENVIRONMENT = %q, want prod", got)
 	}
@@ -568,6 +577,38 @@ func TestProfile_SharedServiceStrictOverrideHonoured(t *testing.T) {
 	if cfg.RequireForwardTenantClaim {
 		t.Fatalf("RequireForwardTenantClaim = true; explicit override (MCP_REQUIRE_FORWARD_TENANT_CLAIM=0) must beat the profile default")
 	}
+}
+
+func TestProfile_CircuitBreakerExplicitOverrideWins(t *testing.T) {
+	t.Run("local enabled", func(t *testing.T) {
+		setProfileEnv(t, "local-stdio", map[string]string{
+			"CLOCKIFY_API_KEY":         "test-key",
+			"CLOCKIFY_CIRCUIT_BREAKER": "enabled",
+		})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if !cfg.CircuitBreakerEnabled {
+			t.Fatal("CircuitBreakerEnabled = false, want explicit enabled")
+		}
+	})
+	t.Run("hosted disabled", func(t *testing.T) {
+		setProfileEnv(t, "shared-service", map[string]string{
+			"CLOCKIFY_API_KEY":         "test-key",
+			"MCP_OIDC_ISSUER":          "https://issuer.example",
+			"MCP_OIDC_AUDIENCE":        "clockify-mcp-shared",
+			"MCP_CONTROL_PLANE_DSN":    "postgres://db/mcp",
+			"CLOCKIFY_CIRCUIT_BREAKER": "disabled",
+		})
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if cfg.CircuitBreakerEnabled {
+			t.Fatal("CircuitBreakerEnabled = true, want explicit disabled")
+		}
+	})
 }
 
 // TestProfile_NamesAreUnique guards against copy-paste duplication in

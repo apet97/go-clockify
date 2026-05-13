@@ -22,6 +22,10 @@ recover.
 - `status.clockify.me` reports an incident.
 - `/ready` returns `503` (the readiness probe checks upstream
   reachability and flips to not-ready when consecutive checks fail).
+- Hosted profiles may show fast local failures while
+  `clockify_upstream_circuit_breaker_state{endpoint,method}` is `1`
+  for the affected endpoint; this is expected load-shedding, not a
+  separate transport failure.
 
 ## 2. Where to look first
 
@@ -37,9 +41,9 @@ curl -i -H "X-Api-Key: $CLOCKIFY_LIVE_API_KEY" \
 curl -sf http://<host>:8080/metrics \
   | grep -E '^clockify_mcp_tool_calls_total\{.*outcome="(tool_error|timeout)".*\}'
 
-# Upstream 5xx / retries
+# Upstream 5xx / retries / breaker state
 curl -sf http://<host>:8080/metrics \
-  | grep -E '^clockify_(upstream_requests_total|upstream_retries_total)'
+  | grep -E '^clockify_(upstream_requests_total|upstream_retries_total|upstream_circuit_breaker_)'
 
 # Recent error logs
 kubectl -n clockify-mcp logs deploy/clockify-mcp --since=15m \
@@ -79,6 +83,26 @@ kubectl -n clockify-mcp set env deploy/clockify-mcp \
 ```
 
 Restore the default after the upstream recovers.
+
+### Confirm the circuit breaker is shedding load
+
+Hosted profiles default `CLOCKIFY_CIRCUIT_BREAKER=auto`, which enables
+the per-endpoint upstream 5xx breaker. Local/self-hosted profiles can
+opt in with `CLOCKIFY_CIRCUIT_BREAKER=enabled`.
+
+Useful signals:
+
+- `clockify_upstream_circuit_breaker_state{endpoint,method}` —
+  `0=closed`, `0.5=half_open`, `1=open`.
+- `clockify_upstream_circuit_breaker_rejections_total` — local
+  fast-fails before any upstream HTTP attempt.
+- `clockify_upstream_circuit_breaker_transitions_total` — state
+  changes by endpoint, method, and next state.
+
+During recovery, the breaker automatically moves from open to
+half-open after `CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION` (default
+45s). A successful probe closes the endpoint breaker; a final 5xx
+opens it again.
 
 ### Communicate
 
@@ -121,15 +145,14 @@ for >15 minutes.
   reports and our discovery?
 - **Mitigation** — Did `CLOCKIFY_POLICY=read_only` reduce write
   errors as expected? Did lowering `CLOCKIFY_TOOL_TIMEOUT` improve
-  client UX?
+  client UX? Did the circuit breaker reduce upstream attempts?
 - **Recovery** — When did upstream return to healthy? Did our error
   rate recover automatically or did we need to restart?
 - **Permanent fix** — Anything to add to the readiness probe?
   Anything to harden in the upstream client (jitter, backoff,
-  hedging)?
-- **Prevention** — Should we add a circuit breaker to the upstream
-  client so we fail fast without consuming the local rate-limit
-  budget?
+  hedging, breaker thresholds)?
+- **Prevention** — Should the default breaker thresholds or gateway
+  alerts change for the observed failure mode?
 
 ## See also
 
@@ -137,7 +160,8 @@ for >15 minutes.
   backoff, pagination).
 - `internal/metrics/metrics.go` — `clockify_mcp_tool_calls_total`,
   `clockify_mcp_tool_call_duration_seconds`,
-  `clockify_mcp_panics_recovered_total`.
+  `clockify_mcp_panics_recovered_total`, and
+  `clockify_upstream_circuit_breaker_*`.
 - `rate-limit-saturation.md` — when 5xx is actually 429 in disguise.
 - `auth-failures.md` — when 5xx is actually 401 in disguise.
 - `SECURITY.md` — panic-containment policy that keeps the server up

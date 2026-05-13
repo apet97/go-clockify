@@ -90,6 +90,7 @@ type Client struct {
 	httpClient *http.Client
 	maxRetries int
 	userAgent  string
+	breaker    *CircuitBreaker
 }
 
 func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *Client {
@@ -139,6 +140,14 @@ func (c *Client) Close() {
 // SetUserAgent sets the User-Agent string sent with every request.
 func (c *Client) SetUserAgent(ua string) {
 	c.userAgent = ua
+}
+
+func (c *Client) SetCircuitBreaker(cfg CircuitBreakerConfig) {
+	if !cfg.Enabled {
+		c.breaker = nil
+		return
+	}
+	c.breaker = NewCircuitBreaker(cfg)
 }
 
 func (c *Client) Get(ctx context.Context, path string, query map[string]string, out any) error {
@@ -550,6 +559,11 @@ func (c *Client) doRequest(ctx context.Context, baseURL, method, path string, qu
 
 func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path string, query url.Values, contentType string, payload []byte, out any) error {
 	endpoint := normalizeEndpoint(path)
+	if c.breaker != nil {
+		if err := c.breaker.Before(endpoint, method); err != nil {
+			return err
+		}
+	}
 
 	var lastErr error
 	var explicitRetryAfter time.Duration
@@ -571,10 +585,12 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 			// Before sleeping for retry, check if we have enough time left.
 			if deadline, ok := ctx.Deadline(); ok {
 				if time.Until(deadline) < waitDur {
+					c.recordCircuitBreakerResult(endpoint, method, lastErr)
 					return lastErr
 				}
 			}
 			if err := sleepWithContext(ctx, waitDur); err != nil {
+				c.recordCircuitBreakerResult(endpoint, method, lastErr)
 				return err
 			}
 			// explicitRetryAfter is re-read below on retryable errors; no reset needed here.
@@ -582,21 +598,34 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 
 		err := c.doOnceValues(ctx, baseURL, method, path, endpoint, query, contentType, payload, out)
 		if err == nil {
+			c.recordCircuitBreakerResult(endpoint, method, nil)
 			return nil
 		}
 		lastErr = err
 
 		apiErr, ok := err.(*APIError)
 		if !ok || !isRetryableStatus(apiErr.StatusCode) {
+			c.recordCircuitBreakerResult(endpoint, method, err)
 			return err
 		}
 		explicitRetryAfter = apiErr.RetryAfter
 	}
 
 	if lastErr != nil {
+		c.recordCircuitBreakerResult(endpoint, method, lastErr)
 		return lastErr
 	}
-	return fmt.Errorf("request failed without specific error")
+	err := fmt.Errorf("request failed without specific error")
+	c.recordCircuitBreakerResult(endpoint, method, err)
+	return err
+}
+
+func (c *Client) recordCircuitBreakerResult(endpoint, method string, err error) {
+	if c.breaker == nil {
+		return
+	}
+	apiErr, ok := err.(*APIError)
+	c.breaker.After(endpoint, method, ok && apiErr.StatusCode >= 500 && apiErr.StatusCode <= 599)
 }
 
 func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoint string, query url.Values, contentType string, payload []byte, out any) error {

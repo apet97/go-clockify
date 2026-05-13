@@ -576,6 +576,15 @@ var (
 	// operator dashboards can distinguish an upstream format regression from
 	// a missing header.
 	UpstreamRetryAfterUnparseableTotal *Counter
+	// UpstreamCircuitBreakerState exposes per-endpoint breaker state:
+	// 0=closed, 0.5=half-open, 1=open.
+	UpstreamCircuitBreakerState *Gauge
+	// UpstreamCircuitBreakerRejectionsTotal counts local fast-fails while a
+	// per-endpoint breaker is open or saturated in half-open.
+	UpstreamCircuitBreakerRejectionsTotal *Counter
+	// UpstreamCircuitBreakerTransitionsTotal counts state transitions by next
+	// state (open, half_open, closed).
+	UpstreamCircuitBreakerTransitionsTotal *Counter
 	// ProtocolErrorsTotal counts JSON-RPC protocol-level errors by code.
 	ProtocolErrorsTotal *Counter
 	// ProtocolVersionHeaderMissingTotal counts post-initialize streamable HTTP
@@ -708,6 +717,21 @@ func init() {
 		"clockify_upstream_retry_after_unparseable_total",
 		"Non-empty Retry-After headers that could not be parsed by endpoint template.",
 		"endpoint",
+	)
+	UpstreamCircuitBreakerState = Default.NewGauge(
+		"clockify_upstream_circuit_breaker_state",
+		"Per-endpoint upstream circuit breaker state: 0=closed, 0.5=half_open, 1=open.",
+		"endpoint", "method",
+	)
+	UpstreamCircuitBreakerRejectionsTotal = Default.NewCounter(
+		"clockify_upstream_circuit_breaker_rejections_total",
+		"Local Clockify upstream calls rejected by an open or saturated half-open circuit breaker.",
+		"endpoint", "method",
+	)
+	UpstreamCircuitBreakerTransitionsTotal = Default.NewCounter(
+		"clockify_upstream_circuit_breaker_transitions_total",
+		"Clockify upstream circuit breaker state transitions by next state.",
+		"endpoint", "method", "state",
 	)
 	ProtocolErrorsTotal = Default.NewCounter(
 		"clockify_mcp_protocol_errors_total",

@@ -78,6 +78,18 @@ func newService(client *clockify.Client, workspaceID string, timezone string, dd
 	return service
 }
 
+func configureClockifyClient(client *clockify.Client, cfg config.Config) {
+	if client == nil {
+		return
+	}
+	client.SetCircuitBreaker(clockify.CircuitBreakerConfig{
+		Enabled:          cfg.CircuitBreakerEnabled,
+		FailureThreshold: cfg.CircuitBreakerFailureThreshold,
+		OpenDuration:     cfg.CircuitBreakerOpenDuration,
+		HalfOpenProbes:   cfg.CircuitBreakerHalfOpenProbes,
+	})
+}
+
 func buildServer(version string, deps runtimeDeps, service *tools.Service, pol *policy.Policy, bc *bootstrap.Config) *mcp.Server {
 	registry := service.Registry()
 	tier1Names := make(map[string]bool, len(registry))
@@ -327,6 +339,7 @@ func tenantRuntime(_ context.Context, principalTenant string, deps runtimeDeps, 
 		workspaceID = tenant.WorkspaceID
 	}
 	client := clockify.NewClient(material.APIKey, baseURL, deps.cfg.RequestTimeout, deps.cfg.MaxRetries)
+	configureClockifyClient(client, deps.cfg)
 	client.SetUserAgent("clockify-mcp-go/" + deps.version)
 
 	pol, err := tenantpolicy.Derive(deps.policy, tenant)
