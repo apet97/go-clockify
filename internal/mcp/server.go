@@ -206,12 +206,6 @@ type Server struct {
 	// params.protocolVersion. Empty or unsupported values fall back to
 	// SupportedProtocolVersions[0]; explicit supported client requests still win.
 	DefaultProtocolVersion string
-	ReadyChecker           func(ctx context.Context) error // optional upstream health check for /ready
-	// ExposeAuthErrors controls whether HTTP transports return detailed
-	// authenticator errors to unauthenticated clients. The default is false:
-	// transports return a generic OAuth error_description and log details
-	// server-side only.
-	ExposeAuthErrors bool
 
 	// SanitizeUpstreamErrors controls whether tool-error responses to MCP
 	// clients omit upstream Clockify response bodies. The one-user stdio

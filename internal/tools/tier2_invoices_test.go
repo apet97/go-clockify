@@ -294,6 +294,29 @@ func TestTier2_Invoices_BuilderShape(t *testing.T) {
 	}
 }
 
+func TestExportInvoiceOneUserDefaultsUserLocale(t *testing.T) {
+	var gotQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/inv1/export" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotQuery = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("%PDF invoice"))
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{"invoice_id": "inv1"})
+	mustOK(t, res, err, "clockify_invoices_export")
+	if got := gotQuery.Get("userLocale"); got != "en-US" {
+		t.Fatalf("expected default userLocale=en-US, got query=%q", gotQuery.Encode())
+	}
+	if res.Meta["userLocale"] != "en-US" {
+		t.Fatalf("expected userLocale meta, got %#v", res.Meta)
+	}
+}
+
 // TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:
 // when the caller passes `status`, the handler must emit ?statuses=
 // (plural) upstream and must NOT emit ?status=. Upstream wire name
@@ -506,6 +529,51 @@ func TestUpdateInvoiceUsesCamelCaseBodyKeys(t *testing.T) {
 	}
 	if gotPatchBody["invoiceStatus"] != "SENT" {
 		t.Fatalf("expected split status patch invoiceStatus=SENT, got %#v", gotPatchBody)
+	}
+}
+
+func TestUpdateInvoiceDoesNotTreatTotalAmountsAsPercentFields(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1":
+			respondJSON(t, w, map[string]any{
+				"id":         "inv1",
+				"clientId":   "client1",
+				"number":     "INV-1",
+				"issuedDate": "2026-04-01T00:00:00Z",
+				"currency":   "USD",
+				"dueDate":    "2026-05-01T00:00:00Z",
+				"note":       "old",
+				"tax":        125.0,
+				"tax2":       225.0,
+				"discount":   325.0,
+			})
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1":
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": "inv1"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.updateInvoice(context.Background(), map[string]any{
+		"invoice_id": "inv1",
+		"note":       "updated",
+	})
+	mustOK(t, res, err, "clockify_update_invoice")
+
+	for _, key := range []string{"taxPercent", "tax2Percent", "discountPercent"} {
+		if _, ok := gotBody[key]; ok {
+			t.Fatalf("invoice update must not copy total amount field into %s: %#v", key, gotBody)
+		}
+	}
+	if gotBody["note"] != "updated" {
+		t.Fatalf("invoice note not updated: %#v", gotBody)
 	}
 }
 
@@ -730,6 +798,104 @@ func TestInvoiceItemDryRunsDoNotMutate(t *testing.T) {
 	}
 	if res.Meta["itemIndex"] != "2" || res.Meta["itemId"] != "2" {
 		t.Fatalf("expected item index aliases in meta, got %#v", res.Meta)
+	}
+}
+
+func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
+	var bodies []map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/invoices/inv1/items/import" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		bodies = append(bodies, body)
+		respondJSON(t, w, map[string]any{"id": "imported"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	sharedBody := map[string]any{
+		"from":          "2026-05-01T00:00:00Z",
+		"to":            "2026-05-02T00:00:00Z",
+		"projectFilter": map[string]any{"ids": []any{"p1"}, "contains": "CONTAINS", "status": "ACTIVE"},
+	}
+	res, err := svc.importInvoiceTimeOneUser(context.Background(), map[string]any{
+		"invoice_id":            "inv1",
+		"time_entry_ids":        []any{"te1"},
+		"time_entry_group_type": "DETAILED",
+		"body":                  sharedBody,
+	})
+	mustOK(t, res, err, "clockify_invoices_import_time")
+
+	res, err = svc.importInvoiceExpensesOneUser(context.Background(), map[string]any{
+		"invoice_id":       "inv1",
+		"expense_ids":      []any{"exp1"},
+		"include_expenses": true,
+		"body":             sharedBody,
+	})
+	mustOK(t, res, err, "clockify_invoices_import_expenses")
+
+	if len(bodies) != 2 {
+		t.Fatalf("expected two import requests, got %d", len(bodies))
+	}
+	if bodies[0]["importExpenses"] != false {
+		t.Fatalf("time import must send importExpenses=false, got %#v", bodies[0])
+	}
+	if bodies[1]["importExpenses"] != true {
+		t.Fatalf("expense import must send importExpenses=true, got %#v", bodies[1])
+	}
+	if bodies[1]["timeEntryGroupType"] != "DETAILED" {
+		t.Fatalf("expense import must default timeEntryGroupType=DETAILED, got %#v", bodies[1])
+	}
+	for _, body := range bodies {
+		if _, ok := body["includeExpenses"]; ok {
+			t.Fatalf("import request must not send legacy includeExpenses: %#v", body)
+		}
+	}
+}
+
+func TestInvoicePaymentCreateUsesPaymentDateWireField(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/invoices/inv1/payments":
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": "inv1"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1/payments":
+			respondJSON(t, w, map[string]any{
+				"payments": []map[string]any{{
+					"id":          "pay1",
+					"note":        "paid",
+					"paymentDate": "2026-05-01T00:00:00Z",
+				}},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.createInvoicePaymentOneUser(context.Background(), map[string]any{
+		"invoice_id": "inv1",
+		"amount":     10,
+		"date":       "2026-05-01T00:00:00Z",
+		"note":       "paid",
+	})
+	mustOK(t, res, err, "clockify_invoices_payments_create")
+	if gotBody["paymentDate"] != "2026-05-01T00:00:00Z" {
+		t.Fatalf("expected paymentDate wire field, got %#v", gotBody)
+	}
+	if _, ok := gotBody["date"]; ok {
+		t.Fatalf("payment create must not send legacy date field: %#v", gotBody)
+	}
+	if res.Meta["paymentId"] != "pay1" {
+		t.Fatalf("expected paymentId from post-create list lookup, got %#v", res.Meta)
 	}
 }
 

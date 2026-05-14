@@ -23,6 +23,7 @@ Optional one-user probes use additional gates:
 ```sh
 export CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1
 export CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1
+export CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1
 ```
 
 The build-tagged optional domain campaign also requires an explicit workspace
@@ -36,6 +37,9 @@ Some optional campaign categories still require their own blast-radius gates,
 such as `CLOCKIFY_LIVE_ADMIN_ENABLED=true`,
 `CLOCKIFY_LIVE_BILLING_ENABLED=true`, and
 `CLOCKIFY_LIVE_SETTINGS_ENABLED=true`.
+`CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1` is only for paid-feature happy-path
+campaigns that create real invoices, expenses, time-off records, scheduling
+assignments, and webhooks in the confirmed sacrificial workspace.
 
 ## What To Run
 
@@ -74,6 +78,7 @@ make live-contract-local
 | `TestOneUserLiveWorkflow` | The internal one-user service can seed, log, start, switch, stop, fix, review, and clean up work in the configured workspace. |
 | `TestOneUserLivePaidFeatureWorkflowRecovery` | Paid or high-risk workflow tools return useful success/recovery envelopes under `CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1`. |
 | `TestOneUserLiveOptionalDomainContracts` | Optional domain tools return stable success/recovery envelopes under `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`. |
+| `TestLiveOneUserPaidFeatureHappyPaths` | Paid-feature domain tools complete real happy paths when the workspace has the relevant features and every happy-path gate is enabled. |
 
 ## Skip Behavior
 

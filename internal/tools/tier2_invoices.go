@@ -450,6 +450,8 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
 		query.Set("format", format)
 	}
+	userLocale := firstNonEmpty([]string{stringArg(args, "user_locale"), "en-US"})
+	query.Set("userLocale", userLocale)
 	raw, err := s.Client.RequestRawValues(ctx, false, "GET", path, query, nil)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -462,6 +464,7 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 		"workspaceId": wsID,
 		"invoiceId":   invoiceID,
 		"format":      strings.TrimSpace(stringArg(args, "format")),
+		"userLocale":  userLocale,
 		"binary":      true,
 	}), nil
 }
@@ -490,6 +493,12 @@ func (s *Service) importInvoiceTimeOneUser(ctx context.Context, args map[string]
 		return ResultEnvelope{}, err
 	}
 	body := nativeBodyFromArgs(args, "time_entry_group_type")
+	if body == nil {
+		body = map[string]any{}
+	}
+	if _, ok := body["importExpenses"]; !ok {
+		body["importExpenses"] = false
+	}
 	body["timeEntryIds"] = timeEntryIDs
 	var imported map[string]any
 	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
@@ -527,12 +536,15 @@ func (s *Service) importInvoiceExpensesOneUser(ctx context.Context, args map[str
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	body := nativeBodyFromArgs(args)
+	body := nativeBodyFromArgs(args, "time_entry_group_type")
 	if body == nil {
 		body = map[string]any{}
 	}
+	if _, ok := body["timeEntryGroupType"]; !ok {
+		body["timeEntryGroupType"] = "DETAILED"
+	}
 	body["expenseIds"] = expenseIDs
-	body["includeExpenses"] = includeExpenses
+	body["importExpenses"] = includeExpenses
 	var imported map[string]any
 	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
 		return ResultEnvelope{}, err
@@ -561,15 +573,71 @@ func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[stri
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	body := nativeBodyFromArgs(args, "amount", "date", "note")
+	body := nativeBodyFromArgs(args, "amount", "note")
+	body["paymentDate"] = args["date"]
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_invoices_payments_create", invoicePaymentViewFromRaw(created, ""), map[string]any{
+
+	view := invoicePaymentViewFromRaw(created, "")
+	if invoicePaymentViewID(view) == "" || invoicePaymentViewID(view) == invoiceID {
+		if payments, err := s.invoicePaymentViews(ctx, wsID, invoiceID, 1, 50); err == nil && len(payments) > 0 {
+			view = selectInvoicePaymentView(payments, args)
+		}
+	}
+	meta := map[string]any{
 		"workspaceId": wsID,
 		"invoiceId":   invoiceID,
-	}), nil
+	}
+	if paymentID := invoicePaymentViewID(view); paymentID != "" {
+		meta["paymentId"] = paymentID
+	}
+	return ok("clockify_invoices_payments_create", view, meta), nil
+}
+
+func selectInvoicePaymentView(payments []InvoicePaymentView, args map[string]any) InvoicePaymentView {
+	note := stringArg(args, "note")
+	date := stringArg(args, "date")
+	for _, payment := range payments {
+		if note != "" && invoicePaymentViewField(payment, "note") == note {
+			return payment
+		}
+		if date != "" && invoicePaymentViewField(payment, "date") == date {
+			return payment
+		}
+	}
+	return payments[0]
+}
+
+func invoicePaymentViewID(view InvoicePaymentView) string {
+	if id := firstReportString(map[string]any(view), "id", "_id", "paymentId", "payment_id"); id != "" {
+		return id
+	}
+	if nested, ok := view["payment"].(map[string]any); ok {
+		if id := firstReportString(nested, "id", "_id", "paymentId", "payment_id"); id != "" {
+			return id
+		}
+	}
+	if raw, ok := view["raw"].(map[string]any); ok {
+		return firstReportString(raw, "id", "_id", "paymentId", "payment_id")
+	}
+	return ""
+}
+
+func invoicePaymentViewField(view InvoicePaymentView, field string) string {
+	if nested, ok := view["payment"].(map[string]any); ok {
+		if value := firstReportString(nested, field); value != "" {
+			return value
+		}
+	}
+	if value := firstReportString(map[string]any(view), field); value != "" {
+		return value
+	}
+	if raw, ok := view["raw"].(map[string]any); ok {
+		return firstReportString(raw, field)
+	}
+	return ""
 }
 
 func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -754,14 +822,13 @@ func invoiceUpdateBodyFromExisting(existing map[string]any) map[string]any {
 			}
 		}
 	}
-	copyNumber := func(dst string, fallback float64, keys ...string) {
+	copyNumber := func(dst string, keys ...string) {
 		for _, key := range keys {
 			if value, ok := reportNumber(existing[key]); ok {
 				body[dst] = value
 				return
 			}
 		}
-		body[dst] = fallback
 	}
 
 	copyString("clientId", "clientId", "client_id")
@@ -775,9 +842,9 @@ func invoiceUpdateBodyFromExisting(existing map[string]any) map[string]any {
 	copyString("number", "number")
 	copyString("subject", "subject")
 	copyString("taxType", "taxType", "tax_type")
-	copyNumber("discountPercent", 0, "discountPercent", "discount_percent", "discount")
-	copyNumber("tax2Percent", 0, "tax2Percent", "tax2_percent", "tax2")
-	copyNumber("taxPercent", 0, "taxPercent", "tax_percent", "tax")
+	copyNumber("discountPercent", "discountPercent", "discount_percent")
+	copyNumber("tax2Percent", "tax2Percent", "tax2_percent")
+	copyNumber("taxPercent", "taxPercent", "tax_percent")
 	switch visible := firstPresent(existing, "visibleZeroFields", "visible_zero_fields").(type) {
 	case string:
 		body["visibleZeroFields"] = visible

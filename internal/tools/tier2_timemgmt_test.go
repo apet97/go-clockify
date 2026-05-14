@@ -197,6 +197,16 @@ func TestCreateAssignmentNormalizesFlexibleRange(t *testing.T) {
 			if body["start"] != "2026-04-01T09:00:00Z" || body["end"] != "2026-04-02T17:30:00Z" {
 				t.Fatalf("body start/end not normalized: %#v", body)
 			}
+			recurring, ok := body["recurringAssignment"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected recurringAssignment defaults, got %#v", body["recurringAssignment"])
+			}
+			if recurring["repeat"] != false {
+				t.Fatalf("expected one-off repeat=false, got %#v", recurring)
+			}
+			if weeks, ok := reportNumber(recurring["weeks"]); !ok || weeks != 1 {
+				t.Fatalf("expected one-off weeks=1, got %#v", recurring)
+			}
 			body["id"] = "a1"
 			respondJSON(t, w, []map[string]any{body})
 		default:
@@ -511,6 +521,56 @@ func TestGetTimeOffRequestUsesBareRequestEndpointAndNormalizesStructuredStatus(t
 	}
 }
 
+func TestGetTimeOffRequestSearchesApprovedRequestsWhenBareEndpointMisses(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID:
+			http.Error(w, "not found", http.StatusNotFound)
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/time-off/requests":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			statuses, _ := body["statuses"].([]any)
+			if len(statuses) == 1 && statuses[0] == "APPROVED" {
+				respondJSON(t, w, map[string]any{
+					"requests": []map[string]any{{
+						"id":       requestID,
+						"policyId": policyID,
+						"status":   map[string]any{"statusType": "APPROVED"},
+					}},
+				})
+				return
+			}
+			respondJSON(t, w, map[string]any{"requests": []map[string]any{}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.getTimeOffRequest(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	if err != nil {
+		t.Fatalf("get time off request failed: %v", err)
+	}
+	data, ok := result.Data.(TimeOffRequestView)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	request, ok := data["request"].(map[string]any)
+	if !ok || request["status"] != "APPROVED" {
+		t.Fatalf("expected fallback-approved request, got %#v", data["request"])
+	}
+}
+
 func TestDeleteTimeOffRequestDryRunUsesBareRequestEndpoint(t *testing.T) {
 	const (
 		policyID  = "abc123def456789012345678"
@@ -575,6 +635,156 @@ func TestTimeOffBalanceUsesUserBalanceEndpointAndFiltersPolicy(t *testing.T) {
 	policy, ok := data["policy"].(map[string]any)
 	if !ok || policy["id"] != policyID {
 		t.Fatalf("expected selected policy %s, got %#v", policyID, data["policy"])
+	}
+}
+
+func TestCreateTimeOffPolicyUsesClockifyPolicyBodyShape(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/user" {
+			respondJSON(t, w, map[string]any{"id": "user1", "name": "Owner"})
+			return
+		}
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/time-off/policies" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": "pol1", "name": gotBody["name"]})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.createTimeOffPolicy(context.Background(), map[string]any{
+		"name":              "Vacation",
+		"time_unit":         "DAYS",
+		"days_per_year":     5,
+		"negative_balance":  true,
+		"requires_approval": false,
+	})
+	if err != nil {
+		t.Fatalf("create time off policy failed: %v", err)
+	}
+	if gotBody["allowNegativeBalance"] != true {
+		t.Fatalf("expected allowNegativeBalance=true, got %#v", gotBody)
+	}
+	negativeBalance, ok := gotBody["negativeBalance"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected structured negativeBalance, got %#v", gotBody["negativeBalance"])
+	}
+	if negativeBalance["timeUnit"] != "DAYS" || negativeBalance["period"] != "YEAR" {
+		t.Fatalf("unexpected negativeBalance defaults: %#v", negativeBalance)
+	}
+	if negativeBalance["amount"] != float64(10) {
+		t.Fatalf("expected negativeBalance.amount=10, got %#v", negativeBalance)
+	}
+	approve, ok := gotBody["approve"].(map[string]any)
+	if !ok || approve["requiresApproval"] != false {
+		t.Fatalf("expected approve.requiresApproval=false, got %#v", gotBody["approve"])
+	}
+	if _, exists := gotBody["requiresApproval"]; exists {
+		t.Fatalf("requiresApproval must be nested under approve, got %#v", gotBody)
+	}
+	users, ok := gotBody["users"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected current-user filter, got %#v", gotBody["users"])
+	}
+	ids, ok := users["ids"].([]any)
+	if !ok || len(ids) != 1 || ids[0] != "user1" {
+		t.Fatalf("expected current user ID in users filter, got %#v", users)
+	}
+}
+
+func TestUpdateTimeOffPolicyMapsNegativeBalanceAndApprovalShape(t *testing.T) {
+	const policyID = "abc123def456789012345678"
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/time-off/policies/"+policyID {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		switch r.Method {
+		case http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":                   policyID,
+				"name":                 "Existing",
+				"allowNegativeBalance": false,
+				"approve":              map[string]any{"requiresApproval": true},
+				"archived":             false,
+				"everyoneIncludingNew": false,
+				"hasExpiration":        false,
+				"timeUnit":             "DAYS",
+				"userGroups":           map[string]any{"contains": "CONTAINS", "ids": []any{}, "status": "ACTIVE"},
+				"users":                map[string]any{"contains": "CONTAINS", "ids": []any{}, "status": "ACTIVE"},
+			})
+		case http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": policyID, "name": gotBody["name"]})
+		default:
+			t.Fatalf("unexpected method %s", r.Method)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateTimeOffPolicy(context.Background(), map[string]any{
+		"policy_id":         policyID,
+		"negative_balance":  true,
+		"requires_approval": false,
+	})
+	if err != nil {
+		t.Fatalf("update time off policy failed: %v", err)
+	}
+	if gotBody["allowNegativeBalance"] != true {
+		t.Fatalf("expected allowNegativeBalance=true, got %#v", gotBody)
+	}
+	if _, ok := gotBody["negativeBalance"].(map[string]any); !ok {
+		t.Fatalf("expected structured negativeBalance, got %#v", gotBody["negativeBalance"])
+	}
+	if amount, ok := reportNumber(gotBody["negativeBalance"].(map[string]any)["amount"]); !ok || amount != 10 {
+		t.Fatalf("expected update to coerce reusable negativeBalance.amount=10, got %#v", gotBody["negativeBalance"])
+	}
+	approve, ok := gotBody["approve"].(map[string]any)
+	if !ok || approve["requiresApproval"] != false {
+		t.Fatalf("expected approve.requiresApproval=false, got %#v", gotBody["approve"])
+	}
+	if _, exists := gotBody["requiresApproval"]; exists {
+		t.Fatalf("requiresApproval must be nested under approve, got %#v", gotBody)
+	}
+}
+
+func TestArchiveTimeOffPolicyUsesStatusPatch(t *testing.T) {
+	const policyID = "abc123def456789012345678"
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != "/workspaces/ws1/time-off/policies/"+policyID {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": policyID, "status": gotBody["status"]})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.archiveTimeOffPolicy(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"archived":  true,
+	})
+	if err != nil {
+		t.Fatalf("archive time off policy failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatal("expected ok result")
+	}
+	if gotBody["status"] != "ARCHIVED" {
+		t.Fatalf("expected status ARCHIVED, got %#v", gotBody)
+	}
+	if _, exists := gotBody["archived"]; exists {
+		t.Fatalf("archive endpoint expects status, not archived boolean: %#v", gotBody)
 	}
 }
 
@@ -652,8 +862,25 @@ func TestUpdateTimeOffRequestRejectsEmptyBody(t *testing.T) {
 		"policy_id":  "abc123def456789012345678",
 		"request_id": "abc123def456789012345679",
 	})
-	if err == nil || !strings.Contains(err.Error(), "at least one field") {
+	if err == nil || !strings.Contains(err.Error(), "status is required") {
 		t.Fatalf("expected empty update body error, got %v", err)
+	}
+}
+
+func TestUpdateTimeOffRequestRejectsNoteOnly(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("note-only time-off update must not reach upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateTimeOffRequest(context.Background(), map[string]any{
+		"policy_id":  "abc123def456789012345678",
+		"request_id": "abc123def456789012345679",
+		"note":       "status endpoint requires a status",
+	})
+	if err == nil || !strings.Contains(err.Error(), "status is required") {
+		t.Fatalf("expected status required error, got %v", err)
 	}
 }
 

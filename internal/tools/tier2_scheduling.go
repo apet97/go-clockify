@@ -544,6 +544,7 @@ func addRecurringAssignment(payload map[string]any, args map[string]any) {
 	_, hasRepeat := args["repeat"]
 	weeks := intArg(args, "weeks", 0)
 	if !hasRepeat && weeks == 0 {
+		payload["recurringAssignment"] = map[string]any{"repeat": false, "weeks": 1}
 		return
 	}
 	recurring := map[string]any{}

@@ -47893,6 +47893,9 @@
           },
           "invoice_id": {
             "type": "string"
+          },
+          "user_locale": {
+            "type": "string"
           }
         },
         "required": [
@@ -49393,10 +49396,8 @@
     },
     {
       "name": "clockify_time_off_archive",
-      "description": "Archive a time off policy or request.",
+      "description": "Archive or reactivate a time off policy.",
       "handler_kind": "native handler",
-      "method": "PATCH",
-      "path": "/workspaces/{workspaceId}/time-off/policies/{policy_id}",
       "read_only": false,
       "destructive": false,
       "idempotent": true,
@@ -49633,9 +49634,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "PATCH",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/time-off/policies/{policy_id}",
         "priority": 506,
         "readOnlyHint": false,
         "riskClass": [

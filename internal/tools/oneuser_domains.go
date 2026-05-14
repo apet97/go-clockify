@@ -647,7 +647,10 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 		out = append(out, s.nativeRouteDescriptor(spec))
 	}
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
-	out = append(out, s.nativeRouteDescriptor(rt(506, "PATCH", "clockify_time_off_archive", "Archive a time off policy or request.", "time-off/policies/{policy_id}", "time_off", []string{"policy_id"}, fields("archived", "body"), nil, []string{"archived"}, false, true, false, "updated").withDefaults(map[string]any{"archived": true})))
+	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
+		"required":   []string{"policy_id"},
+		"properties": fields("policy_id", "archived"),
+	})), "time_off", "updated", s.archiveTimeOffPolicy))
 	out = append(out, s.explicitPostTimeOffNativeDescriptors()...)
 	return out
 }
@@ -656,7 +659,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "format"),
+			"properties": fields("invoice_id", "format", "user_locale"),
 		})), "invoice_export", "", s.exportInvoiceOneUser),
 		nativeDomainTool(211, toolRW("clockify_invoices_import_time", "Import time entries into an invoice.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id"},

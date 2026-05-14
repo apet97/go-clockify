@@ -181,7 +181,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_payments_list` | — | yes | no | yes | no | `read` | List invoice payments. |
 | `clockify_invoices_payments_create` | — | no | no | no | no | `write` | Create an invoice payment. |
 | `clockify_invoices_payments_delete` | — | no | yes | no | no | `destructive` | Delete an invoice payment. |
-| `clockify_time_off_archive` | — | no | no | yes | no | `write` | Archive a time off policy or request. |
+| `clockify_time_off_archive` | — | no | no | yes | no | `write` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
 | `clockify_approvals_resubmit` | — | no | no | no | no | `write` | Resubmit rejected or withdrawn entries and expenses for approval. |
