@@ -255,6 +255,320 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	}
 }
 
+func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
+	apiKey, workspaceID, prefix := requireRemainingCoverageLiveEnv(t)
+
+	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)
+	defer client.Close()
+	svc := New(client, workspaceID)
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("live-remaining", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	runID := cleanDemoRunID(prefix)
+	if runID == "" {
+		runID = "live-remaining"
+	}
+	unique := func(kind string) string {
+		return liveOptionalName(prefix, runID, kind, 80)
+	}
+	bogusID := "000000000000000000000001"
+
+	status := requireLiveOK(t, server, "clockify_status", nil)
+	userID := requireLiveID(t, status, "userId")
+
+	callLiveToolDataOrRecovery(t, server, "clockify_clients_list", nil)
+	clientResp := requireLiveOK(t, server, "clockify_clients_create", map[string]any{"name": unique("client")})
+	clientID := requireLiveID(t, clientResp, "clientId")
+	requireLiveOK(t, server, "clockify_clients_get", map[string]any{"client_id": clientID})
+	requireLiveOK(t, server, "clockify_clients_update", map[string]any{"client_id": clientID, "note": "live coverage probe"})
+
+	callLiveToolDataOrRecovery(t, server, "clockify_projects_list", nil)
+	projectResp := requireLiveOK(t, server, "clockify_projects_create", map[string]any{
+		"name":      unique("project"),
+		"client_id": clientID,
+		"billable":  true,
+	})
+	projectID := requireLiveID(t, projectResp, "projectId")
+	secondProjectResp := requireLiveOK(t, server, "clockify_projects_create", map[string]any{
+		"name":     unique("timer-project"),
+		"billable": true,
+	})
+	secondProjectID := requireLiveID(t, secondProjectResp, "projectId")
+	requireLiveOK(t, server, "clockify_projects_update", map[string]any{"project_id": projectID, "note": "live coverage probe"})
+	callLiveToolDataOrRecovery(t, server, "clockify_projects_rates_update", map[string]any{
+		"project_id": projectID,
+		"user_id":    userID,
+		"rate_kind":  "hourly",
+		"amount":     1,
+	})
+
+	taskResp := requireLiveOK(t, server, "clockify_tasks_create", map[string]any{
+		"project_id": projectID,
+		"name":       unique("task"),
+	})
+	taskID := requireLiveID(t, taskResp, "taskId")
+	requireLiveOK(t, server, "clockify_tasks_get", map[string]any{"project_id": projectID, "task_id": taskID})
+	requireLiveOK(t, server, "clockify_tasks_update", map[string]any{"project_id": projectID, "task_id": taskID, "billable": true})
+	callLiveToolDataOrRecovery(t, server, "clockify_tasks_rates_update", map[string]any{
+		"project_id": projectID,
+		"task_id":    taskID,
+		"rate_kind":  "hourly",
+		"amount":     1,
+	})
+
+	tagResp := requireLiveOK(t, server, "clockify_tags_create", map[string]any{"name": unique("tag")})
+	tagID := requireLiveID(t, tagResp, "tagId")
+	requireLiveOK(t, server, "clockify_tags_get", map[string]any{"tag_id": tagID})
+	requireLiveOK(t, server, "clockify_tags_update", map[string]any{"tag_id": tagID, "name": unique("tag-renamed")})
+
+	entryResp := requireLiveOK(t, server, "clockify_entries_create", map[string]any{
+		"start":         "2026-02-03T09:00:00Z",
+		"end":           "2026-02-03T10:00:00Z",
+		"description":   unique("entry"),
+		"project_id":    projectID,
+		"task_id":       taskID,
+		"tag_ids":       []any{tagID},
+		"allow_overlap": true,
+	})
+	entryID := requireLiveID(t, entryResp, "entryId")
+	requireLiveOK(t, server, "clockify_entries_get", map[string]any{"entry_id": entryID})
+	requireLiveOK(t, server, "clockify_entries_update", map[string]any{"entry_id": entryID, "description": unique("entry-updated")})
+
+	callLiveToolDataOrRecovery(t, server, "clockify_entries_running", nil)
+	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_status", nil)
+	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_stop", nil)
+	timerStart := requireLiveOK(t, server, "clockify_entries_timer_start", map[string]any{
+		"project_id":  projectID,
+		"description": unique("timer-start"),
+	})
+	requireLiveID(t, timerStart, "entryId")
+	timerSwitch := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", map[string]any{
+		"project":     unique("timer-project"),
+		"description": unique("timer-switch"),
+	})
+	var timerEntryID string
+	if timerSwitch.OK {
+		timerEntryID = timerSwitch.IDs["entryId"]
+	}
+	timerStop := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_stop", nil)
+	if timerStop.OK && timerStop.IDs["entryId"] != "" {
+		timerEntryID = timerStop.IDs["entryId"]
+	}
+
+	invoiceID := bogusID
+	invoice := callLiveToolOKOrRecovery(t, server, "clockify_invoices_create", map[string]any{
+		"client_id":   clientID,
+		"number":      "MCP-LIVE-" + runID,
+		"issued_date": "2026-02-03T00:00:00Z",
+		"due_date":    "2026-02-28T00:00:00Z",
+		"currency":    "USD",
+	})
+	if invoice.OK && invoice.IDs["invoiceId"] != "" {
+		invoiceID = invoice.IDs["invoiceId"]
+	}
+	invoiceItemArgs := map[string]any{
+		"invoice_id":  invoiceID,
+		"item_index":  "0",
+		"item_type":   "SERVICE",
+		"description": "Live coverage item",
+		"quantity":    1,
+		"unit_price":  1,
+	}
+	for _, probe := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"clockify_invoices_update", map[string]any{"invoice_id": invoiceID, "note": "live coverage probe"}},
+		{"clockify_invoices_mark_paid", map[string]any{"invoice_id": invoiceID}},
+		{"clockify_invoices_items_add", invoiceItemArgs},
+		{"clockify_invoices_items_update", invoiceItemArgs},
+		{"clockify_invoices_items_delete", invoiceItemArgs},
+		{"clockify_invoices_export", map[string]any{"invoice_id": invoiceID, "format": "PDF"}},
+		{"clockify_invoices_import_time", map[string]any{"invoice_id": invoiceID, "time_entry_ids": []any{entryID}}},
+		{"clockify_invoices_import_expenses", map[string]any{"invoice_id": invoiceID, "expense_ids": []any{bogusID}, "include_expenses": true}},
+		{"clockify_invoices_payments_list", map[string]any{"invoice_id": invoiceID}},
+		{"clockify_invoices_payments_create", map[string]any{"invoice_id": invoiceID, "amount": 1, "date": "2026-02-03T00:00:00Z", "note": "live coverage"}},
+		{"clockify_invoices_payments_delete", map[string]any{"invoice_id": invoiceID, "payment_id": bogusID}},
+		{"clockify_invoices_delete", map[string]any{"invoice_id": invoiceID}},
+	} {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+
+	callLiveToolDataOrRecovery(t, server, "clockify_expenses_categories_delete", map[string]any{"category_id": bogusID})
+
+	policyID := bogusID
+	policy := callLiveToolOKOrRecovery(t, server, "clockify_time_off_policies_create", map[string]any{
+		"name":              unique("policy"),
+		"time_unit":         "DAYS",
+		"days_per_year":     1,
+		"requires_approval": false,
+	})
+	if policy.OK && policy.IDs["policyId"] != "" {
+		policyID = policy.IDs["policyId"]
+	}
+	for _, probe := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"clockify_time_off_policies_get", map[string]any{"policy_id": policyID}},
+		{"clockify_time_off_policies_update", map[string]any{"policy_id": policyID, "name": unique("policy-updated")}},
+		{"clockify_time_off_balances", map[string]any{"policy_id": policyID, "user_id": userID}},
+		{"clockify_time_off_requests_get", map[string]any{"request_id": bogusID}},
+		{"clockify_time_off_requests_update", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
+		{"clockify_time_off_requests_delete", map[string]any{"policy_id": policyID, "request_id": bogusID}},
+		{"clockify_time_off_approve", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
+		{"clockify_time_off_deny", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
+		{"clockify_time_off_archive", map[string]any{"policy_id": policyID, "archived": true}},
+	} {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+
+	assignmentID := bogusID
+	assignment := callLiveToolOKOrRecovery(t, server, "clockify_scheduling_assignments_create", map[string]any{
+		"user_id":       userID,
+		"project_id":    projectID,
+		"start":         "2026-02-09T09:00:00Z",
+		"end":           "2026-02-13T17:00:00Z",
+		"hours_per_day": 1,
+	})
+	if assignment.OK && assignment.IDs["assignmentId"] != "" {
+		assignmentID = assignment.IDs["assignmentId"]
+	}
+	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_assignments_update", map[string]any{
+		"assignment_id": assignmentID,
+		"start":         "2026-02-10T09:00:00Z",
+		"end":           "2026-02-14T17:00:00Z",
+		"hours_per_day": 2,
+	})
+	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_assignments_delete", map[string]any{"assignment_id": assignmentID})
+
+	webhookID := bogusID
+	webhook := callLiveToolOKOrRecovery(t, server, "clockify_webhooks_create", map[string]any{
+		"name":          unique("webhook"),
+		"url":           "https://example.com/clockify",
+		"webhook_event": "NEW_TIME_ENTRY",
+	})
+	if webhook.OK && webhook.IDs["webhookId"] != "" {
+		webhookID = webhook.IDs["webhookId"]
+	}
+	for _, probe := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"clockify_webhooks_update", map[string]any{"webhook_id": webhookID, "name": unique("webhook-updated")}},
+		{"clockify_webhooks_test", map[string]any{"webhook_id": webhookID}},
+		{"clockify_webhooks_delete", map[string]any{"webhook_id": webhookID}},
+	} {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+
+	groupID := bogusID
+	group := callLiveToolOKOrRecovery(t, server, "clockify_groups_create", map[string]any{"name": unique("group")})
+	if group.OK && group.IDs["groupId"] != "" {
+		groupID = group.IDs["groupId"]
+	}
+	callLiveToolDataOrRecovery(t, server, "clockify_groups_add_user", map[string]any{"group_id": groupID, "user_id": userID})
+	callLiveToolDataOrRecovery(t, server, "clockify_groups_remove_user", map[string]any{"group_id": groupID, "user_id": userID})
+	callLiveToolDataOrRecovery(t, server, "clockify_groups_delete", map[string]any{"group_id": groupID})
+
+	holidayID := bogusID
+	holidayDate := time.Now().UTC().AddDate(1, 1, 0).Format("2006-01-02")
+	holiday := callLiveToolOKOrRecovery(t, server, "clockify_holidays_create", map[string]any{
+		"name":       unique("holiday"),
+		"start_date": holidayDate,
+		"end_date":   holidayDate,
+		"user_ids":   []any{userID},
+	})
+	if holiday.OK && holiday.IDs["holidayId"] != "" {
+		holidayID = holiday.IDs["holidayId"]
+	}
+	callLiveToolDataOrRecovery(t, server, "clockify_holidays_get", map[string]any{"holiday_id": holidayID})
+	callLiveToolDataOrRecovery(t, server, "clockify_holidays_update", map[string]any{
+		"holiday_id":      holidayID,
+		"name":            unique("holiday-updated"),
+		"start_date":      holidayDate,
+		"end_date":        holidayDate,
+		"occurs_annually": false,
+		"user_ids":        []any{userID},
+		"user_group_ids":  []any{},
+	})
+	callLiveToolDataOrRecovery(t, server, "clockify_holidays_list_for_user_period", map[string]any{
+		"user_id": userID,
+		"start":   holidayDate,
+		"end":     holidayDate,
+	})
+	callLiveToolDataOrRecovery(t, server, "clockify_holidays_delete", map[string]any{"holiday_id": holidayID})
+
+	for _, probe := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"clockify_users_deactivate", map[string]any{"user_id": bogusID}},
+		{"clockify_users_role", map[string]any{"user_id": bogusID, "role": "WORKSPACE_ADMIN"}},
+		{"clockify_workspace_settings", nil},
+		{"clockify_projects_memberships_list", map[string]any{"project_id": projectID}},
+		{"clockify_reports_attendance", reportProbeArgs()},
+		{"clockify_reports_money", reportProbeArgs()},
+		{"clockify_reports_export", map[string]any{"start": "2026-02-03T00:00:00.000", "end": "2026-02-04T00:00:00.000", "export_type": "JSON"}},
+		{"clockify_approvals_resubmit", map[string]any{"approval_id": bogusID, "entry_ids": []any{entryID}, "note": "live coverage"}},
+	} {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+
+	if timerEntryID != "" {
+		callLiveToolDataOrRecovery(t, server, "clockify_entries_delete", map[string]any{"entry_id": timerEntryID})
+	}
+	requireLiveOK(t, server, "clockify_entries_delete", map[string]any{"entry_id": entryID})
+	requireLiveOK(t, server, "clockify_tasks_delete", map[string]any{"project_id": projectID, "task_id": taskID})
+	requireLiveOK(t, server, "clockify_tags_delete", map[string]any{"tag_id": tagID})
+	requireLiveOK(t, server, "clockify_projects_delete", map[string]any{"project_id": secondProjectID})
+	requireLiveOK(t, server, "clockify_projects_delete", map[string]any{"project_id": projectID})
+	requireLiveOK(t, server, "clockify_clients_delete", map[string]any{"client_id": clientID})
+}
+
+func requireRemainingCoverageLiveEnv(t *testing.T) (string, string, string) {
+	t.Helper()
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" ||
+		os.Getenv("CLOCKIFY_LIVE_OPTIONAL_DOMAINS") != "1" ||
+		os.Getenv("CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS") != "1" {
+		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1, CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1, and CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1 to run remaining live coverage probes")
+	}
+	for _, gate := range []string{"CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"} {
+		if os.Getenv(gate) != "true" {
+			t.Skipf("set %s=true to run remaining live coverage probes", gate)
+		}
+	}
+	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
+	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
+	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
+	if apiKey == "" || workspaceID == "" || prefix == "" {
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required")
+	}
+	if confirm := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_WORKSPACE_CONFIRM")); confirm != workspaceID {
+		t.Fatalf("CLOCKIFY_LIVE_WORKSPACE_CONFIRM=%q does not match CLOCKIFY_WORKSPACE_ID", confirm)
+	}
+	return apiKey, workspaceID, prefix
+}
+
+func requireLiveOK(t *testing.T, server *mcp.Server, name string, args map[string]any) liveToolEnvelope {
+	t.Helper()
+	envelope := callLiveToolDataOrRecovery(t, server, name, args)
+	if !envelope.OK {
+		t.Fatalf("%s returned recovery where success is required: code=%s hint=%s", name, envelope.Error.Code, envelope.Recovery.Hint)
+	}
+	return envelope
+}
+
+func reportProbeArgs() map[string]any {
+	return map[string]any{
+		"start":     "2026-02-03T00:00:00.000",
+		"end":       "2026-02-04T00:00:00.000",
+		"page":      1,
+		"page_size": 10,
+	}
+}
+
 type liveToolEnvelope struct {
 	OK       bool              `json:"ok"`
 	IDs      map[string]string `json:"ids,omitempty"`
