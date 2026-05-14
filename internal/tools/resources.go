@@ -464,6 +464,12 @@ func (s *Service) ListResourceTemplates(_ context.Context) ([]mcp.ResourceTempla
 			Description: "Aggregated weekly report keyed by ISO week-start date (YYYY-MM-DD).",
 			MimeType:    "application/json",
 		},
+		{
+			URITemplate: "clockify://demo/{run_id}",
+			Name:        "Demo run by id",
+			Description: "Demo state resource. Replace {run_id} with the run_id passed to demo seed or cleanup.",
+			MimeType:    "application/json",
+		},
 	}, nil
 }
 

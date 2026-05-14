@@ -532,13 +532,17 @@ func changedFor(change, entity string, data any, ids map[string]string) ChangeSe
 func idsFromData(data any, entity string) map[string]string {
 	out := map[string]string{}
 	switch m := data.(type) {
+	case clockify.TimeEntry:
+		addEntryIDs(out, m.ID, m.WorkspaceID, m.UserID, m.ProjectID, m.TaskID)
+	case EntryView:
+		addEntryIDs(out, m.ID, m.WorkspaceID, m.UserID, m.ProjectID, m.TaskID)
 	case map[string]any:
-		if id := stringFromMap(m, "id", "_id"); id != "" {
+		if id := oneUserStringFromMap(m, "id", "_id"); id != "" {
 			out[idKey(entity+"_id")] = id
 		}
 	case []map[string]any:
 		for _, item := range m {
-			if id := stringFromMap(item, "id", "_id"); id != "" {
+			if id := oneUserStringFromMap(item, "id", "_id"); id != "" {
 				out[idKey(entity+"_id")] = id
 				break
 			}
@@ -546,7 +550,7 @@ func idsFromData(data any, entity string) map[string]string {
 	case []any:
 		for _, item := range m {
 			if asMap, ok := item.(map[string]any); ok {
-				if id := stringFromMap(asMap, "id", "_id"); id != "" {
+				if id := oneUserStringFromMap(asMap, "id", "_id"); id != "" {
 					out[idKey(entity+"_id")] = id
 					break
 				}
@@ -554,6 +558,24 @@ func idsFromData(data any, entity string) map[string]string {
 		}
 	}
 	return out
+}
+
+func addEntryIDs(out map[string]string, entryID, workspaceID, userID, projectID, taskID string) {
+	if entryID != "" {
+		out["entryId"] = entryID
+	}
+	if workspaceID != "" {
+		out["workspaceId"] = workspaceID
+	}
+	if userID != "" {
+		out["userId"] = userID
+	}
+	if projectID != "" {
+		out["projectId"] = projectID
+	}
+	if taskID != "" {
+		out["taskId"] = taskID
+	}
 }
 
 func firstEntityID(entity string, ids map[string]string) string {
@@ -575,13 +597,19 @@ func firstEntityID(entity string, ids map[string]string) string {
 }
 
 func entityName(data any) string {
+	switch v := data.(type) {
+	case clockify.TimeEntry:
+		return v.Description
+	case EntryView:
+		return v.Description
+	}
 	if m, ok := data.(map[string]any); ok {
-		return stringFromMap(m, "name", "description", "number")
+		return oneUserStringFromMap(m, "name", "description", "number")
 	}
 	return ""
 }
 
-func stringFromMap(m map[string]any, keys ...string) string {
+func oneUserStringFromMap(m map[string]any, keys ...string) string {
 	for _, key := range keys {
 		if value, ok := m[key].(string); ok && value != "" {
 			return value

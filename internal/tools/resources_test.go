@@ -31,7 +31,6 @@ func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
 		"clockify://tools",
 		"clockify://workflows",
 		"clockify://demo/phase1",
-		"clockify://demo/{run_id}",
 		"clockify://recent/entries",
 		"clockify://recent/projects",
 		"clockify://workspace/ws1",
@@ -116,14 +115,23 @@ func TestDemoResourcesTrackSeedAndCleanup(t *testing.T) {
 	}
 }
 
-func TestResourcesListTemplatesSix(t *testing.T) {
+func TestResourcesListTemplatesIncludesDemo(t *testing.T) {
 	svc := &Service{}
 	tmpls, err := svc.ListResourceTemplates(context.Background())
 	if err != nil {
 		t.Fatalf("templates: %v", err)
 	}
-	if len(tmpls) != 6 {
-		t.Fatalf("expected 6 templates, got %d", len(tmpls))
+	if len(tmpls) != 7 {
+		t.Fatalf("expected 7 templates, got %d", len(tmpls))
+	}
+	foundDemo := false
+	for _, tmpl := range tmpls {
+		if tmpl.URITemplate == "clockify://demo/{run_id}" {
+			foundDemo = true
+		}
+	}
+	if !foundDemo {
+		t.Fatalf("missing demo resource template in %+v", tmpls)
 	}
 }
 
@@ -238,9 +246,16 @@ func TestResourcesReadWeeklyReportDoesNotMutateServiceWorkspace(t *testing.T) {
 		switch r.URL.Path {
 		case "/user":
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice"})
-		case "/workspaces/" + resourceWorkspace + "/user/u1/time-entries":
+		case "/workspaces/" + resourceWorkspace + "/reports/weekly":
+			if r.Method != http.MethodPost {
+				t.Fatalf("weekly report method = %s, want POST", r.Method)
+			}
 			observedWorkspace <- svc.WorkspaceID
-			respondJSON(t, w, []clockify.TimeEntry{})
+			respondJSON(t, w, map[string]any{
+				"totals":      []map[string]any{},
+				"groupOne":    []map[string]any{},
+				"totalsByDay": []map[string]any{},
+			})
 		default:
 			t.Fatalf("unexpected path: %q", r.URL.Path)
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/resolve"
+	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
 func (s *Service) workflowDescriptors() []mcp.ToolDescriptor {
@@ -232,11 +233,10 @@ func (s *Service) ClockifyLogWork(ctx context.Context, args map[string]any) (any
 }
 
 func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (any, error) {
-	startArgs := copyArgs(args)
-	if strings.TrimSpace(stringArg(startArgs, "start")) == "" {
-		startArgs["start"] = time.Now().UTC().Format(time.RFC3339)
+	startArgs, err := s.prepareStartWorkArgs(ctx, args)
+	if err != nil {
+		return nil, err
 	}
-	delete(startArgs, "end")
 	entry, ids, err := s.createEntry(ctx, startArgs)
 	if err != nil {
 		return nil, err
@@ -264,6 +264,16 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 			})
 			resultOut.Changed = ChangeSet{Updated: []EntityRef{entryRef(entry)}}
 		}
+		if entry, ok := env.Data.(EntryView); ok {
+			resultOut.IDs = cleanIDs(map[string]string{
+				"workspaceId": firstNonEmptyString(entry.WorkspaceID, stringFromAny(env.Meta["workspaceId"])),
+				"userId":      firstNonEmptyString(entry.UserID, stringFromAny(env.Meta["userId"])),
+				"entryId":     entry.ID,
+				"projectId":   entry.ProjectID,
+				"taskId":      entry.TaskID,
+			})
+			resultOut.Changed = ChangeSet{Updated: []EntityRef{{Type: "entry", ID: entry.ID, Name: entry.Description}}}
+		}
 	}
 	resultOut.Next = []NextAction{{Tool: "clockify_review_day", Reason: "Review the day after stopping work."}}
 	return resultOut, nil
@@ -271,6 +281,10 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 
 func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (any, error) {
 	warnings := []Warning{}
+	startArgs, err := s.prepareStartWorkArgs(ctx, args)
+	if err != nil {
+		return nil, err
+	}
 	stopped, stopErr := s.ClockifyStopWork(ctx, map[string]any{})
 	if stopErr != nil {
 		if !isNoRunningTimer(stopErr) {
@@ -278,9 +292,17 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 		}
 		warnings = append(warnings, Warning{Code: "no_running_timer", Message: "No running timer was found; started the new work item."})
 	}
-	started, err := s.ClockifyStartWork(ctx, args)
+	started, err := s.ClockifyStartWork(ctx, startArgs)
 	if err != nil {
-		return nil, fmt.Errorf("start new work: %w", err)
+		if stopped != nil {
+			warnings = append(warnings, Warning{Code: "partial_failure", Message: "Stopped the previous timer but could not start the new one."})
+		}
+		return result("clockify_switch_work", "entry", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+			"stopped": stopped,
+			"error":   err.Error(),
+		}, ChangeSet{Updated: refsFromToolResult(stopped)}, warnings, []NextAction{
+			{Tool: "clockify_start_work", Args: startArgs, Reason: "Retry starting the target timer after fixing the error."},
+		}), nil
 	}
 	startResult, _ := started.(ToolResult)
 	ids := map[string]string{"workspaceId": s.WorkspaceID}
@@ -293,6 +315,58 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 	}, ChangeSet{Created: startResult.Changed.Created, Updated: refsFromToolResult(stopped)}, warnings, []NextAction{
 		{Tool: "clockify_stop_work", Reason: "Stop the newly started timer when finished."},
 	}), nil
+}
+
+func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any) (map[string]any, error) {
+	startArgs := copyArgs(args)
+	if strings.TrimSpace(stringArg(startArgs, "start")) == "" {
+		startArgs["start"] = time.Now().UTC().Format(time.RFC3339)
+	} else if _, err := timeparse.ParseDatetime(stringArg(startArgs, "start"), s.location()); err != nil {
+		return nil, fmt.Errorf("invalid start: %w", err)
+	}
+	delete(startArgs, "end")
+
+	projectID := strings.TrimSpace(stringArg(startArgs, "project_id"))
+	if projectID == "" {
+		if project := strings.TrimSpace(stringArg(startArgs, "project")); project != "" {
+			resolved, err := s.resolveProjectID(ctx, s.WorkspaceID, project)
+			if err != nil {
+				return nil, err
+			}
+			projectID = resolved
+			startArgs["project_id"] = resolved
+			delete(startArgs, "project")
+		}
+	} else if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return nil, err
+	}
+
+	if taskID := strings.TrimSpace(stringArg(startArgs, "task_id")); taskID != "" {
+		if err := resolve.ValidateID(taskID, "task_id"); err != nil {
+			return nil, err
+		}
+	} else if task := strings.TrimSpace(stringArg(startArgs, "task")); task != "" {
+		if projectID == "" {
+			return nil, fmt.Errorf("project_id or project is required when resolving task by name")
+		}
+		resolved, err := s.resolveTaskID(ctx, s.WorkspaceID, projectID, task)
+		if err != nil {
+			return nil, err
+		}
+		startArgs["task_id"] = resolved
+		delete(startArgs, "task")
+	}
+
+	tagIDs, err := s.tagIDsFromArgs(ctx, startArgs)
+	if err != nil {
+		return nil, err
+	}
+	if len(tagIDs) > 0 {
+		startArgs["tag_ids"] = tagIDs
+		delete(startArgs, "tag")
+	}
+
+	return startArgs, nil
 }
 
 func (s *Service) ClockifyReviewDay(ctx context.Context, args map[string]any) (any, error) {
@@ -342,10 +416,11 @@ func (s *Service) ClockifyFixEntry(ctx context.Context, args map[string]any) (an
 	if env, ok := out.(ResultEnvelope); ok {
 		if data, ok := env.Data.(FindAndUpdateEntryData); ok {
 			standard.IDs = cleanIDs(map[string]string{"workspaceId": stringFromAny(env.Meta["workspaceId"]), "entryId": data.Entry.ID, "projectId": data.Entry.ProjectID})
+			ref := EntityRef{Type: "entry", ID: data.Entry.ID, Name: data.Entry.Description}
 			if len(data.UpdatedFields) == 0 {
-				standard.Changed = ChangeSet{Reused: []EntityRef{entryRef(data.Entry)}}
+				standard.Changed = ChangeSet{Reused: []EntityRef{ref}}
 			} else {
-				standard.Changed = ChangeSet{Updated: []EntityRef{entryRef(data.Entry)}}
+				standard.Changed = ChangeSet{Updated: []EntityRef{ref}}
 			}
 		}
 	}
@@ -464,15 +539,52 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 
 func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any) (any, error) {
 	scheduleArgs := copyArgs(args)
-	if strings.TrimSpace(stringArg(scheduleArgs, "user_id")) == "" {
-		if user := strings.TrimSpace(stringArg(scheduleArgs, "user")); user != "" {
-			scheduleArgs["user_id"] = user
-		}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(stringArg(scheduleArgs, "project_id")) == "" {
-		if project := strings.TrimSpace(stringArg(scheduleArgs, "project")); project != "" {
-			scheduleArgs["project_id"] = project
+	if userID := strings.TrimSpace(stringArg(scheduleArgs, "user_id")); userID != "" {
+		resolved, err := s.resolveUserID(ctx, wsID, userID)
+		if err != nil {
+			return nil, err
 		}
+		scheduleArgs["user_id"] = resolved
+	} else if user := strings.TrimSpace(stringArg(scheduleArgs, "user")); user != "" {
+		resolved, err := s.resolveUserID(ctx, wsID, user)
+		if err != nil {
+			return nil, err
+		}
+		scheduleArgs["user_id"] = resolved
+		delete(scheduleArgs, "user")
+	}
+
+	projectID := strings.TrimSpace(stringArg(scheduleArgs, "project_id"))
+	if projectID != "" {
+		resolved, err := s.resolveProjectID(ctx, wsID, projectID)
+		if err != nil {
+			return nil, err
+		}
+		projectID = resolved
+		scheduleArgs["project_id"] = resolved
+	} else if project := strings.TrimSpace(stringArg(scheduleArgs, "project")); project != "" {
+		resolved, err := s.resolveProjectID(ctx, wsID, project)
+		if err != nil {
+			return nil, err
+		}
+		projectID = resolved
+		scheduleArgs["project_id"] = resolved
+		delete(scheduleArgs, "project")
+	}
+	if task := strings.TrimSpace(stringArg(scheduleArgs, "task")); task != "" && strings.TrimSpace(stringArg(scheduleArgs, "task_id")) == "" {
+		if projectID == "" {
+			return nil, fmt.Errorf("project_id or project is required when resolving task by name")
+		}
+		resolved, err := s.resolveTaskID(ctx, wsID, projectID, task)
+		if err != nil {
+			return nil, err
+		}
+		scheduleArgs["task_id"] = resolved
+		delete(scheduleArgs, "task")
 	}
 	out, err := s.createAssignment(ctx, scheduleArgs)
 	if err != nil {
@@ -820,7 +932,7 @@ func uniqueIDByName(items []map[string]any, name, label, idField string) (string
 	matches := make([]string, 0, 1)
 	for _, item := range items {
 		if strings.EqualFold(stringFromMap(item, "name"), name) {
-			if id := stringFromMap(item, "id", "_id"); id != "" {
+			if id := oneUserStringFromMap(item, "id", "_id"); id != "" {
 				matches = append(matches, id)
 			}
 		}
@@ -896,15 +1008,6 @@ func workflowStringList(args map[string]any, key string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func stringFromAny(value any) string {
-	switch v := value.(type) {
-	case string:
-		return v
-	default:
-		return ""
-	}
 }
 
 func refsFromToolResult(value any) []EntityRef {

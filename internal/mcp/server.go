@@ -308,10 +308,14 @@ type Server struct {
 	// capabilities.tools.listChanged=true. Only transports that can actually
 	// deliver notifications/tools/list_changed should set this.
 	advertiseListChanged atomic.Bool
-	encoder              *json.Encoder // stored for push notifications
-	encoderMu            sync.Mutex    // protects concurrent encoder writes
-	writer               io.Writer     // raw stdio writer for cached JSON-RPC responses
-	requestSeq           atomic.Int64  // monotonic request ID for log correlation
+	// StaticToolList keeps tools.listChanged out of initialize for products
+	// that load their complete registry at startup and never mutate tool
+	// availability during a session.
+	StaticToolList bool
+	encoder        *json.Encoder // stored for push notifications
+	encoderMu      sync.Mutex    // protects concurrent encoder writes
+	writer         io.Writer     // raw stdio writer for cached JSON-RPC responses
+	requestSeq     atomic.Int64  // monotonic request ID for log correlation
 
 	hub               notifierHub
 	setNotifierRemove func() // cleanup from previous SetNotifier call
@@ -551,7 +555,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	if s.hub.len() == 0 {
 		s.SetNotifier(stdioNotifier)
 	}
-	s.advertiseListChanged.Store(true)
+	s.advertiseListChanged.Store(!s.StaticToolList)
 	// Thread the stdio peer's Notifier into every dispatched request so
 	// resources/subscribe records subscriptions against this peer. Stdio
 	// only has one peer so the practical effect is identical to the

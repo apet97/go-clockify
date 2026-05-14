@@ -150,6 +150,7 @@ func TestQualityGateNameResolutionStrictAndTimeParsing(t *testing.T) {
 func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server.StaticToolList = true
 	server.ResourceProvider = svc
 
 	responses := runOneUserProtocol(t, server, []string{

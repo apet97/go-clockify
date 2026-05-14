@@ -7,9 +7,7 @@
       "listChanged": true,
       "subscribe": true
     },
-    "tools": {
-      "listChanged": true
-    }
+    "tools": {}
   },
   "instructions": "This is a single-user full-access Clockify MCP for one pinned workspace.\nAll tools are loaded at startup.\nUse workflow tools first.\nUse IDs returned by previous calls.\nIf a feature is unavailable, report it and continue.",
   "protocolVersion": "2025-11-25",

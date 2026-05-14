@@ -107,6 +107,7 @@ func run() error {
 		service.DefaultTimezone = loc
 	}
 	server := mcp.NewServer(effective, service.FullAccessRegistry(), nil, nil)
+	server.StaticToolList = true
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated
 	service.SubscriptionGate = server.HasResourceSubscription

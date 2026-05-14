@@ -71,12 +71,6 @@ func oneUserResources() []mcp.Resource {
 			MimeType:    "application/json",
 		},
 		{
-			URI:         "clockify://demo/{run_id}",
-			Name:        "Demo run by id",
-			Description: "Template-style demo state resource. Replace {run_id} with the run id passed to demo seed or cleanup.",
-			MimeType:    "application/json",
-		},
-		{
 			URI:         "clockify://recent/entries",
 			Name:        "Recent entries",
 			Description: "Recent current-user time entries from the pinned workspace.",
