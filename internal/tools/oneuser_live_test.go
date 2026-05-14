@@ -269,8 +269,9 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if runID == "" {
 		runID = "live-remaining"
 	}
+	runID = cleanDemoRunID(runID + "-remaining")
 	unique := func(kind string) string {
-		return liveOptionalName(prefix, runID, kind, 80)
+		return liveOptionalName("mcp-remaining", runID, kind, 80)
 	}
 	bogusID := "000000000000000000000001"
 
