@@ -293,22 +293,66 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityArrayDataSchema("id", "number", "status", "clientId")
 	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_send", "clockify_invoices_mark_paid":
 		return entityObjectDataSchema("id", "number", "status", "clientId")
+	case "clockify_invoices_delete":
+		return entityObjectDataSchema("deleted", "invoiceId")
+	case "clockify_invoices_items_add", "clockify_invoices_items_update":
+		return entityObjectDataSchema("id", "invoiceItemId", "description", "quantity", "unitPrice")
+	case "clockify_invoices_items_delete":
+		return entityObjectDataSchema("deleted", "invoiceId", "itemIndex", "itemId")
 	case "clockify_expenses_list":
 		return entityArrayDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
 	case "clockify_expenses_get", "clockify_expenses_create", "clockify_expenses_update":
 		return entityObjectDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
+	case "clockify_expenses_delete":
+		return entityObjectDataSchema("deleted", "expenseId")
+	case "clockify_expenses_categories_create", "clockify_expenses_categories_update":
+		return entityObjectDataSchema("id", "categoryId", "name", "hasUnitPrice", "unit", "archived")
+	case "clockify_expenses_categories_delete":
+		return entityObjectDataSchema("deleted", "categoryId")
+	case "clockify_custom_fields_list":
+		return entityArrayDataSchema("id", "name", "type", "status", "entity_type")
+	case "clockify_custom_fields_get", "clockify_custom_fields_create", "clockify_custom_fields_update":
+		return entityObjectDataSchema("id", "name", "type", "status", "entity_type")
+	case "clockify_custom_fields_delete":
+		return entityObjectDataSchema("deleted", "fieldId")
+	case "clockify_custom_fields_set_value":
+		return entityObjectDataSchema("id", "customFieldId", "value", "projectId", "entryId", "source")
 	case "clockify_time_off_requests_create", "clockify_time_off_requests_get", "clockify_time_off_requests_update":
 		return entityObjectDataSchema("id", "requestId", "policyId", "status")
-	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_get":
+	case "clockify_time_off_requests_delete":
+		return entityObjectDataSchema("deleted", "requestId", "policyId")
+	case "clockify_time_off_approve", "clockify_time_off_deny":
+		return entityObjectDataSchema("id", "requestId", "policyId", "status")
+	case "clockify_time_off_policies_list":
+		return entityArrayDataSchema("id", "policyId", "name", "timeUnit", "archived")
+	case "clockify_time_off_policies_get", "clockify_time_off_policies_create", "clockify_time_off_policies_update":
+		return entityObjectDataSchema("id", "policyId", "name", "timeUnit", "archived")
+	case "clockify_time_off_balances":
+		return entityObjectDataSchema("policyId", "userId", "balance", "used", "available")
+	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_get", "clockify_scheduling_assignments_update":
 		return entityObjectDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
+	case "clockify_scheduling_assignments_delete":
+		return entityObjectDataSchema("deleted", "assignmentId")
 	case "clockify_webhooks_list":
 		return entityArrayDataSchema("id", "name", "url", "webhookEvent")
 	case "clockify_webhooks_get", "clockify_webhooks_create", "clockify_webhooks_update":
 		return entityObjectDataSchema("id", "name", "url", "webhookEvent")
-	case "clockify_groups_create", "clockify_groups_get":
-		return entityObjectDataSchema("id", "name", "userIds")
+	case "clockify_webhooks_delete":
+		return entityObjectDataSchema("deleted", "webhookId")
+	case "clockify_webhooks_test":
+		return entityObjectDataSchema("id", "webhookId", "status")
+	case "clockify_groups_create", "clockify_groups_get", "clockify_groups_update":
+		return entityObjectDataSchema("id", "groupId", "name", "userIds")
+	case "clockify_groups_delete":
+		return entityObjectDataSchema("deleted", "groupId")
+	case "clockify_groups_add_user", "clockify_groups_remove_user":
+		return entityObjectDataSchema("groupId", "userId")
+	case "clockify_holidays_list_for_user_period":
+		return entityArrayDataSchema("id", "holidayId", "name", "start", "end")
 	case "clockify_holidays_create", "clockify_holidays_get", "clockify_holidays_update":
 		return entityObjectDataSchema("id", "name", "start", "end")
+	case "clockify_holidays_delete":
+		return entityObjectDataSchema("deleted", "holidayId")
 	case "clockify_users_invite":
 		return entityObjectDataSchema("id", "email", "status")
 	case "clockify_entries_mark_invoiced":

@@ -79,6 +79,9 @@ go test -count=1 ./...
 git diff --check
 ```
 
+Use `make check` before PRs; it runs the stricter race-enabled test target
+plus repo hygiene checks.
+
 ## Compatibility
 
 | Capability | Support |

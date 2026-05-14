@@ -7,7 +7,7 @@ Summary:
 - Workflow tools: 17
 - Domain tools: 132
 - Raw fallback tools: 2
-- Fake-smoke yes: 83
+- Fake-smoke yes: 124
 - Live-tested yes: 29
 
 Remaining honest gaps:
@@ -70,46 +70,46 @@ Remaining honest gaps:
 | `clockify_invoices_list` | domain | alias wrapper | wraps clockify_list_invoices | no | yes | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_invoices_get` | domain | alias wrapper | wraps clockify_get_invoice | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_invoices_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_invoices_update` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_invoices_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_invoices_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_invoices_send` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_invoices_mark_paid` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_mark_paid` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_invoices_items_list` | domain | alias wrapper | wraps clockify_list_invoice_items | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_invoices_items_add` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_invoices_items_update` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_invoices_items_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_items_add` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_invoices_items_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_invoices_items_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_expenses_list` | domain | alias wrapper | wraps clockify_list_expenses | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_expenses_get` | domain | alias wrapper | wraps clockify_get_expense | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_expenses_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_expenses_update` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_expenses_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_expenses_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_expenses_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_expenses_categories_list` | domain | alias wrapper | wraps clockify_list_expense_categories | no | yes | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_expenses_categories_create` | domain | alias wrapper | wraps clockify_create_expense_category | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_expenses_categories_update` | domain | alias wrapper | wraps clockify_update_expense_category | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_expenses_categories_delete` | domain | alias wrapper | wraps clockify_delete_expense_category | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_list` | domain | alias wrapper | wraps clockify_list_custom_fields | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_get` | domain | alias wrapper | wraps clockify_get_custom_field | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_create` | domain | alias wrapper | wraps clockify_create_custom_field | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_update` | domain | alias wrapper | wraps clockify_update_custom_field | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_delete` | domain | alias wrapper | wraps clockify_delete_custom_field | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_custom_fields_set_value` | domain | alias wrapper | wraps clockify_set_custom_field_value | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_expenses_categories_create` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_expenses_categories_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_expenses_categories_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_list` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_get` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_create` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_custom_fields_set_value` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_time_off_requests_list` | domain | alias wrapper | wraps clockify_list_time_off_requests | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_time_off_requests_get` | domain | alias wrapper | wraps clockify_get_time_off_request | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_time_off_requests_get` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_time_off_requests_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_time_off_requests_update` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_time_off_requests_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_time_off_approve` | domain | alias wrapper | wraps clockify_approve_time_off | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_time_off_deny` | domain | alias wrapper | wraps clockify_deny_time_off | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_time_off_policies_list` | domain | alias wrapper | wraps clockify_list_time_off_policies | no | yes | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_time_off_policies_get` | domain | alias wrapper | wraps clockify_get_time_off_policy | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_time_off_policies_create` | domain | alias wrapper | wraps clockify_create_time_off_policy | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_time_off_policies_update` | domain | alias wrapper | wraps clockify_update_time_off_policy | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_time_off_balances` | domain | alias wrapper | wraps clockify_time_off_balance | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_time_off_requests_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_requests_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_approve` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_deny` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_policies_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_time_off_policies_get` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_policies_create` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_policies_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_time_off_balances` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_scheduling_assignments_list` | domain | alias wrapper | wraps clockify_list_assignments | no | yes | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_scheduling_assignments_get` | domain | alias wrapper | wraps clockify_get_assignment | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_scheduling_assignments_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_scheduling_assignments_update` | domain | alias wrapper | wraps clockify_update_assignment | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_scheduling_assignments_delete` | domain | alias wrapper | wraps clockify_delete_assignment | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_scheduling_assignments_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_scheduling_assignments_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_scheduling_project_totals` | domain | alias wrapper | wraps clockify_get_project_schedule_totals | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_approvals_list` | domain | alias wrapper | wraps clockify_list_approval_requests | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_approvals_get` | domain | alias wrapper | wraps clockify_get_approval_request | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
@@ -120,44 +120,44 @@ Remaining honest gaps:
 | `clockify_webhooks_list` | domain | alias wrapper | wraps clockify_list_webhooks | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_webhooks_get` | domain | alias wrapper | wraps clockify_get_webhook | no | no | typed | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_webhooks_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_webhooks_update` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_webhooks_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_webhooks_test` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_webhooks_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_webhooks_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_webhooks_test` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_webhooks_events` | domain | alias wrapper | wraps clockify_list_webhook_events | no | yes | generic | usable_wrapper | monitor_usage_or_convert_if_hot |
 | `clockify_groups_list` | domain | alias wrapper | wraps clockify_list_user_groups_admin | no | yes | generic | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_groups_get` | domain | alias wrapper | wraps clockify_get_user_group | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_groups_get` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_groups_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_groups_update` | domain | alias wrapper | wraps clockify_update_user_group_admin | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_groups_delete` | domain | alias wrapper | wraps clockify_delete_user_group_admin | no | no | generic | needs_native_handler | convert_native_handler |
-| `clockify_groups_add_user` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_groups_remove_user` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_groups_update` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_groups_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_groups_add_user` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_groups_remove_user` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_holidays_list` | domain | alias wrapper | wraps clockify_list_holidays | no | yes | generic | usable_wrapper | monitor_usage_or_convert_if_hot |
-| `clockify_holidays_list_for_user_period` | domain | alias wrapper | wraps clockify_list_holidays_in_period | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_holidays_list_for_user_period` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_holidays_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_holidays_delete` | domain | alias wrapper | wraps clockify_delete_holiday | no | no | generic | needs_native_handler | convert_native_handler |
+| `clockify_holidays_delete` | domain | native handler | native handler; endpoint selected in code | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_users_list` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
 | `clockify_users_profile` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
 | `clockify_users_deactivate` | domain | alias wrapper | wraps clockify_deactivate_user | no | no | generic | needs_native_handler | convert_native_handler |
 | `clockify_users_role` | domain | alias wrapper | wraps clockify_update_user_role | no | no | generic | needs_native_handler | convert_native_handler |
 | `clockify_workspace_settings` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
-| `clockify_projects_memberships_list` | domain | route descriptor | GET /workspaces/{workspaceId}/projects/{project_id}/memberships | no | no | generic | needs_fake_smoke | add_fake_smoke |
+| `clockify_projects_memberships_list` | domain | route descriptor | GET /workspaces/{workspaceId}/projects/{project_id}/memberships | yes | no | generic | needs_live_probe | add_live_probe |
 | `clockify_entries_mark_invoiced` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_reports_attendance` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/attendance | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_reports_money` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/summary | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_reports_expense` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/expenses/detailed | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_reports_export` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/detailed | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_export` | domain | route descriptor | GET /workspaces/{workspaceId}/invoices/{invoice_id}/export | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_import_time` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/items/import | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_import_expenses` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/items/import | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_payments_list` | domain | route descriptor | GET /workspaces/{workspaceId}/invoices/{invoice_id}/payments | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_payments_create` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/payments | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_invoices_payments_delete` | domain | route descriptor | DELETE /workspaces/{workspaceId}/invoices/{invoice_id}/payments/{payment_id} | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_time_off_archive` | domain | route descriptor | PATCH /workspaces/{workspaceId}/time-off/policies/{policy_id} | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_scheduling_user_totals` | domain | route descriptor | GET /workspaces/{workspaceId}/scheduling/assignments/users/{user_id}/totals | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_scheduling_capacity` | domain | route descriptor | POST /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_approvals_resubmit` | domain | route descriptor | POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_holidays_get` | domain | route descriptor | GET /workspaces/{workspaceId}/holidays/{holiday_id} | no | no | generic | needs_fake_smoke | add_fake_smoke |
-| `clockify_holidays_update` | domain | route descriptor | PUT /workspaces/{workspaceId}/holidays/{holiday_id} | no | no | generic | needs_fake_smoke | add_fake_smoke |
+| `clockify_reports_attendance` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/attendance | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_reports_money` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/summary | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_reports_expense` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/expenses/detailed | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_reports_export` | domain | route descriptor | POST /workspaces/{workspaceId}/reports/detailed | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_export` | domain | route descriptor | GET /workspaces/{workspaceId}/invoices/{invoice_id}/export | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_import_time` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/items/import | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_import_expenses` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/items/import | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_payments_list` | domain | route descriptor | GET /workspaces/{workspaceId}/invoices/{invoice_id}/payments | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_payments_create` | domain | route descriptor | POST /workspaces/{workspaceId}/invoices/{invoice_id}/payments | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_invoices_payments_delete` | domain | route descriptor | DELETE /workspaces/{workspaceId}/invoices/{invoice_id}/payments/{payment_id} | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_time_off_archive` | domain | route descriptor | PATCH /workspaces/{workspaceId}/time-off/policies/{policy_id} | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_scheduling_user_totals` | domain | route descriptor | GET /workspaces/{workspaceId}/scheduling/assignments/users/{user_id}/totals | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_scheduling_capacity` | domain | route descriptor | POST /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_approvals_resubmit` | domain | route descriptor | POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval | yes | no | generic | needs_live_probe | add_live_probe |
+| `clockify_holidays_get` | domain | route descriptor | GET /workspaces/{workspaceId}/holidays/{holiday_id} | yes | no | typed | needs_live_probe | add_live_probe |
+| `clockify_holidays_update` | domain | route descriptor | PUT /workspaces/{workspaceId}/holidays/{holiday_id} | yes | no | typed | needs_live_probe | add_live_probe |
 | `clockify_users_invite` | domain | native handler | native handler; endpoint selected in code | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_entries_running` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
 | `clockify_entries_timer_start` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | needs_live_probe | add_live_probe |
