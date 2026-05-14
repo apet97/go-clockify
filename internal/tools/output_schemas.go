@@ -8,9 +8,9 @@ import (
 )
 
 // tier1OutputSchemas returns the outputSchema map keyed by tool name for
-// every Tier 1 tool. Splitting the schema lookup out of registry.go keeps
-// the inline tool table compact and lets the schema sweep be reviewed in
-// isolation.
+// the first-slice tools. Splitting the schema lookup out of registry.go
+// keeps the inline tool table compact and lets the schema sweep be
+// reviewed in isolation.
 //
 // Tools whose handlers return a typed Go struct (SummaryData, LogTimeData,
 // clockify.TimeEntry, etc.) get a schemaFor[T]-driven envelope. Tools that
@@ -19,12 +19,10 @@ import (
 // makes the action a JSON Schema const so MCP clients can dispatch on it.
 //
 // The map and every envelope value inside it are built once per process
-// via sync.OnceValue. The result is shared across every Service.Registry()
-// invocation and therefore across every streamable-HTTP session: schemas
-// are immutable per binary build, so memoising eliminates ~3000 per-session
-// allocations on the reflection-heavy envelopeSchemaFor[T] path. Callers
-// MUST NOT mutate the returned maps; the existing assignment-only usage
-// in applyTier1OutputSchemas preserves that invariant.
+// via sync.OnceValue so the reflection-heavy envelopeSchemaFor[T] path
+// runs at most once. Callers MUST NOT mutate the returned maps; the
+// existing assignment-only usage in applyTier1OutputSchemas preserves
+// that invariant.
 var tier1OutputSchemas = sync.OnceValue(buildTier1OutputSchemas)
 
 func buildTier1OutputSchemas() map[string]map[string]any {
@@ -84,16 +82,10 @@ func buildTier1OutputSchemas() map[string]map[string]any {
 		"clockify_monthly_brief":        monthlyBriefOutputSchema(),
 		"clockify_money_report":         moneyReportOutputSchema("clockify_money_report"),
 		"clockify_audit_entries":        envelopeSchemaFor[AuditEntriesView]("clockify_audit_entries"),
-		"clockify_policy_info":          envelopeOpaque("clockify_policy_info"),
-		"clockify_list_tools":           envelopeOpaque("clockify_list_tools"),
-		"clockify_activate_group":       envelopeOpaque("clockify_activate_group"),
-		"clockify_activate_tool":        envelopeOpaque("clockify_activate_tool"),
-		"clockify_deactivate_group":     envelopeOpaque("clockify_deactivate_group"),
-		"clockify_search_tools":         envelopeOpaque("clockify_search_tools"),
 	}
 }
 
-// applyTier1OutputSchemas attaches an outputSchema to every Tier 1 tool
+// applyTier1OutputSchemas attaches an outputSchema to every descriptor
 // that has an entry in the lookup. Tools missing from the lookup are
 // left untouched (their OutputSchema stays nil) so partial coverage
 // during the sweep is safe.
@@ -109,9 +101,8 @@ func applyTier1OutputSchemas(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 
 // applyOpaqueOutputSchemas gives every descriptor that lacks an
 // outputSchema a generic envelopeOpaque schema keyed by tool name. Used
-// by Tier 2 group activation so all 104 lazy-loaded tools advertise at
-// least the envelope wrapper to clients without the maintenance burden
-// of hand-crafting per-tool typed schemas.
+// by the domain-handler families so every tool advertises at least the
+// envelope wrapper without hand-crafting per-tool typed schemas.
 func applyOpaqueOutputSchemas(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	for i := range in {
 		if in[i].Tool.OutputSchema == nil {

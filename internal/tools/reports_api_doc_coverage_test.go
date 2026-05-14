@@ -66,12 +66,8 @@ func TestReportToolSchemasExposeDocumentedEnumsAndAliases(t *testing.T) {
 
 func TestExpenseReportSchemaCoversDetailedExpenseReportBody(t *testing.T) {
 	svc := &Service{}
-	descs, ok := svc.Tier2Handlers("expenses")
-	if !ok {
-		t.Fatal("expenses Tier 2 group not registered")
-	}
 	var schema map[string]any
-	for _, desc := range descs {
+	for _, desc := range expenseHandlers(svc) {
 		if desc.Tool.Name == "clockify_expense_report" {
 			schema = desc.Tool.InputSchema
 			break

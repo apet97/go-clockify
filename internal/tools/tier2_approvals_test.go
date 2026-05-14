@@ -206,7 +206,7 @@ func TestListApprovalRequestsForwardsDocumentedSort(t *testing.T) {
 
 func TestApprovalListSchemaDocumentsSort(t *testing.T) {
 	svc := New(nil, "ws1")
-	handlers, ok := svc.Tier2Handlers("approvals")
+	handlers, ok := tier2Handlers(svc, "approvals")
 	if !ok {
 		t.Fatal("approvals group not registered")
 	}

@@ -99,18 +99,8 @@ func TestRegistrySchemasAcceptHappyPathArgs(t *testing.T) {
 		}
 	}
 
-	for _, d := range svc.Registry() {
-		check("tier1/"+d.Tool.Name, d)
-	}
-
-	for groupName := range Tier2Groups {
-		descriptors, ok := svc.Tier2Handlers(groupName)
-		if !ok {
-			continue
-		}
-		for _, d := range descriptors {
-			check("tier2/"+groupName+"/"+d.Tool.Name, d)
-		}
+	for _, d := range svc.FullAccessRegistry() {
+		check(d.Tool.Name, d)
 	}
 }
 

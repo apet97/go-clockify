@@ -38,18 +38,6 @@ var entityChangeTypeAllowed = func() map[string]bool {
 	return out
 }()
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "change_tracking",
-		Description: "Read-only created, updated, and deleted entity change feeds",
-		Keywords:    []string{"changes", "audit", "created", "updated", "deleted", "sync"},
-		ToolNames: []string{
-			"clockify_entity_changes",
-		},
-		Builder: changeTrackingHandlers,
-	})
-}
-
 func changeTrackingHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		{Tool: withOutputSchema(toolRO("clockify_entity_changes", "List created, updated, or deleted Clockify entities for sync/audit enrichment", map[string]any{

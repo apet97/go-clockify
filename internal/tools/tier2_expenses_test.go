@@ -432,16 +432,9 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 	}
 }
 
-// TestTier2_Expenses_GroupRegistration sanity-checks the catalog entry.
-func TestTier2_Expenses_GroupRegistration(t *testing.T) {
-	g, ok := Tier2Groups["expenses"]
-	if !ok {
-		t.Fatal("expenses group not registered")
-	}
-	if g.Builder == nil {
-		t.Fatal("expenses Builder is nil")
-	}
-	descs := g.Builder(New(nil, "ws1"))
+// TestTier2_Expenses_BuilderShape sanity-checks expenseHandlers' size.
+func TestTier2_Expenses_BuilderShape(t *testing.T) {
+	descs := expenseHandlers(New(nil, "ws1"))
 	if len(descs) < 9 {
 		t.Fatalf("expected at least 9 expense tools, got %d", len(descs))
 	}

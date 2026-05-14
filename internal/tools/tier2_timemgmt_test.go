@@ -775,31 +775,3 @@ func TestDeleteAssignmentDryRun(t *testing.T) {
 		t.Fatalf("expected minimal dry-run resource nil, got %#v", dataMap["resource"])
 	}
 }
-
-// TestSchedulingGroupRegistered verifies the init() registered the group.
-func TestSchedulingGroupRegistered(t *testing.T) {
-	g, ok := Tier2Groups["scheduling"]
-	if !ok {
-		t.Fatal("scheduling group not registered in Tier2Groups")
-	}
-	if g.Description == "" {
-		t.Fatal("scheduling group has empty description")
-	}
-	if len(g.Keywords) == 0 {
-		t.Fatal("scheduling group has no keywords")
-	}
-}
-
-// TestTimeOffGroupRegistered verifies the init() registered the group.
-func TestTimeOffGroupRegistered(t *testing.T) {
-	g, ok := Tier2Groups["time_off"]
-	if !ok {
-		t.Fatal("time_off group not registered in Tier2Groups")
-	}
-	if g.Description == "" {
-		t.Fatal("time_off group has empty description")
-	}
-	if len(g.Keywords) == 0 {
-		t.Fatal("time_off group has no keywords")
-	}
-}

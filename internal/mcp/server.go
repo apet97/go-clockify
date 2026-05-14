@@ -55,52 +55,29 @@ func negotiateProtocolVersion(requested, configuredDefault string) string {
 }
 
 // ServerInstructions is returned in the initialize response to teach MCP
-// clients how to navigate the server. Agentic clients consume this as part
-// of their system prompt, so it trades some verbosity for clarity.
-const ServerInstructions = `This is the Clockify Go MCP server. It exposes a tiered tool surface and safety enforcement for Clockify operations.
-
-Tool tiers:
-  - Tier 1 tools are registered at startup and visible in tools/list.
-  - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
-  - Use 'clockify_list_tools' to discover tools by keyword or group name.
-  - Activate Tier 2 tools with 'clockify_activate_group' (preferred) or 'clockify_activate_tool' before calling them, and use 'clockify_deactivate_group' to shrink the visible surface after a task. Each Tier-2 group is the unit of activation: passing a single Tier-2 tool name to 'clockify_activate_tool' brings the entire containing group online, and activated_tools enumerates only currently visible/callable names.
-  - 'clockify_search_tools' remains as a deprecated compatibility shim for older clients.
-
-Safety:
-  - The server supports five policy modes: read_only, time_tracking_safe, safe_core, standard (default), full.
-  - time_tracking_safe is the recommended AI-facing default (used by the shared-service and prod-postgres profiles).
-  - Every write tool accepts dry_run:true to preview the effect without executing.
-  - High-risk tools (billing, admin, permission-change, external-side-effect, destructive) require a server-issued confirmation token before execution. Flow:
-      1. Call with dry_run:true. The response includes confirmation_token, confirmation_expires_at, confirmation_risk_class, and confirmation_note.
-      2. Re-submit the SAME arguments with dry_run:false and confirmation_token to execute.
-    The token binds to (tool, arguments, principal, expiry); any argument change invalidates it.
-  - Ordinary RiskWrite tools (the time-entry/timer surface) do not need a confirmation token; pass dry_run:false (or omit it) to execute directly.
-  - Use 'clockify_policy_info' to inspect the active policy, dry-run, and confirmation-token configuration.
-  - Tool arguments that reference entities by name (project, client, tag, user) are resolved strictly; ambiguous matches are rejected rather than guessed.
-
-Errors are returned in the MCP tool-error envelope (result.content + isError:true) for tool failures, and as JSON-RPC errors only for protocol violations.`
+// clients how to use the one-user/full-access product path.
+const ServerInstructions = `This is a single-user full-access Clockify MCP for one pinned workspace.
+All tools are loaded at startup.
+Use workflow tools first.
+Use IDs returned by previous calls.
+If a feature is unavailable, report it and continue.`
 
 // Notifier delivers server-initiated notifications (e.g. tools/list_changed)
-// to the connected client. Transports implement this: the stdio transport
-// writes through the shared JSON encoder, while the legacy HTTP POST-only
-// transport logs + counts drops until a real SSE channel is wired by the
-// Streamable HTTP transport rewrite.
+// to the connected client. The stdio transport implements this by writing
+// through the shared JSON encoder.
 type Notifier interface {
 	Notify(method string, params any) error
 }
 
-// notifierCtxKey carries the calling stream's Notifier through the
-// request context so resources/subscribe and resources/unsubscribe can
-// record per-notifier subscription state. Transports that multiplex
-// streams over one *mcp.Server (currently gRPC) MUST wrap their dispatch
-// context with WithNotifier so notifications/resources/updated does not
-// leak to streams that never subscribed.
+// notifierCtxKey carries the calling peer's Notifier through the request
+// context so resources/subscribe and resources/unsubscribe can record
+// per-peer subscription state.
 type notifierCtxKey struct{}
 
-// WithNotifier returns a child context carrying n as the calling stream's
-// Notifier. Transports call this once per stream after AddNotifier so the
-// resources/subscribe handler can attribute the subscription to the right
-// stream. Passing a nil Notifier yields the parent context unchanged.
+// WithNotifier returns a child context carrying n as the calling peer's
+// Notifier. The stdio loop calls this once per session after AddNotifier
+// so the resources/subscribe handler attributes the subscription
+// correctly. Passing a nil Notifier yields the parent context unchanged.
 func WithNotifier(ctx context.Context, n Notifier) context.Context {
 	if n == nil {
 		return ctx
@@ -121,24 +98,9 @@ func notifierFromContext(ctx context.Context) (Notifier, bool) {
 	return n, ok && n != nil
 }
 
-// droppingNotifier is installed by the legacy HTTP transport. It records
-// every drop so operators can measure the gap until Streamable HTTP ships.
-type droppingNotifier struct{}
-
-func (droppingNotifier) Notify(method string, _ any) error {
-	metrics.ProtocolErrorsTotal.Inc("notification_dropped")
-	slog.Warn("notification_dropped",
-		"method", method,
-		"reason", "legacy_http_transport",
-		"hint", "migrate to Streamable HTTP for server-initiated notifications",
-	)
-	return nil
-}
-
 // encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
-// Notifier interface. Decoupling notification delivery from the raw encoder
-// lets transports plug in their own delivery mechanism without the server
-// core holding transport-specific state.
+// Notifier interface so notification delivery does not require the server
+// core to hold raw I/O state.
 type encoderNotifier struct {
 	mu      *sync.Mutex
 	encoder **json.Encoder
@@ -164,11 +126,9 @@ func (e encoderNotifier) Notify(method string, params any) error {
 }
 
 // sanitizable is implemented by errors that carry both a verbose form
-// (Error()) and a sanitised form (Sanitized()) — typically because the
-// verbose form embeds an upstream HTTP response body that should not
-// cross tenant boundaries on a hosted deployment. clockify.APIError is
-// the in-tree implementer; the interface is duck-typed so this package
-// stays free of a clockify import.
+// (Error()) and a sanitised form (Sanitized()). clockify.APIError is the
+// in-tree implementer; the interface is duck-typed so this package stays
+// free of a clockify import.
 type sanitizable interface {
 	error
 	Sanitized() string
@@ -196,16 +156,14 @@ type ToolHandler func(context.Context, map[string]any) (any, error)
 
 // RiskClass categorises tools beyond the three MCP boolean hints. It is a
 // bitmask so a tool can carry multiple attributes (for example a billing
-// action that also triggers an external side effect). Consumers — audit,
-// policy, enforcement — pattern-match against bits to decide confirmation
-// requirements, log fidelity, and policy gates. The taxonomy mirrors
-// docs/policy/production-tool-scope.md.
+// action that also triggers an external side effect). Consumers can
+// pattern-match against bits for logging, filtering, or UX hints.
 type RiskClass uint32
 
 const (
 	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
 	RiskWrite                                    // ordinary mutating writes
-	RiskSensitiveRead                            // reads users, policies, invoices, balances, webhooks, or similar sensitive state
+	RiskSensitiveRead                            // reads users, invoices, balances, webhooks, or similar sensitive state
 	RiskBilling                                  // touches invoices / payments
 	RiskAdmin                                    // workspace-admin scope (deactivate, group/user mgmt)
 	RiskPermissionChange                         // role / permission changes
@@ -216,19 +174,11 @@ const (
 // Has reports whether the receiver carries every bit in mask.
 func (r RiskClass) Has(mask RiskClass) bool { return r&mask == mask }
 
-// RiskHighMask is the union of risk-class bits that gate a tool call
-// behind a confirmation token per docs/adr/0018-risk-class-confirmation-tokens.md.
-// The set is intentionally narrow: ordinary RiskWrite stays
-// confirmation-free so the time-tracking surface is not slowed down
-// by the dry-run-first flow. RiskDestructive, RiskBilling, RiskAdmin,
-// RiskPermissionChange, and RiskExternalSideEffect each represent a
-// "agent fires off the wrong call" failure mode that the dry-run
-// preview is uniquely positioned to catch.
+// RiskHighMask is retained as metadata for clients that want to visually
+// distinguish billing, admin, external-side-effect, and destructive tools.
 const RiskHighMask = RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive
 
-// IsHighRisk reports whether any high-risk bit is set on the receiver.
-// Used by the confirmation-token gate (internal/enforcement) and by
-// the schema/annotation enrichment in internal/tools/common.go.
+// IsHighRisk reports whether any high-risk metadata bit is set.
 func (r RiskClass) IsHighRisk() bool { return r&RiskHighMask != 0 }
 
 type ToolDescriptor struct {
@@ -243,16 +193,14 @@ type ToolDescriptor struct {
 	// (billing, admin, permission_change, external_side_effect) override it
 	// in internal/tools/risk_overrides.go.
 	RiskClass RiskClass
-	// AuditKeys lists argument keys (beyond the implicit *_id suffix scan)
-	// whose values must be captured in audit events. Used for action-defining
-	// fields like role, status, quantity, unit_price.
+	// AuditKeys is kept as neutral legacy metadata for typed tool descriptors.
+	// The one-user stdio runtime does not wire an audit durability pipeline.
 	AuditKeys []string
 }
 
 type Server struct {
 	Version     string
 	Enforcement Enforcement   // nil = no filtering or enforcement
-	Activator   Activator     // nil = activation unrestricted
 	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
 	// DefaultProtocolVersion is used only when initialize omits
 	// params.protocolVersion. Empty or unsupported values fall back to
@@ -266,11 +214,9 @@ type Server struct {
 	ExposeAuthErrors bool
 
 	// SanitizeUpstreamErrors controls whether tool-error responses to MCP
-	// clients omit upstream Clockify response bodies. The default is false
-	// (verbose, useful for local development); hosted profiles
-	// (shared-service, prod-postgres) set it to true so a 4xx from
-	// Clockify can't leak per-tenant info across tenant boundaries.
-	// The full APIError is always logged server-side regardless.
+	// clients omit upstream Clockify response bodies. The one-user stdio
+	// product keeps this false for useful local diagnostics. Remote
+	// deployments can set it true to return compact upstream errors.
 	SanitizeUpstreamErrors bool
 
 	// ResourceProvider backs resources/* method handlers. nil disables the
@@ -288,40 +234,10 @@ type Server struct {
 	MaxInFlightToolCalls int
 	MaxMessageSize       int64
 
-	// StrictHostCheck enables DNS rebinding protection on the HTTP
-	// transport: the inbound Host header must match either a loopback
-	// literal or one of the configured allowed-origin hostnames. Defaults
-	// to off so that reverse-proxy deployments that rewrite Host are
-	// unaffected; flip on (MCP_STRICT_HOST_CHECK=1) in localhost-bound
-	// production deployments to get the strict guarantee.
-	StrictHostCheck bool
-
-	// BehindHTTPSProxy lets the baseline-header middleware emit
-	// Strict-Transport-Security on plaintext responses because a
-	// trusted upstream proxy is terminating TLS for us. Without TLS
-	// in front of the listener and without this flag, HSTS is skipped
-	// to avoid making honest http:// URLs unreachable on misconfigured
-	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
-	BehindHTTPSProxy bool
-
-	// HTTPAdmissionLimits configures process-local app-layer admission
-	// guards for legacy HTTP. Streamable HTTP receives the same values
-	// through StreamableHTTPOptions.
-	HTTPAdmissionLimits HTTPAdmissionLimits
-
-	// ExtraHTTPHandlers carries optional handlers that the legacy HTTP
-	// transport mounts on its mux before ListenAndServe. Used by the
-	// -tags=pprof build in cmd/clockify-mcp/ to attach /debug/pprof/*
-	// without forcing internal/mcp to depend on net/http/pprof. nil or
-	// empty = no extras registered, which is the default production path.
-	ExtraHTTPHandlers []ExtraHandler
-
-	mu           sync.RWMutex
-	tools        map[string]ToolDescriptor
-	activeGroups map[string][]string
-	// toolListCache stores the sorted, enforcement-filtered tools/list
-	// snapshot. Protected by mu and invalidated when descriptors or
-	// activation visibility change.
+	mu    sync.RWMutex
+	tools map[string]ToolDescriptor
+	// toolListCache stores the sorted, filtered tools/list snapshot.
+	// Protected by mu and invalidated when descriptors or visibility changes.
 	toolListCache      []Tool
 	toolListCacheValid bool
 	// toolListResultJSON stores the serialized tools/list result only.
@@ -333,10 +249,14 @@ type Server struct {
 	// capabilities.tools.listChanged=true. Only transports that can actually
 	// deliver notifications/tools/list_changed should set this.
 	advertiseListChanged atomic.Bool
-	encoder              *json.Encoder // stored for push notifications
-	encoderMu            sync.Mutex    // protects concurrent encoder writes
-	writer               io.Writer     // raw stdio writer for cached JSON-RPC responses
-	requestSeq           atomic.Int64  // monotonic request ID for log correlation
+	// StaticToolList keeps tools.listChanged out of initialize for products
+	// that load their complete registry at startup and never mutate tool
+	// availability during a session.
+	StaticToolList bool
+	encoder        *json.Encoder // stored for push notifications
+	encoderMu      sync.Mutex    // protects concurrent encoder writes
+	writer         io.Writer     // raw stdio writer for cached JSON-RPC responses
+	requestSeq     atomic.Int64  // monotonic request ID for log correlation
 
 	hub               notifierHub
 	setNotifierRemove func() // cleanup from previous SetNotifier call
@@ -350,33 +270,9 @@ type Server struct {
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
-	Auditor        Auditor
-	AuditTenantID  string
-	AuditSubject   string
-	AuditSessionID string
-	AuditTransport string
-
-	// AuditDurabilityMode controls what happens when audit persistence fails
-	// for a non-read-only tool call.
-	//
-	//   "best_effort" (default): log the error and increment the failure metric;
-	//   do not fail the tool call.
-	//
-	//   "fail_closed": fail before mutation when the intent record cannot be
-	//   persisted; post-mutation outcome failures stay log/metric-only for
-	//   backwards compatibility.
-	//
-	//   "fail_closed_strict": same pre-mutation intent guard, plus post-mutation
-	//   outcome failures are returned to the client so the missing durable
-	//   outcome row is visible on the MCP wire.
-	//
-	//   Read-only operations are never affected regardless of this setting.
-	AuditDurabilityMode string
-
 	// readiness cache
 	readyMu     sync.Mutex
 	readyCached bool
-	readyAt     time.Time
 
 	// inflight tracks cancellable contexts for in-flight tools/call
 	// requests, keyed by JSON-RPC request ID. notifications/cancelled
@@ -388,16 +284,14 @@ type Server struct {
 
 // AddNotifier registers a notification sink and returns a function that
 // removes it. Multiple notifiers can coexist; Notify fans out to all of
-// them. Transports that multiplex clients (gRPC Exchange streams) should
-// call AddNotifier per-stream and defer the returned remove function.
+// them.
 func (s *Server) AddNotifier(n Notifier) func() {
 	return s.hub.add(n)
 }
 
-// SetNotifier installs a notification sink, removing any previously
-// installed via SetNotifier. Transports that own a single client (stdio,
-// legacy HTTP) use this for backwards compatibility. Internally delegates
-// to AddNotifier.
+// SetNotifier installs a single notification sink, removing any
+// previously installed via SetNotifier. The stdio loop uses this for the
+// per-session encoder notifier.
 func (s *Server) SetNotifier(n Notifier) {
 	if s.setNotifierRemove != nil {
 		s.setNotifierRemove()
@@ -427,22 +321,15 @@ func (s *Server) ClientInfo() (name, version string) {
 }
 
 // MarkInitialized seeds a freshly-built Server with the negotiated state
-// it would normally obtain from a live `initialize` exchange. Used by
-// the streamable-HTTP cross-pod rehydration path (ADR 0017, Path A) to
-// rebuild a session whose `initialize` ran on a different replica:
-// the persisted controlplane.SessionRecord carries ProtocolVersion +
-// ClientName + ClientVersion, and the rehydrated Server uses them
-// instead of demanding the client re-initialize. Idempotent — calling
-// it twice with the same values is a no-op.
+// it would normally obtain from a live `initialize` exchange. Tests and
+// embedders use this to skip the handshake; idempotent — calling it
+// twice with the same values is a no-op.
 //
-// protocolVersion may be empty (a session that was never re-persisted
-// after sync_initialize, or a pre-2025-03-26 client); ClientInfo
+// protocolVersion may be empty (pre-2025-03-26 client); ClientInfo
 // fields are best-effort. The initialized flag is set unconditionally
-// because the rehydration boundary's contract is that the server is
-// ready to dispatch tool calls; lacking a persisted protocolVersion
-// just means validateProtocolVersion's negotiated-version check
-// degrades to "accept any supported version" (see the comment on
-// validateProtocolVersion in transport_streamable_http.go).
+// because the caller's contract is that the server is ready to dispatch
+// tool calls; lacking protocolVersion just means the negotiated-version
+// check degrades to "accept any supported version".
 func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion string) {
 	s.negotiatedMu.Lock()
 	if protocolVersion != "" {
@@ -458,19 +345,17 @@ func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion stri
 	s.initialized.Store(true)
 }
 
-func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
+func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, _ ...any) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {
 		toolMap[d.Tool.Name] = d
 	}
 	s := &Server{
-		Version:      version,
-		Enforcement:  enforcement,
-		Activator:    activator,
-		tools:        toolMap,
-		activeGroups: make(map[string][]string),
-		inflight:     make(map[any]context.CancelFunc),
-		prompts:      newPromptRegistry(),
+		Version:     version,
+		Enforcement: enforcement,
+		tools:       toolMap,
+		inflight:    make(map[any]context.CancelFunc),
+		prompts:     newPromptRegistry(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
 	return s
@@ -570,18 +455,15 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.encoder = json.NewEncoder(w)
 	s.writer = w
 	s.encoderMu.Unlock()
-	// Install the stdio notifier so activation events (tools/list_changed)
-	// flow back through the same thread-safe encoder the responses use.
+	// Install the stdio notifier so list/resource change notifications flow
+	// back through the same thread-safe encoder the responses use.
 	stdioNotifier := encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
 	if s.hub.len() == 0 {
 		s.SetNotifier(stdioNotifier)
 	}
-	s.advertiseListChanged.Store(true)
+	s.advertiseListChanged.Store(!s.StaticToolList)
 	// Thread the stdio peer's Notifier into every dispatched request so
-	// resources/subscribe records subscriptions against this peer. Stdio
-	// only has one peer so the practical effect is identical to the
-	// pre-fix server-wide subscription, but wiring it the same way as
-	// gRPC keeps the per-notifier contract uniform across transports.
+	// resources/subscribe records subscriptions against this peer.
 	ctx = WithNotifier(ctx, stdioNotifier)
 
 	// Channel-based approach: scan lines in a goroutine so we can
@@ -660,9 +542,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 					// take down the whole stdio loop. RecoverDispatch
 					// emits a structured panic event and hands the
 					// stable JSON-RPC tool-error envelope to the sink
-					// for transport delivery. Same shape used by
-					// streamable HTTP and gRPC for cross-transport
-					// parity.
+					// for delivery.
 					defer RecoverDispatch(r.ID, "stdio_tool_dispatch", toolNameFromRequest(r), func(resp Response) {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
@@ -709,8 +589,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 
 // DispatchMessage parses a single JSON-RPC message from raw bytes, invokes
 // the central handler, and returns the serialized response. It is intended
-// for non-stdio transports (gRPC sub-module, custom bridges) that own their
-// own concurrency model and framing.
+// for embedders that own their own concurrency model and framing.
 //
 // Parse and validation errors are converted to JSON-RPC error responses
 // mirroring the stdio loop. A notification (no id, no result, no error)
@@ -803,16 +682,13 @@ func (s *Server) writeRawResponse(raw []byte) error {
 }
 
 // DispatchMessageWithRecover is the recovery-wrapped variant of
-// DispatchMessage for transports whose dispatch goroutines must
-// not let a panicking handler escape the transport boundary.
-// gRPC's per-frame goroutine uses this so a single broken tool
-// cannot kill an in-flight stream — every other concurrent request
-// on the same Exchange would otherwise be aborted.
+// DispatchMessage for embedders whose dispatch goroutines must not
+// let a panicking handler escape the embedder boundary.
 //
 // Identical to DispatchMessage on the parse / validate / marshal
 // path; the only difference is that handle() runs through
 // HandleWithRecover so panics are translated into the same stable
-// JSON-RPC tool-error envelope stdio + streamable HTTP emit.
+// JSON-RPC tool-error envelope the stdio loop emits.
 func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, site string) ([]byte, error) {
 	var req Request
 	if err := json.Unmarshal(msg, &req); err != nil {
@@ -837,9 +713,9 @@ func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, sit
 }
 
 // HandleWithRecover invokes handle with structured panic recovery.
-// Used by transports whose dispatch goroutines do not own a higher-
-// level recovery wrapper (streamable HTTP, gRPC) — stdio's loop has
-// its own RecoverDispatch deferred at the goroutine boundary in Run.
+// Used by embedders whose dispatch goroutines do not own a higher-
+// level recovery wrapper — stdio's loop has its own RecoverDispatch
+// deferred at the goroutine boundary in Run.
 //
 // site is the metric/log label that lets operators distinguish where
 // a panic originated. Returns the stable JSON-RPC tool-error response
@@ -1117,9 +993,9 @@ func (s *Server) IsReadyCached() bool {
 	return s.readyCached
 }
 
-// SetReadyCached updates the cached readiness state. Transports that
-// lack an HTTP readiness endpoint (gRPC) call this after verifying
-// upstream connectivity so IsReadyCached reflects their state.
+// SetReadyCached updates the cached readiness state. Embedders that
+// lack an HTTP readiness endpoint call this after verifying upstream
+// connectivity so IsReadyCached reflects their state.
 func (s *Server) SetReadyCached(ready bool) {
 	s.readyMu.Lock()
 	s.readyCached = ready

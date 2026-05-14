@@ -50,8 +50,8 @@ func projectResourceURI(workspaceID, projectID string) string {
 // userResourceURI builds the canonical resource URI for a user in a
 // workspace. Matches the `clockify://workspace/{workspaceId}/user/{userId}`
 // template advertised in ListResourceTemplates. Returns empty when either
-// piece is missing so tier 2 mutation handlers can safely skip the emit
-// step instead of publishing a malformed URI.
+// piece is missing so mutation handlers can safely skip the emit step
+// instead of publishing a malformed URI.
 func userResourceURI(workspaceID, userID string) string {
 	if workspaceID == "" || userID == "" {
 		return ""
@@ -405,20 +405,23 @@ func (s *Service) ListResources(ctx context.Context) ([]mcp.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []mcp.Resource{
-		{
+	resources := oneUserResources()
+	resources = append(resources, s.demoResourcesList()...)
+	resources = append(resources,
+		mcp.Resource{
 			URI:         fmt.Sprintf("clockify://workspace/%s", wsID),
 			Name:        "Current workspace",
 			Description: "Active Clockify workspace for this MCP session.",
 			MimeType:    "application/json",
 		},
-		{
+		mcp.Resource{
 			URI:         fmt.Sprintf("clockify://workspace/%s/user/current", wsID),
 			Name:        "Current user",
 			Description: "The user owning the API key this server is authenticated with.",
 			MimeType:    "application/json",
 		},
-	}, nil
+	)
+	return resources, nil
 }
 
 // ListResourceTemplates returns the parametric URI templates clients
@@ -461,6 +464,12 @@ func (s *Service) ListResourceTemplates(_ context.Context) ([]mcp.ResourceTempla
 			Description: "Aggregated weekly report keyed by ISO week-start date (YYYY-MM-DD).",
 			MimeType:    "application/json",
 		},
+		{
+			URITemplate: "clockify://demo/{run_id}",
+			Name:        "Demo run by id",
+			Description: "Demo state resource. Replace {run_id} with the run_id passed to demo seed or cleanup.",
+			MimeType:    "application/json",
+		},
 	}, nil
 }
 
@@ -468,6 +477,9 @@ func (s *Service) ListResourceTemplates(_ context.Context) ([]mcp.ResourceTempla
 // from Clockify, returning it as a single JSON-encoded ResourceContents entry.
 // Unknown or malformed URIs return a -32602-equivalent error.
 func (s *Service) ReadResource(ctx context.Context, uri string) ([]mcp.ResourceContents, error) {
+	if contents, handled, err := s.readOneUserResource(ctx, uri); handled || err != nil {
+		return contents, err
+	}
 	rest, ok := strings.CutPrefix(uri, clockifyResourceScheme)
 	if !ok {
 		return nil, fmt.Errorf("unsupported URI scheme: %q", uri)

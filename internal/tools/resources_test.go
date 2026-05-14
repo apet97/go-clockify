@@ -2,10 +2,14 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/testclockify"
 )
 
 func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
@@ -19,25 +23,115 @@ func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 concrete resources, got %d", len(list))
-	}
-	if !strings.HasPrefix(list[0].URI, "clockify://workspace/ws1") {
-		t.Fatalf("first uri: %q", list[0].URI)
-	}
-	if !strings.HasSuffix(list[1].URI, "/user/current") {
-		t.Fatalf("second uri: %q", list[1].URI)
+	for _, want := range []string{
+		"clockify://status",
+		"clockify://workspace",
+		"clockify://user",
+		"clockify://features",
+		"clockify://tools",
+		"clockify://workflows",
+		"clockify://demo/phase1",
+		"clockify://recent/entries",
+		"clockify://recent/projects",
+		"clockify://workspace/ws1",
+		"clockify://workspace/ws1/user/current",
+	} {
+		if !hasResourceURI(list, want) {
+			t.Fatalf("missing resource %q in %+v", want, list)
+		}
 	}
 }
 
-func TestResourcesListTemplatesSix(t *testing.T) {
+func TestOneUserResourcesReadStatusWorkspaceToolsWorkflows(t *testing.T) {
+	fake := testclockify.NewServer("ws1")
+	defer fake.Close()
+	client := clockify.NewClient("test-key", fake.URL, 5*time.Second, 0)
+	svc := New(client, fake.WorkspaceID)
+
+	for _, uri := range []string{
+		"clockify://status",
+		"clockify://workspace",
+		"clockify://tools",
+		"clockify://workflows",
+	} {
+		t.Run(uri, func(t *testing.T) {
+			contents, err := svc.ReadResource(context.Background(), uri)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if len(contents) != 1 {
+				t.Fatalf("contents: %+v", contents)
+			}
+			if contents[0].MimeType != "application/json" || contents[0].Text == "" {
+				t.Fatalf("content: %+v", contents[0])
+			}
+		})
+	}
+}
+
+func TestDemoResourcesTrackSeedAndCleanup(t *testing.T) {
+	fake := testclockify.NewServer("ws1")
+	defer fake.Close()
+	client := clockify.NewClient("test-key", fake.URL, 5*time.Second, 0)
+	svc := New(client, fake.WorkspaceID)
+	ctx := context.Background()
+	uri := "clockify://demo/resource-test"
+
+	before, err := svc.ReadResource(ctx, uri)
+	if err != nil {
+		t.Fatalf("read before seed: %v", err)
+	}
+	if !strings.Contains(before[0].Text, `"status":"not_seeded"`) {
+		t.Fatalf("before seed: %q", before[0].Text)
+	}
+
+	if _, err := svc.ClockifyDemoSeed(ctx, map[string]any{"run_id": "resource-test"}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	seeded, err := svc.ReadResource(ctx, uri)
+	if err != nil {
+		t.Fatalf("read seeded: %v", err)
+	}
+	if !strings.Contains(seeded[0].Text, `"status":"seeded"`) || !strings.Contains(seeded[0].Text, `"entryId"`) {
+		t.Fatalf("seeded resource: %q", seeded[0].Text)
+	}
+	resources, err := svc.ListResources(ctx)
+	if err != nil {
+		t.Fatalf("list resources: %v", err)
+	}
+	if !hasResourceURI(resources, uri) {
+		t.Fatalf("resources/list did not expose demo run resource %q", uri)
+	}
+
+	if _, err := svc.ClockifyDemoCleanup(ctx, map[string]any{"run_id": "resource-test"}); err != nil {
+		t.Fatalf("cleanup: %v", err)
+	}
+	cleaned, err := svc.ReadResource(ctx, uri)
+	if err != nil {
+		t.Fatalf("read cleaned: %v", err)
+	}
+	if !strings.Contains(cleaned[0].Text, `"status":"cleaned"`) || !strings.Contains(cleaned[0].Text, `"deletedCount"`) {
+		t.Fatalf("cleaned resource: %q", cleaned[0].Text)
+	}
+}
+
+func TestResourcesListTemplatesIncludesDemo(t *testing.T) {
 	svc := &Service{}
 	tmpls, err := svc.ListResourceTemplates(context.Background())
 	if err != nil {
 		t.Fatalf("templates: %v", err)
 	}
-	if len(tmpls) != 6 {
-		t.Fatalf("expected 6 templates, got %d", len(tmpls))
+	if len(tmpls) != 7 {
+		t.Fatalf("expected 7 templates, got %d", len(tmpls))
+	}
+	foundDemo := false
+	for _, tmpl := range tmpls {
+		if tmpl.URITemplate == "clockify://demo/{run_id}" {
+			foundDemo = true
+		}
+	}
+	if !foundDemo {
+		t.Fatalf("missing demo resource template in %+v", tmpls)
 	}
 }
 
@@ -151,18 +245,17 @@ func TestResourcesReadWeeklyReportDoesNotMutateServiceWorkspace(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/user":
-			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice"})
 		case "/workspaces/" + resourceWorkspace + "/reports/weekly":
+			if r.Method != http.MethodPost {
+				t.Fatalf("weekly report method = %s, want POST", r.Method)
+			}
 			observedWorkspace <- svc.WorkspaceID
-			var body map[string]any
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-				t.Fatalf("decode weekly report body: %v", err)
-			}
-			filter, _ := body["weeklyFilter"].(map[string]any)
-			if filter["group"] != "PROJECT" || filter["subgroup"] != "TIME" {
-				t.Fatalf("unexpected weeklyFilter: %#v", filter)
-			}
-			respondJSON(t, w, map[string]any{"totals": []map[string]any{}})
+			respondJSON(t, w, map[string]any{
+				"totals":      []map[string]any{},
+				"groupOne":    []map[string]any{},
+				"totalsByDay": []map[string]any{},
+			})
 		default:
 			t.Fatalf("unexpected path: %q", r.URL.Path)
 		}
@@ -205,4 +298,13 @@ func TestResourcesReadRejectsMalformedURI(t *testing.T) {
 			t.Fatalf("expected error for uri %q", uri)
 		}
 	}
+}
+
+func hasResourceURI(resources []mcp.Resource, uri string) bool {
+	for _, resource := range resources {
+		if resource.URI == uri {
+			return true
+		}
+	}
+	return false
 }

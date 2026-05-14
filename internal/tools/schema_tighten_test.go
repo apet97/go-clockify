@@ -214,37 +214,21 @@ func TestTightenInputSchemaColorPattern(t *testing.T) {
 	}
 }
 
-// TestRegistrySchemasAllHaveAdditionalPropertiesFalse is the property test
-// required by the W1-10 plan: walk every Tier 1 tool's input schema and
-// assert additionalProperties:false is present on every object.
+// TestRegistrySchemasAllHaveAdditionalPropertiesFalse walks every tool's
+// input schema and asserts additionalProperties:false is present on every
+// object.
 func TestRegistrySchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
 	svc := &Service{}
-	for _, d := range svc.Registry() {
+	descriptors := svc.FullAccessRegistry()
+	if len(descriptors) == 0 {
+		t.Fatal("FullAccessRegistry returned zero tools")
+	}
+	for _, d := range descriptors {
 		if d.Tool.InputSchema == nil {
 			continue
 		}
 		if err := assertNoOpenObjects(d.Tool.InputSchema, d.Tool.Name, "$"); err != nil {
-			t.Errorf("tier1 %s: %v", d.Tool.Name, err)
-		}
-	}
-}
-
-// TestTier2SchemasAllHaveAdditionalPropertiesFalse walks every tier 2 group
-// and makes the same assertion.
-func TestTier2SchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
-	svc := &Service{}
-	for groupName := range Tier2Groups {
-		descriptors, ok := svc.Tier2Handlers(groupName)
-		if !ok {
-			continue
-		}
-		for _, d := range descriptors {
-			if d.Tool.InputSchema == nil {
-				continue
-			}
-			if err := assertNoOpenObjects(d.Tool.InputSchema, d.Tool.Name, "$"); err != nil {
-				t.Errorf("tier2/%s/%s: %v", groupName, d.Tool.Name, err)
-			}
+			t.Errorf("%s: %v", d.Tool.Name, err)
 		}
 	}
 }
@@ -254,38 +238,14 @@ func TestTier2SchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
 // within the keyword subset internal/jsonschema actually enforces.
 func TestRegistrySchemasUseOnlySupportedValidatorKeywords(t *testing.T) {
 	svc := &Service{}
-
-	tier1 := svc.Registry()
-	if len(tier1) == 0 {
-		t.Fatal("Tier 1 registry is empty; schema keyword guard is vacuous")
+	descriptors := svc.FullAccessRegistry()
+	if len(descriptors) == 0 {
+		t.Fatal("FullAccessRegistry is empty; schema keyword guard is vacuous")
 	}
-	for _, d := range tier1 {
+	for _, d := range descriptors {
 		for _, violation := range unsupportedSchemaKeywords(d.Tool.Name, d.Tool.InputSchema) {
 			t.Error(violation)
 		}
-	}
-
-	if len(Tier2Groups) == 0 {
-		t.Fatal("Tier 2 group registry is empty; schema keyword guard is vacuous")
-	}
-	tier2Tools := 0
-	for groupName := range Tier2Groups {
-		descriptors, ok := svc.Tier2Handlers(groupName)
-		if !ok {
-			t.Fatalf("missing tier2 handlers for group %q", groupName)
-		}
-		if len(descriptors) == 0 {
-			t.Fatalf("Tier 2 group %q has no descriptors; schema keyword guard is vacuous for that group", groupName)
-		}
-		tier2Tools += len(descriptors)
-		for _, d := range descriptors {
-			for _, violation := range unsupportedSchemaKeywords(d.Tool.Name, d.Tool.InputSchema) {
-				t.Error(violation)
-			}
-		}
-	}
-	if tier2Tools == 0 {
-		t.Fatal("Tier 2 descriptors are empty; schema keyword guard is vacuous")
 	}
 }
 
@@ -331,22 +291,13 @@ func (e *schemaError) Error() string { return e.tool + " @ " + e.path + ": " + e
 
 func newSchemaError(tool, path, msg string) error { return &schemaError{tool, path, msg} }
 
-// sanity — Tier 2 catalog must actually populate the Tier2Groups map before
-// the above test runs, otherwise we'd be walking zero groups and falsely
-// passing. This assertion makes the precondition explicit.
-func TestTier2CatalogPopulated(t *testing.T) {
-	if len(Tier2Groups) == 0 {
-		t.Fatal("Tier2Groups is empty — schema property tests would be vacuous")
-	}
-}
-
-// TestTier1RegistryNonEmpty asserts the same precondition for Tier 1 —
-// if Registry() ever returns zero tools, the property test above becomes
-// a no-op and silently passes.
-func TestTier1RegistryNonEmpty(t *testing.T) {
+// TestFullAccessRegistryNonEmpty makes the precondition that the registry
+// has content explicit, so the schema property tests above never silently
+// pass on an empty input.
+func TestFullAccessRegistryNonEmpty(t *testing.T) {
 	svc := &Service{}
-	if len(svc.Registry()) == 0 {
-		t.Fatal("Tier1 Registry returned zero tools")
+	if len(svc.FullAccessRegistry()) == 0 {
+		t.Fatal("FullAccessRegistry returned zero tools")
 	}
 }
 

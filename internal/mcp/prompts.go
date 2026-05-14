@@ -37,7 +37,7 @@ type Prompt struct {
 	Messages    []PromptMessage  `json:"messages"`
 }
 
-// promptRegistry stores the built-in Clockify prompts. Registration is
+// promptRegistry stores the built-in one-user Clockify prompts. Registration is
 // done in init() and guarded by a mutex so tests can add fixture prompts
 // without racing reads from the dispatch path.
 type promptRegistry struct {
@@ -113,110 +113,121 @@ func substituteArgs(text string, args map[string]any) string {
 func builtinPrompts() []Prompt {
 	return []Prompt{
 		{
-			Name:        "log-week-from-calendar",
-			Description: "Draft time entries for one week by walking a calendar reference and mapping each event to a Clockify project.",
+			Name:        "demo-full-workspace-story",
+			Description: "Seed a deterministic demo workspace story, review it, and report the IDs.",
 			Arguments: []PromptArgument{
-				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the Monday of the week to log.", Required: true},
-				{Name: "calendar_uri", Description: "Where the upstream calendar data lives (ICS URL, Google Calendar id, etc.).", Required: true},
+				{Name: "run_id", Description: "Stable demo run id. Default phase1.", Required: false},
+				{Name: "prefix", Description: "Explicit demo object prefix.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Walk the calendar at {{calendar_uri}} for the week starting {{week_start}}. For each finished event that should be tracked in Clockify, draft a `clockify_log_time` call with project/project_id when known, start/end from the calendar, and the event description. Ask me for clarification if the project name is ambiguous. Do not execute any write tool without my confirmation. If Clockify reports an overlap, inspect the affected entries and use `allow_overlap:true` only after explicit confirmation."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_demo_seed` to create or reuse the deterministic demo fixture. Use returned IDs in later calls, especially clientId, projectId, taskId, tagId, and entryId. If a paid feature is unavailable, report it and continue with the available workspace data. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "weekly-review",
-			Description: "Summarise the current user's Clockify week and flag anomalies (gaps, overtime, untagged entries).",
+			Name:        "setup-client-project-task",
+			Description: "Create or reuse a client/project/task/tag work package from names or IDs.",
 			Arguments: []PromptArgument{
-				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the Monday of the week to review.", Required: true},
+				{Name: "client", Description: "Client name or ID.", Required: false},
+				{Name: "project", Description: "Project name or ID.", Required: false},
+				{Name: "task", Description: "Task name or ID.", Required: false},
+				{Name: "tag", Description: "Tag name.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` for week_start={{week_start}} first. Report total hours, issues, and suggestedActions from that structured review. If you need Reports API weekly totals, call `clockify_weekly_summary` with `week_start={{week_start}}` and `weekly_filter:{\"group\":\"PROJECT\",\"subgroup\":\"TIME\"}`."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_create_work_package` with the client, project, task, and tag names or IDs you have. Use returned IDs in later calls instead of repeating names. If a paid feature is unavailable, report it and continue with the created or reused core work objects. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "find-unbilled-hours",
-			Description: "Find time entries in a date range that are not yet marked billable.",
+			Name:        "log-week",
+			Description: "Log a week of finished work with workflow tools.",
 			Arguments: []PromptArgument{
-				{Name: "since", Description: "ISO date lower bound.", Required: true},
-				{Name: "until", Description: "ISO date upper bound.", Required: true},
+				{Name: "week_start", Description: "Week start date, if known.", Required: false},
+				{Name: "project", Description: "Project name or ID.", Required: false},
+				{Name: "task", Description: "Task name or ID.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "List every billable-eligible time entry between {{since}} and {{until}} that has `billable=false`. Group by project and report total unbilled hours. Use `clockify_list_entries`."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_log_work` for the first finished entry, then repeat it for each remaining entry in the week. Use returned IDs from setup or earlier log calls whenever possible. If a paid feature is unavailable, report it and continue logging the entries that can be recorded. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "find-duplicate-entries",
-			Description: "Scan recent time entries for probable duplicates (same project, overlapping time, similar description).",
+			Name:        "invoice-client",
+			Description: "Create an invoice workflow for client work and degrade cleanly when invoicing is unavailable.",
 			Arguments: []PromptArgument{
-				{Name: "lookback_days", Description: "How many days of history to scan. Default 14.", Required: false},
+				{Name: "client", Description: "Client name or ID.", Required: false},
+				{Name: "start", Description: "Start date or datetime.", Required: false},
+				{Name: "end", Description: "End date or datetime.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Use `clockify_timesheet_review` with explicit `start` and `end` covering the requested lookback window. If `lookback_days` is absent, use the last 14 days. Inspect overlap issues and relatedEntryIds, then describe each suspected duplicate pair. Do not delete anything."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_invoice_client_work` with the client name or ID and date range you have. Use returned IDs in later calls, including clientId, invoiceId, and imported entry IDs when present. If a paid feature is unavailable, report it and continue by summarizing invoice-ready work instead of failing the workflow. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "generate-timesheet-report",
-			Description: "Produce a formatted timesheet for a given week in one of the supported export formats.",
+			Name:        "cleanup-demo",
+			Description: "Clean deterministic demo objects by run id or prefix.",
 			Arguments: []PromptArgument{
-				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the Monday of the week.", Required: true},
-				{Name: "format", Description: "One of `pdf`, `csv`, `md`.", Required: true},
+				{Name: "run_id", Description: "Stable demo run id. Default phase1.", Required: false},
+				{Name: "prefix", Description: "Explicit demo prefix.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Build a timesheet for week_start={{week_start}} in {{format}} format. Use `clockify_weekly_summary` with `weekly_filter:{\"group\":\"PROJECT\",\"subgroup\":\"TIME\"}` for Reports API totals, then use `clockify_timesheet_review` to flag gaps or overlaps before rendering every day of the week including zero-hour days."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_demo_cleanup` with the run id or prefix you have. Use returned IDs in later calls only if follow-up cleanup or verification is needed. If a paid feature is unavailable, report it and continue cleaning the core demo objects. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "invoice-review-and-send",
-			Description: "Review invoice readiness, draft invoice changes, and require dry-run/confirmation before external invoice actions.",
+			Name:        "review-week",
+			Description: "Review weekly totals, issues, and suggested fixes.",
 			Arguments: []PromptArgument{
-				{Name: "client", Description: "Client name or ID to invoice.", Required: true},
-				{Name: "since", Description: "ISO date lower bound.", Required: true},
-				{Name: "until", Description: "ISO date upper bound.", Required: true},
+				{Name: "week_start", Description: "Week start date, if known.", Required: false},
+				{Name: "user", Description: "User name, email, or ID.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review invoice readiness for client {{client}} from {{since}} through {{until}}. Use invoice and report tools to identify billable entries, draft invoice line items, and surface missing client/project metadata. Do not call `clockify_send_invoice` until a dry-run preview is shown and I explicitly confirm the external side effect."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_review_week` for the requested week. Use returned IDs in later calls, especially entryId, projectId, taskId, and tagId values referenced by issues or next actions. If a paid feature is unavailable, report it and continue with the local entry-based review. Summarize what changed or what should change next, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused when any write follows."}},
 			},
 		},
 		{
-			Name:        "approval-cycle",
-			Description: "Plan an approval workflow by listing approval requests and previewing approve/reject actions before execution.",
+			Name:        "create-expense",
+			Description: "Record an expense with category/project names or IDs.",
 			Arguments: []PromptArgument{
-				{Name: "period", Description: "Approval period or date range to inspect.", Required: true},
+				{Name: "category", Description: "Expense category name or ID.", Required: false},
+				{Name: "project", Description: "Project name or ID.", Required: false},
+				{Name: "amount", Description: "Expense amount.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Plan the approval cycle for {{period}}. Use `clockify_list_approval_requests` and `clockify_get_approval_request` first, summarize pending/blocked requests, and use dry_run:true for any `clockify_approve_timesheet`, `clockify_reject_timesheet`, or `clockify_withdraw_approval` proposal before execution."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_record_expense` with the category, project, amount, date, and notes you have. Use returned IDs in later calls, including expenseId, categoryId, projectId, taskId, and userId. If a paid feature is unavailable, report it and continue with a clear summary of the expense that could not be recorded. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "time-off-review",
-			Description: "Review time-off policies, balances, and requests before drafting safe request/status changes.",
+			Name:        "request-time-off",
+			Description: "Request time off with a policy name or ID.",
 			Arguments: []PromptArgument{
-				{Name: "user", Description: "User name or ID whose time-off state should be reviewed.", Required: true},
+				{Name: "policy", Description: "Time-off policy name or ID.", Required: false},
+				{Name: "start", Description: "Start date.", Required: false},
+				{Name: "end", Description: "End date.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review time-off state for {{user}}. Resolve the user, inspect policies, balances, and existing requests, then explain any plan/role limits. Draft create/status/delete request tool calls only with dry_run:true first and require explicit confirmation before any write."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_request_time_off` with the policy name or ID, dates, and note you have. Use returned IDs in later calls, including requestId, policyId, and userId. If a paid feature is unavailable, report it and continue with the requested dates and reason for manual handling. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "scheduling-capacity-review",
-			Description: "Review scheduling assignments and per-user capacity totals before proposing schedule changes.",
+			Name:        "schedule-week",
+			Description: "Schedule work for a week using names or IDs.",
 			Arguments: []PromptArgument{
-				{Name: "user", Description: "User name or ID to inspect.", Required: true},
-				{Name: "week_start", Description: "ISO date (YYYY-MM-DD) for the week to inspect.", Required: true},
+				{Name: "week_start", Description: "Week start date, if known.", Required: false},
+				{Name: "project", Description: "Project name or ID.", Required: false},
+				{Name: "user", Description: "User name, email, or ID.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Review scheduling capacity for {{user}} in the week starting {{week_start}}. Prefer typed scheduling tools, including per-user capacity totals, and avoid raw documented API writes unless the operator has enabled them. Summarize overloads, gaps, and any proposed assignment writes with dry_run:true before execution."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_schedule_work` with the user, project, dates, and hours you have. Use returned IDs in later calls, including assignmentId, userId, and projectId. If a paid feature is unavailable, report it and continue with a readable schedule plan. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
-			Name:        "webhook-rollout-check",
-			Description: "Plan a webhook rollout with DNS validation, dry-run payload review, and token-safe output handling.",
+			Name:        "setup-webhook",
+			Description: "Create a webhook from a simple name, callback URL, and event.",
 			Arguments: []PromptArgument{
-				{Name: "url", Description: "Webhook delivery URL to validate.", Required: true},
-				{Name: "event", Description: "Clockify webhook event to configure.", Required: true},
+				{Name: "name", Description: "Webhook name.", Required: false},
+				{Name: "url", Description: "HTTPS callback URL.", Required: false},
+				{Name: "event", Description: "Clockify webhook event.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "Plan a webhook rollout for {{event}} to {{url}}. Use webhook list/get tools to avoid duplicates, verify that DNS validation will pass, mask any auth token, and preview create/update/test/delete operations with dry_run:true before execution. Treat `clockify_test_webhook` as an external side effect requiring confirmation."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_setup_webhook` with the webhook name, HTTPS callback URL, and event you have. Use returned IDs in later calls, including webhookId. If a paid feature is unavailable, report it and continue with the event and callback details for manual setup. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 	}

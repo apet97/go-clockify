@@ -12,26 +12,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "groups_holidays",
-		Description: "User groups (admin view) and workspace holidays",
-		Keywords:    []string{"group", "holiday", "public holiday", "recurring", "user group"},
-		ToolNames: []string{
-			"clockify_list_user_groups_admin",
-			"clockify_get_user_group",
-			"clockify_create_user_group_admin",
-			"clockify_update_user_group_admin",
-			"clockify_delete_user_group_admin",
-			"clockify_list_holidays",
-			"clockify_list_holidays_in_period",
-			"clockify_create_holiday",
-			"clockify_delete_holiday",
-		},
-		Builder: groupsHolidaysHandlers,
-	})
-}
-
 func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List user groups (admin)

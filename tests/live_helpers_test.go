@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -166,24 +165,10 @@ func (c *liveCampaignContext) flushCleanups() {
 	}
 }
 
-// activateTier2 brings a Tier-2 group's descriptors online on the
-// underlying MCP server. Mirrors the production path
-// (internal/runtime/service.go:113-128) without going through
-// clockify_search_tools, because setupLiveMCPHarness intentionally does
-// not wire Service.ActivateGroup. Idempotent: a duplicate activation
-// surfaced by the server as "already" is treated as a no-op.
-func (c *liveCampaignContext) activateTier2(group string) {
-	c.t.Helper()
-	descriptors, ok := c.h.Service.Tier2Handlers(group)
-	if !ok {
-		c.t.Fatalf("Tier 2 group %q is not registered (Tier2Handlers returned false)", group)
-	}
-	if err := c.h.Server.ActivateGroup(group, descriptors); err != nil {
-		if !strings.Contains(err.Error(), "already") {
-			c.t.Fatalf("activate Tier 2 group %q: %v", group, err)
-		}
-	}
-}
+// activateTier2 was the legacy hook for bringing a tier-2 group online.
+// The one-user MCP loads every tool at startup, so this helper is a
+// no-op preserved as a call-site shim for existing tests.
+func (c *liveCampaignContext) activateTier2(_ string) {}
 
 // rawDeletePath performs a DELETE through the raw Clockify client,
 // bypassing the MCP path. Cleanups use this to avoid re-triggering

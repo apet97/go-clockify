@@ -2,533 +2,83 @@ package main
 
 import (
 	"bytes"
-	"maps"
 	"strings"
 	"testing"
-
-	"github.com/apet97/go-clockify/internal/config"
 )
 
-func TestEffectiveVersionDefaultIsNotStaleReleaseLiteral(t *testing.T) {
-	if version == "1.0.0" {
-		t.Fatal("default version literal must not be a stale release number")
-	}
-	if got := effectiveVersion(); got == "1.0.0" {
-		t.Fatalf("effectiveVersion() = %q, want non-stale default", got)
-	}
-}
-
-func TestEffectiveVersionPrefersInjectedVersion(t *testing.T) {
+func TestEffectiveVersionFallsBackToDev(t *testing.T) {
 	old := version
-	t.Cleanup(func() { version = old })
-	version = "v9.9.9-test"
+	version = "dev"
+	defer func() { version = old }()
 
-	if got := effectiveVersion(); got != "v9.9.9-test" {
-		t.Fatalf("effectiveVersion() = %q, want injected version", got)
+	if got := effectiveVersion(); got == "" {
+		t.Fatal("effectiveVersion returned empty string")
 	}
 }
 
-func TestValidateBuildCapabilitiesRequiresGRPCTag(t *testing.T) {
-	withGRPCBuildAvailable(t, false)
-	err := validateBuildCapabilities(config.Config{Transport: "grpc"})
-	if err == nil {
-		t.Fatal("expected grpc transport to require grpc build tag")
+func TestParseLogLevel(t *testing.T) {
+	tests := map[string]slogLevelCase{
+		"debug":   {known: true},
+		"info":    {known: true},
+		"warn":    {known: true},
+		"warning": {known: true},
+		"error":   {known: true},
+		"weird":   {known: false},
 	}
-	if !strings.Contains(err.Error(), "-tags=grpc") {
-		t.Fatalf("error should name -tags=grpc, got: %v", err)
+	for input, tt := range tests {
+		if got := isKnownLogLevel(input); got != tt.known {
+			t.Fatalf("isKnownLogLevel(%q)=%v want %v", input, got, tt.known)
+		}
 	}
 }
 
-func TestDoctorStrictFailsUnsafeHostedPosture(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, map[string]string{
-		"MCP_TRANSPORT":              "streamable_http",
-		"MCP_AUTH_MODE":              "oidc",
-		"MCP_OIDC_ISSUER":            "https://issuer.example",
-		"MCP_CONTROL_PLANE_DSN":      "memory",
-		"MCP_ALLOW_DEV_BACKEND":      "1",
-		"MCP_AUDIT_DURABILITY":       "best_effort",
-		"MCP_EXPOSE_AUTH_ERRORS":     "1",
-		"MCP_DISABLE_INLINE_SECRETS": "0",
-		"CLOCKIFY_POLICY":            "standard",
-	})
-	if code != 3 {
-		t.Fatalf("runDoctor strict exit = %d, want 3; output:\n%s", code, out)
+type slogLevelCase struct {
+	known bool
+}
+
+func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_TIMEZONE", "Europe/Belgrade")
+	t.Setenv("CLOCKIFY_BASE_URL", "https://api.clockify.me/api/v1")
+	t.Setenv("MCP_LOG_LEVEL", "debug")
+
+	var stdout, stderr bytes.Buffer
+	code := runDoctor(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("runDoctor exit=%d stderr=%s stdout=%s", code, stderr.String(), stdout.String())
 	}
+	out := stdout.String()
 	for _, want := range []string{
-		"Strict posture", "Severity", "MCP_OIDC_STRICT", "MCP_OIDC_AUDIENCE/MCP_RESOURCE_URI",
-		"MCP_REQUIRE_TENANT_CLAIM", "MCP_DISABLE_INLINE_SECRETS", "MCP_EXPOSE_AUTH_ERRORS",
-		"MCP_CONTROL_PLANE_DSN", "MCP_AUDIT_DURABILITY", "CLOCKIFY_POLICY",
+		"one-user configuration",
+		"CLOCKIFY_API_KEY       set (redacted)",
+		"CLOCKIFY_WORKSPACE_ID  65b382b606de527a7ee2b60e",
+		"CLOCKIFY_TIMEZONE      Europe/Belgrade",
+		"MCP_LOG_LEVEL          debug",
+		"Result: OK",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("doctor output missing %q:\n%s", want, out)
 		}
 	}
-}
-
-func TestDoctorStrictProdPostgresPasses(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--profile=prod-postgres", "--strict"}, map[string]string{
-		"MCP_OIDC_ISSUER":       "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":     "clockify-mcp-prod",
-		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
-	})
-	if code != 0 {
-		t.Fatalf("runDoctor strict prod-postgres exit = %d, want 0; output:\n%s", code, out)
-	}
-	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
-		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
+	if strings.Contains(out, "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
+		t.Fatalf("doctor leaked API key: stdout=%s stderr=%s", out, stderr.String())
 	}
 }
 
-func TestDoctorStrictHostedDefaultTenantWarnsWithoutFailing(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--profile=prod-postgres", "--strict"}, map[string]string{
-		"MCP_OIDC_ISSUER":       "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":     "clockify-mcp-prod",
-		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
-	})
-	if code != 0 {
-		t.Fatalf("runDoctor strict prod-postgres exit = %d, want 0 despite warning; output:\n%s", code, out)
-	}
-	for _, want := range []string{"Strict posture", "OK", "WARN", "MCP_DEFAULT_TENANT_ID", "deployment-specific fallback"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("doctor hosted default-tenant warning missing %q:\n%s", want, out)
-		}
-	}
-}
+func TestRunDoctorOneUserMissingConfig(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "")
 
-func TestDoctorStrictHostedCustomDefaultTenantClearsWarning(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--profile=prod-postgres", "--strict"}, map[string]string{
-		"MCP_OIDC_ISSUER":       "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":     "clockify-mcp-prod",
-		"MCP_CONTROL_PLANE_DSN": "postgres://db/mcp",
-		"MCP_DEFAULT_TENANT_ID": "prod-fallback-disabled",
-	})
-	if code != 0 {
-		t.Fatalf("runDoctor strict prod-postgres exit = %d, want 0; output:\n%s", code, out)
-	}
-	if strings.Contains(out, "deployment-specific fallback") {
-		t.Fatalf("doctor emitted default-tenant warning despite custom fallback:\n%s", out)
-	}
-}
-
-func TestDoctorStrictSyntheticConfigPasses(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(nil))
-	if code != 0 {
-		t.Fatalf("doctor --strict synthetic config exit = %d, want 0; output:\n%s", code, out)
-	}
-	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
-		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
-	}
-}
-
-func TestDoctorStrictAllowBroadPolicyFlag(t *testing.T) {
-	env := map[string]string{
-		"MCP_TRANSPORT":                    "streamable_http",
-		"MCP_AUTH_MODE":                    "oidc",
-		"MCP_OIDC_ISSUER":                  "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":                "clockify-mcp-prod",
-		"MCP_OIDC_STRICT":                  "1",
-		"MCP_REQUIRE_TENANT_CLAIM":         "1",
-		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
-		"MCP_DISABLE_INLINE_SECRETS":       "1",
-		"MCP_CONTROL_PLANE_DSN":            "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":             "fail_closed",
-		"CLOCKIFY_POLICY":                  "safe_core",
-	}
-	code, out := runDoctorForTest(t, []string{"--strict"}, env)
-	if code != 3 || !strings.Contains(out, "CLOCKIFY_POLICY") {
-		t.Fatalf("strict broad policy exit/output mismatch: code=%d output:\n%s", code, out)
-	}
-
-	code, out = runDoctorForTest(t, []string{"--strict", "--allow-broad-policy"}, env)
-	if code != 0 {
-		t.Fatalf("strict --allow-broad-policy exit = %d, want 0; output:\n%s", code, out)
-	}
-}
-
-func TestDoctorStrictIndividualPostureFindings(t *testing.T) {
-	cases := []struct {
-		name string
-		env  map[string]string
-		want string
-	}{
-		{
-			name: "missing OIDC audience or resource",
-			env: strictCleanDoctorEnv(map[string]string{
-				"MCP_OIDC_STRICT":   "0",
-				"MCP_OIDC_AUDIENCE": "",
-				"MCP_RESOURCE_URI":  "",
-			}),
-			want: "MCP_OIDC_AUDIENCE/MCP_RESOURCE_URI",
-		},
-		{
-			name: "exposed auth errors",
-			env: strictCleanDoctorEnv(map[string]string{
-				"MCP_EXPOSE_AUTH_ERRORS": "1",
-			}),
-			want: "MCP_EXPOSE_AUTH_ERRORS",
-		},
-		{
-			name: "memory control plane",
-			env: strictCleanDoctorEnv(map[string]string{
-				"MCP_CONTROL_PLANE_DSN": "memory",
-				"MCP_ALLOW_DEV_BACKEND": "1",
-			}),
-			want: "MCP_CONTROL_PLANE_DSN",
-		},
-		{
-			name: "file control plane",
-			env: strictCleanDoctorEnv(map[string]string{
-				"MCP_CONTROL_PLANE_DSN": "file:///tmp/clockify-mcp-cp.json",
-				"MCP_ALLOW_DEV_BACKEND": "1",
-			}),
-			want: "MCP_CONTROL_PLANE_DSN",
-		},
-		{
-			name: "safe_core policy",
-			env: strictCleanDoctorEnv(map[string]string{
-				"CLOCKIFY_POLICY": "safe_core",
-			}),
-			want: "CLOCKIFY_POLICY",
-		},
-		{
-			name: "standard policy",
-			env: strictCleanDoctorEnv(map[string]string{
-				"CLOCKIFY_POLICY": "standard",
-			}),
-			want: "CLOCKIFY_POLICY",
-		},
-		{
-			name: "full policy",
-			env: strictCleanDoctorEnv(map[string]string{
-				"CLOCKIFY_POLICY": "full",
-			}),
-			want: "CLOCKIFY_POLICY",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			code, out := runDoctorForTest(t, []string{"--strict"}, tc.env)
-			if code != 3 || !strings.Contains(out, tc.want) {
-				t.Fatalf("strict finding exit/output mismatch: code=%d want key %q output:\n%s", code, tc.want, out)
-			}
-		})
-	}
-}
-
-// TestDoctorStrictRequiresForwardAuthTrustedProxies locks the gate
-// added per ChatGPT's audit: a hosted strict deployment using
-// forward_auth must declare its upstream-proxy allow-list. Without
-// MCP_FORWARD_AUTH_TRUSTED_PROXIES, doctor refuses to start the
-// posture because any network-reachable client could spoof
-// X-Forwarded-User / X-Forwarded-Tenant.
-func TestDoctorStrictRequiresForwardAuthTrustedProxies(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_AUTH_MODE":                    "forward_auth",
-		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "",
-		// forward_auth has no MCP_OIDC_* requirement; clear those so
-		// the test isn't masked by the OIDC gate firing first.
-		"MCP_OIDC_STRICT":          "0",
-		"MCP_OIDC_AUDIENCE":        "",
-		"MCP_RESOURCE_URI":         "",
-		"MCP_REQUIRE_TENANT_CLAIM": "0",
-		"MCP_OIDC_ISSUER":          "",
-	}))
-	if code == 0 {
-		t.Fatalf("expected non-zero exit; output:\n%s", out)
-	}
-	if !strings.Contains(out, "MCP_FORWARD_AUTH_TRUSTED_PROXIES") {
-		t.Fatalf("expected output to mention MCP_FORWARD_AUTH_TRUSTED_PROXIES; output:\n%s", out)
-	}
-}
-
-func TestDoctorStrictRequiresForwardAuthTenantClaim(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_AUTH_MODE":                    "forward_auth",
-		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
-		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "0",
-		"MCP_OIDC_STRICT":                  "0",
-		"MCP_OIDC_AUDIENCE":                "",
-		"MCP_RESOURCE_URI":                 "",
-		"MCP_REQUIRE_TENANT_CLAIM":         "0",
-		"MCP_OIDC_ISSUER":                  "",
-	}))
-	if code == 0 {
-		t.Fatalf("expected non-zero exit; output:\n%s", out)
-	}
-	if !strings.Contains(out, "MCP_REQUIRE_FORWARD_TENANT_CLAIM") {
-		t.Fatalf("expected output to mention MCP_REQUIRE_FORWARD_TENANT_CLAIM; output:\n%s", out)
-	}
-}
-
-// TestDoctorStrictAcceptsForwardAuthWithTrustedProxies is the
-// symmetric pass case: with the allow-list set, the gate passes.
-func TestDoctorStrictAcceptsForwardAuthWithTrustedProxies(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_AUTH_MODE":                    "forward_auth",
-		"MCP_FORWARD_AUTH_TRUSTED_PROXIES": "10.0.0.0/8",
-		"MCP_OIDC_STRICT":                  "0",
-		"MCP_OIDC_AUDIENCE":                "",
-		"MCP_RESOURCE_URI":                 "",
-		"MCP_REQUIRE_TENANT_CLAIM":         "0",
-		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
-		"MCP_OIDC_ISSUER":                  "",
-	}))
-	if code != 0 {
-		t.Fatalf("expected zero exit, got %d; output:\n%s", code, out)
-	}
-}
-
-func TestDoctorStrictAcceptsPostgresqlDSN(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_CONTROL_PLANE_DSN": "postgresql://db/mcp",
-	}))
-	if code != 0 {
-		t.Fatalf("strict postgresql DSN exit = %d, want 0; output:\n%s", code, out)
-	}
-}
-
-func TestDoctorStrictForbidsLegacyHTTP(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, map[string]string{
-		"CLOCKIFY_API_KEY":           "test-key",
-		"MCP_TRANSPORT":              "http",
-		"MCP_AUTH_MODE":              "static_bearer",
-		"MCP_BEARER_TOKEN":           "super-secret-token-at-least-sixteen",
-		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":       "fail_closed",
-		"MCP_DISABLE_INLINE_SECRETS": "1",
-		"CLOCKIFY_POLICY":            "time_tracking_safe",
-	})
-	if code != 3 || !strings.Contains(out, "MCP_TRANSPORT") {
-		t.Fatalf("strict legacy-http exit/output mismatch: code=%d output:\n%s", code, out)
-	}
-}
-
-func TestDoctorStrictForbidsAllowAnyOrigin(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_ALLOW_ANY_ORIGIN": "1",
-	}))
-	if code != 3 || !strings.Contains(out, "MCP_ALLOW_ANY_ORIGIN") {
-		t.Fatalf("strict allow-any-origin exit/output mismatch: code=%d output:\n%s", code, out)
-	}
-}
-
-func TestDoctorReportsMissingGRPCBuildTag(t *testing.T) {
-	withGRPCBuildAvailable(t, false)
-	code, out := runDoctorForTest(t, nil, map[string]string{
-		"CLOCKIFY_API_KEY":      "test-key",
-		"MCP_TRANSPORT":         "grpc",
-		"MCP_GRPC_BIND":         "127.0.0.1:9090",
-		"MCP_AUTH_MODE":         "static_bearer",
-		"MCP_BEARER_TOKEN":      "super-secret-token-at-least-sixteen",
-		"MCP_ALLOW_DEV_BACKEND": "1",
-	})
-	if code != 2 || !strings.Contains(out, "-tags=grpc") {
-		t.Fatalf("doctor missing-grpc-build exit/output mismatch: code=%d output:\n%s", code, out)
-	}
-}
-
-func TestDoctorRedactsSensitiveValues(t *testing.T) {
-	env := map[string]string{
-		"CLOCKIFY_API_KEY":                     "correcthorsebatterystaple",
-		"MCP_TRANSPORT":                        "streamable_http",
-		"MCP_AUTH_MODE":                        "static_bearer",
-		"MCP_BEARER_TOKEN":                     "super-secret-token-at-least-sixteen",
-		"MCP_METRICS_BEARER_TOKEN":             "metrics-secret-token-at-least-sixteen",
-		"MCP_HTTP_INLINE_METRICS_BEARER_TOKEN": "inline-secret-token-at-least-sixteen",
-		"MCP_CONTROL_PLANE_DSN":                "postgres://user:dbpassword@db.example:5432/mcp?sslmode=require",
-		"MCP_GRPC_TLS_CERT":                    "/etc/clockify/public-grpc.crt",
-		"MCP_GRPC_TLS_KEY":                     "/etc/clockify/secret-grpc.key",
-		"MCP_HTTP_TLS_CERT":                    "/etc/clockify/public-http.crt",
-		"MCP_HTTP_TLS_KEY":                     "/etc/clockify/secret-http.key",
-		"MCP_OIDC_JWKS_PATH":                   "/etc/clockify/private-jwks.json",
-	}
-	code, out := runDoctorForTest(t, nil, env)
-	if code != 0 {
-		t.Fatalf("doctor exit = %d, want 0; output:\n%s", code, out)
-	}
-	for _, key := range []string{
-		"CLOCKIFY_API_KEY",
-		"MCP_BEARER_TOKEN",
-		"MCP_METRICS_BEARER_TOKEN",
-		"MCP_HTTP_INLINE_METRICS_BEARER_TOKEN",
-		"MCP_CONTROL_PLANE_DSN",
-		"MCP_GRPC_TLS_KEY",
-		"MCP_HTTP_TLS_KEY",
-		"MCP_OIDC_JWKS_PATH",
-	} {
-		if !strings.Contains(out, key) {
-			t.Fatalf("doctor output missing sensitive key %s:\n%s", key, out)
-		}
-	}
-	for _, leaked := range []string{
-		"correcthorsebatterystaple",
-		"super-secret-token-at-least-sixteen",
-		"metrics-secret-token-at-least-sixteen",
-		"inline-secret-token-at-least-sixteen",
-		"dbpassword",
-		"secret-grpc.key",
-		"secret-http.key",
-		"private-jwks.json",
-	} {
-		if strings.Contains(out, leaked) {
-			t.Fatalf("doctor output leaked %q:\n%s", leaked, out)
-		}
-	}
-	if !strings.Contains(out, "set (redacted)") {
-		t.Fatalf("doctor output did not show redacted marker:\n%s", out)
-	}
-}
-
-func TestDoctorStrictMTLSRequiresCertTenantSource(t *testing.T) {
-	withGRPCBuildAvailable(t, true)
-	code, out := runDoctorForTest(t, []string{"--strict"}, map[string]string{
-		"CLOCKIFY_API_KEY":           "test-key",
-		"MCP_TRANSPORT":              "grpc",
-		"MCP_AUTH_MODE":              "mtls",
-		"MCP_GRPC_TLS_CERT":          "/tmp/server.crt",
-		"MCP_GRPC_TLS_KEY":           "/tmp/server.key",
-		"MCP_MTLS_CA_CERT_PATH":      "/tmp/ca.crt",
-		"MCP_MTLS_TENANT_SOURCE":     "header_or_cert",
-		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":       "fail_closed",
-		"MCP_DISABLE_INLINE_SECRETS": "1",
-		"CLOCKIFY_POLICY":            "time_tracking_safe",
-	})
-	if code != 3 || !strings.Contains(out, "MCP_MTLS_TENANT_SOURCE") {
-		t.Fatalf("strict mtls tenant source exit/output mismatch: code=%d output:\n%s", code, out)
-	}
-}
-
-// strictMTLSDoctorEnv returns a self-consistent strict-posture env for
-// MCP_AUTH_MODE=mtls. Pinning every required strict flag here keeps the
-// mTLS-specific tests below focused on the one assertion they care about
-// (require-mtls-tenant) rather than tripping over unrelated findings.
-func strictMTLSDoctorEnv(overrides map[string]string) map[string]string {
-	env := map[string]string{
-		"CLOCKIFY_API_KEY":           "test-key",
-		"MCP_TRANSPORT":              "grpc",
-		"MCP_AUTH_MODE":              "mtls",
-		"MCP_GRPC_TLS_CERT":          "/tmp/server.crt",
-		"MCP_GRPC_TLS_KEY":           "/tmp/server.key",
-		"MCP_MTLS_CA_CERT_PATH":      "/tmp/ca.crt",
-		"MCP_MTLS_TENANT_SOURCE":     "cert",
-		"MCP_REQUIRE_MTLS_TENANT":    "1",
-		"MCP_CONTROL_PLANE_DSN":      "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":       "fail_closed",
-		"MCP_DISABLE_INLINE_SECRETS": "1",
-		"CLOCKIFY_POLICY":            "time_tracking_safe",
-	}
-	maps.Copy(env, overrides)
-	return env
-}
-
-// TestDoctorStrictMTLSRequiresTenantRequired locks that hosted strict
-// posture refuses an mTLS deployment that has not set
-// MCP_REQUIRE_MTLS_TENANT=1. Without that flag a client whose verified
-// cert exposes no tenant identity silently collapses onto
-// MCP_DEFAULT_TENANT_ID — the multi-tenant footgun this gate closes.
-func TestDoctorStrictMTLSRequiresTenantRequired(t *testing.T) {
-	withGRPCBuildAvailable(t, true)
-	env := strictMTLSDoctorEnv(map[string]string{
-		"MCP_REQUIRE_MTLS_TENANT": "0",
-	})
-	code, out := runDoctorForTest(t, []string{"--strict"}, env)
-	if code != 3 {
-		t.Fatalf("strict mtls without require-tenant exit = %d, want 3; output:\n%s", code, out)
-	}
-	if !strings.Contains(out, "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1") {
-		t.Fatalf("doctor output missing MCP_REQUIRE_MTLS_TENANT finding message:\n%s", out)
-	}
-}
-
-// TestDoctorStrictMTLSWithRequireTenantPasses confirms the happy path:
-// mTLS + tenant source cert + require-mtls-tenant + every other strict
-// flag self-consistent → no findings.
-func TestDoctorStrictMTLSWithRequireTenantPasses(t *testing.T) {
-	withGRPCBuildAvailable(t, true)
-	env := strictMTLSDoctorEnv(nil)
-	code, out := runDoctorForTest(t, []string{"--strict"}, env)
-	if code != 0 {
-		t.Fatalf("strict mtls happy path exit = %d, want 0; output:\n%s", code, out)
-	}
-	if !strings.Contains(out, "Strict posture") || !strings.Contains(out, "OK") {
-		t.Fatalf("doctor strict success output missing OK posture:\n%s", out)
-	}
-}
-
-// TestDoctorStrictNonMTLSDoesNotRequireMTLSTenantRequired pins the
-// negative half: an OIDC deployment must not be flagged for missing
-// MCP_REQUIRE_MTLS_TENANT — the gate is mTLS-specific.
-func TestDoctorStrictNonMTLSDoesNotRequireMTLSTenantRequired(t *testing.T) {
-	env := strictCleanDoctorEnv(map[string]string{
-		"MCP_REQUIRE_MTLS_TENANT": "0",
-	})
-	code, out := runDoctorForTest(t, []string{"--strict"}, env)
-	if code != 0 {
-		t.Fatalf("strict OIDC without require-mtls-tenant exit = %d, want 0; output:\n%s", code, out)
-	}
-	if strings.Contains(out, "hosted strict mTLS posture requires MCP_REQUIRE_MTLS_TENANT=1") {
-		t.Fatalf("OIDC posture flagged MCP_REQUIRE_MTLS_TENANT (mTLS-only gate); output:\n%s", out)
-	}
-}
-
-func TestDoctorStrictCheckBackendsPreservesLoadErrorExit(t *testing.T) {
-	code, out := runDoctorForTest(t, []string{"--strict", "--check-backends"}, strictCleanDoctorEnv(map[string]string{
-		"MCP_AUDIT_DURABILITY": "sometimes",
-	}))
+	var stdout, stderr bytes.Buffer
+	code := runDoctor(nil, &stdout, &stderr)
 	if code != 2 {
-		t.Fatalf("doctor load-error exit = %d, want 2; output:\n%s", code, out)
+		t.Fatalf("runDoctor exit=%d want 2", code)
 	}
-	if !strings.Contains(out, "Load() result") || !strings.Contains(out, "invalid MCP_AUDIT_DURABILITY") {
-		t.Fatalf("doctor load-error output missing config failure:\n%s", out)
+	if !strings.Contains(stdout.String(), "Result: ERROR") || !strings.Contains(stdout.String(), "Recovery:") {
+		t.Fatalf("doctor failure output missing recovery:\nstdout=%s\nstderr=%s", stdout.String(), stderr.String())
 	}
-}
-
-func TestParseDoctorArgsCheckBackends(t *testing.T) {
-	opts := parseDoctorArgs([]string{"--strict", "--check-backends"})
-	if !opts.strict {
-		t.Fatal("parseDoctorArgs did not set strict")
+	if strings.Contains(stdout.String(), "profile") || strings.Contains(stdout.String(), "tenant") || strings.Contains(stdout.String(), "policy") {
+		t.Fatalf("doctor failure output reintroduced old product language:\n%s", stdout.String())
 	}
-	if !opts.checkBackends {
-		t.Fatal("parseDoctorArgs did not set checkBackends")
-	}
-}
-
-func withGRPCBuildAvailable(t *testing.T, available bool) {
-	t.Helper()
-	old := grpcBuildAvailable
-	grpcBuildAvailable = available
-	t.Cleanup(func() { grpcBuildAvailable = old })
-}
-
-func runDoctorForTest(t *testing.T, args []string, env map[string]string) (int, string) {
-	t.Helper()
-	for _, spec := range config.AllSpecs() {
-		t.Setenv(spec.Name, "")
-	}
-	for k, v := range env {
-		t.Setenv(k, v)
-	}
-	var out bytes.Buffer
-	code := runDoctorReport(args, &out)
-	return code, out.String()
-}
-
-func strictCleanDoctorEnv(overrides map[string]string) map[string]string {
-	env := map[string]string{
-		"MCP_TRANSPORT":                    "streamable_http",
-		"MCP_AUTH_MODE":                    "oidc",
-		"MCP_OIDC_ISSUER":                  "https://issuer.example",
-		"MCP_OIDC_AUDIENCE":                "clockify-mcp-prod",
-		"MCP_OIDC_STRICT":                  "1",
-		"MCP_REQUIRE_TENANT_CLAIM":         "1",
-		"MCP_REQUIRE_FORWARD_TENANT_CLAIM": "1",
-		"MCP_DISABLE_INLINE_SECRETS":       "1",
-		"MCP_CONTROL_PLANE_DSN":            "postgres://db/mcp",
-		"MCP_AUDIT_DURABILITY":             "fail_closed",
-		"CLOCKIFY_POLICY":                  "time_tracking_safe",
-	}
-	maps.Copy(env, overrides)
-	return env
 }

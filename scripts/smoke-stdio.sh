@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
-# Builds clockify-mcp and smoke-tests the stdio transport:
-#   - launches the server in stdio mode,
-#   - pipes an `initialize` then `tools/list` JSON-RPC request to stdin,
-#   - closes stdin (EOF signals Run() to exit the scanner loop),
-#   - reads stdout, asserts:
-#       line 1 is a valid initialize response with
-#         result.serverInfo.name == "clockify-go-mcp",
-#       line 2 is a valid tools/list response with at least one tool.
+# Builds clockify-mcp and smoke-tests the stdio loop:
+#   - pipes initialize + tools/list + prompts/list + resources/list,
+#   - closes stdin so Run() flushes and exits,
+#   - asserts:
+#       initialize  -> serverInfo.name == clockify-go-mcp,
+#       tools/list  -> >=100 tools, first=clockify_status, last=clockify_api_request,
+#       no forbidden activation/policy tools in any response,
+#       prompts/list  -> >=1,
+#       resources/list -> >=1.
 #
-# Stdio is the default transport per the MCP spec and the framing layer
-# in internal/mcp/server.go is newline-delimited JSON. It had been
-# unexercised in CI (only http, streamable_http, and grpc-under-tag were
-# smoked) until this script was added — a regression in the stdio framing
-# layer would have required a user bug report to surface.
-#
-# Env vars consumed:
-#   CLOCKIFY_API_KEY   Dummy value is fine; stdio mode never talks to
-#                      the real Clockify API during the smoke.
-#   MCP_TRANSPORT      Forced to `stdio` by the script.
-#
-# Requires: jq (for JSON parsing). Installed by default on
-# ubuntu-latest runners and available via Homebrew on macOS.
+# Requires: jq. Installed by default on ubuntu-latest runners and via
+# Homebrew on macOS.
 
 set -euo pipefail
 
@@ -40,16 +30,12 @@ fi
 
 go build -o "$BIN" ./cmd/clockify-mcp
 
-# Two newline-delimited JSON-RPC requests. Closing stdin after the
-# second request triggers the EOF path in Run() (internal/mcp/server.go
-# line ~354), which flushes pending responses and exits the loop.
-REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n'
+REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
 
 set +e
 printf '%s' "$REQUESTS" \
-    | MCP_TRANSPORT=stdio \
-      MCP_METRICS_AUTH_MODE=none \
-      CLOCKIFY_API_KEY=smoke-test-dummy \
+    | CLOCKIFY_API_KEY="${CLOCKIFY_API_KEY:-smoke-test-dummy}" \
+      CLOCKIFY_WORKSPACE_ID="${CLOCKIFY_WORKSPACE_ID:-00000000000000000000abcd}" \
       "$BIN" \
       >"$OUT" 2>"$ERR"
 rc=$?
@@ -64,10 +50,9 @@ if [ "$rc" -ne 0 ]; then
     exit 1
 fi
 
-# Expect at least two non-empty JSON lines on stdout.
 line_count=$(grep -c . "$OUT" || true)
-if [ "$line_count" -lt 2 ]; then
-    echo "FAIL: expected >=2 JSON-RPC responses on stdout, got $line_count" >&2
+if [ "$line_count" -lt 4 ]; then
+    echo "FAIL: expected >=4 JSON-RPC responses on stdout, got $line_count" >&2
     echo "--- stdout ---" >&2
     cat "$OUT" >&2
     echo "--- stderr ---" >&2
@@ -75,22 +60,49 @@ if [ "$line_count" -lt 2 ]; then
     exit 1
 fi
 
-# Pair responses by id (order isn't contractually guaranteed, but jq
-# lets us pick by id cheaply).
 init_name=$(jq -r 'select(.id == 1) | .result.serverInfo.name // empty' "$OUT")
 if [ "$init_name" != "clockify-go-mcp" ]; then
     echo "FAIL: initialize response missing result.serverInfo.name=clockify-go-mcp" >&2
-    echo "--- stdout ---" >&2
     cat "$OUT" >&2
     exit 1
 fi
-echo "OK: initialize returned serverInfo.name=$init_name"
+echo "OK: initialize -> serverInfo.name=$init_name"
 
 tool_count=$(jq -r 'select(.id == 2) | .result.tools | length' "$OUT")
-if [ -z "$tool_count" ] || [ "$tool_count" -lt 1 ]; then
-    echo "FAIL: tools/list returned ${tool_count:-?} tools (expected >=1)" >&2
-    echo "--- stdout ---" >&2
-    cat "$OUT" >&2
+first_tool=$(jq -r 'select(.id == 2) | .result.tools[0].name' "$OUT")
+last_tool=$(jq -r 'select(.id == 2) | .result.tools[-1].name' "$OUT")
+if [ -z "$tool_count" ] || [ "$tool_count" -lt 100 ]; then
+    echo "FAIL: tools/list returned ${tool_count:-?} tools (expected >=100)" >&2
     exit 1
 fi
-echo "OK: tools/list returned $tool_count tools"
+if [ "$first_tool" != "clockify_status" ]; then
+    echo "FAIL: tools/list[0] = $first_tool (expected clockify_status)" >&2
+    exit 1
+fi
+if [ "$last_tool" != "clockify_api_request" ]; then
+    echo "FAIL: tools/list[-1] = $last_tool (expected clockify_api_request)" >&2
+    exit 1
+fi
+echo "OK: tools/list -> $tool_count tools (first=$first_tool, last=$last_tool)"
+
+for forbidden in clockify_activate_group clockify_activate_tool clockify_deactivate_group clockify_search_tools clockify_list_tools clockify_policy_info; do
+    if grep -q "\"$forbidden\"" "$OUT"; then
+        echo "FAIL: forbidden tool $forbidden present in stdio output" >&2
+        exit 1
+    fi
+done
+echo "OK: no forbidden activation/policy tools surfaced"
+
+prompt_count=$(jq -r 'select(.id == 3) | .result.prompts | length // 0' "$OUT")
+if [ -z "$prompt_count" ] || [ "$prompt_count" -lt 1 ]; then
+    echo "FAIL: prompts/list returned ${prompt_count:-0} (expected >=1)" >&2
+    exit 1
+fi
+echo "OK: prompts/list -> $prompt_count prompts"
+
+resource_count=$(jq -r 'select(.id == 4) | .result.resources | length // 0' "$OUT")
+if [ -z "$resource_count" ] || [ "$resource_count" -lt 1 ]; then
+    echo "FAIL: resources/list returned ${resource_count:-0} (expected >=1)" >&2
+    exit 1
+fi
+echo "OK: resources/list -> $resource_count resources"

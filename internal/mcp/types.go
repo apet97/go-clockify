@@ -119,91 +119,14 @@ type ToolHints struct {
 	ReadOnly    bool
 	Destructive bool
 	Idempotent  bool
-	// AuditKeys is forwarded from ToolDescriptor.AuditKeys so the audit
-	// recorder can capture action-defining argument values (role, status,
-	// quantity, unit_price, …) beyond the implicit *_id suffix scan in
-	// resourceIDs. Empty for tools whose argument shape is fully
-	// described by *_id keys.
-	AuditKeys []string
 	// RiskClass is the bitmask risk taxonomy populated on every
-	// ToolDescriptor by internal/tools/applyRiskMetadata. It is forwarded
-	// here so Enforcement.FilterTool / BeforeCall can make policy
-	// decisions on bits (RiskBilling, RiskAdmin, RiskPermissionChange,
-	// RiskExternalSideEffect, RiskDestructive) rather than re-deriving
-	// the class from the tool name string. This is the Q3 prerequisite
-	// from docs/adr/0018-risk-class-confirmation-tokens.md — it adds
-	// no behaviour today, just the surface that future
-	// confirmation-token or risk-bit-aware gates will consume. Zero
-	// means "no risk classification available" (legacy callers that
-	// build the literal without a descriptor).
+	// ToolDescriptor by internal/tools/applyRiskMetadata. The one-user
+	// runtime exposes it as client-facing metadata only.
 	RiskClass RiskClass
 }
 
-// AuditPhase identifies which side of a non-read-only tool call an
-// audit record was emitted on. Two-phase audit (intent → outcome)
-// is what makes MCP_AUDIT_DURABILITY=fail_closed actually prevent
-// mutation when audit persistence is broken: an intent record is
-// written before the handler runs, and a fail_closed deployment
-// short-circuits the handler when that intent persistence fails.
-//
-//	PhaseIntent   — pre-handler write; "we are about to call this tool"
-//	PhaseOutcome  — post-handler write; "result was succeeded/failed"
-//
-// Empty Phase ("") is preserved for backward compatibility with
-// audit consumers that pre-date the phased model and treat every
-// record as a single-shot outcome.
-type AuditPhase = string
-
-const (
-	PhaseIntent  AuditPhase = "intent"
-	PhaseOutcome AuditPhase = "outcome"
-
-	// PhaseHandlerPanic identifies an outcome record written from
-	// the deferred panic-recovery wrapper around the tool handler.
-	// The intent record (PhaseIntent) was already written; this
-	// outcome pairs with it so a crashing handler does not leave
-	// an orphaned intent. Reason carries a sanitized panic value;
-	// the full stack lives in the slog `panic_recovered` event.
-	PhaseHandlerPanic AuditPhase = "handler_panic"
-)
-
-type AuditEvent struct {
-	Tool        string
-	Action      string
-	Outcome     string
-	Phase       AuditPhase
-	Reason      string
-	ResourceIDs map[string]string
-	Metadata    map[string]string
-}
-
-// Auditor records non-read-only tool-call events for compliance and audit
-// trail purposes. RecordAudit returns an error when persistence fails so the
-// server can make the failure observable (log + metric) and optionally fail
-// the call when AuditDurabilityMode is "fail_closed".
-//
-// Rationale: a void return means persistence errors are silently lost.
-// Returning an error makes audit degradation visible without mandating that
-// every deployment fail-close on it — the server's AuditDurabilityMode field
-// controls the actual behavior.
-type Auditor interface {
-	RecordAudit(AuditEvent) error
-}
-
-// Activator handles dynamic tool activation (group enable, visibility toggle).
-// A nil Activator means activation is unrestricted.
-type Activator interface {
-	// IsGroupAllowed reports whether a Tier 2 group may be activated.
-	IsGroupAllowed(group string) bool
-	// OnActivate is called when tools are dynamically registered.
-	OnActivate(names []string)
-	// OnDeactivate is called when dynamically registered tools are removed.
-	OnDeactivate(names []string)
-}
-
-// Enforcement handles the tool-call enforcement pipeline.
-// The server delegates all filtering, gating, and post-processing
-// to this interface, keeping the protocol core free of domain logic.
+// Enforcement is an optional validation/post-processing hook. The one-user
+// command leaves it nil so all registered tools are callable from startup.
 //
 // A nil Enforcement means no filtering or enforcement.
 type Enforcement interface {

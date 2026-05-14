@@ -14,9 +14,9 @@ import (
 // documented list/create/resubmit/PATCH approval surface.
 func TestApprovalHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descriptors, ok := svc.Tier2Handlers("approvals")
+	descriptors, ok := tier2Handlers(svc, "approvals")
 	if !ok {
-		t.Fatal("approvals group not found in Tier2Groups")
+		t.Fatal("approvals group not found")
 	}
 	if len(descriptors) != 9 {
 		t.Fatalf("expected 9 approval tools, got %d", len(descriptors))
@@ -47,9 +47,9 @@ func TestApprovalHandlersCount(t *testing.T) {
 // TestSharedReportHandlersCount verifies that the shared_reports group produces exactly 6 tools.
 func TestSharedReportHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descriptors, ok := svc.Tier2Handlers("shared_reports")
+	descriptors, ok := tier2Handlers(svc, "shared_reports")
 	if !ok {
-		t.Fatal("shared_reports group not found in Tier2Groups")
+		t.Fatal("shared_reports group not found")
 	}
 	if len(descriptors) != 6 {
 		t.Fatalf("expected 6 shared report tools, got %d", len(descriptors))

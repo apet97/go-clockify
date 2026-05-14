@@ -17,8 +17,7 @@ import (
 //     every call.
 //   - All consumers (envelopeSchemaFor[T], applyTier1OutputSchemas,
 //     applyOpaqueOutputSchemas) embed the returned map as a property of
-//     a fresh outer map and never mutate it afterwards. The Tier 2
-//     descriptor cache explicitly clones via cloneDescriptorMap.
+//     a fresh outer map and never mutate it afterwards.
 //
 // Together with the tier1OutputSchemas sync.OnceValue gate, this
 // collapses schema generation to a single per-binary cost; subsequent
@@ -214,7 +213,7 @@ func envelopeOpenMapSlice(action string) map[string]any {
 }
 
 // envelopeOpaque produces an outputSchema for tools whose Data field is
-// an open-shape map[string]any (most Tier 2 CRUD wrappers). It still
+// an open-shape map[string]any (most domain CRUD wrappers). It still
 // pins the action field as a const and validates the required envelope
 // fields. Optional data/meta fields remain allowed by the schema's default
 // open-object behavior without repeating unconstrained property schemas in

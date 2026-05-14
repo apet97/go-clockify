@@ -11,26 +11,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "approvals",
-		Description: "Timesheet approval workflows",
-		Keywords:    []string{"approval", "timesheet", "approve", "reject", "submit"},
-		ToolNames: []string{
-			"clockify_list_approval_requests",
-			"clockify_get_approval_request",
-			"clockify_submit_for_approval",
-			"clockify_resubmit_for_approval",
-			"clockify_submit_for_user_approval",
-			"clockify_resubmit_for_user_approval",
-			"clockify_approve_timesheet",
-			"clockify_reject_timesheet",
-			"clockify_withdraw_approval",
-		},
-		Builder: approvalHandlers,
-	})
-}
-
 func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List approval requests (RO)
