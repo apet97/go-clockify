@@ -6,38 +6,28 @@ Clockify workspace. Its job is to catch upstream drift — response shape
 changes, auth policy changes, rate-limit behavior changes — before those
 changes break customer integrations without anyone noticing.
 
-## Current launch-candidate evidence status
+## Current one-user live-test posture
 
-As of 2026-05-09, local live-contract false-green prevention is in
-place and `scripts/check-live-tool-coverage.sh` statically verifies
-that the current 128-tool catalog has every Tier-2 and API-backed
-Tier-1 tool named by the livee2e source bundle, with only local
-catalog/tool-surface helpers explicitly allowed out of live Clockify
-calls. Group 1 scheduled-cron evidence is closed as of 2026-05-09:
-scheduled runs 25608259477 and 25607242862 are consecutive greens on
-`feef83c641ced93d2ab6ba07ef766d61c82cc703` and include the
-read-only/schema-diff, mutating, MCP-path safety, and audit-phase
-steps. The temporary launch-evidence cron used to gather those runs
-was removed after the evidence was archived. The exhaustive manual
-probes are local coverage artifacts and are intentionally not part of
-the nightly `live-contract.yml` regex.
+As of the one-user rewrite, local live-contract tests use the same
+configuration surface as the stdio server: `CLOCKIFY_API_KEY`,
+`CLOCKIFY_WORKSPACE_ID`, and the opt-in flag
+`CLOCKIFY_RUN_LIVE_E2E=1`. The primary live contract drives
+`initialize` + `tools/call` against the one-user MCP harness rather
+than calling tool handlers directly.
 
 ## What runs
 
-| Test | Always runs | Runs when `CLOCKIFY_LIVE_WRITE_ENABLED=true` |
+| Test | Runs with `CLOCKIFY_RUN_LIVE_E2E=1` | Extra gates |
 |---|---|---|
-| `TestE2EReadOnly`  (whoami, get_workspace, list_projects) | ✅ | ✅ |
-| `TestE2EErrors`    (invalid ID, missing args) | ✅ | ✅ |
-| `TestLiveReadSideSchemaDiff` (raw Clockify JSON field set versus `internal/clockify` structs) | ✅ | ✅ |
-| `TestE2EMutating`  (create_client → create_project → start_timer → stop_timer → delete_entry, with full cleanup) | ❌ | ✅ |
-| `TestLiveDryRunDoesNotMutate`                         (MCP-path: confirms `clockify_delete_entry` with `dry_run:true` previews instead of deleting) | ❌ | ✅ |
-| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate`   (MCP-path: confirms `time_tracking_safe` rejects `clockify_create_project` before the handler runs) | ❌ | ✅ |
-| `TestLiveCreateUpdateDeleteEntryAuditPhases`          (MCP-path + Postgres: confirms each non-read-only call writes both intent and outcome rows) | ❌ | ✅ *(also requires `MCP_LIVE_CONTROL_PLANE_DSN`)* |
+| `TestLiveOneUserWorkflowMCP` | yes | none; performs real workflow calls |
+| `TestLiveRawClockifyReadSideSchemaDiff` | yes | none; raw Clockify model drift only |
+| `TestLiveTier1ReadOnly` | yes | `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true` |
+| `TestLivePaginationOnTags` | yes | `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true` |
+| `TestLiveTier2ReadOnlySweep` | yes | `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true` |
+| `TestLiveT2*` optional-domain CRUD probes | yes | `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true` plus category gates |
 
-The read-only tests are always enabled because they have no side effects.
-The mutating tests are gated by a repository variable so writes can be
-disabled from the GitHub UI without editing the workflow — useful when
-the sacrificial workspace needs a break or when Clockify is flapping.
+The workflow test is intentionally live and does not pass `dry_run`.
+Use only the sacrificial workspace.
 
 The static inventory guard is:
 
@@ -61,58 +51,22 @@ Setting it up:
 2. Create a new workspace. Name it `go-clockify-ci-sacrificial` or
    similar so it's obvious in audit logs.
 3. Generate an API key scoped to that workspace only.
-4. Store the key and workspace id as repo secrets:
-   - `CLOCKIFY_LIVE_API_KEY`
-   - `CLOCKIFY_LIVE_WORKSPACE_ID`
-5. Set the repo variable `CLOCKIFY_LIVE_WRITE_ENABLED` to `true` to
-   enable the mutating test path.
-6. (Audit-phase test only) Provision a sacrificial Postgres database
-   the audit-phase contract test can write to and store its DSN as
-   the repo secret `MCP_LIVE_CONTROL_PLANE_DSN`. Setup steps:
-   - Spin up a small Postgres instance (RDS, Cloud SQL, fly.io, a
-     `postgres:16-alpine` container — anything reachable from the
-     GitHub-hosted runner). Do **not** use a production database,
-     even one with separate schemas; the test's cleanup drops every
-     `audit_events` row matching its synthesised `session_id`, but a
-     migration mistake would still affect that pool.
-   - Create a dedicated database (e.g. `cp_live_audit`) and
-     a least-privileged role limited to that database's
-     `audit_events`, `tenants`, `credential_refs`, `sessions`, and
-     `schema_migrations` tables (the production opener auto-applies
-     migrations on first connect, so `CREATE` privileges are
-     required).
-   - DSN format: `postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require`.
-     `?sslmode=disable` is acceptable for ephemeral test instances.
-   - (Optional, paid-launch posture) Set the repo variable
-     `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` so a missing DSN fails
-     the nightly instead of skipping with a `::warning::`. Leave it
-     unset during onboarding; flip it on once the secret is wired
-     and the test has been observed running green.
+4. Store the key and workspace id as `CLOCKIFY_API_KEY` and
+   `CLOCKIFY_WORKSPACE_ID` in the shell or CI secret environment.
+5. Set `CLOCKIFY_RUN_LIVE_E2E=1` only for runs that are meant to touch
+   the live sacrificial workspace.
+6. Set `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true` only when you also
+   want the optional full-surface campaign.
 
 ### Fail-soft skip behaviour (read this for fresh forks)
 
-When **either** `CLOCKIFY_LIVE_API_KEY` **or**
-`CLOCKIFY_LIVE_WORKSPACE_ID` is missing, the workflow exits the
-`secrets_check` step with `skip=true` and downstream test steps are
-gated off via their `if:` conditions. The nightly run reports
-**green** — not failed — and a `::warning::` annotation surfaces in
-the job summary naming the missing secret(s).
+When `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID`, or
+`CLOCKIFY_RUN_LIVE_E2E=1` is missing, the build-tagged tests skip. On
+unfiltered local livee2e runs, `TestLiveContractSkipSentinel` fails if
+everything skipped so the shell output cannot be mistaken for evidence.
 
-This matters for anyone reading the Actions tab: **a green nightly
-does not by itself prove the live tests actually ran.** The
-honest signal is the warning annotation in the job summary. If
-someone forks this repo without copying the secrets, every
-nightly will be silently green with a warning, which is the
-intended behaviour — it avoids drowning the `live-test-failure`
-label queue with drift noise from unowned forks — but it is also
-the reason to skim the job summary periodically instead of
-trusting the green check alone.
-
-To force a failure when the secrets are missing (e.g. on an
-internal deployment where the secrets are required), turn the
-`::warning::` into a `::error::` and remove the `if: skip != 'true'`
-gating from the test steps. That's a deliberate policy choice, not
-the default.
+This matters for anyone reading local output: a skipped run is not live
+evidence.
 
 ## Secret rotation
 
@@ -126,7 +80,7 @@ The API key should be rotated:
 To rotate:
 
 1. Generate a new API key in Clockify for the sacrificial workspace.
-2. Update the `CLOCKIFY_LIVE_API_KEY` secret in repo settings.
+2. Update the `CLOCKIFY_API_KEY` secret or local environment value.
 3. Revoke the old key.
 4. Trigger the workflow via `workflow_dispatch` to confirm the new key
    works before waiting on the nightly.
@@ -146,8 +100,8 @@ Clockify occasionally renames a field, changes a type, or adds a new
 required property. The test failure usually looks like:
 
 ```
---- FAIL: TestE2EReadOnly (0.12s)
-    e2e_live_test.go:92: Unexpected projects format
+--- FAIL: TestLiveRawClockifyReadSideSchemaDiff (0.12s)
+    e2e_live_schema_test.go:45: /workspaces/{id}/projects[0] returned fields not represented in clockify.Project: ...
 ```
 
 Fix: update the struct in `internal/clockify/` to match the new shape,
@@ -161,14 +115,14 @@ Clockify sometimes changes the minimum role needed for an operation. A
 failure here looks like:
 
 ```
---- FAIL: TestE2EMutating (0.08s)
-    e2e_live_test.go:138: create_client failed: 403 Forbidden
+--- FAIL: TestLiveOneUserWorkflowMCP (0.08s)
+    e2e_live_test.go:34: clockify_demo_seed returned error: 403 Forbidden
 ```
 
 Fix: confirm the sacrificial workspace still has write access. If
-Clockify revoked a permission, you'll need to either (a) grant the
-workspace the required role, or (b) disable mutating tests via
-`CLOCKIFY_LIVE_WRITE_ENABLED=false` until you can restructure the test.
+Clockify revoked a permission, grant the sacrificial workspace the
+required role or disable the relevant optional category gate until the
+test can be restructured.
 
 ### 3. Genuine regression
 
@@ -200,10 +154,9 @@ the same build tag) now fails explicitly when this happens, but the
 Makefile target is the safest path — it fails on missing env vars before
 the tests even start.
 
-Never point local live tests at a production workspace. The test will
-create a client, a project, a time entry, and then clean them up — if
-anything crashes mid-run, the workspace will be left with orphan
-entities named `AG_TEST_<timestamp>_*`.
+Never point local live tests at a production workspace. The one-user
+workflow test performs real writes and may leave prefixed demo objects
+behind for later inspection.
 
 ### Personal workspace smoke tests are not launch evidence
 
@@ -212,65 +165,46 @@ live-contract suite or the full mutating campaign. Use the
 `local-stdio` profile with `CLOCKIFY_WORKSPACE_ID` pinned, then smoke
 only read-only or narrow calls first:
 
-- `clockify_whoami`
-- `clockify_policy_info`
-- small `clockify_list_*` pages with explicit `page` / `page_size`
+- `clockify_status`
+- `clockify_tools_guide`
+- small read-only domain pages with explicit `page` / `page_size`
 - short-range reports with `include_entries=false`
 
 Those personal checks can prove your local client wiring, but they are
 not Group 1 launch-candidate evidence. The evidence that closed Group 1
 is the pair of scheduled GitHub Actions runs recorded above.
 
-## Required live coverage before paid hosted launch
+## Required live coverage
 
-The launch-blocking MCP-path safety contracts are now implemented
-and wired into the nightly workflow alongside the long-standing
-read-only and mutating suites:
+The one-user live contracts are:
 
 | Contract test | What it proves | Where it lives |
 |---|---|---|
-| `TestLiveReadSideSchemaDiff` | The read-side Clockify responses used by this MCP (`/user`, `/workspaces`, projects, clients, tags, tasks when present, and user time entries when present) do not contain top-level fields missing from the corresponding `internal/clockify` structs. | `tests/e2e_live_schema_test.go` |
-| `TestLiveDryRunDoesNotMutate` | When `clockify_delete_entry` is invoked with `dry_run:true` through the MCP enforcement pipeline, the destructive handler never runs, the response carries the dry-run envelope, and the entry still exists upstream. | `tests/e2e_live_mcp_test.go` |
-| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | With `CLOCKIFY_POLICY=time_tracking_safe`, calling `clockify_create_project` through the MCP path returns a policy-deny error and the project is never created upstream. | `tests/e2e_live_mcp_test.go` |
-| `TestLiveCreateUpdateDeleteEntryAuditPhases` | A real create→update→delete entry cycle, driven through the MCP server and persisted to a Postgres-backed control plane, lands six rows in `audit_events` (3 `intent` + 3 `outcome`, paired per tool, with `outcome=success` on the outcome row and distinct `external_id`s). | `internal/controlplane/postgres/live_audit_phases_test.go` (build tags `postgres,livee2e`) |
-
-All three tests share the same `CLOCKIFY_LIVE_WRITE_ENABLED=true`
-write-gate as `TestE2EMutating`. The audit-phase test additionally
-requires `MCP_LIVE_CONTROL_PLANE_DSN` pointing at a sacrificial
-Postgres database that has had the controlplane migrations applied
-(the test reuses the production opener, which auto-migrates on
-first connect).
+| `TestLiveOneUserWorkflowMCP` | The stdio MCP path can initialize and call workflow tools including status, tool guide, demo seed, log work, fix entry, day/week review, and no-op demo cleanup. | `tests/e2e_live_test.go` |
+| `TestLiveRawClockifyReadSideSchemaDiff` | Raw Clockify responses (`/user`, `/workspaces`, projects, clients, tags, tasks when present, and user time entries when present) do not contain top-level fields missing from the corresponding `internal/clockify` structs. | `tests/e2e_live_schema_test.go` |
 
 ### Skip behaviour when secrets are missing
 
 | Missing secret/var | What happens |
 |---|---|
-| `CLOCKIFY_LIVE_API_KEY` / `CLOCKIFY_LIVE_WORKSPACE_ID` | Whole live job skips with a `::warning::` (fork-friendly fail-soft); on the main repo it is a hard failure (see `live-contract.yml`). |
-| `CLOCKIFY_LIVE_WRITE_ENABLED != "true"` | Mutating + MCP-path safety + audit-phase tests all skip; read-only tests still run. |
-| `MCP_LIVE_CONTROL_PLANE_DSN` | Audit-phase test skips with a `::warning::`. The other safety tests still run. Set the repo variable `CLOCKIFY_LIVE_AUDIT_REQUIRED=true` to make missing DSN a hard failure on the main repo. |
+| `CLOCKIFY_API_KEY` / `CLOCKIFY_WORKSPACE_ID` | Live tests skip before making Clockify calls. |
+| `CLOCKIFY_LIVE_FULL_SURFACE_ENABLED != "true"` | Optional full-surface campaign tests skip; one-user workflow and raw schema tests still run. |
 
 ### Running locally
-
-The audit-phase test requires Postgres locally:
 
 ```sh
 export CLOCKIFY_API_KEY='...'
 export CLOCKIFY_WORKSPACE_ID='...'
 export CLOCKIFY_RUN_LIVE_E2E=1
-export CLOCKIFY_LIVE_WRITE_ENABLED=true
-export MCP_LIVE_CONTROL_PLANE_DSN='postgres://cp:cp@localhost:5432/cp_live_audit?sslmode=disable'
-# Read-only/schema contracts:
 go test -tags=livee2e -count=1 -timeout 5m \
-  -run '^(TestE2E(ReadOnly|Errors)|TestLiveReadSideSchemaDiff)$' \
+  -run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$' \
   ./tests/...
-# Read/write/dry-run/policy contracts:
+
+# Optional full-surface campaign:
+export CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true
 go test -tags=livee2e -count=1 -timeout 10m \
-  -run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$' \
+  -run '^(TestLiveTier1ReadOnly|TestLivePaginationOnTags|TestLiveTier2ReadOnlySweep|TestLiveT2)' \
   ./tests/...
-# Audit-phase contract (separate sub-module — must run from there):
-( cd internal/controlplane/postgres && \
-  go test -tags=postgres,livee2e -count=1 -timeout 10m \
-    -run '^TestLiveCreateUpdateDeleteEntryAuditPhases$' ./... )
 ```
 
 ## Why not just run in PR CI?

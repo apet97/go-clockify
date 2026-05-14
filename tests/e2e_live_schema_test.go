@@ -21,12 +21,14 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
-func TestLiveReadSideSchemaDiff(t *testing.T) {
+const liveRawSchemaTimeout = 30 * time.Second
+
+func TestLiveRawClockifyReadSideSchemaDiff(t *testing.T) {
 	cfg := setupLiveSchemaConfig(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), liveRawSchemaTimeout)
 	defer cancel()
 
-	httpClient := &http.Client{Timeout: cfg.RequestTimeout}
+	httpClient := &http.Client{Timeout: liveRawSchemaTimeout}
 	get := func(path string, query map[string]string, out any) {
 		t.Helper()
 		if err := liveGetRaw(ctx, httpClient, cfg, path, query, out); err != nil {
@@ -131,7 +133,7 @@ func TestLiveReadSideSchemaDiff(t *testing.T) {
 	}
 }
 
-func setupLiveSchemaConfig(t *testing.T) config.Config {
+func setupLiveSchemaConfig(t *testing.T) config.OneUserConfig {
 	t.Helper()
 	if os.Getenv("CLOCKIFY_API_KEY") == "" {
 		t.Skip("Skipping live schema diff since CLOCKIFY_API_KEY is not set")
@@ -139,15 +141,15 @@ func setupLiveSchemaConfig(t *testing.T) config.Config {
 	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" {
 		t.Skip("Skipping live schema diff unless CLOCKIFY_RUN_LIVE_E2E=1")
 	}
-	cfg, err := config.Load()
+	cfg, err := config.LoadOneUser()
 	if err != nil {
-		t.Fatalf("load config: %v", err)
+		t.Fatalf("load one-user config: %v", err)
 	}
 	MarkLiveTestRan()
 	return cfg
 }
 
-func liveGetRaw(ctx context.Context, client *http.Client, cfg config.Config, path string, query map[string]string, out any) error {
+func liveGetRaw(ctx context.Context, client *http.Client, cfg config.OneUserConfig, path string, query map[string]string, out any) error {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}

@@ -4,201 +4,122 @@ package e2e_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/config"
-	"github.com/apet97/go-clockify/internal/tools"
 )
 
-func setupTestEnv(t *testing.T) *tools.Service {
-	// Require Env Vars for live test
-	if os.Getenv("CLOCKIFY_API_KEY") == "" {
-		t.Skip("Skipping live e2e tests since CLOCKIFY_API_KEY is not set")
-	}
-	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" {
-		t.Skip("Skipping live e2e tests unless CLOCKIFY_RUN_LIVE_E2E=1")
-	}
-	t.Setenv("CLOCKIFY_DRY_RUN", "off") // Allow real mutations for this test only
+func TestLiveOneUserWorkflowMCP(t *testing.T) {
+	h := setupLiveMCPHarness(t, liveMCPOptions{})
 
-	MarkLiveTestRan()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
+	prefix := liveWorkflowPrefix()
+	runID := strings.ToLower(prefix)
+	date := time.Now().UTC().Format("2006-01-02")
 
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, cfg.RequestTimeout, cfg.MaxRetries)
-	service := tools.New(client, cfg.WorkspaceID)
-
-	return service
-}
-
-func invokeTool(ctx context.Context, service *tools.Service, name string, args map[string]any) (tools.ResultEnvelope, error) {
-	for _, tool := range service.Registry() {
-		if tool.Tool.Name == name {
-			resAny, err := tool.Handler(ctx, args)
-			if err != nil {
-				return tools.ResultEnvelope{}, err
-			}
-			resEnv, ok := resAny.(tools.ResultEnvelope)
-			if !ok {
-				return tools.ResultEnvelope{}, fmt.Errorf("unexpected return type not ResultEnvelope")
-			}
-			return resEnv, nil
-		}
-	}
-	return tools.ResultEnvelope{}, fmt.Errorf("tool %s not found", name)
-}
-
-func unmarshalData[T any](data any, out *T) error {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, out)
-}
-
-func TestE2EReadOnly(t *testing.T) {
-	svc := setupTestEnv(t)
-	ctx := context.Background()
-
-	// 1. whoami
-	resEnv, err := invokeTool(ctx, svc, "clockify_whoami", nil)
-	if err != nil {
-		t.Fatalf("whoami failed: %v", err)
-	}
-	t.Logf("whoami success")
-
-	// 2. get_workspace
-	resEnv, err = invokeTool(ctx, svc, "clockify_get_workspace", nil)
-	if err != nil {
-		t.Fatalf("get_workspace failed: %v", err)
-	}
-	var ws map[string]any
-	if err := unmarshalData(resEnv.Data, &ws); err == nil {
-		t.Logf("get_workspace success: %v", ws["id"])
+	status := h.callOK(ctx, "clockify_status", nil)
+	statusIDs := extractIDs(t, status)
+	if statusIDs["workspaceId"] == "" || statusIDs["userId"] == "" {
+		t.Fatalf("clockify_status missing workspace/user IDs: %#v", statusIDs)
 	}
 
-	// 3. list_projects
-	resEnv, err = invokeTool(ctx, svc, "clockify_list_projects", nil)
-	if err != nil {
-		t.Fatalf("list_projects failed: %v", err)
+	guide := h.callOK(ctx, "clockify_tools_guide", nil)
+	guideData := extractDataMap(t, guide)
+	if _, ok := guideData["workflows"]; !ok {
+		t.Fatalf("clockify_tools_guide missing workflows: %#v", guideData)
 	}
-	var projects []clockify.Project
-	if err := unmarshalData(resEnv.Data, &projects); err != nil {
-		t.Fatalf("Unexpected projects format")
-	}
-	t.Logf("list_projects success: found %d projects", len(projects))
-}
 
-func TestE2EMutating(t *testing.T) {
-	svc := setupTestEnv(t)
-	ctx := context.Background()
-	tagPrefix := fmt.Sprintf("AG_TEST_%d", time.Now().Unix())
-	wsID, err := svc.ResolveWorkspaceID(ctx)
-	if err != nil {
-		t.Fatalf("resolve workspace failed: %v", err)
-	}
-	var client clockify.ClientEntity
-	var project clockify.Project
-	var entry clockify.TimeEntry
-	t.Cleanup(func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		if entry.ID != "" {
-			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/time-entries/"+entry.ID); err != nil {
-				t.Logf("cleanup delete entry %s failed: %v", entry.ID, err)
-			}
-		}
-		if project.ID != "" {
-			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/projects/"+project.ID); err != nil {
-				t.Logf("cleanup delete project %s failed: %v", project.ID, err)
-			}
-		}
-		if client.ID != "" {
-			// Clockify rejects DELETE on active clients; archive first.
-			// The PUT validator also requires `name` in the body.
-			_ = svc.Client.Put(cleanupCtx, "/workspaces/"+wsID+"/clients/"+client.ID, map[string]any{"name": client.Name, "archived": true}, nil)
-			if err := svc.Client.Delete(cleanupCtx, "/workspaces/"+wsID+"/clients/"+client.ID); err != nil {
-				t.Logf("cleanup delete client %s failed: %v", client.ID, err)
-			}
-		}
+	seed := h.callOK(ctx, "clockify_demo_seed", map[string]any{
+		"run_id": runID,
+		"prefix": prefix,
+		"date":   date,
 	})
-
-	// 1. Create a client
-	cResEnv, err := invokeTool(ctx, svc, "clockify_create_client", map[string]any{"name": tagPrefix + "_client"})
-	if err != nil {
-		t.Fatalf("create_client failed: %v", err)
+	seedIDs := extractIDs(t, seed)
+	for _, key := range []string{"clientId", "projectId", "taskId", "tagId", "entryId"} {
+		if seedIDs[key] == "" {
+			t.Fatalf("clockify_demo_seed missing %s: %#v", key, seedIDs)
+		}
 	}
-	if err := unmarshalData(cResEnv.Data, &client); err != nil {
-		t.Fatalf("Unexpected client return format")
-	}
-	t.Logf("created client: %s", client.ID)
 
-	// 2. Create a project
-	pResEnv, err := invokeTool(ctx, svc, "clockify_create_project", map[string]any{
-		"name":   tagPrefix + "_project",
-		"client": client.ID,
+	logged := h.callOK(ctx, "clockify_log_work", map[string]any{
+		"start":       date + " 10:00",
+		"end":         date + " 10:20",
+		"description": prefix + " workflow log",
+		"project_id":  seedIDs["projectId"],
+		"task_id":     seedIDs["taskId"],
+		"tag_ids":     []any{seedIDs["tagId"]},
+		"billable":    true,
 	})
-	if err != nil {
-		t.Fatalf("create_project failed: %v", err)
+	loggedIDs := extractIDs(t, logged)
+	if loggedIDs["entryId"] == "" {
+		t.Fatalf("clockify_log_work missing entryId: %#v", loggedIDs)
 	}
-	if err := unmarshalData(pResEnv.Data, &project); err != nil {
-		t.Fatalf("Unexpected project return format")
-	}
-	t.Logf("created project: %s", project.ID)
 
-	// 3. Start a timer
-	startResEnv, err := invokeTool(ctx, svc, "clockify_start_timer", map[string]any{
-		"project_id":  project.ID,
-		"description": "E2E testing timer",
+	fixed := h.callOK(ctx, "clockify_fix_entry", map[string]any{
+		"entry_id":    loggedIDs["entryId"],
+		"description": prefix + " workflow log fixed",
 	})
-	if err != nil {
-		t.Fatalf("start_timer failed: %v", err)
+	fixedIDs := extractIDs(t, fixed)
+	if fixedIDs["entryId"] != loggedIDs["entryId"] {
+		t.Fatalf("clockify_fix_entry entryId=%q, want %q", fixedIDs["entryId"], loggedIDs["entryId"])
 	}
-	t.Logf("started timer: %v", startResEnv.Data)
 
-	// 4. Stop the timer
-	time.Sleep(1 * time.Second) // wait slightly
-	stopResEnv, err := invokeTool(ctx, svc, "clockify_stop_timer", map[string]any{"dry_run": false})
-	if err != nil {
-		t.Fatalf("stop_timer failed: %v", err)
+	day := h.callOK(ctx, "clockify_review_day", map[string]any{
+		"date":            date,
+		"include_entries": true,
+	})
+	dayData := extractDataMap(t, day)
+	if _, ok := dayData["totals"]; !ok {
+		t.Fatalf("clockify_review_day missing totals: %#v", dayData)
 	}
-	if err := unmarshalData(stopResEnv.Data, &entry); err != nil {
-		t.Fatalf("Unexpected stop timer return format")
-	}
-	t.Logf("stopped timer entry: %s", entry.ID)
 
-	// 5. Cleanup time entry explicitly so the timer artifact is removed before test exit.
-	_, err = invokeTool(ctx, svc, "clockify_delete_entry", map[string]any{"entry_id": entry.ID, "dry_run": false})
-	if err != nil {
-		t.Fatalf("delete_entry failed: %v", err)
+	week := h.callOK(ctx, "clockify_review_week", map[string]any{
+		"week_start":      date,
+		"include_entries": true,
+	})
+	weekData := extractDataMap(t, week)
+	if _, ok := weekData["totals"]; !ok {
+		t.Fatalf("clockify_review_week missing totals: %#v", weekData)
 	}
-	t.Logf("deleted entry: %s", entry.ID)
-	entry.ID = ""
+
+	noopCleanup := h.callOK(ctx, "clockify_demo_cleanup", map[string]any{
+		"run_id": "missing-" + runID,
+		"prefix": "missing-" + prefix,
+		"start":  date + " 00:00",
+		"end":    date + " 23:59",
+	})
+	cleanupData := extractDataMap(t, noopCleanup)
+	if _, ok := cleanupData["deletedCount"]; !ok {
+		t.Fatalf("clockify_demo_cleanup missing deletedCount: %#v", cleanupData)
+	}
 }
 
-func TestE2EErrors(t *testing.T) {
-	svc := setupTestEnv(t)
-	ctx := context.Background()
-
-	// Invalid entry ID
-	_, err := invokeTool(ctx, svc, "clockify_get_entry", map[string]any{"entry_id": "invalid_12345"})
-	if err == nil {
-		t.Fatalf("Expected error for invalid entry_id but got none")
+func liveWorkflowPrefix() string {
+	if prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX")); prefix != "" {
+		return prefix
 	}
-	t.Logf("Correctly got error for invalid entry_id: %v", err)
+	return fmt.Sprintf("MCP-LIVE-%d", time.Now().UTC().Unix())
+}
 
-	// Missing args
-	_, err = invokeTool(ctx, svc, "clockify_create_project", map[string]any{})
-	if err == nil {
-		t.Fatalf("Expected error for missing required args in create_project")
+func extractIDs(t *testing.T, result map[string]any) map[string]string {
+	t.Helper()
+	sc, ok := result["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("result missing structuredContent: %#v", result)
 	}
-	t.Logf("Correctly got error for missing args: %v", err)
+	raw, ok := sc["ids"].(map[string]any)
+	if !ok {
+		t.Fatalf("structuredContent missing ids: %#v", sc)
+	}
+	ids := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			ids[k] = s
+		}
+	}
+	return ids
 }

@@ -36,13 +36,13 @@ func TestLiveT2CustomFieldsCRUD(t *testing.T) {
 	t.Run("seed_project", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_create_project", map[string]any{
-			"name": projectName,
+		result := h.callOK(ctx, "clockify_create_work_package", map[string]any{
+			"project": projectName,
 		})
-		data := extractDataMap(t, result)
-		id, _ := data["id"].(string)
+		ids := extractIDs(t, result)
+		id := ids["projectId"]
 		if id == "" {
-			t.Fatalf("clockify_create_project returned no id: %#v", data)
+			t.Fatalf("clockify_create_work_package returned no projectId: %#v", ids)
 		}
 		projectID = id
 		c.RegisterCleanup("project", id, func(ctx context.Context) error {

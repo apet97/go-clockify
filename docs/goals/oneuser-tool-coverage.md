@@ -8,7 +8,7 @@ Summary:
 - Domain tools: 132
 - Raw fallback tools: 2
 - Fake-smoke yes: 32
-- Live-tested yes: 21
+- Live-tested yes: 22
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
@@ -19,7 +19,7 @@ Remaining honest gaps:
 | Tool | Class | Handler | Endpoint / method | Fake smoke | Live-tested | Output schema | Status |
 |------|-------|---------|-------------------|-------------|-------------|---------------|--------|
 | `clockify_status` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | typed | ready |
-| `clockify_tools_guide` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | no | typed | ready |
+| `clockify_tools_guide` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | typed | ready |
 | `clockify_create_work_package` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | typed | ready |
 | `clockify_log_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | typed | ready |
 | `clockify_start_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | typed | ready |

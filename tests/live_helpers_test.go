@@ -72,19 +72,16 @@ func setupLiveCampaign(t *testing.T, h *liveMCPHarness) *liveCampaignContext {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// clockify_whoami returns IdentityData: user is the User struct,
-	// workspaceId is the resolved workspace. Owner identity lives under
-	// data.user.id, not flat at data.id.
-	whoami := h.callOK(ctx, "clockify_whoami", nil)
-	data := extractDataMap(t, whoami)
+	status := h.callOK(ctx, "clockify_status", nil)
+	data := extractDataMap(t, status)
 	user, ok := data["user"].(map[string]any)
 	if !ok {
-		t.Fatalf("clockify_whoami response missing user object: %#v", data)
+		t.Fatalf("clockify_status response missing user object: %#v", data)
 	}
 	ownerID, _ := user["id"].(string)
 	ownerEmail, _ := user["email"].(string)
 	if ownerID == "" {
-		t.Fatalf("clockify_whoami returned no user id; cannot identify workspace owner: %#v", data)
+		t.Fatalf("clockify_status returned no user id; cannot identify workspace owner: %#v", data)
 	}
 
 	c := &liveCampaignContext{

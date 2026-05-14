@@ -4,7 +4,6 @@ package e2e_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 )
@@ -54,9 +53,6 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		result := h.callOK(ctx, "clockify_current_user", nil)
-		// current_user returns the flat clockify.User struct (id, email,
-		// name, settings, …). Distinct from clockify_whoami which wraps
-		// the user in IdentityData with a workspaceId sibling.
 		data := extractDataMap(t, result)
 		id, _ := data["id"].(string)
 		if id != c.OwnerUserID {
@@ -171,33 +167,30 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		}
 	})
 
-	t.Run("timesheet_review", func(t *testing.T) {
+	t.Run("review_day", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_timesheet_review", map[string]any{
+		result := h.callOK(ctx, "clockify_review_day", map[string]any{
 			"date":            time.Now().UTC().Format("2006-01-02"),
 			"timezone":        "UTC",
 			"min_gap_minutes": 0,
 		})
 		data := extractDataMap(t, result)
 		if _, ok := data["issues"]; !ok {
-			t.Fatalf("timesheet_review response missing issues field: %#v", data)
+			t.Fatalf("review_day response missing issues field: %#v", data)
 		}
 		if _, ok := data["suggestedActions"]; !ok {
-			t.Fatalf("timesheet_review response missing suggestedActions field: %#v", data)
+			t.Fatalf("review_day response missing suggestedActions field: %#v", data)
 		}
 	})
 
-	t.Run("timer_status", func(t *testing.T) {
+	t.Run("status_orientation", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_timer_status", nil)
+		result := h.callOK(ctx, "clockify_status", nil)
 		data := extractDataMap(t, result)
-		// running is the contract field; type may be bool true/false or
-		// the response may wrap the running entry. Either way the field
-		// must be present so callers know whether to expect entry data.
-		if _, ok := data["running"]; !ok {
-			t.Fatalf("timer_status response missing running field: %#v", data)
+		if _, ok := data["recommendedFirstTools"]; !ok {
+			t.Fatalf("status response missing recommendedFirstTools field: %#v", data)
 		}
 	})
 
@@ -244,31 +237,23 @@ func TestLiveTier1ReadOnly(t *testing.T) {
 		}
 	})
 
-	t.Run("resolve_name", func(t *testing.T) {
+	t.Run("tools_guide", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		probe := c.LivePrefix("resolve-name-probe", 0)
-		result := h.callOK(ctx, "clockify_resolve_name", map[string]any{
-			"entity_type": "project",
-			"name_or_id":  probe,
-		})
+		result := h.callOK(ctx, "clockify_tools_guide", nil)
 		data := extractDataMap(t, result)
-		if status, _ := data["status"].(string); status == "" {
-			t.Fatalf("resolve_name returned no status for probe %q: %#v", probe, data)
+		if _, ok := data["workflows"]; !ok {
+			t.Fatalf("tools_guide response missing workflows: %#v", data)
 		}
 	})
 
-	t.Run("policy_info", func(t *testing.T) {
+	t.Run("status_feature_status", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_policy_info", nil)
+		result := h.callOK(ctx, "clockify_status", nil)
 		data := extractDataMap(t, result)
-		mode, _ := data["mode"].(string)
-		// setupLiveMCPHarness defaults to policy.Standard when no mode
-		// is set on the options. A regression that shifts the default
-		// silently breaks the production-shaped fixture.
-		if !strings.EqualFold(mode, "standard") {
-			t.Fatalf("policy_info reported mode=%q, expected standard (the harness default)", mode)
+		if _, ok := data["featureStatus"]; !ok {
+			t.Fatalf("status response missing featureStatus: %#v", data)
 		}
 	})
 }

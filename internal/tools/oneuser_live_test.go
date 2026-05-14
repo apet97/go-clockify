@@ -13,14 +13,14 @@ import (
 )
 
 func TestOneUserLiveWorkflow(t *testing.T) {
-	if os.Getenv("CLOCKIFY_LIVE_TESTS") != "1" {
-		t.Skip("set CLOCKIFY_LIVE_TESTS=1 with CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX to run live Clockify workflow tests")
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" {
+		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1 with CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX to run live Clockify workflow tests")
 	}
 	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
 	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
 	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
 	if apiKey == "" || workspaceID == "" || prefix == "" {
-		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_LIVE_TESTS=1")
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_RUN_LIVE_E2E=1")
 	}
 
 	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)
@@ -107,14 +107,14 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 }
 
 func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
-	if os.Getenv("CLOCKIFY_LIVE_TESTS") != "1" || os.Getenv("CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS") != "1" {
-		t.Skip("set CLOCKIFY_LIVE_TESTS=1 and CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1 to probe paid/high-risk workflow tools")
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" || os.Getenv("CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS") != "1" {
+		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1 and CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1 to probe paid/high-risk workflow tools")
 	}
 	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
 	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
 	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
 	if apiKey == "" || workspaceID == "" || prefix == "" {
-		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_LIVE_TESTS=1")
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_RUN_LIVE_E2E=1")
 	}
 
 	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)
@@ -146,14 +146,14 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 }
 
 func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
-	if os.Getenv("CLOCKIFY_LIVE_TESTS") != "1" || os.Getenv("CLOCKIFY_LIVE_OPTIONAL_DOMAINS") != "1" {
-		t.Skip("set CLOCKIFY_LIVE_TESTS=1 and CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 to probe optional-domain tools")
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" || os.Getenv("CLOCKIFY_LIVE_OPTIONAL_DOMAINS") != "1" {
+		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1 and CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 to probe optional-domain tools")
 	}
 	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
 	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
 	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
 	if apiKey == "" || workspaceID == "" || prefix == "" {
-		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_LIVE_TESTS=1")
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_RUN_LIVE_E2E=1")
 	}
 
 	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)

@@ -596,9 +596,9 @@ shared-service-e2e:
 # on the candidate SHA — local results, manual dispatches, and PR CI
 # runs do not count. This target is for pre-flight debugging only.
 #
-# Read-only tier (always): set CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY
-#   + CLOCKIFY_WORKSPACE_ID.
-# Mutating tier (adds write tests): also set CLOCKIFY_LIVE_WRITE_ENABLED=true.
+# Workflow/schema tier: set CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY
+#   + CLOCKIFY_WORKSPACE_ID. The workflow test uses real live calls.
+# Optional domain tiers remain gated by their category env vars.
 live-contract-local:
 	@echo "============================================================" >&2
 	@echo "  live-contract-local: PRE-FLIGHT DEBUG ONLY" >&2
@@ -611,17 +611,17 @@ live-contract-local:
 		echo "  Read docs/live-tests.md before running this target." >&2; \
 		exit 1; \
 	fi
-	@echo "== read-only tier =="
+	@echo "== one-user workflow + raw schema tier =="
 	go test -tags=livee2e -count=1 -timeout 5m \
-		-run '^(TestE2E(ReadOnly|Errors)|TestLiveReadSideSchemaDiff)$$' \
+		-run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$$' \
 		./tests/...
-	@if [ "$${CLOCKIFY_LIVE_WRITE_ENABLED:-}" = "true" ]; then \
-		echo "== mutating + MCP-path safety tier =="; \
+	@if [ "$${CLOCKIFY_LIVE_FULL_SURFACE_ENABLED:-}" = "true" ]; then \
+		echo "== optional full-surface tier =="; \
 		go test -tags=livee2e -count=1 -timeout 10m \
-			-run '^(TestE2EMutating|TestLiveDryRunDoesNotMutate|TestLivePolicyTimeTrackingSafeBlocksProjectCreate)$$' \
+			-run '^(TestLiveTier1ReadOnly|TestLivePaginationOnTags|TestLiveTier2ReadOnlySweep|TestLiveT2)' \
 			./tests/...; \
 	else \
-		echo "== mutating tier skipped (CLOCKIFY_LIVE_WRITE_ENABLED != true) =="; \
+		echo "== optional full-surface tier skipped (CLOCKIFY_LIVE_FULL_SURFACE_ENABLED != true) =="; \
 	fi
 	@echo ""
 	@echo "============================================================" >&2

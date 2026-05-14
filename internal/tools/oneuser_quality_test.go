@@ -601,6 +601,7 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 	)
 	liveEvidence := setOf(
 		"clockify_status",
+		"clockify_tools_guide",
 		"clockify_create_work_package",
 		"clockify_log_work",
 		"clockify_start_work",

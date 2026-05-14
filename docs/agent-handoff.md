@@ -61,7 +61,7 @@ Live tests use the same one-user configuration as the server. Set the
 credentials in the shell, choose a unique prefix, and avoid printing secrets:
 
 ```sh
-CLOCKIFY_LIVE_TESTS=1 \
+CLOCKIFY_RUN_LIVE_E2E=1 \
 CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
 go test -count=1 ./internal/tools -run TestOneUserLiveWorkflow
 ```
@@ -71,7 +71,7 @@ start/stop/switch timer flow, entry fix, and day/week review. Paid-feature
 workflow probing is separate and opt-in:
 
 ```sh
-CLOCKIFY_LIVE_TESTS=1 \
+CLOCKIFY_RUN_LIVE_E2E=1 \
 CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1 \
 CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
 go test -count=1 ./internal/tools -run TestOneUserLivePaidFeatureWorkflowRecovery
@@ -84,7 +84,7 @@ Optional-domain contract probing is also opt-in and uses real live calls only;
 it never passes `dry_run`:
 
 ```sh
-CLOCKIFY_LIVE_TESTS=1 \
+CLOCKIFY_RUN_LIVE_E2E=1 \
 CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 \
 CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
 go test -count=1 ./internal/tools -run TestOneUserLiveOptionalDomainContracts

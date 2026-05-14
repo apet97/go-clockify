@@ -11,7 +11,7 @@ import (
 // TestLiveT2ProjectAdminCRUD covers the project_admin Tier-2 group
 // against a real Clockify backend. The test creates a project, then
 // uses the admin tools to edit it: a project template clone is made
-// (clockify_create_project_template), a TIME estimate is set
+// via the one-user project-template tool, a TIME estimate is set
 // (clockify_update_project_estimate), the workspace owner is
 // installed as the only member with no hourly rate
 // (clockify_set_project_memberships), and finally the project is
@@ -34,13 +34,13 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 	t.Run("seed_project", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_create_project", map[string]any{
-			"name": projectName,
+		result := h.callOK(ctx, "clockify_create_work_package", map[string]any{
+			"project": projectName,
 		})
-		data := extractDataMap(t, result)
-		id, _ := data["id"].(string)
+		ids := extractIDs(t, result)
+		id := ids["projectId"]
 		if id == "" {
-			t.Fatalf("seed project returned no id: %#v", data)
+			t.Fatalf("seed work package returned no projectId: %#v", ids)
 		}
 		projectID = id
 		c.RegisterCleanup("project", id, func(ctx context.Context) error {
@@ -54,7 +54,7 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 	t.Run("create_project_template", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_create_project_template", map[string]any{
+		result := h.callOK(ctx, "clockify_projects_templates_create", map[string]any{
 			"name":      templateName,
 			"is_public": false,
 		})

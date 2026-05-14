@@ -52,7 +52,7 @@ product-definition change.
 | Refresh tool catalog | `make gen-tool-catalog` |
 | Focused tools tests | `go test -count=1 ./internal/tools` |
 | Focused MCP tests | `go test -count=1 ./internal/mcp` |
-| Live workflow smoke | `CLOCKIFY_LIVE_TESTS=1 CLOCKIFY_LIVE_PREFIX=<prefix> go test -count=1 ./internal/tools -run TestOneUserLiveWorkflow` |
+| Live workflow smoke | `CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_LIVE_PREFIX=<prefix> go test -count=1 ./internal/tools -run TestOneUserLiveWorkflow` |
 
 For live tests, set `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` in the
 environment. Do not echo them.

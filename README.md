@@ -256,6 +256,21 @@ workflow-first ordering and annotations, result envelope behavior,
 deterministic demo seed, repeatable cleanup behavior, and review workflow
 coverage against a stateful fake Clockify server.
 
+### Live tests
+
+Live tests are opt-in and must point at a sacrificial Clockify workspace:
+
+```bash
+export CLOCKIFY_API_KEY="..."
+export CLOCKIFY_WORKSPACE_ID="..."
+export CLOCKIFY_RUN_LIVE_E2E=1
+go test -tags=livee2e -count=1 -timeout 5m \
+  -run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$' \
+  ./tests/...
+```
+
+The workflow live test uses real API calls and does not pass `dry_run`.
+
 ## Implementation Goal
 
 The implementation goal lives at
