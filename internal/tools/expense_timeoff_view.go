@@ -346,8 +346,8 @@ func timeOffSuggestions(requestID, policyID, status string) []ToolSuggestion {
 		return nil
 	}
 	return []ToolSuggestion{
-		{Tool: "clockify_approve_time_off", Reason: "Approve this pending time-off request.", Arguments: map[string]any{"policy_id": policyID, "request_id": requestID}},
-		{Tool: "clockify_deny_time_off", Reason: "Deny this pending time-off request with an optional note.", Arguments: map[string]any{"policy_id": policyID, "request_id": requestID}},
+		{Tool: "clockify_time_off_approve", Reason: "Approve this pending time-off request.", Arguments: map[string]any{"policy_id": policyID, "request_id": requestID}},
+		{Tool: "clockify_time_off_deny", Reason: "Deny this pending time-off request with an optional note.", Arguments: map[string]any{"policy_id": policyID, "request_id": requestID}},
 	}
 }
 

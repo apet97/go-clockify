@@ -234,7 +234,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if projectID == "" && projectRef != "" {
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_resolve_name to disambiguate project names before retrying", err)
+			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_tools_guide and returned IDs to disambiguate project names before retrying", err)
 		}
 	}
 	if projectID != "" {
@@ -262,7 +262,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 					Message:     err.Error(),
 					Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
 				})
-				return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: attachValidationToPreview(dryrun.Preview("clockify_add_entry", args), validation)}, nil
+				return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: attachValidationToPreview(dryrun.Preview(legacyToolAddEntry, args), validation)}, nil
 			}
 			return ResultEnvelope{}, err
 		}
@@ -276,18 +276,18 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 				Message:     err.Error(),
 				Remediation: "Change the time entry details, or adjust dedupe/overlap settings only after manual review.",
 			})
-			return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: attachValidationToPreview(dryrun.Preview("clockify_add_entry", args), validation)}, nil
+			return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: attachValidationToPreview(dryrun.Preview(legacyToolAddEntry, args), validation)}, nil
 		}
 		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
 		validation := validationOK("overlap_and_dedupe_check")
-		preview := dryrunPreviewPayloadValidated("clockify_add_entry", payload, validation)
+		preview := dryrunPreviewPayloadValidated(legacyToolAddEntry, payload, validation)
 		preview["args"] = args
 		if len(dedupeMeta) > 0 {
 			preview["dedupe"] = dedupeMeta
 		}
-		return ResultEnvelope{OK: true, Action: "clockify_add_entry", Data: preview}, nil
+		return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: preview}, nil
 	}
 
 	path, err := paths.Workspace(wsID, "time-entries")
@@ -308,7 +308,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-	return ok("clockify_add_entry", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok(legacyToolAddEntry, view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) addEntryDedupeMeta(ctx context.Context, description, projectID string, payload map[string]any) (map[string]any, error) {
@@ -409,7 +409,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if projectID == "" && projectRef != "" {
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_resolve_name to disambiguate project names before retrying", err)
+			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_tools_guide and returned IDs to disambiguate project names before retrying", err)
 		}
 	}
 	if projectID != "" && projectID != existing.ProjectID {

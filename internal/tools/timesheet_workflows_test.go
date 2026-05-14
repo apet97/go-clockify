@@ -74,9 +74,9 @@ func TestTimesheetReviewFindsIssuesAndSuggestedActions(t *testing.T) {
 	assertIssueType(t, data.Issues, "missing_project")
 	assertIssueType(t, data.Issues, "overlap")
 	assertIssueType(t, data.Issues, "gap")
-	assertSuggestionTool(t, data.SuggestedActions, "clockify_find_and_update_entry")
+	assertSuggestionTool(t, data.SuggestedActions, legacyToolFindAndUpdateEntry)
 	assertSuggestionTool(t, data.SuggestedActions, "clockify_update_entry")
-	assertSuggestionTool(t, data.SuggestedActions, "clockify_timesheet_fill_gap")
+	assertSuggestionTool(t, data.SuggestedActions, legacyToolTimesheetFillGap)
 }
 
 func TestTimesheetFillGapDryRunValidatesWithoutPost(t *testing.T) {

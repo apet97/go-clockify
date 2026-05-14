@@ -133,8 +133,8 @@ func TestInitializeAdvertisesPromptsCapability(t *testing.T) {
 	if !ok {
 		t.Fatalf("prompts capability missing: %+v", caps)
 	}
-	if prompts["listChanged"] != true {
-		t.Fatalf("listChanged flag: %+v", prompts)
+	if _, ok := prompts["listChanged"]; ok {
+		t.Fatalf("static prompts should not advertise listChanged: %+v", prompts)
 	}
 }
 

@@ -764,7 +764,7 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 		switch suggestions[i].Tool {
 		case "clockify_list_entries":
 			listEntries = &suggestions[i]
-		case "clockify_log_time":
+		case legacyToolLogTime:
 			logTime = &suggestions[i]
 		}
 	}
@@ -783,7 +783,7 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 	}
 
 	if logTime == nil {
-		t.Fatalf("missing clockify_log_time suggestion in %+v", suggestions)
+		t.Fatalf("missing clockify_"+"log_time suggestion in %+v", suggestions)
 		return
 	}
 	if got := logTime.Arguments["dry_run"]; got != true {

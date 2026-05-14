@@ -29,7 +29,7 @@ func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
 	}
 	naturalLanguageCases := []input{
 		{
-			toolName: "clockify_add_entry",
+			toolName: legacyToolAddEntry,
 			// only `start` is required for add_entry.
 			args: map[string]any{"start": "now"},
 		},

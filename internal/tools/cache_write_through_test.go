@@ -260,7 +260,7 @@ func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
 			wantSeconds:       0,
 			wantProjectCount:  0,
 			wantDayCount:      0,
-			wantSuggestedTool: "clockify_log_time",
+			wantSuggestedTool: legacyToolLogTime,
 		},
 	}
 	for _, tt := range tests {

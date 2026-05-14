@@ -93,6 +93,9 @@ prefer the documented format on each tool descriptor.
 | `clockify_entries_get` | — | yes | no | yes | no | `read` | Get one time entry by ID. |
 | `clockify_entries_update` | — | no | no | yes | no | `write` | Update a time entry by ID. |
 | `clockify_entries_delete` | — | no | yes | no | yes | `destructive` | Delete a time entry by ID. |
+| `clockify_users_list` | — | yes | no | yes | no | `read` | List users in the pinned workspace. |
+| `clockify_users_profile` | — | yes | no | yes | no | `read` | Get the current Clockify user. |
+| `clockify_workspace_settings` | — | yes | no | yes | no | `read` | Read pinned workspace settings. |
 | `clockify_projects_templates_list` | — | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | — | no | no | no | no | `write` | Create a new project template |
 | `clockify_projects_estimates_update` | — | no | no | no | no | `write` | Update a project's documented estimate fields |
@@ -165,11 +168,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_holidays_list_for_user_period` | — | yes | no | yes | no | `read` | List holidays assigned to a user in a date period |
 | `clockify_holidays_create` | — | no | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_holidays_delete` | — | no | yes | no | yes | `destructive` | Delete a holiday by ID (supports dry_run preview) |
-| `clockify_users_list` | — | yes | no | yes | no | `read` | List users in the pinned workspace. |
-| `clockify_users_profile` | — | yes | no | yes | no | `read` | Get the current Clockify user. |
 | `clockify_users_deactivate` | — | no | no | no | yes | `write` | Deactivate a user in the workspace |
 | `clockify_users_role` | — | no | no | no | yes | `write` | Update a user's workspace role. Supports dry_run:true. |
-| `clockify_workspace_settings` | — | yes | no | yes | no | `read` | Read pinned workspace settings. |
 | `clockify_projects_memberships_list` | — | yes | no | yes | no | `read` | List project memberships. |
 | `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write` | Mark time entries as invoiced or not invoiced. |
 | `clockify_reports_attendance` | — | yes | no | yes | no | `read` | Run the attendance report. |

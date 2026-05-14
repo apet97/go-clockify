@@ -1,275 +1,70 @@
-# AGENTS.md — Clockify MCP
+# AGENTS.md - go-clockify
 
-> Standard agent-spec entrypoint for Codex, Claude Code, and any
-> autonomous coding agent operating on this repository. Read this
-> file first; it points at the binding constraints and the live
-> launch-state docs.
+Read this file first when working in this repository.
 
-## What this repo is
+## Product Shape
 
-A production-grade [Model Context Protocol](https://modelcontextprotocol.io)
-server for [Clockify](https://clockify.me), written in Go. Three
-transports (stdio, streamable HTTP 2025-03-26, opt-in gRPC behind
-`-tags=grpc`), five policy modes, signed releases. **`v1.2.5` is the
-current stable community/self-hosted AIII-backed API-refresh line**
-(released 2026-05-13). The original community/self-hosted
-launch evidence remains anchored to `v1.2.1` (released 2026-05-10 from
-rc.3 peeled commit `ce56414`; see
-[`docs/runbooks/release-candidate-evidence.md`](docs/runbooks/release-candidate-evidence.md)
-§ "v1.2.1 release evidence record (2026-05-10)" for the canonical
-launch evidence anchor). The repository is unofficial and **not affiliated
-with or endorsed by Clockify**; any paid-hosted / commercial /
-"official Clockify" promotion remains explicitly deferred — see the
-external evidence and legal/product gates summarised below and the
-"Deferred paid-hosted/commercial follow-ups" section of
-[`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md).
+This repo is a local one-user Clockify MCP server written in Go.
 
-## Read first (in this order)
+- One required `CLOCKIFY_API_KEY`.
+- One required `CLOCKIFY_WORKSPACE_ID`.
+- Stdio transport only.
+- Full access from startup.
+- All 151 tools loaded at startup.
+- Workflow tools first, domain tools second, raw API fallback last.
+- Every write-style workflow returns useful IDs.
+- Recoverable failures return `ok:false`, an error code, and recovery guidance.
 
-1. [`docs/agent-handoff.md`](docs/agent-handoff.md) — entry point
-   for autonomous work. Names the latest pushed state, current
-   blockers, files to inspect first, commands to run, the
-   non-negotiable safety constraints, and a suggested
-   implementation order.
-2. [`docs/launch-candidate-checklist.md`](docs/launch-candidate-checklist.md)
-   — bound checklist with per-group definitions of done.
-3. [`docs/launch-readiness-review-may-8.md`](docs/launch-readiness-review-may-8.md)
-   — May 8 review disposition ledger and
-   objective-to-artifact completion audit. Do not mark launch-ready
-   while that audit says external evidence or approval gates remain open.
-4. [`docs/official-clockify-mcp-gap-analysis.md`](docs/official-clockify-mcp-gap-analysis.md)
-   — narrative readiness ladder (community / internal alpha /
-   official launch).
-5. [`docs/adr/0017-streamable-http-session-rehydration.md`](docs/adr/0017-streamable-http-session-rehydration.md)
-   — Accepted; Path A landed. Read this before touching session
-   state.
-6. [`docs/live-tests.md`](docs/live-tests.md) — how the
-   live-contract nightly works and how the **sacrificial
-   workspace** is wired. Read this before any live Clockify call.
-7. [`docs/claude-code-continuation.md`](docs/claude-code-continuation.md)
-   — historical continuation packet for Claude Code after PR #51
-   merged. Use `docs/agent-handoff.md` for the current post-PR #63
-   launch state.
+Do not change those invariants unless the maintainer explicitly asks for a
+product-definition change.
 
-If a contributor maintains a workstation-private `CLAUDE.md` at the
-repo root, it is gitignored and machine-specific; treat it as
-optional context, not as a source of binding rules. The binding
-rules live in this file and the docs above.
+## Read First
 
-## Launch-state baseline
+1. `README.md` - user-facing setup and product overview.
+2. `docs/agent-cookbook.md` - workflow-first examples for agents.
+3. `docs/tool-catalog.md` - generated tool list in runtime order.
+4. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
+5. `cmd/clockify-mcp/main.go` - process wiring and doctor command.
+6. `internal/tools/oneuser_workflows.go` - workflow tools.
+7. `internal/tools/oneuser_domains.go` - full-access domain registry.
+8. `internal/tools/oneuser_resources.go` - resource provider.
+9. `internal/mcp/server.go` - MCP protocol core.
+10. `internal/testclockify/fake_server.go` - fake Clockify server.
 
-- **Latest code-bearing launch baseline:** `308c81560a75db037dfdaf306ac04afb48a5cff6`
-  (`chore(launch): harden hosted candidate readiness`). This is the
-  May 9 hosted/public hardening and dependency-security push. Later
-  docs-only evidence commits may move `main`; always verify the
-  current SHA with `git ls-remote origin refs/heads/main` before
-  binding scheduled or manual workflow evidence to a candidate. Manual
-  `live-contract.yml` dispatches on May 9 are useful candidate-now
-  evidence, but they do **not** replace the scheduled evidence that
-  closed Group 1 or the still-open Group 6/7 gates.
-- **Latest scheduled live-contract evidence SHA:**
-  `feef83c641ced93d2ab6ba07ef766d61c82cc703`
-  (`ci(live): add temporary launch evidence cron`). Scheduled
-  `live-contract.yml` runs 25608259477 and 25607242862 are consecutive
-  greens on this SHA and include the read-only/schema-diff, mutating,
-  MCP-path safety, and audit-phase steps. The temporary high-frequency
-  cron was removed after these runs were archived.
-- **Latest manual live-campaign baseline:** `ff0047aa50cdcd4bb43037c72d66b218d51f13e8`
-  (`test(livee2e): pin user invite validation`). This records the
-  full sacrificial-workspace live API campaign refresh: the documented
-  invite-user route is pinned by a no-email validation probe, stale
-  non-catalog user-invite risk overrides are removed, and risk
-  overrides now fail if they target ghost descriptor names. This is
-  manual campaign coverage only; it does **not** close Group 1,
-  Group 6, or Group 7 launch blockers.
-- **Historical baselines, not current candidate SHAs:** post-PR #63
-  remediation `0960bfa03db143778deb59f9b9522012116c9c9b`
-  (`chore(review): harden MCP server readiness`), PR #60 docs
-  stabilization `4e69c7a1db8011055187cf9892426ed48fc8e572`
-  (`docs(handoff): update post-PR59 launch state`) and PR #51 merge
-  tip `adce316d60644fe51365086aba186227c9ae3977`
-  (`docs(launch): record bench comparison evidence`) are retained for
-  audit continuity only. Do not cite either as the current
-  launch-state baseline.
-- **Closed launch-candidate groups:**
-  - **Group 1 — Live API contract.** Scheduled
-    `live-contract.yml` runs 25608259477 and 25607242862 are green on
-    `feef83c641ced93d2ab6ba07ef766d61c82cc703` and include
-    `TestLiveReadSideSchemaDiff`, `TestE2EMutating`, MCP-path safety
-    contracts, and `TestLiveCreateUpdateDeleteEntryAuditPhases`. The
-    rolling `live-test-failure` issues remain closed.
-  - **Group 2 — Shared-service Postgres E2E.** Lives at
-    `internal/controlplane/postgres/e2e_shared_service_test.go`
-    (`make shared-service-e2e`); runs per-PR as the
-    `Shared-service Postgres E2E` job in
-    `.github/workflows/ci.yml`; **promoted to required-status
-    check on `main`** (commit `50aa87f`) after three consecutive
-    green runs.
-  - **Group 3 — ADR 0017 Path A.** `streamSessionManager.get`
-    rehydrates from the shared `controlplane.Store` on local
-    miss, strict-validates the principal vs persisted
-    Subject/TenantID, and reuses the principal-aware Factory.
-    Pinned by `TestStreamableHTTPCrossInstanceRehydration`. The
-    `sessionAffinity: ClientIP` band-aid stays as
-    defence-in-depth.
-  - **Group 4 — Auth-model docs.** [`docs/auth-model.md`](docs/auth-model.md)
-    is the one-page reviewer summary; cross-linked from
-    `docs/production-readiness.md` and
-    `docs/runbooks/auth-failures.md`. `forward_auth` rejects
-    duplicated identity headers and principal values >1024 bytes
-    (pinned by
-    `TestForwardAuth_RejectsDuplicatedAndOversizedHeaders`).
-  - **Group 5 — Launch docs.** Per-profile "How to verify this
-    deployment" sections; client matrix in
-    [`docs/clients.md`](docs/clients.md) names tested
-    transport/auth combos; [`docs/support-matrix.md`](docs/support-matrix.md)
-    pins Go / OS / FIPS / kernel posture.
-  - **Local bench baseline readiness.** The committed linux/amd64
-    benchmark baseline was refreshed from Actions artifact
-    `bench-current-25255062599` and passed normal comparison in
-    Bench workflow run 25255216987.
-  - **Manual API coverage expansion.** PR #59 live-probed every tool
-    in the catalog snapshot that existed at that time (then 121
-    generated tools) through the MCP path against the sacrificial
-    workspace and documented the success-vs-unsupported outcome split
-    in [`docs/api-coverage.md`](docs/api-coverage.md).
-    PR #62 adds the documented invite-user route as a no-email raw
-    route validation probe because no dedicated catalog tool exists.
-    The current catalog has 177 tools after two agent-facing
-    timesheet workflow helpers, five local discovery/activation
-    and name-resolution helpers, expanded client/project/task/admin
-    and reports coverage, invoice export/status, member-profile tools,
-    scheduling assignment reporting/totals tools, client business report enrichment, RC5 governance/business helpers, and the latest
-    documented probe-lab route refresh were added on top
-    of the raw API coverage surface; those
-    helpers are covered by unit tests, and API-backed additions have
-    live-test hooks where the upstream workspace permits them.
-    This is coverage evidence only; it did not itself close Group 1
-    and does **not** close Group 6 or Group 7 launch blockers.
-- **Read-side schema diff** (`tests/e2e_live_schema_test.go::TestLiveReadSideSchemaDiff`)
-  is wired into the read-only step of
-  `.github/workflows/live-contract.yml`; scheduled run evidence is
-  archived under Group 1 above.
+## Safety Rules
 
-## Remaining launch blockers
+- Never print, commit, or log API keys or tokens.
+- Use only the configured workspace for live tests.
+- Keep docs and generated catalog files in sync with descriptor changes.
+- Do not remove tools to simplify the catalog.
+- Do not weaken validation or schema checks to make tests pass.
+- Prefer small focused diffs and repo-local helpers.
+- Run the existing tests that match the behavior you changed.
 
-Listed in priority order; full detail in
-[`docs/agent-handoff.md`](docs/agent-handoff.md).
-
-1. **Group 6 — security walk-through on the candidate tag.**
-   Re-run `make verify-vuln`, `make verify-fips`, gitleaks, and
-   semgrep on the final candidate tag and file findings or
-   "no findings" evidence in `SECURITY.md`. The same suite was
-   refreshed as local preflight on 2026-05-09 after the Go 1.25.10 and
-   `govulncheck@v1.3.0` hardening, but candidate-tag evidence is still
-   required.
-2. **Group 7 — release/sigstore/SLSA evidence on the candidate tag.**
-   Cut `vX.Y.Z-rc.N`, watch `release-smoke.yml`, verify
-   sigstore + SLSA artefact attestation, and archive the
-   `release-smoke-doctor-output` artifact containing the reference
-   `doctor --strict` outputs alongside the release notes.
-
-## Safety constraints (non-negotiable)
-
-These constraints apply to any autonomous agent. They override
-convenience.
-
-1. **Do not declare launch-ready until live-contract +
-   shared-service Postgres E2E + CI on `main` are simultaneously
-   green** on the candidate SHA **and** candidate-tag security plus
-   release/sigstore/SLSA evidence exists. Local `release-check` is
-   necessary, not sufficient.
-2. **Do not weaken security or profile defaults to make tests
-   pass.** No relaxing `time_tracking_safe`. No flipping
-   `MCP_AUDIT_DURABILITY` away from `fail_closed` under
-   `ENVIRONMENT=prod`. No granting `MCP_ALLOW_DEV_BACKEND=1` in
-   production-shaped fixtures. If a default needs to change,
-   write an ADR first.
-3. **Tests before broad refactors.** First commit of any
-   transport / enforcement / authn refactor is a failing test
-   that expresses the new contract. Drift checks (flip the
-   assertion, confirm red, restore) on non-trivial test commits;
-   record them in the `Verified:` line.
-4. **Keep generated docs in lockstep with the source.** Any
-   change to `internal/config/spec.go` or to a tool descriptor
-   must re-run `go run ./cmd/gen-config-docs -mode=all` and
-   `make gen-tool-catalog` in the same commit. CI gates
-   `config-doc-parity` and `catalog-drift` will reject partial
-   updates.
-5. **Do not run destructive live Clockify calls outside the
-   sacrificial workspace.** The only approved workspace is the
-   one named in [`docs/live-tests.md`](docs/live-tests.md),
-   reachable via `CLOCKIFY_LIVE_API_KEY` +
-   `CLOCKIFY_LIVE_WORKSPACE_ID`. Do not point those secrets at
-   any personal, teammate, or production workspace. When in
-   doubt: read-only only.
-6. **Do not skip git hooks.** No `--no-verify`, no
-   `--no-gpg-sign`. If a hook fails, fix the underlying issue.
-7. **Atomic commits, atomic pushes.** One logical change per
-   commit; the body ends with `Why:` and `Verified:` lines. When
-   landing a multi-commit wave, push only when the whole group
-   is green locally.
-8. **Do not modify generator-owned files by hand.** Listed in
-   `CONTRIBUTING.md` and the workstation `CLAUDE.md` if present.
-9. **Do not invent commands.** If a command is not in
-   `Makefile`, `.github/workflows/`, or the docs, propose it as
-   a Makefile target first.
-10. **Never print, echo, commit, or log API keys or tokens** —
-    even disposable ones for sacrificial workspaces. Reference
-    them by env-var name only.
-
-## Tight-loop commands
+## Common Commands
 
 | Goal | Command |
 |------|---------|
-| Fast inner loop | `make check` (fmt + vet + test) |
-| Pre-ship local gate | `make release-check` |
-| Coverage | `make cover` |
-| Single test | `go test -race -run TestName ./path/...` |
-| With gRPC transport | append `-tags=grpc` to `go test` / `go build` |
-| With Postgres backend | `make build-postgres` / `make test-postgres` |
-| Shared-service Postgres E2E | `make shared-service-e2e` |
-| Streamable-HTTP smoke | `make http-smoke` |
-| Stdio smoke | `make stdio-smoke` |
-| gRPC auth smoke | `make grpc-auth-smoke` |
-| Strict deploy gate (config) | `clockify-mcp doctor --profile=<profile> --strict` |
-| Strict deploy gate (backends) | `clockify-mcp-postgres doctor --profile=prod-postgres --strict --check-backends` |
-| Live-contract tests (local pre-flight) | `make live-contract-local` with `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID` set against a sacrificial workspace. **Local green is NOT Group 1 launch-candidate evidence** — two consecutive scheduled-cron greens in `.github/workflows/live-contract.yml` on the candidate SHA are the authoritative bar. |
-| Live-contract tests (read-only, raw) | `go test -tags=livee2e -run '^(TestE2EReadOnly\|TestE2EErrors\|TestLiveReadSideSchemaDiff)$' ./tests/...` — prefer `make live-contract-local` which wraps this with evidence warnings. |
-| Refresh generated docs/help | `go run ./cmd/gen-config-docs -mode=all && make gen-tool-catalog` |
-| Vuln scan | `make verify-vuln` |
-| FIPS verify | `make verify-fips` |
-| Bench baseline | `make verify-bench` then `make bench-baseline-check` |
-| Candidate-tag evidence rehearsal | `make rc-evidence-plan TAG=vX.Y.Z-rc.N` |
+| Full test suite | `go test -count=1 ./...` |
+| Diff hygiene | `git diff --check` |
+| Package list | `go list ./...` |
+| Default command dependency sanity | `go list -deps ./cmd/clockify-mcp \| grep -E 'controlplane\|oidc\|grpc\|vault\|policy\|enforcement\|runtime\|postgres\|otel\|pprof\|auth' \|\| true` |
+| Refresh tool catalog | `make gen-tool-catalog` |
+| Focused tools tests | `go test -count=1 ./internal/tools` |
+| Focused MCP tests | `go test -count=1 ./internal/mcp` |
+| Live workflow smoke | `CLOCKIFY_LIVE_TESTS=1 CLOCKIFY_LIVE_PREFIX=<prefix> go test -count=1 ./internal/tools -run TestOneUserLiveWorkflow` |
 
-## When you are uncertain
+For live tests, set `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` in the
+environment. Do not echo them.
 
-Stop and write down what you know in the commit message body.
-The `Why:` line is the right place for "I am uncertain because
-X" — hidden uncertainty is worse than documented uncertainty.
+## Generated Files
 
-If the uncertainty is a security or default-weakening question:
-**stop and ask the maintainer.** The cost of waiting is low; the
-cost of guessing wrong is high.
+`docs/tool-catalog.md` and `docs/tool-catalog.json` are generated from the
+runtime registry. After changing a tool descriptor, run:
 
-## Local vs. CI evidence
+```sh
+make gen-tool-catalog
+```
 
-`go test -tags=livee2e ./tests/...` without the required env vars
-silently skips every live-contract test and reports `ok` in <0.5s.
-The `TestLiveContractSkipSentinel` test (under the same build tag)
-detects this and fails with an explicit message. If you see that
-failure, set the env vars or stop claiming evidence.
-
-Even with env vars set, a local green run is **not** Group 1
-launch-candidate evidence. Only two consecutive scheduled (cron)
-green runs of `.github/workflows/live-contract.yml` on the
-candidate SHA count. Use `make live-contract-local` for pre-flight
-debugging — it prints this warning automatically.
-
-`make launch-checklist-parity` runs the evidence gate
-(`scripts/check-launch-evidence-gate.sh`) which fails when a
-launch-candidate-checklist box in Groups 1, 6, or 7 is checked
-without an evidence URL, `workflow_run_id:`, or `_Closed_`
-annotation. The gate's regression test
-(`scripts/test-check-launch-evidence-gate.sh`) exercises the
-fail-closed paths and runs as part of `make script-tests`.
+Then inspect the diff. The catalog should still show 151 tools with workflow
+tools first and raw fallback tools last.

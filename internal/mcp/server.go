@@ -961,7 +961,7 @@ func (s *Server) handleInitialize(raw any) map[string]any {
 	if s.ResourceProvider != nil {
 		caps["resources"] = map[string]any{"subscribe": true, "listChanged": true}
 	}
-	caps["prompts"] = map[string]any{"listChanged": true}
+	caps["prompts"] = map[string]any{}
 
 	return map[string]any{
 		"protocolVersion": negotiated,

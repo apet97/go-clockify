@@ -41,6 +41,9 @@ type catalogTool struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description,omitempty"`
 	Category     string         `json:"category,omitempty"`
+	HandlerKind  string         `json:"handler_kind,omitempty"`
+	Method       string         `json:"method,omitempty"`
+	Path         string         `json:"path,omitempty"`
 	ReadOnly     bool           `json:"read_only"`
 	Destructive  bool           `json:"destructive"`
 	Idempotent   bool           `json:"idempotent"`
@@ -108,10 +111,16 @@ func toCatalog(ds []mcp.ToolDescriptor) []catalogTool {
 	out := make([]catalogTool, 0, len(ds))
 	for _, d := range ds {
 		category, _ := d.Tool.Annotations["category"].(string)
+		handlerKind, _ := d.Tool.Annotations["handlerKind"].(string)
+		method, _ := d.Tool.Annotations["method"].(string)
+		path, _ := d.Tool.Annotations["path"].(string)
 		out = append(out, catalogTool{
 			Name:         d.Tool.Name,
 			Description:  d.Tool.Description,
 			Category:     category,
+			HandlerKind:  handlerKind,
+			Method:       method,
+			Path:         path,
 			ReadOnly:     d.ReadOnlyHint,
 			Destructive:  d.DestructiveHint,
 			Idempotent:   d.IdempotentHint,

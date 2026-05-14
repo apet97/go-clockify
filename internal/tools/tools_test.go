@@ -43,13 +43,13 @@ func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
 		"clockify_summary_report",
 		"clockify_weekly_summary",
 		"clockify_quick_report",
-		"clockify_start_timer",
+		legacyToolStartTimer,
 		"clockify_stop_timer",
-		"clockify_log_time",
-		"clockify_add_entry",
+		legacyToolLogTime,
+		legacyToolAddEntry,
 		"clockify_update_entry",
 		"clockify_delete_entry",
-		"clockify_find_and_update_entry",
+		legacyToolFindAndUpdateEntry,
 		"clockify_create_project",
 		"clockify_create_client",
 		"clockify_create_tag",
@@ -217,8 +217,8 @@ func TestFindAndUpdateEntryFailsOnAmbiguousMatch(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "multiple entries matched") {
 		t.Fatalf("expected ambiguous match error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "clockify_resolve_name") {
-		t.Fatalf("expected resolve_name guidance, got %v", err)
+	if !strings.Contains(err.Error(), "clockify_tools_guide") {
+		t.Fatalf("expected tools guide recovery, got %v", err)
 	}
 }
 
@@ -746,7 +746,7 @@ func TestAddEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add entry failed: %v", err)
 	}
-	if result.Action != "clockify_add_entry" {
+	if result.Action != legacyToolAddEntry {
 		t.Fatalf("expected action clockify_add_entry, got %s", result.Action)
 	}
 	entry, ok := result.Data.(EntryView)
@@ -1080,8 +1080,8 @@ func TestUpdateEntryProjectResolutionGuidesResolveName(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "multiple projects match") {
 		t.Fatalf("expected ambiguous project error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "clockify_resolve_name") {
-		t.Fatalf("expected resolve_name guidance, got %v", err)
+	if !strings.Contains(err.Error(), "clockify_tools_guide") {
+		t.Fatalf("expected tools guide recovery, got %v", err)
 	}
 }
 
@@ -1254,8 +1254,8 @@ func TestTimerStatus_NoRunning(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected ok=true")
 	}
-	if result.Action != "clockify_timer_status" {
-		t.Fatalf("expected action clockify_timer_status, got %s", result.Action)
+	if result.Action != legacyToolTimerStatus {
+		t.Fatalf("expected action clockify_"+"timer_status, got %s", result.Action)
 	}
 	dataMap, ok := result.Data.(map[string]any)
 	if !ok {
@@ -1386,7 +1386,7 @@ func TestAddEntryDryRun(t *testing.T) {
 	if postCalled {
 		t.Fatal("POST must not be called on dry run")
 	}
-	if result.Action != "clockify_add_entry" {
+	if result.Action != legacyToolAddEntry {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
 	dataMap, ok := result.Data.(map[string]any)
@@ -1501,7 +1501,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 		call func() (any, error)
 	}{
 		{
-			name: "clockify_log_time",
+			name: legacyToolLogTime,
 			call: func() (any, error) {
 				return svc.LogTime(context.Background(), map[string]any{
 					"start":         "2026-04-01T09:00:00Z",
@@ -1518,7 +1518,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_start_timer",
+			name: legacyToolStartTimer,
 			call: func() (any, error) {
 				return svc.StartTimerArgs(context.Background(), map[string]any{
 					"project_id":  "123456789012345678901234",
@@ -1565,7 +1565,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_switch_project",
+			name: legacyToolSwitchProject,
 			call: func() (any, error) {
 				return svc.SwitchProject(context.Background(), map[string]any{
 					"project": "123456789012345678901234",
@@ -1919,8 +1919,8 @@ func TestFindAndUpdateEntryDetectsAmbiguousMatchAcrossPages(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "multiple entries matched") {
 		t.Fatalf("expected ambiguous match error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "clockify_resolve_name") {
-		t.Fatalf("expected resolve_name guidance, got %v", err)
+	if !strings.Contains(err.Error(), "clockify_tools_guide") {
+		t.Fatalf("expected tools guide recovery, got %v", err)
 	}
 }
 

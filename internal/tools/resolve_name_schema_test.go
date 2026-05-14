@@ -8,7 +8,7 @@ import (
 )
 
 // TestResolveNameInputSchema_EnumConstraint pins the enum tightening on
-// clockify_resolve_name's entity_type field. Before this change the
+// the legacy name resolver's entity_type field. Before this change the
 // schema accepted any string and the handler did the run-time check via
 // a switch statement; spec-strict MCP clients had no way to know the
 // valid set up front. The enum surfaces the contract through tools/list

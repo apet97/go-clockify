@@ -63,7 +63,7 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 		}
 		if len(overlaps) > 0 {
 			if dryrun.Enabled(args) {
-				preview := dryrunPreviewPayload("clockify_log_time", payload)
+				preview := dryrunPreviewPayload(legacyToolLogTime, payload)
 				preview["blocked"] = true
 				preview["warning"] = fmt.Sprintf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 				preview["overlaps"] = overlaps
@@ -77,13 +77,13 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 					Message:     fmt.Sprintf("requested entry overlaps %d existing entr%s", len(overlaps), pluralY(len(overlaps))),
 					Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
 				}))
-				return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
+				return ok(legacyToolLogTime, preview, logTimePreviewMeta(wsID, userID, projectID)), nil
 			}
 			return nil, fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
 		}
 	}
 	if dryrun.Enabled(args) {
-		preview := dryrunPreviewPayloadValidated("clockify_log_time", payload, validationOK("overlap_check"))
+		preview := dryrunPreviewPayloadValidated(legacyToolLogTime, payload, validationOK("overlap_check"))
 		if len(overlaps) > 0 {
 			preview["overlaps"] = overlaps
 		}
@@ -91,7 +91,7 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 		if warnings := entryTemporalWarnings(start, end); len(warnings) > 0 {
 			preview["temporal_warnings"] = warnings
 		}
-		return ok("clockify_log_time", preview, logTimePreviewMeta(wsID, userID, projectID)), nil
+		return ok(legacyToolLogTime, preview, logTimePreviewMeta(wsID, userID, projectID)), nil
 	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -102,7 +102,7 @@ func (s *Service) LogTime(ctx context.Context, args map[string]any) (any, error)
 		return nil, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
-	return ok("clockify_log_time", LogTimeData{Entry: view, ResolvedProject: projectID}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
+	return ok(legacyToolLogTime, LogTimeData{Entry: view, ResolvedProject: projectID}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 func logTimePreviewMeta(wsID, userID, projectID string) map[string]any {
@@ -216,7 +216,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	if parsed.DryRun {
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 		validation := validationOK("lookup_and_payload_check")
-		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{
+		return ok(legacyToolFindAndUpdateEntry, FindAndUpdateEntryData{
 			Entry:          view,
 			MatchedBy:      matchedBy,
 			UpdatedFields:  updatedFields,
@@ -230,7 +230,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 	}
 	if len(updatedFields) == 0 {
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-		return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID, "noop": true}, financialMeta)), nil
+		return ok(legacyToolFindAndUpdateEntry, FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID, "noop": true}, financialMeta)), nil
 	}
 	payload := timeEntryPutPayload(entry)
 	path, err := paths.Workspace(wsID, "time-entries", entry.ID)
@@ -242,7 +242,7 @@ func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (
 		return nil, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
-	return ok("clockify_find_and_update_entry", FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
+	return ok(legacyToolFindAndUpdateEntry, FindAndUpdateEntryData{Entry: view, MatchedBy: matchedBy, UpdatedFields: updatedFields}, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 func timeEntryUpdatePreview(entry clockify.TimeEntry) *TimeEntryUpdatePreview {
@@ -308,7 +308,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 			"description": description,
 			"projectId":   resolvedProjectID,
 		}
-		return ok("clockify_switch_project", dryrunPreviewPayload("clockify_switch_project", payload), map[string]any{"workspaceId": wsID, "projectId": resolvedProjectID}), nil
+		return ok(legacyToolSwitchProject, dryrunPreviewPayload(legacyToolSwitchProject, payload), map[string]any{"workspaceId": wsID, "projectId": resolvedProjectID}), nil
 	}
 
 	// Stop the current timer; ignore "no running timer" errors.
@@ -337,7 +337,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, fmt.Errorf("start timer: %w", startErr)
 	}
 
-	return ok("clockify_switch_project", map[string]any{
+	return ok(legacyToolSwitchProject, map[string]any{
 		"stop_outcome":          stopOutcome,
 		"previous_entry_action": stopOutcome,
 		"previous_entry":        stoppedEntry,
@@ -458,13 +458,13 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 			if entryMatchesFindArgs(entry, args) {
 				matches = append(matches, entry)
 				if len(matches) > 1 {
-					return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters, or use clockify_resolve_name before retrying if a project/user/client name is ambiguous")
+					return clockify.TimeEntry{}, nil, fmt.Errorf("multiple entries matched; narrow the filters, or use clockify_tools_guide and returned IDs before retrying if a project/user/client name is ambiguous")
 				}
 			}
 		}
 		if len(entries) < pageSize {
 			if len(matches) == 0 {
-				return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found; re-check exact IDs or use clockify_resolve_name before retrying if a project/user/client name is ambiguous")
+				return clockify.TimeEntry{}, nil, fmt.Errorf("no matching entry found; re-check exact IDs or use clockify_tools_guide and returned IDs before retrying if a project/user/client name is ambiguous")
 			}
 			matchedBy := matchedByForFindArgs(args)
 			matchedBy["pagesFetched"] = pagesFetched

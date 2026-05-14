@@ -493,7 +493,7 @@ func detailedReportSuggestions(entries []ReportEntryView) []ToolSuggestion {
 	entrySummary := summarizeReportEntries(entries)
 	if entrySummary.MissingDescriptionCount > 0 || entrySummary.MissingProjectCount > 0 || entrySummary.MissingTaskCount > 0 || entrySummary.LockedCount > 0 {
 		suggestions = append(suggestions, ToolSuggestion{
-			Tool:   "clockify_timesheet_review",
+			Tool:   legacyToolTimesheetReview,
 			Reason: "Review locked or incomplete entries found in this detailed report.",
 		})
 	}

@@ -162,6 +162,27 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 	}
 }
 
+func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	first := svc.FullAccessRegistry()
+	if len(first) != 151 {
+		t.Fatalf("registry size=%d, want 151", len(first))
+	}
+	if len(svc.registry) != 151 {
+		t.Fatalf("cached registry size=%d, want 151", len(svc.registry))
+	}
+	cachedFirstName := svc.registry[0].Tool.Name
+	first[0].Tool.Name = "mutated-by-test"
+
+	second := svc.FullAccessRegistry()
+	if second[0].Tool.Name != cachedFirstName {
+		t.Fatalf("cached registry was not defensively cloned: got %s want %s", second[0].Tool.Name, cachedFirstName)
+	}
+	if len(svc.registry) != 151 || svc.registry[0].Tool.Name != cachedFirstName {
+		t.Fatalf("cached registry changed across calls: len=%d first=%s", len(svc.registry), svc.registry[0].Tool.Name)
+	}
+}
+
 func BenchmarkFullAccessRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	b.ReportAllocs()
@@ -180,6 +201,32 @@ func BenchmarkOneUserToolsResourceData(b *testing.B) {
 		if got, _ := data["count"].(int); got != 151 {
 			b.Fatalf("tools resource count=%d, want 151", got)
 		}
+	}
+}
+
+func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	first := svc.toolsResourceData()
+	if svc.toolsResourceCache == nil {
+		t.Fatal("tools resource cache was not populated")
+	}
+	first["count"] = 0
+	tools, ok := first["tools"].([]mcp.Tool)
+	if !ok || len(tools) == 0 {
+		t.Fatalf("tools resource missing tool slice: %+v", first["tools"])
+	}
+	tools[0].Name = "mutated-by-test"
+
+	second := svc.toolsResourceData()
+	if got, _ := second["count"].(int); got != 151 {
+		t.Fatalf("cached tools resource count=%d, want 151", got)
+	}
+	secondTools, ok := second["tools"].([]mcp.Tool)
+	if !ok || len(secondTools) == 0 {
+		t.Fatalf("cached tools resource missing tool slice: %+v", second["tools"])
+	}
+	if secondTools[0].Name != "clockify_status" {
+		t.Fatalf("cached tools resource leaked caller mutation: first=%s", secondTools[0].Name)
 	}
 }
 

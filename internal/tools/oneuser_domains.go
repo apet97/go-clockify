@@ -345,6 +345,14 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"entry_id": map[string]any{"type": "string"},
 			"dry_run":  map[string]any{"type": "boolean"},
 		}})), "entry", "deleted", s.DeleteEntry),
+
+		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace.", paginationSchema(nil)), "user", "", s.ListUsers),
+		nativeDomainTool(1101, toolRO("clockify_users_profile", "Get the current Clockify user.", objectSchema(nil)), "user", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+			return s.CurrentUser(ctx)
+		}),
+		nativeDomainTool(1105, toolRO("clockify_workspace_settings", "Read pinned workspace settings.", objectSchema(nil)), "workspace", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+			return s.GetWorkspace(ctx)
+		}),
 	}
 }
 
@@ -433,11 +441,8 @@ func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
 		{"clockify_holidays_create", "clockify_create_holiday", "holiday", "created"},
 		{"clockify_holidays_delete", "clockify_delete_holiday", "holiday", "deleted"},
 
-		{"clockify_users_list", "clockify_list_users", "user", ""},
-		{"clockify_users_profile", "clockify_current_user", "user", ""},
 		{"clockify_users_deactivate", "clockify_deactivate_user", "user", "updated"},
 		{"clockify_users_role", "clockify_update_user_role", "user", "updated"},
-		{"clockify_workspace_settings", "clockify_get_workspace", "workspace", ""},
 	}
 	out := make([]mcp.ToolDescriptor, 0, len(aliases))
 	for i, alias := range aliases {
@@ -492,6 +497,8 @@ func nativeAliasDescriptor(priority int, alias nativeAlias, old mcp.ToolDescript
 		tool.Annotations = map[string]any{}
 	}
 	tool.Annotations["priority"] = priority
+	tool.Annotations["handlerKind"] = "alias wrapper"
+	tool.Annotations["wraps"] = alias.OldName
 	handler := func(ctx context.Context, args map[string]any) (any, error) {
 		out, err := old.Handler(ctx, args)
 		if err != nil {
@@ -601,6 +608,10 @@ func oneUserAliasPriority(name string, fallback int) int {
 }
 
 func nativeDomainTool(priority int, tool mcp.Tool, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	tool.Annotations["handlerKind"] = "native handler"
 	return firstSliceDescriptor(priority, tool, aliasHandler(tool.Name, entity, change, handler))
 }
 
@@ -661,6 +672,12 @@ func (s *Service) routeDescriptor(spec routeTool) mcp.ToolDescriptor {
 	default:
 		tool = toolRW(spec.Name, spec.Description, schema)
 	}
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	tool.Annotations["handlerKind"] = "route descriptor"
+	tool.Annotations["method"] = spec.Method
+	tool.Annotations["path"] = "/workspaces/{workspaceId}/" + spec.Path
 	return firstSliceDescriptor(spec.Priority, tool, func(ctx context.Context, args map[string]any) (any, error) {
 		return s.callRouteTool(ctx, spec, args)
 	})

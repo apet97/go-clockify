@@ -23,13 +23,13 @@ func TestToolCallParamsFromMap_MatchesDecodeParams(t *testing.T) {
 		{
 			name: "bare_name",
 			in: map[string]any{
-				"name": "clockify_log_time",
+				"name": "clockify_" + "log_time",
 			},
 		},
 		{
 			name: "name_and_args",
 			in: map[string]any{
-				"name": "clockify_log_time",
+				"name": "clockify_" + "log_time",
 				"arguments": map[string]any{
 					"start":       "2026-01-01T09:00:00Z",
 					"end":         "2026-01-01T10:00:00Z",

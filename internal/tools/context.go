@@ -9,11 +9,11 @@ import (
 )
 
 func (s *Service) ResolveName(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	return s.resolveName(ctx, args, "clockify_resolve_name")
+	return s.resolveName(ctx, args, legacyToolResolveName)
 }
 
 func (s *Service) ResolveDebug(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	slog.Warn("deprecated_tool_alias", "tool", "clockify_resolve_debug", "replacement", "clockify_resolve_name")
+	slog.Warn("deprecated_tool_alias", "tool", "clockify_resolve_debug", "replacement", legacyToolResolveName)
 	return s.resolveName(ctx, args, "clockify_resolve_debug")
 }
 

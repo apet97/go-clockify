@@ -34,7 +34,7 @@ func (s *Service) workflowDescriptors() []mcp.ToolDescriptor {
 			toolRO("clockify_review_day", "Review one day of work and return totals, issues, and next actions.", reviewDaySchema()), s.ClockifyReviewDay),
 		workflowDescriptor(8, "review", "entry", []string{"Review one week for totals, missing fields, gaps, overlaps, and next actions."}, []string{"clockify_reports_weekly", "clockify_entries_list"},
 			toolRO("clockify_review_week", "Review one week of work and return totals, issues, and next actions.", reviewWeekSchema()), s.ClockifyReviewWeek),
-		workflowDescriptor(9, "work_tracking", "entry", []string{"Find and fix one time entry without hand-chaining get/update calls."}, []string{"clockify_entries_get", "clockify_entries_update", "clockify_find_and_update_entry"},
+		workflowDescriptor(9, "work_tracking", "entry", []string{"Find and fix one time entry without hand-chaining get/update calls."}, []string{"clockify_entries_get", "clockify_entries_update", legacyToolFindAndUpdateEntry},
 			toolRWIdem("clockify_fix_entry", "Find one entry by ID or strict filters, then update selected fields.", fixEntrySchema()), s.ClockifyFixEntry),
 		workflowDescriptor(10, "billing", "invoice", []string{"Create an invoice shell for a client and optionally import time entries."}, []string{"clockify_invoices_create", "clockify_invoices_import_time"},
 			toolRW("clockify_invoice_client_work", "Create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable.", invoiceClientWorkSchema()), s.ClockifyInvoiceClientWork),
@@ -63,6 +63,7 @@ func workflowDescriptor(priority int, domain, entity string, bestFor, preferOver
 	ann["category"] = "workflow"
 	ann["preferred"] = true
 	ann["priority"] = priority
+	ann["handlerKind"] = "native handler"
 	ann["bestFor"] = bestFor
 	ann["preferOver"] = preferOver
 	ann["domain"] = domain
@@ -591,8 +592,23 @@ func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any)
 		return nil, err
 	}
 	standard := standardizeDomainResult("clockify_schedule_work", "assignment", "created", out, scheduleArgs)
+	standard.Data = map[string]any{"assignment": singleAssignmentData(standard.Data)}
 	standard.Next = []NextAction{{Tool: "clockify_scheduling_assignments_list", Args: map[string]any{"start": stringArg(scheduleArgs, "start"), "end": stringArg(scheduleArgs, "end")}, Reason: "Verify the scheduled assignment."}}
 	return standard, nil
+}
+
+func singleAssignmentData(data any) any {
+	switch items := data.(type) {
+	case []map[string]any:
+		if len(items) == 1 {
+			return items[0]
+		}
+	case []any:
+		if len(items) == 1 {
+			return items[0]
+		}
+	}
+	return data
 }
 
 func (s *Service) ClockifySetupWebhook(ctx context.Context, args map[string]any) (any, error) {
@@ -972,9 +988,9 @@ func workflowPreferredTool(tool string) string {
 	switch tool {
 	case "clockify_stop_timer", "clockify_entries_timer_stop":
 		return "clockify_stop_work"
-	case "clockify_find_and_update_entry", "clockify_update_entry", "clockify_entries_update":
+	case legacyToolFindAndUpdateEntry, "clockify_update_entry", "clockify_entries_update":
 		return "clockify_fix_entry"
-	case "clockify_log_time", "clockify_timesheet_fill_gap", "clockify_add_entry", "clockify_entries_create":
+	case legacyToolLogTime, legacyToolTimesheetFillGap, legacyToolAddEntry, "clockify_entries_create":
 		return "clockify_log_work"
 	default:
 		return tool

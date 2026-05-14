@@ -457,7 +457,7 @@ func reportSuggestedActions(projects []ProjectSummary, totals SummaryTotals, sta
 		logReason = "This report found no entries; log confirmed missing work after collecting the exact project, description, start, and end."
 	}
 	actions = append(actions, ToolSuggestion{
-		Tool:        "clockify_log_time",
+		Tool:        legacyToolLogTime,
 		Reason:      logReason,
 		Arguments:   map[string]any{"dry_run": true},
 		MissingArgs: []string{"project", "description", "start", "end"},

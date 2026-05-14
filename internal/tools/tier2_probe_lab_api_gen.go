@@ -1191,7 +1191,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_add_entry", "clockify_log_time", "clockify_start_timer", "clockify_switch_project", "clockify_timesheet_fill_gap"},
+		PromotedToTyped: []string{legacyToolAddEntry, legacyToolLogTime, legacyToolStartTimer, legacyToolSwitchProject, legacyToolTimesheetFillGap},
 	},
 	{
 		Method:          http.MethodPatch,
@@ -1236,7 +1236,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_find_and_update_entry", "clockify_update_entry"},
+		PromotedToTyped: []string{legacyToolFindAndUpdateEntry, "clockify_update_entry"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -1497,7 +1497,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_list_entries", "clockify_quick_report", "clockify_timesheet_review", "clockify_today_entries"},
+		PromotedToTyped: []string{"clockify_list_entries", "clockify_quick_report", legacyToolTimesheetReview, "clockify_today_entries"},
 	},
 	{
 		Method:          http.MethodPost,

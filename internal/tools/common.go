@@ -16,6 +16,19 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
+const (
+	legacyToolPrefix             = "clockify_"
+	legacyToolResolveName        = legacyToolPrefix + "resolve_name"
+	legacyToolLogTime            = legacyToolPrefix + "log_time"
+	legacyToolTimesheetReview    = legacyToolPrefix + "timesheet_review"
+	legacyToolTimesheetFillGap   = legacyToolPrefix + "timesheet_fill_gap"
+	legacyToolSwitchProject      = legacyToolPrefix + "switch_project"
+	legacyToolTimerStatus        = legacyToolPrefix + "timer_status"
+	legacyToolAddEntry           = legacyToolPrefix + "add_entry"
+	legacyToolStartTimer         = legacyToolPrefix + "start_timer"
+	legacyToolFindAndUpdateEntry = legacyToolPrefix + "find_and_update_entry"
+)
+
 func timeEntryPutPayload(entry clockify.TimeEntry) map[string]any {
 	payload := map[string]any{
 		"start":       entry.TimeInterval.Start,
@@ -106,10 +119,12 @@ type Service struct {
 	resolveCache map[resolveKey]resolveEntry
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
-	resourceCache *resourceStateCache
-	demoResources map[string]demoResourceState
-	registryOnce  sync.Once
-	registry      []mcp.ToolDescriptor
+	resourceCache      *resourceStateCache
+	demoResources      map[string]demoResourceState
+	registryOnce       sync.Once
+	registry           []mcp.ToolDescriptor
+	toolsResourceOnce  sync.Once
+	toolsResourceCache map[string]any
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was
@@ -213,7 +228,7 @@ type TimerStatusData struct {
 	Elapsed string     `json:"elapsed,omitempty"`
 }
 
-// LogTimeData is the structured payload for clockify_log_time. Entry
+// LogTimeData is the structured payload for the legacy finished-work helper. Entry
 // is the created TimeEntry; ResolvedProject names the project the
 // agent supplied (by name or ID) so the caller can confirm name
 // resolution succeeded.
@@ -425,24 +440,24 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 }
 
 var agentToolMetadata = map[string]map[string]any{
-	"clockify_log_time": {
+	legacyToolLogTime: {
 		"bestToolFor": []string{"log finished past work", "create a complete time entry"},
-		"preferOver":  []string{"clockify_add_entry"},
+		"preferOver":  []string{legacyToolAddEntry},
 	},
-	"clockify_timesheet_review": {
+	legacyToolTimesheetReview: {
 		"bestToolFor": []string{"find gaps and overlaps", "plan timesheet cleanup"},
 	},
-	"clockify_timesheet_fill_gap": {
+	legacyToolTimesheetFillGap: {
 		"bestToolFor": []string{"fill a reviewed timesheet gap"},
-		"preferAfter": []string{"clockify_timesheet_review"},
+		"preferAfter": []string{legacyToolTimesheetReview},
 	},
-	"clockify_resolve_name": {
+	legacyToolResolveName: {
 		"bestToolFor": []string{"resolve human names to Clockify IDs"},
 		"preferOver":  []string{"clockify_resolve_debug"},
 	},
 	"clockify_resolve_debug": {
 		"compatibilityShim": true,
-		"primaryTool":       "clockify_resolve_name",
+		"primaryTool":       legacyToolResolveName,
 	},
 	"clockify_set_project_memberships": {
 		"compatibilityShim": true,

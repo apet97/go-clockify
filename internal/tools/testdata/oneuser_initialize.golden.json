@@ -1,8 +1,6 @@
 {
   "capabilities": {
-    "prompts": {
-      "listChanged": true
-    },
+    "prompts": {},
     "resources": {
       "listChanged": true,
       "subscribe": true

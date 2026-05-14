@@ -179,6 +179,9 @@ func firstSliceDescriptor(priority int, tool mcp.Tool, handler mcp.ToolHandler) 
 		tool.Annotations = map[string]any{}
 	}
 	tool.Annotations["priority"] = priority
+	if _, ok := tool.Annotations["handlerKind"]; !ok {
+		tool.Annotations["handlerKind"] = "native handler"
+	}
 	tool.OutputSchema = firstSliceOutputSchema(tool.Name, firstSliceDataOutputSchema(tool.Name))
 	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(tool.Name, handler)}
 }
@@ -234,8 +237,89 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	switch action {
 	case "clockify_status":
 		return schemaFor[statusData]()
+	case "clockify_tools_guide":
+		return objectDataSchema(map[string]any{
+			"workflows":    arraySchema("Workflow groups and the tools that satisfy them."),
+			"commonTasks":  arraySchema("Common user intents mapped to primary tools."),
+			"domainTools":  arraySchema("Domain tool prefixes for lower-level CRUD."),
+			"rawFallback":  stringArraySchema("Raw API fallback tools to use last."),
+			"rulesOfThumb": stringArraySchema("Short tool-selection guidance."),
+		})
+	case "clockify_create_work_package":
+		return objectDataSchema(map[string]any{
+			"client":  map[string]any{"type": "object"},
+			"project": map[string]any{"type": "object"},
+			"task":    map[string]any{"type": "object"},
+			"tags":    arraySchema("Created or reused tags."),
+			"tagIds":  stringArraySchema("Tag IDs attached to the package."),
+		})
+	case "clockify_log_work", "clockify_start_work":
+		return schemaFor[clockify.TimeEntry]()
+	case "clockify_stop_work":
+		return schemaFor[EntryView]()
+	case "clockify_fix_entry":
+		return schemaFor[FindAndUpdateEntryData]()
+	case "clockify_switch_work":
+		return objectDataSchema(map[string]any{
+			"stopped": map[string]any{"type": "object", "description": "Result from stopping the previous timer, when one was running."},
+			"started": map[string]any{"type": "object", "description": "Result from starting the new timer."},
+			"error":   map[string]any{"type": "string", "description": "Retryable start error after a previous timer was stopped."},
+		})
+	case "clockify_review_day", "clockify_review_week":
+		return schemaFor[TimesheetReviewData]()
+	case "clockify_invoice_client_work":
+		return dataKeysSchema("billing", "client", "clientId", "discount", "financials", "id", "import", "invoice", "number", "payment_summary", "raw", "status", "suggestedActions", "taxes")
+	case "clockify_record_expense":
+		return dataKeysSchema("amount", "approval", "category", "categoryId", "date", "entities", "expense", "id", "invoicing", "notes", "projectId", "raw", "receipt", "status", "taskId", "tax", "userId")
+	case "clockify_request_time_off":
+		return dataKeysSchema("actions", "audit", "day_period", "duration", "id", "note", "period", "policy", "policyId", "raw", "request", "status", "suggestedActions", "user", "userId")
+	case "clockify_schedule_work":
+		return objectDataSchema(map[string]any{"id": map[string]any{"type": "string"}, "assignment": map[string]any{"type": "object"}})
+	case "clockify_setup_webhook":
+		return dataKeysSchema("id", "name", "secret_token_present", "triggerSource", "triggerSourceType", "url", "webhook", "webhookEvent", "webhookEventStatus")
+	case "clockify_demo_seed":
+		return objectDataSchema(map[string]any{
+			"runId":      map[string]any{"type": "string"},
+			"prefix":     map[string]any{"type": "string"},
+			"client":     map[string]any{"type": "object"},
+			"project":    map[string]any{"type": "object"},
+			"task":       map[string]any{"type": "object"},
+			"tag":        map[string]any{"type": "object"},
+			"entry":      map[string]any{"type": "object"},
+			"usableWith": stringArraySchema("Workflow tools that can use the seeded IDs."),
+		})
+	case "clockify_demo_cleanup":
+		return objectDataSchema(map[string]any{
+			"runId":         map[string]any{"type": "string"},
+			"prefix":        map[string]any{"type": "string"},
+			"deletedCount":  map[string]any{"type": "integer"},
+			"warningsCount": map[string]any{"type": "integer"},
+		})
 	default:
 		return nil
+	}
+}
+
+func objectDataSchema(properties map[string]any) map[string]any {
+	return map[string]any{
+		"type":       "object",
+		"properties": properties,
+	}
+}
+
+func dataKeysSchema(keys ...string) map[string]any {
+	props := make(map[string]any, len(keys))
+	for _, key := range keys {
+		props[key] = map[string]any{}
+	}
+	return objectDataSchema(props)
+}
+
+func arraySchema(description string) map[string]any {
+	return map[string]any{
+		"type":        "array",
+		"description": description,
+		"items":       map[string]any{"type": "object"},
 	}
 }
 
@@ -436,9 +520,12 @@ func oneUserFeatureStatus(features []string) (map[string]string, []Warning) {
 		}
 		return out, []Warning{{Code: "feature_signals_unknown", Message: "Clockify did not return workspace feature signals; paid-feature tools may return recovery guidance when called."}}
 	}
-	unavailable := []string{}
+	notAdvertised := []string{}
 	for _, sig := range signals {
-		status := "unavailable"
+		status := "not_advertised"
+		if sig.key == "groups" || sig.key == "holidays" {
+			status = "unknown"
+		}
 		for _, feature := range normalized {
 			for _, needle := range sig.needles {
 				if strings.Contains(feature, needle) {
@@ -451,14 +538,14 @@ func oneUserFeatureStatus(features []string) (map[string]string, []Warning) {
 			}
 		}
 		out[sig.key] = status
-		if status == "unavailable" {
-			unavailable = append(unavailable, sig.key)
+		if status == "not_advertised" {
+			notAdvertised = append(notAdvertised, sig.key)
 		}
 	}
-	if len(unavailable) == 0 {
+	if len(notAdvertised) == 0 {
 		return out, nil
 	}
-	return out, []Warning{{Code: "feature_signals_unavailable", Message: "Some optional Clockify feature signals were not advertised by the workspace: " + strings.Join(unavailable, ", ")}}
+	return out, []Warning{{Code: "feature_signals_not_advertised", Message: "Some optional Clockify feature signals were not advertised by the workspace: " + strings.Join(notAdvertised, ", ")}}
 }
 
 func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, error) {
@@ -664,6 +751,7 @@ func (s *Service) ClockifyDemoSeed(ctx context.Context, args map[string]any) (an
 		"tagId":       tag.ID,
 		"entryId":     entry.ID,
 	}, map[string]any{
+		"runId":      runID,
 		"prefix":     prefix,
 		"client":     client,
 		"project":    project,
@@ -753,6 +841,7 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 	}
 
 	out := result("clockify_demo_cleanup", "demo", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+		"runId":         runID,
 		"prefix":        prefix,
 		"deletedCount":  len(changed.Deleted),
 		"warningsCount": len(warnings),

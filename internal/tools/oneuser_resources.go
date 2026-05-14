@@ -221,6 +221,13 @@ func (s *Service) requireClockifyClient() error {
 }
 
 func (s *Service) toolsResourceData() map[string]any {
+	s.toolsResourceOnce.Do(func() {
+		s.toolsResourceCache = s.buildToolsResourceData()
+	})
+	return cloneToolsResourceData(s.toolsResourceCache)
+}
+
+func (s *Service) buildToolsResourceData() map[string]any {
 	descriptors := s.FullAccessRegistry()
 	sortDescriptorsForToolsList(descriptors)
 	tools := make([]mcp.Tool, 0, len(descriptors))
@@ -252,6 +259,27 @@ func (s *Service) toolsResourceData() map[string]any {
 		"rawFallback":   rawTools,
 		"loadedAtStart": true,
 	}
+}
+
+func cloneToolsResourceData(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		switch v := value.(type) {
+		case []mcp.Tool:
+			out[key] = append([]mcp.Tool(nil), v...)
+		case []string:
+			out[key] = append([]string(nil), v...)
+		case map[string][]string:
+			cp := make(map[string][]string, len(v))
+			for domain, tools := range v {
+				cp[domain] = append([]string(nil), tools...)
+			}
+			out[key] = cp
+		default:
+			out[key] = value
+		}
+	}
+	return out
 }
 
 func sortDescriptorsForToolsList(descriptors []mcp.ToolDescriptor) {

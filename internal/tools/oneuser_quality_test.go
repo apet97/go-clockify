@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/jsonschema"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/testclockify"
 )
@@ -379,6 +380,24 @@ func TestOneUserDocsAvoidRemovedToolNames(t *testing.T) {
 
 func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	workflowDataSchemas := map[string][]string{
+		"clockify_tools_guide":         {"workflows", "commonTasks", "domainTools", "rawFallback"},
+		"clockify_create_work_package": {"project"},
+		"clockify_log_work":            {"id", "timeInterval"},
+		"clockify_start_work":          {"id", "timeInterval"},
+		"clockify_stop_work":           {"id", "timeInterval"},
+		"clockify_switch_work":         {"stopped", "started"},
+		"clockify_review_day":          {"range", "totals", "issues", "suggestedActions"},
+		"clockify_review_week":         {"range", "totals", "issues", "suggestedActions"},
+		"clockify_fix_entry":           {"entry", "updatedFields"},
+		"clockify_invoice_client_work": {"invoice"},
+		"clockify_record_expense":      {"expense"},
+		"clockify_request_time_off":    {"request"},
+		"clockify_schedule_work":       {"assignment"},
+		"clockify_setup_webhook":       {"webhook"},
+		"clockify_demo_seed":           {"runId", "prefix"},
+		"clockify_demo_cleanup":        {"runId", "prefix"},
+	}
 	for _, descriptor := range svc.FullAccessRegistry() {
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
 			schema := descriptor.Tool.OutputSchema
@@ -401,26 +420,265 @@ func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 					t.Fatalf("output schema missing %s property: %+v", field, props)
 				}
 			}
+			if requiredDataFields, ok := workflowDataSchemas[descriptor.Tool.Name]; ok {
+				dataSchema, ok := props["data"].(map[string]any)
+				if !ok {
+					t.Fatalf("workflow data schema is not an object: %+v", props["data"])
+				}
+				dataProps, ok := dataSchema["properties"].(map[string]any)
+				if !ok {
+					t.Fatalf("workflow data schema missing properties: %+v", dataSchema)
+				}
+				for _, field := range requiredDataFields {
+					if _, ok := dataProps[field]; !ok {
+						t.Fatalf("workflow data schema missing typed field %s: %+v", field, dataProps)
+					}
+				}
+			}
 		})
 	}
 }
 
-func TestOneUserCoverageLedgerHasNoKnownImplementationGaps(t *testing.T) {
+func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	callAndValidate := func(name string, args map[string]any) ToolResult {
+		t.Helper()
+		raw := callToolRaw(t, server, name, args)
+		result := decodeStructuredToolResult(t, name, raw)
+		validateToolResultAgainstOutputSchema(t, name, descriptors[name].Tool.OutputSchema, result)
+		assertDataSchemaCoversActualKeys(t, name, descriptors[name].Tool.OutputSchema, result.Data)
+		return result
+	}
+
+	status := callAndValidate("clockify_status", nil)
+	requireID(t, status, "workspaceId")
+	callAndValidate("clockify_tools_guide", nil)
+	packageResult := callAndValidate("clockify_create_work_package", map[string]any{
+		"client":  "Schema Client",
+		"project": "Schema Project",
+		"task":    "Schema Task",
+		"tag":     "Schema Tag",
+	})
+	logged := callAndValidate("clockify_log_work", map[string]any{
+		"start":       "2026-01-02 09:00",
+		"end":         "2026-01-02 10:00",
+		"description": "Schema logged work",
+		"project_id":  packageResult.IDs["projectId"],
+		"task_id":     packageResult.IDs["taskId"],
+		"tag_ids":     []any{packageResult.IDs["tagId"]},
+	})
+	started := callAndValidate("clockify_start_work", map[string]any{
+		"description": "Schema running work",
+		"project_id":  packageResult.IDs["projectId"],
+		"task_id":     packageResult.IDs["taskId"],
+		"tag_ids":     []any{packageResult.IDs["tagId"]},
+	})
+	callAndValidate("clockify_switch_work", map[string]any{
+		"description": "Schema switched work",
+		"project_id":  packageResult.IDs["projectId"],
+		"task_id":     packageResult.IDs["taskId"],
+	})
+	callAndValidate("clockify_stop_work", nil)
+	callAndValidate("clockify_review_day", map[string]any{"date": "2026-01-02", "include_entries": true})
+	callAndValidate("clockify_review_week", map[string]any{"week_start": "2025-12-29", "include_entries": true})
+	callAndValidate("clockify_fix_entry", map[string]any{
+		"entry_id":    logged.IDs["entryId"],
+		"description": "Schema fixed work",
+	})
+	callAndValidate("clockify_invoice_client_work", map[string]any{"client_id": packageResult.IDs["clientId"], "number": "INV-SCHEMA-1"})
+	callAndValidate("clockify_record_expense", map[string]any{"amount": float64(10), "category_id": "65b382b606de527a7ee2b60b", "date": "2026-01-02T00:00:00Z"})
+	callAndValidate("clockify_request_time_off", map[string]any{"policy_id": "65b382b606de527a7ee2b60c", "start": "2026-01-05", "end": "2026-01-06", "note": "Schema coverage"})
+	callAndValidate("clockify_schedule_work", map[string]any{"user_id": "65b382b606de527a7ee2b60e", "project_id": "65b382b606de527a7ee2b60d", "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(6)})
+	callAndValidate("clockify_setup_webhook", map[string]any{"name": "Schema webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
+	seed := callAndValidate("clockify_demo_seed", map[string]any{"run_id": "schema", "prefix": "SCHEMA", "date": "2026-01-02"})
+	if seed.IDs["entryId"] == "" || started.IDs["entryId"] == "" {
+		t.Fatalf("schema smoke missing workflow IDs: seed=%+v started=%+v", seed.IDs, started.IDs)
+	}
+	callAndValidate("clockify_demo_cleanup", map[string]any{"run_id": "schema", "prefix": "SCHEMA", "start": "2026-01-01 00:00", "end": "2026-01-03 00:00"})
+}
+
+func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	wantNative := map[string]bool{
+		"clockify_users_list":         true,
+		"clockify_users_profile":      true,
+		"clockify_workspace_settings": true,
+	}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if !wantNative[descriptor.Tool.Name] {
+			continue
+		}
+		if got := descriptor.Tool.Annotations["handlerKind"]; got != "native handler" {
+			t.Fatalf("%s handlerKind=%v, want native handler", descriptor.Tool.Name, got)
+		}
+		if wraps := descriptor.Tool.Annotations["wraps"]; wraps != nil {
+			t.Fatalf("%s still advertises wrapper metadata: %+v", descriptor.Tool.Name, descriptor.Tool.Annotations)
+		}
+		delete(wantNative, descriptor.Tool.Name)
+	}
+	if len(wantNative) > 0 {
+		t.Fatalf("missing native discovery tools: %+v", wantNative)
+	}
+}
+
+func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	raw, err := os.ReadFile("../../docs/goals/oneuser-tool-coverage.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := strings.ToLower(string(raw))
-	for _, forbidden := range []string{
-		"needs follow-up",
-		"remaining known gap",
+	for _, required := range []string{
+		"remaining honest gaps",
+		"| `clockify_status` | workflow | native handler",
+		"| `clockify_api_request` | raw | raw fallback",
+		"acceptable gap",
 		"| generic |",
-		"still need direct fake-server tests",
-		"shared generic result envelope",
 	} {
-		if strings.Contains(text, forbidden) {
-			t.Fatalf("coverage ledger still advertises gap %q", forbidden)
+		if !strings.Contains(text, required) {
+			t.Fatalf("coverage ledger missing required honesty marker %q", required)
 		}
+	}
+	if strings.Contains(text, "needs native handler") && !strings.Contains(text, "alias wrapper") {
+		t.Fatalf("native-handler gap status must be tied to alias-wrapper rows")
+	}
+}
+
+func TestOneUserDocsAndDefaultCodeDoNotMentionRemovedProductTools(t *testing.T) {
+	removed := []string{
+		"clockify_" + "activate_group",
+		"clockify_" + "activate_tool",
+		"clockify_" + "deactivate_group",
+		"clockify_" + "search_tools",
+		"clockify_" + "policy_info",
+		"clockify_" + "list_tools",
+		"clockify_" + "resolve_name",
+		"clockify_" + "log_time",
+		"clockify_" + "timesheet_review",
+		"clockify_" + "timesheet_fill_gap",
+		"clockify_" + "switch_project",
+		"clockify_" + "timer_status",
+	}
+	roots := []string{
+		"../../AGENTS.md",
+		"../../README.md",
+		"../../docs/agent-handoff.md",
+		"../../docs/agent-cookbook.md",
+		"../../docs/api-coverage.md",
+		"../../docs/clients.md",
+		"../../docs/coverage-policy.md",
+		"../../docs/performance.md",
+		"../../docs/policy/production-tool-scope.md",
+		"../../docs/tool-catalog.md",
+		"../../cmd/clockify-mcp",
+		"../../internal/mcp",
+		"../../internal/tools",
+	}
+	for _, root := range roots {
+		info, err := os.Stat(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !info.IsDir() {
+			assertFileOmitsRemovedTools(t, root, removed)
+			continue
+		}
+		err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				return nil
+			}
+			switch filepath.Ext(path) {
+			case ".go", ".md":
+				assertFileOmitsRemovedTools(t, path, removed)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func assertFileOmitsRemovedTools(t *testing.T, path string, removed []string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	for _, tool := range removed {
+		if strings.Contains(text, tool) {
+			t.Fatalf("%s mentions removed product-surface tool %s", path, tool)
+		}
+	}
+}
+
+func TestOneUserFeatureStatusUsesConservativeVocabulary(t *testing.T) {
+	tests := []struct {
+		name     string
+		features []string
+		want     map[string]string
+	}{
+		{
+			name:     "empty",
+			features: nil,
+			want:     map[string]string{"invoices": "unknown", "groups": "unknown", "holidays": "unknown"},
+		},
+		{
+			name:     "partial",
+			features: []string{"INVOICING", "EXPENSES"},
+			want:     map[string]string{"invoices": "available", "expenses": "available", "groups": "unknown", "holidays": "unknown", "timeOff": "not_advertised"},
+		},
+		{
+			name:     "rich",
+			features: []string{"INVOICE", "EXPENSE", "CUSTOM_FIELD", "TIME_OFF", "SCHEDULING", "APPROVAL", "WEBHOOK", "REPORT", "SHARED_REPORT"},
+			want: map[string]string{
+				"invoices":      "available",
+				"expenses":      "available",
+				"customFields":  "available",
+				"timeOff":       "available",
+				"scheduling":    "available",
+				"approvals":     "available",
+				"webhooks":      "available",
+				"reports":       "available",
+				"sharedReports": "available",
+				"groups":        "unknown",
+				"holidays":      "unknown",
+			},
+		},
+	}
+	allowed := map[string]bool{
+		"available":                   true,
+		"not_advertised":              true,
+		"unknown":                     true,
+		"requires_plan_or_permission": true,
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := oneUserFeatureStatus(tt.features)
+			for feature, status := range got {
+				if !allowed[status] {
+					t.Fatalf("%s status=%q outside conservative vocabulary: %+v", feature, status, got)
+				}
+			}
+			for feature, want := range tt.want {
+				if got[feature] != want {
+					t.Fatalf("%s status=%q, want %q: %+v", feature, got[feature], want, got)
+				}
+			}
+		})
 	}
 }
 
@@ -788,6 +1046,73 @@ func decodeToolResult(t *testing.T, name string, raw []byte) ToolResult {
 		t.Fatalf("write tool %s returned no IDs: %+v", name, resp.Result.StructuredContent)
 	}
 	return resp.Result.StructuredContent
+}
+
+func decodeStructuredToolResult(t *testing.T, name string, raw []byte) ToolResult {
+	t.Helper()
+	var resp struct {
+		Result struct {
+			StructuredContent ToolResult `json:"structuredContent"`
+		} `json:"result"`
+		Error any `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error != nil || !resp.Result.StructuredContent.OK {
+		t.Fatalf("tool %s did not return ok result: %s", name, raw)
+	}
+	return resp.Result.StructuredContent
+}
+
+func validateToolResultAgainstOutputSchema(t *testing.T, name string, schema map[string]any, result ToolResult) {
+	t.Helper()
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var jsonValue any
+	if err := json.Unmarshal(raw, &jsonValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := jsonschema.Validate(schema, jsonValue); err != nil {
+		t.Fatalf("%s result failed advertised output schema: %v\nvalue=%s", name, err, raw)
+	}
+}
+
+func assertDataSchemaCoversActualKeys(t *testing.T, name string, schema map[string]any, data any) {
+	t.Helper()
+	if data == nil {
+		return
+	}
+	props, _ := schema["properties"].(map[string]any)
+	dataSchema, _ := props["data"].(map[string]any)
+	dataProps, _ := dataSchema["properties"].(map[string]any)
+	if len(dataProps) == 0 {
+		t.Fatalf("%s advertised data schema has no typed properties: %+v", name, dataSchema)
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dataMap map[string]any
+	if err := json.Unmarshal(raw, &dataMap); err != nil {
+		t.Fatalf("%s data is not a JSON object: %v", name, err)
+	}
+	for key := range dataMap {
+		if _, ok := dataProps[key]; !ok {
+			t.Fatalf("%s data schema omits actual data key %q; schema keys=%v value=%s", name, key, sortedMapKeys(dataProps), raw)
+		}
+	}
+}
+
+func sortedMapKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
 }
 
 func callToolError(t *testing.T, server *mcp.Server, name string, args map[string]any) ToolError {

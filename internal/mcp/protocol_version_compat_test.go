@@ -111,7 +111,8 @@ func TestProtocolVersion_ConfiguredDefaultOnlyAppliesWhenOmitted(t *testing.T) {
 
 // TestProtocolVersion_CapabilitiesShape asserts the initialize response
 // shape is stable across every supported version. The server advertises
-// only capabilities it implements: tools/prompts listChanged, resources
+// only capabilities it implements: tools listChanged, static prompts,
+// resources
 // subscribe/listChanged when a ResourceProvider is installed, and no
 // 2025-11-25 task capability until task-augmented requests are implemented.
 // A silent regression here would either break MCP 2025-03-26+ clients that
@@ -152,8 +153,8 @@ func TestProtocolVersion_CapabilitiesShape(t *testing.T) {
 			if prompts == nil {
 				t.Fatalf("capabilities.prompts missing")
 			}
-			if prompts["listChanged"] == nil {
-				t.Fatalf("capabilities.prompts.listChanged missing for version %s", version)
+			if _, ok := prompts["listChanged"]; ok {
+				t.Fatalf("capabilities.prompts overclaims listChanged for version %s: %+v", version, prompts)
 			}
 			resources, _ := caps["resources"].(map[string]any)
 			if resources == nil {

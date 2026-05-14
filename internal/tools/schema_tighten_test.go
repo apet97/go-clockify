@@ -165,7 +165,7 @@ func TestRegistryFlexibleTimeFieldsHaveNoFormat(t *testing.T) {
 	flexible := []expect{
 		{"clockify_list_entries", "start"},
 		{"clockify_list_entries", "end"},
-		{"clockify_add_entry", "start"},
+		{legacyToolAddEntry, "start"},
 		{"clockify_weekly_summary", "week_start"},
 	}
 
