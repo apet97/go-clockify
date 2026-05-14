@@ -705,52 +705,6 @@ func descriptionAdvertisesFlexibleTime(desc string) bool {
 	return false
 }
 
-// schemaString returns a JSON Schema string property with an optional
-// description. Empty desc emits `{"type":"string"}` so the wire output
-// matches the dozens of inline literals that omit description today.
-func schemaString(desc string) map[string]any {
-	out := map[string]any{"type": "string"}
-	if desc != "" {
-		out["description"] = desc
-	}
-	return out
-}
-
-// schemaEnum returns a JSON Schema string property constrained to the
-// supplied enum values, with an optional description. Validators
-// (jsonschema.Validate) reject inputs outside the enum at parse time,
-// shifting the responsibility off the handler's switch statement and
-// surfacing the contract to MCP clients via tools/list.
-func schemaEnum(desc string, values ...string) map[string]any {
-	out := schemaString(desc)
-	out["enum"] = values
-	return out
-}
-
-func nullableBoolSchema(desc string) map[string]any {
-	out := map[string]any{"type": []any{"boolean", "null"}}
-	if desc != "" {
-		out["description"] = desc
-	}
-	return out
-}
-
-// schemaObject returns a JSON Schema object node with optional required
-// fields and properties. Empty required/props slots are omitted from
-// the output so the wire shape stays identical to the dozens of inline
-// `map[string]any{"type":"object", …}` literals already across the
-// registry.
-func schemaObject(required []string, properties map[string]any) map[string]any {
-	out := map[string]any{"type": "object"}
-	if len(required) > 0 {
-		out["required"] = required
-	}
-	if len(properties) > 0 {
-		out["properties"] = properties
-	}
-	return out
-}
-
 func requiredSchema(field string) map[string]any {
 	return map[string]any{"type": "object", "required": []string{field}, "properties": map[string]any{field: map[string]any{"type": "string"}}}
 }

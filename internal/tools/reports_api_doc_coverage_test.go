@@ -107,13 +107,3 @@ func assertEnumContains(t *testing.T, schema map[string]any, wants ...string) {
 		}
 	}
 }
-
-func assertEnumMissing(t *testing.T, schema map[string]any, wrong string) {
-	t.Helper()
-	values, _ := toStringSliceAny(schema["enum"])
-	for _, value := range values {
-		if value == wrong {
-			t.Fatalf("enum %v must not contain %s", values, wrong)
-		}
-	}
-}

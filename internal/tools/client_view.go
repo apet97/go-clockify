@@ -630,17 +630,3 @@ func detailedReportSuggestionArgs(clientRef string, finRange FinancialRangeView)
 	}
 	return args
 }
-
-func clientReportInputSchema() map[string]any {
-	props := map[string]any{
-		"client":            map[string]any{"type": "string", "description": "Client name or ID"},
-		"invoice_page":      map[string]any{"type": "integer", "minimum": 1},
-		"invoice_page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
-	}
-	addFinancialRangeInputProperties(props)
-	return map[string]any{
-		"type":       "object",
-		"required":   []string{"client"},
-		"properties": props,
-	}
-}

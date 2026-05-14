@@ -425,40 +425,6 @@ func mergeMap(base map[string]any, extra map[string]any) map[string]any {
 	return out
 }
 
-func moneyReportInputSchema() map[string]any {
-	props := map[string]any{
-		"group_by": map[string]any{"type": "array", "description": "Up to 3 Summary Reports groups. Extra values are ignored.", "items": map[string]any{"type": "string", "enum": []string{"CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY", "DAY"}}},
-	}
-	addFinancialRangeInputProperties(props)
-	return map[string]any{"type": "object", "properties": props}
-}
-
-func monthlyBriefInputSchema() map[string]any {
-	props := map[string]any{
-		"month":     map[string]any{"type": "string", "description": "YYYY-MM month. Defaults to the current month in timezone."},
-		"timezone":  timezoneInputProperty(),
-		"page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
-	}
-	return map[string]any{"type": "object", "properties": props}
-}
-
-func auditEntriesInputSchema() map[string]any {
-	props := map[string]any{
-		"page":            map[string]any{"type": "integer", "minimum": 1},
-		"page_size":       map[string]any{"type": "integer", "minimum": 1, "maximum": 200},
-		"client_id":       map[string]any{"type": "string", "description": "Filter detailed report rows to one client ID."},
-		"project_id":      map[string]any{"type": "string", "description": "Filter detailed report rows to one project ID."},
-		"task_id":         map[string]any{"type": "string", "description": "Filter detailed report rows to one task ID."},
-		"user_id":         map[string]any{"type": "string", "description": "Filter detailed report rows to one user ID."},
-		"tag_ids":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Filter detailed report rows to entries with these tag IDs."},
-		"billable":        map[string]any{"type": "boolean", "description": "Filter detailed report rows by billable state."},
-		"description":     map[string]any{"type": "string", "description": "Filter detailed report rows by description text."},
-		"invoicing_state": map[string]any{"type": "string", "description": "Filter by invoicing state, e.g. INVOICED or UNINVOICED."},
-	}
-	addFinancialRangeInputProperties(props)
-	return map[string]any{"type": "object", "properties": props}
-}
-
 func unbilledForClientInputSchema() map[string]any {
 	props := map[string]any{
 		"client":    map[string]any{"type": "string", "description": "Client name or ID"},
