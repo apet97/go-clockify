@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package testharness wires the real MCP dispatch path (auth → enforcement
 // pipeline → tool handler → Clockify client) against a fake Clockify upstream
 // so tests can assert policy, auth, and idempotency properties end-to-end

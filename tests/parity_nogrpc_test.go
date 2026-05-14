@@ -1,4 +1,4 @@
-//go:build !grpc
+//go:build legacy_platform && !grpc
 
 package e2e_test
 

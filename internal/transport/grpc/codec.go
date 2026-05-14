@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package grpctransport exposes the Clockify MCP server over gRPC using a
 // raw-bytes passthrough codec and a hand-wired ServiceDesc. The design
 // intentionally avoids protobuf codegen: each Exchange frame is a JSON-RPC

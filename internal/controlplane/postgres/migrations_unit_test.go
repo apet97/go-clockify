@@ -1,4 +1,4 @@
-//go:build postgres
+//go:build legacy_platform && postgres
 
 package postgres
 

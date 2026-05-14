@@ -14,7 +14,7 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-type legacyAlias struct {
+type nativeAlias struct {
 	NewName string
 	OldName string
 	Entity  string
@@ -46,8 +46,9 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 160)
 	out = append(out, s.workflowDescriptors()...)
 	out = append(out, s.FirstSliceRegistry()...)
+	out = append(out, s.nativeCoreDescriptors()...)
+	out = append(out, s.nativeAliasDescriptors()...)
 	out = append(out, s.coreRouteDescriptors()...)
-	out = append(out, s.legacyAliasDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
 	return normalizeDescriptors(dedupeToolDescriptors(out))
 }
@@ -163,9 +164,185 @@ func (s *Service) coreRouteDescriptors() []mcp.ToolDescriptor {
 	return out
 }
 
-func (s *Service) legacyAliasDescriptors() []mcp.ToolDescriptor {
-	legacy := s.legacyDescriptorMap()
-	aliases := []legacyAlias{
+func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
+	return []mcp.ToolDescriptor{
+		nativeDomainTool(22, toolRO("clockify_clients_get", "Get one client by name or ID.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
+			"client":    map[string]any{"type": "string", "description": "Client name or ID."},
+			"client_id": map[string]any{"type": "string", "description": "Client ID."},
+		}})), "client", "", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.GetClientWithArgs(ctx, aliasArg(args, "client_id", "client"))
+		}),
+		nativeDomainTool(23, toolRWIdem("clockify_clients_update", "Update a client by name or ID.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
+			"client":           map[string]any{"type": "string", "description": "Client name or ID."},
+			"client_id":        map[string]any{"type": "string", "description": "Client ID."},
+			"name":             map[string]any{"type": "string"},
+			"email":            map[string]any{"type": "string"},
+			"address":          map[string]any{"type": "string"},
+			"note":             map[string]any{"type": "string"},
+			"currency_id":      map[string]any{"type": "string"},
+			"cc_emails":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"archived":         map[string]any{"type": "boolean"},
+			"archive_projects": map[string]any{"type": "boolean"},
+		}})), "client", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.UpdateClient(ctx, aliasArg(args, "client_id", "client"))
+		}),
+		nativeDomainTool(24, toolDestructive("clockify_clients_delete", "Delete a client by name or ID.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
+			"client":    map[string]any{"type": "string", "description": "Client name or ID."},
+			"client_id": map[string]any{"type": "string", "description": "Client ID."},
+			"dry_run":   map[string]any{"type": "boolean"},
+		}})), "client", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.DeleteClient(ctx, aliasArg(args, "client_id", "client"))
+		}),
+
+		nativeDomainTool(32, toolRO("clockify_projects_get", "Get one project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+		}})), "project", "", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.GetProject(ctx, aliasArg(args, "project_id", "project"))
+		}),
+		nativeDomainTool(33, toolRWIdem("clockify_projects_update", "Update a project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+			"name":       map[string]any{"type": "string"},
+			"client":     map[string]any{"type": "string", "description": "Client name or ID."},
+			"client_id":  map[string]any{"type": "string"},
+			"color":      map[string]any{"type": "string"},
+			"billable":   map[string]any{"type": "boolean"},
+			"is_public":  map[string]any{"type": "boolean"},
+			"archived":   map[string]any{"type": "boolean"},
+			"note":       map[string]any{"type": "string"},
+		}})), "project", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.UpdateProject(ctx, aliasArg(args, "project_id", "project"))
+		}),
+		nativeDomainTool(34, toolDestructive("clockify_projects_delete", "Delete a project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+			"dry_run":    map[string]any{"type": "boolean"},
+		}})), "project", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.DeleteProject(ctx, aliasArg(args, "project_id", "project"))
+		}),
+		nativeDomainTool(35, toolRWIdem("clockify_projects_archive", "Archive a project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+		}})), "project", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			args = aliasArg(args, "project_id", "project")
+			args["archived"] = true
+			return s.UpdateProject(ctx, args)
+		}),
+		nativeDomainTool(41, toolRWIdem("clockify_projects_rates_update", "Set a project member hourly or cost rate.", objectSchema(map[string]any{"required": []string{"project_id", "user_id", "rate_kind", "amount"}, "properties": map[string]any{
+			"project_id": map[string]any{"type": "string"},
+			"user_id":    map[string]any{"type": "string"},
+			"rate_kind":  map[string]any{"type": "string", "enum": []string{"hourly", "cost"}},
+			"amount":     map[string]any{"type": "integer", "minimum": 0},
+			"since":      map[string]any{"type": "string"},
+			"dry_run":    map[string]any{"type": "boolean"},
+		}})), "project_rate", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			endpoint, err := rateKindEndpoint(args)
+			if err != nil {
+				return ResultEnvelope{}, err
+			}
+			return s.UpdateProjectUserRate(ctx, args, endpoint)
+		}),
+
+		nativeDomainTool(42, toolRO("clockify_tasks_get", "Get one task by name or ID within a project.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":    map[string]any{"type": "string", "description": "Task ID."},
+		}})), "task", "", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.GetTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
+		}),
+		nativeDomainTool(43, toolRWIdem("clockify_tasks_update", "Update a task by name or ID within a project.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
+			"project":      map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id":   map[string]any{"type": "string", "description": "Project ID."},
+			"task":         map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":      map[string]any{"type": "string", "description": "Task ID."},
+			"name":         map[string]any{"type": "string"},
+			"billable":     map[string]any{"type": "boolean"},
+			"assignee_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"status":       map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}},
+		}})), "task", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.UpdateTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
+		}),
+		nativeDomainTool(44, toolDestructive("clockify_tasks_delete", "Delete a task by name or ID within a project.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":    map[string]any{"type": "string", "description": "Task ID."},
+			"dry_run":    map[string]any{"type": "boolean"},
+		}})), "task", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.DeleteTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
+		}),
+		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount"}, "properties": map[string]any{
+			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id": map[string]any{"type": "string"},
+			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":    map[string]any{"type": "string"},
+			"rate_kind":  map[string]any{"type": "string", "enum": []string{"hourly", "cost"}},
+			"amount":     map[string]any{"type": "integer", "minimum": 0},
+			"since":      map[string]any{"type": "string"},
+			"dry_run":    map[string]any{"type": "boolean"},
+		}})), "task_rate", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			endpoint, err := rateKindEndpoint(args)
+			if err != nil {
+				return ResultEnvelope{}, err
+			}
+			return s.UpdateTaskRate(ctx, args, endpoint)
+		}),
+
+		nativeDomainTool(52, toolRO("clockify_tags_get", "Get one tag by name or ID.", objectSchema(map[string]any{"required": []string{"tag"}, "properties": map[string]any{
+			"tag":    map[string]any{"type": "string", "description": "Tag name or ID."},
+			"tag_id": map[string]any{"type": "string", "description": "Tag ID."},
+		}})), "tag", "", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.GetTag(ctx, aliasArg(args, "tag_id", "tag"))
+		}),
+		nativeDomainTool(53, toolRWIdem("clockify_tags_update", "Update a tag by name or ID.", objectSchema(map[string]any{"required": []string{"tag"}, "properties": map[string]any{
+			"tag":      map[string]any{"type": "string", "description": "Tag name or ID."},
+			"tag_id":   map[string]any{"type": "string", "description": "Tag ID."},
+			"name":     map[string]any{"type": "string"},
+			"archived": map[string]any{"type": "boolean"},
+		}})), "tag", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.UpdateTag(ctx, aliasArg(args, "tag_id", "tag"))
+		}),
+		nativeDomainTool(54, toolDestructive("clockify_tags_delete", "Delete a tag by name or ID.", objectSchema(map[string]any{"required": []string{"tag"}, "properties": map[string]any{
+			"tag":     map[string]any{"type": "string", "description": "Tag name or ID."},
+			"tag_id":  map[string]any{"type": "string", "description": "Tag ID."},
+			"dry_run": map[string]any{"type": "boolean"},
+		}})), "tag", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+			return s.DeleteTag(ctx, aliasArg(args, "tag_id", "tag"))
+		}),
+
+		nativeDomainTool(62, toolRO("clockify_entries_get", "Get one time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+			"entry_id": map[string]any{"type": "string"},
+		}})), "entry", "", s.GetEntry),
+		nativeDomainTool(63, toolRWIdem("clockify_entries_update", "Update a time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+			"entry_id":    map[string]any{"type": "string"},
+			"start":       map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"description": map[string]any{"type": "string"},
+			"project":     map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id":  map[string]any{"type": "string"},
+			"task":        map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":     map[string]any{"type": "string"},
+			"tag":         map[string]any{"type": "string", "description": "Tag name or ID."},
+			"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"billable":    map[string]any{"type": "boolean"},
+		}})), "entry", "updated", s.UpdateEntry),
+		nativeDomainTool(64, toolDestructive("clockify_entries_delete", "Delete a time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+			"entry_id": map[string]any{"type": "string"},
+			"dry_run":  map[string]any{"type": "boolean"},
+		}})), "entry", "deleted", s.DeleteEntry),
+	}
+}
+
+func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
+	sources := s.nativeDomainDescriptorMap()
+	aliases := []nativeAlias{
+		{"clockify_projects_templates_list", "clockify_list_project_templates", "project_template", ""},
+		{"clockify_projects_templates_create", "clockify_create_project_template", "project_template", "created"},
+		{"clockify_projects_estimates_update", "clockify_update_project_estimate", "project", "updated"},
+		{"clockify_projects_memberships_update", "clockify_update_project_memberships", "membership", "updated"},
+
 		{"clockify_invoices_list", "clockify_list_invoices", "invoice", ""},
 		{"clockify_invoices_get", "clockify_get_invoice", "invoice", ""},
 		{"clockify_invoices_create", "clockify_create_invoice", "invoice", "created"},
@@ -239,6 +416,7 @@ func (s *Service) legacyAliasDescriptors() []mcp.ToolDescriptor {
 		{"clockify_groups_remove_user", "clockify_remove_user_from_group", "group_member", "deleted"},
 
 		{"clockify_holidays_list", "clockify_list_holidays", "holiday", ""},
+		{"clockify_holidays_list_for_user_period", "clockify_list_holidays_in_period", "holiday", ""},
 		{"clockify_holidays_create", "clockify_create_holiday", "holiday", "created"},
 		{"clockify_holidays_delete", "clockify_delete_holiday", "holiday", "deleted"},
 
@@ -246,36 +424,54 @@ func (s *Service) legacyAliasDescriptors() []mcp.ToolDescriptor {
 		{"clockify_users_profile", "clockify_current_user", "user", ""},
 		{"clockify_users_deactivate", "clockify_deactivate_user", "user", "updated"},
 		{"clockify_users_role", "clockify_update_user_role", "user", "updated"},
+		{"clockify_workspace_settings", "clockify_get_workspace", "workspace", ""},
 	}
 	out := make([]mcp.ToolDescriptor, 0, len(aliases))
 	for i, alias := range aliases {
-		old, ok := legacy[alias.OldName]
+		old, ok := sources[alias.OldName]
 		if !ok {
 			continue
 		}
-		out = append(out, legacyAliasDescriptor(200+i, alias, old))
+		out = append(out, nativeAliasDescriptor(oneUserAliasPriority(alias.NewName, 200+i), alias, old))
 	}
 	return out
 }
 
-func (s *Service) legacyDescriptorMap() map[string]mcp.ToolDescriptor {
+func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 	out := map[string]mcp.ToolDescriptor{}
 	add := func(descriptors []mcp.ToolDescriptor) {
+		descriptors = normalizeDescriptors(descriptors)
 		for _, descriptor := range descriptors {
 			out[descriptor.Tool.Name] = descriptor
 		}
 	}
-	add(s.Registry())
-	for _, name := range Tier2GroupNames() {
-		descriptors, ok := s.Tier2Handlers(name)
-		if ok {
-			add(descriptors)
-		}
-	}
+	add([]mcp.ToolDescriptor{
+		{Tool: toolRO("clockify_list_users", "List users in the pinned workspace.", paginationSchema(nil)), Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return s.ListUsers(ctx, args)
+		}},
+		{Tool: toolRO("clockify_current_user", "Get the current Clockify user.", map[string]any{"type": "object"}), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			return s.CurrentUser(ctx)
+		}},
+	})
+	add(invoiceHandlers(s))
+	add(expenseHandlers(s))
+	add(customFieldHandlers(s))
+	add(timeOffHandlers(s))
+	add(schedulingHandlers(s))
+	add(approvalHandlers(s))
+	add(webhookHandlers(s))
+	add(groupsHolidaysHandlers(s))
+	add(projectAdminHandlers(s))
+	add(userAdminHandlers(s))
+	add([]mcp.ToolDescriptor{
+		{Tool: toolRO("clockify_get_workspace", "Read pinned workspace settings.", objectSchema(nil)), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			return s.GetWorkspace(ctx)
+		}},
+	})
 	return out
 }
 
-func legacyAliasDescriptor(priority int, alias legacyAlias, old mcp.ToolDescriptor) mcp.ToolDescriptor {
+func nativeAliasDescriptor(priority int, alias nativeAlias, old mcp.ToolDescriptor) mcp.ToolDescriptor {
 	tool := old.Tool
 	tool.Name = alias.NewName
 	tool.OutputSchema = firstSliceOutputSchema()
@@ -288,9 +484,130 @@ func legacyAliasDescriptor(priority int, alias legacyAlias, old mcp.ToolDescript
 		if err != nil {
 			return nil, err
 		}
-		return standardizeLegacyResult(alias.NewName, alias.Entity, alias.Change, out, args), nil
+		return standardizeDomainResult(alias.NewName, alias.Entity, alias.Change, out, args), nil
 	}
 	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(alias.NewName, handler)}
+}
+
+func oneUserAliasPriority(name string, fallback int) int {
+	priorities := map[string]int{
+		"clockify_projects_templates_list":       36,
+		"clockify_projects_templates_create":     37,
+		"clockify_projects_estimates_update":     38,
+		"clockify_projects_memberships_update":   40,
+		"clockify_invoices_list":                 200,
+		"clockify_invoices_get":                  201,
+		"clockify_invoices_create":               202,
+		"clockify_invoices_update":               203,
+		"clockify_invoices_delete":               204,
+		"clockify_invoices_send":                 205,
+		"clockify_invoices_mark_paid":            206,
+		"clockify_invoices_items_list":           207,
+		"clockify_invoices_items_add":            208,
+		"clockify_invoices_items_update":         209,
+		"clockify_invoices_items_delete":         216,
+		"clockify_expenses_list":                 300,
+		"clockify_expenses_get":                  301,
+		"clockify_expenses_create":               302,
+		"clockify_expenses_update":               303,
+		"clockify_expenses_delete":               304,
+		"clockify_expenses_categories_list":      305,
+		"clockify_expenses_categories_create":    306,
+		"clockify_expenses_categories_update":    307,
+		"clockify_expenses_categories_delete":    308,
+		"clockify_custom_fields_list":            400,
+		"clockify_custom_fields_get":             401,
+		"clockify_custom_fields_create":          402,
+		"clockify_custom_fields_update":          403,
+		"clockify_custom_fields_delete":          404,
+		"clockify_custom_fields_set_value":       405,
+		"clockify_time_off_requests_list":        500,
+		"clockify_time_off_requests_get":         501,
+		"clockify_time_off_requests_create":      502,
+		"clockify_time_off_requests_update":      503,
+		"clockify_time_off_requests_delete":      504,
+		"clockify_time_off_approve":              505,
+		"clockify_time_off_deny":                 506,
+		"clockify_time_off_policies_list":        507,
+		"clockify_time_off_policies_get":         508,
+		"clockify_time_off_policies_create":      509,
+		"clockify_time_off_policies_update":      510,
+		"clockify_time_off_balances":             511,
+		"clockify_scheduling_assignments_list":   600,
+		"clockify_scheduling_assignments_get":    601,
+		"clockify_scheduling_assignments_create": 602,
+		"clockify_scheduling_assignments_update": 603,
+		"clockify_scheduling_assignments_delete": 604,
+		"clockify_scheduling_project_totals":     605,
+		"clockify_approvals_list":                700,
+		"clockify_approvals_get":                 701,
+		"clockify_approvals_submit":              702,
+		"clockify_approvals_approve":             703,
+		"clockify_approvals_reject":              704,
+		"clockify_approvals_withdraw":            705,
+		"clockify_webhooks_list":                 800,
+		"clockify_webhooks_get":                  801,
+		"clockify_webhooks_create":               802,
+		"clockify_webhooks_update":               803,
+		"clockify_webhooks_delete":               804,
+		"clockify_webhooks_test":                 805,
+		"clockify_webhooks_events":               806,
+		"clockify_groups_list":                   900,
+		"clockify_groups_get":                    901,
+		"clockify_groups_create":                 902,
+		"clockify_groups_update":                 903,
+		"clockify_groups_delete":                 904,
+		"clockify_groups_add_user":               905,
+		"clockify_groups_remove_user":            906,
+		"clockify_holidays_list":                 1000,
+		"clockify_holidays_list_for_user_period": 1003,
+		"clockify_holidays_create":               1004,
+		"clockify_holidays_delete":               1005,
+		"clockify_users_list":                    1100,
+		"clockify_users_profile":                 1101,
+		"clockify_users_deactivate":              1103,
+		"clockify_users_role":                    1104,
+		"clockify_workspace_settings":            1105,
+	}
+	if priority, ok := priorities[name]; ok {
+		return priority
+	}
+	return fallback
+}
+
+func nativeDomainTool(priority int, tool mcp.Tool, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+	return firstSliceDescriptor(priority, tool, aliasHandler(tool.Name, entity, change, handler))
+}
+
+func rateKindEndpoint(args map[string]any) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(stringArg(args, "rate_kind"))) {
+	case "hourly":
+		return "hourly-rate", nil
+	case "cost":
+		return "cost-rate", nil
+	default:
+		return "", fmt.Errorf("rate_kind must be hourly or cost")
+	}
+}
+
+func aliasArg(args map[string]any, from, to string) map[string]any {
+	return aliasArgs(args, map[string]string{from: to})
+}
+
+func aliasArgs(args map[string]any, aliases map[string]string) map[string]any {
+	out := make(map[string]any, len(args)+len(aliases))
+	for key, value := range args {
+		out[key] = value
+	}
+	for from, to := range aliases {
+		if _, ok := out[to]; ok {
+			continue
+		}
+		if value, ok := out[from]; ok {
+			out[to] = value
+		}
+	}
+	return out
 }
 
 func aliasHandler(action, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolHandler {
@@ -299,7 +616,7 @@ func aliasHandler(action, entity, change string, handler func(context.Context, m
 		if err != nil {
 			return nil, err
 		}
-		return standardizeLegacyResult(action, entity, change, out, args), nil
+		return standardizeDomainResult(action, entity, change, out, args), nil
 	}
 }
 
@@ -481,7 +798,7 @@ func routeBody(spec routeTool, args map[string]any) map[string]any {
 	return body
 }
 
-func standardizeLegacyResult(action, entity, change string, out any, args map[string]any) ToolResult {
+func standardizeDomainResult(action, entity, change string, out any, args map[string]any) ToolResult {
 	if current, ok := out.(ToolResult); ok {
 		current.Action = action
 		return current
@@ -793,7 +1110,7 @@ func (s *Service) EntriesTimerStart(ctx context.Context, args map[string]any) (a
 	if err != nil {
 		return nil, err
 	}
-	return standardizeLegacyResult("clockify_entries_timer_start", "entry", "created", out, args), nil
+	return standardizeDomainResult("clockify_entries_timer_start", "entry", "created", out, args), nil
 }
 
 func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (any, error) {
@@ -801,7 +1118,7 @@ func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (an
 	if err != nil {
 		return nil, err
 	}
-	return standardizeLegacyResult("clockify_entries_timer_stop", "entry", "updated", out, args), nil
+	return standardizeDomainResult("clockify_entries_timer_stop", "entry", "updated", out, args), nil
 }
 
 func (s *Service) EntriesTimerStatus(ctx context.Context, _ map[string]any) (any, error) {
@@ -809,7 +1126,7 @@ func (s *Service) EntriesTimerStatus(ctx context.Context, _ map[string]any) (any
 	if err != nil {
 		return nil, err
 	}
-	return standardizeLegacyResult("clockify_entries_timer_status", "entry", "", out, nil), nil
+	return standardizeDomainResult("clockify_entries_timer_status", "entry", "", out, nil), nil
 }
 
 func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (any, error) {
@@ -817,7 +1134,7 @@ func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return nil, err
 	}
-	return standardizeLegacyResult("clockify_entries_timer_switch", "entry", "updated", out, args), nil
+	return standardizeDomainResult("clockify_entries_timer_switch", "entry", "updated", out, args), nil
 }
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {

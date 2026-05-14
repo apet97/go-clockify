@@ -1,4 +1,4 @@
-//go:build postgres && livee2e
+//go:build legacy_platform && postgres && livee2e
 
 // Live audit-phase contract test for the Postgres-backed control-plane
 // store. The runtime two-phase auditor (intent + outcome) synthesises the

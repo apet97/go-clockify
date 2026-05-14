@@ -1,4 +1,4 @@
-//go:build grpcreflection
+//go:build legacy_platform && grpcreflection
 
 package grpctransport
 

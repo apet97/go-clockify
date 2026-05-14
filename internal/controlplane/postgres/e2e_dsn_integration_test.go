@@ -1,4 +1,4 @@
-//go:build postgres && integration
+//go:build legacy_platform && postgres && integration
 
 package postgres_test
 

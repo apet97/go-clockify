@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Per-tool micro-benchmarks for the Tier-1 destructive write surface.

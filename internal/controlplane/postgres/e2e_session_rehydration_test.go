@@ -1,4 +1,4 @@
-//go:build postgres
+//go:build legacy_platform && postgres
 
 // Cross-instance streamable-HTTP session rehydration E2E for the
 // launch-candidate gate (Group 3 / ADR 0017). Boots TWO

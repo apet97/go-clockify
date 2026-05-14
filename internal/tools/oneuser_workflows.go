@@ -252,7 +252,7 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 	if err != nil {
 		return nil, err
 	}
-	resultOut := standardizeLegacyResult("clockify_stop_work", "entry", "updated", out, args)
+	resultOut := standardizeDomainResult("clockify_stop_work", "entry", "updated", out, args)
 	if env, ok := out.(ResultEnvelope); ok {
 		if entry, ok := env.Data.(clockify.TimeEntry); ok {
 			resultOut.IDs = cleanIDs(map[string]string{
@@ -390,7 +390,7 @@ func (s *Service) reviewWorkflow(ctx context.Context, action string, args map[st
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult(action, "entry_review", "", out, args)
+	standard := standardizeDomainResult(action, "entry_review", "", out, args)
 	standard.Action = action
 	standard.IDs = cleanIDs(map[string]string{
 		"workspaceId": stringFromAny(out.Meta["workspaceId"]),
@@ -412,7 +412,7 @@ func (s *Service) ClockifyFixEntry(ctx context.Context, args map[string]any) (an
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_fix_entry", "entry", "updated", out, fixArgs)
+	standard := standardizeDomainResult("clockify_fix_entry", "entry", "updated", out, fixArgs)
 	if env, ok := out.(ResultEnvelope); ok {
 		if data, ok := env.Data.(FindAndUpdateEntryData); ok {
 			standard.IDs = cleanIDs(map[string]string{"workspaceId": stringFromAny(env.Meta["workspaceId"]), "entryId": data.Entry.ID, "projectId": data.Entry.ProjectID})
@@ -457,7 +457,7 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_invoice_client_work", "invoice", "created", out, invoiceArgs)
+	standard := standardizeDomainResult("clockify_invoice_client_work", "invoice", "created", out, invoiceArgs)
 	if standard.IDs == nil {
 		standard.IDs = map[string]string{}
 	}
@@ -510,7 +510,7 @@ func (s *Service) ClockifyRecordExpense(ctx context.Context, args map[string]any
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_record_expense", "expense", "created", out, expenseArgs)
+	standard := standardizeDomainResult("clockify_record_expense", "expense", "created", out, expenseArgs)
 	standard.Next = []NextAction{{Tool: "clockify_expenses_list", Reason: "Verify the recorded expense in the expense list."}}
 	return standard, nil
 }
@@ -532,7 +532,7 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_request_time_off", "time_off_request", "created", out, reqArgs)
+	standard := standardizeDomainResult("clockify_request_time_off", "time_off_request", "created", out, reqArgs)
 	standard.Next = []NextAction{{Tool: "clockify_time_off_requests_list", Reason: "Check the request status after submitting."}}
 	return standard, nil
 }
@@ -590,7 +590,7 @@ func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any)
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_schedule_work", "assignment", "created", out, scheduleArgs)
+	standard := standardizeDomainResult("clockify_schedule_work", "assignment", "created", out, scheduleArgs)
 	standard.Next = []NextAction{{Tool: "clockify_scheduling_assignments_list", Args: map[string]any{"start": stringArg(scheduleArgs, "start"), "end": stringArg(scheduleArgs, "end")}, Reason: "Verify the scheduled assignment."}}
 	return standard, nil
 }
@@ -606,7 +606,7 @@ func (s *Service) ClockifySetupWebhook(ctx context.Context, args map[string]any)
 	if err != nil {
 		return nil, err
 	}
-	standard := standardizeLegacyResult("clockify_setup_webhook", "webhook", "created", out, webhookArgs)
+	standard := standardizeDomainResult("clockify_setup_webhook", "webhook", "created", out, webhookArgs)
 	standard.Next = []NextAction{{Tool: "clockify_webhooks_test", Args: map[string]any{"webhook_id": standard.IDs["webhookId"]}, Reason: "Send a test event after setup if desired."}}
 	return standard, nil
 }

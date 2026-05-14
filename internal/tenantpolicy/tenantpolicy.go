@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package tenantpolicy derives a per-tenant *policy.Policy from a
 // process policy and a control-plane TenantRecord under the ADR 0021
 // hosted tenant policy ceiling contract.

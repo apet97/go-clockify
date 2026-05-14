@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Per-tool micro-benchmarks for a representative slice of the Tier-2

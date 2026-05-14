@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package confirmation implements server-issued HMAC confirmation
 // tokens for high-risk tool calls as specified by
 // docs/adr/0018-risk-class-confirmation-tokens.md (Q1 option B).

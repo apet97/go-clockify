@@ -1,4 +1,4 @@
-//go:build livee2e
+//go:build legacy_platform && livee2e
 
 package e2e_test
 

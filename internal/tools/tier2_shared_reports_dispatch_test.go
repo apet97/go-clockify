@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Dispatcher-level coverage for the Tier 2 shared_reports group. Pins

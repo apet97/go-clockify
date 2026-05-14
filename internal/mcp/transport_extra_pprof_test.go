@@ -1,4 +1,4 @@
-//go:build pprof
+//go:build legacy_platform && pprof
 
 package mcp
 

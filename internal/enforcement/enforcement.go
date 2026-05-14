@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package enforcement provides the concrete Enforcement and Activator
 // implementations that compose the safety subsystems (policy, rate limiting,
 // dry-run, truncation, bootstrap) into the MCP server's pluggable interfaces.

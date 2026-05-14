@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Activation-path micro-benchmarks. These measure the cost of

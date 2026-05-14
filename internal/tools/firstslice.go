@@ -274,6 +274,8 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 		default:
 			code = "clockify_upstream_error"
 		}
+	} else if strings.Contains(strings.ToLower(message), "not found") {
+		code = "not_found"
 	}
 	if recovery.Hint == "" {
 		recovery = defaultRecovery(action, nil)

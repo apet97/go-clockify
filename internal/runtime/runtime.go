@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package runtime wires the clockify-mcp process: it loads the
 // config-derived dependencies (policy, rate limit, dedupe, dry-run,
 // truncation, bootstrap) and owns transport dispatch. It sits ABOVE

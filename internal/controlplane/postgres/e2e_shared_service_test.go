@@ -1,4 +1,4 @@
-//go:build postgres
+//go:build legacy_platform && postgres
 
 // Shared-service Postgres end-to-end test for the launch-candidate
 // gate (Group 2 of docs/launch-candidate-checklist.md). Boots

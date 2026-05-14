@@ -351,43 +351,5 @@ func (s *Service) Registry() []mcp.ToolDescriptor {
 		{Tool: toolRO("clockify_resolve_debug", "Deprecated compatibility alias for clockify_resolve_name.", resolveNameInputSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ResolveDebug(ctx, args)
 		}},
-		{Tool: toolRO("clockify_policy_info", "Display the MCP server policy configuration; this is not Clockify workspace policy/governance. Use clockify_workspace_governance for Clockify workspace settings.", map[string]any{"type": "object"}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, _ map[string]any) (any, error) {
-			return s.PolicyInfo(ctx)
-		}},
-		{Tool: toolRO("clockify_list_tools", "Search/list the tool catalog by query string. Group results include activatable and block_reason metadata so agents can preflight whether activation will succeed under the current policy.", map[string]any{"type": "object", "properties": map[string]any{
-			"query": map[string]any{"type": "string", "description": "Search query for tools or groups"},
-		}}), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.ListTools(ctx, args)
-		}},
-		{Tool: toolRWIdem("clockify_activate_group", "Activate every tool in the named Tier-2 group. The response puts only currently visible/callable names in activated_tools and reports unavailable names under activated_tools_hidden_by_bootstrap or activated_tools_blocked_by_policy.", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name": map[string]any{"type": "string", "description": "Tier-2 group name to activate, e.g. invoices"},
-		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.ActivateToolGroup(ctx, args)
-		}},
-		{Tool: toolRWIdem("clockify_activate_tool", "Activate a hidden Tier-1 tool by name, or activate the full Tier-2 group that contains the named Tier-2 tool. The side effect can bring sibling tools online; inspect activated_tools after the call.", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name": map[string]any{"type": "string", "description": "Tool name to activate, e.g. clockify_send_invoice"},
-		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.ActivateNamedTool(ctx, args)
-		}},
-		{Tool: toolRWIdem("clockify_deactivate_group", "Deactivate a previously activated Tier-2 group and remove its tools from tools/list for this session. Idempotent: deactivating an inactive group removes zero tools.", map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
-			"name": map[string]any{"type": "string", "description": "Tier-2 group name to deactivate, e.g. invoices"},
-		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.DeactivateToolGroup(ctx, args)
-		}},
-		// clockify_search_tools is annotated as a write tool (idempotent)
-		// because the activate_group / activate_tool branches mutate the
-		// server's visible tool surface and emit
-		// notifications/tools/list_changed. ChatGPT's audit pointed out
-		// that classifying it read-only let activations bypass the
-		// intent/outcome audit pipeline — read-only tools short-circuit
-		// at audit.go's `hints.ReadOnly` gate. Idempotent because
-		// re-activating an already-active group is a no-op.
-		{Tool: toolRWIdem("clockify_search_tools", "Deprecated compatibility shim. Prefer clockify_list_tools, clockify_activate_group, clockify_activate_tool, or clockify_deactivate_group for single-purpose planning. In minimal/custom bootstrap modes, search results mark hidden Tier-1 tools with availability=tier1_hidden_by_bootstrap. Tier-2 groups remain the unit of activation.", map[string]any{"type": "object", "properties": map[string]any{
-			"query":          map[string]any{"type": "string", "description": "Search query for tools"},
-			"activate_group": map[string]any{"type": "string", "description": "Activate every tool in the named Tier-2 group (e.g. \"invoices\")"},
-			"activate_tool":  map[string]any{"type": "string", "description": "Activate a hidden Tier-1 tool, or activate the Tier-2 group that contains the named Tier-2 tool (e.g. \"clockify_send_invoice\" activates the full \"invoices\" group)."},
-		}}), ReadOnlyHint: false, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.SearchTools(ctx, args)
-		}},
 	}))
 }

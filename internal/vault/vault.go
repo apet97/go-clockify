@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package vault
 
 import (

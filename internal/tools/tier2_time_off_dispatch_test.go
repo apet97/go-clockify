@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Dispatcher-level coverage for tier2 time_off.listTimeOffRequests.

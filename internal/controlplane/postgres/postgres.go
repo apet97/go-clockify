@@ -1,4 +1,4 @@
-//go:build postgres
+//go:build legacy_platform && postgres
 
 // Package postgres provides a Postgres-backed controlplane.Store
 // implementation. It is selected at runtime by the DSN scheme

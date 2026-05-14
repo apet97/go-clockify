@@ -58,6 +58,12 @@ go run ./cmd/clockify-mcp
 MCP clients should launch the binary as a stdio subprocess and pass the
 environment variables above.
 
+To validate configuration without starting the MCP loop:
+
+```bash
+go run ./cmd/clockify-mcp doctor
+```
+
 ## Tool Coverage
 
 The runtime exposes workflow, domain, and raw API tools at startup. Start with
@@ -164,12 +170,15 @@ available, and ends by summarizing what changed.
 - `clockify://features`
 - `clockify://tools`
 - `clockify://workflows`
-- `clockify://demo/{run_id}`
+- `clockify://demo/phase1`
 - `clockify://recent/entries`
 - `clockify://recent/projects`
+- `clockify://workspace/{workspace_id}`
+- `clockify://workspace/{workspace_id}/user/current`
 
 `clockify_demo_seed` and `clockify_demo_cleanup` update
-`clockify://demo/{run_id}` for the run id passed to the tool.
+`clockify://demo/{run_id}` for the run id passed to the tool. Non-default demo
+run IDs are exposed through the `clockify://demo/{run_id}` resource template.
 
 ## Result Envelope
 

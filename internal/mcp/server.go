@@ -183,7 +183,7 @@ type RiskClass uint32
 const (
 	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
 	RiskWrite                                    // ordinary mutating writes
-	RiskSensitiveRead                            // reads users, policies, invoices, balances, webhooks, or similar sensitive state
+	RiskSensitiveRead                            // reads users, invoices, balances, webhooks, or similar sensitive state
 	RiskBilling                                  // touches invoices / payments
 	RiskAdmin                                    // workspace-admin scope (deactivate, group/user mgmt)
 	RiskPermissionChange                         // role / permission changes
@@ -194,19 +194,11 @@ const (
 // Has reports whether the receiver carries every bit in mask.
 func (r RiskClass) Has(mask RiskClass) bool { return r&mask == mask }
 
-// RiskHighMask is the union of risk-class bits that gate a tool call
-// behind a confirmation token per docs/adr/0018-risk-class-confirmation-tokens.md.
-// The set is intentionally narrow: ordinary RiskWrite stays
-// confirmation-free so the time-tracking surface is not slowed down
-// by the dry-run-first flow. RiskDestructive, RiskBilling, RiskAdmin,
-// RiskPermissionChange, and RiskExternalSideEffect each represent a
-// "agent fires off the wrong call" failure mode that the dry-run
-// preview is uniquely positioned to catch.
+// RiskHighMask is retained as metadata for clients that want to visually
+// distinguish billing, admin, external-side-effect, and destructive tools.
 const RiskHighMask = RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive
 
-// IsHighRisk reports whether any high-risk bit is set on the receiver.
-// Used by the confirmation-token gate (internal/enforcement) and by
-// the schema/annotation enrichment in internal/tools/common.go.
+// IsHighRisk reports whether any high-risk metadata bit is set.
 func (r RiskClass) IsHighRisk() bool { return r&RiskHighMask != 0 }
 
 type ToolDescriptor struct {
@@ -221,16 +213,14 @@ type ToolDescriptor struct {
 	// (billing, admin, permission_change, external_side_effect) override it
 	// in internal/tools/risk_overrides.go.
 	RiskClass RiskClass
-	// AuditKeys lists argument keys (beyond the implicit *_id suffix scan)
-	// whose values must be captured in audit events. Used for action-defining
-	// fields like role, status, quantity, unit_price.
+	// AuditKeys is kept as neutral legacy metadata for typed tool descriptors.
+	// The one-user stdio runtime does not wire an audit durability pipeline.
 	AuditKeys []string
 }
 
 type Server struct {
 	Version     string
 	Enforcement Enforcement   // nil = no filtering or enforcement
-	Activator   Activator     // nil = no dynamic tool visibility hook
 	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
 	// DefaultProtocolVersion is used only when initialize omits
 	// params.protocolVersion. Empty or unsupported values fall back to
@@ -264,37 +254,8 @@ type Server struct {
 	MaxInFlightToolCalls int
 	MaxMessageSize       int64
 
-	// StrictHostCheck enables DNS rebinding protection on the HTTP
-	// transport: the inbound Host header must match either a loopback
-	// literal or one of the configured allowed-origin hostnames. Defaults
-	// to off so that reverse-proxy deployments that rewrite Host are
-	// unaffected; flip on (MCP_STRICT_HOST_CHECK=1) in localhost-bound
-	// production deployments to get the strict guarantee.
-	StrictHostCheck bool
-
-	// BehindHTTPSProxy lets the baseline-header middleware emit
-	// Strict-Transport-Security on plaintext responses because a
-	// trusted upstream proxy is terminating TLS for us. Without TLS
-	// in front of the listener and without this flag, HSTS is skipped
-	// to avoid making honest http:// URLs unreachable on misconfigured
-	// dev installs. Wired from MCP_BEHIND_HTTPS_PROXY=1.
-	BehindHTTPSProxy bool
-
-	// HTTPAdmissionLimits configures process-local app-layer admission
-	// guards for legacy HTTP. Streamable HTTP receives the same values
-	// through StreamableHTTPOptions.
-	HTTPAdmissionLimits HTTPAdmissionLimits
-
-	// ExtraHTTPHandlers carries optional handlers that the legacy HTTP
-	// transport mounts on its mux before ListenAndServe. Used by the
-	// -tags=pprof build in cmd/clockify-mcp/ to attach /debug/pprof/*
-	// without forcing internal/mcp to depend on net/http/pprof. nil or
-	// empty = no extras registered, which is the default production path.
-	ExtraHTTPHandlers []ExtraHandler
-
-	mu           sync.RWMutex
-	tools        map[string]ToolDescriptor
-	activeGroups map[string][]string
+	mu    sync.RWMutex
+	tools map[string]ToolDescriptor
 	// toolListCache stores the sorted, filtered tools/list snapshot.
 	// Protected by mu and invalidated when descriptors or visibility changes.
 	toolListCache      []Tool
@@ -328,29 +289,6 @@ type Server struct {
 	clientVersion     string
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
-
-	Auditor        Auditor
-	AuditTenantID  string
-	AuditSubject   string
-	AuditSessionID string
-	AuditTransport string
-
-	// AuditDurabilityMode controls what happens when audit persistence fails
-	// for a non-read-only tool call.
-	//
-	//   "best_effort" (default): log the error and increment the failure metric;
-	//   do not fail the tool call.
-	//
-	//   "fail_closed": fail before mutation when the intent record cannot be
-	//   persisted; post-mutation outcome failures stay log/metric-only for
-	//   backwards compatibility.
-	//
-	//   "fail_closed_strict": same pre-mutation intent guard, plus post-mutation
-	//   outcome failures are returned to the client so the missing durable
-	//   outcome row is visible on the MCP wire.
-	//
-	//   Read-only operations are never affected regardless of this setting.
-	AuditDurabilityMode string
 
 	// readiness cache
 	readyMu     sync.Mutex
@@ -437,19 +375,17 @@ func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion stri
 	s.initialized.Store(true)
 }
 
-func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, activator Activator) *Server {
+func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, _ ...any) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {
 		toolMap[d.Tool.Name] = d
 	}
 	s := &Server{
-		Version:      version,
-		Enforcement:  enforcement,
-		Activator:    activator,
-		tools:        toolMap,
-		activeGroups: make(map[string][]string),
-		inflight:     make(map[any]context.CancelFunc),
-		prompts:      newPromptRegistry(),
+		Version:     version,
+		Enforcement: enforcement,
+		tools:       toolMap,
+		inflight:    make(map[any]context.CancelFunc),
+		prompts:     newPromptRegistry(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
 	return s

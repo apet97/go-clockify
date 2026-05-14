@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package testharness_test
 
 import (

@@ -197,47 +197,8 @@ func (s *Server) invalidateToolListCacheLocked() {
 	s.toolListResultJSONValid = false
 }
 
-// invokeHandler runs the tool handler under a deferred panic-recovery
-// wrapper that pairs the pre-handler intent record with a
-// PhaseHandlerPanic outcome record before the panic propagates up to
-// RecoverDispatch. Without this layer, a panicking handler leaves the
-// intent row orphaned in the audit trail — the client sees the
-// "internal tool error" JSON-RPC envelope but the audit log has no
-// matching outcome, which breaks fail_closed-strict reconciliation
-// and any operator scan that pairs intent/outcome events.
-//
-// The wrapper re-panics so the existing RecoverDispatch deferred at
-// each transport's dispatch site still emits its metric, slog event,
-// and stable JSON-RPC tool-error envelope. The audit row is best-
-// effort: failing the panic itself on audit persistence would mask
-// the original crash and is no more useful than the regular
-// fail_closed paths.
-func (s *Server) invokeHandler(ctx context.Context, name string, d ToolDescriptor, args map[string]any, hints ToolHints, reqID int64) (result any, err error) {
-	if !hints.ReadOnly {
-		defer func() {
-			if rec := recover(); rec != nil {
-				reason := truncatePanicReason(fmt.Sprintf("%v", rec))
-				_ = s.emitAudit(name, "tools/call", "panic", PhaseHandlerPanic, reason, args, hints)
-				slog.Warn("tool_call_panic_audit_paired",
-					"tool", name,
-					"req_id", reqID,
-				)
-				panic(rec)
-			}
-		}()
-	}
+func (s *Server) invokeHandler(ctx context.Context, _ string, d ToolDescriptor, args map[string]any, _ ToolHints, _ int64) (any, error) {
 	return d.Handler(ctx, args)
-}
-
-// truncatePanicReason keeps the audit `reason` column at a sane size
-// even when a handler panics with a multi-KB string. The full panic
-// value remains in the slog `panic_recovered` event.
-func truncatePanicReason(s string) string {
-	const max = 256
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "..."
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
@@ -259,7 +220,6 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	s.mu.RUnlock()
 	if !ok {
 		outcome = "tool_error"
-		s.recordAuditBestEffort(params.Name, "tools/call", outcome, "unknown_tool", params.Arguments, ToolHints{})
 		slog.Warn("tool_call", "tool", params.Name, "error", "unknown_tool", "req_id", reqID)
 		return nil, &UnknownToolError{Name: params.Name}
 	}
@@ -272,11 +232,9 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		ReadOnly:    d.ReadOnlyHint,
 		Destructive: d.DestructiveHint,
 		Idempotent:  d.IdempotentHint,
-		AuditKeys:   d.AuditKeys,
 		RiskClass:   d.RiskClass,
 	}
 
-	// Enforcement: policy gate, rate limit, dry-run intercept
 	var release func()
 	if s.Enforcement != nil {
 		lookup := func(name string) (ToolHandler, bool) {
@@ -300,53 +258,19 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 				outcome = "invalid_params"
 			case errors.Is(err, ratelimit.ErrRateLimitExceeded), errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded):
 				outcome = "rate_limited"
-			case strings.Contains(err.Error(), "blocked by policy"):
-				outcome = "policy_denied"
-			case strings.Contains(err.Error(), "confirmation token required"):
-				outcome = "confirmation_required"
-			case strings.Contains(err.Error(), "confirmation token expired"):
-				outcome = "confirmation_expired"
-			case strings.Contains(err.Error(), "confirmation token"):
-				outcome = "confirmation_invalid"
 			default:
 				outcome = "tool_error"
 			}
-			s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
 			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
 			return nil, err
 		}
 		if result != nil {
 			outcome = "dry_run"
-			s.recordAuditBestEffort(params.Name, "tools/call", outcome, "dry_run_intercepted", params.Arguments, hints)
 			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
 			return result, nil
 		}
 	}
 
-	// Pre-mutation intent audit. For non-read-only calls, write the
-	// intent record BEFORE the handler runs so MCP_AUDIT_DURABILITY=
-	// fail_closed actually blocks mutations when the audit pipeline is
-	// broken. In best_effort mode the intent failure is logged and we
-	// continue; in fail_closed the caller gets an error and the handler
-	// is never invoked.
-	if !d.ReadOnlyHint {
-		if intentErr := s.recordAuditIntent(params.Name, "tools/call", params.Arguments, hints); intentErr != nil {
-			outcome = "audit_intent_failed"
-			slog.Warn("tool_call_blocked_by_audit",
-				"tool", params.Name,
-				"error", intentErr.Error(),
-				"req_id", reqID,
-				"durability_mode", s.AuditDurabilityMode,
-				"tenant_id", s.AuditTenantID,
-				"subject", s.AuditSubject,
-				"session_id", s.AuditSessionID,
-				"transport", s.AuditTransport,
-			)
-			return nil, intentErr
-		}
-	}
-
-	// Dispatch
 	start := time.Now()
 	timeout := s.ToolTimeout
 	if timeout <= 0 {
@@ -357,7 +281,6 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 
 	result, err := s.invokeHandler(callCtx, params.Name, d, params.Arguments, hints, reqID)
 	duration := time.Since(start)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded):
@@ -369,48 +292,11 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		default:
 			outcome = "tool_error"
 		}
-		// Failed mutation: write the outcome record so the intent is
-		// paired with a failure, not orphaned. Best-effort — the handler
-		// already reported its error and failing the call on audit here
-		// would only confuse the client.
-		if !d.ReadOnlyHint {
-			if auditErr := s.recordAuditOutcome(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints); auditErr != nil {
-				slog.Warn("tool_call_outcome_not_durable",
-					"tool", params.Name,
-					"error", auditErr.Error(),
-					"duration_ms", duration.Milliseconds(),
-					"req_id", reqID,
-				)
-			}
-		} else {
-			s.recordAuditBestEffort(params.Name, "tools/call", outcome, err.Error(), params.Arguments, hints)
-		}
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
 		return nil, err
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
-	if !d.ReadOnlyHint {
-		// Successful mutation: pair the earlier intent with a
-		// succeeded outcome. Best-effort — the mutation has already
-		// committed, so failing the call on audit write here is
-		// pointless for legacy fail_closed (the intent proved
-		// fail_closed wasn't going to block us). Persistence failures
-		// still emit slog audit_persist_failed + metrics. Operators
-		// that need the client to see outcome-row loss can opt into
-		// fail_closed_strict, where recordAuditOutcome returns an error.
-		if auditErr := s.recordAuditOutcome(params.Name, "tools/call", outcome, "", params.Arguments, hints); auditErr != nil {
-			slog.Warn("tool_call_outcome_not_durable",
-				"tool", params.Name,
-				"error", auditErr.Error(),
-				"duration_ms", duration.Milliseconds(),
-				"req_id", reqID,
-			)
-			return nil, auditErr
-		}
-		slog.Info("audit", "tool", params.Name, "destructive", d.DestructiveHint, "req_id", reqID)
-	}
 
-	// Post-processing (truncation)
 	if s.Enforcement != nil {
 		processed, err := s.Enforcement.AfterCall(result)
 		if err != nil {
@@ -418,7 +304,6 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		}
 		result = processed
 	}
-
 	return result, nil
 }
 
@@ -429,99 +314,4 @@ func (s *Server) InFlightToolCalls() int {
 		return 0
 	}
 	return len(s.toolCallSem)
-}
-
-// ActivateGroup registers a group of tool descriptors dynamically and
-// sends a tools/list_changed notification to the client.
-func (s *Server) ActivateGroup(groupName string, descriptors []ToolDescriptor) error {
-	if s.Activator != nil && !s.Activator.IsGroupAllowed(groupName) {
-		return fmt.Errorf("group '%s' is blocked by policy", groupName)
-	}
-	s.mu.Lock()
-	activatedNames := make([]string, 0, len(descriptors))
-	for _, d := range descriptors {
-		s.tools[d.Tool.Name] = d
-		activatedNames = append(activatedNames, d.Tool.Name)
-	}
-	s.activeGroups[groupName] = append([]string(nil), activatedNames...)
-	s.invalidateToolListCacheLocked()
-	s.mu.Unlock()
-	if s.Activator != nil {
-		s.Activator.OnActivate(activatedNames)
-		s.mu.Lock()
-		s.invalidateToolListCacheLocked()
-		s.mu.Unlock()
-	}
-	s.notifyToolsChanged()
-	slog.Info("group_activated", "group", groupName, "tools_added", len(descriptors))
-	return nil
-}
-
-// DeactivateGroup removes descriptors that were previously registered by
-// ActivateGroup and sends a tools/list_changed notification. The operation is
-// idempotent: deactivating a group that is not active is a no-op.
-func (s *Server) DeactivateGroup(groupName string) []string {
-	s.mu.Lock()
-	deactivatedNames := append([]string(nil), s.activeGroups[groupName]...)
-	for _, name := range deactivatedNames {
-		delete(s.tools, name)
-	}
-	delete(s.activeGroups, groupName)
-	if len(deactivatedNames) > 0 {
-		s.invalidateToolListCacheLocked()
-	}
-	s.mu.Unlock()
-	if len(deactivatedNames) == 0 {
-		return deactivatedNames
-	}
-	if s.Activator != nil {
-		s.Activator.OnDeactivate(deactivatedNames)
-		s.mu.Lock()
-		s.invalidateToolListCacheLocked()
-		s.mu.Unlock()
-	}
-	s.notifyToolsChanged()
-	slog.Info("group_deactivated", "group", groupName, "tools_removed", len(deactivatedNames))
-	return deactivatedNames
-}
-
-// ActivateTier1Tool marks a single registered tool as visible.
-func (s *Server) ActivateTier1Tool(name string) error {
-	s.mu.Lock()
-	if _, exists := s.tools[name]; !exists {
-		s.mu.Unlock()
-		return fmt.Errorf("unknown tool: %s", name)
-	}
-	s.invalidateToolListCacheLocked()
-	s.mu.Unlock()
-	if s.Activator != nil {
-		s.Activator.OnActivate([]string{name})
-		s.mu.Lock()
-		s.invalidateToolListCacheLocked()
-		s.mu.Unlock()
-	}
-	s.notifyToolsChanged()
-	slog.Info("tier1_tool_activated", "tool", name)
-	return nil
-}
-
-// notifyToolsChanged delivers notifications/tools/list_changed through the
-// configured Notifier. If no notifier is installed (e.g. a test harness that
-// calls ActivateGroup directly without running a transport), the notification
-// is dropped and counted so the gap is visible in /metrics.
-func (s *Server) notifyToolsChanged() {
-	if s.hub.len() == 0 {
-		metrics.ProtocolErrorsTotal.Inc("notification_dropped_no_notifier")
-		slog.Warn("notification_dropped",
-			"method", "notifications/tools/list_changed",
-			"reason", "no_notifier_installed",
-		)
-		return
-	}
-	if err := s.Notify("notifications/tools/list_changed", map[string]any{}); err != nil {
-		slog.Warn("notification_failed",
-			"method", "notifications/tools/list_changed",
-			"error", err.Error(),
-		)
-	}
 }

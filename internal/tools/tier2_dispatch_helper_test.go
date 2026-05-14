@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Helper for dispatching Tier 2 tool calls through the full MCP pipeline in

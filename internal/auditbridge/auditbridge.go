@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package auditbridge converts mcp.AuditEvent records into the
 // controlplane.AuditEvent shape the durable audit store accepts.
 //

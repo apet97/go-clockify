@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package harness provides a unified TransportHarness interface that lets
 // one test body exercise stdio, legacy HTTP, streamable HTTP, and gRPC in
 // parallel. Each factory binds an OS-assigned port (or bufconn for gRPC) so

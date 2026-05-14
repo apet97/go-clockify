@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 package tools_test
 
 // Dispatcher-level tests for the Tier 1 destructive surface. These assert

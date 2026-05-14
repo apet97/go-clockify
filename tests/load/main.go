@@ -1,3 +1,5 @@
+//go:build legacy_platform
+
 // Package main is the clockify-mcp load harness. It drives the
 // per-token rate limiter under configurable scenarios and reports
 // aggregate throughput + per-tenant rejection rates.
