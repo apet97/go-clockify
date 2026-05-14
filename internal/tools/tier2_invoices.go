@@ -433,6 +433,176 @@ func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (Resul
 	}), nil
 }
 
+func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	invoiceID, err := requiredIDArg(args, "invoice_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "export")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query := url.Values{}
+	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
+		query.Set("format", format)
+	}
+	raw, err := s.Client.RequestRawValues(ctx, false, "GET", path, query, nil)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	data := documentedRawResponse(raw.Header, raw.Body)
+	if body, ok := data["body"]; ok {
+		data["content"] = body
+	}
+	return ok("clockify_invoices_export", data, map[string]any{
+		"workspaceId": wsID,
+		"invoiceId":   invoiceID,
+		"format":      strings.TrimSpace(stringArg(args, "format")),
+		"binary":      true,
+	}), nil
+}
+
+func (s *Service) importInvoiceTimeOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	invoiceID, err := requiredIDArg(args, "invoice_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	timeEntryIDs, found, err := strictStringSliceArg(args, "time_entry_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found || len(timeEntryIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("time_entry_ids is required")
+	}
+	if err := requirePresentArgs(args, "time_entry_group_type"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", "import")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := nativeBodyFromArgs(args, "time_entry_group_type")
+	body["timeEntryIds"] = timeEntryIDs
+	var imported map[string]any
+	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_invoices_import_time", invoiceItemViewFromRaw(imported, ""), map[string]any{
+		"workspaceId":   wsID,
+		"invoiceId":     invoiceID,
+		"timeEntryIds":  timeEntryIDs,
+		"importedCount": len(timeEntryIDs),
+	}), nil
+}
+
+func (s *Service) importInvoiceExpensesOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	invoiceID, err := requiredIDArg(args, "invoice_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	expenseIDs, found, err := strictStringSliceArg(args, "expense_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found || len(expenseIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("expense_ids is required")
+	}
+	includeExpenses, found := optionalBoolArg(args, "include_expenses")
+	if !found {
+		return ResultEnvelope{}, fmt.Errorf("include_expenses is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", "import")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := nativeBodyFromArgs(args)
+	if body == nil {
+		body = map[string]any{}
+	}
+	body["expenseIds"] = expenseIDs
+	body["includeExpenses"] = includeExpenses
+	var imported map[string]any
+	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_invoices_import_expenses", invoiceItemViewFromRaw(imported, ""), map[string]any{
+		"workspaceId":   wsID,
+		"invoiceId":     invoiceID,
+		"expenseIds":    expenseIDs,
+		"importedCount": len(expenseIDs),
+	}), nil
+}
+
+func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	invoiceID, err := requiredIDArg(args, "invoice_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := requirePresentArgs(args, "amount", "date", "note"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "payments")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := nativeBodyFromArgs(args, "amount", "date", "note")
+	var created map[string]any
+	if err := s.Client.Post(ctx, path, body, &created); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_invoices_payments_create", invoicePaymentViewFromRaw(created, ""), map[string]any{
+		"workspaceId": wsID,
+		"invoiceId":   invoiceID,
+	}), nil
+}
+
+func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	invoiceID, err := requiredIDArg(args, "invoice_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	paymentID, err := requiredIDArg(args, "payment_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", invoiceID, "payments", paymentID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Delete(ctx, path); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_invoices_payments_delete", map[string]any{
+		"deleted":   true,
+		"invoiceId": invoiceID,
+		"paymentId": paymentID,
+	}, map[string]any{
+		"workspaceId": wsID,
+		"invoiceId":   invoiceID,
+		"paymentId":   paymentID,
+	}), nil
+}
+
 func (s *Service) createInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	clientID := stringArg(args, "client_id")
 	if err := resolve.ValidateID(clientID, "client_id"); err != nil {

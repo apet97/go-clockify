@@ -448,6 +448,78 @@ func (s *Service) getWorkspaceScheduleUserTotals(ctx context.Context, args map[s
 	}), nil
 }
 
+func (s *Service) schedulingUserTotalsOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	userRef := stringArg(args, "user_id")
+	if userRef == "" {
+		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+	}
+	userID, err := s.resolveUserID(ctx, wsID, userRef)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query := map[string]string{"start": start, "end": end}
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "users", userID, "totals")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var raw any
+	if err := s.Client.Get(ctx, path, query, &raw); err != nil {
+		return ResultEnvelope{}, err
+	}
+	var data any
+	if capacity, ok := raw.(map[string]any); ok {
+		data, _ = s.enrichScheduleCapacity(ctx, wsID, capacity, args)
+	} else if rows := mapSlice(raw); len(rows) > 0 {
+		data = scheduleTotalView(rows[0], "USER")
+	} else {
+		data = raw
+	}
+	return ok("clockify_scheduling_user_totals", data, map[string]any{
+		"workspaceId": wsID,
+		"userId":      userID,
+		"start":       start,
+		"end":         end,
+	}), nil
+}
+
+func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	userIDs, found, err := strictStringSliceArg(args, "user_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found || len(userIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("user_ids is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	rawArgs := copyArgs(args)
+	rawArgs["users"] = userIDs
+	totals, err := s.getWorkspaceScheduleUserTotalsRaw(ctx, wsID, rawArgs)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	views := make([]map[string]any, 0, len(totals))
+	for _, total := range totals {
+		views = append(views, scheduleTotalView(total, "USER"))
+	}
+	return ok("clockify_scheduling_capacity", views, map[string]any{
+		"workspaceId": wsID,
+		"userIds":     userIDs,
+		"count":       len(totals),
+	}), nil
+}
+
 func (s *Service) getWorkspaceScheduleUserTotalsRaw(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, error) {
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)

@@ -623,6 +623,35 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		t.Fatalf("missing native discovery tools: %+v", wantNative)
 	}
 
+	explicitOnly := map[string]bool{
+		"clockify_users_invite":                  true,
+		"clockify_workspace_settings":            true,
+		"clockify_invoices_export":               true,
+		"clockify_invoices_import_time":          true,
+		"clockify_invoices_import_expenses":      true,
+		"clockify_invoices_payments_list":        true,
+		"clockify_invoices_payments_create":      true,
+		"clockify_invoices_payments_delete":      true,
+		"clockify_scheduling_user_totals":        true,
+		"clockify_scheduling_capacity":           true,
+		"clockify_approvals_resubmit":            true,
+		"clockify_holidays_get":                  true,
+		"clockify_holidays_update":               true,
+		"clockify_holidays_list_for_user_period": true,
+	}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if !explicitOnly[descriptor.Tool.Name] {
+			continue
+		}
+		if descriptor.Tool.Annotations["method"] != nil || descriptor.Tool.Annotations["path"] != nil {
+			t.Fatalf("%s is still backed by route descriptor annotations: %+v", descriptor.Tool.Name, descriptor.Tool.Annotations)
+		}
+		delete(explicitOnly, descriptor.Tool.Name)
+	}
+	if len(explicitOnly) > 0 {
+		t.Fatalf("missing explicit native route replacements: %+v", explicitOnly)
+	}
+
 	if aliases := svc.nativeAliasDescriptors(); len(aliases) != 0 {
 		names := make([]string, 0, len(aliases))
 		for _, descriptor := range aliases {

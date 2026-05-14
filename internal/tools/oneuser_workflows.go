@@ -464,15 +464,19 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 	}
 	standard.IDs["clientId"] = clientID
 	if invoiceID := standard.IDs["invoiceId"]; invoiceID != "" && len(stringSliceArg(invoiceArgs, "time_entry_ids")) > 0 {
-		imported, importErr := s.callRouteTool(ctx, rt(0, "POST", "clockify_invoices_import_time", "", "invoices/{invoice_id}/items/import", "invoice_item", []string{"invoice_id"}, fields("time_entry_ids", "time_entry_group_type"), nil, []string{"time_entry_ids", "time_entry_group_type"}, false, false, false, "updated"), map[string]any{
+		importArgs := map[string]any{
 			"invoice_id":            invoiceID,
 			"time_entry_ids":        stringSliceArg(invoiceArgs, "time_entry_ids"),
 			"time_entry_group_type": firstNonEmpty([]string{stringArg(invoiceArgs, "time_entry_group_type"), "DETAILED"}),
-		})
+		}
+		imported, importErr := s.importInvoiceTimeOneUser(ctx, importArgs)
 		if importErr != nil {
 			standard.Warnings = append(standard.Warnings, Warning{Code: "invoice_import_failed", Message: importErr.Error()})
 		} else {
-			standard.Data = map[string]any{"invoice": standard.Data, "import": imported}
+			standard.Data = map[string]any{
+				"invoice": standard.Data,
+				"import":  standardizeDomainResult("clockify_invoices_import_time", "invoice_item", "updated", imported, importArgs),
+			}
 		}
 	}
 	standard.Next = []NextAction{

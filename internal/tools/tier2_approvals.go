@@ -156,6 +156,33 @@ func (s *Service) resubmitForApproval(ctx context.Context, args map[string]any) 
 	return s.postApprovalPeriod(ctx, args, "clockify_resubmit_for_approval", "approval-requests", "resubmit-entries-for-approval")
 }
 
+func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	approvalID, err := requiredIDArg(args, "approval_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := requirePresentArgs(args, "entry_ids", "expense_ids", "note"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "approval-requests", "resubmit-entries-for-approval")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := nativeBodyFromArgs(args, "approval_id", "entry_ids", "expense_ids", "note")
+	var updated any
+	if err := s.Client.Post(ctx, path, body, &updated); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_approvals_resubmit", approvalDataView(updated), map[string]any{
+		"workspaceId": wsID,
+		"approvalId":  approvalID,
+	}), nil
+}
+
 func (s *Service) submitForUserApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	return s.postUserApprovalPeriod(ctx, args, "clockify_submit_for_user_approval", "approval-requests", "users")
 }

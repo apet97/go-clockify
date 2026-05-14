@@ -329,6 +329,37 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	}), nil
 }
 
+func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	holidayID, err := requiredIDArg(args, "holiday_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "holidays", holidayID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var raw any
+	if err := s.Client.Get(ctx, path, nil, &raw); err != nil {
+		return ResultEnvelope{}, err
+	}
+	out, isMap := raw.(map[string]any)
+	if !isMap {
+		if rows := mapSlice(raw); len(rows) > 0 {
+			out = rows[0]
+		} else {
+			out = map[string]any{"raw": raw}
+		}
+	}
+	return ok("clockify_holidays_get", out, map[string]any{
+		"workspaceId": wsID,
+		"holidayId":   holidayID,
+	}), nil
+}
+
 func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	assignedTo := firstNonEmptyString(strings.TrimSpace(stringArg(args, "assigned_to")), strings.TrimSpace(stringArg(args, "user_id")))
 	if assignedTo == "" {
@@ -425,6 +456,72 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 	}
 	out["date_period"] = holidayDatePeriodSnake(out, startDate, endDate)
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
+}
+
+func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	holidayID, err := requiredIDArg(args, "holiday_id")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := requirePresentArgs(args, "name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids"); err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	body := nativeBodyFromArgs(args)
+	if body == nil {
+		body = map[string]any{}
+	}
+	name := strings.TrimSpace(stringArg(args, "name"))
+	if name != "" {
+		body["name"] = name
+	}
+	startDate := strings.TrimSpace(stringArg(args, "start_date"))
+	endDate := strings.TrimSpace(stringArg(args, "end_date"))
+	if startDate != "" || endDate != "" {
+		body["datePeriod"] = map[string]any{
+			"startDate": startDate,
+			"endDate":   firstNonEmptyString(endDate, startDate),
+		}
+	}
+	if occurs, ok := optionalBoolArg(args, "occurs_annually"); ok {
+		body["occursAnnually"] = occurs
+	}
+	if userIDs, found, err := strictStringSliceArg(args, "user_ids"); err != nil {
+		return ResultEnvelope{}, err
+	} else if found && len(userIDs) > 0 {
+		body["users"] = map[string]any{
+			"contains": "CONTAINS",
+			"ids":      userIDs,
+			"status":   "ACTIVE",
+		}
+	}
+	if groupIDs, found, err := strictStringSliceArg(args, "user_group_ids"); err != nil {
+		return ResultEnvelope{}, err
+	} else if found && len(groupIDs) > 0 {
+		body["userGroups"] = map[string]any{
+			"contains": "CONTAINS",
+			"ids":      groupIDs,
+			"status":   "ALL",
+		}
+	}
+
+	path, err := paths.Workspace(wsID, "holidays", holidayID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var out map[string]any
+	if err := s.Client.Put(ctx, path, body, &out); err != nil {
+		return ResultEnvelope{}, err
+	}
+	out["date_period"] = holidayDatePeriodSnake(out, startDate, firstNonEmptyString(endDate, startDate))
+	return ok("clockify_holidays_update", out, map[string]any{
+		"workspaceId": wsID,
+		"holidayId":   holidayID,
+	}), nil
 }
 
 func holidayDatePeriodSnake(out map[string]any, fallbackStart, fallbackEnd string) map[string]any {
