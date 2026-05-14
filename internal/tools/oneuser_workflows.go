@@ -647,7 +647,7 @@ func logWorkSchema() map[string]any {
 func startWorkSchema() map[string]any {
 	schema := logWorkSchema()
 	delete(schema, "required")
-	props := schema["properties"].(map[string]any)
+	props, _ := schema["properties"].(map[string]any)
 	props["start"] = map[string]any{"type": "string", "description": flexibleDatetimeDescription + ". Default: now."}
 	delete(props, "end")
 	return schema
@@ -680,7 +680,7 @@ func reviewDaySchema() map[string]any {
 
 func reviewWeekSchema() map[string]any {
 	schema := reviewDaySchema()
-	props := schema["properties"].(map[string]any)
+	props, _ := schema["properties"].(map[string]any)
 	props["week_start"] = map[string]any{"type": "string", "description": "Any date in the week to review. Default: current week."}
 	delete(props, "date")
 	return schema

@@ -405,7 +405,7 @@ func splitPath(path string) []string {
 }
 
 func decode(r *http.Request, out any) error {
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	return json.NewDecoder(r.Body).Decode(out)
 }
 

@@ -24,14 +24,6 @@ var tier2GroupBuilders = map[string]func(*Service) []mcp.ToolDescriptor{
 	"probe_lab_api":   probeLabAPIHandlers,
 }
 
-func tier2GroupNamesForTest() []string {
-	out := make([]string, 0, len(tier2GroupBuilders))
-	for name := range tier2GroupBuilders {
-		out = append(out, name)
-	}
-	return out
-}
-
 func tier2Handlers(svc *Service, name string) ([]mcp.ToolDescriptor, bool) {
 	build, ok := tier2GroupBuilders[name]
 	if !ok {

@@ -273,7 +273,6 @@ type Server struct {
 	// readiness cache
 	readyMu     sync.Mutex
 	readyCached bool
-	readyAt     time.Time
 
 	// inflight tracks cancellable contexts for in-flight tools/call
 	// requests, keyed by JSON-RPC request ID. notifications/cancelled

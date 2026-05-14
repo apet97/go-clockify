@@ -804,7 +804,7 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 		return current
 	}
 	ids := map[string]string{}
-	var data any = out
+	data := out
 	var warnings []Warning
 	if env, ok := out.(ResultEnvelope); ok {
 		data = env.Data

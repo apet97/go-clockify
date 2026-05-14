@@ -273,33 +273,6 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	}
 }
 
-func dispatchOneUserResult(t *testing.T, server *mcp.Server, method string, params any) map[string]any {
-	t.Helper()
-	req := map[string]any{"jsonrpc": "2.0", "id": 1, "method": method}
-	if params != nil {
-		req["params"] = params
-	}
-	rawReq, err := json.Marshal(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := server.DispatchMessage(context.Background(), rawReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp struct {
-		Result map[string]any `json:"result"`
-		Error  any            `json:"error,omitempty"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		t.Fatal(err)
-	}
-	if resp.Error != nil {
-		t.Fatalf("%s returned error: %s", method, raw)
-	}
-	return resp.Result
-}
-
 func runOneUserProtocol(t *testing.T, server *mcp.Server, lines []string) map[float64]map[string]any {
 	t.Helper()
 	var out strings.Builder

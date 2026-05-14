@@ -19,21 +19,10 @@ import (
 	"github.com/apet97/go-clockify/internal/tools"
 )
 
-// version, commit, and buildDate are populated at build time via ldflags:
+// version is populated at build time via ldflags:
 //
-//	go build -ldflags "-X main.version=v0.5.0 \
-//	                   -X main.commit=$(git rev-parse HEAD) \
-//	                   -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-//	        ./cmd/clockify-mcp
-//
-// commit and buildDate default to placeholder strings when ldflags are not
-// set (local `go run`, `go build` without flags), so the /metrics build_info
-// gauge always emits a sample.
-var (
-	version   = "dev"
-	commit    = "unknown"
-	buildDate = "unknown"
-)
+//	go build -ldflags "-X main.version=v1.2.3" ./cmd/clockify-mcp
+var version = "dev"
 
 func effectiveVersion() string {
 	if version != "" && version != "dev" {

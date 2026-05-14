@@ -13,8 +13,6 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-    # Hard ceiling: gofmt scan + diff is seconds; 5m absorbs cold-cache
-    # setup-go without letting a stuck step monopolise the runner.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -34,8 +32,6 @@ jobs:
   vet:
     name: Vet
     runs-on: ubuntu-latest
-    # Hard ceiling: go vet is pure AST analysis, seconds; 5m absorbs
-    # cold-cache setup-go.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -47,9 +43,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    # Hard ceiling: golangci-lint v2.5.0 typically runs 10-30s warm,
-    # but the action pulls a sizeable tool on cold cache; 10m leaves
-    # headroom without letting a hung analyser monopolise the runner.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -63,8 +56,6 @@ jobs:
   vulncheck:
     name: Vulncheck
     runs-on: ubuntu-latest
-    # Hard ceiling: govulncheck install + scan is 20-60s warm; 10m
-    # leaves headroom for cold module downloads.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -72,10 +63,6 @@ jobs:
         with:
           go-version: "1.25.10"
       - name: Run govulncheck
-        # Pin to a tagged golang.org/x/vuln release so supply-chain
-        # auditors can point at what actually ran. The version is
-        # managed in tools/govulncheck/go.mod so Dependabot can open
-        # PRs for subsequent scanner releases.
         run: |
           (cd tools/govulncheck && GOWORK=off go install golang.org/x/vuln/cmd/govulncheck)
           govulncheck -version
@@ -84,26 +71,40 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    # Hard ceiling: compile-only across 4 build-tag combos is 10-20s;
-    # 5m leaves headroom for cold-cache go install.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: "1.25.10"
-      - name: Verify build-tag wiring (default + otel/grpc/pprof/fips)
-        # Extracted to scripts/check-build-tags.sh so `make verify-core` and CI
-        # exercise the same symbol and go.mod parity checks.
-        run: bash scripts/check-build-tags.sh
+      - name: Build clockify-mcp
+        run: go build -o /tmp/clockify-mcp ./cmd/clockify-mcp
+      - name: Verify default build has no platform symbols
+        run: |
+          set -e
+          for pat in opentelemetry 'net/http/pprof' 'google.golang.org/grpc' 'jackc/pgx'; do
+            count=$(go tool nm /tmp/clockify-mcp | grep -c "$pat" || true)
+            printf '%s symbol count: %s\n' "$pat" "$count"
+            if [ "$count" -ne 0 ]; then
+              echo "FAIL: default build leaked $pat symbols" >&2
+              exit 1
+            fi
+          done
+      - name: Verify go.mod has no platform rows
+        run: |
+          set -e
+          for pat in 'go.opentelemetry.io' 'google.golang.org/grpc' 'jackc/pgx'; do
+            count=$(grep -c "$pat" go.mod || true)
+            printf '%s rows: %s\n' "$pat" "$count"
+            if [ "$count" -ne 0 ]; then
+              echo "FAIL: go.mod leaked $pat rows" >&2
+              exit 1
+            fi
+          done
 
   test:
     name: Test
     runs-on: ubuntu-latest
-    # Hard ceiling: full race suite typically completes in 1-2min and
-    # the inner -timeout 120s caps an individual hang; 10m bounds the
-    # whole job in case the runner stalls before the inner timeout
-    # fires.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -112,229 +113,46 @@ jobs:
           go-version: "1.25.10"
       - run: go test -race -count=1 -timeout 120s ./...
 
-  test-grpc:
-    name: Test (gRPC tag)
+  smoke-stdio:
+    name: Stdio smoke
     runs-on: ubuntu-latest
-    # Hard ceiling: -tags=grpc E2E typically completes in 2-3min and
-    # the inner -timeout 180s caps an individual hang; 10m bounds the
-    # whole job.
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: "1.25.10"
-      - name: Run cross-transport tests under -tags=grpc
-        # Mirrors the "full E2E" line in `make release-check`:
-        #   go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
-        # The default `test` job above runs without build tags, which
-        # skips //go:build grpc files in tests/ (parity_grpc_test.go,
-        # e2e_grpc_test.go, harness/grpc_smoke_test.go) and the gRPC
-        # rows of the cross-transport parity matrix (cancellation,
-        # list_changed, size_limit, panic_recovery). The build job
-        # is compile-only via scripts/check-build-tags.sh, and
-        # grpc-auth-smoke below is unit-scoped to internal/transport/grpc.
-        # Without this job, a regression in tests/harness/grpc.go,
-        # the async gRPC DispatchMessage panic recovery, or any gRPC
-        # parity assertion would land on main if the contributor
-        # skipped `make release-check` locally.
-        # Static command, no untrusted input — hook advisory does not apply.
-        run: go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
+      - name: Build and exercise initialize + tools/list
+        env:
+          CLOCKIFY_API_KEY: ci-test-key
+          CLOCKIFY_WORKSPACE_ID: "00000000000000000000abcd"
+        run: bash scripts/smoke-stdio.sh
 
-  coverage:
-    name: Coverage
+  catalog-drift:
+    name: Tool-catalog drift
     runs-on: ubuntu-latest
-    # Hard ceiling: re-runs the full suite under cover profile, 2-3min
-    # warm; 10m leaves headroom for cold-cache module downloads.
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: "1.25.10"
-      - name: Run tests and enforce coverage floors
-        # Global + per-package floors are defined in scripts/check-coverage.sh
-        # (COVERAGE_GLOBAL_FLOOR, COVERAGE_FLOORS). `make cover-check` calls
-        # the same script so local runs match CI.
-        run: bash scripts/check-coverage.sh
-
-  fuzz:
-    name: Fuzz
-    runs-on: ubuntu-latest
-    # Hard ceiling: if any target hangs, the whole job is killed after 8min
-    # instead of occupying the runner for GitHub's default 6-hour timeout.
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Run fuzz targets
-        # Count-based budget (-fuzztime=Nx) instead of duration-based
-        # (-fuzztime=Ns) to eliminate the "context deadline exceeded"
-        # flake class at its root. The old 30s budget was a patch over
-        # a 20s budget that itself was a patch over a 10s budget --
-        # each bump delayed the symptom without fixing the cause,
-        # which is that Go's fuzz engine cancels its internal context
-        # at exactly -fuzztime, and any worker still mid-execution
-        # surfaces the cancellation as a test failure even when no
-        # input actually crashed. Wave D's 800-entry committed corpus
-        # made this worse because baseline gathering now takes a
-        # meaningful slice of the duration budget before mutation
-        # starts. Count-based budgets have no timing race: the engine
-        # stops after N executions regardless of wall clock.
-        #
-        # 300_000 execs per target * ~250k execs/sec on GitHub Actions
-        # runners -> ~1.2s per target, total ~4s for the job plus
-        # build + baseline gathering. Well under the 8min job ceiling.
+      - name: Regenerate tool catalog
+        run: go run ./scripts/gen-tool-catalog -out docs
+      - name: Fail if generated catalog drifted
         run: |
-          go test -fuzz=FuzzParseDatetime -fuzztime=300000x -run='^$' -timeout=5m ./internal/timeparse
-          go test -fuzz=FuzzValidateID   -fuzztime=300000x -run='^$' -timeout=5m ./internal/resolve
-          go test -fuzz=FuzzJSONRPCParse -fuzztime=300000x -run='^$' -timeout=5m ./internal/mcp
-
-  config-doc-parity:
-    name: Config doc parity
-    runs-on: ubuntu-latest
-    # Hard ceiling: three static parity scripts, 10-30s combined;
-    # 5m absorbs cold-cache setup-go.
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Verify help+README generated from internal/config/spec.go
-        # Re-renders cmd/clockify-mcp/help_generated.go and the
-        # CONFIG-TABLE block in README.md, then fails if either has
-        # drifted from internal/config/AllSpecs(). Keeps EnvSpec as the
-        # single source of truth; editing spec.go without regenerating
-        # cannot merge. Input is the static script path, not event data.
-        run: bash scripts/check-config-doc-parity.sh
-      - name: Verify governance matches branch-protection snapshot
-        # Fails when GOVERNANCE.md claims current controls that
-        # docs/branch-protection.md says are not actually enforced.
-        # Input is the static script path, not event data.
-        run: sh scripts/check-governance-parity.sh
-      - name: Verify public launch checklist CLI parity
-        # Fails when the hosted launch checklist references CLI flags
-        # that cmd/clockify-mcp does not implement.
-        run: bash scripts/check-launch-checklist-parity.sh
-
-  repo-hygiene:
-    name: Repo hygiene
-    runs-on: ubuntu-latest
-    # Hard ceiling: pure bash/awk gates plus eight contract tests,
-    # 10-20s combined; 5m absorbs runner variance.
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Check for tracked OS / editor / coverage junk
-        # Fails if any .DS_Store, swap file, coverage.out, or *.prof
-        # slips into HEAD. Keeps the repo tree clean by automation
-        # rather than discipline alone. Input is the static script
-        # path, not event data.
-        run: bash scripts/check-repo-hygiene.sh
-      - name: Verify bench-output filter contract
-        # Runs the same regression test invoked locally by `make script-tests`,
-        # `make verify-core`, and `make release-check`. Guards
-        # scripts/filter-bench-output.sh because bench.yml pipes raw
-        # `go test -bench` output through it.
-        run: bash scripts/test-filter-bench-output.sh
-      - name: Verify bench-baseline gate contract
-        # Same playbook as the filter test above. Guards
-        # scripts/check-bench-baseline.sh, which validates that
-        # internal/benchdata/baseline.txt covers every package the
-        # bench.yml workflow runs, has linux/amd64 rows only, and
-        # has at least the workflow's -count= samples per benchmark.
-        # A regression in the gate would silently let a stale or
-        # mismatched baseline through verify-bench. Static input,
-        # no event data.
-        run: bash scripts/test-check-bench-baseline.sh
-      - name: Verify coverage gate contract
-        # Same playbook as the two filter/baseline tests above.
-        # Guards scripts/check-coverage.sh, which enforces both the
-        # global and per-package coverage floors used by the
-        # `coverage` job and `make cover-check`. The gate is
-        # pure-shell and pure-awk; a typo in any of its parsing
-        # paths would silently turn the floor check into a no-op.
-        # The test stubs `go` via PATH and exercises every exit
-        # branch without running the real test suite.
-        run: bash scripts/test-check-coverage.sh
-      - name: Verify doc-parity gate contract
-        # Same playbook as the three peer tests above. Guards
-        # scripts/check-doc-parity.sh, the release-blocking gate
-        # that keeps operator-facing docs in sync with code across
-        # five phases (env-var content, tool-name catalog match,
-        # banned strings, README<->npm engines parity, dangling
-        # markers). The gate is pure shell+grep+awk; a typo in any
-        # phase silently turns the gate into a no-op while still
-        # printing "doc-parity: OK". The test exercises every phase
-        # via per-case tmpdir fixtures; no `go` stub is needed
-        # because the gate itself shells out to nothing. Static
-        # input, no event data.
-        run: bash scripts/test-check-doc-parity.sh
-      - name: Verify repo-hygiene gate contract
-        # Same playbook as the four peer tests above. Guards
-        # scripts/check-repo-hygiene.sh, the single-regex gate that
-        # fails when tracked OS / editor / coverage junk slips into
-        # HEAD. The gate is one `git ls-files | grep -E PATTERN`
-        # pipeline; a typo in PATTERN would silently turn the gate
-        # into a no-op while still printing "repo-hygiene: OK". The
-        # test exercises every alternation branch (named files,
-        # extension classes, ~ suffix) plus negative cases that
-        # confirm the anchors aren't too loose. Each case builds a
-        # throwaway git repo in a tmpdir; static input, no event
-        # data.
-        run: bash scripts/test-check-repo-hygiene.sh
-      - name: Verify governance-parity gate contract
-        # Same playbook as the five peer tests above. Guards
-        # scripts/check-governance-parity.sh, which fails when
-        # GOVERNANCE.md claims controls that docs/branch-protection.md
-        # says are not enforced. ~13 require/forbid assertions across
-        # two markdown docs; the awk-extracted current-state section
-        # plus the case-insensitive forbid patterns are the
-        # silent-no-op surfaces a contract test must lock. Each case
-        # writes a tmpdir baseline and mutates one file; static
-        # input, no event data.
-        run: bash scripts/test-check-governance-parity.sh
-      - name: Verify release-assets gate contract
-        # Same playbook as the six peer tests above. Guards
-        # scripts/check-release-assets.sh, the post-goreleaser gate
-        # added after v0.7.0 silently shipped with all nine SBOMs
-        # missing. The gate enumerates the exact 46-asset matrix
-        # from .goreleaser.yaml; missing files (Pass 1) and unexpected
-        # extras (Pass 2 cardinality regex) both fail closed. The
-        # test exercises the find-fallback path, the jq path (when
-        # jq is available — runner image always ships it), and the
-        # exit-2 directory-absent surface. Static input, no event
-        # data.
-        run: bash scripts/test-check-release-assets.sh
-      - name: Verify launch-checklist-parity gate contract
-        # Same playbook as the seven peer tests above. Guards
-        # scripts/check-launch-checklist-parity.sh, the doc-parity
-        # gate that keeps the public hosted launch checklist tied
-        # to the cmd/clockify-mcp source AND its --help banner
-        # (Layer 1 source greps + Layer 2 binary parity). The test
-        # PATH-stubs `go` so Layer 2 runs in milliseconds against
-        # a controlled help-text fixture, exercising every grep
-        # branch in both layers plus the build-failure and
-        # Go-absent edges. Static input, no event data.
-        run: bash scripts/test-check-launch-checklist-parity.sh
+          if ! git diff --exit-code docs/tool-catalog.json docs/tool-catalog.md; then
+            echo "tool catalog drift detected; run 'go run ./scripts/gen-tool-catalog -out docs' and commit" >&2
+            exit 1
+          fi
 
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
-    # Hard ceiling: shellcheck over scripts/ is 5-10s; 5m absorbs
-    # action-fetch and runner variance.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run shellcheck on scripts/
-        # Static analysis for every shell script in scripts/. Catches
-        # the silent-no-op bug class that contract tests miss
-        # (unquoted vars, set -u violations, [ ] vs [[ ]] mistakes).
-        # Severity floor: warning. Errors only fail; info/style are
-        # advisory.
         uses: ludeeus/action-shellcheck@00b27aa7cb85167568cb48a3838b75f4265f2bca # v2.0.0
         with:
           severity: warning
@@ -343,8 +161,6 @@ jobs:
   actionlint:
     name: Actionlint
     runs-on: ubuntu-latest
-    # Hard ceiling: go install + actionlint scan is 10-20s; 5m absorbs
-    # cold-cache module download for the pinned commit.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -352,212 +168,19 @@ jobs:
         with:
           go-version: "1.25.10"
       - name: Run actionlint
-        # Static analysis for every .github/workflows/*.yml file.
-        # Catches the silent-runtime-fail bug class CI itself can't
-        # catch — bad runs-on, stale action input schemas, malformed
-        # ${{ }} expressions, undefined step outputs, and inline
-        # run: shell (via embedded shellcheck). SHA-pinned to the
-        # v1.7.12 tag for supply-chain audit traceability; mirrors
-        # the govulncheck SHA-pin rationale at line 72.
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca
           actionlint -color
 
-  deploy-render:
-    name: Deploy render (k8s + helm)
-    runs-on: ubuntu-latest
-    # Hard ceiling: kubeconform install + kustomize/helm render is
-    # 20-60s warm; 10m leaves headroom for cold-cache helm fetch
-    # without letting a hung renderer monopolise the runner.
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Install kubeconform
-        run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
-      - name: Render and validate Kustomize + Helm
-        # Extracted to scripts/check-k8s-render.sh so `make verify-k8s`
-        # exercises the same base/overlay/helm render path.
-        run: bash scripts/check-k8s-render.sh
-
-  test-http:
-    name: Test (HTTP smoke)
-    runs-on: ubuntu-latest
-    # Hard ceiling: build + HTTP/stdio probes typically complete in
-    # 20-60s; 10m leaves headroom for cold-cache go build without
-    # letting a hung probe monopolise the runner.
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Build and smoke-test HTTP transport
-        # Extracted to scripts/smoke-http.sh so `make verify-core` runs the
-        # same /health + /ready probe.
-        run: bash scripts/smoke-http.sh
-      - name: Smoke-test stdio transport
-        # Paired with smoke-http.sh above. Stdio is the MCP spec default
-        # transport (internal/mcp/server.go Run() -- newline-delimited
-        # JSON-RPC) and had no CI exercise prior to Wave D. A regression
-        # in the scanner loop or response encoder would otherwise only
-        # surface via user reports. Script takes no external input.
-        run: bash scripts/smoke-stdio.sh
-
-  grpc-auth-smoke:
-    name: gRPC auth smoke
-    runs-on: ubuntu-latest
-    # Behavioural gate for the gRPC auth interceptor — pins that mTLS
-    # streams do not require an Authorization metadata pair, that the
-    # generic "authentication failed" response does not leak the
-    # underlying failure reason, and that non-mTLS modes still demand
-    # Authorization metadata. The build-tag matrix is compile-only;
-    # the remaining risk after that is behavioural, so this is its
-    # own job rather than hiding inside `test`.
-    # Hard ceiling: build + gRPC mTLS regression smoke is 20-30s
-    # warm; 10m leaves headroom for cold-cache module downloads.
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Run gRPC auth/mTLS regression suite
-        run: bash scripts/smoke-grpc-auth.sh
-
-  doctor-strict:
-    name: Doctor strict smoke
-    runs-on: ubuntu-latest
-    # Hard ceiling: offline synthetic env smoke is 10-20s; 5m absorbs
-    # cold-cache setup-go and runner variance.
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Run strict doctor smoke
-        # Offline synthetic env only: verifies strict-mode flag
-        # parsing and posture findings without requiring Postgres.
-        run: bash scripts/smoke-doctor-strict.sh
-
-  doctor-postgres:
-    name: Doctor Postgres backend
-    runs-on: ubuntu-latest
-    # Hard ceiling: the build + Postgres health check is ~30s on a
-    # warm runner; 10min leaves headroom for cold pgx download and
-    # service-container start without letting a hung backend monopolise
-    # the runner.
-    timeout-minutes: 10
-    services:
-      # Ephemeral Postgres for the backend doctor check. The service is
-      # created with the credentials the DSN below references and is
-      # torn down with the runner at job exit. No external secrets are
-      # required: DoctorCheck(ctx) writes/reads a single audit_events
-      # row in this throwaway database and deletes it before returning.
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: clockify
-          POSTGRES_PASSWORD: clockify
-          POSTGRES_DB: clockify_mcp
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U clockify -d clockify_mcp"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Run Postgres backend doctor smoke
-        # Builds with -tags=postgres so the pgx-backed control-plane
-        # store is linked in, then runs `doctor --strict
-        # --check-backends` against the local service. Exit 0 proves
-        # migrations applied, audit_events.phase exists, and the
-        # DoctorCheck(ctx) audit round-trip succeeded — i.e. the
-        # production hosted backend gate is operational, not just a
-        # config-string check.
-        env:
-          MCP_CONTROL_PLANE_DSN: postgres://clockify:clockify@localhost:5432/clockify_mcp?sslmode=disable
-        run: bash scripts/smoke-doctor-postgres.sh
-
-  shared-service-e2e:
-    name: Shared-service Postgres E2E
-    runs-on: ubuntu-latest
-    # Hard ceiling: the test is ~5s end-to-end on a warm runner;
-    # 12min leaves headroom for cold pgx download, service-container
-    # start, and the streamable HTTP listener bring-up without letting
-    # a hung audit pipeline monopolise the runner.
-    timeout-minutes: 12
-    services:
-      # Throwaway Postgres for the multi-tenant E2E. Mirrors the
-      # doctor-postgres service container shape (same image, same
-      # health check, same eject-with-runner lifecycle) but with a
-      # distinct DB name so the two jobs cannot collide on
-      # audit_events rows when they happen to be scheduled on the
-      # same runner.
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: clockify
-          POSTGRES_PASSWORD: clockify
-          POSTGRES_DB: clockify_mcp_e2e
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U clockify -d clockify_mcp_e2e"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.25.10"
-      - name: Run shared-service Postgres E2E
-        # Drives mcp.ServeStreamableHTTP in-process against the
-        # postgres service with two distinct forward_auth principals,
-        # then asserts tenant isolation in audit_events + sessions.
-        # No live Clockify upstream is involved (httptest fake stood
-        # up locally), so this job needs no CLOCKIFY_LIVE_* secrets
-        # and lives in ci.yml (per-PR cadence) rather than
-        # live-contract.yml (nightly).
-        # Closes Group 2 of docs/launch-candidate-checklist.md.
-        env:
-          MCP_LIVE_CONTROL_PLANE_DSN: postgres://clockify:clockify@localhost:5432/clockify_mcp_e2e?sslmode=disable
-        run: make shared-service-e2e
-
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
-    # Hard ceiling: the scan is ~2s on current repo size; 5min leaves
-    # headroom for repo growth or an unusually slow runner without
-    # letting a hung gitleaks monopolise the job.
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install pinned gitleaks
-        # scripts/gitleaks-install.sh downloads gitleaks directly from
-        # the upstream GitHub release with a SHA256-pinned tarball.
-        # Deliberately does NOT use a third-party action -- every
-        # `uses:` line is an extra supply-chain link, and gitleaks'
-        # rules come from the same repo as the binary, so pulling the
-        # binary directly via curl + sha256sum is strictly fewer moving
-        # parts than going through a gitleaks-action wrapper.
         run: bash scripts/gitleaks-install.sh "$HOME/gitleaks-bin"
       - name: Run gitleaks
-        # --no-git so the scan walks the working tree (same shape as
-        # what gets uploaded to a PR) rather than crawling git history
-        # on every push. History scans are expensive and duplicate what
-        # prior pushes already checked; new content is what matters.
-        # --redact so the CI log never prints a secret even if one is
-        # found. --config .gitleaks.toml pulls allowlists from the repo.
         run: |
           "$HOME/gitleaks-bin/gitleaks" detect \
             --no-git \

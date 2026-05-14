@@ -295,4 +295,3 @@ func (h *liveMCPHarness) deleteClientRaw(ctx context.Context, clientID string) e
 	}
 	return h.Service.Client.Delete(ctx, "/workspaces/"+wsID+"/clients/"+clientID)
 }
-

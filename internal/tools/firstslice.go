@@ -191,10 +191,8 @@ func objectSchema(overrides map[string]any) map[string]any {
 		"type":       "object",
 		"properties": map[string]any{},
 	}
-	if overrides != nil {
-		for k, v := range overrides {
-			schema[k] = v
-		}
+	for k, v := range overrides {
+		schema[k] = v
 	}
 	return schema
 }
