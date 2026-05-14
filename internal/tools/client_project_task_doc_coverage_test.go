@@ -17,10 +17,8 @@ func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 	for _, d := range svc.Registry() {
 		descriptors[d.Tool.Name] = d.Tool.InputSchema
 	}
-	if projectAdmin, ok := svc.Tier2Handlers("project_admin"); ok {
-		for _, d := range projectAdmin {
-			descriptors[d.Tool.Name] = d.Tool.InputSchema
-		}
+	for _, d := range projectAdminHandlers(svc) {
+		descriptors[d.Tool.Name] = d.Tool.InputSchema
 	}
 	requireProps := func(tool string, props ...string) {
 		t.Helper()

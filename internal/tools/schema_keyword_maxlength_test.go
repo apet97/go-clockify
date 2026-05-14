@@ -57,26 +57,12 @@ func TestApplyPropertyConstraintsSkipsNonStringFields(t *testing.T) {
 // reviewer cannot silently slacken one tool by hand.
 func TestRegistryFreeTextFieldsHaveMaxLength(t *testing.T) {
 	svc := &Service{}
-	for _, d := range svc.Registry() {
+	for _, d := range svc.FullAccessRegistry() {
 		if d.Tool.InputSchema == nil {
 			continue
 		}
 		for _, v := range walkFreeTextViolations(d.Tool.Name, d.Tool.InputSchema) {
-			t.Errorf("tier1 %s: %s", d.Tool.Name, v)
-		}
-	}
-	for groupName := range Tier2Groups {
-		descriptors, ok := svc.Tier2Handlers(groupName)
-		if !ok {
-			continue
-		}
-		for _, d := range descriptors {
-			if d.Tool.InputSchema == nil {
-				continue
-			}
-			for _, v := range walkFreeTextViolations(d.Tool.Name, d.Tool.InputSchema) {
-				t.Errorf("tier2/%s/%s: %s", groupName, d.Tool.Name, v)
-			}
+			t.Errorf("%s: %s", d.Tool.Name, v)
 		}
 	}
 }

@@ -135,7 +135,7 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 
 func TestCreateHolidayInputSchemaRequiresAssignment(t *testing.T) {
 	svc := New(nil, "ws1")
-	descriptors, ok := svc.Tier2Handlers("groups_holidays")
+	descriptors, ok := tier2Handlers(svc, "groups_holidays")
 	if !ok {
 		t.Fatal("missing groups_holidays handlers")
 	}

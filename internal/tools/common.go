@@ -69,34 +69,26 @@ type Service struct {
 	// when the entry begins with a dot (`.example.com` matches
 	// `webhook.example.com` and `api.example.com` but NOT
 	// `attacker.example.com.evil.com`). Empty list = no bypass; the
-	// DNS check applies to every host. Operators use this to admit
-	// known-trusted hostnames in split-horizon DNS environments where
-	// the hostname legitimately resolves to a private IP only on the
-	// control-plane network. See `docs/runbooks/webhook-dns-validation.md`
-	// §4b for the use case. Production wiring (env var + Config field)
-	// follows in a later commit; tests inject this field directly.
+	// DNS check applies to every host.
 	WebhookAllowedDomains []string
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier
 	// EmitResourceUpdate publishes notifications/resources/updated for a URI
-	// with an optional delta envelope. Wired from runtime.go to
-	// Server.NotifyResourceUpdated so the subscription gate lives in the
-	// protocol core rather than in every mutation handler. nil = drop silently
-	// (tests without a Server wired).
+	// with an optional delta envelope. Wired to Server.NotifyResourceUpdated
+	// so the subscription gate lives in the protocol core rather than in
+	// every mutation handler. nil = drop silently.
 	EmitResourceUpdate func(uri string, delta mcp.ResourceUpdateDelta)
 	// SubscriptionGate reports whether any client is currently subscribed
-	// to a URI. When wired (runtime.go sets it to
-	// Server.HasResourceSubscription), emitResourceUpdate short-circuits
-	// before the ReadResource round-trip so unsubscribed mutations don't
-	// pay for a redundant fetch. nil = gate disabled; every emit pays for
-	// the re-read (W3-era behaviour, preserved for tests).
+	// to a URI. When wired (Server.HasResourceSubscription),
+	// emitResourceUpdate short-circuits before the ReadResource round-trip
+	// so unsubscribed mutations don't pay for a redundant fetch.
 	SubscriptionGate func(uri string) bool
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
 	// DocumentedAPIWrites enables generic probe_lab_api write/delete calls.
-	// Runtime defaults this off for hosted profiles and on for local profiles.
+	// Defaults off; callers opt in explicitly when they want raw mutations.
 	DocumentedAPIWrites bool
 	// EntryFinancialReports forces entry financial enrichment to call the
 	// reports host even when the client is pointed at a non-canonical base URL.
@@ -116,8 +108,6 @@ type Service struct {
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache
 	demoResources map[string]demoResourceState
-	tier2CacheMu  sync.Mutex
-	tier2Cache    map[string][]mcp.ToolDescriptor
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was
@@ -144,13 +134,13 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	_ = s.Notifier.Notify("notifications/progress", params)
 }
 
-// ResultEnvelope is the canonical shape every Tier 1 / Tier 2 tool
-// handler returns. OK is the boolean success flag, Action mirrors the
-// tool name for client-side dispatch, Data carries the typed payload
-// (struct or map) and Meta is reserved for cross-cutting metadata
-// (pagination cursors, fingerprint hashes, etc.). Wire-locked by the
-// per-tool outputSchemas in output_schemas.go; mutate this struct and
-// every schemaFor[T] surface has to be reviewed for drift.
+// ResultEnvelope is the canonical shape every tool handler returns.
+// OK is the boolean success flag, Action mirrors the tool name for
+// client-side dispatch, Data carries the typed payload (struct or map)
+// and Meta is reserved for cross-cutting metadata (pagination cursors,
+// fingerprint hashes, etc.). Wire-locked by the per-tool outputSchemas
+// in output_schemas.go; mutate this struct and every schemaFor[T]
+// surface has to be reviewed for drift.
 type ResultEnvelope struct {
 	OK     bool           `json:"ok"`
 	Action string         `json:"action"`
@@ -452,10 +442,6 @@ var agentToolMetadata = map[string]map[string]any{
 		"compatibilityShim": true,
 		"primaryTool":       "clockify_resolve_name",
 	},
-	"clockify_search_tools": {
-		"compatibilityShim": true,
-		"primaryTool":       "clockify_list_tools",
-	},
 	"clockify_set_project_memberships": {
 		"compatibilityShim": true,
 		"primaryTool":       "clockify_update_project_memberships",
@@ -507,56 +493,6 @@ func applyRiskMetadata(d *mcp.ToolDescriptor) {
 		d.Tool.Annotations["riskClass"] = names
 	}
 	d.Tool.Annotations["dryRun"] = schemaHasDryRun(d.Tool.InputSchema)
-
-	// Confirmation-token discoverability surface (ADR 0018 Q4):
-	//   - annotations.requiresConfirmationToken signals to MCP clients
-	//     that the tool's execution path requires a server-issued
-	//     token obtained via dry_run:true first.
-	//   - annotations.confirmationRiskClass repeats the lower-case
-	//     risk-class names so clients can render which class
-	//     triggered the gate without re-deriving from the bitmask.
-	//   - InputSchema.properties.confirmation_token is added as an
-	//     optional string so spec-strict clients can pass the token
-	//     back without tripping additionalProperties:false. Adding
-	//     to properties (not required) means the schema gate accepts
-	//     both the dry-run preview call (no token) and the execution
-	//     call (token present).
-	// Read-only tools skip the schema injection because they can never
-	// be high-risk and never execute side effects worth gating.
-	if d.RiskClass.IsHighRisk() {
-		d.Tool.Annotations["requiresConfirmationToken"] = true
-		d.Tool.Annotations["confirmationRiskClass"] = riskClassAnnotationNames(d.RiskClass)
-		if !d.ReadOnlyHint {
-			ensureConfirmationTokenSchemaProperty(d.Tool.InputSchema)
-		}
-	}
-}
-
-// ensureConfirmationTokenSchemaProperty adds an optional
-// confirmation_token string property to the tool's InputSchema so
-// spec-strict clients can echo a minted token back through the
-// execution call without tripping additionalProperties:false. The
-// helper is idempotent — a descriptor that already declares the
-// property keeps the caller's metadata.
-func ensureConfirmationTokenSchemaProperty(schema map[string]any) {
-	if schema == nil {
-		return
-	}
-	if typ, _ := schema["type"].(string); typ != "" && typ != "object" {
-		return
-	}
-	props, _ := schema["properties"].(map[string]any)
-	if props == nil {
-		props = map[string]any{}
-		schema["properties"] = props
-	}
-	if _, exists := props["confirmation_token"]; exists {
-		return
-	}
-	props["confirmation_token"] = map[string]any{
-		"type":        "string",
-		"description": "Confirmation token returned by a prior dry_run:true call. Required when executing high-risk tools (see annotations.requiresConfirmationToken).",
-	}
 }
 
 func riskClassAnnotationNames(rc mcp.RiskClass) []string {
@@ -608,7 +544,7 @@ func dryrunPreviewPayload(tool string, payload map[string]any) map[string]any {
 }
 
 // tightenInputSchema mutates a JSON schema tree in place to meet the MCP
-// spec B2 requirements for Tier 1 + Tier 2 tools:
+// spec requirements for every tool descriptor:
 //   - every object schema gets `additionalProperties: false` unless explicitly set
 //   - `page` and `page_size` integer properties gain `minimum`/`maximum` bounds
 //   - string properties whose description mentions RFC3339 gain
@@ -703,15 +639,13 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 		}
 	}
 	// Generic maxLength bounds on common free-text fields. Centralised
-	// here so every Tier 1 + Tier 2 descriptor inherits the same ceiling
-	// without each handler hand-declaring it. Bounds chosen from observed
+	// here so every descriptor inherits the same ceiling without each
+	// handler hand-declaring it. Bounds chosen from observed
 	// Clockify-API limits and RFC defaults; an explicit handler-side
 	// maxLength always wins.
 	//
 	// Skipped on purpose:
 	//   - project/client/tag lookup identifiers (Clockify accepts UUIDs);
-	//   - the free-form `query` field on clockify_list_tools (multi-word
-	//     search queries must stay flexible);
 	//   - flexible-time string fields (handled separately above).
 	if ceil, ok := freeTextMaxLength[name]; ok {
 		if typ, _ := prop["type"].(string); typ == "string" {

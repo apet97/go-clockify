@@ -13,7 +13,7 @@ import (
 
 func TestInvoiceHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descs, ok := svc.Tier2Handlers("invoices")
+	descs, ok := tier2Handlers(svc, "invoices")
 	if !ok {
 		t.Fatal("invoices group not registered")
 	}
@@ -51,7 +51,7 @@ func TestInvoiceHandlersCount(t *testing.T) {
 
 func TestExpenseHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descs, ok := svc.Tier2Handlers("expenses")
+	descs, ok := tier2Handlers(svc, "expenses")
 	if !ok {
 		t.Fatal("expenses group not registered")
 	}
@@ -425,21 +425,6 @@ func TestExpenseReport(t *testing.T) {
 	}
 	if result.Meta["source"] != "reports-api" {
 		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
-	}
-}
-
-func TestTier2CatalogRegistration(t *testing.T) {
-	if _, ok := Tier2Groups["invoices"]; !ok {
-		t.Fatal("invoices group not registered in Tier2Groups")
-	}
-	if _, ok := Tier2Groups["expenses"]; !ok {
-		t.Fatal("expenses group not registered in Tier2Groups")
-	}
-	if g := Tier2Groups["invoices"]; len(g.Keywords) == 0 {
-		t.Fatal("invoices group should have keywords")
-	}
-	if g := Tier2Groups["expenses"]; len(g.Keywords) == 0 {
-		t.Fatal("expenses group should have keywords")
 	}
 }
 

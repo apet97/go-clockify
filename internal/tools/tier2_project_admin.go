@@ -12,31 +12,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "project_admin",
-		Description: "Project templates, estimates, memberships, and archival",
-		Keywords:    []string{"template", "estimate", "membership", "archive", "budget"},
-		ToolNames: []string{
-			"clockify_list_project_templates",
-			"clockify_get_project_template",
-			"clockify_create_project_template",
-			"clockify_create_project_from_template",
-			"clockify_update_project_estimate",
-			"clockify_update_project_memberships",
-			"clockify_set_project_memberships",
-			"clockify_assign_project_memberships",
-			"clockify_update_project_template",
-			"clockify_update_project_user_cost_rate",
-			"clockify_update_project_user_hourly_rate",
-			"clockify_update_task_cost_rate",
-			"clockify_update_task_hourly_rate",
-			"clockify_archive_projects",
-		},
-		Builder: projectAdminHandlers,
-	})
-}
-
 func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List project templates

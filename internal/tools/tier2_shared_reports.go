@@ -74,23 +74,6 @@ func sharedReportFilterSchema() map[string]any {
 	}
 }
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "shared_reports",
-		Description: "Shared report management — create, update, export, delete",
-		Keywords:    []string{"shared", "report", "export", "csv", "pdf"},
-		ToolNames: []string{
-			"clockify_list_shared_reports",
-			"clockify_get_shared_report",
-			"clockify_create_shared_report",
-			"clockify_update_shared_report",
-			"clockify_delete_shared_report",
-			"clockify_export_shared_report",
-		},
-		Builder: sharedReportHandlers,
-	})
-}
-
 func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List shared reports (RO)

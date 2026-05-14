@@ -50,8 +50,8 @@ func projectResourceURI(workspaceID, projectID string) string {
 // userResourceURI builds the canonical resource URI for a user in a
 // workspace. Matches the `clockify://workspace/{workspaceId}/user/{userId}`
 // template advertised in ListResourceTemplates. Returns empty when either
-// piece is missing so tier 2 mutation handlers can safely skip the emit
-// step instead of publishing a malformed URI.
+// piece is missing so mutation handlers can safely skip the emit step
+// instead of publishing a malformed URI.
 func userResourceURI(workspaceID, userID string) string {
 	if workspaceID == "" || userID == "" {
 		return ""

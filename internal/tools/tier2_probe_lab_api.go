@@ -25,22 +25,6 @@ type documentedAPIOperation struct {
 	PromotedToTyped []string
 }
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "probe_lab_api",
-		Description: "Allowlisted OpenAPI/probe-lab routes not yet promoted to dedicated tools",
-		Keywords:    []string{"openapi", "probe", "documented", "coverage", "raw", "api"},
-		ToolNames: []string{
-			"clockify_list_documented_api_operations",
-			"clockify_call_documented_read_api",
-			"clockify_call_documented_write_api",
-			"clockify_call_documented_delete_api",
-			"clockify_upload_image",
-		},
-		Builder: probeLabAPIHandlers,
-	})
-}
-
 func probeLabAPIHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		{Tool: toolRO("clockify_list_documented_api_operations", "List the allowlisted method/path operations from the probe-lab OpenAPI and DOC source set.", documentedAPIListSchema()), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {

@@ -12,33 +12,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "invoices",
-		Description: "Invoice management — create, send, track payments",
-		Keywords:    []string{"invoice", "billing", "payment", "send"},
-		ToolNames: []string{
-			"clockify_list_invoices",
-			"clockify_get_invoice",
-			"clockify_export_invoice",
-			"clockify_create_invoice",
-			"clockify_update_invoice",
-			"clockify_delete_invoice",
-			"clockify_send_invoice",
-			"clockify_mark_invoice_paid",
-			"clockify_get_invoice_settings",
-			"clockify_list_invoice_payments",
-			"clockify_list_invoice_items",
-			"clockify_unbilled_for_client",
-			"clockify_add_invoice_item",
-			"clockify_update_invoice_item",
-			"clockify_delete_invoice_item",
-			"clockify_invoice_report",
-		},
-		Builder: invoiceHandlers,
-	})
-}
-
 func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List invoices

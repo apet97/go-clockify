@@ -14,27 +14,6 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "scheduling",
-		Description: "Resource scheduling and capacity planning",
-		Keywords:    []string{"schedule", "assignment", "capacity", "resource"},
-		ToolNames: []string{
-			"clockify_assignment_report",
-			"clockify_list_assignments",
-			"clockify_get_assignment",
-			"clockify_create_assignment",
-			"clockify_update_assignment",
-			"clockify_delete_assignment",
-			"clockify_get_project_schedule_totals",
-			"clockify_get_single_project_schedule_totals",
-			"clockify_get_workspace_schedule_user_totals",
-			"clockify_filter_schedule_capacity",
-		},
-		Builder: schedulingHandlers,
-	})
-}
-
 func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. clockify_assignment_report (RO)

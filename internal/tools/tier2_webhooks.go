@@ -18,25 +18,6 @@ import (
 
 type WebhookLogView map[string]any
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "webhooks",
-		Description: "Webhook management",
-		Keywords:    []string{"webhook", "event", "subscribe", "notification", "callback"},
-		ToolNames: []string{
-			"clockify_list_webhooks",
-			"clockify_get_webhook",
-			"clockify_create_webhook",
-			"clockify_update_webhook",
-			"clockify_delete_webhook",
-			"clockify_list_webhook_logs",
-			"clockify_list_webhook_events",
-			"clockify_test_webhook",
-		},
-		Builder: webhookHandlers,
-	})
-}
-
 func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List webhooks (RO)
@@ -200,12 +181,11 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 	}
 }
 
-// validateWebhookURLForService runs validateWebhookURL plus, when the
-// service is configured for DNS-aware validation (hosted profiles),
-// resolves the host and rejects any reply containing a private,
-// reserved, link-local, or loopback IP. Same isPublicWebhookAddr
-// classifier as the literal-IP path so the contract is identical
-// across both modes.
+// validateWebhookURLForService runs validateWebhookURL plus, when DNS-aware
+// validation is enabled, resolves the host and rejects any reply containing
+// a private, reserved, link-local, or loopback IP. Same isPublicWebhookAddr
+// classifier as the literal-IP path so the contract is identical across
+// both modes.
 //
 // Note: there is an inherent TOCTOU window between this resolve and
 // the upstream Clockify→host delivery — DNS rebinding is not fully
@@ -231,9 +211,8 @@ func (s *Service) validateWebhookURLForService(ctx context.Context, url string) 
 
 	// Operator escape hatch: known-trusted hostnames bypass the
 	// private-IP check. Used when split-horizon DNS resolves a
-	// legitimately-trusted hostname to a private IP only on the
-	// control-plane network (see docs/runbooks/webhook-dns-validation.md
-	// §4b). Empty allowlist = no bypass.
+	// legitimately-trusted hostname to a private IP. Empty allowlist =
+	// no bypass.
 	if isWebhookHostAllowed(host, s.WebhookAllowedDomains) {
 		return nil
 	}

@@ -11,29 +11,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "time_off",
-		Description: "Time off policies, requests, and balances",
-		Keywords:    []string{"time off", "time-off", "vacation", "leave", "pto", "policy", "balance"},
-		ToolNames: []string{
-			"clockify_list_time_off_requests",
-			"clockify_get_time_off_request",
-			"clockify_create_time_off_request",
-			"clockify_update_time_off_request",
-			"clockify_delete_time_off_request",
-			"clockify_approve_time_off",
-			"clockify_deny_time_off",
-			"clockify_list_time_off_policies",
-			"clockify_get_time_off_policy",
-			"clockify_create_time_off_policy",
-			"clockify_update_time_off_policy",
-			"clockify_time_off_balance",
-		},
-		Builder: timeOffHandlers,
-	})
-}
-
 func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. clockify_list_time_off_requests (RO)

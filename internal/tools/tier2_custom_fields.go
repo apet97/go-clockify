@@ -14,23 +14,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "custom_fields",
-		Description: "Custom metadata fields for entries and projects",
-		Keywords:    []string{"custom", "field", "metadata", "dropdown", "value"},
-		ToolNames: []string{
-			"clockify_list_custom_fields",
-			"clockify_get_custom_field",
-			"clockify_create_custom_field",
-			"clockify_update_custom_field",
-			"clockify_delete_custom_field",
-			"clockify_set_custom_field_value",
-		},
-		Builder: customFieldHandlers,
-	})
-}
-
 func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List custom fields

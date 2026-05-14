@@ -1,12 +1,11 @@
-# Example snippets
+# MCP client snippets
 
-These files are quick-copy snippets for local MCP client setup. The
-canonical walkthroughs live in the main docs:
+Quick-copy entries for local MCP clients. The binary reads its single-user
+configuration from environment variables (`CLOCKIFY_API_KEY`,
+`CLOCKIFY_WORKSPACE_ID`, and optional `CLOCKIFY_TIMEZONE`,
+`CLOCKIFY_BASE_URL`, `MCP_LOG_LEVEL`).
 
-- Claude Desktop and Cursor: [`README.md`](../README.md#connect-to-an-mcp-client)
-- Client transport/auth matrix: [`docs/clients.md`](../docs/clients.md)
-- Deployment profile environment files: [`deploy/examples/`](../deploy/examples/)
-
-Prefer the profile-specific files under `deploy/examples/` for
-operator deployments. The root snippets are intentionally minimal and
-target local `stdio` client setup.
+| File | Purpose |
+| --- | --- |
+| [`claude-desktop.json`](claude-desktop.json) | Claude Desktop `claude_desktop_config.json` snippet |
+| [`cursor-mcp.json`](cursor-mcp.json) | Cursor `mcp` config snippet |

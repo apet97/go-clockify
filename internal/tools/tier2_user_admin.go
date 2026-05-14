@@ -12,29 +12,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func init() {
-	registerTier2Group(Tier2Group{
-		Name:        "user_admin",
-		Description: "User and group management",
-		Keywords:    []string{"user", "group", "role", "admin", "deactivate", "permission"},
-		ToolNames: []string{
-			"clockify_list_user_groups",
-			"clockify_create_user_group",
-			"clockify_update_user_group",
-			"clockify_delete_user_group",
-			"clockify_invite_user",
-			"clockify_add_user_to_group",
-			"clockify_remove_user_from_group",
-			"clockify_update_user_role",
-			"clockify_deactivate_user",
-			"clockify_list_user_managers",
-			"clockify_get_member_profile",
-			"clockify_update_member_profile",
-		},
-		Builder: userAdminHandlers,
-	})
-}
-
 func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List user groups (RO)

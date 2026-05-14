@@ -129,21 +129,7 @@ func TestSchemaSupportedKeywordsAcceptsSupportedSubset(t *testing.T) {
 }
 
 func allToolDescriptorsForSchemaKeywordTest(svc *Service) []mcp.ToolDescriptor {
-	out := append([]mcp.ToolDescriptor{}, svc.Registry()...)
-
-	groupNames := make([]string, 0, len(Tier2Groups))
-	for name := range Tier2Groups {
-		groupNames = append(groupNames, name)
-	}
-	sort.Strings(groupNames)
-	for _, groupName := range groupNames {
-		descriptors, ok := svc.Tier2Handlers(groupName)
-		if !ok {
-			continue
-		}
-		out = append(out, descriptors...)
-	}
-	return out
+	return svc.FullAccessRegistry()
 }
 
 type schemaKeywordViolation struct {

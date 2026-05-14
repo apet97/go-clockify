@@ -1,6 +1,6 @@
-// gen-tool-catalog walks the Tier-1 registry and every Tier-2 group
-// builder and emits a machine-readable catalog (JSON) and a
-// human-readable rendering (Markdown) for docs/tool-catalog.{json,md}.
+// gen-tool-catalog walks the one-user full-access registry and emits
+// a machine-readable catalog (JSON) and a human-readable rendering
+// (Markdown) for docs/tool-catalog.{json,md}.
 //
 // Usage:
 //
@@ -12,8 +12,8 @@
 //	make gen-tool-catalog && git diff --exit-code docs/tool-catalog.*
 //
 // to refuse PRs that forget to regenerate after adding or changing
-// a tool. No network calls, no real Clockify client — the builders
-// only need the Service struct populated with nil fields.
+// a tool. No network calls, no real Clockify client — the descriptor
+// builders only need the Service struct populated with nil fields.
 package main
 
 import (
@@ -31,20 +31,16 @@ import (
 )
 
 // catalogTool is the JSON shape emitted for each tool. Fields match
-// MCP's Tool struct plus the ToolDescriptor hints and the group
-// membership so consumers can filter by read/write/destructive or
-// tier without parsing Markdown.
+// MCP's Tool struct plus the ToolDescriptor hints so consumers can
+// filter by read/write/destructive without parsing Markdown.
 //
-// RiskClass and AuditKeys surface the structured taxonomy added in
-// the 2026-04-27 audit-finding wave so consumers (policy, ops
-// dashboards, agent harnesses) can filter on billing / admin /
-// permission_change / external_side_effect without grep-ing source.
-// The taxonomy mapping mirrors internal/tools/risk_overrides.go.
+// RiskClass and AuditKeys surface the structured taxonomy so
+// consumers can filter on billing / admin / permission_change /
+// external_side_effect without grep-ing source.
 type catalogTool struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description,omitempty"`
-	Group        string         `json:"group"`
-	Tier         int            `json:"tier"`
+	Category     string         `json:"category,omitempty"`
 	ReadOnly     bool           `json:"read_only"`
 	Destructive  bool           `json:"destructive"`
 	Idempotent   bool           `json:"idempotent"`
@@ -56,9 +52,6 @@ type catalogTool struct {
 	Annotations  map[string]any `json:"annotations,omitempty"`
 }
 
-// riskClassNames decomposes a mcp.RiskClass bitmask into the stable
-// lowercase taxonomy names emitted in the catalog. Order is fixed so
-// catalog output is byte-deterministic.
 func riskClassNames(rc mcp.RiskClass) []string {
 	if rc == 0 {
 		return nil
@@ -87,8 +80,7 @@ func riskClassNames(rc mcp.RiskClass) []string {
 
 type catalog struct {
 	Generator string        `json:"generator"`
-	Tier1     []catalogTool `json:"tier1"`
-	Tier2     []catalogTool `json:"tier2"`
+	Tools     []catalogTool `json:"tools"`
 }
 
 func main() {
@@ -96,13 +88,11 @@ func main() {
 	flag.Parse()
 
 	svc := &tools.Service{}
-	t1 := toCatalog(svc.Registry(), "tier1", 1)
-	t2 := tier2Catalog(svc)
+	registry := svc.FullAccessRegistry()
 
 	cat := catalog{
 		Generator: "scripts/gen-tool-catalog — DO NOT EDIT BY HAND; run `make gen-tool-catalog` to refresh",
-		Tier1:     t1,
-		Tier2:     t2,
+		Tools:     toCatalog(registry),
 	}
 
 	if err := writeJSON(filepath.Join(*outDir, "tool-catalog.json"), cat); err != nil {
@@ -111,18 +101,17 @@ func main() {
 	if err := writeMarkdown(filepath.Join(*outDir, "tool-catalog.md"), cat); err != nil {
 		log.Fatalf("write md: %v", err)
 	}
-	fmt.Printf("wrote %d tier-1 + %d tier-2 tools to %s/tool-catalog.{json,md}\n",
-		len(t1), len(t2), *outDir)
+	fmt.Printf("wrote %d tools to %s/tool-catalog.{json,md}\n", len(cat.Tools), *outDir)
 }
 
-func toCatalog(ds []mcp.ToolDescriptor, group string, tier int) []catalogTool {
+func toCatalog(ds []mcp.ToolDescriptor) []catalogTool {
 	out := make([]catalogTool, 0, len(ds))
 	for _, d := range ds {
+		category, _ := d.Tool.Annotations["category"].(string)
 		out = append(out, catalogTool{
 			Name:         d.Tool.Name,
 			Description:  d.Tool.Description,
-			Group:        group,
-			Tier:         tier,
+			Category:     category,
 			ReadOnly:     d.ReadOnlyHint,
 			Destructive:  d.DestructiveHint,
 			Idempotent:   d.IdempotentHint,
@@ -143,24 +132,6 @@ func annotationBool(annotations map[string]any, key string) bool {
 	return v
 }
 
-func tier2Catalog(svc *tools.Service) []catalogTool {
-	groups := make([]string, 0, len(tools.Tier2Groups))
-	for name := range tools.Tier2Groups {
-		groups = append(groups, name)
-	}
-	sort.Strings(groups)
-
-	var out []catalogTool
-	for _, gname := range groups {
-		handlers, ok := svc.Tier2Handlers(gname)
-		if !ok {
-			continue
-		}
-		out = append(out, toCatalog(handlers, gname, 2)...)
-	}
-	return out
-}
-
 func writeJSON(path string, v any) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -177,33 +148,13 @@ func writeMarkdown(path string, c catalog) error {
 	b.WriteString("# Tool catalog\n\n")
 	b.WriteString("Autogenerated by `scripts/gen-tool-catalog`. Do not edit by hand;\n")
 	b.WriteString("re-run `make gen-tool-catalog` after changing any tool descriptor.\n\n")
-	fmt.Fprintf(&b, "- Tier 1 tools: **%d** (always registered; visible in `tools/list`).\n", len(c.Tier1))
-	fmt.Fprintf(&b, "- Tier 2 tools: **%d** (lazily activated via `clockify_activate_group` / `clockify_activate_tool`; `clockify_search_tools` is a deprecated compatibility shim).\n\n", len(c.Tier2))
+	fmt.Fprintf(&b, "- Tools: **%d** (all registered at startup; workflow tools first, domain tools second, raw API fallback last).\n\n", len(c.Tools))
 	writeCookbookLinks(&b)
 	writeTimeEntryGuidance(&b)
 
-	b.WriteString("## Tier 1\n\n")
-	writeTable(&b, c.Tier1, false)
-
-	b.WriteString("\n## Tier 2\n\n")
-	// Group tier-2 by group name for readability.
-	byGroup := map[string][]catalogTool{}
-	var groupOrder []string
-	for _, t := range c.Tier2 {
-		if _, ok := byGroup[t.Group]; !ok {
-			groupOrder = append(groupOrder, t.Group)
-		}
-		byGroup[t.Group] = append(byGroup[t.Group], t)
-	}
-	sort.Strings(groupOrder)
-	for _, g := range groupOrder {
-		fmt.Fprintf(&b, "### `%s`\n\n", g)
-		writeTable(&b, byGroup[g], true)
-		b.WriteString("\n")
-	}
-
+	b.WriteString("## Tools\n\n")
+	writeTable(&b, c.Tools)
 	writeAuditKeysSection(&b, c)
-
 	return os.WriteFile(path, []byte(b.String()), 0o644)
 }
 
@@ -233,7 +184,7 @@ func writeTimeEntryGuidance(b *strings.Builder) {
 	b.WriteString("`clockify_start_timer` or `clockify_switch_project` for live timers.\n\n")
 
 	b.WriteString("## Time formats\n\n")
-	b.WriteString("Tier-1 time-entry and report range fields accept RFC3339 values and\n")
+	b.WriteString("Time-entry and report range fields accept RFC3339 values and\n")
 	b.WriteString("common flexible forms parsed in the requested `timezone`, `CLOCKIFY_TIMEZONE`,\n")
 	b.WriteString("or local/server timezone when no timezone is supplied:\n")
 	b.WriteString("`YYYY-MM-DD`, `YYYY-MM-DD HH:MM`, `today HH:MM`, `yesterday HH:MM`,\n")
@@ -241,75 +192,41 @@ func writeTimeEntryGuidance(b *strings.Builder) {
 	b.WriteString("prefer the documented format on each tool descriptor.\n\n")
 }
 
-// writeAuditKeysSection emits a focused table of every tool that
-// carries action-defining audit_keys beyond the default *_id capture.
-// The audit recorder (internal/mcp/audit.go) consumes these keys to
-// record what change was applied (role, status, quantity, unit_price)
-// alongside the IDs that were touched. Surfacing them in the catalog
-// gives compliance reviewers a one-screen view of which mutations
-// emit enriched audit events without grepping source. Tools without
-// audit_keys are omitted to keep the section tight; consumers needing
-// the full per-tool field appear in tool-catalog.json.
 func writeAuditKeysSection(b *strings.Builder, c catalog) {
-	type row struct {
-		tier int
-		tool catalogTool
-	}
-	var rows []row
-	for _, t := range c.Tier1 {
+	var rows []catalogTool
+	for _, t := range c.Tools {
 		if len(t.AuditKeys) > 0 {
-			rows = append(rows, row{1, t})
-		}
-	}
-	for _, t := range c.Tier2 {
-		if len(t.AuditKeys) > 0 {
-			rows = append(rows, row{2, t})
+			rows = append(rows, t)
 		}
 	}
 	if len(rows) == 0 {
 		return
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].tier != rows[j].tier {
-			return rows[i].tier < rows[j].tier
-		}
-		return rows[i].tool.Name < rows[j].tool.Name
-	})
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
 
 	b.WriteString("\n## Audit-tracked argument capture\n\n")
 	b.WriteString("Tools below record action-defining arguments alongside the\n")
-	b.WriteString("default `*_id` capture in audit events. See\n")
-	b.WriteString("`internal/mcp/audit.go` for the recorder; the per-tool\n")
-	b.WriteString("`audit_keys` list also surfaces in `docs/tool-catalog.json`.\n\n")
-	b.WriteString("| Tool | Tier | Audit Keys |\n")
-	b.WriteString("|------|------|------------|\n")
+	b.WriteString("default `*_id` capture in audit events. The per-tool `audit_keys`\n")
+	b.WriteString("list also surfaces in `docs/tool-catalog.json`.\n\n")
+	b.WriteString("| Tool | Audit Keys |\n")
+	b.WriteString("|------|------------|\n")
 	for _, r := range rows {
-		parts := make([]string, len(r.tool.AuditKeys))
-		for i, k := range r.tool.AuditKeys {
+		parts := make([]string, len(r.AuditKeys))
+		for i, k := range r.AuditKeys {
 			parts[i] = "`" + k + "`"
 		}
-		fmt.Fprintf(b, "| `%s` | %d | %s |\n", r.tool.Name, r.tier, strings.Join(parts, ", "))
+		fmt.Fprintf(b, "| `%s` | %s |\n", r.Name, strings.Join(parts, ", "))
 	}
 }
 
-func writeTable(b *strings.Builder, rows []catalogTool, hideGroup bool) {
-	if hideGroup {
-		b.WriteString("| Tool | Read-only | Destructive | Idempotent | Dry-run | Risk | Description |\n")
-		b.WriteString("|------|-----------|-------------|------------|---------|------|-------------|\n")
-	} else {
-		b.WriteString("| Tool | Group | Read-only | Destructive | Idempotent | Dry-run | Risk | Description |\n")
-		b.WriteString("|------|-------|-----------|-------------|------------|---------|------|-------------|\n")
-	}
+func writeTable(b *strings.Builder, rows []catalogTool) {
+	b.WriteString("| Tool | Category | Read-only | Destructive | Idempotent | Dry-run | Risk | Description |\n")
+	b.WriteString("|------|----------|-----------|-------------|------------|---------|------|-------------|\n")
 	for _, t := range rows {
 		desc := strings.ReplaceAll(t.Description, "|", "\\|")
 		desc = strings.ReplaceAll(desc, "\n", " ")
-		if hideGroup {
-			fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s | %s | %s |\n",
-				t.Name, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), yn(t.DryRun), riskCell(t.RiskClass), desc)
-		} else {
-			fmt.Fprintf(b, "| `%s` | `%s` | %s | %s | %s | %s | %s | %s |\n",
-				t.Name, t.Group, yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), yn(t.DryRun), riskCell(t.RiskClass), desc)
-		}
+		fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s | %s | %s | %s |\n",
+			t.Name, categoryCell(t.Category), yn(t.ReadOnly), yn(t.Destructive), yn(t.Idempotent), yn(t.DryRun), riskCell(t.RiskClass), desc)
 	}
 }
 
@@ -320,10 +237,13 @@ func yn(v bool) string {
 	return "no"
 }
 
-// riskCell renders a tool's RiskClass taxonomy as a comma-separated
-// list of inline-coded names for the markdown table. Empty input
-// renders as an em dash so the column never collapses to a blank
-// cell that would distort the table.
+func categoryCell(c string) string {
+	if c == "" {
+		return "—"
+	}
+	return "`" + c + "`"
+}
+
 func riskCell(names []string) string {
 	if len(names) == 0 {
 		return "—"

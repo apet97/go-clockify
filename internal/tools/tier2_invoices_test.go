@@ -275,18 +275,11 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	}
 }
 
-// TestTier2_Invoices_GroupRegistration verifies the group is registered
-// in the Tier2Groups catalog and the Builder produces all descriptors.
-func TestTier2_Invoices_GroupRegistration(t *testing.T) {
-	g, ok := Tier2Groups["invoices"]
-	if !ok {
-		t.Fatal("invoices group not registered")
-	}
-	if g.Name != "invoices" || g.Builder == nil {
-		t.Fatalf("group missing name or builder: %+v", g)
-	}
+// TestTier2_Invoices_BuilderShape verifies invoiceHandlers builds the
+// documented 16-tool surface with proper names and handlers wired.
+func TestTier2_Invoices_BuilderShape(t *testing.T) {
 	svc := New(nil, "ws1")
-	descs := g.Builder(svc)
+	descs := invoiceHandlers(svc)
 	if len(descs) != 16 {
 		t.Fatalf("expected 16 invoice tools, got %d", len(descs))
 	}

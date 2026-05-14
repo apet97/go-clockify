@@ -33,9 +33,8 @@ var riskOverrides = map[string]riskOverride{
 		auditKeys: []string{"filename", "content_type"},
 	},
 
-	// Sensitive reads — user, policy, billing, balance, and webhook
-	// surfaces should be visible to audit/agents without joining the
-	// confirmation-token high-risk mask.
+	// Sensitive reads — user, billing, balance, and webhook surfaces
+	// stay visible to audit/agents while tagged as sensitive.
 	"clockify_current_user": {
 		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
 		auditKeys: []string{"user_id"},
@@ -43,10 +42,6 @@ var riskOverrides = map[string]riskOverride{
 	"clockify_list_users": {
 		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
 		auditKeys: []string{"workspace_id"},
-	},
-	"clockify_policy_info": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"policy"},
 	},
 	"clockify_get_user_group": {
 		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
