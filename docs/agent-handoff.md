@@ -81,7 +81,8 @@ Those probes accept either success with IDs or a recoverable `ok:false`
 response when the workspace does not allow the feature.
 
 Optional-domain contract probing is also opt-in and uses real live calls only;
-it never passes `dry_run`:
+it never passes `dry_run` and intentionally leaves sacrificial-workspace
+objects in place for inspection:
 
 ```sh
 CLOCKIFY_RUN_LIVE_E2E=1 \
@@ -92,8 +93,10 @@ go test -count=1 ./internal/tools -run TestOneUserLiveOptionalDomainContracts
 
 ## Current Follow-Ups
 
-- Convert heavily used alias-wrapper domain tools to native one-user handlers.
-- Add live probes for more domain tools when the sacrificial workspace can do
-  so without manual cleanup.
-- Keep tightening workflow output schemas against fake-server and live outputs.
+- Continue converting lower-priority alias-wrapper domain tools when usage or
+  live evidence makes them hot.
+- Keep expanding live probes for domain tools that are still marked
+  `needs_live_probe` in `docs/goals/oneuser-tool-coverage.md`.
+- Keep tightening remaining generic output schemas against fake-server and
+  live outputs.
 - Keep stale docs out of the read-first path.

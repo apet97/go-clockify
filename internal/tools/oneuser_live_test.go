@@ -173,6 +173,22 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	if userID == "" {
 		t.Fatalf("clockify_status did not return userId: %+v", status)
 	}
+	workPackage := callLiveToolOKOrRecovery(t, server, "clockify_create_work_package", map[string]any{
+		"client":  liveOptionalName(prefix, runID, "client", 80),
+		"project": liveOptionalName(prefix, runID, "project", 80),
+		"task":    liveOptionalName(prefix, runID, "task", 80),
+		"tag":     liveOptionalName(prefix, runID, "tag", 80),
+	})
+	var entry liveToolEnvelope
+	if workPackage.OK {
+		entry = callLiveToolOKOrRecovery(t, server, "clockify_log_work", map[string]any{
+			"start":       "2026-01-06T09:00:00Z",
+			"end":         "2026-01-06T10:00:00Z",
+			"description": liveOptionalName(prefix, runID, "invoiceable work", 120),
+			"project_id":  requireLiveID(t, workPackage, "projectId"),
+			"task_id":     workPackage.IDs["taskId"],
+		})
+	}
 
 	for _, probe := range []struct {
 		name string
@@ -189,16 +205,48 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
 	}
 
-	var cleanups []liveCleanup
-	defer func() {
-		for i := len(cleanups) - 1; i >= 0; i-- {
-			callLiveToolDataOrRecovery(t, server, cleanups[i].Tool, cleanups[i].Args)
-		}
-	}()
+	callLiveToolOKOrRecovery(t, server, "clockify_invoices_create", map[string]any{
+		"client_id":   workPackage.IDs["clientId"],
+		"number":      "MCP-LIVE-" + runID,
+		"issued_date": "2026-01-06T00:00:00Z",
+		"due_date":    "2026-01-31T00:00:00Z",
+		"currency":    "USD",
+	})
+	callLiveToolOKOrRecovery(t, server, "clockify_invoices_send", map[string]any{"invoice_id": "65b382b606de527a7ee2b619"})
+	callLiveToolOKOrRecovery(t, server, "clockify_expenses_create", map[string]any{
+		"amount":      float64(5),
+		"date":        "2026-01-06T00:00:00Z",
+		"category_id": "65b382b606de527a7ee2b612",
+		"project_id":  workPackage.IDs["projectId"],
+		"notes":       liveOptionalName(prefix, runID, "expense", 120),
+	})
+	callLiveToolOKOrRecovery(t, server, "clockify_time_off_requests_create", map[string]any{
+		"policy_id": "65b382b606de527a7ee2b61c",
+		"start":     "2026-01-07",
+		"end":       "2026-01-07",
+		"note":      liveOptionalName(prefix, runID, "time off", 120),
+	})
+	callLiveToolOKOrRecovery(t, server, "clockify_scheduling_assignments_create", map[string]any{
+		"user_id":       userID,
+		"project_id":    workPackage.IDs["projectId"],
+		"start":         "2026-01-12T09:00:00Z",
+		"end":           "2026-01-16T17:00:00Z",
+		"hours_per_day": float64(4),
+	})
+	callLiveToolOKOrRecovery(t, server, "clockify_users_invite", map[string]any{
+		"email":      "mcp-live-" + runID + "@example.com",
+		"send_email": false,
+	})
+	if entry.OK {
+		callLiveToolOKOrRecovery(t, server, "clockify_entries_mark_invoiced", map[string]any{
+			"time_entry_ids": []any{requireLiveID(t, entry, "entryId")},
+			"invoiced":       true,
+		})
+	}
 
 	group := callLiveToolOKOrRecovery(t, server, "clockify_groups_create", map[string]any{"name": liveOptionalName(prefix, runID, "group", 80)})
 	if group.OK {
-		cleanups = append(cleanups, liveCleanup{Tool: "clockify_groups_delete", Args: map[string]any{"group_id": requireLiveID(t, group, "groupId")}})
+		requireLiveID(t, group, "groupId")
 	}
 
 	holiday := callLiveToolOKOrRecovery(t, server, "clockify_holidays_create", map[string]any{
@@ -208,7 +256,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		"user_ids":   []any{userID},
 	})
 	if holiday.OK {
-		cleanups = append(cleanups, liveCleanup{Tool: "clockify_holidays_delete", Args: map[string]any{"holiday_id": requireLiveID(t, holiday, "holidayId")}})
+		requireLiveID(t, holiday, "holidayId")
 	}
 
 	webhook := callLiveToolOKOrRecovery(t, server, "clockify_webhooks_create", map[string]any{
@@ -217,13 +265,8 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		"webhook_event": "NEW_TIME_ENTRY",
 	})
 	if webhook.OK {
-		cleanups = append(cleanups, liveCleanup{Tool: "clockify_webhooks_delete", Args: map[string]any{"webhook_id": requireLiveID(t, webhook, "webhookId")}})
+		requireLiveID(t, webhook, "webhookId")
 	}
-}
-
-type liveCleanup struct {
-	Tool string
-	Args map[string]any
 }
 
 type liveToolEnvelope struct {

@@ -54,6 +54,7 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out = append(out, s.workflowDescriptors()...)
 	out = append(out, s.FirstSliceRegistry()...)
 	out = append(out, s.nativeCoreDescriptors()...)
+	out = append(out, s.nativeHighValueDescriptors()...)
 	out = append(out, s.nativeAliasDescriptors()...)
 	out = append(out, s.coreRouteDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
@@ -455,6 +456,50 @@ func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
 	return out
 }
 
+func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
+	sources := s.nativeDomainDescriptorMap()
+	out := make([]mcp.ToolDescriptor, 0, 12)
+	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
+		old, ok := sources[oldName]
+		if !ok {
+			return
+		}
+		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
+	}
+	add(202, "clockify_invoices_create", "clockify_create_invoice", "invoice", "created", s.createInvoice)
+	add(205, "clockify_invoices_send", "clockify_send_invoice", "invoice", "updated", s.sendInvoice)
+	add(302, "clockify_expenses_create", "clockify_create_expense", "expense", "created", s.createExpense)
+	add(502, "clockify_time_off_requests_create", "clockify_create_time_off_request", "time_off_request", "created", s.createTimeOffRequest)
+	add(602, "clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created", s.createAssignment)
+	add(802, "clockify_webhooks_create", "clockify_create_webhook", "webhook", "created", s.CreateWebhook)
+	add(902, "clockify_groups_create", "clockify_create_user_group_admin", "group", "created", s.CreateUserGroupAdmin)
+	add(1004, "clockify_holidays_create", "clockify_create_holiday", "holiday", "created", s.CreateHoliday)
+	out = append(out,
+		nativeDomainTool(65, toolRWIdem("clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", objectSchema(map[string]any{"required": []string{"time_entry_ids", "invoiced"}, "properties": map[string]any{
+			"time_entry_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"invoiced":       map[string]any{"type": "boolean"},
+			"body":           map[string]any{"type": "object", "additionalProperties": true},
+		}})), "entry", "updated", s.EntriesMarkInvoiced),
+		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite or add users to the pinned workspace by email.", objectSchema(map[string]any{"properties": map[string]any{
+			"email":      map[string]any{"type": "string", "format": "email"},
+			"emails":     map[string]any{"type": "array", "items": map[string]any{"type": "string", "format": "email"}},
+			"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send invitation email. Defaults to true."},
+		}})), "user", "created", s.UsersInvite),
+	)
+	return out
+}
+
+func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+	tool := old.Tool
+	tool.Name = name
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	delete(tool.Annotations, "wraps")
+	tool.Annotations["handlerKind"] = "native handler"
+	return firstSliceDescriptor(priority, tool, aliasHandler(name, entity, change, handler))
+}
+
 func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 	out := map[string]mcp.ToolDescriptor{}
 	add := func(descriptors []mcp.ToolDescriptor) {
@@ -492,7 +537,11 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 func nativeAliasDescriptor(priority int, alias nativeAlias, old mcp.ToolDescriptor) mcp.ToolDescriptor {
 	tool := old.Tool
 	tool.Name = alias.NewName
-	tool.OutputSchema = firstSliceOutputSchema(alias.NewName, outputSchemaData(old.Tool.OutputSchema))
+	dataSchema := firstSliceDataOutputSchema(alias.NewName)
+	if dataSchema == nil {
+		dataSchema = outputSchemaData(old.Tool.OutputSchema)
+	}
+	tool.OutputSchema = firstSliceOutputSchema(alias.NewName, dataSchema)
 	if tool.Annotations == nil {
 		tool.Annotations = map[string]any{}
 	}
@@ -745,6 +794,88 @@ func (s *Service) callRouteTool(ctx context.Context, spec routeTool, args map[st
 	}
 	changed := changedFor(spec.Change, spec.Entity, data, ids)
 	return result(spec.Name, spec.Entity, ids, data, changed, nil, nil), nil
+}
+
+func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	entryIDs, found, err := strictStringSliceArg(args, "time_entry_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found || len(entryIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("time_entry_ids is required")
+	}
+	invoiced, found := optionalBoolArg(args, "invoiced")
+	if !found {
+		return ResultEnvelope{}, fmt.Errorf("invoiced is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "time-entries", "invoiced")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := map[string]any{"timeEntryIds": entryIDs, "invoiced": invoiced}
+	var upstream map[string]any
+	if err := s.Client.Patch(ctx, path, body, &upstream); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_entries_mark_invoiced", map[string]any{
+		"updated":       true,
+		"timeEntryIds":  entryIDs,
+		"invoiced":      invoiced,
+		"upstreamReply": upstream,
+	}, map[string]any{"workspaceId": wsID, "entryId": entryIDs[0]}), nil
+}
+
+func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	emails, found, err := strictStringSliceArg(args, "emails")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found {
+		if email := strings.TrimSpace(stringArg(args, "email")); email != "" {
+			emails = []string{email}
+		}
+	}
+	if len(emails) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("email or emails is required")
+	}
+	baseArgs := map[string]any{}
+	if sendEmail, ok := optionalBoolArg(args, "send_email"); ok {
+		baseArgs["send_email"] = sendEmail
+	}
+	if len(emails) == 1 {
+		baseArgs["email"] = emails[0]
+		out, err := s.InviteUser(ctx, baseArgs)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		out.Action = "clockify_users_invite"
+		return out, nil
+	}
+	var wsID string
+	invitations := make([]any, 0, len(emails))
+	for _, email := range emails {
+		nextArgs := make(map[string]any, len(baseArgs)+1)
+		for key, value := range baseArgs {
+			nextArgs[key] = value
+		}
+		nextArgs["email"] = email
+		out, err := s.InviteUser(ctx, nextArgs)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if id, _ := out.Meta["workspaceId"].(string); id != "" {
+			wsID = id
+		}
+		invitations = append(invitations, out.Data)
+	}
+	return ok("clockify_users_invite", map[string]any{
+		"invitations": invitations,
+		"count":       len(invitations),
+	}, map[string]any{"workspaceId": wsID}), nil
 }
 
 func routePath(workspaceID string, spec routeTool, args map[string]any) (string, map[string]string, error) {

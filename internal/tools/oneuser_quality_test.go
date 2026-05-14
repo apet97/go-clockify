@@ -510,9 +510,19 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	wantNative := map[string]bool{
-		"clockify_users_list":         true,
-		"clockify_users_profile":      true,
-		"clockify_workspace_settings": true,
+		"clockify_invoices_create":               true,
+		"clockify_invoices_send":                 true,
+		"clockify_expenses_create":               true,
+		"clockify_time_off_requests_create":      true,
+		"clockify_scheduling_assignments_create": true,
+		"clockify_webhooks_create":               true,
+		"clockify_groups_create":                 true,
+		"clockify_holidays_create":               true,
+		"clockify_users_invite":                  true,
+		"clockify_entries_mark_invoiced":         true,
+		"clockify_users_list":                    true,
+		"clockify_users_profile":                 true,
+		"clockify_workspace_settings":            true,
 	}
 	for _, descriptor := range svc.FullAccessRegistry() {
 		if !wantNative[descriptor.Tool.Name] {
@@ -531,6 +541,70 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	}
 }
 
+func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	wantFields := map[string][]string{
+		"clockify_clients_list":                  {"clients", "count", "page", "pageSize"},
+		"clockify_clients_get":                   {"id", "name"},
+		"clockify_clients_create":                {"id", "name"},
+		"clockify_projects_list":                 {"projects", "count", "page", "pageSize"},
+		"clockify_projects_get":                  {"id", "name"},
+		"clockify_projects_create":               {"id", "name"},
+		"clockify_tasks_list":                    {"tasks", "count", "page", "pageSize"},
+		"clockify_tasks_get":                     {"id", "name"},
+		"clockify_tasks_create":                  {"id", "name"},
+		"clockify_tags_list":                     {"tags", "count", "page", "pageSize"},
+		"clockify_tags_get":                      {"id", "name"},
+		"clockify_tags_create":                   {"id", "name"},
+		"clockify_entries_list":                  {"entries", "count", "page", "pageSize"},
+		"clockify_entries_get":                   {"id", "timeInterval"},
+		"clockify_entries_create":                {"id", "timeInterval"},
+		"clockify_invoices_list":                 {"id"},
+		"clockify_invoices_get":                  {"id"},
+		"clockify_invoices_create":               {"id"},
+		"clockify_expenses_list":                 {"id"},
+		"clockify_expenses_get":                  {"id"},
+		"clockify_expenses_create":               {"id"},
+		"clockify_webhooks_list":                 {"id"},
+		"clockify_webhooks_get":                  {"id"},
+		"clockify_webhooks_create":               {"id"},
+		"clockify_time_off_requests_create":      {"id"},
+		"clockify_scheduling_assignments_create": {"id"},
+		"clockify_groups_create":                 {"id"},
+		"clockify_holidays_create":               {"id"},
+		"clockify_users_invite":                  {"id"},
+		"clockify_entries_mark_invoiced":         {"updated"},
+	}
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	for name, fields := range wantFields {
+		t.Run(name, func(t *testing.T) {
+			descriptor, ok := descriptors[name]
+			if !ok {
+				t.Fatalf("missing descriptor")
+			}
+			props, _ := descriptor.Tool.OutputSchema["properties"].(map[string]any)
+			dataSchema, _ := props["data"].(map[string]any)
+			if dataSchema == nil {
+				t.Fatalf("%s missing data schema: %+v", name, descriptor.Tool.OutputSchema)
+			}
+			if desc, _ := dataSchema["description"].(string); strings.HasPrefix(desc, "Tool-specific payload for ") {
+				t.Fatalf("%s still uses generic data schema: %+v", name, dataSchema)
+			}
+			if _, ok := dataSchema["type"]; !ok {
+				t.Fatalf("%s data schema lacks a concrete type: %+v", name, dataSchema)
+			}
+			for _, field := range fields {
+				if !schemaMentionsField(dataSchema, field) {
+					t.Fatalf("%s data schema missing field %s: %+v", name, field, dataSchema)
+				}
+			}
+		})
+	}
+}
+
 func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	raw, err := os.ReadFile("../../docs/goals/oneuser-tool-coverage.md")
 	if err != nil {
@@ -541,15 +615,32 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 		"remaining honest gaps",
 		"| `clockify_status` | workflow | native handler",
 		"| `clockify_api_request` | raw | raw fallback",
-		"acceptable gap",
-		"| generic |",
+		"next action",
+		"needs_native_handler",
+		"needs_live_probe",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("coverage ledger missing required honesty marker %q", required)
 		}
 	}
-	if strings.Contains(text, "needs native handler") && !strings.Contains(text, "alias wrapper") {
-		t.Fatalf("native-handler gap status must be tied to alias-wrapper rows")
+	if strings.Contains(text, "acceptable gap") {
+		t.Fatalf("coverage ledger still uses broad acceptable-gap status")
+	}
+}
+
+func TestOneUserCoverageLedgerStatusesAreActionable(t *testing.T) {
+	ledger := parseOneUserCoverageLedger(t)
+	allowed := setOf("ready", "usable_wrapper", "needs_fake_smoke", "needs_native_handler", "needs_live_probe", "raw_fallback_only")
+	for _, row := range ledger.Rows {
+		if !allowed[row.Status] {
+			t.Fatalf("%s status=%q outside actionable status set", row.Tool, row.Status)
+		}
+		if row.NextAction == "" {
+			t.Fatalf("%s missing next_action", row.Tool)
+		}
+		if row.Handler == "alias wrapper" && row.Status == "ready" {
+			t.Fatalf("%s is an alias wrapper but marked ready", row.Tool)
+		}
 	}
 }
 
@@ -593,6 +684,16 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_tags_create",
 		"clockify_entries_list",
 		"clockify_entries_create",
+		"clockify_entries_mark_invoiced",
+		"clockify_invoices_create",
+		"clockify_invoices_send",
+		"clockify_expenses_create",
+		"clockify_time_off_requests_create",
+		"clockify_scheduling_assignments_create",
+		"clockify_webhooks_create",
+		"clockify_groups_create",
+		"clockify_holidays_create",
+		"clockify_users_invite",
 		"clockify_users_list",
 		"clockify_users_profile",
 		"clockify_workspace_settings",
@@ -612,6 +713,12 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_fix_entry",
 		"clockify_demo_seed",
 		"clockify_demo_cleanup",
+		"clockify_entries_mark_invoiced",
+		"clockify_invoices_create",
+		"clockify_invoices_send",
+		"clockify_expenses_create",
+		"clockify_time_off_requests_create",
+		"clockify_scheduling_assignments_create",
 		"clockify_invoices_list",
 		"clockify_expenses_categories_list",
 		"clockify_time_off_policies_list",
@@ -622,6 +729,7 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_groups_create",
 		"clockify_holidays_create",
 		"clockify_webhooks_create",
+		"clockify_users_invite",
 	)
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Fake smoke", func(row coverageRow) string { return row.FakeSmoke }, fakeEvidence)
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live-tested", func(row coverageRow) string { return row.LiveTested }, liveEvidence)
@@ -1196,9 +1304,13 @@ type coverageLedger struct {
 }
 
 type coverageRow struct {
-	Tool       string
-	FakeSmoke  string
-	LiveTested string
+	Tool         string
+	Handler      string
+	FakeSmoke    string
+	LiveTested   string
+	OutputSchema string
+	Status       string
+	NextAction   string
 }
 
 func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
@@ -1217,13 +1329,17 @@ func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
 			ledger.LiveTestedYes = parseCoverageSummaryCount(t, line, "- Live-tested yes:")
 		case strings.HasPrefix(line, "| `clockify_"):
 			fields := strings.Split(line, "|")
-			if len(fields) < 9 {
+			if len(fields) < 10 {
 				t.Fatalf("malformed coverage row: %s", line)
 			}
 			ledger.Rows = append(ledger.Rows, coverageRow{
-				Tool:       strings.Trim(strings.TrimSpace(fields[1]), "`"),
-				FakeSmoke:  strings.ToLower(strings.TrimSpace(fields[5])),
-				LiveTested: strings.ToLower(strings.TrimSpace(fields[6])),
+				Tool:         strings.Trim(strings.TrimSpace(fields[1]), "`"),
+				Handler:      strings.ToLower(strings.TrimSpace(fields[3])),
+				FakeSmoke:    strings.ToLower(strings.TrimSpace(fields[5])),
+				LiveTested:   strings.ToLower(strings.TrimSpace(fields[6])),
+				OutputSchema: strings.ToLower(strings.TrimSpace(fields[7])),
+				Status:       strings.ToLower(strings.TrimSpace(fields[8])),
+				NextAction:   strings.ToLower(strings.TrimSpace(fields[9])),
 			})
 		}
 	}
@@ -1231,6 +1347,23 @@ func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
 		t.Fatalf("coverage ledger did not parse summary/table: %+v", ledger)
 	}
 	return ledger
+}
+
+func schemaMentionsField(schema map[string]any, field string) bool {
+	if props, ok := schema["properties"].(map[string]any); ok {
+		if _, ok := props[field]; ok {
+			return true
+		}
+		for _, child := range props {
+			if childSchema, ok := child.(map[string]any); ok && schemaMentionsField(childSchema, field) {
+				return true
+			}
+		}
+	}
+	if items, ok := schema["items"].(map[string]any); ok && schemaMentionsField(items, field) {
+		return true
+	}
+	return false
 }
 
 func parseCoverageSummaryCount(t *testing.T, line, prefix string) int {

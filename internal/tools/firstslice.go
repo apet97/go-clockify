@@ -267,6 +267,57 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		})
 	case "clockify_review_day", "clockify_review_week":
 		return schemaFor[TimesheetReviewData]()
+	case "clockify_clients_list":
+		return objectListDataSchema("clients", schemaFor[[]ClientView]())
+	case "clockify_clients_get", "clockify_clients_create", "clockify_clients_update":
+		return schemaFor[ClientView]()
+	case "clockify_projects_list":
+		return objectListDataSchema("projects", schemaFor[[]ProjectView]())
+	case "clockify_projects_get", "clockify_projects_create", "clockify_projects_update", "clockify_projects_archive":
+		return schemaFor[ProjectView]()
+	case "clockify_tasks_list":
+		return objectListDataSchema("tasks", schemaFor[[]TaskView]())
+	case "clockify_tasks_get", "clockify_tasks_create", "clockify_tasks_update":
+		return schemaFor[TaskView]()
+	case "clockify_tags_list":
+		return objectListDataSchema("tags", schemaFor[[]clockify.Tag]())
+	case "clockify_tags_get", "clockify_tags_create", "clockify_tags_update":
+		return schemaFor[clockify.Tag]()
+	case "clockify_entries_list":
+		return objectListDataSchema("entries", schemaFor[[]EntryView]())
+	case "clockify_entries_get", "clockify_entries_update":
+		return schemaFor[EntryView]()
+	case "clockify_entries_create":
+		return schemaFor[clockify.TimeEntry]()
+	case "clockify_invoices_list":
+		return entityArrayDataSchema("id", "number", "status", "clientId")
+	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_send", "clockify_invoices_mark_paid":
+		return entityObjectDataSchema("id", "number", "status", "clientId")
+	case "clockify_expenses_list":
+		return entityArrayDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
+	case "clockify_expenses_get", "clockify_expenses_create", "clockify_expenses_update":
+		return entityObjectDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
+	case "clockify_time_off_requests_create", "clockify_time_off_requests_get", "clockify_time_off_requests_update":
+		return entityObjectDataSchema("id", "requestId", "policyId", "status")
+	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_get":
+		return entityObjectDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
+	case "clockify_webhooks_list":
+		return entityArrayDataSchema("id", "name", "url", "webhookEvent")
+	case "clockify_webhooks_get", "clockify_webhooks_create", "clockify_webhooks_update":
+		return entityObjectDataSchema("id", "name", "url", "webhookEvent")
+	case "clockify_groups_create", "clockify_groups_get":
+		return entityObjectDataSchema("id", "name", "userIds")
+	case "clockify_holidays_create", "clockify_holidays_get", "clockify_holidays_update":
+		return entityObjectDataSchema("id", "name", "start", "end")
+	case "clockify_users_invite":
+		return entityObjectDataSchema("id", "email", "status")
+	case "clockify_entries_mark_invoiced":
+		return objectDataSchema(map[string]any{
+			"updated":       map[string]any{"type": "boolean"},
+			"timeEntryIds":  stringArraySchema("Time entry IDs updated."),
+			"invoiced":      map[string]any{"type": "boolean"},
+			"upstreamReply": map[string]any{"type": "object", "additionalProperties": true},
+		})
 	case "clockify_invoice_client_work":
 		return dataKeysSchema("billing", "client", "clientId", "discount", "financials", "id", "import", "invoice", "number", "payment_summary", "raw", "status", "suggestedActions", "taxes")
 	case "clockify_record_expense":
@@ -302,8 +353,33 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 
 func objectDataSchema(properties map[string]any) map[string]any {
 	return map[string]any{
-		"type":       "object",
-		"properties": properties,
+		"type":                 "object",
+		"additionalProperties": true,
+		"properties":           properties,
+	}
+}
+
+func objectListDataSchema(key string, itemsSchema map[string]any) map[string]any {
+	return objectDataSchema(map[string]any{
+		key:        itemsSchema,
+		"count":    map[string]any{"type": "integer"},
+		"page":     map[string]any{"type": "integer"},
+		"pageSize": map[string]any{"type": "integer"},
+	})
+}
+
+func entityObjectDataSchema(fields ...string) map[string]any {
+	props := make(map[string]any, len(fields))
+	for _, field := range fields {
+		props[field] = map[string]any{}
+	}
+	return objectDataSchema(props)
+}
+
+func entityArrayDataSchema(fields ...string) map[string]any {
+	return map[string]any{
+		"type":  "array",
+		"items": entityObjectDataSchema(fields...),
 	}
 }
 
