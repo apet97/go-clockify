@@ -1,0 +1,1218 @@
+package tools
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
+	"github.com/apet97/go-clockify/internal/resolve"
+	"github.com/apet97/go-clockify/internal/timeparse"
+)
+
+const demoDefaultRunID = "phase1"
+
+type ToolResult struct {
+	OK       bool              `json:"ok"`
+	Action   string            `json:"action"`
+	Entity   string            `json:"entity,omitempty"`
+	IDs      map[string]string `json:"ids,omitempty"`
+	Data     any               `json:"data,omitempty"`
+	Changed  ChangeSet         `json:"changed"`
+	Warnings []Warning         `json:"warnings,omitempty"`
+	Next     []NextAction      `json:"next,omitempty"`
+}
+
+type ToolError struct {
+	OK       bool         `json:"ok"`
+	Action   string       `json:"action"`
+	Error    ErrorInfo    `json:"error"`
+	Recovery RecoveryHint `json:"recovery"`
+	Warnings []Warning    `json:"warnings,omitempty"`
+}
+
+type ChangeSet struct {
+	Created []EntityRef `json:"created,omitempty"`
+	Updated []EntityRef `json:"updated,omitempty"`
+	Deleted []EntityRef `json:"deleted,omitempty"`
+	Reused  []EntityRef `json:"reused,omitempty"`
+}
+
+type EntityRef struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+	Name string `json:"name,omitempty"`
+}
+
+type Warning struct {
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message"`
+}
+
+type NextAction struct {
+	Tool   string         `json:"tool"`
+	Args   map[string]any `json:"args,omitempty"`
+	Reason string         `json:"reason,omitempty"`
+}
+
+type ErrorInfo struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+type RecoveryHint struct {
+	Hint string         `json:"hint"`
+	Tool string         `json:"tool,omitempty"`
+	Args map[string]any `json:"args,omitempty"`
+}
+
+type statusData struct {
+	User                  clockify.User      `json:"user"`
+	Workspace             clockify.Workspace `json:"workspace"`
+	Timezone              string             `json:"timezone"`
+	CurrentTimer          any                `json:"currentTimer,omitempty"`
+	RecommendedFirstTools []string           `json:"recommendedFirstTools"`
+}
+
+func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
+	descriptors := []mcp.ToolDescriptor{
+		firstSliceDescriptor(0, toolRO("clockify_status", "Show current user, pinned workspace, timezone, features, and current timer.", objectSchema(nil)), s.ClockifyStatus),
+		firstSliceDescriptor(10, toolRWIdem("clockify_demo_seed", "Create or reuse deterministic demo client/project/task/tag/time-entry objects.", objectSchema(map[string]any{
+			"properties": map[string]any{
+				"run_id": map[string]any{"type": "string", "description": "Stable run id. Default: phase1."},
+				"prefix": map[string]any{"type": "string", "description": "Explicit object-name prefix. Default: DEMO-<run_id>."},
+				"date":   map[string]any{"type": "string", "description": "YYYY-MM-DD date for the demo time entry. Default: 2026-01-02."},
+				"upsert": map[string]any{"type": "boolean", "description": "Reuse existing prefixed objects. Default: true."},
+			},
+		})), s.ClockifyDemoSeed),
+		firstSliceDescriptor(11, toolRWIdem("clockify_demo_cleanup", "Delete deterministic demo objects by prefix, continuing through partial failures.", objectSchema(map[string]any{
+			"properties": map[string]any{
+				"run_id": map[string]any{"type": "string", "description": "Stable run id. Default: phase1."},
+				"prefix": map[string]any{"type": "string", "description": "Explicit object-name prefix. Default: DEMO-<run_id>."},
+				"start":  map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			},
+		})), s.ClockifyDemoCleanup),
+
+		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace.", paginationSchema(nil)), s.ClientsList),
+		firstSliceDescriptor(21, toolRW("clockify_clients_create", "Create a client in the pinned workspace.", objectSchema(map[string]any{
+			"required": []string{"name"},
+			"properties": map[string]any{
+				"name": map[string]any{"type": "string"},
+			},
+		})), s.ClientsCreate),
+		firstSliceDescriptor(30, toolRO("clockify_projects_list", "List projects in the pinned workspace.", paginationSchema(nil)), s.ProjectsList),
+		firstSliceDescriptor(31, toolRW("clockify_projects_create", "Create a project in the pinned workspace.", objectSchema(map[string]any{
+			"required": []string{"name"},
+			"properties": map[string]any{
+				"name":      map[string]any{"type": "string"},
+				"client_id": map[string]any{"type": "string"},
+				"client":    map[string]any{"type": "string", "description": "Client name or ID."},
+				"color":     map[string]any{"type": "string", "description": "Hex color code."},
+				"billable":  map[string]any{"type": "boolean"},
+				"is_public": map[string]any{"type": "boolean"},
+			},
+		})), s.ProjectsCreate),
+		firstSliceDescriptor(40, toolRO("clockify_tasks_list", "List tasks for a project.", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"project_id": map[string]any{"type": "string"},
+				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			},
+		})), s.TasksList),
+		firstSliceDescriptor(41, toolRW("clockify_tasks_create", "Create a task under a project.", objectSchema(map[string]any{
+			"required": []string{"name"},
+			"properties": map[string]any{
+				"project_id": map[string]any{"type": "string"},
+				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+				"name":       map[string]any{"type": "string"},
+				"billable":   map[string]any{"type": "boolean"},
+			},
+		})), s.TasksCreate),
+		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(nil)), s.TagsList),
+		firstSliceDescriptor(51, toolRW("clockify_tags_create", "Create a tag in the pinned workspace.", objectSchema(map[string]any{
+			"required": []string{"name"},
+			"properties": map[string]any{
+				"name": map[string]any{"type": "string"},
+			},
+		})), s.TagsCreate),
+		firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace.", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"start":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":        map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"project_id": map[string]any{"type": "string"},
+				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+			},
+		})), s.EntriesList),
+		firstSliceDescriptor(61, toolRW("clockify_entries_create", "Create a current-user time entry in the pinned workspace.", objectSchema(map[string]any{
+			"required": []string{"start"},
+			"properties": map[string]any{
+				"start":       map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"description": map[string]any{"type": "string"},
+				"project_id":  map[string]any{"type": "string"},
+				"project":     map[string]any{"type": "string", "description": "Project name or ID."},
+				"task_id":     map[string]any{"type": "string"},
+				"task":        map[string]any{"type": "string", "description": "Task name. Requires project/project_id."},
+				"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"tag":         map[string]any{"type": "string", "description": "Tag name or ID."},
+				"billable":    map[string]any{"type": "boolean"},
+			},
+		})), s.EntriesCreate),
+	}
+	return normalizeDescriptors(descriptors)
+}
+
+func firstSliceDescriptor(priority int, tool mcp.Tool, handler mcp.ToolHandler) mcp.ToolDescriptor {
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	tool.Annotations["priority"] = priority
+	tool.OutputSchema = firstSliceOutputSchema()
+	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(tool.Name, handler)}
+}
+
+func firstSliceHandler(action string, handler mcp.ToolHandler) mcp.ToolHandler {
+	return func(ctx context.Context, args map[string]any) (any, error) {
+		result, err := handler(ctx, args)
+		if err != nil {
+			return recoverable(action, err, defaultRecovery(action, args)), nil
+		}
+		return result, nil
+	}
+}
+
+func objectSchema(overrides map[string]any) map[string]any {
+	schema := map[string]any{
+		"type":       "object",
+		"properties": map[string]any{},
+	}
+	if overrides != nil {
+		for k, v := range overrides {
+			schema[k] = v
+		}
+	}
+	return schema
+}
+
+func firstSliceOutputSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"required": []string{
+			"ok",
+			"action",
+		},
+		"properties": map[string]any{
+			"ok":       map[string]any{"type": "boolean"},
+			"action":   map[string]any{"type": "string"},
+			"entity":   map[string]any{"type": "string"},
+			"ids":      map[string]any{"type": "object"},
+			"data":     map[string]any{"type": "object"},
+			"changed":  map[string]any{"type": "object"},
+			"warnings": map[string]any{"type": "array"},
+			"next":     map[string]any{"type": "array"},
+			"error":    map[string]any{"type": "object"},
+			"recovery": map[string]any{"type": "object"},
+		},
+	}
+}
+
+func result(action, entity string, ids map[string]string, data any, changed ChangeSet, warnings []Warning, next []NextAction) ToolResult {
+	return ToolResult{
+		OK:       true,
+		Action:   action,
+		Entity:   entity,
+		IDs:      cleanIDs(ids),
+		Data:     data,
+		Changed:  changed,
+		Warnings: warnings,
+		Next:     next,
+	}
+}
+
+func cleanIDs(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		if strings.TrimSpace(v) != "" {
+			out[k] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func recoverable(action string, err error, recovery RecoveryHint) ToolError {
+	code := "error"
+	message := err.Error()
+	var apiErr *clockify.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.StatusCode {
+		case 400:
+			code = "invalid_request"
+		case 402:
+			code = "feature_unavailable"
+		case 401, 403:
+			code = "auth_or_permission"
+			if looksLikeFeatureUnavailable(message) {
+				code = "feature_unavailable"
+			}
+		case 404:
+			code = "not_found"
+		case 409:
+			code = "conflict"
+		case 429:
+			code = "rate_limited"
+		default:
+			code = "clockify_upstream_error"
+		}
+	}
+	if recovery.Hint == "" {
+		recovery = defaultRecovery(action, nil)
+	}
+	return ToolError{
+		OK:       false,
+		Action:   action,
+		Error:    ErrorInfo{Code: code, Message: message},
+		Recovery: recovery,
+	}
+}
+
+func looksLikeFeatureUnavailable(message string) bool {
+	message = strings.ToLower(message)
+	for _, needle := range []string{"feature", "paid", "plan", "subscription", "upgrade", "not available", "not supported"} {
+		if strings.Contains(message, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func defaultRecovery(action string, args map[string]any) RecoveryHint {
+	switch {
+	case strings.Contains(action, "tools_guide"):
+		return RecoveryHint{Hint: "Call clockify_status, then choose a workflow tool from tools/list.", Tool: "clockify_status"}
+	case strings.Contains(action, "create_work_package"):
+		return RecoveryHint{Hint: "List clients, projects, tasks, or tags, then retry with returned IDs or exact names.", Tool: "clockify_tools_guide"}
+	case strings.Contains(action, "log_work"), strings.Contains(action, "start_work"), strings.Contains(action, "stop_work"), strings.Contains(action, "switch_work"), strings.Contains(action, "fix_entry"), strings.Contains(action, "review_day"), strings.Contains(action, "review_week"):
+		return RecoveryHint{Hint: "Check the entry, project, task, tag, and time fields; use returned IDs or exact names.", Tool: "clockify_review_day"}
+	case strings.Contains(action, "invoice"):
+		return RecoveryHint{Hint: "If invoicing is unavailable, report that and continue. Otherwise list clients or invoices, then retry with returned IDs.", Tool: "clockify_invoices_list"}
+	case strings.Contains(action, "expense"):
+		return RecoveryHint{Hint: "If expenses are unavailable, report that and continue. Otherwise list expense categories and retry with returned IDs.", Tool: "clockify_expenses_categories_list"}
+	case strings.Contains(action, "time_off"):
+		return RecoveryHint{Hint: "If time off is unavailable, report that and continue. Otherwise list policies and retry with a returned policy ID.", Tool: "clockify_time_off_policies_list"}
+	case strings.Contains(action, "schedule"):
+		return RecoveryHint{Hint: "If scheduling is unavailable, report that and continue. Otherwise list users/projects and retry with returned IDs.", Tool: "clockify_scheduling_assignments_list"}
+	case strings.Contains(action, "webhook"):
+		return RecoveryHint{Hint: "If webhooks are unavailable, report that and continue. Otherwise verify the HTTPS callback URL and event, then retry.", Tool: "clockify_webhooks_events"}
+	case strings.Contains(action, "projects"):
+		return RecoveryHint{Hint: "Check the project/client fields, list projects or clients, then retry with returned IDs.", Tool: "clockify_projects_list"}
+	case strings.Contains(action, "clients"):
+		return RecoveryHint{Hint: "List clients and reuse an existing client ID, or retry with a different name.", Tool: "clockify_clients_list"}
+	case strings.Contains(action, "tasks"):
+		return RecoveryHint{Hint: "List projects and tasks, then retry with returned project/task IDs.", Tool: "clockify_tasks_list", Args: map[string]any{"project_id": stringArg(args, "project_id")}}
+	case strings.Contains(action, "tags"):
+		return RecoveryHint{Hint: "List tags and reuse an existing tag ID, or retry with a different name.", Tool: "clockify_tags_list"}
+	case strings.Contains(action, "entries"):
+		return RecoveryHint{Hint: "Check start/end times and project/task/tag IDs, list entries or projects, then retry.", Tool: "clockify_entries_list"}
+	default:
+		return RecoveryHint{Hint: "Check the returned error, call clockify_status, then retry with IDs returned by previous calls.", Tool: "clockify_status"}
+	}
+}
+
+func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, error) {
+	user, err := s.getCurrentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	workspace, err := s.getWorkspace(ctx, wsID)
+	if err != nil {
+		return nil, err
+	}
+	warnings := []Warning{}
+	currentTimer, err := s.currentTimer(ctx)
+	if err != nil {
+		warnings = append(warnings, Warning{Code: "timer_unavailable", Message: err.Error()})
+	}
+	return result("clockify_status", "workspace", map[string]string{
+		"workspaceId": wsID,
+		"userId":      user.ID,
+	}, statusData{
+		User:                  user,
+		Workspace:             workspace,
+		Timezone:              s.timezoneName(),
+		CurrentTimer:          currentTimer,
+		RecommendedFirstTools: []string{"clockify_tools_guide", "clockify_create_work_package", "clockify_log_work", "clockify_start_work", "clockify_review_day"},
+	}, ChangeSet{}, warnings, []NextAction{
+		{Tool: "clockify_tools_guide", Reason: "Pick the best workflow tool before falling back to domain tools."},
+		{Tool: "clockify_create_work_package", Reason: "Create or reuse a client/project/task/tag package for work tracking."},
+		{Tool: "clockify_log_work", Reason: "Log finished work with human-friendly project, task, and tag names."},
+	}), nil
+}
+
+func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, error) {
+	items, page, pageSize, err := s.listClients(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_clients_list", "client", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+		"clients":  items,
+		"count":    len(items),
+		"page":     page,
+		"pageSize": pageSize,
+	}, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) ClientsCreate(ctx context.Context, args map[string]any) (any, error) {
+	name := strings.TrimSpace(stringArg(args, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	client, err := s.createClient(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_clients_create", "client", map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"clientId":    client.ID,
+	}, client, ChangeSet{Created: []EntityRef{clientRef(client)}}, nil, []NextAction{{
+		Tool:   "clockify_projects_create",
+		Args:   map[string]any{"client_id": client.ID},
+		Reason: "Create a project for this client.",
+	}}), nil
+}
+
+func (s *Service) ProjectsList(ctx context.Context, args map[string]any) (any, error) {
+	items, page, pageSize, err := s.listProjects(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_projects_list", "project", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+		"projects": items,
+		"count":    len(items),
+		"page":     page,
+		"pageSize": pageSize,
+	}, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) ProjectsCreate(ctx context.Context, args map[string]any) (any, error) {
+	name := strings.TrimSpace(stringArg(args, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	project, clientID, err := s.createProject(ctx, args, name)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_projects_create", "project", map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"projectId":   project.ID,
+		"clientId":    clientID,
+	}, project, ChangeSet{Created: []EntityRef{projectRef(project)}}, nil, []NextAction{{
+		Tool:   "clockify_tasks_create",
+		Args:   map[string]any{"project_id": project.ID},
+		Reason: "Add a task to this project.",
+	}}), nil
+}
+
+func (s *Service) TasksList(ctx context.Context, args map[string]any) (any, error) {
+	projectID, err := s.projectIDFromArgs(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	items, page, pageSize, err := s.listTasks(ctx, projectID, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_tasks_list", "task", map[string]string{"workspaceId": s.WorkspaceID, "projectId": projectID}, map[string]any{
+		"tasks":    items,
+		"count":    len(items),
+		"page":     page,
+		"pageSize": pageSize,
+	}, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) TasksCreate(ctx context.Context, args map[string]any) (any, error) {
+	projectID, err := s.projectIDFromArgs(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(stringArg(args, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	task, err := s.createTask(ctx, projectID, name, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_tasks_create", "task", map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"projectId":   projectID,
+		"taskId":      task.ID,
+	}, task, ChangeSet{Created: []EntityRef{taskRef(task)}}, nil, nil), nil
+}
+
+func (s *Service) TagsList(ctx context.Context, args map[string]any) (any, error) {
+	items, page, pageSize, err := s.listTags(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_tags_list", "tag", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+		"tags":     items,
+		"count":    len(items),
+		"page":     page,
+		"pageSize": pageSize,
+	}, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) TagsCreate(ctx context.Context, args map[string]any) (any, error) {
+	name := strings.TrimSpace(stringArg(args, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	tag, err := s.createTag(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_tags_create", "tag", map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"tagId":       tag.ID,
+	}, tag, ChangeSet{Created: []EntityRef{tagRef(tag)}}, nil, nil), nil
+}
+
+func (s *Service) EntriesList(ctx context.Context, args map[string]any) (any, error) {
+	entries, userID, page, pageSize, err := s.listCurrentUserEntries(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_entries_list", "entry", map[string]string{"workspaceId": s.WorkspaceID, "userId": userID}, map[string]any{
+		"entries":  entries,
+		"count":    len(entries),
+		"page":     page,
+		"pageSize": pageSize,
+	}, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) EntriesCreate(ctx context.Context, args map[string]any) (any, error) {
+	entry, ids, err := s.createEntry(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_entries_create", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, nil, nil), nil
+}
+
+func (s *Service) ClockifyDemoSeed(ctx context.Context, args map[string]any) (any, error) {
+	runID := demoRunID(args)
+	prefix := demoPrefix(args)
+	reviewDate := strings.TrimSpace(stringArg(args, "date"))
+	if reviewDate == "" {
+		reviewDate = "2026-01-02"
+	}
+	upsert := true
+	if v, ok := args["upsert"].(bool); ok {
+		upsert = v
+	}
+
+	changed := ChangeSet{}
+	warnings := []Warning{}
+	client, reused, err := s.ensureDemoClient(ctx, prefix, upsert)
+	if err != nil {
+		return nil, err
+	}
+	addChanged(&changed, reused, clientRef(client))
+
+	project, reused, err := s.ensureDemoProject(ctx, prefix, client.ID, upsert)
+	if err != nil {
+		return nil, err
+	}
+	addChanged(&changed, reused, projectRef(project))
+
+	task, reused, err := s.ensureDemoTask(ctx, prefix, project.ID, upsert)
+	if err != nil {
+		return nil, err
+	}
+	addChanged(&changed, reused, taskRef(task))
+
+	tag, reused, err := s.ensureDemoTag(ctx, prefix, upsert)
+	if err != nil {
+		return nil, err
+	}
+	addChanged(&changed, reused, tagRef(tag))
+
+	entry, reused, err := s.ensureDemoEntry(ctx, args, prefix, project.ID, task.ID, tag.ID, upsert)
+	if err != nil {
+		return nil, err
+	}
+	addChanged(&changed, reused, entryRef(entry))
+
+	out := result("clockify_demo_seed", "demo", map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"clientId":    client.ID,
+		"projectId":   project.ID,
+		"taskId":      task.ID,
+		"tagId":       tag.ID,
+		"entryId":     entry.ID,
+	}, map[string]any{
+		"prefix":     prefix,
+		"client":     client,
+		"project":    project,
+		"task":       task,
+		"tag":        tag,
+		"entry":      entry,
+		"usableWith": []string{"clockify_log_work", "clockify_start_work", "clockify_review_day", "clockify_demo_cleanup"},
+	}, changed, warnings, []NextAction{
+		{
+			Tool:   "clockify_review_day",
+			Args:   map[string]any{"date": reviewDate},
+			Reason: "Review the seeded demo entry and verify report totals.",
+		},
+		{
+			Tool:   "clockify_demo_cleanup",
+			Args:   map[string]any{"prefix": prefix},
+			Reason: "Clean up the deterministic demo objects when finished.",
+		},
+	})
+	s.updateDemoResource(runID, prefix, "seeded", out)
+	return out, nil
+}
+
+func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) (any, error) {
+	runID := demoRunID(args)
+	prefix := demoPrefix(args)
+	changed := ChangeSet{}
+	warnings := []Warning{}
+
+	entries, _, _, _, err := s.listCurrentUserEntries(ctx, cleanupEntryRangeArgs(args))
+	if err != nil {
+		warnings = append(warnings, Warning{Code: "entries_list_failed", Message: err.Error()})
+	} else {
+		for _, entry := range entries {
+			if strings.HasPrefix(entry.Description, prefix) {
+				s.deleteDemo(ctx, "entry", entry.ID, entry.Description, &changed, &warnings)
+			}
+		}
+	}
+
+	projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200)})
+	if err != nil {
+		warnings = append(warnings, Warning{Code: "projects_list_failed", Message: err.Error()})
+	} else {
+		for _, project := range projects {
+			if strings.HasPrefix(project.Name, prefix) {
+				tasks, _, _, taskErr := s.listTasks(ctx, project.ID, map[string]any{"page_size": float64(200)})
+				if taskErr != nil {
+					warnings = append(warnings, Warning{Code: "tasks_list_failed", Message: taskErr.Error()})
+				} else {
+					for _, task := range tasks {
+						if strings.HasPrefix(task.Name, prefix) {
+							s.deleteDemoTask(ctx, project.ID, task, &changed, &warnings)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	tags, _, _, err := s.listTags(ctx, map[string]any{"page_size": float64(200)})
+	if err != nil {
+		warnings = append(warnings, Warning{Code: "tags_list_failed", Message: err.Error()})
+	} else {
+		for _, tag := range tags {
+			if strings.HasPrefix(tag.Name, prefix) {
+				s.deleteDemo(ctx, "tag", tag.ID, tag.Name, &changed, &warnings)
+			}
+		}
+	}
+
+	for _, project := range projects {
+		if strings.HasPrefix(project.Name, prefix) {
+			s.deleteDemo(ctx, "project", project.ID, project.Name, &changed, &warnings)
+		}
+	}
+
+	clients, _, _, err := s.listClients(ctx, map[string]any{"page_size": float64(200)})
+	if err != nil {
+		warnings = append(warnings, Warning{Code: "clients_list_failed", Message: err.Error()})
+	} else {
+		for _, client := range clients {
+			if strings.HasPrefix(client.Name, prefix) {
+				s.deleteDemo(ctx, "client", client.ID, client.Name, &changed, &warnings)
+			}
+		}
+	}
+
+	out := result("clockify_demo_cleanup", "demo", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+		"prefix":        prefix,
+		"deletedCount":  len(changed.Deleted),
+		"warningsCount": len(warnings),
+	}, changed, warnings, []NextAction{{
+		Tool:   "clockify_demo_seed",
+		Args:   map[string]any{"prefix": prefix},
+		Reason: "Recreate the deterministic demo fixture if another smoke pass is needed.",
+	}})
+	s.updateDemoResource(runID, prefix, "cleaned", out)
+	return out, nil
+}
+
+func (s *Service) getWorkspace(ctx context.Context, wsID string) (clockify.Workspace, error) {
+	path, err := paths.Workspace(wsID)
+	if err != nil {
+		return clockify.Workspace{}, err
+	}
+	var workspace clockify.Workspace
+	if err := s.Client.Get(ctx, path, nil, &workspace); err != nil {
+		return clockify.Workspace{}, err
+	}
+	return workspace, nil
+}
+
+func (s *Service) currentTimer(ctx context.Context) (any, error) {
+	entries, userID, _, _, err := s.listCurrentUserEntries(ctx, map[string]any{"page_size": float64(1)})
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 || !entries[0].IsRunning() {
+		return map[string]any{"running": false, "entry": nil, "userId": userID}, nil
+	}
+	entry := entries[0]
+	start, err := entry.StartTime()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"running":        true,
+		"entry":          entry,
+		"userId":         userID,
+		"elapsedSeconds": int64(time.Since(start).Seconds()),
+	}, nil
+}
+
+func (s *Service) listClients(ctx context.Context, args map[string]any) ([]clockify.ClientEntity, int, int, error) {
+	page, pageSize := paginationFromArgs(args)
+	path, err := paths.Workspace(s.WorkspaceID, "clients")
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var out []clockify.ClientEntity
+	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	return out, page, pageSize, err
+}
+
+func (s *Service) createClient(ctx context.Context, name string) (clockify.ClientEntity, error) {
+	path, err := paths.Workspace(s.WorkspaceID, "clients")
+	if err != nil {
+		return clockify.ClientEntity{}, err
+	}
+	var client clockify.ClientEntity
+	err = s.Client.Post(ctx, path, map[string]any{"name": name}, &client)
+	return client, err
+}
+
+func (s *Service) listProjects(ctx context.Context, args map[string]any) ([]clockify.Project, int, int, error) {
+	page, pageSize := paginationFromArgs(args)
+	path, err := paths.Workspace(s.WorkspaceID, "projects")
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var out []clockify.Project
+	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	return out, page, pageSize, err
+}
+
+func (s *Service) createProject(ctx context.Context, args map[string]any, name string) (clockify.Project, string, error) {
+	payload := map[string]any{"name": name}
+	clientID := strings.TrimSpace(stringArg(args, "client_id"))
+	if clientID == "" {
+		clientRef := strings.TrimSpace(stringArg(args, "client"))
+		if clientRef != "" {
+			var err error
+			clientID, err = s.resolveClientID(ctx, s.WorkspaceID, clientRef)
+			if err != nil {
+				return clockify.Project{}, "", err
+			}
+		}
+	}
+	if clientID != "" {
+		if err := resolve.ValidateID(clientID, "client_id"); err != nil {
+			return clockify.Project{}, "", err
+		}
+		payload["clientId"] = clientID
+	}
+	if color := strings.TrimSpace(stringArg(args, "color")); color != "" {
+		payload["color"] = color
+	}
+	if billable, ok := args["billable"].(bool); ok {
+		payload["billable"] = billable
+	}
+	if isPublic, ok := args["is_public"].(bool); ok {
+		payload["isPublic"] = isPublic
+	}
+	path, err := paths.Workspace(s.WorkspaceID, "projects")
+	if err != nil {
+		return clockify.Project{}, "", err
+	}
+	var project clockify.Project
+	err = s.Client.Post(ctx, path, payload, &project)
+	return project, clientID, err
+}
+
+func (s *Service) listTasks(ctx context.Context, projectID string, args map[string]any) ([]clockify.Task, int, int, error) {
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return nil, 0, 0, err
+	}
+	page, pageSize := paginationFromArgs(args)
+	path, err := paths.Workspace(s.WorkspaceID, "projects", projectID, "tasks")
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var out []clockify.Task
+	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	return out, page, pageSize, err
+}
+
+func (s *Service) createTask(ctx context.Context, projectID, name string, args map[string]any) (clockify.Task, error) {
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		return clockify.Task{}, err
+	}
+	payload := map[string]any{"name": name}
+	if billable, ok := args["billable"].(bool); ok {
+		payload["billable"] = billable
+	}
+	path, err := paths.Workspace(s.WorkspaceID, "projects", projectID, "tasks")
+	if err != nil {
+		return clockify.Task{}, err
+	}
+	var task clockify.Task
+	err = s.Client.Post(ctx, path, payload, &task)
+	return task, err
+}
+
+func (s *Service) listTags(ctx context.Context, args map[string]any) ([]clockify.Tag, int, int, error) {
+	page, pageSize := paginationFromArgs(args)
+	path, err := paths.Workspace(s.WorkspaceID, "tags")
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var out []clockify.Tag
+	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	return out, page, pageSize, err
+}
+
+func (s *Service) createTag(ctx context.Context, name string) (clockify.Tag, error) {
+	path, err := paths.Workspace(s.WorkspaceID, "tags")
+	if err != nil {
+		return clockify.Tag{}, err
+	}
+	var tag clockify.Tag
+	err = s.Client.Post(ctx, path, map[string]any{"name": name}, &tag)
+	return tag, err
+}
+
+func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]any) ([]clockify.TimeEntry, string, int, int, error) {
+	user, err := s.getCurrentUser(ctx)
+	if err != nil {
+		return nil, "", 0, 0, err
+	}
+	page, pageSize := paginationFromArgs(args)
+	query := pageQuery(page, pageSize)
+	loc := s.location()
+	if start := strings.TrimSpace(stringArg(args, "start")); start != "" {
+		t, err := timeparse.ParseDatetime(start, loc)
+		if err != nil {
+			return nil, "", 0, 0, fmt.Errorf("invalid start: %w", err)
+		}
+		query["start"] = timeparse.FormatISO(t)
+	}
+	if end := strings.TrimSpace(stringArg(args, "end")); end != "" {
+		t, err := timeparse.ParseDatetime(end, loc)
+		if err != nil {
+			return nil, "", 0, 0, fmt.Errorf("invalid end: %w", err)
+		}
+		query["end"] = timeparse.FormatISO(t)
+	}
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
+	if projectID == "" {
+		projectRef := strings.TrimSpace(stringArg(args, "project"))
+		if projectRef != "" {
+			projectID, err = s.resolveProjectID(ctx, s.WorkspaceID, projectRef)
+			if err != nil {
+				return nil, "", 0, 0, err
+			}
+		}
+	}
+	if projectID != "" {
+		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+			return nil, "", 0, 0, err
+		}
+		query["project"] = projectID
+	}
+	if err := resolve.ValidateID(user.ID, "user_id"); err != nil {
+		return nil, "", 0, 0, err
+	}
+	path, err := paths.Workspace(s.WorkspaceID, "user", user.ID, "time-entries")
+	if err != nil {
+		return nil, "", 0, 0, err
+	}
+	var entries []clockify.TimeEntry
+	err = s.Client.Get(ctx, path, query, &entries)
+	return entries, user.ID, page, pageSize, err
+}
+
+func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockify.TimeEntry, map[string]string, error) {
+	startRaw := strings.TrimSpace(stringArg(args, "start"))
+	if startRaw == "" {
+		return clockify.TimeEntry{}, nil, fmt.Errorf("start is required")
+	}
+	loc := s.location()
+	startTime, err := timeparse.ParseDatetime(startRaw, loc)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, fmt.Errorf("invalid start: %w", err)
+	}
+	payload := map[string]any{"start": timeparse.FormatISO(startTime)}
+	if endRaw := strings.TrimSpace(stringArg(args, "end")); endRaw != "" {
+		endTime, err := timeparse.ParseDatetime(endRaw, loc)
+		if err != nil {
+			return clockify.TimeEntry{}, nil, fmt.Errorf("invalid end: %w", err)
+		}
+		if !endTime.After(startTime) {
+			return clockify.TimeEntry{}, nil, fmt.Errorf("end must be after start")
+		}
+		payload["end"] = timeparse.FormatISO(endTime)
+	}
+	if desc := strings.TrimSpace(stringArg(args, "description")); desc != "" {
+		payload["description"] = desc
+	}
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
+	if projectID == "" {
+		projectRef := strings.TrimSpace(stringArg(args, "project"))
+		if projectRef != "" {
+			projectID, err = s.resolveProjectID(ctx, s.WorkspaceID, projectRef)
+			if err != nil {
+				return clockify.TimeEntry{}, nil, err
+			}
+		}
+	}
+	if projectID != "" {
+		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+			return clockify.TimeEntry{}, nil, err
+		}
+		payload["projectId"] = projectID
+	}
+	taskID := strings.TrimSpace(stringArg(args, "task_id"))
+	if taskID == "" {
+		taskRef := strings.TrimSpace(stringArg(args, "task"))
+		if taskRef != "" {
+			if projectID == "" {
+				return clockify.TimeEntry{}, nil, fmt.Errorf("project_id or project is required when resolving task by name")
+			}
+			taskID, err = s.resolveTaskID(ctx, s.WorkspaceID, projectID, taskRef)
+			if err != nil {
+				return clockify.TimeEntry{}, nil, err
+			}
+		}
+	}
+	if taskID != "" {
+		if err := resolve.ValidateID(taskID, "task_id"); err != nil {
+			return clockify.TimeEntry{}, nil, err
+		}
+		payload["taskId"] = taskID
+	}
+	tagIDs, err := s.tagIDsFromArgs(ctx, args)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	if len(tagIDs) > 0 {
+		payload["tagIds"] = tagIDs
+	}
+	if billable, ok := args["billable"].(bool); ok {
+		payload["billable"] = billable
+	}
+	path, err := paths.Workspace(s.WorkspaceID, "time-entries")
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	var entry clockify.TimeEntry
+	if err := s.Client.Post(ctx, path, payload, &entry); err != nil {
+		return clockify.TimeEntry{}, nil, err
+	}
+	ids := map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"entryId":     entry.ID,
+		"projectId":   projectID,
+		"taskId":      taskID,
+	}
+	if len(tagIDs) == 1 {
+		ids["tagId"] = tagIDs[0]
+	}
+	return entry, ids, nil
+}
+
+func (s *Service) projectIDFromArgs(ctx context.Context, args map[string]any) (string, error) {
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
+	if projectID != "" {
+		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+			return "", err
+		}
+		return projectID, nil
+	}
+	projectRef := strings.TrimSpace(stringArg(args, "project"))
+	if projectRef == "" {
+		return "", fmt.Errorf("project_id or project is required")
+	}
+	return s.resolveProjectID(ctx, s.WorkspaceID, projectRef)
+}
+
+func (s *Service) tagIDsFromArgs(ctx context.Context, args map[string]any) ([]string, error) {
+	out := stringSliceArg(args, "tag_ids")
+	for _, id := range out {
+		if err := resolve.ValidateID(id, "tag_id"); err != nil {
+			return nil, err
+		}
+	}
+	if tag := strings.TrimSpace(stringArg(args, "tag")); tag != "" {
+		tagID, err := s.resolveTagID(ctx, s.WorkspaceID, tag)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, tagID)
+	}
+	return out, nil
+}
+
+func (s *Service) ensureDemoClient(ctx context.Context, prefix string, upsert bool) (clockify.ClientEntity, bool, error) {
+	name := prefix + " Client"
+	if upsert {
+		clients, _, _, err := s.listClients(ctx, map[string]any{"page_size": float64(200)})
+		if err != nil {
+			return clockify.ClientEntity{}, false, err
+		}
+		for _, c := range clients {
+			if c.Name == name {
+				return c, true, nil
+			}
+		}
+	}
+	client, err := s.createClient(ctx, name)
+	return client, false, err
+}
+
+func (s *Service) ensureDemoProject(ctx context.Context, prefix, clientID string, upsert bool) (clockify.Project, bool, error) {
+	name := prefix + " Project"
+	if upsert {
+		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200)})
+		if err != nil {
+			return clockify.Project{}, false, err
+		}
+		for _, p := range projects {
+			if p.Name == name {
+				return p, true, nil
+			}
+		}
+	}
+	project, _, err := s.createProject(ctx, map[string]any{"client_id": clientID, "billable": true}, name)
+	return project, false, err
+}
+
+func (s *Service) ensureDemoTask(ctx context.Context, prefix, projectID string, upsert bool) (clockify.Task, bool, error) {
+	name := prefix + " Task"
+	if upsert {
+		tasks, _, _, err := s.listTasks(ctx, projectID, map[string]any{"page_size": float64(200)})
+		if err != nil {
+			return clockify.Task{}, false, err
+		}
+		for _, t := range tasks {
+			if t.Name == name {
+				return t, true, nil
+			}
+		}
+	}
+	task, err := s.createTask(ctx, projectID, name, map[string]any{"billable": true})
+	return task, false, err
+}
+
+func (s *Service) ensureDemoTag(ctx context.Context, prefix string, upsert bool) (clockify.Tag, bool, error) {
+	name := prefix + " Tag"
+	if upsert {
+		tags, _, _, err := s.listTags(ctx, map[string]any{"page_size": float64(200)})
+		if err != nil {
+			return clockify.Tag{}, false, err
+		}
+		for _, t := range tags {
+			if t.Name == name {
+				return t, true, nil
+			}
+		}
+	}
+	tag, err := s.createTag(ctx, name)
+	return tag, false, err
+}
+
+func (s *Service) ensureDemoEntry(ctx context.Context, args map[string]any, prefix, projectID, taskID, tagID string, upsert bool) (clockify.TimeEntry, bool, error) {
+	date := strings.TrimSpace(stringArg(args, "date"))
+	if date == "" {
+		date = "2026-01-02"
+	}
+	description := prefix + " Time Entry"
+	entryArgs := map[string]any{
+		"start":       date + " 09:00",
+		"end":         date + " 10:00",
+		"description": description,
+		"project_id":  projectID,
+		"task_id":     taskID,
+		"tag_ids":     []any{tagID},
+		"billable":    true,
+	}
+	if upsert {
+		entries, _, _, _, err := s.listCurrentUserEntries(ctx, map[string]any{
+			"start": date + " 00:00",
+			"end":   date + " 23:59",
+		})
+		if err != nil {
+			return clockify.TimeEntry{}, false, err
+		}
+		for _, e := range entries {
+			if e.Description == description {
+				return e, true, nil
+			}
+		}
+	}
+	entry, _, err := s.createEntry(ctx, entryArgs)
+	return entry, false, err
+}
+
+func addChanged(changed *ChangeSet, reused bool, ref EntityRef) {
+	if reused {
+		changed.Reused = append(changed.Reused, ref)
+		return
+	}
+	changed.Created = append(changed.Created, ref)
+}
+
+func (s *Service) deleteDemoTask(ctx context.Context, projectID string, task clockify.Task, changed *ChangeSet, warnings *[]Warning) {
+	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
+		*warnings = append(*warnings, Warning{Code: "delete_failed", Message: fmt.Sprintf("task %s: %v", task.ID, err)})
+		return
+	}
+	if err := resolve.ValidateID(task.ID, "task_id"); err != nil {
+		*warnings = append(*warnings, Warning{Code: "delete_failed", Message: fmt.Sprintf("task %s: %v", task.ID, err)})
+		return
+	}
+	path, err := paths.Workspace(s.WorkspaceID, "projects", projectID, "tasks", task.ID)
+	if err == nil {
+		err = s.Client.Delete(ctx, path)
+	}
+	if err != nil {
+		*warnings = append(*warnings, Warning{Code: "delete_failed", Message: fmt.Sprintf("task %s: %v", task.ID, err)})
+		return
+	}
+	changed.Deleted = append(changed.Deleted, taskRef(task))
+}
+
+func (s *Service) deleteDemo(ctx context.Context, entity, id, name string, changed *ChangeSet, warnings *[]Warning) {
+	if err := resolve.ValidateID(id, entity+"_id"); err != nil {
+		*warnings = append(*warnings, Warning{Code: "delete_failed", Message: fmt.Sprintf("%s %s: %v", entity, id, err)})
+		return
+	}
+	var path string
+	var err error
+	switch entity {
+	case "entry":
+		path, err = paths.Workspace(s.WorkspaceID, "time-entries", id)
+	case "tag":
+		path, err = paths.Workspace(s.WorkspaceID, "tags", id)
+	case "project":
+		path, err = paths.Workspace(s.WorkspaceID, "projects", id)
+	case "client":
+		path, err = paths.Workspace(s.WorkspaceID, "clients", id)
+	default:
+		err = fmt.Errorf("unknown cleanup entity %q", entity)
+	}
+	if err == nil {
+		err = s.Client.Delete(ctx, path)
+	}
+	if err != nil {
+		*warnings = append(*warnings, Warning{Code: "delete_failed", Message: fmt.Sprintf("%s %s: %v", entity, id, err)})
+		return
+	}
+	changed.Deleted = append(changed.Deleted, EntityRef{Type: entity, ID: id, Name: name})
+}
+
+func cleanupEntryRangeArgs(args map[string]any) map[string]any {
+	out := map[string]any{"page_size": float64(200)}
+	if start := strings.TrimSpace(stringArg(args, "start")); start != "" {
+		out["start"] = start
+	} else {
+		out["start"] = "2026-01-01 00:00"
+	}
+	if end := strings.TrimSpace(stringArg(args, "end")); end != "" {
+		out["end"] = end
+	} else {
+		out["end"] = time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
+	}
+	return out
+}
+
+func pageQuery(page, pageSize int) map[string]string {
+	return map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
+}
+
+func demoPrefix(args map[string]any) string {
+	if prefix := strings.TrimSpace(stringArg(args, "prefix")); prefix != "" {
+		return prefix
+	}
+	runID := strings.TrimSpace(stringArg(args, "run_id"))
+	if runID == "" {
+		runID = demoDefaultRunID
+	}
+	return "DEMO-" + runID
+}
+
+func (s *Service) location() *time.Location {
+	if s.DefaultTimezone != nil {
+		return s.DefaultTimezone
+	}
+	return time.UTC
+}
+
+func (s *Service) timezoneName() string {
+	if s.DefaultTimezone != nil {
+		return s.DefaultTimezone.String()
+	}
+	return "UTC"
+}
+
+func clientRef(c clockify.ClientEntity) EntityRef {
+	return EntityRef{Type: "client", ID: c.ID, Name: c.Name}
+}
+
+func projectRef(p clockify.Project) EntityRef {
+	return EntityRef{Type: "project", ID: p.ID, Name: p.Name}
+}
+
+func taskRef(t clockify.Task) EntityRef {
+	return EntityRef{Type: "task", ID: t.ID, Name: t.Name}
+}
+
+func tagRef(t clockify.Tag) EntityRef {
+	return EntityRef{Type: "tag", ID: t.ID, Name: t.Name}
+}
+
+func entryRef(e clockify.TimeEntry) EntityRef {
+	return EntityRef{Type: "entry", ID: e.ID, Name: e.Description}
+}

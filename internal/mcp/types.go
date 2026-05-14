@@ -190,10 +190,10 @@ type Auditor interface {
 	RecordAudit(AuditEvent) error
 }
 
-// Activator handles dynamic tool activation (group enable, visibility toggle).
-// A nil Activator means activation is unrestricted.
+// Activator handles optional dynamic tool visibility hooks. The one-user
+// product passes nil because all supported tools are registered at startup.
 type Activator interface {
-	// IsGroupAllowed reports whether a Tier 2 group may be activated.
+	// IsGroupAllowed reports whether a named group may be made visible.
 	IsGroupAllowed(group string) bool
 	// OnActivate is called when tools are dynamically registered.
 	OnActivate(names []string)

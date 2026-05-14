@@ -122,6 +122,7 @@ type Service struct {
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache
+	demoResources map[string]demoResourceState
 	tier2CacheMu  sync.Mutex
 	tier2Cache    map[string][]mcp.ToolDescriptor
 }
@@ -391,6 +392,7 @@ func New(client *clockify.Client, workspaceID string) *Service {
 		WorkspaceID:         workspaceID,
 		DocumentedAPIWrites: true,
 		resourceCache:       newResourceStateCache(1024),
+		demoResources:       map[string]demoResourceState{},
 	}
 }
 

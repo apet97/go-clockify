@@ -24,16 +24,16 @@ func TestPromptsListReturnsBuiltins(t *testing.T) {
 		t.Fatalf("expected 10 builtin prompts, got %d", len(prompts))
 	}
 	wantOrder := []string{
-		"log-week-from-calendar",
-		"weekly-review",
-		"find-unbilled-hours",
-		"find-duplicate-entries",
-		"generate-timesheet-report",
-		"invoice-review-and-send",
-		"approval-cycle",
-		"time-off-review",
-		"scheduling-capacity-review",
-		"webhook-rollout-check",
+		"demo-full-workspace-story",
+		"setup-client-project-task",
+		"log-week",
+		"invoice-client",
+		"cleanup-demo",
+		"review-week",
+		"create-expense",
+		"request-time-off",
+		"schedule-week",
+		"setup-webhook",
 	}
 	for i, want := range wantOrder {
 		if prompts[i].Name != want {
@@ -42,121 +42,68 @@ func TestPromptsListReturnsBuiltins(t *testing.T) {
 	}
 }
 
-func TestPromptsGetSubstitutesArguments(t *testing.T) {
+func TestPromptsGetWorksForEachBuiltin(t *testing.T) {
 	server := newPromptsTestServer()
-	resp := server.handle(context.Background(), Request{
-		JSONRPC: "2.0", ID: 1, Method: "prompts/get",
-		Params: map[string]any{
-			"name":      "weekly-review",
-			"arguments": map[string]any{"week_start": "2026-04-06"},
-		},
-	})
-	if resp.Error != nil {
-		t.Fatalf("error: %+v", resp.Error)
-	}
-	result := resp.Result.(map[string]any)
-	messages, _ := result["messages"].([]PromptMessage)
-	if len(messages) != 1 {
-		t.Fatalf("messages: %+v", messages)
-	}
-	if !strings.Contains(messages[0].Content.Text, "2026-04-06") {
-		t.Fatalf("substitution missing: %q", messages[0].Content.Text)
-	}
-}
-
-func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
-	server := newPromptsTestServer()
-	tests := []struct {
-		name        string
-		args        map[string]any
-		want        []string
-		notWant     []string
-		description string
-	}{
-		{
-			name: "log-week-from-calendar",
-			args: map[string]any{
-				"week_start":   "2026-04-06",
-				"calendar_uri": "calendar://work",
-			},
-			want:        []string{"clockify_log_time", "allow_overlap:true"},
-			notWant:     []string{"clockify_add_entry"},
-			description: "calendar prompt should use the canonical finished-entry helper",
-		},
-		{
-			name:        "weekly-review",
-			args:        map[string]any{"week_start": "2026-04-06"},
-			want:        []string{"clockify_timesheet_review", "clockify_weekly_summary"},
-			description: "weekly review should start with the structured review helper",
-		},
-		{
-			name:        "find-duplicate-entries",
-			args:        map[string]any{},
-			want:        []string{"clockify_timesheet_review", "overlap issues"},
-			notWant:     []string{"clockify_list_entries", "{{lookback_days}}"},
-			description: "duplicate scan should use review issues instead of manual entry loops",
-		},
-		{
-			name: "invoice-review-and-send",
-			args: map[string]any{"client": "Acme", "since": "2026-05-01", "until": "2026-05-31"},
-			want: []string{"clockify_send_invoice", "dry-run preview", "external side effect"},
-		},
-		{
-			name:        "approval-cycle",
-			args:        map[string]any{"period": "2026-W19"},
-			want:        []string{"clockify_list_approval_requests", "dry_run:true"},
-			description: "approval recipe should require read-before-write and previews",
-		},
-		{
-			name:        "time-off-review",
-			args:        map[string]any{"user": "Ada"},
-			want:        []string{"policies", "balances", "dry_run:true"},
-			description: "time-off recipe should review balance context before writes",
-		},
-		{
-			name:        "scheduling-capacity-review",
-			args:        map[string]any{"user": "Ada", "week_start": "2026-05-11"},
-			want:        []string{"per-user capacity totals", "dry_run:true"},
-			description: "scheduling recipe should prefer typed capacity tools",
-		},
-		{
-			name:        "webhook-rollout-check",
-			args:        map[string]any{"url": "https://hooks.example.com/clockify", "event": "TIME_ENTRY_CREATED"},
-			want:        []string{"DNS validation", "mask any auth token", "external side effect"},
-			description: "webhook recipe should foreground DNS and token safety",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			text := getPromptText(t, server, tt.name, tt.args)
-			for _, want := range tt.want {
-				if !strings.Contains(text, want) {
-					t.Fatalf("%s: missing %q in %q", tt.description, want, text)
-				}
+	for _, name := range []string{
+		"demo-full-workspace-story",
+		"setup-client-project-task",
+		"log-week",
+		"invoice-client",
+		"cleanup-demo",
+		"review-week",
+		"create-expense",
+		"request-time-off",
+		"schedule-week",
+		"setup-webhook",
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp := server.handle(context.Background(), Request{
+				JSONRPC: "2.0", ID: 1, Method: "prompts/get",
+				Params: map[string]any{"name": name, "arguments": map[string]any{}},
+			})
+			if resp.Error != nil {
+				t.Fatalf("error: %+v", resp.Error)
 			}
-			for _, notWant := range tt.notWant {
-				if strings.Contains(text, notWant) {
-					t.Fatalf("%s: unexpected %q in %q", tt.description, notWant, text)
-				}
+			result := resp.Result.(map[string]any)
+			messages, _ := result["messages"].([]PromptMessage)
+			if len(messages) != 1 {
+				t.Fatalf("messages: %+v", messages)
+			}
+			if strings.Contains(messages[0].Content.Text, "{{") {
+				t.Fatalf("prompt left an unsubstituted placeholder: %q", messages[0].Content.Text)
 			}
 		})
 	}
 }
 
-func TestPromptsGetMissingRequiredArgument(t *testing.T) {
+func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 	server := newPromptsTestServer()
-	resp := server.handle(context.Background(), Request{
-		JSONRPC: "2.0", ID: 1, Method: "prompts/get",
-		Params: map[string]any{
-			"name":      "weekly-review",
-			"arguments": map[string]any{},
-		},
-	})
-	if resp.Error == nil || resp.Error.Code != -32602 {
-		t.Fatalf("expected -32602 for missing arg, got %+v", resp.Error)
+	firstTools := map[string]string{
+		"demo-full-workspace-story": "clockify_demo_seed",
+		"setup-client-project-task": "clockify_create_work_package",
+		"log-week":                  "clockify_log_work",
+		"invoice-client":            "clockify_invoice_client_work",
+		"cleanup-demo":              "clockify_demo_cleanup",
+		"review-week":               "clockify_review_week",
+		"create-expense":            "clockify_record_expense",
+		"request-time-off":          "clockify_request_time_off",
+		"schedule-week":             "clockify_schedule_work",
+		"setup-webhook":             "clockify_setup_webhook",
 	}
-	if !strings.Contains(resp.Error.Message, "week_start") {
-		t.Fatalf("error should name the missing arg: %q", resp.Error.Message)
+	for name, firstTool := range firstTools {
+		t.Run(name, func(t *testing.T) {
+			text := getPromptText(t, server, name, map[string]any{})
+			for _, want := range []string{"First call `" + firstTool + "`", "Use returned IDs", "paid feature is unavailable", "Summarize what changed"} {
+				if !strings.Contains(text, want) {
+					t.Fatalf("prompt %q missing %q in %q", name, want, text)
+				}
+			}
+			for _, notWant := range []string{"confirmation", "activate", "tenant", "hosted", "policy mode", "Tier 2"} {
+				if strings.Contains(strings.ToLower(text), strings.ToLower(notWant)) {
+					t.Fatalf("prompt %q contains forbidden language %q in %q", name, notWant, text)
+				}
+			}
+		})
 	}
 }
 

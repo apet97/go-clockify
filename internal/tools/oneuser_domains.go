@@ -1,0 +1,908 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/paths"
+	"github.com/apet97/go-clockify/internal/resolve"
+)
+
+type legacyAlias struct {
+	NewName string
+	OldName string
+	Entity  string
+	Change  string
+}
+
+type routeTool struct {
+	Name        string
+	Description string
+	Method      string
+	Path        string
+	Entity      string
+	Required    []string
+	Properties  map[string]any
+	Query       []string
+	Body        []string
+	Defaults    map[string]any
+	Reports     bool
+	ReadOnly    bool
+	Idempotent  bool
+	Destructive bool
+	Change      string
+	Priority    int
+}
+
+// FullAccessRegistry is the one-user product registry: every supported tool is
+// visible from startup, with workflows first and raw API fallback last.
+func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
+	out := make([]mcp.ToolDescriptor, 0, 160)
+	out = append(out, s.workflowDescriptors()...)
+	out = append(out, s.FirstSliceRegistry()...)
+	out = append(out, s.coreRouteDescriptors()...)
+	out = append(out, s.legacyAliasDescriptors()...)
+	out = append(out, s.rawAPIDescriptors()...)
+	return normalizeDescriptors(dedupeToolDescriptors(out))
+}
+
+func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
+	seen := map[string]bool{}
+	out := make([]mcp.ToolDescriptor, 0, len(in))
+	for _, descriptor := range in {
+		name := descriptor.Tool.Name
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, descriptor)
+	}
+	return out
+}
+
+func (s *Service) coreRouteDescriptors() []mcp.ToolDescriptor {
+	specs := []routeTool{
+		// Clients.
+		rt(22, "GET", "clockify_clients_get", "Get one client.", "clients/{client_id}", "client", []string{"client_id"}, nil, nil, nil, true, false, false, ""),
+		rt(23, "PUT", "clockify_clients_update", "Update a client.", "clients/{client_id}", "client", []string{"client_id"}, fields("name"), nil, []string{"name"}, false, true, false, "updated"),
+		rt(24, "DELETE", "clockify_clients_delete", "Delete a client.", "clients/{client_id}", "client", []string{"client_id"}, nil, nil, nil, false, false, true, "deleted"),
+
+		// Projects.
+		rt(32, "GET", "clockify_projects_get", "Get one project.", "projects/{project_id}", "project", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
+		rt(33, "PUT", "clockify_projects_update", "Update a project.", "projects/{project_id}", "project", []string{"project_id"}, fields("name", "client_id", "color", "billable", "is_public", "archived", "body"), nil, []string{"name", "client_id", "color", "billable", "is_public", "archived"}, false, true, false, "updated"),
+		rt(34, "DELETE", "clockify_projects_delete", "Delete a project.", "projects/{project_id}", "project", []string{"project_id"}, nil, nil, nil, false, false, true, "deleted"),
+		rt(35, "PUT", "clockify_projects_archive", "Archive a project.", "projects/{project_id}", "project", []string{"project_id"}, fields("body"), nil, nil, false, true, false, "updated").withDefaults(map[string]any{"archived": true}),
+		rt(36, "GET", "clockify_projects_templates_list", "List project templates.", "projects", "project_template", nil, fields("page", "page_size"), []string{"page", "page_size", "is_template"}, nil, true, false, false, "").withDefaults(map[string]any{"is_template": true}),
+		rt(37, "POST", "clockify_projects_templates_create", "Create a project template.", "projects", "project_template", []string{"name"}, fields("name", "client_id", "color", "billable", "is_public", "body"), nil, []string{"name", "client_id", "color", "billable", "is_public"}, false, false, false, "created").withDefaults(map[string]any{"isTemplate": true}),
+		rt(38, "PUT", "clockify_projects_estimates_update", "Update a project estimate.", "projects/{project_id}/estimate", "project", []string{"project_id"}, fields("estimate_type", "estimate_value", "body"), nil, []string{"estimate_type", "estimate_value"}, false, true, false, "updated"),
+		rt(39, "GET", "clockify_projects_memberships_list", "List project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
+		rt(40, "PATCH", "clockify_projects_memberships_update", "Set project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, fields("memberships", "user_ids", "hourly_rate", "body"), nil, []string{"memberships", "user_ids", "hourly_rate"}, false, true, false, "updated"),
+		rt(41, "PUT", "clockify_projects_rates_update", "Set a project member hourly or cost rate.", "projects/{project_id}/users/{user_id}/{rate_kind}-rate", "project_rate", []string{"project_id", "user_id", "rate_kind"}, fields("amount", "currency", "body"), nil, []string{"amount", "currency"}, false, true, false, "updated"),
+
+		// Tasks.
+		rt(42, "GET", "clockify_tasks_get", "Get one task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, nil, nil, nil, true, false, false, ""),
+		rt(43, "PUT", "clockify_tasks_update", "Update a task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, fields("name", "billable", "assignee_ids", "status", "body"), nil, []string{"name", "billable", "assignee_ids", "status"}, false, true, false, "updated"),
+		rt(44, "DELETE", "clockify_tasks_delete", "Delete a task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, nil, nil, nil, false, false, true, "deleted"),
+		rt(45, "PUT", "clockify_tasks_rates_update", "Set a task hourly or cost rate.", "projects/{project_id}/tasks/{task_id}/{rate_kind}-rate", "task_rate", []string{"project_id", "task_id", "rate_kind"}, fields("amount", "currency", "body"), nil, []string{"amount", "currency"}, false, true, false, "updated"),
+
+		// Tags.
+		rt(52, "GET", "clockify_tags_get", "Get one tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, nil, nil, nil, true, false, false, ""),
+		rt(53, "PUT", "clockify_tags_update", "Update a tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, fields("name", "body"), nil, []string{"name"}, false, true, false, "updated"),
+		rt(54, "DELETE", "clockify_tags_delete", "Delete a tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, nil, nil, nil, false, false, true, "deleted"),
+
+		// Time entries and timer helpers not covered by the first slice.
+		rt(62, "GET", "clockify_entries_get", "Get one time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, nil, nil, nil, true, false, false, ""),
+		rt(63, "PUT", "clockify_entries_update", "Update a time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, fields("start", "end", "description", "project_id", "task_id", "tag_ids", "billable", "body"), nil, []string{"start", "end", "description", "project_id", "task_id", "tag_ids", "billable"}, false, true, false, "updated"),
+		rt(64, "DELETE", "clockify_entries_delete", "Delete a time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, nil, nil, nil, false, false, true, "deleted"),
+		rt(65, "PATCH", "clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", "time-entries/invoiced", "entry", []string{"time_entry_ids", "invoiced"}, fields("time_entry_ids", "invoiced", "body"), nil, []string{"time_entry_ids", "invoiced"}, false, true, false, "updated"),
+
+		// Reports.
+		reportRT(100, "clockify_reports_attendance", "Run the attendance report.", "reports/attendance"),
+		reportRT(101, "clockify_reports_money", "Run the money summary report.", "reports/summary"),
+		reportRT(102, "clockify_reports_expense", "Run the detailed expense report.", "reports/expenses/detailed"),
+		reportRT(103, "clockify_reports_export", "Run a report export request.", "reports/detailed"),
+
+		// Invoice gaps beyond the existing invoice handlers.
+		rt(210, "GET", "clockify_invoices_export", "Export an invoice.", "invoices/{invoice_id}/export", "invoice_export", []string{"invoice_id"}, fields("format"), []string{"format"}, nil, true, false, false, ""),
+		rt(211, "POST", "clockify_invoices_import_time", "Import time entries into an invoice.", "invoices/{invoice_id}/items/import", "invoice_item", []string{"invoice_id"}, fields("time_entry_ids", "time_entry_group_type", "body"), nil, []string{"time_entry_ids", "time_entry_group_type"}, false, false, false, "updated"),
+		rt(212, "POST", "clockify_invoices_import_expenses", "Import expenses into an invoice.", "invoices/{invoice_id}/items/import", "invoice_item", []string{"invoice_id"}, fields("expense_ids", "include_expenses", "body"), nil, []string{"expense_ids", "include_expenses"}, false, false, false, "updated"),
+		rt(213, "GET", "clockify_invoices_payments_list", "List invoice payments.", "invoices/{invoice_id}/payments", "payment", []string{"invoice_id"}, fields("page", "page_size"), []string{"page", "page_size"}, nil, true, false, false, ""),
+		rt(214, "POST", "clockify_invoices_payments_create", "Create an invoice payment.", "invoices/{invoice_id}/payments", "payment", []string{"invoice_id"}, fields("amount", "date", "note", "body"), nil, []string{"amount", "date", "note"}, false, false, false, "created"),
+		rt(215, "DELETE", "clockify_invoices_payments_delete", "Delete an invoice payment.", "invoices/{invoice_id}/payments/{payment_id}", "payment", []string{"invoice_id", "payment_id"}, nil, nil, nil, false, false, true, "deleted"),
+
+		// Time-off archive and documented request fallback.
+		rt(506, "PATCH", "clockify_time_off_archive", "Archive a time off policy or request.", "time-off/policies/{policy_id}", "time_off", []string{"policy_id"}, fields("archived", "body"), nil, []string{"archived"}, false, true, false, "updated").withDefaults(map[string]any{"archived": true}),
+
+		// Scheduling coverage beyond the existing assignment helpers.
+		rt(606, "GET", "clockify_scheduling_user_totals", "Get scheduled assignment totals for one user.", "scheduling/assignments/users/{user_id}/totals", "scheduling", []string{"user_id"}, fields("start", "end"), []string{"start", "end"}, nil, true, false, false, ""),
+		rt(607, "GET", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, fields("start", "end", "user_ids"), []string{"start", "end", "user_ids"}, nil, true, false, false, ""),
+
+		// Approval resubmit route from the documented API.
+		rt(704, "POST", "clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses for approval.", "approval-requests/resubmit-entries-for-approval", "approval", []string{"approval_id"}, fields("approval_id", "entry_ids", "expense_ids", "note", "body"), nil, []string{"approval_id", "entry_ids", "expense_ids", "note"}, false, false, false, "updated"),
+
+		// Holiday gaps beyond the existing handlers.
+		rt(1001, "GET", "clockify_holidays_get", "Get one holiday.", "holidays/{holiday_id}", "holiday", []string{"holiday_id"}, nil, nil, nil, true, false, false, ""),
+		rt(1002, "PUT", "clockify_holidays_update", "Update a holiday.", "holidays/{holiday_id}", "holiday", []string{"holiday_id"}, fields("name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids", "body"), nil, []string{"name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids"}, false, true, false, "updated"),
+		rt(1003, "GET", "clockify_holidays_list_for_user_period", "List holidays for a user in a period.", "holidays/in-period", "holiday", []string{"user_id", "start", "end"}, fields("user_id", "start", "end"), []string{"user_id", "start", "end"}, nil, true, false, false, ""),
+
+		// Users and workspace.
+		rt(1102, "POST", "clockify_users_invite", "Invite or add users to the pinned workspace.", "users", "user", []string{"emails"}, fields("emails", "send_email", "body"), []string{"send_email"}, []string{"emails"}, false, false, false, "created"),
+		rt(1105, "GET", "clockify_workspace_settings", "Read pinned workspace settings.", "", "workspace", nil, nil, nil, nil, true, false, false, ""),
+	}
+	out := make([]mcp.ToolDescriptor, 0, len(specs)+4)
+	for _, spec := range specs {
+		out = append(out, s.routeDescriptor(spec))
+	}
+	out = append(out,
+		firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning),
+		firstSliceDescriptor(67, toolRW("clockify_entries_timer_start", "Start a timer.", objectSchema(map[string]any{"properties": map[string]any{
+			"project_id":  map[string]any{"type": "string"},
+			"project":     map[string]any{"type": "string"},
+			"description": map[string]any{"type": "string"},
+		}})), s.EntriesTimerStart),
+		firstSliceDescriptor(68, toolRWIdem("clockify_entries_timer_stop", "Stop the current timer.", objectSchema(map[string]any{"properties": map[string]any{
+			"end": map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		}})), s.EntriesTimerStop),
+		firstSliceDescriptor(69, toolRO("clockify_entries_timer_status", "Show timer status.", objectSchema(nil)), s.EntriesTimerStatus),
+		firstSliceDescriptor(70, toolRW("clockify_entries_timer_switch", "Switch the running timer to another project.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+			"project":     map[string]any{"type": "string"},
+			"description": map[string]any{"type": "string"},
+			"task_id":     map[string]any{"type": "string"},
+			"billable":    map[string]any{"type": "boolean"},
+		}})), s.EntriesTimerSwitch),
+		firstSliceDescriptor(104, toolRO("clockify_reports_detailed", "Run the local detailed time report helper.", reportHelperSchema()), aliasHandler("clockify_reports_detailed", "report", "", s.DetailedReport)),
+		firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport)),
+		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
+	)
+	return out
+}
+
+func (s *Service) legacyAliasDescriptors() []mcp.ToolDescriptor {
+	legacy := s.legacyDescriptorMap()
+	aliases := []legacyAlias{
+		{"clockify_invoices_list", "clockify_list_invoices", "invoice", ""},
+		{"clockify_invoices_get", "clockify_get_invoice", "invoice", ""},
+		{"clockify_invoices_create", "clockify_create_invoice", "invoice", "created"},
+		{"clockify_invoices_update", "clockify_update_invoice", "invoice", "updated"},
+		{"clockify_invoices_delete", "clockify_delete_invoice", "invoice", "deleted"},
+		{"clockify_invoices_send", "clockify_send_invoice", "invoice", "updated"},
+		{"clockify_invoices_mark_paid", "clockify_mark_invoice_paid", "invoice", "updated"},
+		{"clockify_invoices_items_list", "clockify_list_invoice_items", "invoice_item", ""},
+		{"clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created"},
+		{"clockify_invoices_items_update", "clockify_update_invoice_item", "invoice_item", "updated"},
+		{"clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted"},
+
+		{"clockify_expenses_list", "clockify_list_expenses", "expense", ""},
+		{"clockify_expenses_get", "clockify_get_expense", "expense", ""},
+		{"clockify_expenses_create", "clockify_create_expense", "expense", "created"},
+		{"clockify_expenses_update", "clockify_update_expense", "expense", "updated"},
+		{"clockify_expenses_delete", "clockify_delete_expense", "expense", "deleted"},
+		{"clockify_expenses_categories_list", "clockify_list_expense_categories", "expense_category", ""},
+		{"clockify_expenses_categories_create", "clockify_create_expense_category", "expense_category", "created"},
+		{"clockify_expenses_categories_update", "clockify_update_expense_category", "expense_category", "updated"},
+		{"clockify_expenses_categories_delete", "clockify_delete_expense_category", "expense_category", "deleted"},
+
+		{"clockify_custom_fields_list", "clockify_list_custom_fields", "custom_field", ""},
+		{"clockify_custom_fields_get", "clockify_get_custom_field", "custom_field", ""},
+		{"clockify_custom_fields_create", "clockify_create_custom_field", "custom_field", "created"},
+		{"clockify_custom_fields_update", "clockify_update_custom_field", "custom_field", "updated"},
+		{"clockify_custom_fields_delete", "clockify_delete_custom_field", "custom_field", "deleted"},
+		{"clockify_custom_fields_set_value", "clockify_set_custom_field_value", "custom_field_value", "updated"},
+
+		{"clockify_time_off_requests_list", "clockify_list_time_off_requests", "time_off_request", ""},
+		{"clockify_time_off_requests_get", "clockify_get_time_off_request", "time_off_request", ""},
+		{"clockify_time_off_requests_create", "clockify_create_time_off_request", "time_off_request", "created"},
+		{"clockify_time_off_requests_update", "clockify_update_time_off_request", "time_off_request", "updated"},
+		{"clockify_time_off_requests_delete", "clockify_delete_time_off_request", "time_off_request", "deleted"},
+		{"clockify_time_off_approve", "clockify_approve_time_off", "time_off_request", "updated"},
+		{"clockify_time_off_deny", "clockify_deny_time_off", "time_off_request", "updated"},
+		{"clockify_time_off_policies_list", "clockify_list_time_off_policies", "time_off_policy", ""},
+		{"clockify_time_off_policies_get", "clockify_get_time_off_policy", "time_off_policy", ""},
+		{"clockify_time_off_policies_create", "clockify_create_time_off_policy", "time_off_policy", "created"},
+		{"clockify_time_off_policies_update", "clockify_update_time_off_policy", "time_off_policy", "updated"},
+		{"clockify_time_off_balances", "clockify_time_off_balance", "time_off_balance", ""},
+
+		{"clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", ""},
+		{"clockify_scheduling_assignments_get", "clockify_get_assignment", "assignment", ""},
+		{"clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created"},
+		{"clockify_scheduling_assignments_update", "clockify_update_assignment", "assignment", "updated"},
+		{"clockify_scheduling_assignments_delete", "clockify_delete_assignment", "assignment", "deleted"},
+		{"clockify_scheduling_project_totals", "clockify_get_project_schedule_totals", "scheduling", ""},
+
+		{"clockify_approvals_list", "clockify_list_approval_requests", "approval", ""},
+		{"clockify_approvals_get", "clockify_get_approval_request", "approval", ""},
+		{"clockify_approvals_submit", "clockify_submit_for_approval", "approval", "created"},
+		{"clockify_approvals_approve", "clockify_approve_timesheet", "approval", "updated"},
+		{"clockify_approvals_reject", "clockify_reject_timesheet", "approval", "updated"},
+		{"clockify_approvals_withdraw", "clockify_withdraw_approval", "approval", "updated"},
+
+		{"clockify_webhooks_list", "clockify_list_webhooks", "webhook", ""},
+		{"clockify_webhooks_get", "clockify_get_webhook", "webhook", ""},
+		{"clockify_webhooks_create", "clockify_create_webhook", "webhook", "created"},
+		{"clockify_webhooks_update", "clockify_update_webhook", "webhook", "updated"},
+		{"clockify_webhooks_delete", "clockify_delete_webhook", "webhook", "deleted"},
+		{"clockify_webhooks_test", "clockify_test_webhook", "webhook", "updated"},
+		{"clockify_webhooks_events", "clockify_list_webhook_events", "webhook_event", ""},
+
+		{"clockify_groups_list", "clockify_list_user_groups_admin", "group", ""},
+		{"clockify_groups_get", "clockify_get_user_group", "group", ""},
+		{"clockify_groups_create", "clockify_create_user_group_admin", "group", "created"},
+		{"clockify_groups_update", "clockify_update_user_group_admin", "group", "updated"},
+		{"clockify_groups_delete", "clockify_delete_user_group_admin", "group", "deleted"},
+		{"clockify_groups_add_user", "clockify_add_user_to_group", "group_member", "created"},
+		{"clockify_groups_remove_user", "clockify_remove_user_from_group", "group_member", "deleted"},
+
+		{"clockify_holidays_list", "clockify_list_holidays", "holiday", ""},
+		{"clockify_holidays_create", "clockify_create_holiday", "holiday", "created"},
+		{"clockify_holidays_delete", "clockify_delete_holiday", "holiday", "deleted"},
+
+		{"clockify_users_list", "clockify_list_users", "user", ""},
+		{"clockify_users_profile", "clockify_current_user", "user", ""},
+		{"clockify_users_deactivate", "clockify_deactivate_user", "user", "updated"},
+		{"clockify_users_role", "clockify_update_user_role", "user", "updated"},
+	}
+	out := make([]mcp.ToolDescriptor, 0, len(aliases))
+	for i, alias := range aliases {
+		old, ok := legacy[alias.OldName]
+		if !ok {
+			continue
+		}
+		out = append(out, legacyAliasDescriptor(200+i, alias, old))
+	}
+	return out
+}
+
+func (s *Service) legacyDescriptorMap() map[string]mcp.ToolDescriptor {
+	out := map[string]mcp.ToolDescriptor{}
+	add := func(descriptors []mcp.ToolDescriptor) {
+		for _, descriptor := range descriptors {
+			out[descriptor.Tool.Name] = descriptor
+		}
+	}
+	add(s.Registry())
+	for _, name := range Tier2GroupNames() {
+		descriptors, ok := s.Tier2Handlers(name)
+		if ok {
+			add(descriptors)
+		}
+	}
+	return out
+}
+
+func legacyAliasDescriptor(priority int, alias legacyAlias, old mcp.ToolDescriptor) mcp.ToolDescriptor {
+	tool := old.Tool
+	tool.Name = alias.NewName
+	tool.OutputSchema = firstSliceOutputSchema()
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	tool.Annotations["priority"] = priority
+	handler := func(ctx context.Context, args map[string]any) (any, error) {
+		out, err := old.Handler(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return standardizeLegacyResult(alias.NewName, alias.Entity, alias.Change, out, args), nil
+	}
+	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(alias.NewName, handler)}
+}
+
+func aliasHandler(action, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolHandler {
+	return func(ctx context.Context, args map[string]any) (any, error) {
+		out, err := handler(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return standardizeLegacyResult(action, entity, change, out, args), nil
+	}
+}
+
+func (s *Service) routeDescriptor(spec routeTool) mcp.ToolDescriptor {
+	schema := objectSchema(map[string]any{
+		"required":   spec.Required,
+		"properties": spec.Properties,
+	})
+	var tool mcp.Tool
+	switch {
+	case spec.Destructive:
+		tool = toolDestructive(spec.Name, spec.Description, schema)
+	case spec.ReadOnly:
+		tool = toolRO(spec.Name, spec.Description, schema)
+	case spec.Idempotent:
+		tool = toolRWIdem(spec.Name, spec.Description, schema)
+	default:
+		tool = toolRW(spec.Name, spec.Description, schema)
+	}
+	return firstSliceDescriptor(spec.Priority, tool, func(ctx context.Context, args map[string]any) (any, error) {
+		return s.callRouteTool(ctx, spec, args)
+	})
+}
+
+func (s *Service) callRouteTool(ctx context.Context, spec routeTool, args map[string]any) (any, error) {
+	for _, key := range spec.Required {
+		if _, ok := args[key]; !ok {
+			return nil, fmt.Errorf("%s is required", key)
+		}
+		if value, _ := args[key].(string); value == "" {
+			return nil, fmt.Errorf("%s is required", key)
+		}
+	}
+	if spec.Name == "clockify_workspace_settings" {
+		workspace, err := s.getWorkspace(ctx, s.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return result(spec.Name, spec.Entity, map[string]string{"workspaceId": s.WorkspaceID}, workspace, ChangeSet{}, nil, nil), nil
+	}
+	path, ids, err := routePath(s.WorkspaceID, spec, args)
+	if err != nil {
+		return nil, err
+	}
+	query := routeQuery(spec, args)
+	body := routeBody(spec, args)
+	var data any
+	switch strings.ToUpper(spec.Method) {
+	case "GET":
+		if spec.Reports {
+			err = s.Client.GetReports(ctx, path, query, &data)
+		} else {
+			err = s.Client.Get(ctx, path, query, &data)
+		}
+	case "POST":
+		if spec.Reports {
+			err = s.Client.PostReports(ctx, path, body, &data)
+		} else {
+			err = s.Client.Post(ctx, path, body, &data)
+		}
+	case "PUT":
+		if spec.Reports {
+			err = s.Client.PutReports(ctx, path, body, &data)
+		} else {
+			err = s.Client.Put(ctx, path, body, &data)
+		}
+	case "PATCH":
+		err = s.Client.Patch(ctx, path, body, &data)
+	case "DELETE":
+		if spec.Reports {
+			err = s.Client.DeleteReports(ctx, path)
+		} else {
+			err = s.Client.Delete(ctx, path)
+		}
+		data = map[string]any{"deleted": true}
+	default:
+		return nil, fmt.Errorf("unsupported method %s", spec.Method)
+	}
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range idsFromData(data, spec.Entity) {
+		ids[key] = value
+	}
+	changed := changedFor(spec.Change, spec.Entity, data, ids)
+	return result(spec.Name, spec.Entity, ids, data, changed, nil, nil), nil
+}
+
+func routePath(workspaceID string, spec routeTool, args map[string]any) (string, map[string]string, error) {
+	ids := map[string]string{"workspaceId": workspaceID}
+	segments := strings.Split(strings.Trim(spec.Path, "/"), "/")
+	for i, segment := range segments {
+		resolved, segmentIDs, err := resolveRouteSegment(segment, args)
+		if err != nil {
+			return "", nil, err
+		}
+		segments[i] = resolved
+		for key, value := range segmentIDs {
+			ids[key] = value
+		}
+	}
+	if spec.Reports {
+		return "/workspaces/" + workspaceID + "/" + strings.Join(segments, "/"), ids, nil
+	}
+	path, err := paths.Workspace(workspaceID, segments...)
+	return path, ids, err
+}
+
+func resolveRouteSegment(segment string, args map[string]any) (string, map[string]string, error) {
+	ids := map[string]string{}
+	for {
+		start := strings.IndexByte(segment, '{')
+		if start < 0 {
+			return segment, ids, nil
+		}
+		end := strings.IndexByte(segment[start:], '}')
+		if end < 0 {
+			return "", nil, fmt.Errorf("unclosed route parameter in %q", segment)
+		}
+		end += start
+		key := segment[start+1 : end]
+		value := strings.TrimSpace(stringArg(args, key))
+		if value == "" {
+			return "", nil, fmt.Errorf("%s is required", key)
+		}
+		if strings.HasSuffix(key, "_id") || strings.HasSuffix(key, "Id") || key == "id" {
+			if err := resolve.ValidateID(value, key); err != nil {
+				return "", nil, err
+			}
+		}
+		if key == "rate_kind" {
+			value = strings.ToLower(value)
+			if value != "hourly" && value != "cost" {
+				return "", nil, fmt.Errorf("rate_kind must be hourly or cost")
+			}
+		}
+		segment = segment[:start] + value + segment[end+1:]
+		ids[idKey(key)] = value
+	}
+}
+
+func routeQuery(spec routeTool, args map[string]any) map[string]string {
+	query := map[string]string{}
+	for _, key := range spec.Query {
+		if value, ok := spec.Defaults[key]; ok {
+			query[wireQueryName(key)] = fmt.Sprint(value)
+		}
+		if raw, ok := args[key]; ok {
+			query[wireQueryName(key)] = scalarToString(raw)
+		}
+	}
+	if len(query) == 0 {
+		return nil
+	}
+	return query
+}
+
+func routeBody(spec routeTool, args map[string]any) map[string]any {
+	body := map[string]any{}
+	if raw, ok := args["body"].(map[string]any); ok {
+		for key, value := range raw {
+			body[key] = value
+		}
+	}
+	for key, value := range spec.Defaults {
+		body[bodyName(key)] = value
+	}
+	for _, key := range spec.Body {
+		if key == "body" {
+			continue
+		}
+		if value, ok := args[key]; ok {
+			body[bodyName(key)] = value
+		}
+	}
+	if len(body) == 0 {
+		return nil
+	}
+	return body
+}
+
+func standardizeLegacyResult(action, entity, change string, out any, args map[string]any) ToolResult {
+	if current, ok := out.(ToolResult); ok {
+		current.Action = action
+		return current
+	}
+	ids := map[string]string{}
+	var data any = out
+	var warnings []Warning
+	if env, ok := out.(ResultEnvelope); ok {
+		data = env.Data
+		for key, value := range env.Meta {
+			if str, ok := value.(string); ok && str != "" {
+				ids[key] = str
+			}
+		}
+	}
+	for key, value := range args {
+		if strings.HasSuffix(key, "_id") {
+			if str, ok := value.(string); ok && str != "" {
+				ids[idKey(key)] = str
+			}
+		}
+	}
+	for key, value := range idsFromData(data, entity) {
+		ids[key] = value
+	}
+	return result(action, entity, ids, data, changedFor(change, entity, data, ids), warnings, nil)
+}
+
+func changedFor(change, entity string, data any, ids map[string]string) ChangeSet {
+	if change == "" {
+		return ChangeSet{}
+	}
+	ref := EntityRef{Type: entity, ID: firstEntityID(entity, ids), Name: entityName(data)}
+	switch change {
+	case "created":
+		return ChangeSet{Created: []EntityRef{ref}}
+	case "updated":
+		return ChangeSet{Updated: []EntityRef{ref}}
+	case "deleted":
+		return ChangeSet{Deleted: []EntityRef{ref}}
+	case "reused":
+		return ChangeSet{Reused: []EntityRef{ref}}
+	default:
+		return ChangeSet{}
+	}
+}
+
+func idsFromData(data any, entity string) map[string]string {
+	out := map[string]string{}
+	switch m := data.(type) {
+	case map[string]any:
+		if id := stringFromMap(m, "id", "_id"); id != "" {
+			out[idKey(entity+"_id")] = id
+		}
+	case []map[string]any:
+		for _, item := range m {
+			if id := stringFromMap(item, "id", "_id"); id != "" {
+				out[idKey(entity+"_id")] = id
+				break
+			}
+		}
+	case []any:
+		for _, item := range m {
+			if asMap, ok := item.(map[string]any); ok {
+				if id := stringFromMap(asMap, "id", "_id"); id != "" {
+					out[idKey(entity+"_id")] = id
+					break
+				}
+			}
+		}
+	}
+	return out
+}
+
+func firstEntityID(entity string, ids map[string]string) string {
+	preferred := idKey(entity + "_id")
+	if ids[preferred] != "" {
+		return ids[preferred]
+	}
+	keys := make([]string, 0, len(ids))
+	for key := range ids {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if strings.HasSuffix(strings.ToLower(key), "id") && key != "workspaceId" {
+			return ids[key]
+		}
+	}
+	return ids["workspaceId"]
+}
+
+func entityName(data any) string {
+	if m, ok := data.(map[string]any); ok {
+		return stringFromMap(m, "name", "description", "number")
+	}
+	return ""
+}
+
+func stringFromMap(m map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := m[key].(string); ok && value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func idKey(name string) string {
+	name = strings.TrimSuffix(name, "_id")
+	name = strings.TrimSuffix(name, "Id")
+	parts := strings.Split(name, "_")
+	for i := 1; i < len(parts); i++ {
+		if parts[i] == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, "") + "Id"
+}
+
+func bodyName(name string) string {
+	switch name {
+	case "client_id":
+		return "clientId"
+	case "project_id":
+		return "projectId"
+	case "task_id":
+		return "taskId"
+	case "tag_ids":
+		return "tagIds"
+	case "time_entry_ids":
+		return "timeEntryIds"
+	case "expense_ids":
+		return "expenseIds"
+	case "user_ids":
+		return "userIds"
+	case "user_group_ids":
+		return "userGroupIds"
+	case "entry_ids":
+		return "entryIds"
+	case "approval_id":
+		return "approvalRequestId"
+	case "time_entry_group_type":
+		return "timeEntryGroupType"
+	case "is_public":
+		return "isPublic"
+	case "send_email":
+		return "sendEmail"
+	default:
+		parts := strings.Split(name, "_")
+		for i := 1; i < len(parts); i++ {
+			if parts[i] != "" {
+				parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+			}
+		}
+		return strings.Join(parts, "")
+	}
+}
+
+func wireQueryName(name string) string {
+	switch name {
+	case "page_size":
+		return "page-size"
+	case "is_template":
+		return "is-template"
+	case "send_email":
+		return "send-email"
+	case "user_ids":
+		return "user-ids"
+	default:
+		return strings.ReplaceAll(name, "_", "-")
+	}
+}
+
+func scalarToString(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case bool:
+		return strconv.FormatBool(typed)
+	case float64:
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	case []any:
+		parts := make([]string, 0, len(typed))
+		for _, item := range typed {
+			parts = append(parts, scalarToString(item))
+		}
+		return strings.Join(parts, ",")
+	default:
+		return fmt.Sprint(value)
+	}
+}
+
+func fields(names ...string) map[string]any {
+	props := map[string]any{
+		"body": map[string]any{"type": "object", "additionalProperties": true, "description": "Optional raw Clockify request body fields merged with typed fields."},
+	}
+	for _, name := range names {
+		switch {
+		case strings.HasSuffix(name, "_ids"), name == "emails", name == "memberships", name == "trigger_source":
+			props[name] = map[string]any{"type": "array", "items": map[string]any{}}
+		case strings.Contains(name, "amount") || strings.Contains(name, "price") || strings.Contains(name, "rate") || strings.Contains(name, "value"):
+			props[name] = map[string]any{"type": "number"}
+		case name == "billable" || name == "is_public" || name == "archived" || name == "invoiced" || name == "include_expenses" || name == "occurs_annually" || name == "send_email":
+			props[name] = map[string]any{"type": "boolean"}
+		case name == "page" || name == "page_size":
+			props[name] = map[string]any{"type": "integer"}
+		case name == "body":
+			continue
+		default:
+			props[name] = map[string]any{"type": "string"}
+		}
+	}
+	return props
+}
+
+func reportHelperSchema() map[string]any {
+	return objectSchema(map[string]any{"properties": map[string]any{
+		"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"project":         map[string]any{"type": "string"},
+		"include_entries": map[string]any{"type": "boolean"},
+		"max_entries":     map[string]any{"type": "integer", "minimum": 0},
+		"week_start":      map[string]any{"type": "string", "description": "YYYY-MM-DD or RFC3339 week start."},
+		"timezone":        map[string]any{"type": "string"},
+	}})
+}
+
+func rt(priority int, method, name, desc, path, entity string, required []string, props map[string]any, query, body []string, readOnly, idempotent, destructive bool, change string) routeTool {
+	if props == nil {
+		props = map[string]any{}
+	}
+	for _, key := range required {
+		if _, ok := props[key]; !ok {
+			props[key] = map[string]any{"type": "string"}
+		}
+	}
+	return routeTool{
+		Name:        name,
+		Description: desc,
+		Method:      method,
+		Path:        path,
+		Entity:      entity,
+		Required:    required,
+		Properties:  props,
+		Query:       query,
+		Body:        body,
+		ReadOnly:    readOnly,
+		Idempotent:  idempotent,
+		Destructive: destructive,
+		Change:      change,
+		Priority:    priority,
+	}
+}
+
+func reportRT(priority int, name, desc, reportPath string) routeTool {
+	return rt(priority, "POST", name, desc, reportPath, "report", nil, fields("date_range_start", "date_range_end", "start", "end", "export_type", "body"), nil, []string{"date_range_start", "date_range_end", "start", "end", "export_type"}, true, false, false, "").withReports()
+}
+
+func (r routeTool) withDefaults(defaults map[string]any) routeTool {
+	r.Defaults = defaults
+	return r
+}
+
+func (r routeTool) withReports() routeTool {
+	r.Reports = true
+	return r
+}
+
+func (s *Service) EntriesRunning(ctx context.Context, _ map[string]any) (any, error) {
+	timer, err := s.currentTimer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return result("clockify_entries_running", "entry", map[string]string{"workspaceId": s.WorkspaceID}, timer, ChangeSet{}, nil, nil), nil
+}
+
+func (s *Service) EntriesTimerStart(ctx context.Context, args map[string]any) (any, error) {
+	out, err := s.StartTimer(ctx, stringArg(args, "project_id"), stringArg(args, "project"), stringArg(args, "description"))
+	if err != nil {
+		return nil, err
+	}
+	return standardizeLegacyResult("clockify_entries_timer_start", "entry", "created", out, args), nil
+}
+
+func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (any, error) {
+	out, err := s.StopTimer(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return standardizeLegacyResult("clockify_entries_timer_stop", "entry", "updated", out, args), nil
+}
+
+func (s *Service) EntriesTimerStatus(ctx context.Context, _ map[string]any) (any, error) {
+	out, err := s.TimerStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return standardizeLegacyResult("clockify_entries_timer_status", "entry", "", out, nil), nil
+}
+
+func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (any, error) {
+	out, err := s.SwitchProject(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return standardizeLegacyResult("clockify_entries_timer_switch", "entry", "updated", out, args), nil
+}
+
+func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
+	return []mcp.ToolDescriptor{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback within the pinned workspace or Clockify API path.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+			"path":  map[string]any{"type": "string"},
+			"query": map[string]any{"type": "object", "additionalProperties": true},
+		}})), s.RawAPIGet),
+		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback within the pinned workspace or Clockify API path.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+			"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
+			"path":   map[string]any{"type": "string"},
+			"query":  map[string]any{"type": "object", "additionalProperties": true},
+			"body":   map[string]any{"type": "object", "additionalProperties": true},
+		}})), s.RawAPIRequest),
+	}
+}
+
+func (s *Service) RawAPIGet(ctx context.Context, args map[string]any) (any, error) {
+	return s.rawAPI(ctx, "GET", args)
+}
+
+func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, error) {
+	method := strings.ToUpper(strings.TrimSpace(stringArg(args, "method")))
+	if method == "" {
+		return nil, fmt.Errorf("method is required")
+	}
+	return s.rawAPI(ctx, method, args)
+}
+
+func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any) (any, error) {
+	path, err := safeRawPath(s.WorkspaceID, stringArg(args, "path"))
+	if err != nil {
+		return nil, err
+	}
+	query := rawQuery(args["query"])
+	body, _ := args["body"].(map[string]any)
+	var data any
+	switch method {
+	case "GET":
+		err = s.Client.Get(ctx, path, query, &data)
+	case "POST":
+		err = s.Client.Post(ctx, path, body, &data)
+	case "PUT":
+		err = s.Client.Put(ctx, path, body, &data)
+	case "PATCH":
+		err = s.Client.Patch(ctx, path, body, &data)
+	case "DELETE":
+		err = s.Client.DeleteWithQuery(ctx, path, query)
+		data = map[string]any{"deleted": true}
+	default:
+		return nil, fmt.Errorf("unsupported method %s", method)
+	}
+	if err != nil {
+		return nil, err
+	}
+	action := "clockify_api_request"
+	if method == "GET" {
+		action = "clockify_api_get"
+	}
+	return result(action, "raw_api", map[string]string{"workspaceId": s.WorkspaceID}, data, changedFor(rawChange(method), "raw_api", data, nil), nil, nil), nil
+}
+
+func safeRawPath(workspaceID, raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("path is required")
+	}
+	raw = strings.ReplaceAll(raw, "{workspaceId}", workspaceID)
+	raw = strings.TrimPrefix(raw, "/api/v1")
+	raw = strings.TrimPrefix(raw, "/v1")
+	if strings.Contains(raw, "://") || strings.Contains(raw, "\\") || strings.Contains(raw, "..") {
+		return "", fmt.Errorf("raw API path must be a relative Clockify API path")
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	if u.IsAbs() || u.Host != "" {
+		return "", fmt.Errorf("raw API path must not include a host")
+	}
+	path := u.Path
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	if !strings.HasPrefix(path, "/workspaces/"+workspaceID+"/") && path != "/workspaces/"+workspaceID && path != "/user" && path != "/workspaces" {
+		return "", fmt.Errorf("raw API path must stay within the pinned workspace or current-user API")
+	}
+	return path, nil
+}
+
+func rawQuery(raw any) map[string]string {
+	m, ok := raw.(map[string]any)
+	if !ok || len(m) == 0 {
+		return nil
+	}
+	query := make(map[string]string, len(m))
+	for key, value := range m {
+		query[key] = scalarToString(value)
+	}
+	return query
+}
+
+func rawChange(method string) string {
+	switch method {
+	case "POST":
+		return "created"
+	case "PUT", "PATCH":
+		return "updated"
+	case "DELETE":
+		return "deleted"
+	default:
+		return ""
+	}
+}
+
+var _ = clockify.RawResponse{}

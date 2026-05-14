@@ -126,10 +126,31 @@ func (s *Server) toolsListResultJSONBytes() ([]byte, error) {
 
 func (s *Server) buildToolListLocked() []Tool {
 	keys := make([]string, 0, len(s.tools))
+	priorityAware := false
 	for k := range s.tools {
 		keys = append(keys, k)
+		if _, ok := toolPriority(s.tools[k].Tool); ok {
+			priorityAware = true
+		}
 	}
-	sort.Strings(keys)
+	if priorityAware {
+		sort.Slice(keys, func(i, j int) bool {
+			left, lok := toolPriority(s.tools[keys[i]].Tool)
+			right, rok := toolPriority(s.tools[keys[j]].Tool)
+			if !lok {
+				left = 50
+			}
+			if !rok {
+				right = 50
+			}
+			if left != right {
+				return left < right
+			}
+			return keys[i] < keys[j]
+		})
+	} else {
+		sort.Strings(keys)
+	}
 
 	tools := make([]Tool, 0, len(keys))
 	for _, key := range keys {
@@ -145,6 +166,22 @@ func (s *Server) buildToolListLocked() []Tool {
 		tools = append(tools, d.Tool)
 	}
 	return tools
+}
+
+func toolPriority(tool Tool) (int, bool) {
+	if tool.Annotations == nil {
+		return 0, false
+	}
+	switch v := tool.Annotations["priority"].(type) {
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	default:
+		return 0, false
+	}
 }
 
 func cloneToolList(in []Tool) []Tool {

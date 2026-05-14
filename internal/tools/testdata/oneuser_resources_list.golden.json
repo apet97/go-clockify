@@ -1,0 +1,14 @@
+[
+  "clockify://status",
+  "clockify://workspace",
+  "clockify://user",
+  "clockify://features",
+  "clockify://tools",
+  "clockify://workflows",
+  "clockify://demo/phase1",
+  "clockify://demo/{run_id}",
+  "clockify://recent/entries",
+  "clockify://recent/projects",
+  "clockify://workspace/65b382b606de527a7ee2b60e",
+  "clockify://workspace/65b382b606de527a7ee2b60e/user/current"
+]

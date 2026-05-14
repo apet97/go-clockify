@@ -36,42 +36,14 @@ func TestInitializeAndToolsList(t *testing.T) {
 }
 
 func TestServerInstructionsPublicContract(t *testing.T) {
-	for _, name := range []string{"clockify_list_tools", "clockify_activate_group", "clockify_activate_tool", "clockify_deactivate_group"} {
-		if !strings.Contains(ServerInstructions, name) {
-			t.Fatalf("ServerInstructions should reference %s: %q", name, ServerInstructions)
+	for _, want := range []string{"single-user full-access", "All tools are loaded", "Use workflow tools first", "Use IDs returned by previous calls"} {
+		if !strings.Contains(ServerInstructions, want) {
+			t.Fatalf("ServerInstructions missing %q: %q", want, ServerInstructions)
 		}
 	}
-	if !strings.Contains(ServerInstructions, "clockify_search_tools") || !strings.Contains(ServerInstructions, "deprecated compatibility shim") {
-		t.Fatalf("ServerInstructions should keep the deprecated search_tools compatibility note: %q", ServerInstructions)
-	}
-	if !strings.Contains(ServerInstructions, "dry_run:true") || !strings.Contains(ServerInstructions, "dry_run:false") {
-		t.Fatalf("ServerInstructions should describe dry_run:true preview and dry_run:false execution: %q", ServerInstructions)
-	}
-	if strings.Contains(ServerInstructions, "dry-run interceptor by default") {
-		t.Fatalf("ServerInstructions contains stale dry-run-default wording: %q", ServerInstructions)
-	}
-	// ADR 0018 confirmation-token gate. Agentic clients reading
-	// instructions as system prompt need both the "high-risk" keyword
-	// (so they recognise the gated class) and the confirmation_token
-	// argument name (so they can echo the dry-run-issued token back).
-	// Case-insensitive on "high-risk" so a sentence-leading "High-risk"
-	// (the natural English rendering) still passes the contract test.
-	lowered := strings.ToLower(ServerInstructions)
-	for _, marker := range []string{"high-risk", "confirmation_token"} {
-		if !strings.Contains(lowered, marker) {
-			t.Fatalf("ServerInstructions missing %q (ADR 0018 confirmation-token guidance): %q", marker, ServerInstructions)
-		}
-	}
-	// Policy-mode count must match the policy.Mode constants in
-	// internal/policy. Stale "four policy modes" wording omits
-	// time_tracking_safe — the recommended AI-facing default — and
-	// misleads agentic clients reading instructions as system prompt.
-	if !strings.Contains(ServerInstructions, "five policy modes") {
-		t.Fatalf("ServerInstructions should advertise all five policy modes: %q", ServerInstructions)
-	}
-	for _, mode := range []string{"read_only", "time_tracking_safe", "safe_core", "standard", "full"} {
-		if !strings.Contains(ServerInstructions, mode) {
-			t.Fatalf("ServerInstructions missing policy mode %q: %q", mode, ServerInstructions)
+	for _, forbidden := range []string{"clockify_activate_group", "clockify_activate_tool", "clockify_deactivate_group", "clockify_search_tools", "confirmation", "policy mode", "Tier 2", "tenant", "hosted"} {
+		if strings.Contains(strings.ToLower(ServerInstructions), strings.ToLower(forbidden)) {
+			t.Fatalf("ServerInstructions contains forbidden language %q: %q", forbidden, ServerInstructions)
 		}
 	}
 }

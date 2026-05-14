@@ -55,30 +55,12 @@ func negotiateProtocolVersion(requested, configuredDefault string) string {
 }
 
 // ServerInstructions is returned in the initialize response to teach MCP
-// clients how to navigate the server. Agentic clients consume this as part
-// of their system prompt, so it trades some verbosity for clarity.
-const ServerInstructions = `This is the Clockify Go MCP server. It exposes a tiered tool surface and safety enforcement for Clockify operations.
-
-Tool tiers:
-  - Tier 1 tools are registered at startup and visible in tools/list.
-  - Tier 2 tools are organised into domain groups (invoices, expenses, scheduling, time_off, approvals, shared_reports, user_admin, webhooks, custom_fields, groups_holidays, project_admin) and activated on demand.
-  - Use 'clockify_list_tools' to discover tools by keyword or group name.
-  - Activate Tier 2 tools with 'clockify_activate_group' (preferred) or 'clockify_activate_tool' before calling them, and use 'clockify_deactivate_group' to shrink the visible surface after a task. Each Tier-2 group is the unit of activation: passing a single Tier-2 tool name to 'clockify_activate_tool' brings the entire containing group online, and activated_tools enumerates only currently visible/callable names.
-  - 'clockify_search_tools' remains as a deprecated compatibility shim for older clients.
-
-Safety:
-  - The server supports five policy modes: read_only, time_tracking_safe, safe_core, standard (default), full.
-  - time_tracking_safe is the recommended AI-facing default (used by the shared-service and prod-postgres profiles).
-  - Every write tool accepts dry_run:true to preview the effect without executing.
-  - High-risk tools (billing, admin, permission-change, external-side-effect, destructive) require a server-issued confirmation token before execution. Flow:
-      1. Call with dry_run:true. The response includes confirmation_token, confirmation_expires_at, confirmation_risk_class, and confirmation_note.
-      2. Re-submit the SAME arguments with dry_run:false and confirmation_token to execute.
-    The token binds to (tool, arguments, principal, expiry); any argument change invalidates it.
-  - Ordinary RiskWrite tools (the time-entry/timer surface) do not need a confirmation token; pass dry_run:false (or omit it) to execute directly.
-  - Use 'clockify_policy_info' to inspect the active policy, dry-run, and confirmation-token configuration.
-  - Tool arguments that reference entities by name (project, client, tag, user) are resolved strictly; ambiguous matches are rejected rather than guessed.
-
-Errors are returned in the MCP tool-error envelope (result.content + isError:true) for tool failures, and as JSON-RPC errors only for protocol violations.`
+// clients how to use the one-user/full-access product path.
+const ServerInstructions = `This is a single-user full-access Clockify MCP for one pinned workspace.
+All tools are loaded at startup.
+Use workflow tools first.
+Use IDs returned by previous calls.
+If a feature is unavailable, report it and continue.`
 
 // Notifier delivers server-initiated notifications (e.g. tools/list_changed)
 // to the connected client. Transports implement this: the stdio transport
@@ -164,11 +146,9 @@ func (e encoderNotifier) Notify(method string, params any) error {
 }
 
 // sanitizable is implemented by errors that carry both a verbose form
-// (Error()) and a sanitised form (Sanitized()) — typically because the
-// verbose form embeds an upstream HTTP response body that should not
-// cross tenant boundaries on a hosted deployment. clockify.APIError is
-// the in-tree implementer; the interface is duck-typed so this package
-// stays free of a clockify import.
+// (Error()) and a sanitised form (Sanitized()). clockify.APIError is the
+// in-tree implementer; the interface is duck-typed so this package stays
+// free of a clockify import.
 type sanitizable interface {
 	error
 	Sanitized() string
@@ -196,10 +176,8 @@ type ToolHandler func(context.Context, map[string]any) (any, error)
 
 // RiskClass categorises tools beyond the three MCP boolean hints. It is a
 // bitmask so a tool can carry multiple attributes (for example a billing
-// action that also triggers an external side effect). Consumers — audit,
-// policy, enforcement — pattern-match against bits to decide confirmation
-// requirements, log fidelity, and policy gates. The taxonomy mirrors
-// docs/policy/production-tool-scope.md.
+// action that also triggers an external side effect). Consumers can
+// pattern-match against bits for logging, filtering, or UX hints.
 type RiskClass uint32
 
 const (
@@ -252,7 +230,7 @@ type ToolDescriptor struct {
 type Server struct {
 	Version     string
 	Enforcement Enforcement   // nil = no filtering or enforcement
-	Activator   Activator     // nil = activation unrestricted
+	Activator   Activator     // nil = no dynamic tool visibility hook
 	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
 	// DefaultProtocolVersion is used only when initialize omits
 	// params.protocolVersion. Empty or unsupported values fall back to
@@ -266,11 +244,9 @@ type Server struct {
 	ExposeAuthErrors bool
 
 	// SanitizeUpstreamErrors controls whether tool-error responses to MCP
-	// clients omit upstream Clockify response bodies. The default is false
-	// (verbose, useful for local development); hosted profiles
-	// (shared-service, prod-postgres) set it to true so a 4xx from
-	// Clockify can't leak per-tenant info across tenant boundaries.
-	// The full APIError is always logged server-side regardless.
+	// clients omit upstream Clockify response bodies. The one-user stdio
+	// product keeps this false for useful local diagnostics. Remote
+	// deployments can set it true to return compact upstream errors.
 	SanitizeUpstreamErrors bool
 
 	// ResourceProvider backs resources/* method handlers. nil disables the
@@ -319,9 +295,8 @@ type Server struct {
 	mu           sync.RWMutex
 	tools        map[string]ToolDescriptor
 	activeGroups map[string][]string
-	// toolListCache stores the sorted, enforcement-filtered tools/list
-	// snapshot. Protected by mu and invalidated when descriptors or
-	// activation visibility change.
+	// toolListCache stores the sorted, filtered tools/list snapshot.
+	// Protected by mu and invalidated when descriptors or visibility changes.
 	toolListCache      []Tool
 	toolListCacheValid bool
 	// toolListResultJSON stores the serialized tools/list result only.
@@ -570,8 +545,8 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.encoder = json.NewEncoder(w)
 	s.writer = w
 	s.encoderMu.Unlock()
-	// Install the stdio notifier so activation events (tools/list_changed)
-	// flow back through the same thread-safe encoder the responses use.
+	// Install the stdio notifier so list/resource change notifications flow
+	// back through the same thread-safe encoder the responses use.
 	stdioNotifier := encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
 	if s.hub.len() == 0 {
 		s.SetNotifier(stdioNotifier)

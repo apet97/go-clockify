@@ -6,17 +6,16 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
 	logslog "github.com/apet97/go-clockify/internal/logging"
 	"github.com/apet97/go-clockify/internal/mcp"
-	"github.com/apet97/go-clockify/internal/metrics"
-	svcruntime "github.com/apet97/go-clockify/internal/runtime"
+	"github.com/apet97/go-clockify/internal/tools"
 )
 
 // version, commit, and buildDate are populated at build time via ldflags:
@@ -33,8 +32,6 @@ var (
 	version   = "dev"
 	commit    = "unknown"
 	buildDate = "unknown"
-
-	grpcBuildAvailable = svcruntime.GRPCBuildAvailable
 )
 
 func effectiveVersion() string {
@@ -55,17 +52,6 @@ func main() {
 	// the module is not active. See ADR 011.
 	fipsStartupCheck()
 
-	// Honour --profile=<name> from anywhere in the argv tail by
-	// translating it into MCP_PROFILE before the config package reads
-	// the env. The env form MCP_PROFILE=<name> keeps working for
-	// container / systemd operators; --profile is the flag form for
-	// interactive use.
-	for _, a := range os.Args[1:] {
-		if name, ok := strings.CutPrefix(a, "--profile="); ok {
-			_ = os.Setenv("MCP_PROFILE", name)
-		}
-	}
-
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "--version", "-v":
@@ -74,8 +60,6 @@ func main() {
 		case "--help", "-h":
 			printHelp()
 			os.Exit(0)
-		case "doctor":
-			os.Exit(runDoctor(os.Args[2:]))
 		}
 	}
 
@@ -105,74 +89,39 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load()
+	cfg, err := config.LoadOneUser()
 	if err != nil {
-		return err
-	}
-	if err := validateBuildCapabilities(cfg); err != nil {
 		return err
 	}
 	effective := effectiveVersion()
-	rt, err := svcruntime.New(cfg, svcruntime.NewOpts{
-		Version:       effective,
-		ExtraHandlers: pprofExtras(),
-	})
-	if err != nil {
-		return err
+	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 2)
+	client.SetUserAgent("clockify-mcp-one-user/" + effective)
+	defer client.Close()
+
+	service := tools.New(client, cfg.WorkspaceID)
+	if cfg.Timezone != "" {
+		loc, err := time.LoadLocation(cfg.Timezone)
+		if err != nil {
+			return err
+		}
+		service.DefaultTimezone = loc
 	}
+	server := mcp.NewServer(effective, service.FullAccessRegistry(), nil, nil)
+	server.ResourceProvider = service
+	service.EmitResourceUpdate = server.NotifyResourceUpdated
+	service.SubscriptionGate = server.HasResourceSubscription
 
-	// BuildInfo is a process-level gauge wired once here. ReadyState /
-	// InFlightToolCalls are rewired per-transport inside Runtime.Run
-	// once the server is built.
-	metrics.BuildInfo.SetFunc(
-		func() float64 { return 1 },
-		effective, commit, buildDate, runtime.Version(),
-	)
-
-	slog.Info("server_start",
+	slog.Info("one_user_server_start",
 		"version", effective,
-		"policy", string(rt.Policy().Mode),
-		"bootstrap", rt.Bootstrap().Mode.String(),
-		"transport", cfg.Transport,
+		"transport", "stdio",
 		"workspace", cfg.WorkspaceID,
-		"config", cfg.Fingerprint(),
+		"base_url", cfg.BaseURL,
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// B3: start the per-subject reaper so the subjects map can't grow
-	// unbounded in long-lived multi-tenant deployments. Defaults: 1h
-	// idle TTL swept every 5m. Override via CLOCKIFY_SUBJECT_IDLE_TTL
-	// and CLOCKIFY_SUBJECT_SWEEP_INTERVAL. Nil receiver (limiter
-	// disabled) is a no-op.
-	rt.RateLimit().StartSubjectReaper(ctx, subjectSweepInterval(), subjectIdleTTL())
-
-	// Install the OTel exporter when built with -tags=otel and
-	// OTEL_EXPORTER_OTLP_ENDPOINT is set. Default build is a no-op. See ADR 009.
-	otelShutdown := installOTel(ctx)
-	defer otelShutdown()
-	if cfg.MetricsBind != "" {
-		go func() {
-			if err := mcp.ServeMetrics(ctx, mcp.MetricsServerOptions{
-				Bind:        cfg.MetricsBind,
-				AuthMode:    cfg.MetricsAuthMode,
-				BearerToken: cfg.MetricsBearerToken,
-			}); err != nil {
-				slog.Error("metrics_server_error", "error", err.Error())
-				cancel()
-			}
-		}()
-	}
-
-	return rt.Run(ctx)
-}
-
-func validateBuildCapabilities(cfg config.Config) error {
-	if cfg.Transport == "grpc" && !grpcBuildAvailable {
-		return fmt.Errorf("MCP_TRANSPORT=grpc requires a binary built with -tags=grpc; use a clockify-mcp-grpc* release artifact or see docs/deploy/profile-private-network-grpc.md")
-	}
-	return nil
+	return server.Run(ctx, os.Stdin, os.Stdout)
 }
 
 func parseLogLevel(s string) slog.Level {
@@ -196,53 +145,23 @@ func isKnownLogLevel(s string) bool {
 	return false
 }
 
-// subjectIdleTTL returns the cutoff at which a per-subject rate limiter
-// entry becomes eligible for reap. 0 disables reaping entirely.
-// Default 1h keeps steady-state memory bounded without being so
-// aggressive that bursty subjects with hour-between-calls patterns
-// pay repeat allocation cost.
-func subjectIdleTTL() time.Duration {
-	if v := strings.TrimSpace(os.Getenv("CLOCKIFY_SUBJECT_IDLE_TTL")); v != "" {
-		if d, err := time.ParseDuration(v); err == nil && d > 0 {
-			return d
-		}
-	}
-	return 1 * time.Hour
-}
-
-// subjectSweepInterval is how often the background reaper runs. 0
-// disables. Default 5m balances reap latency against goroutine wakes.
-func subjectSweepInterval() time.Duration {
-	if v := strings.TrimSpace(os.Getenv("CLOCKIFY_SUBJECT_SWEEP_INTERVAL")); v != "" {
-		if d, err := time.ParseDuration(v); err == nil && d > 0 {
-			return d
-		}
-	}
-	return 5 * time.Minute
-}
-
-// printHelp emits the --help banner. The environment-variable catalog is
-// rendered from internal/config/AllSpecs() via cmd/gen-config-docs and
-// embedded as generatedHelp in help_generated.go. Regenerate after any
-// EnvSpec edit with: go run ./cmd/gen-config-docs -mode=all
+// printHelp emits the one-user branch help banner.
 func printHelp() {
 	// Writes to stderr never fail in any actionable way at this call
 	// site — if the OS-level write has gone south, help-text drops
 	// are the least of our problems. Explicit _, _ = satisfies the
 	// errcheck linter.
 	w := os.Stderr
-	_, _ = fmt.Fprintf(w, "clockify-mcp %s — MCP server for Clockify\n\n", effectiveVersion())
+	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — one-user full-access Clockify MCP\n\n", effectiveVersion())
 	_, _ = fmt.Fprintln(w, "Usage:")
-	_, _ = fmt.Fprintln(w, "  clockify-mcp [--profile=<name>]        Start the server with an optional profile")
-	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor [--profile=<name>] [--strict] [--allow-broad-policy] [--check-backends]")
-	_, _ = fmt.Fprintln(w, "                                             Audit config (exit 0=OK, 2=LOAD ERROR, 3=STRICT FINDINGS)")
-	_, _ = fmt.Fprintln(w, "  clockify-mcp --version | -v            Print version and exit")
-	_, _ = fmt.Fprintln(w, "  clockify-mcp --help    | -h            Print this help and exit")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp                 Start the stdio MCP server")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --version | -v  Print version and exit")
+	_, _ = fmt.Fprintln(w, "  clockify-mcp --help    | -h  Print this help and exit")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "Profiles (set via --profile or MCP_PROFILE):")
-	for _, p := range config.AllProfiles() {
-		_, _ = fmt.Fprintf(w, "  %-24s %s\n", p.Name, p.Summary)
-	}
-	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprint(w, generatedHelp)
+	_, _ = fmt.Fprintln(w, "Environment:")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_API_KEY       required")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WORKSPACE_ID  required")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TIMEZONE      optional")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_BASE_URL      optional, defaults to https://api.clockify.me/api/v1")
+	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error")
 }
