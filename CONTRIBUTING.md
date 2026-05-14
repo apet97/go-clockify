@@ -1,4 +1,8 @@
-# Contributing to Clockify MCP Server (Go)
+# Contributing to go-clockify
+
+`go-clockify` is a local one-user Clockify MCP server written in Go. The
+runtime shape is intentionally small: one API key, one required workspace id,
+stdio transport, and all 151 tools loaded at startup.
 
 ## Development Setup
 
@@ -8,193 +12,91 @@ cd go-clockify
 go build ./...
 ```
 
-While the repository is private, the HTTPS clone requires GitHub access
-to `apet97/go-clockify`; use SSH or set `GOPRIVATE=github.com/apet97/go-clockify`
-before `go install` / module commands. When the repository is public
-again, the same clone command works without additional auth.
+Requires the pinned Go 1.25.10 toolchain. Module path:
+`github.com/apet97/go-clockify`.
 
-Requires the pinned Go 1.25.10 toolchain. No external dependencies. Module path: `github.com/apet97/go-clockify`.
-
-## Running Tests
+## Common Commands
 
 ```sh
-# All tests
-go test ./...
-
-# With race detector (highly recommended)
-go test -race ./...
-
-# Single package
-go test ./internal/tools/...
-go test ./internal/mcp/...
-
-# Verbose output
-go test -v -run TestName ./internal/mcp/...
+make build
+make test
+make fmt
+make vet
+make check
+make gen-tool-catalog
+make catalog-drift
 ```
 
-## Code Quality
+`make check` is the normal pre-PR gate: formatting, `go vet`, and the full Go
+test suite with the race detector. After descriptor changes, run
+`make gen-tool-catalog` and `make catalog-drift`.
 
-Two local targets:
+Live tests intentionally call a sacrificial Clockify workspace. Read
+[docs/live-tests.md](docs/live-tests.md) before running:
 
 ```sh
-make check   # fast inner loop (seconds): gofmt + go vet + go test
-make verify  # pre-PR pipeline (minutes): mirrors PR-blocking CI jobs where local tools exist
-make release-check  # pre-ship/tag gate: docs, scripts, smokes, gRPC E2E, deploy render
+CLOCKIFY_RUN_LIVE_E2E=1 \
+CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
+make live-contract-local
 ```
 
-`make check` is for the edit-test cycle. `make verify` is what you run
-before opening a PR — it exercises every PR-blocking CI step that can
-run on a contributor laptop when its local tool is installed. Tool-gated
-local tiers print a skip warning when the binary or FIPS-capable
-toolchain is missing; CI remains authoritative for those checks.
-`make release-check` is the pre-ship/tag gate and must be green before
-launch-candidate handoff.
-
-### What `make verify` runs locally
-
-| Step | Tool | Local behavior |
-|---|---|---|
-| `fmt` | gofmt | always runs |
-| `vet` | go vet | always runs |
-| `lint` | golangci-lint | **skips** with a warning if not installed; CI enforces |
-| `test` | go test -race | always runs |
-| `cover-check` | go test -coverprofile + floors | always runs |
-| `fuzz-short` | go test -fuzz | 100000 executions per target (CI uses 300000) |
-| `build-tags` | scripts/check-build-tags.sh | otel/grpc/pprof symbol + go.mod parity checks |
-| `http-smoke` | scripts/smoke-http.sh | builds binary, curls `/health` + `/ready` |
-| `config-parity` | scripts/check-config-parity.sh | env-var parity across config.go / Helm / Kustomize |
-| `verify-vuln` | tools/govulncheck | always installs and runs the pinned `govulncheck` module with the repo Go pin |
-| `verify-k8s` | kubeconform + helm | **skips** with a warning if any tool missing |
-| `verify-fips` | GOFIPS140=latest | **soft-fails** locally if toolchain lacks FIPS support |
-
-### What CI runs that `make verify` does not
-
-- **Trivy container scan** — CI-only (Docker image workflow)
-- **Higher count-based fuzz budget** — CI uses 300000 executions per target; local uses 100000
-- **Mutation testing** — nightly workflow, not PR-blocking
-
-If `make verify` passes locally you have high confidence CI will pass, but
-the definitive answer always comes from the CI workflow on your PR.
-
-All checks must pass with no errors.
+Set `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` in the environment, but never
+print or commit them.
 
 ## Project Structure
 
+```text
+cmd/clockify-mcp/        One-user stdio executable and doctor command
+internal/config/         One-user environment loader
+internal/mcp/            JSON-RPC/MCP protocol core
+internal/clockify/       Clockify HTTP client and typed models
+internal/tools/          Workflow, domain, resource, and raw fallback tools
+internal/paths/          Workspace path builder with ID validation
+internal/resolve/        Name-to-ID resolution helpers
+internal/testclockify/   Fake Clockify server for local tests
+tests/                   Build-tagged live MCP harness tests
+docs/                    User, agent, catalog, and coverage documentation
+scripts/                 Current generators plus historical validation helpers
 ```
-cmd/clockify-mcp/     Entrypoint shim — defers to internal/runtime
-internal/
-  mcp/                Protocol core — pure JSON-RPC/MCP engine (server, tools, resources, audit, prompts)
-  runtime/            Process wiring — selects transport, builds Server (extracted in C2.2)
-  clockify/           HTTP client (connection pooling, retry/backoff, pagination)
-  tools/              All 177 tool handlers (58 Tier 1 + 119 Tier 2 lazy groups)
-  enforcement/        Composes policy, rate limit, dry-run, truncation into Enforcement interface
-  config/             EnvSpec + profile system + fail-fast validation
-  policy/             Policy modes (read_only/time_tracking_safe/safe_core/standard/full)
-  resolve/            Name-to-ID resolution
-  dryrun/             Dry-run interception strategies
-  bootstrap/          Tool visibility modes, searchable catalog
-  ratelimit/          Concurrency + throughput control (race-safe)
-  truncate/           Token-aware output truncation
-  dedupe/             Duplicate entry detection
-  timeparse/          Natural-language time parsing
-  helpers/            Error mapping, write envelopes
-  paths/              Typed URL path builder (validates IDs before concat)
-  transport/          Transport adapters (grpc behind -tags=grpc)
-  controlplane/       Audit + tenant store (memory or postgres backend)
-  auditbridge/        Bridge from mcp.Auditor to controlplane.Auditor
-  authn/              Auth modes (static_bearer, oidc, forward_auth, mtls)
-  vault/              Secret storage abstraction (inline vs external refs)
-  logging/            slog handler + PII-redaction wrapper
-  metrics/            Prometheus metrics + side-channel listener
-  tracing/            OTel tracing (behind -tags=otel)
-  jsonschema/         Tool input-schema validation
-  jsonpatch/          RFC 6902 patches (audit/replay)
-  jsonmergepatch/     RFC 7396 patches (resource delta-sync)
-  testharness/        Cross-transport parity test harness
-  benchdata/          Benchmark fixtures
-```
+
+The generated catalog should always show workflow tools first, domain tools
+second, and raw API fallback tools last.
 
 ## Pull Request Process
 
-1. Fork the repo and create a feature branch from `main`
-2. Make your changes with clear, focused commits
-3. Add tests for new functionality
-4. Ensure all checks pass (fmt, vet, build, test)
-5. Open a PR with a clear description of what and why
-
-See [`GOVERNANCE.md`](GOVERNANCE.md) for who reviews and merges PRs. Architectural decisions are recorded as ADRs under [`docs/adr/`](docs/adr/) — write a new one when a change is load-bearing, non-obvious, or cross-cutting.
+1. Create a focused branch from `main`.
+2. Keep diffs scoped to the behavior or documentation you are changing.
+3. Add or update tests when behavior changes.
+4. Run the matching local gates and include the commands in the PR body.
+5. Open a PR with a clear summary and any remaining risk.
 
 ## Commit Conventions
 
-Use conventional commit prefixes:
-- `feat:` — New feature
-- `fix:` — Bug fix
-- `docs:` — Documentation only
-- `ci:` — CI/CD changes
-- `refactor:` — Code change that neither fixes a bug nor adds a feature
-- `test:` — Adding or updating tests
-- `chore:` — Maintenance tasks
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation only
+- `ci:` - CI changes
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
 
 ## Design Principles
 
-1. **Stdlib only** — No external Go dependencies
-2. **Fail closed** — Ambiguous operations error instead of guessing
-3. **Stdout purity** — Protocol only on stdout, logs on stderr
-4. **Typed models** — Prefer structs over `map[string]any` for stable entities
-5. **Safety first** — Destructive tools must have policy + dry-run + tests
-6. **Graceful shutdown** — Respect context and drain in-flight requests
+1. Keep the one-user product boundary explicit.
+2. Prefer small, focused diffs.
+3. Keep stdout pure MCP protocol; diagnostics belong on stderr.
+4. Prefer typed models and typed output schemas for stable entities.
+5. Every write-style workflow should return useful IDs.
+6. Recoverable errors should return recovery guidance.
+7. Do not print, commit, or log API keys.
 
-## Go version pin
+## Go Version Pin
 
-This project pins to **Go 1.25.10** — the latest patch on the current
-minor at the time of this writing. We do not pin for a specific
-language feature or stdlib bug fix; we follow the principle "track
-the latest patch on the current minor, bump the minor on a documented
-cadence."
+This project pins to **Go 1.25.10**. Patch bumps should move all checked Go
+version surfaces together, then run:
 
-The bump cadence is:
-
-- **Patch** (1.25.x → 1.25.y): within two weeks of upstream release,
-  to pick up runtime fixes and security patches.
-- **Minor** (1.25 → 1.26): within four weeks of upstream release,
-  after running `make verify` against the new toolchain locally.
-
-The pin lives in these checked surfaces that must move together:
-
-1. `go.mod`, `go.work`, and build-tag module `go.mod` files —
-   `go 1.25.10` directives near the top.
-2. `.github/workflows/*.yml` — every `actions/setup-go` block uses
-   `go-version: "1.25.10"`. A bump in any one workflow without the
-   others is a structural drift bug.
-3. `deploy/Dockerfile` — `FROM golang:1.25-bookworm AS builder`. This
-   keeps the human-readable tag at the minor line, while the digest
-   pins the exact builder image. Bump the digest when the Go patch
-   moves so Docker builds use the same patched toolchain as CI.
-4. Current public support docs, including `README.md`,
-   `CONTRIBUTING.md`, and `docs/support-matrix.md`.
-
-When bumping the pin, change all four in the same commit and run
-`make go-version-parity` before opening the PR. That gate fails when
-module directives, workflow pins, current public docs, or the Docker
-builder digest drift apart. Then run `make verify` end-to-end. The
-`scripts/check-build-tags.sh` script exercises every build-tag
-combination against the new toolchain; if any combination breaks, the
-bump is not safe.
-
-Why "track latest patch" rather than "stay on the LTS-equivalent"?
-Go has no LTS — every minor receives security fixes only until the
-next-next minor ships. Staying behind the current minor means falling
-out of the security-fix window faster than tracking the head, so the
-tightest pin is also the safest one.
-
-## Releases
-
-Versioning, support window, deprecation policy, and the definition of
-"breaking change" used by this project live in
-[docs/release-policy.md](docs/release-policy.md). Read it before
-proposing a change to a public surface (tools, env vars, CLI flags,
-protocol version).
-
-## Questions?
-
-File an [issue](https://github.com/apet97/go-clockify/issues).
+```sh
+make check
+go list ./...
+git diff --check
+```

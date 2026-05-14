@@ -511,12 +511,27 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	wantNative := map[string]bool{
 		"clockify_invoices_create":               true,
+		"clockify_invoices_update":               true,
+		"clockify_invoices_delete":               true,
 		"clockify_invoices_send":                 true,
+		"clockify_invoices_mark_paid":            true,
+		"clockify_invoices_items_add":            true,
+		"clockify_invoices_items_update":         true,
+		"clockify_invoices_items_delete":         true,
 		"clockify_expenses_create":               true,
+		"clockify_expenses_update":               true,
+		"clockify_expenses_delete":               true,
 		"clockify_time_off_requests_create":      true,
+		"clockify_time_off_requests_update":      true,
+		"clockify_time_off_requests_delete":      true,
 		"clockify_scheduling_assignments_create": true,
 		"clockify_webhooks_create":               true,
+		"clockify_webhooks_update":               true,
+		"clockify_webhooks_delete":               true,
+		"clockify_webhooks_test":                 true,
 		"clockify_groups_create":                 true,
+		"clockify_groups_add_user":               true,
+		"clockify_groups_remove_user":            true,
 		"clockify_holidays_create":               true,
 		"clockify_users_invite":                  true,
 		"clockify_entries_mark_invoiced":         true,
@@ -676,27 +691,68 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_demo_cleanup",
 		"clockify_clients_list",
 		"clockify_clients_create",
+		"clockify_clients_get",
+		"clockify_clients_update",
+		"clockify_clients_delete",
 		"clockify_projects_list",
 		"clockify_projects_create",
+		"clockify_projects_get",
+		"clockify_projects_update",
+		"clockify_projects_delete",
+		"clockify_projects_archive",
+		"clockify_projects_rates_update",
 		"clockify_tasks_list",
 		"clockify_tasks_create",
+		"clockify_tasks_get",
+		"clockify_tasks_update",
+		"clockify_tasks_delete",
+		"clockify_tasks_rates_update",
 		"clockify_tags_list",
 		"clockify_tags_create",
+		"clockify_tags_get",
+		"clockify_tags_update",
+		"clockify_tags_delete",
 		"clockify_entries_list",
 		"clockify_entries_create",
+		"clockify_entries_get",
+		"clockify_entries_update",
+		"clockify_entries_delete",
 		"clockify_entries_mark_invoiced",
+		"clockify_entries_running",
+		"clockify_entries_timer_start",
+		"clockify_entries_timer_stop",
+		"clockify_entries_timer_status",
+		"clockify_entries_timer_switch",
 		"clockify_invoices_create",
+		"clockify_invoices_update",
+		"clockify_invoices_delete",
 		"clockify_invoices_send",
+		"clockify_invoices_mark_paid",
+		"clockify_invoices_items_add",
+		"clockify_invoices_items_update",
+		"clockify_invoices_items_delete",
 		"clockify_expenses_create",
+		"clockify_expenses_update",
+		"clockify_expenses_delete",
 		"clockify_time_off_requests_create",
+		"clockify_time_off_requests_update",
+		"clockify_time_off_requests_delete",
 		"clockify_scheduling_assignments_create",
 		"clockify_webhooks_create",
+		"clockify_webhooks_update",
+		"clockify_webhooks_delete",
+		"clockify_webhooks_test",
 		"clockify_groups_create",
+		"clockify_groups_add_user",
+		"clockify_groups_remove_user",
 		"clockify_holidays_create",
 		"clockify_users_invite",
 		"clockify_users_list",
 		"clockify_users_profile",
 		"clockify_workspace_settings",
+		"clockify_reports_detailed",
+		"clockify_reports_summary",
+		"clockify_reports_weekly",
 		"clockify_api_get",
 		"clockify_api_request",
 	)
@@ -1076,6 +1132,79 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 			}
 			if !descriptor.ReadOnlyHint && !hasAnyChange(result.Changed) {
 				t.Fatalf("write tool did not report a changed entity: %+v", result.Changed)
+			}
+		})
+	}
+}
+
+func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	smoke := []struct {
+		name   string
+		change string
+	}{
+		{"clockify_clients_get", ""},
+		{"clockify_clients_update", "updated"},
+		{"clockify_clients_delete", "deleted"},
+		{"clockify_projects_get", ""},
+		{"clockify_projects_update", "updated"},
+		{"clockify_projects_delete", "deleted"},
+		{"clockify_projects_archive", "updated"},
+		{"clockify_projects_rates_update", "updated"},
+		{"clockify_tasks_get", ""},
+		{"clockify_tasks_update", "updated"},
+		{"clockify_tasks_delete", "deleted"},
+		{"clockify_tasks_rates_update", "updated"},
+		{"clockify_tags_get", ""},
+		{"clockify_tags_update", "updated"},
+		{"clockify_tags_delete", "deleted"},
+		{"clockify_entries_get", ""},
+		{"clockify_entries_update", "updated"},
+		{"clockify_entries_delete", "deleted"},
+		{"clockify_entries_running", ""},
+		{"clockify_entries_timer_start", "created"},
+		{"clockify_entries_timer_stop", "updated"},
+		{"clockify_entries_timer_status", ""},
+		{"clockify_entries_timer_switch", "updated"},
+		{"clockify_reports_detailed", ""},
+		{"clockify_reports_summary", ""},
+		{"clockify_reports_weekly", ""},
+		{"clockify_invoices_update", "updated"},
+		{"clockify_invoices_delete", "deleted"},
+		{"clockify_invoices_mark_paid", "updated"},
+		{"clockify_invoices_items_add", "created"},
+		{"clockify_invoices_items_update", "updated"},
+		{"clockify_invoices_items_delete", "deleted"},
+		{"clockify_expenses_update", "updated"},
+		{"clockify_expenses_delete", "deleted"},
+		{"clockify_time_off_requests_update", "updated"},
+		{"clockify_time_off_requests_delete", "deleted"},
+		{"clockify_webhooks_update", "updated"},
+		{"clockify_webhooks_delete", "deleted"},
+		{"clockify_webhooks_test", "updated"},
+		{"clockify_groups_add_user", "created"},
+		{"clockify_groups_remove_user", "deleted"},
+	}
+	for _, tt := range smoke {
+		t.Run(tt.name, func(t *testing.T) {
+			descriptor, ok := descriptors[tt.name]
+			if !ok {
+				t.Fatalf("missing descriptor")
+			}
+			result := callToolOK(t, server, tt.name, oneUserCoverageArgs(descriptor.Tool))
+			requireID(t, result, "workspaceId")
+			if tt.change != "" {
+				requireChanged(t, result, tt.change)
 			}
 		})
 	}

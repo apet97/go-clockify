@@ -136,7 +136,7 @@ func (s *Service) coreRouteDescriptors() []mcp.ToolDescriptor {
 
 		// Scheduling coverage beyond the existing assignment helpers.
 		rt(606, "GET", "clockify_scheduling_user_totals", "Get scheduled assignment totals for one user.", "scheduling/assignments/users/{user_id}/totals", "scheduling", []string{"user_id"}, fields("start", "end"), []string{"start", "end"}, nil, true, false, false, ""),
-		rt(607, "GET", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, fields("start", "end", "user_ids"), []string{"start", "end", "user_ids"}, nil, true, false, false, ""),
+		rt(607, "POST", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, fields("start", "end", "user_ids"), nil, []string{"start", "end", "user_ids"}, true, false, false, ""),
 
 		// Approval resubmit route from the documented API.
 		rt(704, "POST", "clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses for approval.", "approval-requests/resubmit-entries-for-approval", "approval", []string{"approval_id"}, fields("approval_id", "entry_ids", "expense_ids", "note", "body"), nil, []string{"approval_id", "entry_ids", "expense_ids", "note"}, false, false, false, "updated"),
@@ -458,7 +458,7 @@ func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	sources := s.nativeDomainDescriptorMap()
-	out := make([]mcp.ToolDescriptor, 0, 12)
+	out := make([]mcp.ToolDescriptor, 0, 28)
 	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
 		old, ok := sources[oldName]
 		if !ok {
@@ -467,12 +467,27 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
 	}
 	add(202, "clockify_invoices_create", "clockify_create_invoice", "invoice", "created", s.createInvoice)
+	add(203, "clockify_invoices_update", "clockify_update_invoice", "invoice", "updated", s.updateInvoice)
+	add(204, "clockify_invoices_delete", "clockify_delete_invoice", "invoice", "deleted", s.deleteInvoice)
 	add(205, "clockify_invoices_send", "clockify_send_invoice", "invoice", "updated", s.sendInvoice)
+	add(206, "clockify_invoices_mark_paid", "clockify_mark_invoice_paid", "invoice", "updated", s.markInvoicePaid)
+	add(208, "clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created", s.addInvoiceItem)
+	add(209, "clockify_invoices_items_update", "clockify_update_invoice_item", "invoice_item", "updated", s.updateInvoiceItem)
+	add(216, "clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted", s.deleteInvoiceItem)
 	add(302, "clockify_expenses_create", "clockify_create_expense", "expense", "created", s.createExpense)
+	add(303, "clockify_expenses_update", "clockify_update_expense", "expense", "updated", s.updateExpense)
+	add(304, "clockify_expenses_delete", "clockify_delete_expense", "expense", "deleted", s.deleteExpense)
 	add(502, "clockify_time_off_requests_create", "clockify_create_time_off_request", "time_off_request", "created", s.createTimeOffRequest)
+	add(503, "clockify_time_off_requests_update", "clockify_update_time_off_request", "time_off_request", "updated", s.updateTimeOffRequest)
+	add(504, "clockify_time_off_requests_delete", "clockify_delete_time_off_request", "time_off_request", "deleted", s.deleteTimeOffRequest)
 	add(602, "clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created", s.createAssignment)
 	add(802, "clockify_webhooks_create", "clockify_create_webhook", "webhook", "created", s.CreateWebhook)
+	add(803, "clockify_webhooks_update", "clockify_update_webhook", "webhook", "updated", s.UpdateWebhook)
+	add(804, "clockify_webhooks_delete", "clockify_delete_webhook", "webhook", "deleted", s.DeleteWebhook)
+	add(805, "clockify_webhooks_test", "clockify_test_webhook", "webhook", "updated", s.TestWebhook)
 	add(902, "clockify_groups_create", "clockify_create_user_group_admin", "group", "created", s.CreateUserGroupAdmin)
+	add(905, "clockify_groups_add_user", "clockify_add_user_to_group", "group_member", "created", s.AddUserToGroup)
+	add(906, "clockify_groups_remove_user", "clockify_remove_user_from_group", "group_member", "deleted", s.RemoveUserFromGroup)
 	add(1004, "clockify_holidays_create", "clockify_create_holiday", "holiday", "created", s.CreateHoliday)
 	out = append(out,
 		nativeDomainTool(65, toolRWIdem("clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", objectSchema(map[string]any{"required": []string{"time_entry_ids", "invoiced"}, "properties": map[string]any{
@@ -962,13 +977,31 @@ func routeBody(spec routeTool, args map[string]any) map[string]any {
 			continue
 		}
 		if value, ok := args[key]; ok {
-			body[bodyName(key)] = value
+			wireKey := routeBodyName(spec, key)
+			if spec.Reports && (key == "start" || key == "end") {
+				if _, exists := body[wireKey]; exists {
+					continue
+				}
+			}
+			body[wireKey] = value
 		}
 	}
 	if len(body) == 0 {
 		return nil
 	}
 	return body
+}
+
+func routeBodyName(spec routeTool, key string) string {
+	if spec.Reports {
+		switch key {
+		case "start":
+			return "dateRangeStart"
+		case "end":
+			return "dateRangeEnd"
+		}
+	}
+	return bodyName(key)
 }
 
 func standardizeDomainResult(action, entity, change string, out any, args map[string]any) ToolResult {

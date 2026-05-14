@@ -239,9 +239,10 @@ func (h *liveMCPHarness) callExpectError(ctx context.Context, tool string, args 
 // extractDataMap pulls the "data" field out of a result envelope as a map.
 func extractDataMap(t *testing.T, envelope map[string]any) map[string]any {
 	t.Helper()
-	data, _ := envelope["data"].(map[string]any)
+	sc := structuredContentMap(t, envelope)
+	data, _ := sc["data"].(map[string]any)
 	if data == nil {
-		t.Fatalf("envelope has no data map: %v", envelope)
+		t.Fatalf("envelope has no data map: %v", sc)
 	}
 	return data
 }

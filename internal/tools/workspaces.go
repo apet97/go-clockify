@@ -53,7 +53,7 @@ func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
 		return ResultEnvelope{}, err
 	}
 	// paths.Workspace runs resolve.ValidateID and url.PathEscape per
-	// segment. Defence-in-depth: config.Load already validates an
+	// segment. Defence-in-depth: config.LoadOneUser already validates an
 	// env-supplied CLOCKIFY_WORKSPACE_ID, but ResolveWorkspaceID can
 	// also return an auto-detected ID from a /workspaces response.
 	path, err := paths.Workspace(wsID)

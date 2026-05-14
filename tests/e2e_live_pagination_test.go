@@ -11,7 +11,7 @@ import (
 )
 
 // TestLivePaginationOnTags exercises pagination semantics on
-// clockify_list_tags through the MCP path: create 11 tags with the
+// clockify_tags_list through the MCP path: create 11 tags with the
 // per-run prefix, list with page_size=5 across pages 1, 2, and 3,
 // and verify (a) the meta envelope reports the correct page and
 // pageSize on every response, (b) page 1 and page 2 each return
@@ -39,7 +39,7 @@ func TestLivePaginationOnTags(t *testing.T) {
 		defer cancel()
 		for i := 0; i < totalCreate; i++ {
 			name := c.LivePrefix("page-tag", i)
-			result := h.callOK(ctx, "clockify_create_tag", map[string]any{
+			result := h.callOK(ctx, "clockify_tags_create", map[string]any{
 				"name": name,
 			})
 			data := extractDataMap(t, result)
@@ -62,23 +62,22 @@ func TestLivePaginationOnTags(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		// Page 1 with page_size=5 — meta must echo page=1, pageSize=5.
-		result := h.callOK(ctx, "clockify_list_tags", map[string]any{
+		result := h.callOK(ctx, "clockify_tags_list", map[string]any{
 			"page":      1,
 			"page_size": 5,
 		})
-		meta, _ := result["structuredContent"].(map[string]any)
-		envelope, _ := meta["meta"].(map[string]any)
-		assertNumberEquals(t, "meta.page", envelope, "page", 1)
-		assertNumberEquals(t, "meta.pageSize", envelope, "pageSize", 5)
+		data := extractDataMap(t, result)
+		assertNumberEquals(t, "data.page", data, "page", 1)
+		assertNumberEquals(t, "data.pageSize", data, "pageSize", 5)
 
 		// Page 2 — meta must echo page=2.
-		result = h.callOK(ctx, "clockify_list_tags", map[string]any{
+		result = h.callOK(ctx, "clockify_tags_list", map[string]any{
 			"page":      2,
 			"page_size": 5,
 		})
-		envelope, _ = result["structuredContent"].(map[string]any)["meta"].(map[string]any)
-		assertNumberEquals(t, "meta.page", envelope, "page", 2)
-		assertNumberEquals(t, "meta.pageSize", envelope, "pageSize", 5)
+		data = extractDataMap(t, result)
+		assertNumberEquals(t, "data.page", data, "page", 2)
+		assertNumberEquals(t, "data.pageSize", data, "pageSize", 5)
 	})
 
 	t.Run("union_of_pages_covers_seeded_tags", func(t *testing.T) {
@@ -91,7 +90,7 @@ func TestLivePaginationOnTags(t *testing.T) {
 		// underlying slice covers everything we created.
 		seen := make(map[string]struct{})
 		for page := 1; page <= 20; page++ {
-			result := h.callOK(ctx, "clockify_list_tags", map[string]any{
+			result := h.callOK(ctx, "clockify_tags_list", map[string]any{
 				"page":      page,
 				"page_size": 50,
 			})

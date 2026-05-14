@@ -1,187 +1,52 @@
-# Documentation index
+# Documentation Index
 
-A single navigation page for the `docs/` tree, grouped by audience. If
-you landed here from the repo root, the short answer is: **operators
-probably want [Start Here](#start-here) or [Operator Guides](#operator-guides);
-contributors probably want [Architecture & Decisions](#architecture--decisions);
-security reviewers probably want [Release Trust](#release-trust).**
+This repo is now documented as a local one-user Clockify MCP:
+one API key, one workspace id, stdio transport, full tool access at startup.
 
 ## Start Here
 
-- [README.md](../README.md) — project landing page, install, connect a client.
-- [agent-cookbook.md](agent-cookbook.md) — intent-keyed recipes for
-  agents calling the Clockify MCP tools.
-- [production-readiness.md](production-readiness.md) — single-page operator overview.
-- [deploy/](deploy/) — the five canonical deployment profiles
-  (`local-stdio`, `single-tenant-http`, `shared-service`,
-  `private-network-grpc`, `prod-postgres`). Apply with `clockify-mcp
-  --profile=<name>` or `MCP_PROFILE=<name>`. (The legacy
-  `self-hosted` shape pre-dates the profile system and is now
-  served by `local-stdio` or `single-tenant-http`; see
-  [`deploy/profile-self-hosted.md`](deploy/profile-self-hosted.md).)
+- [../README.md](../README.md) - setup, environment, and MCP client wiring.
+- [agent-cookbook.md](agent-cookbook.md) - workflow-first examples for agents.
+- [tool-catalog.md](tool-catalog.md) / [tool-catalog.json](tool-catalog.json) -
+  generated list of the 151 startup-loaded tools.
+- [goals/oneuser-tool-coverage.md](goals/oneuser-tool-coverage.md) -
+  conservative coverage ledger for native handlers, fake smoke, and live probes.
+- [live-tests.md](live-tests.md) - sacrificial-workspace live test instructions.
 
-## Operator Guides
+## Contributor Docs
 
-Run-the-service documentation grouped by operator shape (multi-tenant
-hosted vs. single-user / small-team). All five registered profiles
-are supported; the two operator guides below cover the two shapes
-that share the most operator concerns. Single-shape deployment notes
-live one section down under [Deployment Profiles](#deployment-profiles).
+- [../CONTRIBUTING.md](../CONTRIBUTING.md) - local build and test loop.
+- [../GOVERNANCE.md](../GOVERNANCE.md) - maintainer and review expectations.
+- [../SUPPORT.md](../SUPPORT.md) - support boundaries and upgrade expectations.
+- [coverage-policy.md](coverage-policy.md) - coverage floors and ratchet rule.
+- [api-coverage.md](api-coverage.md) - API coverage notes.
+- [performance.md](performance.md) - benchmark posture.
 
-- [operators/](operators/) — cross-referenced operator guides for
-  shared-service and self-hosted deployments.
-- [operators/shared-service.md](operators/shared-service.md) —
-  multi-tenant `streamable_http` + Postgres + OIDC. Applies to the
-  `shared-service` and `prod-postgres` profiles.
-- [operators/self-hosted.md](operators/self-hosted.md) —
-  single-user / small-team deployments. Applies to the
-  `local-stdio` and `single-tenant-http` profiles.
-- [clients.md](clients.md) — MCP client compatibility matrix.
-- [internal-test-posture.md](internal-test-posture.md) — local
-  owner-key testing guardrails and policy choices.
-- [testing/standard-http-dogfood-2026-05-07.md](testing/standard-http-dogfood-2026-05-07.md)
-  — internal `standard` policy single-tenant HTTP dogfood evidence
-  from 2026-05-07; not launch-candidate evidence.
-- [support-matrix.md](support-matrix.md) — what we support, in what
-  combination, on which OS.
+## Agent Handoffs
 
-## Deployment Profiles
+- [agent-handoff.md](agent-handoff.md) - current repo state for autonomous agents.
+- [goals/perfect-one-user-full-mcp.md](goals/perfect-one-user-full-mcp.md) -
+  product-boundary spec for the one-user rewrite.
 
-One doc per canonical shape; each profile has a matching example
-env file at [`deploy/examples/`](../deploy/examples/).
+## Generated Artifacts
 
-- [deploy/profile-local-stdio.md](deploy/profile-local-stdio.md)
-- [deploy/profile-single-tenant-http.md](deploy/profile-single-tenant-http.md)
-- [deploy/production-profile-shared-service.md](deploy/production-profile-shared-service.md)
-- [deploy/profile-private-network-grpc.md](deploy/profile-private-network-grpc.md)
-- [deploy/profile-self-hosted.md](deploy/profile-self-hosted.md)
+Regenerate the tool catalog after descriptor changes:
 
-## Runbooks
+```sh
+make gen-tool-catalog
+make catalog-drift
+```
 
-Step-by-step incident response. Every runbook names the exact log
-events, metrics, and escape hatches the current implementation
-emits — no prose-only guesses.
+Regenerate the OpenAPI artifact only when the documented fallback contract
+changes:
 
-- [runbooks/auth-failures.md](runbooks/auth-failures.md) — 401 / 403
-  triage.
-- [runbooks/legacy-http-eol.md](runbooks/legacy-http-eol.md) —
-  deprecated POST-only HTTP migration and future `Sunset` handling.
-- [runbooks/rate-limit.md](runbooks/rate-limit.md) — launch
-  checklist entry point for local and gateway rate-limit posture.
-- [runbooks/rate-limit-saturation.md](runbooks/rate-limit-saturation.md)
-  — hot tenant diagnosis.
-- [runbooks/audit-durability.md](runbooks/audit-durability.md) —
-  what to do when `fail_closed` aborts a call.
-- [runbooks/hosted-error-sanitization.md](runbooks/hosted-error-sanitization.md)
-  — when sanitised errors hide upstream signal that the tenant
-  needs.
-- [runbooks/credential-leak-response.md](runbooks/credential-leak-response.md)
-  — rotate, audit, and notify after API key, bearer token, OIDC,
-  mTLS, CI, or tenant credential exposure.
-- [runbooks/tenant-offboarding.md](runbooks/tenant-offboarding.md) —
-  suspend or remove a hosted tenant without overstating JWT
-  revocation guarantees.
-- [runbooks/webhook-dns-validation.md](runbooks/webhook-dns-validation.md)
-  — DNS-rebinding guard, allowlist escape hatch, and split-horizon
-  triage.
-- [runbooks/clockify-upstream-outage.md](runbooks/clockify-upstream-outage.md)
-  — Clockify API outage playbook.
-- [runbooks/clockify-outage-drill.md](runbooks/clockify-outage-drill.md)
-  — synthetic drill for the above.
-- [runbooks/postgres-restore.md](runbooks/postgres-restore.md) —
-  restore procedure for the Postgres control plane.
-- [runbooks/postgres-restore-drill.md](runbooks/postgres-restore-drill.md)
-  — synthetic drill for the above.
-- [runbooks/image-digest-pinning.md](runbooks/image-digest-pinning.md)
-  — how to pin and rotate the container image digest.
-- [runbooks/release-asset-count.md](runbooks/release-asset-count.md)
-  — release-asset sanity check.
-- [runbooks/release-candidate-evidence.md](runbooks/release-candidate-evidence.md)
-  — post-Group-1 evidence sequence for launch checklist Groups 6
-  and 7.
-- [runbooks/production-incident-drill.md](runbooks/production-incident-drill.md)
-  — end-to-end incident simulation.
+```sh
+make gen-openapi
+make openapi-drift
+```
 
-## Release Trust
+## Historical Material
 
-Supply-chain verification, release process, and the smoke cadence.
-
-- [verification.md](verification.md) — hands-on binary + image
-  verification recipe.
-- [verify-release.md](verify-release.md) — release-smoke reasoning.
-- [release-policy.md](release-policy.md) — SemVer contract,
-  deprecation windows, support timeline.
-- [runbooks/release-candidate-evidence.md](runbooks/release-candidate-evidence.md)
-  — candidate-tag security and release-evidence automation.
-- [release/deploy-readiness-checklist.md](release/deploy-readiness-checklist.md)
-  — pre-production checklist.
-- [release/public-hosted-launch-checklist.md](release/public-hosted-launch-checklist.md)
-  — pre-flight gates for going from "works on my cluster" to
-  accepting traffic from clients you don't control. Use the
-  Postgres-tagged binary for the strict-doctor backend check.
-- [release/brand-legal-review.md](release/brand-legal-review.md)
-  — product/legal/brand questions that must be answered before public
-  copy claims official-product status.
-- [upgrade-checklist.md](upgrade-checklist.md) — per-release
-  upgrade notes.
-- [live-tests.md](live-tests.md) — why `release-smoke` and
-  `live-contract` don't gate PR merges.
-
-## Governance & Support
-
-What this project promises, and how the one-of-one maintainer
-population is reflected across policy surfaces.
-
-- [agent-handoff.md](agent-handoff.md) — current autonomous-agent
-  launch-state entry point.
-- [claude-code-continuation.md](claude-code-continuation.md) —
-  historical Claude Code continuation packet for the post-PR #51
-  launch-candidate evidence pass.
-- [runbooks/claude-code-campaign.md](runbooks/claude-code-campaign.md)
-  — local multi-agent Claude Code campaign harness using isolated
-  git worktrees and iTerm-launched Opus lanes.
-- [../GOVERNANCE.md](../GOVERNANCE.md) — merge gate, sensitive-area
-  self-review expectations, security disclosure process.
-- [../SUPPORT.md](../SUPPORT.md) — where to ask questions,
-  response expectations, v1.x stability guarantee.
-- [../SECURITY.md](../SECURITY.md) — security disclosure contact.
-- [../CONTRIBUTING.md](../CONTRIBUTING.md) — how to build, test,
-  and submit a change.
-- [branch-protection.md](branch-protection.md) — live snapshot of
-  GitHub branch-protection rules.
-- [coverage-policy.md](coverage-policy.md) — per-package coverage
-  floors and the ratchet rule.
-- [opusreview-implementation-audit.md](opusreview-implementation-audit.md)
-  — checklist mapping the local Opus review implementation wave to
-  evidence and remaining blockers.
-
-## Architecture & Decisions
-
-Design-level reading for contributors and reviewers.
-
-- [adr/](adr/) — architectural decision records. Start with
-  [adr/README.md](adr/README.md).
-- [performance.md](performance.md) — benchmark numbers and the
-  workload envelope.
-- [testing/soak-and-profile.md](testing/soak-and-profile.md) —
-  long-running profile + soak methodology.
-- [fuzz-corpus.md](fuzz-corpus.md) — fuzz coverage strategy.
-- [policy/production-tool-scope.md](policy/production-tool-scope.md)
-  — which tools are safe to expose in production.
-- [tool-catalog.md](tool-catalog.md) / [tool-catalog.json](tool-catalog.json)
-  — generated tool catalog (regenerate via `make gen-tool-catalog`).
-
-## Forward Pointers
-
-Capturing shape without committing implementation. See
-[`future/README.md`](future/README.md) for the boundary: these are
-aspirational notes, not committed roadmap items or launch gates.
-
-- [future/observability-correlation.md](future/observability-correlation.md)
-  — end-to-end trace correlation across the MCP boundary; stub
-  only, explains why Wave D deferred it.
-
----
-
-If something is missing from this index, either the doc is newer
-than the index or the index is stale — open an issue or PR.
+Older launch, deployment, profile, release, and ADR material may still exist for
+audit history. Treat it as historical context, not active product guidance. The
+active product path is the one-user stdio server described by the files above.

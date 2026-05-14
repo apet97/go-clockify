@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/apet97/go-clockify/internal/resolve"
 )
+
+const DefaultBaseURL = "https://api.clockify.me/api/v1"
 
 // OneUserConfig is the complete runtime configuration for the
 // one-user/full-access stdio product path.
@@ -66,4 +69,11 @@ func validateOneUserBaseURL(raw string) error {
 		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: host is required")
 	}
 	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return strings.EqualFold(host, "localhost")
 }

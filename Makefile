@@ -1,15 +1,4 @@
-.PHONY: build test cover fmt vet check clean clean-deep lint mutation \
-        verify verify-core verify-vuln verify-k8s verify-fips \
-        cover-check fuzz-short build-tags http-smoke stdio-smoke \
-        doctor-strict-smoke verify-doctor-strict \
-        secret-scan config-parity bench verify-bench bench-baseline-check \
-        build-postgres test-postgres shared-service-e2e build-grpc build-grpc-postgres \
-        gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-probe-lab-allowlist probe-lab-allowlist-drift gen-coverage-matrix coverage-matrix-drift doc-parity launch-checklist-parity config-doc-parity go-version-parity \
-        grpc-release-parity \
-	repo-hygiene script-tests actionlint shellcheck live-contract-local \
-	release-check rc-evidence rc-evidence-plan launch-external-status public-content-audit \
-	license-evidence license-evidence-plan \
-        claude-campaign claude-campaign-plan
+.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -19,279 +8,24 @@ build:
 test:
 	go test -race -count=1 -timeout 120s ./...
 
-cover:
-	go test -race -count=1 -timeout 120s -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
-
 fmt:
 	@test -z "$$(gofmt -l .)" || (echo "Unformatted files:"; gofmt -l .; gofmt -d .; exit 1)
 
 vet:
 	go vet ./...
 
-lint:
-	@if which golangci-lint > /dev/null 2>&1; then \
-		golangci-lint run ./...; \
-	else \
-		echo "golangci-lint not installed, skipping (CI enforces)"; \
-	fi
-
-# Fast inner-loop check — seconds, not minutes. Use `make verify` before a PR
-# and `make release-check` before a tag or launch-candidate handoff.
 check: fmt vet test
 
-# Full local verification pipeline. Mirrors the PR-blocking CI jobs where
-# possible. Tool-gated tiers (vuln/k8s/fips) auto-skip with a warning when
-# their dependencies are missing; see CONTRIBUTING.md for the exact list of
-# checks `make verify` runs locally versus the full CI set.
-verify: verify-core verify-vuln verify-k8s verify-fips
-
-verify-core: fmt vet lint test cover-check fuzz-short build-tags http-smoke stdio-smoke verify-doctor-strict grpc-auth-smoke config-parity catalog-drift probe-lab-allowlist-drift coverage-matrix-drift doc-parity config-doc-parity go-version-parity grpc-release-parity repo-hygiene script-tests shellcheck actionlint
-
-# doc-parity enforces that every MCP_/CLOCKIFY_ env var referenced
-# in docs/ exists in the source, every tool name surfaces in the
-# generated catalog, no TODO/FIXME/TBD markers are left in operator-
-# facing docs, SECURITY.md scope covers the advertised live security
-# surfaces, issue templates/support/CODEOWNERS route vulnerabilities
-# and sensitive-path ownership through the public-safe channels,
-# CONTRIBUTING.md keeps a public-compatible HTTPS clone path, and
-# launch checklists/ledgers keep their evidence gates intact. See
-# scripts/check-doc-parity.sh and companion launch-check scripts for
-# the exact heuristics.
-doc-parity:
-	bash scripts/check-doc-parity.sh
-	bash scripts/check-launch-review-ledger.sh
-	bash scripts/check-launch-checklist-parity.sh
-	bash scripts/check-launch-evidence-gate.sh
-
-launch-checklist-parity:
-	bash scripts/check-launch-checklist-parity.sh
-	bash scripts/check-launch-evidence-gate.sh
-
-# config-doc-parity re-renders cmd/clockify-mcp/help_generated.go and the
-# CONFIG-TABLE block in README.md from internal/config/AllSpecs() and
-# fails if either drifted. Pair with: go run ./cmd/gen-config-docs
-# -mode=all && git add README.md cmd/clockify-mcp/help_generated.go
-config-doc-parity:
-	bash scripts/check-config-doc-parity.sh
-
-go-version-parity:
-	bash scripts/check-go-version-parity.sh
-
-# repo-hygiene fails on tracked OS / editor / coverage junk. See
-# scripts/check-repo-hygiene.sh for the exact pattern list; .gitignore
-# keeps future stages clean.
-repo-hygiene:
-	bash scripts/check-repo-hygiene.sh
-
-# script-tests runs regression tests for repo shell scripts whose
-# output contract matters. Pure bash, runs in milliseconds.
-#
-# Covered:
-#   - filter-bench-output.sh — `make bench` pipes raw `go test -bench`
-#     output through it to produce benchstat-compatible profiles.
-#   - check-bench-baseline.sh — gates the committed
-#     internal/benchdata/baseline.txt against the bench.yml workflow
-#     (linux/amd64 only, matching package set, sample-count floor).
-#   - check-coverage.sh — enforces global + per-package coverage
-#     floors; called by both CI and `make cover-check`.
-#   - check-doc-parity.sh — keeps operator docs in sync with code
-#     (env-var content, tool-name catalog match, banned strings,
-#     public onboarding/security/clone routing, README↔npm engines
-#     parity, dangling markers). Wired into
-#     `make verify-core` and the CI `config-doc-parity` job.
-#   - check-repo-hygiene.sh — fails on tracked OS / editor / coverage
-#     junk; called by `make repo-hygiene` and the CI `repo-hygiene`
-#     job. The single-regex gate is small enough that a typo would
-#     silently turn it into a no-op while still printing OK.
-#   - check-governance-parity.sh — fails when GOVERNANCE.md claims
-#     controls that docs/branch-protection.md says are not enforced;
-#     called from the CI `governance-parity` step. ~13 require/forbid
-#     assertions across two markdown docs; awk-extracted current-state
-#     section is the trickiest branch.
-#   - check-release-assets.sh — fails when goreleaser's dist/ does not
-#     contain the expected 46 release artifacts (5 default + 4 fips +
-#     2 postgres + 2 grpc + 2 grpc-postgres binaries × 3 file shapes
-#     + SHA256SUMS.txt). v0.7.0 silently shipped 19 instead of 28; the
-#     gate exists to fail closed before the release workflow uploads,
-#     and the test pins missing-asset detection plus the cardinality
-#     regex shape. Bash 4+ only (gate uses declare -A); the test
-#     skips with a clear note on bash 3.2.
-#   - check-launch-checklist-parity.sh — fails when the public hosted
-#     launch checklist references CLI flags that cmd/clockify-mcp does
-#     not implement. Two-layer gate (source greps + binary --help
-#     parity); the test exercises both layers via PATH-stubbed `go`
-#     plus a controlled help-text fixture.
-#   - check-launch-evidence-gate.sh — fails when docs/launch-candidate-
-#     checklist.md has a checked box in Groups 1/6/7 without an
-#     evidence URL, workflow_run_id, or _Closed_ annotation. Wired
-#     into make launch-checklist-parity and make doc-parity.
-#   - check-launch-review-ledger.sh — fails when the May 8 launch
-#     review disposition ledger drops any reviewed T/MP/P/D finding ID
-#     or loses the objective-to-artifact completion audit that keeps
-#     open launch evidence gates explicit.
-#   - check-launch-external-status.sh — prints the read-only GitHub/npm,
-#     open-PR, and local-branch evidence checks plus maintainer action
-#     hints for the still-open launch gates; offline stub tests pin the
-#     logic without credentials.
-#   - audit-branch-protection.sh — projects the live branch-protection
-#     API response and fails clearly when GitHub hides it for private
-#     repositories without emitting a null-field pseudo-snapshot.
-#   - check-public-content-audit.sh — reports the read-only public-repo
-#     flip content audit from the May 8 final plan without printing
-#     secret values; gitleaks is summarized from redacted metadata for
-#     candidate branch content and the full working tree, env-like
-#     files are split by candidate/full-tree scope, and internal/private
-#     TODO hits are reported by file and line only. Open/unknown findings
-#     include maintainer action hints without mutating files or history.
-#   - check-go-version-parity.sh — fails when the root Go patch pin
-#     drifts from workspace/module directives, setup-go workflow pins,
-#     current public support docs, or the pinned Docker builder digest.
-#   - check-live-tool-coverage.sh — fails when the generated tool
-#     catalog gains a Tier-2 or API-backed Tier-1 tool that is not at
-#     least named by the livee2e source bundle. Static guard only:
-#     scheduled cron runs remain the authoritative launch evidence.
-#   - openapi-live-overrides.sh — pins live Clockify schema overrides
-#     in the generated OpenAPI file, the phantom-path quarantine, and
-#     zero uncovered operations in the generated coverage matrix.
-#   - collect-license-evidence.sh — prints raw `go list -deps` module
-#     graphs and local license-file candidates for release/build-tag
-#     variants. Legal/product review still decides whether the evidence
-#     clears B.08/L-10; the script does not classify licenses.
-#   - prepare-rc-evidence.sh — prints and runs the post-Group-1
-#     candidate-tag evidence sequence for launch checklist Groups 6/7.
-script-tests:
-	bash scripts/test-filter-bench-output.sh
-	bash scripts/test-check-bench-baseline.sh
-	bash scripts/test-check-coverage.sh
-	bash scripts/test-check-doc-parity.sh
-	bash scripts/test-check-repo-hygiene.sh
-	bash scripts/test-check-governance-parity.sh
-	bash scripts/test-check-release-assets.sh
-	bash scripts/test-check-launch-checklist-parity.sh
-	bash scripts/test-check-launch-evidence-gate.sh
-	bash scripts/test-check-launch-review-ledger.sh
-	bash scripts/test-check-launch-external-status.sh
-	bash scripts/test-audit-branch-protection.sh
-	bash scripts/test-check-public-content-audit.sh
-	bash scripts/test-check-go-version-parity.sh
-	bash scripts/test-check-live-tool-coverage.sh
-	bash scripts/test-openapi-live-overrides.sh
-	bash scripts/test-collect-license-evidence.sh
-	bash scripts/test-prepare-rc-evidence.sh
-	bash scripts/test-publish-npm.sh
-	bash scripts/test-claude-campaign.sh
-	bash scripts/test-release-workflow-structure.sh
-
-claude-campaign-plan:
-	bash scripts/claude-campaign.sh --dry-run
-
-claude-campaign:
-	bash scripts/claude-campaign.sh
-
-rc-evidence-plan:
-	@if [ -z "$(TAG)" ]; then \
-		echo "usage: make rc-evidence-plan TAG=vX.Y.Z-rc.N"; \
-		exit 2; \
-	fi
-	bash scripts/prepare-rc-evidence.sh --plan "$(TAG)"
-
-rc-evidence:
-	@if [ -z "$(TAG)" ]; then \
-		echo "usage: make rc-evidence TAG=vX.Y.Z-rc.N"; \
-		exit 2; \
-	fi
-	bash scripts/prepare-rc-evidence.sh "$(TAG)"
-
-launch-external-status:
-	bash scripts/check-launch-external-status.sh
-
-public-content-audit:
-	bash scripts/check-public-content-audit.sh
-
-license-evidence-plan:
-	bash scripts/collect-license-evidence.sh --plan
-
-license-evidence:
-	bash scripts/collect-license-evidence.sh
-
-# shellcheck statically analyses every shell script in scripts/ for
-# the bug classes contract tests can't catch — unquoted vars, set -u
-# violations, [ ] vs [[ ]] typos, dead branches. Skips with a warning
-# when shellcheck isn't installed locally; the CI gate keeps it
-# honest on every PR.
-shellcheck:
-	@if which shellcheck > /dev/null 2>&1; then \
-		shellcheck -S warning scripts/*.sh; \
-	else \
-		echo "shellcheck not installed, skipping (CI enforces)"; \
-	fi
-
-# actionlint statically analyses .github/workflows/*.yml for the
-# workflow-level bug class CI itself can't catch — bad runs-on
-# values, stale action input schemas, malformed ${{ }}
-# expressions, undefined step outputs, and inline run: shell
-# issues (via embedded shellcheck). Skips with a notice when
-# actionlint isn't installed locally; the CI gate enforces.
-actionlint:
-	@if which actionlint > /dev/null 2>&1; then \
-		actionlint -color; \
-	else \
-		echo "actionlint not installed, skipping (CI enforces)"; \
-	fi
+clean:
+	rm -f clockify-mcp coverage.out
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
-# live registry. Run after adding, removing, or changing any tool
-# descriptor (including InputSchema edits) — the catalog-drift gate
-# refuses to merge an unrefreshed catalog.
+# one-user runtime registry. Run it after changing any tool descriptor.
 gen-tool-catalog:
 	go run ./scripts/gen-tool-catalog -out docs
 
-# gen-openapi regenerates the unified Clockify OpenAPI artifact from
-# the repo-local docs/openapi/sources evidence bundle, this repo's
-# coverage/catalog docs, and the pinned QA finding reports. The
-# generator verifies the source manifest, then validates refs,
-# operation IDs, path params, security, and reports-host routing before
-# writing.
-gen-openapi:
-	scripts/gen-clockify-openapi --out docs/openapi/clockify-openapi.yaml
-
-# openapi-drift re-runs the OpenAPI generator and fails if the committed
-# artifact drifted.
-openapi-drift:
-	@test -f docs/openapi/clockify-openapi.yaml || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml missing — run \`make gen-openapi\`"; exit 1; }
-	@tmpdir="$$(mktemp -d)"; \
-	 trap 'rm -rf "$$tmpdir"' EXIT; \
-	 cp docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before"; \
-	 $(MAKE) --no-print-directory gen-openapi >/dev/null; \
-	 scripts/gen-clockify-openapi --validate-only --out docs/openapi/clockify-openapi.yaml >/dev/null; \
-	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
-	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale — run \`make gen-openapi\` and commit"; \
-	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
-
-# gen-probe-lab-allowlist regenerates the raw documented-API allowlist
-# from docs/openapi/clockify-openapi.yaml, including operation IDs,
-# provenance, risk metadata, and typed-tool promotion hints.
-gen-probe-lab-allowlist:
-	python3 scripts/gen-probe-lab-allowlist
-	gofmt -w internal/tools/tier2_probe_lab_api_gen.go
-
-# probe-lab-allowlist-drift fails when the generated raw API allowlist
-# is stale relative to the committed OpenAPI artifact.
-probe-lab-allowlist-drift:
-	@tmpdir="$$(mktemp -d)"; \
-	 trap 'rm -rf "$$tmpdir"' EXIT; \
-	 cp internal/tools/tier2_probe_lab_api_gen.go "$$tmpdir/tier2_probe_lab_api_gen.go.before"; \
-	 $(MAKE) --no-print-directory gen-probe-lab-allowlist >/dev/null; \
-	 diff -q internal/tools/tier2_probe_lab_api_gen.go "$$tmpdir/tier2_probe_lab_api_gen.go.before" >/dev/null \
-	  || { echo "[probe-lab-allowlist-drift] internal/tools/tier2_probe_lab_api_gen.go is stale — run \`make gen-probe-lab-allowlist\` and commit"; \
-	       diff -u "$$tmpdir/tier2_probe_lab_api_gen.go.before" internal/tools/tier2_probe_lab_api_gen.go | head -80; exit 1; }
-
-# catalog-drift re-runs gen-tool-catalog and fails if the generated
-# docs change relative to the current working tree contents. Wired
-# into verify-core so a PR that forgets to regenerate is caught
-# before merge, while still allowing local validation on a branch
-# with legitimate README / docs edits in flight.
+# catalog-drift fails when the committed catalog does not match the runtime
+# registry order: workflows first, domain tools second, raw API fallback last.
 catalog-drift:
 	@tmpdir="$$(mktemp -d)"; \
 	 trap 'rm -rf "$$tmpdir"' EXIT; \
@@ -300,332 +34,42 @@ catalog-drift:
 	 $(MAKE) --no-print-directory gen-tool-catalog >/dev/null; \
 	 diff -q docs/tool-catalog.json "$$tmpdir/tool-catalog.json.before" >/dev/null \
 	  && diff -q docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before" >/dev/null \
-	  || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale — run \`make gen-tool-catalog\` and commit"; \
+	  || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale; run make gen-tool-catalog"; \
 	       diff -u "$$tmpdir/tool-catalog.md.before" docs/tool-catalog.md | head -80; exit 1; }
 
-# gen-coverage-matrix joins the OpenAPI, tool catalog, api-coverage
-# ledger, the raw documented-API allowlist, and tests/e2e_live* live
-# invocations into docs/openapi/coverage-matrix.{json,md}.
-gen-coverage-matrix:
-	python3 scripts/gen-coverage-matrix
+# The raw documented-API fallback is generated from the canonical OpenAPI
+# artifact, so keep the artifact easy to refresh and validate.
+gen-openapi:
+	scripts/gen-clockify-openapi --out docs/openapi/clockify-openapi.yaml
 
-# coverage-matrix-drift re-runs the matrix generator and fails if the
-# committed artifact drifted.
-coverage-matrix-drift:
+openapi-drift:
+	@test -f docs/openapi/clockify-openapi.yaml || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml missing; run make gen-openapi"; exit 1; }
 	@tmpdir="$$(mktemp -d)"; \
 	 trap 'rm -rf "$$tmpdir"' EXIT; \
-	 cp docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before" 2>/dev/null || true; \
-	 cp docs/openapi/coverage-matrix.md   "$$tmpdir/coverage-matrix.md.before"   2>/dev/null || true; \
-	 $(MAKE) --no-print-directory gen-coverage-matrix >/dev/null; \
-	 diff -q docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before" >/dev/null \
-	  && diff -q docs/openapi/coverage-matrix.md   "$$tmpdir/coverage-matrix.md.before"   >/dev/null \
-	  || { echo "[coverage-matrix-drift] docs/openapi/coverage-matrix.{json,md} are stale — run \`make gen-coverage-matrix\` and commit"; \
-	       diff -u "$$tmpdir/coverage-matrix.md.before" docs/openapi/coverage-matrix.md | head -80; exit 1; }
+	 cp docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before"; \
+	 $(MAKE) --no-print-directory gen-openapi >/dev/null; \
+	 scripts/gen-clockify-openapi --validate-only --out docs/openapi/clockify-openapi.yaml >/dev/null; \
+	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
+	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale; run make gen-openapi"; \
+	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
 
-verify-vuln:
-	@go_pin="$$(awk '$$1 == "go" { print $$2; exit }' go.mod)"; \
-	 if [ -z "$$go_pin" ]; then \
-		echo "[verify-vuln] unable to read Go version from go.mod"; \
-		exit 1; \
-	 fi; \
-	 if [ ! -f tools/govulncheck/go.mod ]; then \
-		echo "[verify-vuln] tools/govulncheck/go.mod missing; cannot run pinned scanner"; \
-		exit 1; \
-	 fi; \
-	 echo "== govulncheck (tools/govulncheck, GOTOOLCHAIN=go$$go_pin) =="; \
-	 tmpdir="$$(mktemp -d)"; \
-	 trap 'rm -rf "$$tmpdir"' EXIT; \
-	 (cd tools/govulncheck && GOWORK=off GOBIN="$$tmpdir" GOTOOLCHAIN="go$$go_pin" go install golang.org/x/vuln/cmd/govulncheck); \
-	 GOTOOLCHAIN="go$$go_pin" "$$tmpdir/govulncheck" -version; \
-	 GOTOOLCHAIN="go$$go_pin" "$$tmpdir/govulncheck" ./...
-
-verify-k8s:
-	@if command -v kubectl >/dev/null 2>&1 && command -v kubeconform >/dev/null 2>&1 && command -v helm >/dev/null 2>&1; then \
-		bash scripts/check-k8s-render.sh; \
-	else \
-		echo "[verify-k8s] kubectl/kubeconform/helm missing, skipping."; \
-		echo "             Install: brew install kubernetes-cli kubeconform helm"; \
-	fi
-
-verify-fips:
-	@FIPS_ONLY=1 bash scripts/check-build-tags.sh || { \
-		echo "[verify-fips] FIPS build failed — local Go toolchain may lack GOFIPS140 support."; \
-		echo "              This step runs in CI; local failure is non-fatal."; \
-	}
-
-cover-check:
-	@tmp="$$(mktemp "$${TMPDIR:-/tmp}/clockify-coverage.XXXXXX")"; \
-	 trap 'rm -f "$$tmp"' EXIT; \
-	 COVERAGE_OUT="$$tmp" bash scripts/check-coverage.sh
-
-# Short fuzz budget for local runs. Count-based (-fuzztime=Nx) instead
-# of duration-based (-fuzztime=Ns) to sidestep a Go fuzz engine race:
-# with -fuzztime=10s, workers mid-execution when the engine's internal
-# context deadline hit would bubble up as "context deadline exceeded"
-# and fail the target even though no input had actually crashed. The
-# race got worse once Wave D committed ~800 corpus seeds to testdata/
-# (baseline gathering eats several seconds before mutation starts).
-# Count-based budgets are deterministic: no timing race, ~0.7s per
-# target on a laptop at ~250k execs/sec.
-#
-# CI uses the same count via .github/workflows/ci.yml.
-fuzz-short:
-	go test -fuzz=FuzzParseDatetime -fuzztime=100000x -run='^$$' -timeout=90s ./internal/timeparse
-	go test -fuzz=FuzzValidateID   -fuzztime=100000x -run='^$$' -timeout=90s ./internal/resolve
-	go test -fuzz=FuzzJSONRPCParse -fuzztime=100000x -run='^$$' -timeout=90s ./internal/mcp
-
-build-tags:
-	SKIP_FIPS=1 bash scripts/check-build-tags.sh
-
-http-smoke:
-	bash scripts/smoke-http.sh
-
-stdio-smoke:
-	bash scripts/smoke-stdio.sh
-
-doctor-strict-smoke verify-doctor-strict:
-	bash scripts/smoke-doctor-strict.sh
-
-grpc-auth-smoke:
-	bash scripts/smoke-grpc-auth.sh
-
-# grpc-release-parity enforces that the private-network gRPC profile
-# documentation, GoReleaser config, asset-count script, and Dockerfile
-# stay coherent. Wired into verify-core so a doc that mentions a gRPC
-# artifact the release pipeline does not produce fails before tag time.
-grpc-release-parity:
-	bash scripts/check-grpc-release-parity.sh
-
-# Sanity-build the gRPC-tagged binaries locally. Mirrors the tag matrix
-# .goreleaser.yaml ships and keeps `make verify` honest about the
-# private-network gRPC profile actually compiling against the working
-# tree (the default build path leaves `-tags=grpc` untested).
-build-grpc:
-	go build -tags=grpc ./...
-
-build-grpc-postgres:
-	cd internal/controlplane/postgres && go build -tags=postgres ./...
-	go build -tags=grpc,postgres ./cmd/clockify-mcp
-
-secret-scan:
-	@if ! command -v gitleaks >/dev/null 2>&1; then \
-		echo "gitleaks not installed; install via 'brew install gitleaks' or run scripts/gitleaks-install.sh"; \
-		exit 1; \
-	fi
-	gitleaks detect --no-git --source . --redact --config .gitleaks.toml
-
-config-parity:
-	bash scripts/check-config-parity.sh
-
-clean:
-	rm -f clockify-mcp coverage.out
-
-clean-deep:
-	@if [ "$(CONFIRM)" != "1" ]; then \
-		echo "Refusing destructive cleanup. Re-run as: make clean-deep CONFIRM=1"; \
-		echo "This removes ignored build/scratch artifacts only: clockify-mcp coverage.out dist staging .bench .local .review .agent-campaign* .agent-loop .serena go-clockify"; \
-		exit 2; \
-	fi
-	rm -rf clockify-mcp coverage.out dist staging .bench .local .review \
-		.agent-campaign .agent-campaign-worktrees .agent-loop .serena go-clockify
-
-# release-check composes every pre-ship gate into one laptop-runnable
-# target. Humans run this before tagging; CI runs equivalent steps
-# across the jobs in ci.yml + release.yml. A green local gate means
-# the checkout passed local pre-ship checks; launch readiness still
-# depends on the external evidence in docs/launch-candidate-checklist.md.
-#
-# Skips optional tiers (vuln/k8s/fips) when their tools are absent —
-# verify-* tiers print a skip notice and return 0 — so the gate
-# still runs on a minimal toolchain.
-release-check:
-	@echo "== release-check: formatting, vet, lint =="
-	$(MAKE) fmt vet lint
-	@echo "== release-check: tests + coverage floors =="
-	$(MAKE) cover-check
-	@echo "== release-check: config + doc parity =="
-	$(MAKE) config-parity doc-parity config-doc-parity catalog-drift probe-lab-allowlist-drift coverage-matrix-drift openapi-drift grpc-release-parity
-	@echo "== release-check: hygiene + build-tag wiring =="
-	$(MAKE) repo-hygiene script-tests go-version-parity actionlint shellcheck build-tags http-smoke stdio-smoke
-	@echo "== release-check: strict doctor smoke =="
-	$(MAKE) verify-doctor-strict
-	@echo "== release-check: full E2E (includes gRPC under -tags=grpc) =="
-	go test -tags=grpc -race -count=1 -timeout 180s ./tests/...
-	@echo "== release-check: deploy render =="
-	@if command -v kubectl >/dev/null 2>&1 && command -v kubeconform >/dev/null 2>&1 && command -v helm >/dev/null 2>&1; then \
-		bash scripts/check-k8s-render.sh; \
-	else \
-		echo "[release-check] kubectl/kubeconform/helm missing — skipping k8s render (CI runs the full check)."; \
-	fi
-	@echo "release-check: OK — local pre-ship gate passed"
-
-# Benchmark capture + regression gate.
-#
-# `make bench` runs every package benchmark and writes a text profile
-# to the path in BENCH_OUT (default .bench/after.txt). `make verify-bench`
-# compares that profile to the committed CI baseline at
-# internal/benchdata/baseline.txt via benchstat. The workflow:
-#
-#   # ... make change ...
-#   make verify-bench                          # capture .bench/after.txt
-#                                              # and compare to CI baseline
-#
-# For ad hoc same-machine before/after checks, explicitly override
-# BENCH_BASELINE=.bench/baseline.txt after recording that local baseline.
-# Do not commit or treat workstation baselines as release evidence.
-#
-# benchstat is installed on demand if missing. The comparison uses the
-# default p=0.05 threshold; sensitive packages can tighten it manually
-# with benchstat -alpha=0.01 etc.
-BENCH_OUT ?= .bench/after.txt
-BENCH_BASELINE ?= internal/benchdata/baseline.txt
-BENCH_PKGS ?= ./internal/...
-
-bench:
-	@mkdir -p $(dir $(BENCH_OUT))
-	@raw="$$(mktemp "$${TMPDIR:-/tmp}/clockify-bench.XXXXXX")"; \
-	 trap 'rm -f "$$raw"' EXIT; \
-	 if ! go test -run=^$$ -bench=. -benchmem -count=5 $(BENCH_PKGS) > "$$raw" 2>&1; then \
-	   cat "$$raw"; \
-	   exit 1; \
-	 fi; \
-	 bash scripts/filter-bench-output.sh < "$$raw" | tee "$(BENCH_OUT)"; \
-	 echo "benchmarks collected:"; \
-	 grep -c '^Benchmark' "$(BENCH_OUT)" || true
-
-verify-bench: bench
-	@if [ ! -f $(BENCH_BASELINE) ]; then \
-		echo "[verify-bench] baseline $(BENCH_BASELINE) not present."; \
-		echo "              The default baseline is committed at internal/benchdata/baseline.txt."; \
-		echo "              For local-only experiments, pass BENCH_BASELINE=.bench/baseline.txt explicitly."; \
-		exit 1; \
-	fi
-	@if [ "$(BENCH_BASELINE)" = "internal/benchdata/baseline.txt" ]; then \
-		bash scripts/check-bench-baseline.sh "$(BENCH_BASELINE)"; \
-		base_platform="$$(awk '/^goos: / { goos=$$2 } /^goarch: / { goarch=$$2 } /^pkg: / { print goos "/" goarch; exit }' "$(BENCH_BASELINE)")"; \
-		out_platform="$$(awk '/^goos: / { goos=$$2 } /^goarch: / { goarch=$$2 } /^pkg: / { print goos "/" goarch; exit }' "$(BENCH_OUT)")"; \
-		if [ -z "$$base_platform" ] || [ -z "$$out_platform" ]; then \
-			echo "[verify-bench] unable to read benchmark platform metadata."; \
-			exit 1; \
-		fi; \
-		if [ "$$base_platform" != "$$out_platform" ]; then \
-			echo "[verify-bench] benchmark output platform $$out_platform does not match committed baseline $$base_platform."; \
-			echo "              Run the CI bench workflow for release evidence, or pass BENCH_BASELINE=.bench/baseline.txt for explicit same-machine experiments."; \
-			exit 1; \
-		fi; \
-	fi
-	@BENCHSTAT="$$(command -v benchstat 2>/dev/null)"; \
-	 if [ -z "$$BENCHSTAT" ]; then \
-	   echo "[verify-bench] benchstat not in PATH, installing..."; \
-	   go install golang.org/x/perf/cmd/benchstat@latest; \
-	   BENCHSTAT="$$(go env GOPATH)/bin/benchstat"; \
-	 fi; \
-	 echo "== benchstat $(BENCH_BASELINE) vs $(BENCH_OUT) =="; \
-	 "$$BENCHSTAT" $(BENCH_BASELINE) $(BENCH_OUT)
-
-bench-baseline-check:
-	bash scripts/check-bench-baseline.sh
-
-# Local mutation testing via gremlins.dev (W2-10). Per-package
-# efficacy floors live in .github/workflows/mutation.yml (top-of-file
-# comment table + matrix entries); CI runs the same tool nightly.
-# Usage: `make mutation PKG=internal/jsonschema`
-PKG ?= internal/jsonschema
-mutation:
-	@which gremlins > /dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
-	gremlins unleash ./$(PKG)
-
-# Postgres control-plane backend (ADR 0011). The Postgres impl lives in
-# internal/controlplane/postgres with its own go.mod so the default
-# binary stays stdlib-only per ADR 0001. `build-postgres` compiles the
-# tagged binary; `test-postgres` runs the sub-module's integration
-# suite (requires Docker for testcontainers-go).
-build-postgres:
-	go build -tags=postgres ./...
-	cd internal/controlplane/postgres && go build -tags=postgres ./... && go vet -tags=postgres ./...
-
-test-postgres:
-	# INTEGRATION_REQUIRED=1 turns a Testcontainers failure into t.Fatal
-	# instead of t.Skip. Without it, the suite would report green when
-	# Docker is unreachable, masking regressions in the postgres
-	# control-plane backend. See store_test.go::dsn for the gate.
-	@tc_sock="$${TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE:-}"; \
-	if [ -z "$$tc_sock" ]; then \
-	  docker_host="$$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"; \
-	  case "$$docker_host" in unix://*) tc_sock="/var/run/docker.sock" ;; esac; \
-	fi; \
-	cd internal/controlplane/postgres && \
-	  INTEGRATION_REQUIRED=1 TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE="$$tc_sock" \
-	  go test -tags=postgres,integration -count=1 -timeout 180s ./...
-
-# shared-service-e2e drives the streamable HTTP transport in-process
-# against a Postgres-backed control plane and pins two launch-candidate
-# contracts:
-#
-#   1. Group 2 — TestSharedServicePostgresE2E: two distinct forward_auth
-#      principals on one listener; tenant isolation in
-#      audit_events + sessions; per-tenant policy mode honored.
-#   2. Group 3 (ADR 0017 Path A) — TestStreamableHTTPCrossInstanceRehydration:
-#      two listeners sharing the store; initialize on instance A +
-#      tools/call on instance B succeeds (no client-visible
-#      re-initialize); cross-tenant replay rejected with 403; expired
-#      session surfaced as 404 with the row removed.
-#
-# Requires MCP_LIVE_CONTROL_PLANE_DSN against a sacrificial Postgres.
-# Soft-skips when the DSN is unset so laptop runs do not require a DB;
-# CI provides one via the postgres:16-alpine service container.
-# The Clockify upstream is mocked locally (httptest), so this target
-# does NOT need CLOCKIFY_LIVE_API_KEY or any live secret.
-shared-service-e2e:
-	@if [ -z "$$MCP_LIVE_CONTROL_PLANE_DSN" ]; then \
-	  echo "shared-service-e2e: MCP_LIVE_CONTROL_PLANE_DSN not set; skipping" >&2; \
-	  exit 0; \
-	fi; \
-	cd internal/controlplane/postgres && \
-	go test -tags=postgres -count=1 -timeout 5m -run '^TestSharedServicePostgresE2E$$|^TestStreamableHTTPCrossInstanceRehydration$$' ./... && \
-	echo "shared-service-e2e: OK"
-
-# live-contract-local runs the livee2e suite against a real Clockify
-# workspace. It requires CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY +
-# CLOCKIFY_WORKSPACE_ID pointing at the sacrificial workspace named in
-# docs/live-tests.md.
-#
-# IMPORTANT: a green run here is NOT launch-candidate evidence.
-# Group 1 of docs/launch-candidate-checklist.md requires two consecutive
-# *scheduled* (cron) green runs of .github/workflows/live-contract.yml
-# on the candidate SHA — local results, manual dispatches, and PR CI
-# runs do not count. This target is for pre-flight debugging only.
-#
-# Workflow/schema tier: set CLOCKIFY_RUN_LIVE_E2E=1 + CLOCKIFY_API_KEY
-#   + CLOCKIFY_WORKSPACE_ID. The workflow test uses real live calls.
-# Optional domain tiers remain gated by their category env vars.
+# live-contract-local intentionally performs real calls against the sacrificial
+# Clockify workspace. Do not point it at a production or personal workspace.
 live-contract-local:
-	@echo "============================================================" >&2
-	@echo "  live-contract-local: PRE-FLIGHT DEBUG ONLY" >&2
-	@echo "  Local results are NOT launch-candidate Group 1 evidence." >&2
-	@echo "  Scheduled cron runs of live-contract.yml are authoritative." >&2
-	@echo "  See docs/launch-candidate-checklist.md Group 1 for the bar." >&2
-	@echo "============================================================" >&2
-	@if [ "$${CLOCKIFY_RUN_LIVE_E2E:-}" != "1" ] || [ -z "$${CLOCKIFY_API_KEY:-}" ]; then \
-		echo "live-contract-local: CLOCKIFY_RUN_LIVE_E2E=1 and CLOCKIFY_API_KEY required." >&2; \
+	@if [ "$${CLOCKIFY_RUN_LIVE_E2E:-}" != "1" ] || [ -z "$${CLOCKIFY_API_KEY:-}" ] || [ -z "$${CLOCKIFY_WORKSPACE_ID:-}" ] || [ -z "$${CLOCKIFY_LIVE_PREFIX:-}" ]; then \
+		echo "live-contract-local: set CLOCKIFY_RUN_LIVE_E2E=1, CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX." >&2; \
 		echo "  Read docs/live-tests.md before running this target." >&2; \
 		exit 1; \
 	fi
-	@echo "== one-user workflow + raw schema tier =="
 	go test -tags=livee2e -count=1 -timeout 5m \
 		-run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$$' \
 		./tests/...
-	@if [ "$${CLOCKIFY_LIVE_FULL_SURFACE_ENABLED:-}" = "true" ]; then \
-		echo "== optional full-surface tier =="; \
+	go test -count=1 -timeout 10m ./internal/tools -run '^TestOneUserLive'
+	@if [ "$${CLOCKIFY_LIVE_OPTIONAL_DOMAINS:-}" = "1" ]; then \
+		echo "== optional livee2e domain campaign =="; \
 		go test -tags=livee2e -count=1 -timeout 10m \
-			-run '^(TestLiveTier1ReadOnly|TestLivePaginationOnTags|TestLiveTier2ReadOnlySweep|TestLiveT2)' \
+			-run '^TestLive' \
 			./tests/...; \
 	else \
-		echo "== optional full-surface tier skipped (CLOCKIFY_LIVE_FULL_SURFACE_ENABLED != true) =="; \
+		echo "== optional livee2e domain campaign skipped (CLOCKIFY_LIVE_OPTIONAL_DOMAINS != 1) =="; \
 	fi
-	@echo ""
-	@echo "============================================================" >&2
-	@echo "  Reminder: local green != Group 1 evidence." >&2
-	@echo "  Two consecutive scheduled cron greens on the candidate SHA" >&2
-	@echo "  in .github/workflows/live-contract.yml are required." >&2
-	@echo "============================================================" >&2

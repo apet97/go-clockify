@@ -35,8 +35,8 @@ Rough expectations, based on the last six months of activity:
 - Bugs that affect correctness on the stable `v1.x` wire format:
   prioritised above feature work, targeted in the next point
   release.
-- Bugs that affect secondary surfaces (legacy HTTP transport,
-  `-tags=fips`, `-tags=otel`): fixed as time allows.
+- Bugs that affect secondary surfaces outside the one-user MCP path:
+  fixed as time allows.
 - Feature requests: triaged into the backlog; decisions on
   whether to accept are posted on the issue.
 
@@ -60,23 +60,15 @@ stable.
 
 What we promise for the `v1.x` series:
 
-- **Wire format stability.** MCP method names, tool names, and
-  env-var surface stay backward-compatible within `v1.x`. Any
-  change that would break a wire-compatible client bumps the
-  major.
-- **Env-var renames are breaking.** Env-var renames (not just
-  additions) only land in a major bump; today we use
-  `Deprecated: true` spec entries as a soft migration window
-  where we intentionally accept both.
-- **Signed releases.** Every tagged release ships 15 binaries
-  (5 default + 4 FIPS + 2 Postgres + 2 gRPC + 2 gRPC + Postgres),
-  each with a per-binary cosign signature and SPDX SBOM. SLSA build
-  provenance is attached when GitHub artifact attestations are
-  available for the repository account tier; when GitHub returns
-  "Feature not available" for this user-owned private repository,
-  ADR-0013 keeps SLSA best-effort and the mandatory cryptographic
-  gate is the cosign binary/image chain. Verification recipe in
-  [`docs/verification.md`](docs/verification.md).
+- **Wire format stability.** MCP method names, tool names, and the
+  one-user environment surface stay backward-compatible within `v1.x`.
+  Any change that would break a wire-compatible client bumps the major.
+- **Env-var renames are breaking.** The one-user runtime requires
+  `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID`; renaming either is a
+  major-version change.
+- **Catalog stability.** The generated catalog remains the source of
+  truth for the 151 startup-loaded tools. Descriptor changes should
+  regenerate `docs/tool-catalog.md` and `docs/tool-catalog.json`.
 - **No surprise removals.** Deprecations are announced one minor
   version before removal. The `MCP_HTTP_MAX_BODY` alias is the
   canonical example: it will disappear no earlier than a
@@ -95,11 +87,9 @@ What we do NOT promise:
 ## Upgrading
 
 Before upgrading, read the `CHANGELOG.md` Unreleased section and
-the target release's entry. Default changes (like Wave H's prod
-fail-closed defaults or Wave I's profile-based config) are called
-out in the Changed / Added sections. `clockify-mcp doctor` will
-tell you which of your env vars come from profile defaults vs.
-explicit operator intent — run it before and after an upgrade.
+the target release's entry. Run `clockify-mcp doctor` before and
+after an upgrade to verify the API key, workspace id, and base URL
+configuration without printing secrets.
 
 ## Version support matrix
 
@@ -115,10 +105,9 @@ explicit operator intent — run it before and after an upgrade.
 - Include the output of `clockify-mcp doctor` (or your effective
   env) when reporting a bug. It is the single fastest way to
   reproduce what you are seeing.
-- If you are asking about operator decisions ("should I use
-  `shared-service` or `prod-postgres`?"), skim
-  [`docs/deploy/`](docs/deploy/) first — the profile docs answer
-  most common questions inline.
+- If you are asking about live behavior, include which command from
+  [`docs/live-tests.md`](docs/live-tests.md) you ran and whether it
+  used a sacrificial workspace.
 - Minimal reproductions are load-bearing. "It broke" is hard to
   action; "I ran `X`, expected `Y`, saw `Z`" is easy to action.
 

@@ -8,25 +8,19 @@ import (
 	"time"
 )
 
-// TestLiveT2ProjectAdminCRUD covers the project_admin Tier-2 group
-// against a real Clockify backend. The test creates a project, then
-// uses the admin tools to edit it: a project template clone is made
-// via the one-user project-template tool, a TIME estimate is set
-// (clockify_update_project_estimate), the workspace owner is
-// installed as the only member with no hourly rate
-// (clockify_set_project_memberships), and finally the project is
-// archived via the bulk-archive tool (clockify_archive_projects).
-// The test then deletes the archived project via the raw client.
+// TestLiveOneUserProjectAdminCRUD covers current project-admin tools against
+// a real Clockify backend. The test creates a project, creates a template,
+// updates an estimate, replaces memberships on the owned test project, archives
+// it, then deletes the archived project via the raw client.
 //
 // Gated by both CLOCKIFY_LIVE_ADMIN_ENABLED (memberships) and
 // CLOCKIFY_LIVE_BILLING_ENABLED (estimates) per the campaign plan.
-func TestLiveT2ProjectAdminCRUD(t *testing.T) {
+func TestLiveOneUserProjectAdminCRUD(t *testing.T) {
 	requireCategory(t, "CLOCKIFY_LIVE_ADMIN_ENABLED")
 	requireCategory(t, "CLOCKIFY_LIVE_BILLING_ENABLED")
 
 	h := setupLiveMCPHarness(t, liveMCPOptions{})
 	c := setupLiveCampaign(t, h)
-	c.activateTier2("project_admin")
 
 	// Seed project — the admin tools all act on a project we own.
 	projectName := c.LivePrefix("padmin", 0)
@@ -75,7 +69,7 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_get_project_template", map[string]any{
+		result := h.callOK(ctx, "clockify_projects_get", map[string]any{
 			"project_id": templateID,
 		})
 		data := extractDataMap(t, result)
@@ -91,17 +85,14 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		// 8 hours = 28800 seconds.
-		result := h.callOK(ctx, "clockify_update_project_estimate", map[string]any{
+		result := h.callOK(ctx, "clockify_projects_estimates_update", map[string]any{
 			"project_id":     projectID,
 			"estimate_type":  "TIME",
 			"estimate_value": 28800,
 		})
-		sc, ok := result["structuredContent"].(map[string]any)
-		if !ok {
-			t.Fatalf("update_project_estimate response missing structuredContent")
-		}
+		sc := structuredContentMap(t, result)
 		if okFlag, _ := sc["ok"].(bool); !okFlag {
-			t.Fatalf("update_project_estimate response carried ok=false")
+			t.Fatalf("clockify_projects_estimates_update response carried ok=false")
 		}
 	})
 
@@ -115,16 +106,13 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 		// full desired list. REPLACE semantics — sending only the
 		// owner here leaves only the owner. Owner-only is safe on the
 		// seeded project (no other members were added in this test).
-		result := h.callOK(ctx, "clockify_set_project_memberships", map[string]any{
+		result := h.callOK(ctx, "clockify_projects_memberships_update", map[string]any{
 			"project_id": projectID,
 			"user_ids":   []any{c.OwnerUserID},
 		})
-		sc, ok := result["structuredContent"].(map[string]any)
-		if !ok {
-			t.Fatalf("set_project_memberships missing structuredContent: %#v", result)
-		}
+		sc := structuredContentMap(t, result)
 		if okFlag, _ := sc["ok"].(bool); !okFlag {
-			t.Fatalf("set_project_memberships carried ok=false: %#v", sc)
+			t.Fatalf("clockify_projects_memberships_update carried ok=false: %#v", sc)
 		}
 		// The handler returns the memberships array as Data.
 		members, ok := sc["data"].([]any)
@@ -151,8 +139,8 @@ func TestLiveT2ProjectAdminCRUD(t *testing.T) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		_ = h.callOK(ctx, "clockify_archive_projects", map[string]any{
-			"project_ids": []any{projectID},
+		_ = h.callOK(ctx, "clockify_projects_archive", map[string]any{
+			"project_id": projectID,
 		})
 		// Verify archived state via raw GET.
 		var probe map[string]any

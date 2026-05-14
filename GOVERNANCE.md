@@ -98,10 +98,9 @@ The following controls are target state, not current state:
 - Admin enforcement: enabled.
 - Restrict who can dismiss PR reviews: enabled.
 
-These controls become enforceable when a second maintainer joins or
-before a paid / public hosted service launch. Until then,
-`docs/branch-protection.md` documents the gap honestly so downstream
-consumers can evaluate the trust model.
+These controls become enforceable when a second maintainer joins.
+Until then, `docs/branch-protection.md` documents the gap honestly
+so downstream consumers can evaluate the trust model.
 
 ## Tighter self-review expectations on security-sensitive areas
 
@@ -112,15 +111,15 @@ explicitly calls out which sensitive path is touched and how the
 change was validated. The sensitive paths that trigger this
 expectation are:
 
-- `internal/authn/` — authentication and JWT verification.
-- `internal/enforcement/` — policy enforcement matrix.
-- `internal/policy/` — policy definitions.
-- `internal/transport/` — transport adapters (gRPC, streamable HTTP).
+- `cmd/clockify-mcp/` — process entrypoint and doctor command.
+- `internal/config/` — required one-user environment loading.
+- `internal/mcp/` — MCP protocol core.
+- `internal/tools/` — workflow, domain, resource, and raw fallback tools.
 - `internal/clockify/` — HTTP client and auth headers.
+- `tests/` — live MCP harnesses.
 - `.github/workflows/release.yml` — the release pipeline.
 - `.github/workflows/docker-image.yml` — the image pipeline.
 - `.goreleaser.yaml` — the release orchestrator.
-- `deploy/` — operator-facing deploy manifests.
 
 When a second maintainer joins, the sensitive-path list in
 `.github/CODEOWNERS` will switch on required CODEOWNERS review; until

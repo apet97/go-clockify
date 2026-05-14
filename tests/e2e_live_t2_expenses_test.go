@@ -9,17 +9,16 @@ import (
 	"time"
 )
 
-// TestLiveT2ExpensesCRUD covers what is currently exercise-able on the
-// expenses group through the MCP path against a real Clockify backend.
+// TestLiveOneUserExpensesCRUD covers what is currently exercise-able on the
+// expenses domain tools through the MCP path against a real Clockify backend.
 // list_expenses / list_expense_categories / expense_report shape
 // mismatches were closed in Batch 1, and the createExpense multipart
 // fix in Batch 3 unblocks the create-path subtest below. The category
 // archive constraint is still pinned because Clockify exposes no
 // archive-flag mutation route.
-func TestLiveT2ExpensesCRUD(t *testing.T) {
+func TestLiveOneUserExpensesCRUD(t *testing.T) {
 	h := setupLiveMCPHarness(t, liveMCPOptions{})
 	c := setupLiveCampaign(t, h)
-	c.activateTier2("expenses")
 
 	categoryName := c.LivePrefix("exp-cat", 0)
 	var categoryID string
@@ -29,13 +28,13 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 	t.Run("create_expense_category", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_create_expense_category", map[string]any{
+		result := h.callOK(ctx, "clockify_expenses_categories_create", map[string]any{
 			"name": categoryName,
 		})
 		data := extractDataMap(t, result)
 		id, _ := data["id"].(string)
 		if id == "" {
-			t.Fatalf("create_expense_category returned no id: %#v", data)
+			t.Fatalf("clockify_expenses_categories_create returned no id: %#v", data)
 		}
 		gotName, _ := data["name"].(string)
 		if gotName != categoryName {
@@ -69,7 +68,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		updated := categoryName + "-renamed"
-		result := h.callOK(ctx, "clockify_update_expense_category", map[string]any{
+		result := h.callOK(ctx, "clockify_expenses_categories_update", map[string]any{
 			"category_id": categoryID,
 			"name":        updated,
 		})
@@ -96,7 +95,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		// that accepts the delete (or a handler that pre-archives)
 		// will flip the assertion and force this annotation to be
 		// reviewed.
-		errMsg := h.callExpectError(ctx, "clockify_delete_expense_category", map[string]any{
+		errMsg := h.callExpectError(ctx, "clockify_expenses_categories_delete", map[string]any{
 			"category_id": categoryID,
 		})
 		if !strings.Contains(errMsg, "archived") {
@@ -118,7 +117,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		// raw client below so a leaked expense doesn't survive the
 		// test even if asserts fail.
 		date := time.Now().UTC().Truncate(time.Second).Format("2006-01-02T15:04:05Z")
-		result := h.callOK(ctx, "clockify_create_expense", map[string]any{
+		result := h.callOK(ctx, "clockify_expenses_create", map[string]any{
 			"amount":      1.0,
 			"date":        date,
 			"category_id": categoryID,
@@ -127,7 +126,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		data := extractDataMap(t, result)
 		id, _ := data["id"].(string)
 		if id == "" {
-			t.Fatalf("create_expense returned no id: %#v", data)
+			t.Fatalf("clockify_expenses_create returned no id: %#v", data)
 		}
 		expenseID = id
 		c.RegisterCleanup("expense", id, func(ctx context.Context) error {
@@ -145,14 +144,14 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 
-		got := h.callOK(ctx, "clockify_get_expense", map[string]any{
+		got := h.callOK(ctx, "clockify_expenses_get", map[string]any{
 			"expense_id": expenseID,
 		})
 		if gotID, _ := extractDataMap(t, got)["id"].(string); gotID != expenseID {
 			t.Fatalf("get_expense id mismatch: got %q want %q", gotID, expenseID)
 		}
 
-		updated := h.callOK(ctx, "clockify_update_expense", map[string]any{
+		updated := h.callOK(ctx, "clockify_expenses_update", map[string]any{
 			"expense_id":    expenseID,
 			"change_fields": []any{"NOTES", "AMOUNT"},
 			"notes":         c.LivePrefix("exp-updated", 0),
@@ -162,17 +161,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 			t.Fatalf("update_expense id mismatch: got %q want %q", updatedID, expenseID)
 		}
 
-		dry := h.callOK(ctx, "clockify_delete_expense", map[string]any{
-			"expense_id": expenseID,
-			"dry_run":    true,
-		})
-		sc, _ := dry["structuredContent"].(map[string]any)
-		data, _ := sc["data"].(map[string]any)
-		if dryRun, _ := data["dry_run"].(bool); !dryRun {
-			t.Fatalf("delete_expense dry_run did not return dry_run:true envelope: %#v", sc)
-		}
-
-		_ = h.callOK(ctx, "clockify_delete_expense", map[string]any{
+		_ = h.callOK(ctx, "clockify_expenses_delete", map[string]any{
 			"expense_id": expenseID,
 		})
 		expenseDeleted = true
@@ -187,7 +176,7 @@ func TestLiveT2ExpensesCRUD(t *testing.T) {
 		// "Expense doesn't belong to Workspace" rather than a 404 —
 		// the assertion pins that current behaviour. Pure read-only
 		// path; no cleanup needed.
-		errMsg := h.callExpectError(ctx, "clockify_get_expense", map[string]any{
+		errMsg := h.callExpectError(ctx, "clockify_expenses_get", map[string]any{
 			"expense_id": "000000000000000000000001",
 		})
 		if !strings.Contains(errMsg, "doesn't belong to Workspace") &&

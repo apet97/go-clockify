@@ -147,10 +147,7 @@ func liveWorkflowPrefix() string {
 
 func extractIDs(t *testing.T, result map[string]any) map[string]string {
 	t.Helper()
-	envelope := result
-	if sc, ok := result["structuredContent"].(map[string]any); ok {
-		envelope = sc
-	}
+	envelope := structuredContentMap(t, result)
 	raw, ok := envelope["ids"].(map[string]any)
 	if !ok {
 		t.Fatalf("result missing ids: %#v", envelope)

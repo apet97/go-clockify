@@ -20,9 +20,8 @@ func (e *fakeUpstreamError) Sanitized() string { return e.sanitized }
 
 // TestSanitizeUpstreamErrors_DefaultExposesBody locks in the
 // developer-friendly default: tool errors flow through to the MCP
-// client unchanged. Local-stdio operators rely on this for fast
-// diagnostics; the body is not a cross-account leak in a single-user
-// install.
+// client unchanged. The one-user stdio process relies on this for fast
+// diagnostics inside a local install.
 func TestSanitizeUpstreamErrors_DefaultExposesBody(t *testing.T) {
 	wantBody := "insufficient permissions " + "ten" + "ant=acme-internal"
 	server := NewServer("test", []ToolDescriptor{{

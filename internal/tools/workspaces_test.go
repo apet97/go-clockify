@@ -10,7 +10,7 @@ import (
 // TestResolveWorkspaceID_RejectsMalformedExplicitID pins the
 // defence-in-depth check added to ResolveWorkspaceID: a programmatically
 // wired workspace ID (Service.WorkspaceID set via New) must still go
-// through resolve.ValidateID even though config.Load already validates
+// through resolve.ValidateID even though config.LoadOneUser already validates
 // an env-supplied CLOCKIFY_WORKSPACE_ID. Without this guard, a future
 // handler that consumes the workspace ID outside paths.Workspace would
 // bypass validation, and the path-safety static test deliberately

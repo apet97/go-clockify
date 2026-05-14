@@ -45,8 +45,8 @@ type cleanupStep struct {
 	Delete func(context.Context) error
 }
 
-// setupLiveCampaign performs the safety preconditions every campaign test
-// must clear: the master surface gate, the workspace-confirmation
+// setupLiveCampaign performs the safety preconditions every optional-domain
+// campaign test must clear: the opt-in gate, the workspace-confirmation
 // second-factor check, and owner detection. Returns a context bound to
 // the test's lifecycle. Cleanup runs in LIFO order at test exit; a single
 // failing deleter is logged via t.Logf and does not abort the sweep.
@@ -54,11 +54,11 @@ type cleanupStep struct {
 // The caller is expected to have already obtained a liveMCPHarness via
 // setupLiveMCPHarness (which handles the API-key + RUN_LIVE_E2E gates and
 // calls MarkLiveTestRan for the skip-sentinel). This helper layers the
-// campaign-specific gates on top of that foundation.
+// optional-domain gates on top of that foundation.
 func setupLiveCampaign(t *testing.T, h *liveMCPHarness) *liveCampaignContext {
 	t.Helper()
-	if os.Getenv("CLOCKIFY_LIVE_FULL_SURFACE_ENABLED") != "true" {
-		t.Skip("set CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true to run sacrificial-workspace campaign tests")
+	if os.Getenv("CLOCKIFY_LIVE_OPTIONAL_DOMAINS") != "1" {
+		t.Skip("set CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 to run sacrificial-workspace optional-domain tests")
 	}
 	wsID := os.Getenv("CLOCKIFY_WORKSPACE_ID")
 	if wsID == "" {
@@ -162,15 +162,9 @@ func (c *liveCampaignContext) flushCleanups() {
 	}
 }
 
-// activateTier2 was the legacy hook for bringing a tier-2 group online.
-// The one-user MCP loads every tool at startup, so this helper is a
-// no-op preserved as a call-site shim for existing tests.
-func (c *liveCampaignContext) activateTier2(_ string) {}
-
 // rawDeletePath performs a DELETE through the raw Clockify client,
-// bypassing the MCP path. Cleanups use this to avoid re-triggering
-// policy or dry-run interception that the test under test is asserting
-// against.
+// bypassing the MCP path. Cleanups use this to avoid coupling teardown to
+// whichever MCP tool shape the test is asserting.
 func (c *liveCampaignContext) rawDeletePath(ctx context.Context, path string) error {
 	return c.h.Service.Client.Delete(ctx, "/workspaces/"+c.WorkspaceID+path)
 }
@@ -233,28 +227,60 @@ func (c *liveCampaignContext) rawGetPath(ctx context.Context, path string, out a
 	return c.h.Service.Client.Get(ctx, "/workspaces/"+c.WorkspaceID+path, nil, out)
 }
 
+// structuredContentMap returns the tool result envelope regardless of whether
+// the caller handed us the parsed content payload directly or the MCP
+// result object that still contains structuredContent.
+func structuredContentMap(t *testing.T, result map[string]any) map[string]any {
+	t.Helper()
+	if sc, ok := result["structuredContent"].(map[string]any); ok {
+		return sc
+	}
+	if _, ok := result["ok"].(bool); ok {
+		return result
+	}
+	t.Fatalf("result missing structured content envelope: %#v", result)
+	return nil
+}
+
 // extractList pulls a slice-shaped envelope out of a tools/call result.
 //
-// Tool result shapes vary on the wire: Tier-1 list tools (list_projects,
-// list_tags, etc.) put the slice directly at structuredContent.data;
-// Tier-2 list tools sometimes wrap it (e.g. structuredContent.data.items
-// or structuredContent.data.entries). When fields is empty the slice
-// must be at data; otherwise the named fields are tried in order and
-// the first match wins. Returns nil when no slice is found — callers
-// treat that as "empty list", which is the correct semantics for an
+// Tool result shapes vary on the wire: some list tools put the slice directly
+// at data; others wrap it under a domain-specific field such as tags, items,
+// or entries. When fields is empty a conservative set of common field names
+// is tried. Returns nil when no slice is found; callers treat that as an
 // empty-but-valid sacrificial workspace.
 func extractList(t *testing.T, result map[string]any, fields ...string) []any {
 	t.Helper()
-	sc, ok := result["structuredContent"].(map[string]any)
-	if !ok {
-		t.Fatalf("result missing structuredContent: %#v", result)
-	}
+	sc := structuredContentMap(t, result)
 	if list, ok := sc["data"].([]any); ok {
 		return list
 	}
 	data, ok := sc["data"].(map[string]any)
 	if !ok {
 		t.Fatalf("structuredContent.data is neither a slice nor a map: %#v", sc)
+	}
+	if len(fields) == 0 {
+		fields = []string{
+			"items",
+			"entries",
+			"tags",
+			"projects",
+			"clients",
+			"tasks",
+			"users",
+			"timeEntries",
+			"invoices",
+			"expenses",
+			"requests",
+			"policies",
+			"assignments",
+			"groups",
+			"holidays",
+			"webhooks",
+			"events",
+			"templates",
+			"customFields",
+		}
 	}
 	for _, f := range fields {
 		if v, ok := data[f].([]any); ok {
