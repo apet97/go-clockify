@@ -384,14 +384,11 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	// Ownership guard. The personal-time-tracking contract in
-	// docs/policy/production-tool-scope.md constrains
-	// clockify_update_entry to the API key owner's own entries. The
-	// admin path /workspaces/{ws}/time-entries/{id} would otherwise
-	// let an elevated key mutate another user's entry. The check
-	// runs regardless of CLOCKIFY_POLICY mode — the contract is a
-	// per-handler invariant, not a policy-mode allowance. Fail-closed
-	// when userId is missing; see requireCurrentUserEntry in users.go.
+	// Ownership guard. clockify_update_entry is constrained to the API
+	// key owner's own entries; the admin path
+	// /workspaces/{ws}/time-entries/{id} would otherwise let an elevated
+	// key mutate another user's entry. Fail-closed when userId is
+	// missing; see requireCurrentUserEntry in users.go.
 	if err := s.requireCurrentUserEntry(ctx, existing); err != nil {
 		return ResultEnvelope{}, err
 	}

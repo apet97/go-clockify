@@ -63,26 +63,21 @@ Use IDs returned by previous calls.
 If a feature is unavailable, report it and continue.`
 
 // Notifier delivers server-initiated notifications (e.g. tools/list_changed)
-// to the connected client. Transports implement this: the stdio transport
-// writes through the shared JSON encoder, while the legacy HTTP POST-only
-// transport logs + counts drops until a real SSE channel is wired by the
-// Streamable HTTP transport rewrite.
+// to the connected client. The stdio transport implements this by writing
+// through the shared JSON encoder.
 type Notifier interface {
 	Notify(method string, params any) error
 }
 
-// notifierCtxKey carries the calling stream's Notifier through the
-// request context so resources/subscribe and resources/unsubscribe can
-// record per-notifier subscription state. Transports that multiplex
-// streams over one *mcp.Server (currently gRPC) MUST wrap their dispatch
-// context with WithNotifier so notifications/resources/updated does not
-// leak to streams that never subscribed.
+// notifierCtxKey carries the calling peer's Notifier through the request
+// context so resources/subscribe and resources/unsubscribe can record
+// per-peer subscription state.
 type notifierCtxKey struct{}
 
-// WithNotifier returns a child context carrying n as the calling stream's
-// Notifier. Transports call this once per stream after AddNotifier so the
-// resources/subscribe handler can attribute the subscription to the right
-// stream. Passing a nil Notifier yields the parent context unchanged.
+// WithNotifier returns a child context carrying n as the calling peer's
+// Notifier. The stdio loop calls this once per session after AddNotifier
+// so the resources/subscribe handler attributes the subscription
+// correctly. Passing a nil Notifier yields the parent context unchanged.
 func WithNotifier(ctx context.Context, n Notifier) context.Context {
 	if n == nil {
 		return ctx
@@ -103,24 +98,9 @@ func notifierFromContext(ctx context.Context) (Notifier, bool) {
 	return n, ok && n != nil
 }
 
-// droppingNotifier is installed by the legacy HTTP transport. It records
-// every drop so operators can measure the gap until Streamable HTTP ships.
-type droppingNotifier struct{}
-
-func (droppingNotifier) Notify(method string, _ any) error {
-	metrics.ProtocolErrorsTotal.Inc("notification_dropped")
-	slog.Warn("notification_dropped",
-		"method", method,
-		"reason", "legacy_http_transport",
-		"hint", "migrate to Streamable HTTP for server-initiated notifications",
-	)
-	return nil
-}
-
 // encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
-// Notifier interface. Decoupling notification delivery from the raw encoder
-// lets transports plug in their own delivery mechanism without the server
-// core holding transport-specific state.
+// Notifier interface so notification delivery does not require the server
+// core to hold raw I/O state.
 type encoderNotifier struct {
 	mu      *sync.Mutex
 	encoder **json.Encoder
@@ -305,16 +285,14 @@ type Server struct {
 
 // AddNotifier registers a notification sink and returns a function that
 // removes it. Multiple notifiers can coexist; Notify fans out to all of
-// them. Transports that multiplex clients (gRPC Exchange streams) should
-// call AddNotifier per-stream and defer the returned remove function.
+// them.
 func (s *Server) AddNotifier(n Notifier) func() {
 	return s.hub.add(n)
 }
 
-// SetNotifier installs a notification sink, removing any previously
-// installed via SetNotifier. Transports that own a single client (stdio,
-// legacy HTTP) use this for backwards compatibility. Internally delegates
-// to AddNotifier.
+// SetNotifier installs a single notification sink, removing any
+// previously installed via SetNotifier. The stdio loop uses this for the
+// per-session encoder notifier.
 func (s *Server) SetNotifier(n Notifier) {
 	if s.setNotifierRemove != nil {
 		s.setNotifierRemove()
@@ -344,22 +322,15 @@ func (s *Server) ClientInfo() (name, version string) {
 }
 
 // MarkInitialized seeds a freshly-built Server with the negotiated state
-// it would normally obtain from a live `initialize` exchange. Used by
-// the streamable-HTTP cross-pod rehydration path (ADR 0017, Path A) to
-// rebuild a session whose `initialize` ran on a different replica:
-// the persisted controlplane.SessionRecord carries ProtocolVersion +
-// ClientName + ClientVersion, and the rehydrated Server uses them
-// instead of demanding the client re-initialize. Idempotent — calling
-// it twice with the same values is a no-op.
+// it would normally obtain from a live `initialize` exchange. Tests and
+// embedders use this to skip the handshake; idempotent — calling it
+// twice with the same values is a no-op.
 //
-// protocolVersion may be empty (a session that was never re-persisted
-// after sync_initialize, or a pre-2025-03-26 client); ClientInfo
+// protocolVersion may be empty (pre-2025-03-26 client); ClientInfo
 // fields are best-effort. The initialized flag is set unconditionally
-// because the rehydration boundary's contract is that the server is
-// ready to dispatch tool calls; lacking a persisted protocolVersion
-// just means validateProtocolVersion's negotiated-version check
-// degrades to "accept any supported version" (see the comment on
-// validateProtocolVersion in transport_streamable_http.go).
+// because the caller's contract is that the server is ready to dispatch
+// tool calls; lacking protocolVersion just means the negotiated-version
+// check degrades to "accept any supported version".
 func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion string) {
 	s.negotiatedMu.Lock()
 	if protocolVersion != "" {
@@ -493,10 +464,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	}
 	s.advertiseListChanged.Store(!s.StaticToolList)
 	// Thread the stdio peer's Notifier into every dispatched request so
-	// resources/subscribe records subscriptions against this peer. Stdio
-	// only has one peer so the practical effect is identical to the
-	// pre-fix server-wide subscription, but wiring it the same way as
-	// gRPC keeps the per-notifier contract uniform across transports.
+	// resources/subscribe records subscriptions against this peer.
 	ctx = WithNotifier(ctx, stdioNotifier)
 
 	// Channel-based approach: scan lines in a goroutine so we can
@@ -575,9 +543,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 					// take down the whole stdio loop. RecoverDispatch
 					// emits a structured panic event and hands the
 					// stable JSON-RPC tool-error envelope to the sink
-					// for transport delivery. Same shape used by
-					// streamable HTTP and gRPC for cross-transport
-					// parity.
+					// for delivery.
 					defer RecoverDispatch(r.ID, "stdio_tool_dispatch", toolNameFromRequest(r), func(resp Response) {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
@@ -624,8 +590,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 
 // DispatchMessage parses a single JSON-RPC message from raw bytes, invokes
 // the central handler, and returns the serialized response. It is intended
-// for non-stdio transports (gRPC sub-module, custom bridges) that own their
-// own concurrency model and framing.
+// for embedders that own their own concurrency model and framing.
 //
 // Parse and validation errors are converted to JSON-RPC error responses
 // mirroring the stdio loop. A notification (no id, no result, no error)
@@ -718,16 +683,13 @@ func (s *Server) writeRawResponse(raw []byte) error {
 }
 
 // DispatchMessageWithRecover is the recovery-wrapped variant of
-// DispatchMessage for transports whose dispatch goroutines must
-// not let a panicking handler escape the transport boundary.
-// gRPC's per-frame goroutine uses this so a single broken tool
-// cannot kill an in-flight stream — every other concurrent request
-// on the same Exchange would otherwise be aborted.
+// DispatchMessage for embedders whose dispatch goroutines must not
+// let a panicking handler escape the embedder boundary.
 //
 // Identical to DispatchMessage on the parse / validate / marshal
 // path; the only difference is that handle() runs through
 // HandleWithRecover so panics are translated into the same stable
-// JSON-RPC tool-error envelope stdio + streamable HTTP emit.
+// JSON-RPC tool-error envelope the stdio loop emits.
 func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, site string) ([]byte, error) {
 	var req Request
 	if err := json.Unmarshal(msg, &req); err != nil {
@@ -752,9 +714,9 @@ func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, sit
 }
 
 // HandleWithRecover invokes handle with structured panic recovery.
-// Used by transports whose dispatch goroutines do not own a higher-
-// level recovery wrapper (streamable HTTP, gRPC) — stdio's loop has
-// its own RecoverDispatch deferred at the goroutine boundary in Run.
+// Used by embedders whose dispatch goroutines do not own a higher-
+// level recovery wrapper — stdio's loop has its own RecoverDispatch
+// deferred at the goroutine boundary in Run.
 //
 // site is the metric/log label that lets operators distinguish where
 // a panic originated. Returns the stable JSON-RPC tool-error response
@@ -1032,9 +994,9 @@ func (s *Server) IsReadyCached() bool {
 	return s.readyCached
 }
 
-// SetReadyCached updates the cached readiness state. Transports that
-// lack an HTTP readiness endpoint (gRPC) call this after verifying
-// upstream connectivity so IsReadyCached reflects their state.
+// SetReadyCached updates the cached readiness state. Embedders that
+// lack an HTTP readiness endpoint call this after verifying upstream
+// connectivity so IsReadyCached reflects their state.
 func (s *Server) SetReadyCached(ready bool) {
 	s.readyMu.Lock()
 	s.readyCached = ready

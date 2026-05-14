@@ -43,12 +43,9 @@ type ResourceProvider interface {
 }
 
 // resourceSubscriptions tracks resources/subscribe state per (Notifier, URI)
-// so notifications/resources/updated fan out only to streams that asked for
-// a given URI. Earlier implementations stored a flat URI set on the Server
-// and relied on the notifierHub broadcast, which leaked updates across
-// concurrent gRPC streams sharing one *mcp.Server. See ADR 0009 ("Resource
-// Delta Sync") for the wire contract; this struct owns the in-memory side
-// of the per-notifier guarantee.
+// so notifications/resources/updated only fire for peers that asked for a
+// given URI. This struct owns the in-memory side of the per-notifier
+// guarantee.
 //
 // hasAnyURI / refcount keep the cheap "is anyone interested in this URI?"
 // shortcut the tools layer relies on for the emitResourceUpdate skip-fetch
@@ -295,15 +292,13 @@ func (s *Server) HasResourceSubscription(uri string) bool {
 }
 
 // NotifyResourceUpdated publishes notifications/resources/updated to every
-// notifier that called resources/subscribe for uri. Transports/tool
-// handlers call this after a mutation that invalidates a cached resource
-// view. Safe to call before any notifier is wired — the call silently
-// no-ops when nothing is subscribed.
+// notifier that called resources/subscribe for uri. Tool handlers call
+// this after a mutation that invalidates a cached resource view. Safe
+// to call before any notifier is wired — the call silently no-ops when
+// nothing is subscribed.
 //
-// Subscription scope is per-notifier (per gRPC Exchange stream / per
-// streamable-HTTP session / the single stdio peer). A stream that did NOT
-// subscribe to uri never receives the notification, even when another
-// stream sharing the same *mcp.Server did. tools/list_changed continues to
+// Subscription scope is per-notifier; a peer that did NOT subscribe to
+// uri never receives the notification. tools/list_changed continues to
 // fan out broadcast through Server.Notify; only resources/updated takes
 // this per-URI path.
 //
