@@ -222,6 +222,7 @@ func (s *Service) requireClockifyClient() error {
 
 func (s *Service) toolsResourceData() map[string]any {
 	descriptors := s.FullAccessRegistry()
+	sortDescriptorsForToolsList(descriptors)
 	tools := make([]mcp.Tool, 0, len(descriptors))
 	workflowTools := make([]string, 0, 20)
 	domainTools := make(map[string][]string)
@@ -250,6 +251,49 @@ func (s *Service) toolsResourceData() map[string]any {
 		"domains":       domainTools,
 		"rawFallback":   rawTools,
 		"loadedAtStart": true,
+	}
+}
+
+func sortDescriptorsForToolsList(descriptors []mcp.ToolDescriptor) {
+	priorityAware := false
+	for _, descriptor := range descriptors {
+		if _, ok := descriptorPriority(descriptor.Tool); ok {
+			priorityAware = true
+			break
+		}
+	}
+	sort.Slice(descriptors, func(i, j int) bool {
+		if !priorityAware {
+			return descriptors[i].Tool.Name < descriptors[j].Tool.Name
+		}
+		left, lok := descriptorPriority(descriptors[i].Tool)
+		right, rok := descriptorPriority(descriptors[j].Tool)
+		if !lok {
+			left = 50
+		}
+		if !rok {
+			right = 50
+		}
+		if left != right {
+			return left < right
+		}
+		return descriptors[i].Tool.Name < descriptors[j].Tool.Name
+	})
+}
+
+func descriptorPriority(tool mcp.Tool) (int, bool) {
+	if tool.Annotations == nil {
+		return 0, false
+	}
+	switch v := tool.Annotations["priority"].(type) {
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	default:
+		return 0, false
 	}
 }
 

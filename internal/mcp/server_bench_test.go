@@ -66,6 +66,41 @@ func BenchmarkDispatchToolsListLarge(b *testing.B) {
 	}
 }
 
+func TestToolsListRepeatedCallsReuseSerializedResult(t *testing.T) {
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "bench_tool", Description: "bench-only no-op"},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			return map[string]any{"ok": true}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil)
+	server.MarkInitialized(SupportedProtocolVersions[0], "test", "0")
+
+	ctx := context.Background()
+	for _, id := range []int{1, 2} {
+		msg := mustMarshalRequestForTest(t, Request{
+			JSONRPC: "2.0",
+			ID:      id,
+			Method:  "tools/list",
+			Params:  map[string]any{},
+		})
+		if _, err := server.DispatchMessage(ctx, msg); err != nil {
+			t.Fatalf("tools/list id=%d: %v", id, err)
+		}
+	}
+
+	server.mu.RLock()
+	valid := server.toolListResultJSONValid
+	cached := append([]byte(nil), server.toolListResultJSON...)
+	server.mu.RUnlock()
+	if !valid {
+		t.Fatal("tools/list serialized result cache was not populated")
+	}
+	if !json.Valid(cached) || !strings.Contains(string(cached), `"bench_tool"`) {
+		t.Fatalf("cached tools/list result is not the expected JSON: %s", cached)
+	}
+}
+
 // BenchmarkDispatchInitialize covers the protocol entry point.
 // initialize runs once per session in production, but it's the
 // canonical "small request, small response" measurement and the
@@ -230,6 +265,15 @@ func mustMarshalRequest(b *testing.B, req Request) []byte {
 	out, err := json.Marshal(req)
 	if err != nil {
 		b.Fatalf("marshal request: %v", err)
+	}
+	return out
+}
+
+func mustMarshalRequestForTest(t *testing.T, req Request) []byte {
+	t.Helper()
+	out, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
 	}
 	return out
 }

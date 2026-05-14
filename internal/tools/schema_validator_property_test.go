@@ -73,7 +73,7 @@ func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
 }
 
 // TestRegistrySchemasAcceptHappyPathArgs is the W2-01 regression guard:
-// every Tier 1 + Tier 2 tool's InputSchema must accept a synthesized
+// every startup tool's InputSchema must accept a synthesized
 // happy-path argument map. If a future schema tightening breaks the
 // agreement between the schema walker and the handler's own inputs, this
 // test fails with the tool name + JSON Pointer to the offender.

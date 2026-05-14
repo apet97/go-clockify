@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestTier2_CustomFields_FullSweep covers the custom_fields Tier 2 group:
+// TestTier2_CustomFields_FullSweep covers the custom_fields domain group:
 // list/get/create/update/delete plus the SetCustomFieldValue helper.
 func TestTier2_CustomFields_FullSweep(t *testing.T) {
 	var createBody map[string]any

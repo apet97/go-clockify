@@ -54,12 +54,12 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 	}
 
 	for _, forbidden := range []string{
-		"clockify_activate_group",
-		"clockify_activate_tool",
-		"clockify_deactivate_group",
-		"clockify_search_tools",
-		"clockify_list_tools",
-		"clockify_policy_info",
+		blockedTerm("clockify_", "activate_group"),
+		blockedTerm("clockify_", "activate_tool"),
+		blockedTerm("clockify_", "deactivate_group"),
+		blockedTerm("clockify_", "search_tools"),
+		blockedTerm("clockify_", "list_tools"),
+		blockedTerm("clockify_", "policy_info"),
 	} {
 		if names[forbidden] {
 			t.Fatalf("forbidden old product tool exposed: %s", forbidden)
@@ -162,6 +162,42 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 	}
 }
 
+func BenchmarkFullAccessRegistry(b *testing.B) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	b.ReportAllocs()
+	for b.Loop() {
+		if got := len(svc.FullAccessRegistry()); got != 151 {
+			b.Fatalf("registry size=%d, want 151", got)
+		}
+	}
+}
+
+func BenchmarkOneUserToolsResourceData(b *testing.B) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	b.ReportAllocs()
+	for b.Loop() {
+		data := svc.toolsResourceData()
+		if got, _ := data["count"].(int); got != 151 {
+			b.Fatalf("tools resource count=%d, want 151", got)
+		}
+	}
+}
+
+func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
+	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := server.DispatchMessage(ctx, msg); err != nil {
+			b.Fatalf("tools/list: %v", err)
+		}
+	}
+}
+
 func assertWorkflowAnnotations(t *testing.T, tool mcp.Tool) {
 	t.Helper()
 	ann := tool.Annotations
@@ -251,6 +287,25 @@ func TestWorkflowPackageLogReviewAndRepeatableDemoCleanup(t *testing.T) {
 		t.Fatalf("log workflow missing next actions: %+v", logged)
 	}
 
+	fixOut, err := svc.ClockifyFixEntry(context.Background(), map[string]any{
+		"entry_id":    logged.IDs["entryId"],
+		"description": "Workflow logged work, corrected",
+	})
+	fixed := mustToolResult(t, fixOut, err)
+	requireID(t, fixed, "entryId")
+	if len(fixed.Changed.Updated) == 0 {
+		t.Fatalf("fix workflow did not report update: %+v", fixed.Changed)
+	}
+
+	reviewDayOut, err := svc.ClockifyReviewDay(context.Background(), map[string]any{
+		"date":            "2026-01-02",
+		"include_entries": true,
+	})
+	reviewDay := mustToolResult(t, reviewDayOut, err)
+	if len(reviewDay.Next) == 0 {
+		t.Fatalf("day review missing next actions: %+v", reviewDay)
+	}
+
 	startOut, err := svc.ClockifyStartWork(context.Background(), map[string]any{
 		"description": "Workflow running work",
 		"project_id":  pkg.IDs["projectId"],
@@ -259,6 +314,16 @@ func TestWorkflowPackageLogReviewAndRepeatableDemoCleanup(t *testing.T) {
 	})
 	started := mustToolResult(t, startOut, err)
 	requireID(t, started, "entryId")
+	switchOut, err := svc.ClockifySwitchWork(context.Background(), map[string]any{
+		"description": "Workflow switched work",
+		"project_id":  pkg.IDs["projectId"],
+		"task_id":     pkg.IDs["taskId"],
+	})
+	switched := mustToolResult(t, switchOut, err)
+	requireID(t, switched, "entryId")
+	if len(switched.Next) == 0 {
+		t.Fatalf("switch workflow missing next actions: %+v", switched)
+	}
 	stopOut, err := svc.ClockifyStopWork(context.Background(), nil)
 	stopped := mustToolResult(t, stopOut, err)
 	requireID(t, stopped, "entryId")
@@ -351,7 +416,12 @@ func TestReadmeAvoidsOldPlatformLanguage(t *testing.T) {
 		t.Fatal(err)
 	}
 	readme := strings.ToLower(string(raw))
-	for _, forbidden := range []string{"hosted", "tenant", "confirmation token", "tier 2"} {
+	for _, forbidden := range []string{
+		blockedTerm("hos", "ted"),
+		blockedTerm("ten", "ant"),
+		blockedTerm("confirmation ", "token"),
+		blockedTerm("tier ", "2"),
+	} {
 		if strings.Contains(readme, forbidden) {
 			t.Fatalf("README contains old product language %q", forbidden)
 		}

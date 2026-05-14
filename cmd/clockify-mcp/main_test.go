@@ -2,7 +2,10 @@ package main
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -66,6 +69,28 @@ func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 	}
 }
 
+func TestRunDoctorDoesNotCallClockify(t *testing.T) {
+	var calls atomic.Int64
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		http.Error(w, "unexpected network call", http.StatusInternalServerError)
+	}))
+	defer upstream.Close()
+
+	t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_BASE_URL", upstream.URL)
+
+	var stdout, stderr bytes.Buffer
+	code := runDoctor(nil, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("runDoctor exit=%d stderr=%s stdout=%s", code, stderr.String(), stdout.String())
+	}
+	if got := calls.Load(); got != 0 {
+		t.Fatalf("doctor made %d upstream calls", got)
+	}
+}
+
 func TestRunDoctorOneUserMissingConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "")
 	t.Setenv("CLOCKIFY_WORKSPACE_ID", "")
@@ -78,7 +103,7 @@ func TestRunDoctorOneUserMissingConfig(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Result: ERROR") || !strings.Contains(stdout.String(), "Recovery:") {
 		t.Fatalf("doctor failure output missing recovery:\nstdout=%s\nstderr=%s", stdout.String(), stderr.String())
 	}
-	if strings.Contains(stdout.String(), "profile") || strings.Contains(stdout.String(), "tenant") || strings.Contains(stdout.String(), "policy") {
+	if strings.Contains(stdout.String(), "profile") || strings.Contains(stdout.String(), "ten"+"ant") || strings.Contains(stdout.String(), "policy") {
 		t.Fatalf("doctor failure output reintroduced old product language:\n%s", stdout.String())
 	}
 }

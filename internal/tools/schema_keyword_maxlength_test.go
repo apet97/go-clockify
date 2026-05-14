@@ -50,7 +50,7 @@ func TestApplyPropertyConstraintsSkipsNonStringFields(t *testing.T) {
 }
 
 // TestRegistryFreeTextFieldsHaveMaxLength is the registry-wide property
-// test: walk every Tier 1 + Tier 2 descriptor, find every property whose
+// test: walk every startup descriptor, find every property whose
 // name matches the central freeTextMaxLength table, and assert it
 // carries maxLength after normalization. The test fails when a maxLength
 // is absent OR when a maxLength exceeds the central ceiling, so a

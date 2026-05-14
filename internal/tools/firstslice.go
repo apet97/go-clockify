@@ -74,8 +74,15 @@ type RecoveryHint struct {
 type statusData struct {
 	User                  clockify.User      `json:"user"`
 	Workspace             clockify.Workspace `json:"workspace"`
+	PinnedWorkspace       clockify.Workspace `json:"pinnedWorkspace"`
+	ActiveWorkspaceID     string             `json:"activeWorkspaceId,omitempty"`
+	DefaultWorkspaceID    string             `json:"defaultWorkspaceId,omitempty"`
 	Timezone              string             `json:"timezone"`
+	WeekStart             string             `json:"weekStart,omitempty"`
 	CurrentTimer          any                `json:"currentTimer,omitempty"`
+	WorkspaceFeatures     []string           `json:"workspaceFeatures,omitempty"`
+	FeatureSubscription   string             `json:"featureSubscriptionType,omitempty"`
+	FeatureStatus         map[string]string  `json:"featureStatus"`
 	RecommendedFirstTools []string           `json:"recommendedFirstTools"`
 }
 
@@ -172,7 +179,7 @@ func firstSliceDescriptor(priority int, tool mcp.Tool, handler mcp.ToolHandler) 
 		tool.Annotations = map[string]any{}
 	}
 	tool.Annotations["priority"] = priority
-	tool.OutputSchema = firstSliceOutputSchema()
+	tool.OutputSchema = firstSliceOutputSchema(tool.Name, firstSliceDataOutputSchema(tool.Name))
 	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(tool.Name, handler)}
 }
 
@@ -197,25 +204,38 @@ func objectSchema(overrides map[string]any) map[string]any {
 	return schema
 }
 
-func firstSliceOutputSchema() map[string]any {
+func firstSliceOutputSchema(action string, dataSchema map[string]any) map[string]any {
+	if dataSchema == nil {
+		dataSchema = map[string]any{"description": "Tool-specific payload for " + action}
+	}
 	return map[string]any{
-		"type": "object",
+		"type":                 "object",
+		"additionalProperties": false,
 		"required": []string{
 			"ok",
 			"action",
 		},
 		"properties": map[string]any{
 			"ok":       map[string]any{"type": "boolean"},
-			"action":   map[string]any{"type": "string"},
+			"action":   map[string]any{"type": "string", "const": action},
 			"entity":   map[string]any{"type": "string"},
-			"ids":      map[string]any{"type": "object"},
-			"data":     map[string]any{"type": "object"},
-			"changed":  map[string]any{"type": "object"},
-			"warnings": map[string]any{"type": "array"},
-			"next":     map[string]any{"type": "array"},
-			"error":    map[string]any{"type": "object"},
-			"recovery": map[string]any{"type": "object"},
+			"ids":      map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+			"data":     dataSchema,
+			"changed":  schemaFor[ChangeSet](),
+			"warnings": schemaFor[[]Warning](),
+			"next":     schemaFor[[]NextAction](),
+			"error":    schemaFor[ErrorInfo](),
+			"recovery": schemaFor[RecoveryHint](),
 		},
+	}
+}
+
+func firstSliceDataOutputSchema(action string) map[string]any {
+	switch action {
+	case "clockify_status":
+		return schemaFor[statusData]()
+	default:
+		return nil
 	}
 }
 
@@ -347,20 +367,98 @@ func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, er
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "timer_unavailable", Message: err.Error()})
 	}
+	featureStatus, featureWarnings := oneUserFeatureStatus(workspace.Features)
+	warnings = append(warnings, featureWarnings...)
 	return result("clockify_status", "workspace", map[string]string{
 		"workspaceId": wsID,
 		"userId":      user.ID,
 	}, statusData{
 		User:                  user,
 		Workspace:             workspace,
+		PinnedWorkspace:       workspace,
+		ActiveWorkspaceID:     user.ActiveWorkspace,
+		DefaultWorkspaceID:    user.DefaultWorkspace,
 		Timezone:              s.timezoneName(),
+		WeekStart:             statusWeekStart(workspace, user),
 		CurrentTimer:          currentTimer,
+		WorkspaceFeatures:     append([]string(nil), workspace.Features...),
+		FeatureSubscription:   workspace.FeatureSubscriptionType,
+		FeatureStatus:         featureStatus,
 		RecommendedFirstTools: []string{"clockify_tools_guide", "clockify_create_work_package", "clockify_log_work", "clockify_start_work", "clockify_review_day"},
 	}, ChangeSet{}, warnings, []NextAction{
 		{Tool: "clockify_tools_guide", Reason: "Pick the best workflow tool before falling back to domain tools."},
 		{Tool: "clockify_create_work_package", Reason: "Create or reuse a client/project/task/tag package for work tracking."},
 		{Tool: "clockify_log_work", Reason: "Log finished work with human-friendly project, task, and tag names."},
 	}), nil
+}
+
+func statusWeekStart(workspace clockify.Workspace, user clockify.User) string {
+	if weekStart, ok := workspaceSettingAny(workspace.WorkspaceSettings, "weekStart", "week_start").(string); ok && strings.TrimSpace(weekStart) != "" {
+		return strings.ToUpper(strings.TrimSpace(weekStart))
+	}
+	if settings, ok := user.Settings.(map[string]any); ok {
+		if weekStart := firstReportString(settings, "weekStart", "week_start"); weekStart != "" {
+			return strings.ToUpper(weekStart)
+		}
+	}
+	return ""
+}
+
+func oneUserFeatureStatus(features []string) (map[string]string, []Warning) {
+	type signal struct {
+		key     string
+		needles []string
+	}
+	signals := []signal{
+		{key: "invoices", needles: []string{"INVOICE", "INVOIC"}},
+		{key: "expenses", needles: []string{"EXPENSE"}},
+		{key: "customFields", needles: []string{"CUSTOM_FIELD", "CUSTOMFIELD"}},
+		{key: "timeOff", needles: []string{"TIME_OFF", "TIMEOFF", "TIME OFF"}},
+		{key: "scheduling", needles: []string{"SCHEDUL"}},
+		{key: "approvals", needles: []string{"APPROVAL"}},
+		{key: "webhooks", needles: []string{"WEBHOOK"}},
+		{key: "reports", needles: []string{"REPORT"}},
+		{key: "groups", needles: []string{"GROUP"}},
+		{key: "holidays", needles: []string{"HOLIDAY"}},
+		{key: "sharedReports", needles: []string{"SHARED_REPORT", "SHAREDREPORT"}},
+	}
+	normalized := make([]string, 0, len(features))
+	for _, feature := range features {
+		feature = strings.ToUpper(strings.TrimSpace(feature))
+		if feature != "" {
+			normalized = append(normalized, feature)
+		}
+	}
+	out := make(map[string]string, len(signals))
+	if len(normalized) == 0 {
+		for _, sig := range signals {
+			out[sig.key] = "unknown"
+		}
+		return out, []Warning{{Code: "feature_signals_unknown", Message: "Clockify did not return workspace feature signals; paid-feature tools may return recovery guidance when called."}}
+	}
+	unavailable := []string{}
+	for _, sig := range signals {
+		status := "unavailable"
+		for _, feature := range normalized {
+			for _, needle := range sig.needles {
+				if strings.Contains(feature, needle) {
+					status = "available"
+					break
+				}
+			}
+			if status == "available" {
+				break
+			}
+		}
+		out[sig.key] = status
+		if status == "unavailable" {
+			unavailable = append(unavailable, sig.key)
+		}
+	}
+	if len(unavailable) == 0 {
+		return out, nil
+	}
+	return out, []Warning{{Code: "feature_signals_unavailable", Message: "Some optional Clockify feature signals were not advertised by the workspace: " + strings.Join(unavailable, ", ")}}
 }
 
 func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, error) {

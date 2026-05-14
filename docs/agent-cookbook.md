@@ -1,88 +1,137 @@
 # Agent cookbook
 
-Intent-keyed recipes for agents calling this MCP server. These examples
-assume a client has already initialized the server and that policy allows
-the named tools. Use `clockify_policy_info` and `clockify_list_tools`
-first when the visible tool list is smaller than expected.
+Concise workflow-first recipes for the one-user Clockify MCP. All tools are
+loaded at startup. Prefer workflow tools first, domain tools for precise CRUD,
+and `clockify_api_get` / `clockify_api_request` only when no workflow or domain
+tool fits.
 
-## Log Time For Past Work
+Each successful write returns `ok=true`, useful `ids`, a `changed` summary,
+and `next` actions. On recoverable failure, read `error.code` and
+`recovery.hint`; use `recovery.tool` when it is present.
 
-1. Confirm identity and workspace:
-   `clockify_whoami {}`
-2. If the project name is ambiguous, resolve it:
-   `clockify_resolve_name { "entity_type": "project", "name_or_id": "Project Alpha" }`
-3. Preview the entry:
-   `clockify_log_time { "project": "Project Alpha", "start": "yesterday 13:00", "end": "yesterday 15:00", "description": "Code review", "dry_run": true }`
-4. Ask the user to confirm the project, time range, and description.
-5. Create the entry:
-   `clockify_log_time { "project": "Project Alpha", "start": "yesterday 13:00", "end": "yesterday 15:00", "description": "Code review" }`
-6. If the call reports an overlap, re-read the affected day and pass
-   `allow_overlap:true` only after the user confirms it is intentional.
-7. Re-read the affected day:
-   `clockify_list_entries { "start": "yesterday", "end": "today", "page_size": 20 }`
+## First Call Orientation
 
-## Catch Up An Empty Timesheet For The Week
+1. Call `clockify_status {}`.
+2. Confirm `ids.workspaceId`, `ids.userId`, user details, pinned workspace,
+   current timer, feature status, and `recommendedFirstTools`.
+3. Call `clockify_tools_guide {}` when choosing between workflow, domain, and
+   raw fallback tools.
+4. Next action behavior: continue with the recommended workflow tool, usually
+   `clockify_create_work_package`, `clockify_log_work`, or
+   `clockify_start_work`.
 
-1. Review the week:
-   `clockify_timesheet_review { "week_start": "2026-05-04", "timezone": "UTC", "include_entries": true }`
-2. For each gap, ask the user for the project and description if the
-   review did not return enough context.
-3. Preview each fill:
-   `clockify_timesheet_fill_gap { "project": "Project Alpha", "start": "2026-05-04T09:00:00Z", "end": "2026-05-04T10:00:00Z", "description": "Planning", "dry_run": true }`
-4. After confirmation, create each approved fill without `dry_run`.
-5. Re-run the review and report remaining gaps or overlaps:
-   `clockify_timesheet_review { "week_start": "2026-05-04", "timezone": "UTC" }`
+## Set Up Client Project Task Tag
 
-## Fix A Wrong Project On Yesterday's Entries
+1. Call `clockify_create_work_package` with names or known IDs:
+   `{ "client": "Acme", "project": "Website", "task": "Implementation", "tag": "billable" }`.
+2. Expect `ids.workspaceId`, `ids.clientId`, `ids.projectId`, and optional
+   `ids.taskId` / `ids.tagId`.
+3. Expect `changed.created` for new objects or `changed.reused` when names
+   already exist.
+4. Next action behavior: use returned IDs with `clockify_log_work` or
+   `clockify_start_work`.
 
-1. List yesterday's entries:
-   `clockify_list_entries { "start": "yesterday", "end": "today", "page_size": 50 }`
-2. Resolve the intended project:
-   `clockify_resolve_name { "entity_type": "project", "name_or_id": "Correct Project" }`
-3. Select one exact entry ID; do not update multiple ambiguous entries in
-   a single step.
-4. Update the selected entry:
-   `clockify_update_entry { "entry_id": "abc123", "project_id": "def456" }`
-5. Re-read the day and summarize the changed entries:
-   `clockify_list_entries { "start": "yesterday", "end": "today", "page_size": 50 }`
+## Log Finished Work
 
-## Stop The Timer And Start A New One
+1. Prefer IDs returned by setup; names are also accepted:
+   `clockify_log_work { "project_id": "project123", "task_id": "task123", "start": "2026-05-14 09:00", "end": "2026-05-14 10:30", "description": "Implementation" }`.
+2. Expect `ids.workspaceId`, `ids.entryId`, `ids.projectId`, and any task/tag
+   IDs used.
+3. Expect `changed.created` with the time entry.
+4. Next action behavior: call `clockify_review_day` to verify the day, or
+   `clockify_fix_entry` with the returned `entryId` if details are wrong.
 
-1. Check the current timer:
-   `clockify_timer_status {}`
-2. Switch projects in one call:
-   `clockify_switch_project { "project": "Project Beta", "description": "Implementation" }`
-3. Read `data.stop_outcome`; `stopped` means an old timer was closed,
-   and `no_running_timer` means only the new timer was started.
-4. Confirm the active timer:
-   `clockify_timer_status {}`
+## Start Stop Switch Timer
 
-## Bill A Client For Last Month's Hours
+1. Start work:
+   `clockify_start_work { "project_id": "project123", "description": "Focus block" }`.
+2. Expect `ids.entryId` and `changed.created`.
+3. Stop the running timer with `clockify_stop_work {}`; expect
+   `changed.updated` and the stopped `entryId`.
+4. Switch directly with
+   `clockify_switch_work { "project_id": "project456", "description": "Review" }`.
+5. Next action behavior: after start or switch, the returned `next` usually
+   points back to `clockify_stop_work` and `clockify_switch_work`.
 
-1. Activate billing tools:
-   `clockify_activate_group { "name": "invoices" }`
-2. Summarize billable time before creating anything:
-   `clockify_detailed_report { "start": "2026-04-01T00:00:00.000", "end": "2026-05-01T00:00:00.000", "detailed_filter": { "page": 1, "page_size": 50, "options": { "totals": "CALCULATE" } } }`
-3. Resolve the Clockify client ID:
-   `clockify_resolve_name { "entity_type": "client", "name_or_id": "Acme" }`
-4. Ask the user to confirm invoice number, dates, currency, amount, and
-   line-item wording; preview the draft first:
-   `clockify_create_invoice { "client_id": "client123", "number": "INV-2026-04", "issued_date": "2026-05-01T00:00:00Z", "due_date": "2026-05-15T00:00:00Z", "currency": "USD", "dry_run": true }`
-5. Create the confirmed invoice draft without `dry_run`:
-   `clockify_create_invoice { "client_id": "client123", "number": "INV-2026-04", "issued_date": "2026-05-01T00:00:00Z", "due_date": "2026-05-15T00:00:00Z", "currency": "USD" }`
-6. Before delivery, preview the send side effect:
-   `clockify_send_invoice { "invoice_id": "invoice123", "dry_run": true }`
+## Review Day Week
 
-## Subscribe To New Time Entry Events And Validate The URL
+1. Review a day:
+   `clockify_review_day { "date": "2026-05-14", "include_entries": true }`.
+2. Review a week:
+   `clockify_review_week { "week_start": "2026-05-11", "include_entries": true }`.
+3. Expect totals, entries when requested, gaps or overlaps when detected, and
+   `ids.workspaceId`.
+4. Next action behavior: follow suggested `clockify_fix_entry` or
+   `clockify_log_work` actions for missing or incorrect work.
 
-1. Activate webhook tools:
-   `clockify_activate_group { "name": "webhooks" }`
-2. Confirm the event token:
-   `clockify_list_webhook_events {}`
-3. Create the webhook with an HTTPS public URL:
-   `clockify_create_webhook { "name": "New time entry sink", "url": "https://example.com/clockify/webhook", "webhook_event": "NEW_TIME_ENTRY" }`
-4. Dry-run the validation delivery first:
-   `clockify_test_webhook { "webhook_id": "webhook123", "dry_run": true }`
-5. After confirmation, send the test delivery:
-   `clockify_test_webhook { "webhook_id": "webhook123" }`
-6. Keep the webhook ID for later updates or deletion.
+## Fix Entry
+
+1. Use an exact ID when possible:
+   `clockify_fix_entry { "entry_id": "entry123", "project_id": "project456", "description": "Corrected work" }`.
+2. If filtering instead of using `entry_id`, keep the filter strict enough to
+   identify one entry.
+3. Expect `ids.workspaceId`, `ids.entryId`, and `changed.updated`.
+4. Next action behavior: re-run `clockify_review_day` or `clockify_review_week`
+   for the affected range.
+
+## Invoice Client
+
+1. Call
+   `clockify_invoice_client_work { "client_id": "client123", "number": "INV-2026-05", "issued_date": "2026-05-14", "due_date": "2026-05-28", "currency": "USD" }`.
+2. Expect `ids.workspaceId`, `ids.clientId`, and `ids.invoiceId` when invoicing
+   is available.
+3. Expect `changed.created` for the invoice draft; imported time entry IDs may
+   appear when import arguments are supplied.
+4. Next action behavior: use returned invoice IDs with `clockify_invoices_*`
+   domain tools for detailed edits, send, export, or payment state.
+
+## Record Expense
+
+1. Call
+   `clockify_record_expense { "category_id": "category123", "amount": 42.5, "date": "2026-05-14", "project_id": "project123", "notes": "Taxi" }`.
+2. Expect `ids.workspaceId`, `ids.expenseId`, and any project/task/user IDs
+   used.
+3. Expect `changed.created`.
+4. Next action behavior: use `clockify_expenses_*` domain tools for detailed
+   edits, listing, or deletion.
+
+## Time Off
+
+1. Call
+   `clockify_request_time_off { "policy_id": "policy123", "start": "2026-06-01", "end": "2026-06-03", "note": "Vacation" }`.
+2. Expect `ids.workspaceId` and `ids.timeOffRequestId` when the workspace
+   supports this feature.
+3. Expect `changed.created`.
+4. Next action behavior: use `clockify_time_off_*` domain tools to inspect
+   requests, balances, and approval flow.
+
+## Schedule Work
+
+1. Call
+   `clockify_schedule_work { "user_id": "user123", "project_id": "project123", "start": "2026-05-18", "end": "2026-05-22", "hours_per_day": 6 }`.
+2. Expect `ids.workspaceId`, `ids.assignmentId`, `ids.userId`, and
+   `ids.projectId`.
+3. Expect `changed.created`.
+4. Next action behavior: use `clockify_scheduling_*` domain tools for list,
+   totals, and capacity checks.
+
+## Webhook
+
+1. Call
+   `clockify_setup_webhook { "name": "New time entry sink", "url": "https://example.com/clockify/webhook", "webhook_event": "NEW_TIME_ENTRY" }`.
+2. Expect `ids.workspaceId` and `ids.webhookId`.
+3. Expect `changed.created`.
+4. Next action behavior: use `clockify_webhooks_*` domain tools to inspect
+   events, logs, updates, and deletion.
+
+## Demo Smoke
+
+1. Seed deterministic objects:
+   `clockify_demo_seed { "run_id": "local-smoke" }`.
+2. Expect `ids.workspaceId`, `ids.clientId`, `ids.projectId`, `ids.taskId`,
+   `ids.tagId`, and `ids.entryId`; expect `changed.created` or
+   `changed.reused`.
+3. Clean up repeatedly:
+   `clockify_demo_cleanup { "run_id": "local-smoke" }`.
+4. Next action behavior: read `clockify://demo/local-smoke` or re-run cleanup
+   until no created demo objects remain.

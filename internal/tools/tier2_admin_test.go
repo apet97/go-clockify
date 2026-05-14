@@ -426,12 +426,12 @@ func TestInviteUserDryRunAndExecute(t *testing.T) {
 	}
 }
 
-// TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA exercises
-// audit finding 10: with WebhookValidateDNS=true (set automatically
-// by hosted profiles), a hostname that resolves to a private or
-// reserved IP must be rejected, not just literal IP addresses. The
-// test injects a deterministic resolver so the test stays offline.
-func TestValidateWebhookURL_DNS_HostedProfile_RejectsPrivateA(t *testing.T) {
+// TestValidateWebhookURL_DNS_StrictProfile_RejectsPrivateA exercises
+// the strict-DNS path: with WebhookValidateDNS=true, a hostname that
+// resolves to a private or reserved IP must be rejected, not just
+// literal IP addresses. The test injects a deterministic resolver so
+// the test stays offline.
+func TestValidateWebhookURL_DNS_StrictProfile_RejectsPrivateA(t *testing.T) {
 	cases := []struct {
 		name      string
 		host      string

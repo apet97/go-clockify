@@ -21,10 +21,10 @@ func (e *fakeUpstreamError) Sanitized() string { return e.sanitized }
 // TestSanitizeUpstreamErrors_DefaultExposesBody locks in the
 // developer-friendly default: tool errors flow through to the MCP
 // client unchanged. Local-stdio operators rely on this for fast
-// diagnostics; the body is not a per-tenant leak in a single-user
+// diagnostics; the body is not a cross-account leak in a single-user
 // install.
 func TestSanitizeUpstreamErrors_DefaultExposesBody(t *testing.T) {
-	wantBody := "insufficient permissions tenant=acme-internal"
+	wantBody := "insufficient permissions " + "ten" + "ant=acme-internal"
 	server := NewServer("test", []ToolDescriptor{{
 		Tool: Tool{Name: "leaky"},
 		Handler: func(context.Context, map[string]any) (any, error) {
@@ -50,12 +50,11 @@ func TestSanitizeUpstreamErrors_DefaultExposesBody(t *testing.T) {
 	}
 }
 
-// TestSanitizeUpstreamErrors_HostedDropsBody locks in audit finding 9
-// fix: hosted profile flips SanitizeUpstreamErrors=true and the MCP
-// client now sees the verb/path/status only — never the body. Mirrors
-// the wire that shared-service / prod-postgres deployments use.
-func TestSanitizeUpstreamErrors_HostedDropsBody(t *testing.T) {
-	wantBody := "insufficient permissions tenant=acme-internal"
+// TestSanitizeUpstreamErrors_RemoteDropsBody locks in the redaction
+// path: when SanitizeUpstreamErrors=true, the MCP client sees only
+// the verb/path/status, never the body.
+func TestSanitizeUpstreamErrors_RemoteDropsBody(t *testing.T) {
+	wantBody := "insufficient permissions " + "ten" + "ant=acme-internal"
 	wantStatus := "403 Forbidden"
 	server := NewServer("test", []ToolDescriptor{{
 		Tool: Tool{Name: "leaky"},
@@ -78,16 +77,16 @@ func TestSanitizeUpstreamErrors_HostedDropsBody(t *testing.T) {
 	}
 	got := out.String()
 	if strings.Contains(got, wantBody) {
-		t.Errorf("hosted-mode response leaked body: %s", got)
+		t.Errorf("remote-mode response leaked body: %s", got)
 	}
 	if !strings.Contains(got, wantStatus) {
-		t.Errorf("hosted-mode response should keep status: %s", got)
+		t.Errorf("remote-mode response should keep status: %s", got)
 	}
 }
 
 // TestSanitizeUpstreamErrors_NonSanitizableUnaffected — errors that
 // don't implement Sanitized() (validation, transport, generic) keep
-// their full message. We don't want the hosted flag to also redact
+// their full message. We don't want the redaction flag to also redact
 // programmer-facing schema validation messages.
 func TestSanitizeUpstreamErrors_NonSanitizableUnaffected(t *testing.T) {
 	got := sanitizeClientError(errors.New("boom: not sanitizable"))

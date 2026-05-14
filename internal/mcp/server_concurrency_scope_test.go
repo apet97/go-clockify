@@ -11,12 +11,11 @@ import (
 
 // TestDispatchMessage_BypassesStdioSemaphore pins that the stdio
 // dispatch-layer semaphore (toolCallSem) only gates Run — the
-// DispatchMessage path used by streamable HTTP and the
-// DispatchMessageWithRecover path used by gRPC must run concurrent
-// tools/call frames without acquiring it. If a future refactor wired
-// the semaphore into DispatchMessage, the documented stdio-only
-// contract in docs/performance.md would silently change for hosted
-// deployments; this test goes RED on that regression.
+// DispatchMessage path and DispatchMessageWithRecover path must run
+// concurrent tools/call frames without acquiring it. If a future
+// refactor wired the semaphore into DispatchMessage, the documented
+// stdio-only contract in docs/performance.md would silently change;
+// this test goes RED on that regression.
 func TestDispatchMessage_BypassesStdioSemaphore(t *testing.T) {
 	const callers = 8
 	const semCap = 1

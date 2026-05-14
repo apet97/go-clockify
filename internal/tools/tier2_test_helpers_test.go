@@ -4,10 +4,10 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
-// tier2GroupBuilders maps the legacy "Tier 2 group" name onto the
-// handler builder it grouped. The product binary no longer exposes
-// these groups — every tool ships in FullAccessRegistry at startup —
-// but tests still find it convenient to fetch descriptors by family.
+// tier2GroupBuilders maps legacy family names onto the handler builders
+// they grouped. The product binary now ships every tool in
+// FullAccessRegistry at startup, but tests still find it convenient to
+// fetch descriptors by family.
 var tier2GroupBuilders = map[string]func(*Service) []mcp.ToolDescriptor{
 	"invoices":        invoiceHandlers,
 	"expenses":        expenseHandlers,

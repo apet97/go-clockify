@@ -123,7 +123,6 @@ func toCatalog(ds []mcp.ToolDescriptor) []catalogTool {
 			Annotations:  d.Tool.Annotations,
 		})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
@@ -163,25 +162,30 @@ func writeCookbookLinks(b *strings.Builder) {
 	b.WriteString("Intent-keyed examples live in [agent-cookbook.md](agent-cookbook.md):\n\n")
 	b.WriteString("| Intent | Primary tools |\n")
 	b.WriteString("|--------|---------------|\n")
-	b.WriteString("| [Log time for past work](agent-cookbook.md#log-time-for-past-work) | `clockify_log_time`, `clockify_resolve_name` |\n")
-	b.WriteString("| [Catch up an empty timesheet for the week](agent-cookbook.md#catch-up-an-empty-timesheet-for-the-week) | `clockify_timesheet_review`, `clockify_timesheet_fill_gap` |\n")
-	b.WriteString("| [Fix a wrong project on yesterday's entries](agent-cookbook.md#fix-a-wrong-project-on-yesterdays-entries) | `clockify_list_entries`, `clockify_update_entry` |\n")
-	b.WriteString("| [Stop the timer and start a new one](agent-cookbook.md#stop-the-timer-and-start-a-new-one) | `clockify_timer_status`, `clockify_switch_project` |\n")
-	b.WriteString("| [Bill a client for last month's hours](agent-cookbook.md#bill-a-client-for-last-months-hours) | `clockify_detailed_report`, `clockify_create_invoice`, `clockify_send_invoice` |\n")
-	b.WriteString("| [Subscribe to NEW_TIME_ENTRY events and validate the URL](agent-cookbook.md#subscribe-to-new-time-entry-events-and-validate-the-url) | `clockify_create_webhook`, `clockify_test_webhook` |\n\n")
+	b.WriteString("| [First call orientation](agent-cookbook.md#first-call-orientation) | `clockify_status`, `clockify_tools_guide` |\n")
+	b.WriteString("| [Set up client project task tag](agent-cookbook.md#set-up-client-project-task-tag) | `clockify_create_work_package` |\n")
+	b.WriteString("| [Log finished work](agent-cookbook.md#log-finished-work) | `clockify_log_work` |\n")
+	b.WriteString("| [Start stop switch timer](agent-cookbook.md#start-stop-switch-timer) | `clockify_start_work`, `clockify_stop_work`, `clockify_switch_work` |\n")
+	b.WriteString("| [Review day week](agent-cookbook.md#review-day-week) | `clockify_review_day`, `clockify_review_week` |\n")
+	b.WriteString("| [Fix entry](agent-cookbook.md#fix-entry) | `clockify_fix_entry` |\n")
+	b.WriteString("| [Invoice client](agent-cookbook.md#invoice-client) | `clockify_invoice_client_work` |\n")
+	b.WriteString("| [Record expense](agent-cookbook.md#record-expense) | `clockify_record_expense` |\n")
+	b.WriteString("| [Time off](agent-cookbook.md#time-off) | `clockify_request_time_off` |\n")
+	b.WriteString("| [Schedule work](agent-cookbook.md#schedule-work) | `clockify_schedule_work` |\n")
+	b.WriteString("| [Webhook](agent-cookbook.md#webhook) | `clockify_setup_webhook` |\n")
+	b.WriteString("| [Demo smoke](agent-cookbook.md#demo-smoke) | `clockify_demo_seed`, `clockify_demo_cleanup` |\n\n")
 }
 
 func writeTimeEntryGuidance(b *strings.Builder) {
-	b.WriteString("## Time-entry tool choice\n\n")
-	b.WriteString("For finished past work, prefer `clockify_log_time`: it requires `start`\n")
-	b.WriteString("and `end`, supports `dry_run`, accepts flexible datetime inputs, and\n")
-	b.WriteString("checks for overlaps by default. Use `allow_overlap:true` only after a\n")
-	b.WriteString("manual review confirms the overlap is intentional.\n\n")
-	b.WriteString("Use `clockify_timesheet_review` before catch-up work, then\n")
-	b.WriteString("`clockify_timesheet_fill_gap` for approved gaps. Use\n")
-	b.WriteString("`clockify_add_entry` only when the lower-level behavior is deliberate,\n")
-	b.WriteString("especially omitting `end` to create a running entry. Use\n")
-	b.WriteString("`clockify_start_timer` or `clockify_switch_project` for live timers.\n\n")
+	b.WriteString("## Workflow tool choice\n\n")
+	b.WriteString("Use `clockify_status` as the first call, then `clockify_tools_guide` when\n")
+	b.WriteString("choosing between workflow, domain, and raw fallback tools. For finished\n")
+	b.WriteString("past work, prefer `clockify_log_work`; it requires both `start` and `end`\n")
+	b.WriteString("and returns the created `entryId` plus review/fix next actions. For live\n")
+	b.WriteString("timers, use `clockify_start_work`, `clockify_stop_work`, and\n")
+	b.WriteString("`clockify_switch_work`. Use `clockify_review_day` or\n")
+	b.WriteString("`clockify_review_week` before catch-up or cleanup work, then\n")
+	b.WriteString("`clockify_fix_entry` for one exact entry.\n\n")
 
 	b.WriteString("## Time formats\n\n")
 	b.WriteString("Time-entry and report range fields accept RFC3339 values and\n")

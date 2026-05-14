@@ -101,7 +101,7 @@ func unsubscribe(t *testing.T, srv *Server, n Notifier, uri string) {
 	}
 }
 
-// TestResourceSubscription_PerNotifier_Isolation pins the gRPC fix: when
+// TestResourceSubscription_PerNotifier_Isolation pins notifier scoping: when
 // two notifiers share one *mcp.Server and only one of them has called
 // resources/subscribe, NotifyResourceUpdated must deliver only to the
 // subscriber. Before the per-notifier scoping change this fanned out via
@@ -198,7 +198,7 @@ func TestResourceSubscription_Unsubscribe_PerNotifier(t *testing.T) {
 // TestResourceSubscription_NotifierRemoval_GCs pins that closing a stream
 // (notifierHub.add's remove closure) drops every subscription the stream
 // owned. Without this, HasResourceSubscription would lie about active
-// subscribers after every gRPC disconnect and the tools layer's
+// subscribers after every stream disconnect and the tools layer's
 // skip-fetch gate would keep paying for reads nobody wants.
 func TestResourceSubscription_NotifierRemoval_GCs(t *testing.T) {
 	srv := newScopeTestServer(t)

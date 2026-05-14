@@ -27,6 +27,11 @@ type Server struct {
 	tasks    map[string]map[string]clockify.Task
 	tags     map[string]clockify.Tag
 	entries  map[string]clockify.TimeEntry
+	invoices map[string]map[string]any
+	expenses map[string]map[string]any
+	timeOff  map[string]map[string]any
+	schedule map[string]map[string]any
+	webhooks map[string]map[string]any
 	errors   map[string]fakeError
 }
 
@@ -47,6 +52,11 @@ func NewServer(workspaceID string) *Server {
 		tasks:       map[string]map[string]clockify.Task{},
 		tags:        map[string]clockify.Tag{},
 		entries:     map[string]clockify.TimeEntry{},
+		invoices:    map[string]map[string]any{},
+		expenses:    map[string]map[string]any{},
+		timeOff:     map[string]map[string]any{},
+		schedule:    map[string]map[string]any{},
+		webhooks:    map[string]map[string]any{},
 		errors:      map[string]fakeError{},
 	}
 	s.http = httptest.NewServer(http.HandlerFunc(s.serveHTTP))
@@ -87,7 +97,13 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet && len(parts) == 2 {
-		writeJSON(w, clockify.Workspace{ID: s.WorkspaceID, Name: "Test Workspace", Features: []string{"PROJECTS", "TAGS", "TASKS"}})
+		writeJSON(w, clockify.Workspace{
+			ID:                      s.WorkspaceID,
+			Name:                    "Test Workspace",
+			FeatureSubscriptionType: "FREE",
+			Features:                []string{"PROJECTS", "TAGS", "TASKS"},
+			WorkspaceSettings:       map[string]any{"weekStart": "MONDAY"},
+		})
 		return
 	}
 	switch {
@@ -101,6 +117,18 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleEntries(w, r, parts)
 	case len(parts) >= 5 && parts[2] == "user" && parts[4] == "time-entries":
 		s.handleUserEntries(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "users":
+		s.handleUsers(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "invoices":
+		s.handleInvoices(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "expenses":
+		s.handleExpenses(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "time-off":
+		s.handleTimeOff(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "scheduling":
+		s.handleScheduling(w, r, parts)
+	case len(parts) >= 3 && parts[2] == "webhooks":
+		s.handleWebhooks(w, r, parts)
 	default:
 		http.NotFound(w, r)
 	}
@@ -346,6 +374,45 @@ func (s *Server) handleEntries(w http.ResponseWriter, r *http.Request, parts []s
 		writeJSON(w, entry)
 		return
 	}
+	if len(parts) == 4 && (r.Method == http.MethodPut || r.Method == http.MethodPatch) {
+		entry, ok := s.entries[parts[3]]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid entry body"}`, http.StatusBadRequest)
+			return
+		}
+		if description, ok := body["description"].(string); ok {
+			entry.Description = description
+		}
+		if projectID, ok := body["projectId"].(string); ok {
+			entry.ProjectID = projectID
+			if project, exists := s.projects[projectID]; exists {
+				entry.ProjectName = project.Name
+			}
+		}
+		if taskID, ok := body["taskId"].(string); ok {
+			entry.TaskID = taskID
+		}
+		if tagIDs := stringListFromAny(body["tagIds"]); len(tagIDs) > 0 {
+			entry.TagIDs = tagIDs
+		}
+		if billable, ok := body["billable"].(bool); ok {
+			entry.Billable = billable
+		}
+		if start, ok := body["start"].(string); ok {
+			entry.TimeInterval.Start = start
+		}
+		if end, ok := body["end"].(string); ok {
+			entry.TimeInterval.End = end
+		}
+		s.entries[entry.ID] = entry
+		writeJSON(w, entry)
+		return
+	}
 	http.NotFound(w, r)
 }
 
@@ -388,9 +455,191 @@ func (s *Server) handleUserEntries(w http.ResponseWriter, r *http.Request, parts
 	http.NotFound(w, r)
 }
 
+func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request, parts []string) {
+	if len(parts) == 3 && r.Method == http.MethodGet {
+		writeJSON(w, []map[string]any{{
+			"id":               s.UserID,
+			"name":             "Test User",
+			"email":            "test@example.com",
+			"activeWorkspace":  s.WorkspaceID,
+			"defaultWorkspace": s.WorkspaceID,
+		}})
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) handleInvoices(w http.ResponseWriter, r *http.Request, parts []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(parts) == 3 && r.Method == http.MethodPost {
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid invoice body"}`, http.StatusBadRequest)
+			return
+		}
+		invoice := map[string]any{
+			"id":       s.nextID("invoice"),
+			"clientId": body["clientId"],
+			"number":   firstString(body, "number", "INV-FAKE"),
+			"status":   "DRAFT",
+		}
+		s.invoices[fmt.Sprint(invoice["id"])] = invoice
+		writeJSON(w, invoice)
+		return
+	}
+	if len(parts) == 3 && r.Method == http.MethodGet {
+		out := make([]map[string]any, 0, len(s.invoices))
+		for _, invoice := range s.invoices {
+			out = append(out, invoice)
+		}
+		writeJSON(w, out)
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) handleExpenses(w http.ResponseWriter, r *http.Request, parts []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(parts) == 3 && r.Method == http.MethodPost {
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			http.Error(w, `{"message":"invalid expense form"}`, http.StatusBadRequest)
+			return
+		}
+		expense := map[string]any{
+			"id":         s.nextID("expense"),
+			"userId":     r.FormValue("userId"),
+			"categoryId": r.FormValue("categoryId"),
+			"projectId":  r.FormValue("projectId"),
+			"taskId":     r.FormValue("taskId"),
+			"amount":     r.FormValue("amount"),
+			"date":       r.FormValue("date"),
+			"notes":      r.FormValue("notes"),
+			"status":     "PENDING",
+		}
+		s.expenses[fmt.Sprint(expense["id"])] = expense
+		writeJSON(w, expense)
+		return
+	}
+	if len(parts) == 3 && r.Method == http.MethodGet {
+		out := make([]map[string]any, 0, len(s.expenses))
+		for _, expense := range s.expenses {
+			out = append(out, expense)
+		}
+		writeJSON(w, out)
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) handleTimeOff(w http.ResponseWriter, r *http.Request, parts []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(parts) == 6 && parts[3] == "policies" && parts[5] == "requests" && r.Method == http.MethodPost {
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid time off body"}`, http.StatusBadRequest)
+			return
+		}
+		request := map[string]any{
+			"id":       s.nextID("timeoff"),
+			"policyId": parts[4],
+			"userId":   s.UserID,
+			"note":     firstString(body, "note", ""),
+			"status":   "PENDING",
+		}
+		s.timeOff[fmt.Sprint(request["id"])] = request
+		writeJSON(w, request)
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) handleScheduling(w http.ResponseWriter, r *http.Request, parts []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(parts) == 5 && parts[3] == "assignments" && parts[4] == "recurring" && r.Method == http.MethodPost {
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid scheduling body"}`, http.StatusBadRequest)
+			return
+		}
+		assignment := map[string]any{
+			"id":          s.nextID("assignment"),
+			"userId":      body["userId"],
+			"projectId":   body["projectId"],
+			"start":       body["start"],
+			"end":         body["end"],
+			"hoursPerDay": body["hoursPerDay"],
+		}
+		s.schedule[fmt.Sprint(assignment["id"])] = assignment
+		writeJSON(w, []map[string]any{assignment})
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) handleWebhooks(w http.ResponseWriter, r *http.Request, parts []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(parts) == 3 && r.Method == http.MethodPost {
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid webhook body"}`, http.StatusBadRequest)
+			return
+		}
+		webhook := map[string]any{
+			"id":                 s.nextID("webhook"),
+			"name":               body["name"],
+			"url":                body["url"],
+			"webhookEvent":       body["webhookEvent"],
+			"triggerSourceType":  body["triggerSourceType"],
+			"triggerSource":      body["triggerSource"],
+			"webhookEventStatus": "ACTIVE",
+		}
+		s.webhooks[fmt.Sprint(webhook["id"])] = webhook
+		writeJSON(w, webhook)
+		return
+	}
+	if len(parts) == 3 && r.Method == http.MethodGet {
+		out := make([]map[string]any, 0, len(s.webhooks))
+		for _, webhook := range s.webhooks {
+			out = append(out, webhook)
+		}
+		writeJSON(w, out)
+		return
+	}
+	http.NotFound(w, r)
+}
+
 func (s *Server) nextID(prefix string) string {
 	s.seq++
 	return fmt.Sprintf("%s-%d", prefix, s.seq)
+}
+
+func firstString(m map[string]any, key, fallback string) string {
+	if value, ok := m[key].(string); ok && value != "" {
+		return value
+	}
+	return fallback
+}
+
+func stringListFromAny(value any) []string {
+	switch v := value.(type) {
+	case []string:
+		return append([]string(nil), v...)
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if str, ok := item.(string); ok && str != "" {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 func splitPath(path string) []string {

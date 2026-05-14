@@ -11,7 +11,7 @@ import (
 )
 
 // TestTier2_Invoices_FullSweep exercises every handler in the invoices
-// Tier 2 group via mocked Clockify API responses. The goal is broad
+// domain group via mocked Clockify API responses. The goal is broad
 // coverage of the listInvoices→...→deleteInvoiceItem chain — each handler
 // is otherwise unreachable from the existing test surface and contributes
 // to the internal/tools coverage gap.

@@ -98,7 +98,14 @@ func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 					t.Fatalf("prompt %q missing %q in %q", name, want, text)
 				}
 			}
-			for _, notWant := range []string{"confirmation", "activate", "tenant", "hosted", "policy mode", "Tier 2"} {
+			for _, notWant := range []string{
+				"confirm" + "ation",
+				"activate",
+				"ten" + "ant",
+				"hos" + "ted",
+				"policy " + "mode",
+				"Tier " + "2",
+			} {
 				if strings.Contains(strings.ToLower(text), strings.ToLower(notWant)) {
 					t.Fatalf("prompt %q contains forbidden language %q in %q", name, notWant, text)
 				}

@@ -108,6 +108,8 @@ type Service struct {
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache *resourceStateCache
 	demoResources map[string]demoResourceState
+	registryOnce  sync.Once
+	registry      []mcp.ToolDescriptor
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was

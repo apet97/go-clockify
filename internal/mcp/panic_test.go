@@ -19,7 +19,7 @@ import (
 // every transport relies on: a recovered panic produces a JSON-RPC
 // 2.0 response with the request ID echoed, isError=true, and the
 // fixed user-facing string. Drift here would split stdio,
-// streamable HTTP, and gRPC error envelopes apart.
+// alternate HTTP, and alternate RPC error envelopes apart.
 func TestRecoverDispatch_StableErrorEnvelope(t *testing.T) {
 	var captured Response
 	var calls int
@@ -164,13 +164,11 @@ func TestSanitizePanicStackScrubsPathsAndTruncates(t *testing.T) {
 }
 
 // TestHandleWithRecover_ReturnsStableEnvelopeOnPanic locks the
-// streamable-HTTP / gRPC recovery path: a panicking tool routed
-// through HandleWithRecover must produce the same JSON-RPC tool-
-// error envelope stdio has emitted since the original wave. The
-// streamable HTTP dispatch handler calls this method directly at
-// transport_streamable_http.go:319 — without the named-return
-// recovery wrapper, the panic would propagate to the http.Handler
-// boundary and surface as a 500 with no JSON-RPC framing.
+// alternate transport recovery path: a panicking tool routed through
+// HandleWithRecover must produce the same JSON-RPC tool-error envelope
+// stdio emits. Without the named-return recovery wrapper, the panic
+// would propagate to the http.Handler boundary and surface as a 500
+// with no JSON-RPC framing.
 func TestHandleWithRecover_ReturnsStableEnvelopeOnPanic(t *testing.T) {
 	const fakeSecret = "sk-handle-with-recover-12345"
 	srv := NewServer("test", []ToolDescriptor{{

@@ -17,7 +17,7 @@ func readBody(t *testing.T, r *http.Request) string {
 	return string(body)
 }
 
-// TestTier2_Expenses_FullSweep covers the complete expenses Tier 2
+// TestTier2_Expenses_FullSweep covers the complete expenses domain
 // surface — expense CRUD plus expense-category CRUD — through a mocked
 // Clockify HTTP server. Mirrors the invoices sweep so coverage stays
 // consistent across the two domain modules.

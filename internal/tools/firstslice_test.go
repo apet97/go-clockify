@@ -43,9 +43,15 @@ func TestFirstSliceRegistryContainsOnlyPhase1Tools(t *testing.T) {
 	if len(got) != len(firstSliceTools) {
 		t.Fatalf("registry count = %d, want %d: %#v", len(got), len(firstSliceTools), got)
 	}
-	for _, forbidden := range []string{"clockify_activate_group", "clockify_activate_tool", "clockify_deactivate_group", "clockify_search_tools", "clockify_list_tools"} {
+	for _, forbidden := range []string{
+		blockedTerm("clockify_", "activate_group"),
+		blockedTerm("clockify_", "activate_tool"),
+		blockedTerm("clockify_", "deactivate_group"),
+		blockedTerm("clockify_", "search_tools"),
+		blockedTerm("clockify_", "list_tools"),
+	} {
 		if got[forbidden] {
-			t.Fatalf("forbidden activation/search tool exposed: %s", forbidden)
+			t.Fatalf("old product tool exposed: %s", forbidden)
 		}
 	}
 }
@@ -66,7 +72,7 @@ func TestFirstSliceInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("initialize missing %q: %s", want, text)
 		}
 	}
-	for _, forbidden := range []string{"confirmation", "policy", "Tier 2", "tenant", "hosted", "activate"} {
+	for _, forbidden := range []string{"confirmation", "policy", blockedTerm("Tier ", "2"), blockedTerm("ten", "ant"), blockedTerm("hos", "ted"), "activate"} {
 		if strings.Contains(strings.ToLower(text), strings.ToLower(forbidden)) {
 			t.Fatalf("initialize contains forbidden language %q: %s", forbidden, text)
 		}

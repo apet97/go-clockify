@@ -43,6 +43,13 @@ type routeTool struct {
 // FullAccessRegistry is the one-user product registry: every supported tool is
 // visible from startup, with workflows first and raw API fallback last.
 func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
+	s.registryOnce.Do(func() {
+		s.registry = s.buildFullAccessRegistry()
+	})
+	return cloneToolDescriptors(s.registry)
+}
+
+func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 160)
 	out = append(out, s.workflowDescriptors()...)
 	out = append(out, s.FirstSliceRegistry()...)
@@ -51,6 +58,12 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 	out = append(out, s.coreRouteDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
 	return normalizeDescriptors(dedupeToolDescriptors(out))
+}
+
+func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
+	out := make([]mcp.ToolDescriptor, len(in))
+	copy(out, in)
+	return out
 }
 
 func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
@@ -474,7 +487,7 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 func nativeAliasDescriptor(priority int, alias nativeAlias, old mcp.ToolDescriptor) mcp.ToolDescriptor {
 	tool := old.Tool
 	tool.Name = alias.NewName
-	tool.OutputSchema = firstSliceOutputSchema()
+	tool.OutputSchema = firstSliceOutputSchema(alias.NewName, outputSchemaData(old.Tool.OutputSchema))
 	if tool.Annotations == nil {
 		tool.Annotations = map[string]any{}
 	}
@@ -487,6 +500,18 @@ func nativeAliasDescriptor(priority int, alias nativeAlias, old mcp.ToolDescript
 		return standardizeDomainResult(alias.NewName, alias.Entity, alias.Change, out, args), nil
 	}
 	return mcp.ToolDescriptor{Tool: tool, Handler: firstSliceHandler(alias.NewName, handler)}
+}
+
+func outputSchemaData(schema map[string]any) map[string]any {
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	data, ok := props["data"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	return data
 }
 
 func oneUserAliasPriority(name string, fallback int) int {
@@ -646,7 +671,7 @@ func (s *Service) callRouteTool(ctx context.Context, spec routeTool, args map[st
 		if _, ok := args[key]; !ok {
 			return nil, fmt.Errorf("%s is required", key)
 		}
-		if value, _ := args[key].(string); value == "" {
+		if value, ok := args[key].(string); ok && strings.TrimSpace(value) == "" {
 			return nil, fmt.Errorf("%s is required", key)
 		}
 	}
@@ -851,15 +876,57 @@ func idsFromData(data any, entity string) map[string]string {
 	switch m := data.(type) {
 	case clockify.TimeEntry:
 		addEntryIDs(out, m.ID, m.WorkspaceID, m.UserID, m.ProjectID, m.TaskID)
+	case clockify.User:
+		if m.ID != "" {
+			out["userId"] = m.ID
+		}
+	case UserView:
+		if m.ID != "" {
+			out["userId"] = m.ID
+		}
+		if m.ActiveWorkspace != "" {
+			out["workspaceId"] = m.ActiveWorkspace
+		}
+	case WorkspaceView:
+		if m.ID != "" {
+			out["workspaceId"] = m.ID
+		}
 	case EntryView:
 		addEntryIDs(out, m.ID, m.WorkspaceID, m.UserID, m.ProjectID, m.TaskID)
 	case map[string]any:
-		if id := oneUserStringFromMap(m, "id", "_id"); id != "" {
-			out[idKey(entity+"_id")] = id
-		}
+		addEntityIDFromMap(out, entity, m)
+	case InvoiceView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case InvoiceItemView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case InvoicePaymentView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case InvoiceSettingsView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case ExpenseView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case TimeOffPolicyView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case TimeOffRequestView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case TimeOffBalanceView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case AssignmentView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case EntityChangeView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
+	case WebhookLogView:
+		addEntityIDFromMap(out, entity, map[string]any(m))
 	case []map[string]any:
 		for _, item := range m {
 			if id := oneUserStringFromMap(item, "id", "_id"); id != "" {
+				out[idKey(entity+"_id")] = id
+				break
+			}
+		}
+	case []AssignmentView:
+		for _, item := range m {
+			if id := oneUserStringFromMap(map[string]any(item), "id", "_id"); id != "" {
 				out[idKey(entity+"_id")] = id
 				break
 			}
@@ -875,6 +942,49 @@ func idsFromData(data any, entity string) map[string]string {
 		}
 	}
 	return out
+}
+
+func addEntityIDFromMap(out map[string]string, entity string, m map[string]any) {
+	for _, key := range []string{
+		"workspaceId",
+		"userId",
+		"clientId",
+		"projectId",
+		"taskId",
+		"tagId",
+		"entryId",
+		"invoiceId",
+		"invoiceItemId",
+		"paymentId",
+		"expenseId",
+		"categoryId",
+		"customFieldId",
+		"policyId",
+		"requestId",
+		"assignmentId",
+		"approvalId",
+		"webhookId",
+		"groupId",
+		"holidayId",
+	} {
+		if value := oneUserStringFromMap(m, key, snakeIDKey(key)); value != "" {
+			out[key] = value
+		}
+	}
+	if id := oneUserStringFromMap(m, "id", "_id"); id != "" {
+		out[idKey(entity+"_id")] = id
+	}
+}
+
+func snakeIDKey(key string) string {
+	var b strings.Builder
+	for i, r := range key {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			b.WriteByte('_')
+		}
+		b.WriteRune(r)
+	}
+	return strings.ToLower(b.String())
 }
 
 func addEntryIDs(out map[string]string, entryID, workspaceID, userID, projectID, taskID string) {
@@ -919,9 +1029,22 @@ func entityName(data any) string {
 		return v.Description
 	case EntryView:
 		return v.Description
-	}
-	if m, ok := data.(map[string]any); ok {
-		return oneUserStringFromMap(m, "name", "description", "number")
+	case map[string]any:
+		return oneUserStringFromMap(v, "name", "description", "number")
+	case InvoiceView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case InvoiceItemView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case InvoicePaymentView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case ExpenseView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case TimeOffPolicyView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case TimeOffRequestView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
+	case AssignmentView:
+		return oneUserStringFromMap(map[string]any(v), "name", "description", "number")
 	}
 	return ""
 }
@@ -1194,7 +1317,11 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 	if method == "GET" {
 		action = "clockify_api_get"
 	}
-	return result(action, "raw_api", map[string]string{"workspaceId": s.WorkspaceID}, data, changedFor(rawChange(method), "raw_api", data, nil), nil, nil), nil
+	ids := map[string]string{"workspaceId": s.WorkspaceID}
+	for key, value := range idsFromData(data, "raw_api") {
+		ids[key] = value
+	}
+	return result(action, "raw_api", ids, data, changedFor(rawChange(method), "raw_api", data, ids), nil, nil), nil
 }
 
 func safeRawPath(workspaceID, raw string) (string, error) {
