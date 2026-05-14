@@ -918,81 +918,79 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_api_get",
 		"clockify_api_request",
 	)
-	liveEvidence := setOf(
-		"clockify_status",
-		"clockify_tools_guide",
-		"clockify_create_work_package",
-		"clockify_log_work",
-		"clockify_start_work",
-		"clockify_stop_work",
-		"clockify_switch_work",
-		"clockify_review_day",
-		"clockify_review_week",
-		"clockify_fix_entry",
-		"clockify_invoice_client_work",
-		"clockify_record_expense",
-		"clockify_request_time_off",
-		"clockify_schedule_work",
-		"clockify_setup_webhook",
-		"clockify_demo_seed",
-		"clockify_demo_cleanup",
-		"clockify_tasks_list",
-		"clockify_tags_list",
-		"clockify_tags_create",
-		"clockify_entries_list",
-		"clockify_projects_get",
-		"clockify_projects_archive",
-		"clockify_projects_templates_list",
-		"clockify_projects_templates_create",
-		"clockify_projects_estimates_update",
-		"clockify_projects_memberships_update",
-		"clockify_entries_mark_invoiced",
-		"clockify_invoices_create",
-		"clockify_invoices_send",
-		"clockify_expenses_list",
-		"clockify_expenses_get",
-		"clockify_expenses_create",
-		"clockify_expenses_update",
-		"clockify_expenses_delete",
-		"clockify_expenses_categories_create",
-		"clockify_expenses_categories_update",
-		"clockify_custom_fields_list",
-		"clockify_custom_fields_get",
-		"clockify_custom_fields_create",
-		"clockify_custom_fields_update",
-		"clockify_custom_fields_delete",
-		"clockify_custom_fields_set_value",
-		"clockify_time_off_requests_list",
-		"clockify_time_off_requests_create",
-		"clockify_scheduling_project_totals",
-		"clockify_scheduling_assignments_create",
-		"clockify_scheduling_user_totals",
-		"clockify_scheduling_capacity",
-		"clockify_approvals_list",
-		"clockify_webhooks_list",
-		"clockify_invoices_list",
-		"clockify_expenses_categories_list",
-		"clockify_time_off_policies_list",
-		"clockify_scheduling_assignments_list",
-		"clockify_webhooks_events",
-		"clockify_groups_list",
-		"clockify_groups_get",
-		"clockify_groups_update",
-		"clockify_groups_delete",
-		"clockify_holidays_list",
-		"clockify_groups_create",
-		"clockify_holidays_create",
-		"clockify_webhooks_create",
-		"clockify_users_invite",
-		"clockify_users_list",
-		"clockify_users_profile",
-		"clockify_reports_detailed",
-		"clockify_reports_summary",
-		"clockify_reports_weekly",
-		"clockify_reports_expense",
-	)
+	liveEvidence := liveEvidenceSet(oneUserNamedLiveEvidence())
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Fake smoke", func(row coverageRow) string { return row.FakeSmoke }, fakeEvidence)
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live-tested", func(row coverageRow) string { return row.LiveTested }, liveEvidence)
+}
+
+func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) {
+	ledger := parseOneUserCoverageLedger(t)
+	evidence := oneUserNamedLiveEvidence()
+	requiredGates := map[string][]string{
+		"TestLiveOneUserWorkflowMCP":                 {"CLOCKIFY_RUN_LIVE_E2E"},
+		"TestLiveOneUserReadOnly":                    {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"},
+		"TestLivePaginationOnTags":                   {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"},
+		"TestLiveOneUserExpensesCRUD":                {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"},
+		"TestLiveOneUserCustomFieldsCRUD":            {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
+		"TestLiveOneUserProjectAdminCRUD":            {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED"},
+		"TestLiveOneUserGroupsHolidaysCRUD":          {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED"},
+		"TestLiveOneUserOptionalDomainReadOnlySweep": {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"},
+		"TestOneUserLiveWorkflow":                    {"CLOCKIFY_RUN_LIVE_E2E"},
+		"TestOneUserLivePaidFeatureWorkflowRecovery": {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS"},
+		"TestOneUserLiveOptionalDomainContracts":     {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
+	}
+	knownGates := setOf(
+		"CLOCKIFY_RUN_LIVE_E2E",
+		"CLOCKIFY_LIVE_OPTIONAL_DOMAINS",
+		"CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS",
+		"CLOCKIFY_LIVE_WORKSPACE_CONFIRM",
+		"CLOCKIFY_LIVE_ADMIN_ENABLED",
+		"CLOCKIFY_LIVE_BILLING_ENABLED",
+		"CLOCKIFY_LIVE_SETTINGS_ENABLED",
+	)
+	testFunctions := collectTestFunctionNames(t, ".", "../../tests")
+	seen := map[string]bool{}
+	for _, row := range ledger.Rows {
+		item, ok := evidence[row.Tool]
+		if row.LiveTested != "yes" {
+			if ok {
+				t.Fatalf("%s has named live evidence but ledger live-tested=%s", row.Tool, row.LiveTested)
+			}
+			continue
+		}
+		if !ok {
+			t.Fatalf("%s is live-tested yes but lacks named live evidence", row.Tool)
+		}
+		if item.Test == "" {
+			t.Fatalf("%s live evidence is missing a test name", row.Tool)
+		}
+		if !testFunctions[item.Test] {
+			t.Fatalf("%s references live evidence test %q, but no matching test function exists", row.Tool, item.Test)
+		}
+		if len(item.Gates) == 0 {
+			t.Fatalf("%s live evidence %s is missing live gates", row.Tool, item.Test)
+		}
+		required, ok := requiredGates[item.Test]
+		if !ok {
+			t.Fatalf("%s references unknown live evidence test %q", row.Tool, item.Test)
+		}
+		for _, gate := range item.Gates {
+			if !knownGates[gate] {
+				t.Fatalf("%s evidence uses unknown gate %s", row.Tool, gate)
+			}
+		}
+		for _, gate := range required {
+			if !containsString(item.Gates, gate) {
+				t.Fatalf("%s evidence %s missing required gate %s", row.Tool, item.Test, gate)
+			}
+		}
+		seen[row.Tool] = true
+	}
+	for tool := range evidence {
+		if !seen[tool] {
+			t.Fatalf("%s has named live evidence but is not marked live-tested yes", tool)
+		}
+	}
 }
 
 func TestOneUserDocsAndDefaultCodeDoNotMentionRemovedProductTools(t *testing.T) {
@@ -1825,6 +1823,168 @@ func setOf(names ...string) map[string]bool {
 		out[name] = true
 	}
 	return out
+}
+
+type liveCoverageEvidence struct {
+	Test  string
+	Gates []string
+}
+
+func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
+	out := map[string]liveCoverageEvidence{}
+	add := func(test string, gates []string, tools ...string) {
+		for _, tool := range tools {
+			if _, exists := out[tool]; exists {
+				panic("duplicate live evidence for " + tool)
+			}
+			out[tool] = liveCoverageEvidence{Test: test, Gates: gates}
+		}
+	}
+	core := []string{"CLOCKIFY_RUN_LIVE_E2E"}
+	optional := []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"}
+	add("TestLiveOneUserWorkflowMCP", core,
+		"clockify_status",
+		"clockify_tools_guide",
+		"clockify_create_work_package",
+		"clockify_log_work",
+		"clockify_start_work",
+		"clockify_stop_work",
+		"clockify_switch_work",
+		"clockify_review_day",
+		"clockify_review_week",
+		"clockify_fix_entry",
+		"clockify_demo_seed",
+		"clockify_demo_cleanup",
+	)
+	add("TestOneUserLivePaidFeatureWorkflowRecovery", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS"},
+		"clockify_invoice_client_work",
+		"clockify_record_expense",
+		"clockify_request_time_off",
+		"clockify_schedule_work",
+		"clockify_setup_webhook",
+	)
+	add("TestLiveOneUserReadOnly", optional,
+		"clockify_tasks_list",
+		"clockify_entries_list",
+		"clockify_users_list",
+		"clockify_users_profile",
+		"clockify_reports_detailed",
+		"clockify_reports_summary",
+		"clockify_reports_weekly",
+	)
+	add("TestLivePaginationOnTags", optional,
+		"clockify_tags_list",
+		"clockify_tags_create",
+	)
+	add("TestLiveOneUserProjectAdminCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED"},
+		"clockify_projects_get",
+		"clockify_projects_archive",
+		"clockify_projects_templates_list",
+		"clockify_projects_templates_create",
+		"clockify_projects_estimates_update",
+		"clockify_projects_memberships_update",
+	)
+	add("TestOneUserLiveOptionalDomainContracts", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
+		"clockify_entries_mark_invoiced",
+		"clockify_invoices_create",
+		"clockify_invoices_send",
+		"clockify_time_off_requests_create",
+		"clockify_scheduling_assignments_create",
+		"clockify_webhooks_create",
+		"clockify_users_invite",
+	)
+	add("TestLiveOneUserExpensesCRUD", optional,
+		"clockify_expenses_get",
+		"clockify_expenses_create",
+		"clockify_expenses_update",
+		"clockify_expenses_delete",
+		"clockify_expenses_categories_create",
+		"clockify_expenses_categories_update",
+	)
+	add("TestLiveOneUserCustomFieldsCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
+		"clockify_custom_fields_list",
+		"clockify_custom_fields_get",
+		"clockify_custom_fields_create",
+		"clockify_custom_fields_update",
+		"clockify_custom_fields_delete",
+		"clockify_custom_fields_set_value",
+	)
+	add("TestLiveOneUserOptionalDomainReadOnlySweep", optional,
+		"clockify_invoices_list",
+		"clockify_expenses_list",
+		"clockify_reports_expense",
+		"clockify_expenses_categories_list",
+		"clockify_scheduling_assignments_list",
+		"clockify_scheduling_project_totals",
+		"clockify_scheduling_user_totals",
+		"clockify_scheduling_capacity",
+		"clockify_time_off_requests_list",
+		"clockify_time_off_policies_list",
+		"clockify_approvals_list",
+		"clockify_webhooks_list",
+		"clockify_webhooks_events",
+		"clockify_groups_list",
+		"clockify_holidays_list",
+	)
+	add("TestLiveOneUserGroupsHolidaysCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED"},
+		"clockify_groups_get",
+		"clockify_groups_create",
+		"clockify_groups_update",
+		"clockify_groups_delete",
+		"clockify_holidays_create",
+	)
+	return out
+}
+
+func liveEvidenceSet(evidence map[string]liveCoverageEvidence) map[string]bool {
+	out := map[string]bool{}
+	for tool := range evidence {
+		out[tool] = true
+	}
+	return out
+}
+
+func collectTestFunctionNames(t *testing.T, roots ...string) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	for _, root := range roots {
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || !strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, line := range strings.Split(string(raw), "\n") {
+				line = strings.TrimSpace(line)
+				if !strings.HasPrefix(line, "func Test") {
+					continue
+				}
+				name, _, ok := strings.Cut(strings.TrimPrefix(line, "func "), "(")
+				if ok {
+					out[name] = true
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return out
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func assertCoverageYesRowsMatchEvidence(t *testing.T, rows []coverageRow, label string, value func(coverageRow) string, evidence map[string]bool) {

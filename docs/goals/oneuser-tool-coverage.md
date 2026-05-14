@@ -14,6 +14,7 @@ Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
 - Remaining alias wrappers are classified as `usable_wrapper`; no current row is marked `needs_native_handler`. Unprobed native tools carry explicit next actions.
 - Live coverage is intentionally narrower than fake coverage and remains limited to the sacrificial workspace. Paid-feature domains such as invoices, expenses, time off, scheduling, webhooks, groups, and holidays may return recovery when the workspace plan or permissions do not allow the operation.
+- Every `Live-tested: yes` row is backed by named live-test evidence and required gate metadata in `internal/tools/oneuser_quality_test.go`; rows without that evidence must remain `needs_live_probe`.
 - Workflow schemas and the first CRUD/native-conversion slice now advertise typed data schemas; remaining generic envelopes are tracked per row.
 
 | Tool | Class | Handler | Endpoint / method | Fake smoke | Live-tested | Output schema | Status | Next action |
