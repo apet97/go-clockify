@@ -478,6 +478,10 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(208, "clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created", s.addInvoiceItem)
 	add(209, "clockify_invoices_items_update", "clockify_update_invoice_item", "invoice_item", "updated", s.updateInvoiceItem)
 	add(216, "clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted", s.deleteInvoiceItem)
+	add(36, "clockify_projects_templates_list", "clockify_list_project_templates", "project_template", "", s.ListProjectTemplates)
+	add(37, "clockify_projects_templates_create", "clockify_create_project_template", "project_template", "created", s.CreateProjectTemplate)
+	add(38, "clockify_projects_estimates_update", "clockify_update_project_estimate", "project", "updated", s.UpdateProjectEstimate)
+	add(40, "clockify_projects_memberships_update", "clockify_update_project_memberships", "membership", "updated", s.updateProjectMembershipsOneUser)
 	add(302, "clockify_expenses_create", "clockify_create_expense", "expense", "created", s.createExpense)
 	add(303, "clockify_expenses_update", "clockify_update_expense", "expense", "updated", s.updateExpense)
 	add(304, "clockify_expenses_delete", "clockify_delete_expense", "expense", "deleted", s.deleteExpense)
@@ -517,6 +521,9 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(1003, "clockify_holidays_list_for_user_period", "clockify_list_holidays_in_period", "holiday", "", s.ListHolidaysInPeriod)
 	add(1004, "clockify_holidays_create", "clockify_create_holiday", "holiday", "created", s.CreateHoliday)
 	add(1005, "clockify_holidays_delete", "clockify_delete_holiday", "holiday", "deleted", s.DeleteHoliday)
+	add(1103, "clockify_users_deactivate", "clockify_deactivate_user", "user", "updated", s.DeactivateUser)
+	add(1104, "clockify_users_role", "clockify_update_user_role", "user", "updated", s.UpdateUserRole)
+	out = append(out, s.nativeRouteDescriptors()...)
 	out = append(out,
 		nativeDomainTool(65, toolRWIdem("clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", objectSchema(map[string]any{"required": []string{"time_entry_ids", "invoiced"}, "properties": map[string]any{
 			"time_entry_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
@@ -542,6 +549,10 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_invoices_items_add":            true,
 		"clockify_invoices_items_update":         true,
 		"clockify_invoices_items_delete":         true,
+		"clockify_projects_templates_list":       true,
+		"clockify_projects_templates_create":     true,
+		"clockify_projects_estimates_update":     true,
+		"clockify_projects_memberships_update":   true,
 		"clockify_expenses_create":               true,
 		"clockify_expenses_update":               true,
 		"clockify_expenses_delete":               true,
@@ -568,6 +579,21 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_scheduling_assignments_create": true,
 		"clockify_scheduling_assignments_update": true,
 		"clockify_scheduling_assignments_delete": true,
+		"clockify_projects_memberships_list":     true,
+		"clockify_reports_attendance":            true,
+		"clockify_reports_money":                 true,
+		"clockify_reports_expense":               true,
+		"clockify_reports_export":                true,
+		"clockify_invoices_export":               true,
+		"clockify_invoices_import_time":          true,
+		"clockify_invoices_import_expenses":      true,
+		"clockify_invoices_payments_list":        true,
+		"clockify_invoices_payments_create":      true,
+		"clockify_invoices_payments_delete":      true,
+		"clockify_time_off_archive":              true,
+		"clockify_scheduling_user_totals":        true,
+		"clockify_scheduling_capacity":           true,
+		"clockify_approvals_resubmit":            true,
 		"clockify_webhooks_create":               true,
 		"clockify_webhooks_update":               true,
 		"clockify_webhooks_delete":               true,
@@ -581,7 +607,54 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_holidays_list_for_user_period": true,
 		"clockify_holidays_create":               true,
 		"clockify_holidays_delete":               true,
+		"clockify_holidays_get":                  true,
+		"clockify_holidays_update":               true,
+		"clockify_users_deactivate":              true,
+		"clockify_users_role":                    true,
 	}
+}
+
+func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
+	specs := []routeTool{
+		rt(39, "GET", "clockify_projects_memberships_list", "List project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
+		reportRT(100, "clockify_reports_attendance", "Run the attendance report.", "reports/attendance"),
+		reportRT(101, "clockify_reports_money", "Run the money summary report.", "reports/summary"),
+		reportRT(102, "clockify_reports_expense", "Run the detailed expense report.", "reports/expenses/detailed"),
+		reportRT(103, "clockify_reports_export", "Run a report export request.", "reports/detailed"),
+		rt(210, "GET", "clockify_invoices_export", "Export an invoice.", "invoices/{invoice_id}/export", "invoice_export", []string{"invoice_id"}, fields("format"), []string{"format"}, nil, true, false, false, ""),
+		rt(211, "POST", "clockify_invoices_import_time", "Import time entries into an invoice.", "invoices/{invoice_id}/items/import", "invoice_item", []string{"invoice_id"}, fields("time_entry_ids", "time_entry_group_type", "body"), nil, []string{"time_entry_ids", "time_entry_group_type"}, false, false, false, "updated"),
+		rt(212, "POST", "clockify_invoices_import_expenses", "Import expenses into an invoice.", "invoices/{invoice_id}/items/import", "invoice_item", []string{"invoice_id"}, fields("expense_ids", "include_expenses", "body"), nil, []string{"expense_ids", "include_expenses"}, false, false, false, "updated"),
+		rt(213, "GET", "clockify_invoices_payments_list", "List invoice payments.", "invoices/{invoice_id}/payments", "payment", []string{"invoice_id"}, fields("page", "page_size"), []string{"page", "page_size"}, nil, true, false, false, ""),
+		rt(214, "POST", "clockify_invoices_payments_create", "Create an invoice payment.", "invoices/{invoice_id}/payments", "payment", []string{"invoice_id"}, fields("amount", "date", "note", "body"), nil, []string{"amount", "date", "note"}, false, false, false, "created"),
+		rt(215, "DELETE", "clockify_invoices_payments_delete", "Delete an invoice payment.", "invoices/{invoice_id}/payments/{payment_id}", "payment", []string{"invoice_id", "payment_id"}, nil, nil, nil, false, false, true, "deleted"),
+		rt(506, "PATCH", "clockify_time_off_archive", "Archive a time off policy or request.", "time-off/policies/{policy_id}", "time_off", []string{"policy_id"}, fields("archived", "body"), nil, []string{"archived"}, false, true, false, "updated").withDefaults(map[string]any{"archived": true}),
+		rt(606, "GET", "clockify_scheduling_user_totals", "Get scheduled assignment totals for one user.", "scheduling/assignments/users/{user_id}/totals", "scheduling", []string{"user_id"}, fields("start", "end"), []string{"start", "end"}, nil, true, false, false, ""),
+		rt(607, "POST", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, fields("start", "end", "user_ids"), nil, []string{"start", "end", "user_ids"}, true, false, false, ""),
+		rt(704, "POST", "clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses for approval.", "approval-requests/resubmit-entries-for-approval", "approval", []string{"approval_id"}, fields("approval_id", "entry_ids", "expense_ids", "note", "body"), nil, []string{"approval_id", "entry_ids", "expense_ids", "note"}, false, false, false, "updated"),
+		rt(1001, "GET", "clockify_holidays_get", "Get one holiday.", "holidays/{holiday_id}", "holiday", []string{"holiday_id"}, nil, nil, nil, true, false, false, ""),
+		rt(1002, "PUT", "clockify_holidays_update", "Update a holiday.", "holidays/{holiday_id}", "holiday", []string{"holiday_id"}, fields("name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids", "body"), nil, []string{"name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids"}, false, true, false, "updated"),
+	}
+	out := make([]mcp.ToolDescriptor, 0, len(specs))
+	for _, spec := range specs {
+		out = append(out, s.nativeRouteDescriptor(spec))
+	}
+	return out
+}
+
+func (s *Service) nativeRouteDescriptor(spec routeTool) mcp.ToolDescriptor {
+	descriptor := s.routeDescriptor(spec)
+	descriptor.Tool.Annotations["handlerKind"] = "native handler"
+	return descriptor
+}
+
+func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	if _, ok := args["memberships"]; ok {
+		return s.UpdateProjectMemberships(ctx, args)
+	}
+	if _, ok := args["user_ids"]; ok {
+		return s.SetProjectMemberships(ctx, args)
+	}
+	return s.UpdateProjectMemberships(ctx, args)
 }
 
 func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {

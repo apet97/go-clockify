@@ -524,6 +524,11 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_expenses_categories_create":    true,
 		"clockify_expenses_categories_update":    true,
 		"clockify_expenses_categories_delete":    true,
+		"clockify_projects_templates_list":       true,
+		"clockify_projects_templates_create":     true,
+		"clockify_projects_estimates_update":     true,
+		"clockify_projects_memberships_list":     true,
+		"clockify_projects_memberships_update":   true,
 		"clockify_custom_fields_list":            true,
 		"clockify_custom_fields_get":             true,
 		"clockify_custom_fields_create":          true,
@@ -544,6 +549,20 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_scheduling_assignments_create": true,
 		"clockify_scheduling_assignments_update": true,
 		"clockify_scheduling_assignments_delete": true,
+		"clockify_scheduling_user_totals":        true,
+		"clockify_scheduling_capacity":           true,
+		"clockify_reports_attendance":            true,
+		"clockify_reports_money":                 true,
+		"clockify_reports_expense":               true,
+		"clockify_reports_export":                true,
+		"clockify_invoices_export":               true,
+		"clockify_invoices_import_time":          true,
+		"clockify_invoices_import_expenses":      true,
+		"clockify_invoices_payments_list":        true,
+		"clockify_invoices_payments_create":      true,
+		"clockify_invoices_payments_delete":      true,
+		"clockify_time_off_archive":              true,
+		"clockify_approvals_resubmit":            true,
 		"clockify_webhooks_create":               true,
 		"clockify_webhooks_update":               true,
 		"clockify_webhooks_delete":               true,
@@ -557,7 +576,11 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_holidays_list_for_user_period": true,
 		"clockify_holidays_create":               true,
 		"clockify_holidays_delete":               true,
+		"clockify_holidays_get":                  true,
+		"clockify_holidays_update":               true,
 		"clockify_users_invite":                  true,
+		"clockify_users_deactivate":              true,
+		"clockify_users_role":                    true,
 		"clockify_entries_mark_invoiced":         true,
 		"clockify_users_list":                    true,
 		"clockify_users_profile":                 true,
@@ -595,6 +618,11 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_projects_list":                 {"projects", "count", "page", "pageSize"},
 		"clockify_projects_get":                  {"id", "name"},
 		"clockify_projects_create":               {"id", "name"},
+		"clockify_projects_templates_list":       {"id"},
+		"clockify_projects_templates_create":     {"id"},
+		"clockify_projects_estimates_update":     {"id"},
+		"clockify_projects_memberships_list":     {"id"},
+		"clockify_projects_memberships_update":   {"id"},
 		"clockify_tasks_list":                    {"tasks", "count", "page", "pageSize"},
 		"clockify_tasks_get":                     {"id", "name"},
 		"clockify_tasks_create":                  {"id", "name"},
@@ -613,6 +641,12 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_invoices_items_add":            {"id"},
 		"clockify_invoices_items_update":         {"id"},
 		"clockify_invoices_items_delete":         {"invoiceId"},
+		"clockify_invoices_export":               {"content"},
+		"clockify_invoices_import_time":          {"id"},
+		"clockify_invoices_import_expenses":      {"id"},
+		"clockify_invoices_payments_list":        {"id"},
+		"clockify_invoices_payments_create":      {"id"},
+		"clockify_invoices_payments_delete":      {"paymentId"},
 		"clockify_expenses_list":                 {"id"},
 		"clockify_expenses_get":                  {"id"},
 		"clockify_expenses_create":               {"id"},
@@ -644,9 +678,17 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_time_off_policies_create":      {"id"},
 		"clockify_time_off_policies_update":      {"id"},
 		"clockify_time_off_balances":             {"policyId"},
+		"clockify_time_off_archive":              {"policyId"},
 		"clockify_scheduling_assignments_create": {"id"},
 		"clockify_scheduling_assignments_update": {"id"},
 		"clockify_scheduling_assignments_delete": {"assignmentId"},
+		"clockify_scheduling_user_totals":        {"id"},
+		"clockify_scheduling_capacity":           {"id"},
+		"clockify_reports_attendance":            {"id"},
+		"clockify_reports_money":                 {"id"},
+		"clockify_reports_expense":               {"id"},
+		"clockify_reports_export":                {"id"},
+		"clockify_approvals_resubmit":            {"id"},
 		"clockify_groups_get":                    {"id"},
 		"clockify_groups_create":                 {"id"},
 		"clockify_groups_update":                 {"id"},
@@ -656,7 +698,11 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_holidays_list_for_user_period": {"id"},
 		"clockify_holidays_create":               {"id"},
 		"clockify_holidays_delete":               {"holidayId"},
+		"clockify_holidays_get":                  {"id"},
+		"clockify_holidays_update":               {"id"},
 		"clockify_users_invite":                  {"id"},
+		"clockify_users_deactivate":              {"userId"},
+		"clockify_users_role":                    {"userId"},
 		"clockify_entries_mark_invoiced":         {"updated"},
 	}
 	descriptors := map[string]mcp.ToolDescriptor{}
@@ -806,6 +852,10 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_expenses_categories_create",
 		"clockify_expenses_categories_update",
 		"clockify_expenses_categories_delete",
+		"clockify_projects_templates_list",
+		"clockify_projects_templates_create",
+		"clockify_projects_estimates_update",
+		"clockify_projects_memberships_update",
 		"clockify_custom_fields_list",
 		"clockify_custom_fields_get",
 		"clockify_custom_fields_create",
@@ -840,6 +890,8 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_holidays_create",
 		"clockify_holidays_delete",
 		"clockify_users_invite",
+		"clockify_users_deactivate",
+		"clockify_users_role",
 		"clockify_users_list",
 		"clockify_users_profile",
 		"clockify_workspace_settings",
@@ -877,25 +929,67 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_review_day",
 		"clockify_review_week",
 		"clockify_fix_entry",
+		"clockify_invoice_client_work",
+		"clockify_record_expense",
+		"clockify_request_time_off",
+		"clockify_schedule_work",
+		"clockify_setup_webhook",
 		"clockify_demo_seed",
 		"clockify_demo_cleanup",
+		"clockify_tasks_list",
+		"clockify_tags_list",
+		"clockify_tags_create",
+		"clockify_entries_list",
+		"clockify_projects_get",
+		"clockify_projects_archive",
+		"clockify_projects_templates_list",
+		"clockify_projects_templates_create",
+		"clockify_projects_estimates_update",
+		"clockify_projects_memberships_update",
 		"clockify_entries_mark_invoiced",
 		"clockify_invoices_create",
 		"clockify_invoices_send",
+		"clockify_expenses_list",
+		"clockify_expenses_get",
 		"clockify_expenses_create",
+		"clockify_expenses_update",
+		"clockify_expenses_delete",
+		"clockify_expenses_categories_create",
+		"clockify_expenses_categories_update",
+		"clockify_custom_fields_list",
+		"clockify_custom_fields_get",
+		"clockify_custom_fields_create",
+		"clockify_custom_fields_update",
+		"clockify_custom_fields_delete",
+		"clockify_custom_fields_set_value",
+		"clockify_time_off_requests_list",
 		"clockify_time_off_requests_create",
+		"clockify_scheduling_project_totals",
 		"clockify_scheduling_assignments_create",
+		"clockify_scheduling_user_totals",
+		"clockify_scheduling_capacity",
+		"clockify_approvals_list",
+		"clockify_webhooks_list",
 		"clockify_invoices_list",
 		"clockify_expenses_categories_list",
 		"clockify_time_off_policies_list",
 		"clockify_scheduling_assignments_list",
 		"clockify_webhooks_events",
 		"clockify_groups_list",
+		"clockify_groups_get",
+		"clockify_groups_update",
+		"clockify_groups_delete",
 		"clockify_holidays_list",
 		"clockify_groups_create",
 		"clockify_holidays_create",
 		"clockify_webhooks_create",
 		"clockify_users_invite",
+		"clockify_users_list",
+		"clockify_users_profile",
+		"clockify_reports_detailed",
+		"clockify_reports_summary",
+		"clockify_reports_weekly",
+		"clockify_reports_expense",
 	)
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Fake smoke", func(row coverageRow) string { return row.FakeSmoke }, fakeEvidence)
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live-tested", func(row coverageRow) string { return row.LiveTested }, liveEvidence)
@@ -1300,6 +1394,10 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_expenses_categories_create", "created"},
 		{"clockify_expenses_categories_update", "updated"},
 		{"clockify_expenses_categories_delete", "deleted"},
+		{"clockify_projects_templates_list", ""},
+		{"clockify_projects_templates_create", "created"},
+		{"clockify_projects_estimates_update", "updated"},
+		{"clockify_projects_memberships_update", "updated"},
 		{"clockify_custom_fields_list", ""},
 		{"clockify_custom_fields_get", ""},
 		{"clockify_custom_fields_create", "created"},
@@ -1328,6 +1426,8 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_groups_remove_user", "deleted"},
 		{"clockify_holidays_list_for_user_period", ""},
 		{"clockify_holidays_delete", "deleted"},
+		{"clockify_users_deactivate", "updated"},
+		{"clockify_users_role", "updated"},
 		{"clockify_projects_memberships_list", ""},
 		{"clockify_reports_attendance", ""},
 		{"clockify_reports_money", ""},
@@ -1358,6 +1458,60 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 				requireChanged(t, result, tt.change)
 			}
 		})
+	}
+}
+
+func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	result := callToolOK(t, server, "clockify_projects_memberships_update", map[string]any{
+		"project_id": "65b382b606de527a7ee2b61d",
+		"user_ids":   []any{"65b382b606de527a7ee2b624"},
+	})
+	requireID(t, result, "workspaceId")
+	requireID(t, result, "projectId")
+	requireChanged(t, result, "updated")
+	if _, ok := result.Data.([]any); !ok {
+		t.Fatalf("expected compatibility path to return memberships slice data, got %T (%#v)", result.Data, result.Data)
+	}
+}
+
+func TestOneUserStopWorkEmptyUpstreamStopReturnsRecovery(t *testing.T) {
+	const workspaceID = "65b382b606de527a7ee2b60e"
+	const userID = "65b382b606de527a7ee2b624"
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":                userID,
+				"activeWorkspace":   workspaceID,
+				"activeWorkspaceId": workspaceID,
+			})
+		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/"+workspaceID+"/user/"+userID+"/time-entries":
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), workspaceID)
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	failure := callToolError(t, server, "clockify_stop_work", nil)
+	if failure.Error.Code != "error" || !strings.Contains(failure.Error.Message, "no stopped entry") {
+		t.Fatalf("unexpected stop recovery error: %+v", failure.Error)
+	}
+	if failure.Recovery.Tool == "" || failure.Recovery.Hint == "" {
+		t.Fatalf("missing stop recovery guidance: %+v", failure.Recovery)
 	}
 }
 
@@ -1934,6 +2088,13 @@ func oneUserCoveragePayload(workspaceID, userID, method, path string) any {
 		return []any{user}
 	case method == http.MethodGet && strings.Contains(path, "/webhooks"):
 		return map[string]any{"workspaceWebhookCount": 1, "webhooks": []any{entity}}
+	case method == http.MethodPatch && strings.HasSuffix(path, "/memberships"):
+		return map[string]any{"memberships": []any{map[string]any{
+			"id":          entity["id"],
+			"userId":      userID,
+			"workspaceId": workspaceID,
+			"projectId":   entity["projectId"],
+		}}}
 	case method == http.MethodGet && strings.HasSuffix(path, "/invoices"):
 		return map[string]any{"total": 1, "invoices": []any{entity}}
 	case method == http.MethodGet && strings.HasSuffix(path, "/expenses"):

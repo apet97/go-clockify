@@ -104,6 +104,10 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_items_add` | — | no | no | no | yes | `write` | Add an item to an invoice |
 | `clockify_invoices_items_update` | — | no | no | no | yes | `write` | Update an invoice item by line index |
 | `clockify_invoices_items_delete` | — | no | yes | no | yes | `destructive` | Delete an invoice item by line index |
+| `clockify_projects_templates_list` | — | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
+| `clockify_projects_templates_create` | — | no | no | no | no | `write` | Create a new project template |
+| `clockify_projects_estimates_update` | — | no | no | no | no | `write` | Update a project's documented estimate fields |
+| `clockify_projects_memberships_update` | — | no | no | yes | yes | `write` | Replace project memberships and optional user-group filter/rate metadata |
 | `clockify_expenses_create` | — | no | no | no | no | `write` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. |
 | `clockify_expenses_update` | — | no | no | no | no | `write` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
 | `clockify_expenses_delete` | — | no | yes | no | yes | `destructive` | Delete an expense by ID |
@@ -143,12 +147,27 @@ prefer the documented format on each tool descriptor.
 | `clockify_holidays_list_for_user_period` | — | yes | no | yes | no | `read` | List holidays assigned to a user in a date period |
 | `clockify_holidays_create` | — | no | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_holidays_delete` | — | no | yes | no | yes | `destructive` | Delete a holiday by ID (supports dry_run preview) |
+| `clockify_users_deactivate` | — | no | no | no | yes | `write` | Deactivate a user in the workspace |
+| `clockify_users_role` | — | no | no | no | yes | `write` | Update a user's workspace role. Supports dry_run:true. |
+| `clockify_projects_memberships_list` | — | yes | no | yes | no | `read` | List project memberships. |
+| `clockify_reports_attendance` | — | yes | no | yes | no | `read` | Run the attendance report. |
+| `clockify_reports_money` | — | yes | no | yes | no | `read` | Run the money summary report. |
+| `clockify_reports_expense` | — | yes | no | yes | no | `read` | Run the detailed expense report. |
+| `clockify_reports_export` | — | yes | no | yes | no | `read` | Run a report export request. |
+| `clockify_invoices_export` | — | yes | no | yes | no | `read` | Export an invoice. |
+| `clockify_invoices_import_time` | — | no | no | no | no | `write` | Import time entries into an invoice. |
+| `clockify_invoices_import_expenses` | — | no | no | no | no | `write` | Import expenses into an invoice. |
+| `clockify_invoices_payments_list` | — | yes | no | yes | no | `read` | List invoice payments. |
+| `clockify_invoices_payments_create` | — | no | no | no | no | `write` | Create an invoice payment. |
+| `clockify_invoices_payments_delete` | — | no | yes | no | no | `destructive` | Delete an invoice payment. |
+| `clockify_time_off_archive` | — | no | no | yes | no | `write` | Archive a time off policy or request. |
+| `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
+| `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
+| `clockify_approvals_resubmit` | — | no | no | no | no | `write` | Resubmit rejected or withdrawn entries and expenses for approval. |
+| `clockify_holidays_get` | — | yes | no | yes | no | `read` | Get one holiday. |
+| `clockify_holidays_update` | — | no | no | yes | no | `write` | Update a holiday. |
 | `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write` | Mark time entries as invoiced or not invoiced. |
 | `clockify_users_invite` | — | no | no | no | no | `write` | Invite or add users to the pinned workspace by email. |
-| `clockify_projects_templates_list` | — | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
-| `clockify_projects_templates_create` | — | no | no | no | no | `write` | Create a new project template |
-| `clockify_projects_estimates_update` | — | no | no | no | no | `write` | Update a project's documented estimate fields |
-| `clockify_projects_memberships_update` | — | no | no | yes | yes | `write` | Replace project memberships and optional user-group filter/rate metadata |
 | `clockify_invoices_list` | — | yes | no | yes | no | `read` | List invoices in the workspace with pagination |
 | `clockify_invoices_get` | — | yes | no | yes | no | `read` | Get a single invoice by ID |
 | `clockify_invoices_items_list` | — | yes | no | yes | no | `read` | List items for an invoice |
@@ -170,25 +189,6 @@ prefer the documented format on each tool descriptor.
 | `clockify_webhooks_events` | — | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | — | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_holidays_list` | — | yes | no | yes | no | `read` | List holidays configured in the workspace |
-| `clockify_users_deactivate` | — | no | no | no | yes | `write` | Deactivate a user in the workspace |
-| `clockify_users_role` | — | no | no | no | yes | `write` | Update a user's workspace role. Supports dry_run:true. |
-| `clockify_projects_memberships_list` | — | yes | no | yes | no | `read` | List project memberships. |
-| `clockify_reports_attendance` | — | yes | no | yes | no | `read` | Run the attendance report. |
-| `clockify_reports_money` | — | yes | no | yes | no | `read` | Run the money summary report. |
-| `clockify_reports_expense` | — | yes | no | yes | no | `read` | Run the detailed expense report. |
-| `clockify_reports_export` | — | yes | no | yes | no | `read` | Run a report export request. |
-| `clockify_invoices_export` | — | yes | no | yes | no | `read` | Export an invoice. |
-| `clockify_invoices_import_time` | — | no | no | no | no | `write` | Import time entries into an invoice. |
-| `clockify_invoices_import_expenses` | — | no | no | no | no | `write` | Import expenses into an invoice. |
-| `clockify_invoices_payments_list` | — | yes | no | yes | no | `read` | List invoice payments. |
-| `clockify_invoices_payments_create` | — | no | no | no | no | `write` | Create an invoice payment. |
-| `clockify_invoices_payments_delete` | — | no | yes | no | no | `destructive` | Delete an invoice payment. |
-| `clockify_time_off_archive` | — | no | no | yes | no | `write` | Archive a time off policy or request. |
-| `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
-| `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
-| `clockify_approvals_resubmit` | — | no | no | no | no | `write` | Resubmit rejected or withdrawn entries and expenses for approval. |
-| `clockify_holidays_get` | — | yes | no | yes | no | `read` | Get one holiday. |
-| `clockify_holidays_update` | — | no | no | yes | no | `write` | Update a holiday. |
 | `clockify_entries_running` | — | yes | no | yes | no | `read` | Return the current running timer, if any. |
 | `clockify_entries_timer_start` | — | no | no | no | no | `write` | Start a timer. |
 | `clockify_entries_timer_stop` | — | no | no | yes | no | `write` | Stop the current timer. |

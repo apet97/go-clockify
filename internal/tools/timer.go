@@ -125,6 +125,9 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	if err := s.Client.Patch(ctx, path, payload, &out); err != nil {
 		return nil, err
 	}
+	if out.ID == "" {
+		return nil, fmt.Errorf("no running timer: no stopped entry returned by Clockify")
+	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
 	return ok("clockify_stop_timer", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": user.ID}, financialMeta)), nil

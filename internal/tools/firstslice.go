@@ -275,6 +275,16 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return objectListDataSchema("projects", schemaFor[[]ProjectView]())
 	case "clockify_projects_get", "clockify_projects_create", "clockify_projects_update", "clockify_projects_archive":
 		return schemaFor[ProjectView]()
+	case "clockify_projects_templates_list":
+		return entityArrayDataSchema("id", "name", "isTemplate", "clientId")
+	case "clockify_projects_templates_create":
+		return entityObjectDataSchema("id", "name", "isTemplate", "clientId")
+	case "clockify_projects_estimates_update":
+		return entityObjectDataSchema("id", "projectId", "timeEstimate", "budgetEstimate", "estimate")
+	case "clockify_projects_memberships_list":
+		return entityArrayDataSchema("id", "userId", "membershipId", "hourlyRate", "costRate")
+	case "clockify_projects_memberships_update":
+		return entityObjectDataSchema("id", "projectId", "memberships", "userGroups")
 	case "clockify_tasks_list":
 		return objectListDataSchema("tasks", schemaFor[[]TaskView]())
 	case "clockify_tasks_get", "clockify_tasks_create", "clockify_tasks_update":
@@ -299,6 +309,16 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("id", "invoiceItemId", "description", "quantity", "unitPrice")
 	case "clockify_invoices_items_delete":
 		return entityObjectDataSchema("deleted", "invoiceId", "itemIndex", "itemId")
+	case "clockify_invoices_export":
+		return entityObjectDataSchema("content", "contentType", "headers")
+	case "clockify_invoices_import_time", "clockify_invoices_import_expenses":
+		return entityObjectDataSchema("id", "invoiceId", "invoiceItemId", "description")
+	case "clockify_invoices_payments_list":
+		return entityArrayDataSchema("id", "paymentId", "amount", "date", "note")
+	case "clockify_invoices_payments_create":
+		return entityObjectDataSchema("id", "paymentId", "amount", "date", "note")
+	case "clockify_invoices_payments_delete":
+		return entityObjectDataSchema("deleted", "paymentId", "invoiceId")
 	case "clockify_expenses_list":
 		return entityArrayDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
 	case "clockify_expenses_get", "clockify_expenses_create", "clockify_expenses_update":
@@ -329,10 +349,18 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("id", "policyId", "name", "timeUnit", "archived")
 	case "clockify_time_off_balances":
 		return entityObjectDataSchema("policyId", "userId", "balance", "used", "available")
+	case "clockify_time_off_archive":
+		return entityObjectDataSchema("id", "policyId", "archived")
 	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_get", "clockify_scheduling_assignments_update":
 		return entityObjectDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
 	case "clockify_scheduling_assignments_delete":
 		return entityObjectDataSchema("deleted", "assignmentId")
+	case "clockify_scheduling_user_totals", "clockify_scheduling_capacity":
+		return entityObjectDataSchema("id", "userId", "assignmentId", "total", "totals")
+	case "clockify_reports_attendance", "clockify_reports_money", "clockify_reports_expense", "clockify_reports_export":
+		return entityObjectDataSchema("id", "workspaceId", "totals", "timeentries", "entries", "data")
+	case "clockify_approvals_resubmit":
+		return entityObjectDataSchema("id", "approvalId", "status")
 	case "clockify_webhooks_list":
 		return entityArrayDataSchema("id", "name", "url", "webhookEvent")
 	case "clockify_webhooks_get", "clockify_webhooks_create", "clockify_webhooks_update":
@@ -355,6 +383,8 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("deleted", "holidayId")
 	case "clockify_users_invite":
 		return entityObjectDataSchema("id", "email", "status")
+	case "clockify_users_deactivate", "clockify_users_role":
+		return entityObjectDataSchema("id", "userId", "status", "role")
 	case "clockify_entries_mark_invoiced":
 		return objectDataSchema(map[string]any{
 			"updated":       map[string]any{"type": "boolean"},
