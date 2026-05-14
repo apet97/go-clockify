@@ -33,6 +33,19 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		t.Fatalf("clockify_tools_guide missing workflows: %#v", guideData)
 	}
 
+	workPackage := h.callOK(ctx, "clockify_create_work_package", map[string]any{
+		"client":  prefix + " workflow client",
+		"project": prefix + " workflow project",
+		"task":    prefix + " workflow task",
+		"tag":     prefix + " workflow tag",
+	})
+	workPackageIDs := extractIDs(t, workPackage)
+	for _, key := range []string{"clientId", "projectId", "taskId", "tagId"} {
+		if workPackageIDs[key] == "" {
+			t.Fatalf("clockify_create_work_package missing %s: %#v", key, workPackageIDs)
+		}
+	}
+
 	seed := h.callOK(ctx, "clockify_demo_seed", map[string]any{
 		"run_id": runID,
 		"prefix": prefix,
@@ -49,14 +62,41 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		"start":       date + " 10:00",
 		"end":         date + " 10:20",
 		"description": prefix + " workflow log",
-		"project_id":  seedIDs["projectId"],
-		"task_id":     seedIDs["taskId"],
-		"tag_ids":     []any{seedIDs["tagId"]},
+		"project_id":  workPackageIDs["projectId"],
+		"task_id":     workPackageIDs["taskId"],
+		"tag_ids":     []any{workPackageIDs["tagId"]},
 		"billable":    true,
 	})
 	loggedIDs := extractIDs(t, logged)
 	if loggedIDs["entryId"] == "" {
 		t.Fatalf("clockify_log_work missing entryId: %#v", loggedIDs)
+	}
+
+	started := h.callOK(ctx, "clockify_start_work", map[string]any{
+		"start":       time.Now().UTC().Add(-4 * time.Minute).Format(time.RFC3339),
+		"description": prefix + " workflow started",
+		"project_id":  workPackageIDs["projectId"],
+		"task_id":     workPackageIDs["taskId"],
+		"tag_ids":     []any{workPackageIDs["tagId"]},
+	})
+	if startedIDs := extractIDs(t, started); startedIDs["entryId"] == "" {
+		t.Fatalf("clockify_start_work missing entryId: %#v", startedIDs)
+	}
+
+	switched := h.callOK(ctx, "clockify_switch_work", map[string]any{
+		"start":       time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
+		"description": prefix + " workflow switched",
+		"project_id":  workPackageIDs["projectId"],
+		"task_id":     workPackageIDs["taskId"],
+		"tag_ids":     []any{workPackageIDs["tagId"]},
+	})
+	if switchedIDs := extractIDs(t, switched); switchedIDs["entryId"] == "" {
+		t.Fatalf("clockify_switch_work missing entryId: %#v", switchedIDs)
+	}
+
+	stopped := h.callOK(ctx, "clockify_stop_work", nil)
+	if stoppedIDs := extractIDs(t, stopped); stoppedIDs["entryId"] == "" {
+		t.Fatalf("clockify_stop_work missing entryId: %#v", stoppedIDs)
 	}
 
 	fixed := h.callOK(ctx, "clockify_fix_entry", map[string]any{
@@ -107,13 +147,13 @@ func liveWorkflowPrefix() string {
 
 func extractIDs(t *testing.T, result map[string]any) map[string]string {
 	t.Helper()
-	sc, ok := result["structuredContent"].(map[string]any)
-	if !ok {
-		t.Fatalf("result missing structuredContent: %#v", result)
+	envelope := result
+	if sc, ok := result["structuredContent"].(map[string]any); ok {
+		envelope = sc
 	}
-	raw, ok := sc["ids"].(map[string]any)
+	raw, ok := envelope["ids"].(map[string]any)
 	if !ok {
-		t.Fatalf("structuredContent missing ids: %#v", sc)
+		t.Fatalf("result missing ids: %#v", envelope)
 	}
 	ids := make(map[string]string, len(raw))
 	for k, v := range raw {

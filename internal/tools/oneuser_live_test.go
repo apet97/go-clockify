@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -27,25 +26,24 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	ctx := context.Background()
+	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
 		runID = "live"
 	}
 	date := "2026-01-02"
 
-	statusOut, err := svc.ClockifyStatus(ctx, nil)
-	status := mustToolResult(t, statusOut, err)
-	requireID(t, status, "workspaceId")
-	requireID(t, status, "userId")
+	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
+	requireLiveID(t, status, "workspaceId")
+	requireLiveID(t, status, "userId")
 
-	seedOut, err := svc.ClockifyDemoSeed(ctx, map[string]any{"run_id": runID, "prefix": prefix, "date": date})
-	seed := mustToolResult(t, seedOut, err)
+	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", map[string]any{"run_id": runID, "prefix": prefix, "date": date})
 	for _, key := range []string{"clientId", "projectId", "taskId", "tagId", "entryId"} {
-		requireID(t, seed, key)
+		requireLiveID(t, seed, key)
 	}
 
-	logOut, err := svc.ClockifyLogWork(ctx, map[string]any{
+	logged := callLiveToolOKOrRecovery(t, server, "clockify_log_work", map[string]any{
 		"start":       date + " 10:30",
 		"end":         date + " 11:00",
 		"description": prefix + " Live logged work",
@@ -54,56 +52,48 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 		"tag_ids":     []any{seed.IDs["tagId"]},
 		"billable":    true,
 	})
-	logged := mustToolResult(t, logOut, err)
-	requireID(t, logged, "entryId")
+	requireLiveID(t, logged, "entryId")
 
 	startAt := time.Now().UTC().Add(-4 * time.Minute).Format(time.RFC3339)
-	startOut, err := svc.ClockifyStartWork(ctx, map[string]any{
+	started := callLiveToolOKOrRecovery(t, server, "clockify_start_work", map[string]any{
 		"start":       startAt,
 		"description": prefix + " Live started work",
 		"project_id":  seed.IDs["projectId"],
 		"task_id":     seed.IDs["taskId"],
 		"tag_ids":     []any{seed.IDs["tagId"]},
 	})
-	started := mustToolResult(t, startOut, err)
-	requireID(t, started, "entryId")
+	requireLiveID(t, started, "entryId")
 
-	switchOut, err := svc.ClockifySwitchWork(ctx, map[string]any{
+	switched := callLiveToolOKOrRecovery(t, server, "clockify_switch_work", map[string]any{
 		"start":       time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
 		"description": prefix + " Live switched work",
 		"project_id":  seed.IDs["projectId"],
 		"task_id":     seed.IDs["taskId"],
 		"tag_ids":     []any{seed.IDs["tagId"]},
 	})
-	switched := mustToolResult(t, switchOut, err)
-	requireID(t, switched, "entryId")
+	requireLiveID(t, switched, "entryId")
 
-	stopOut, err := svc.ClockifyStopWork(ctx, nil)
-	stopped := mustToolResult(t, stopOut, err)
-	requireID(t, stopped, "entryId")
+	stopped := callLiveToolOKOrRecovery(t, server, "clockify_stop_work", nil)
+	requireLiveID(t, stopped, "entryId")
 
-	fixOut, err := svc.ClockifyFixEntry(ctx, map[string]any{
+	fixed := callLiveToolOKOrRecovery(t, server, "clockify_fix_entry", map[string]any{
 		"entry_id":    logged.IDs["entryId"],
 		"description": prefix + " Live fixed logged work",
 	})
-	fixed := mustToolResult(t, fixOut, err)
-	requireID(t, fixed, "entryId")
+	requireLiveID(t, fixed, "entryId")
 
-	dayOut, err := svc.ClockifyReviewDay(ctx, map[string]any{"date": date, "include_entries": true})
-	day := mustToolResult(t, dayOut, err)
+	day := callLiveToolDataOrRecovery(t, server, "clockify_review_day", map[string]any{"date": date, "include_entries": true})
 	if day.Data == nil {
 		t.Fatalf("live day review missing data: %+v", day)
 	}
 
-	weekOut, err := svc.ClockifyReviewWeek(ctx, map[string]any{"week_start": "2025-12-29", "include_entries": true})
-	week := mustToolResult(t, weekOut, err)
+	week := callLiveToolDataOrRecovery(t, server, "clockify_review_week", map[string]any{"week_start": "2025-12-29", "include_entries": true})
 	if week.Data == nil {
 		t.Fatalf("live week review missing data: %+v", week)
 	}
 
-	cleanupOut, err := svc.ClockifyDemoCleanup(ctx, map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
-	cleanup := mustToolResult(t, cleanupOut, err)
-	requireID(t, cleanup, "workspaceId")
+	cleanup := callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
+	requireLiveID(t, cleanup, "workspaceId")
 }
 
 func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
@@ -123,25 +113,21 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
 	initializeServer(t, server)
-	ctx := context.Background()
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
 		runID = "live-paid"
 	}
-	seedOut, err := svc.ClockifyDemoSeed(ctx, map[string]any{"run_id": runID, "prefix": prefix, "date": "2026-01-02"})
-	seed := mustToolResult(t, seedOut, err)
-	user, err := svc.getCurrentUser(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", map[string]any{"run_id": runID, "prefix": prefix, "date": "2026-01-02"})
+	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
+	userID := requireLiveID(t, status, "userId")
 	defer func() {
-		_, _ = svc.ClockifyDemoCleanup(context.Background(), map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
+		callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
 	}()
 
 	callLiveToolOKOrRecovery(t, server, "clockify_invoice_client_work", map[string]any{"client_id": seed.IDs["clientId"], "number": "MCP-LIVE-" + runID})
 	callLiveToolOKOrRecovery(t, server, "clockify_record_expense", map[string]any{"amount": float64(10), "category": prefix, "project_id": seed.IDs["projectId"], "date": "2026-01-02T00:00:00Z"})
 	callLiveToolOKOrRecovery(t, server, "clockify_request_time_off", map[string]any{"policy": prefix, "start": "2026-01-05", "end": "2026-01-06"})
-	callLiveToolOKOrRecovery(t, server, "clockify_schedule_work", map[string]any{"user_id": user.ID, "project_id": seed.IDs["projectId"], "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z"})
+	callLiveToolOKOrRecovery(t, server, "clockify_schedule_work", map[string]any{"user_id": userID, "project_id": seed.IDs["projectId"], "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z"})
 	callLiveToolOKOrRecovery(t, server, "clockify_setup_webhook", map[string]any{"name": prefix + " Live webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
 }
 
