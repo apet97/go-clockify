@@ -88,7 +88,7 @@ func (s *Server) marshalCachedToolsListResponse(id any) ([]byte, error) {
 
 	const prefix = `{"jsonrpc":"2.0","id":`
 	const resultKey = `,"result":`
-	out := make([]byte, 0, len(prefix)+len(idBytes)+len(resultKey)+len(result)+1)
+	var out []byte
 	out = append(out, prefix...)
 	out = append(out, idBytes...)
 	out = append(out, resultKey...)
