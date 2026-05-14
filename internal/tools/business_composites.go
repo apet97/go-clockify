@@ -85,7 +85,7 @@ func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ResultE
 		SuggestedActions: reportDrilldownSuggestions(summaryReportBody(finRange, groups, nil)),
 		Raw:              raw,
 	}
-	return ok("clockify_money_report", view, map[string]any{"workspaceId": wsID, "source": "reports-summary-api"}), nil
+	return ok("clockify_reports_money", view, map[string]any{"workspaceId": wsID, "source": "reports-summary-api"}), nil
 }
 
 func (s *Service) MonthlyBrief(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -124,11 +124,11 @@ func (s *Service) MonthlyBrief(ctx context.Context, args map[string]any) (Result
 		Money: money,
 		Audit: audit,
 		SuggestedActions: []ToolSuggestion{
-			{Tool: "clockify_money_report", Reason: "Drill into month-to-date money by client, project, and task.", Arguments: map[string]any{"financial_start": finRange.Start, "financial_end": finRange.End}},
-			{Tool: "clockify_audit_entries", Reason: "Review entries with missing fields, locked state, approvals, or invoicing gaps.", Arguments: map[string]any{"financial_start": finRange.Start, "financial_end": finRange.End}},
+			{Tool: "clockify_reports_money", Reason: "Drill into month-to-date money by client, project, and task.", Arguments: map[string]any{"financial_start": finRange.Start, "financial_end": finRange.End}},
+			{Tool: "clockify_entries_list", Reason: "Review entries with missing fields, locked state, approvals, or invoicing gaps.", Arguments: map[string]any{"financial_start": finRange.Start, "financial_end": finRange.End}},
 		},
 	}
-	return ok("clockify_monthly_brief", view, moneyResult.Meta), nil
+	return ok("clockify_reports_summary", view, moneyResult.Meta), nil
 }
 
 func (s *Service) AuditEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -154,7 +154,7 @@ func (s *Service) AuditEntries(ctx context.Context, args map[string]any) (Result
 		SuggestedActions: detailedReportSuggestions(views.Entries),
 		Raw:              raw,
 	}
-	return ok("clockify_audit_entries", view, map[string]any{"workspaceId": wsID, "source": "reports-detailed-api"}), nil
+	return ok("clockify_entries_list", view, map[string]any{"workspaceId": wsID, "source": "reports-detailed-api"}), nil
 }
 
 func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -188,7 +188,7 @@ func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (R
 		EntrySummary:     views.EntrySummary,
 		Totals:           views.TotalsSummary,
 		Financials:       financialsFromReportEntries(views.Entries),
-		SuggestedActions: []ToolSuggestion{{Tool: "clockify_client_report", Reason: "Review full business context for this client before creating an invoice.", Arguments: map[string]any{"client": clientID, "financial_start": finRange.Start, "financial_end": finRange.End}}},
+		SuggestedActions: []ToolSuggestion{{Tool: "clockify_reports_detailed", Reason: "Review full business context for this client before creating an invoice.", Arguments: map[string]any{"client": clientID, "financial_start": finRange.Start, "financial_end": finRange.End}}},
 		Raw:              raw,
 	}
 	return ok("clockify_unbilled_for_client", view, map[string]any{"workspaceId": wsID, "clientId": clientID, "source": "reports-detailed-api"}), nil

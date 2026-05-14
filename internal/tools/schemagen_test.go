@@ -178,7 +178,7 @@ func TestSchemaFor_Struct(t *testing.T) {
 // TestEnvelopeSchemaFor verifies the wrapper shape is stable: ok/action/data
 // always present, action bound as const, data filled from schemaFor[T].
 func TestEnvelopeSchemaFor(t *testing.T) {
-	got := envelopeSchemaFor[SummaryData]("clockify_summary_report")
+	got := envelopeSchemaFor[SummaryData]("clockify_reports_summary")
 	if got["type"] != "object" {
 		t.Fatalf("type = %v", got["type"])
 	}
@@ -189,7 +189,7 @@ func TestEnvelopeSchemaFor(t *testing.T) {
 	}
 	props := got["properties"].(map[string]any)
 	action := props["action"].(map[string]any)
-	if action["const"] != "clockify_summary_report" {
+	if action["const"] != "clockify_reports_summary" {
 		t.Fatalf("action const = %v", action["const"])
 	}
 	data := props["data"].(map[string]any)

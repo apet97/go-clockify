@@ -10,7 +10,7 @@ import (
 
 // TestRegistrySchemaAcceptsNaturalLanguageDatetime is the regression
 // guard for the schema/handler date-time drift. Tools that document
-// flexible-time start/end (e.g. clockify_add_entry, clockify_list_entries)
+// flexible-time start/end (e.g. clockify_entries_create, clockify_entries_list)
 // have handlers using timeparse.ParseDatetime which accepts inputs like
 // "now" and "today 9:00". The schema tightener must NOT add
 // format:date-time to those fields, because the jsonschema validator's
@@ -29,28 +29,23 @@ func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
 	}
 	naturalLanguageCases := []input{
 		{
-			toolName: legacyToolAddEntry,
-			// only `start` is required for add_entry.
-			args: map[string]any{"start": "now"},
+			toolName: "clockify_entries_create",
+			args:     map[string]any{"start": "now"},
 		},
 		{
-			toolName: "clockify_list_entries",
+			toolName: "clockify_entries_list",
 			args:     map[string]any{"start": "today 9:00", "end": "now"},
 		},
 		{
-			toolName: "clockify_weekly_summary",
-			args: map[string]any{ // YYYY-MM-DD short date plus the required Reports API filter.
+			toolName: "clockify_reports_weekly",
+			args: map[string]any{
 				"week_start": "2026-04-21",
-				"weekly_filter": map[string]any{
-					"group":    "PROJECT",
-					"subgroup": "TIME",
-				},
 			},
 		},
 	}
 
 	svc := &Service{}
-	descriptors := svc.Registry()
+	descriptors := svc.FullAccessRegistry()
 	descByName := make(map[string]map[string]any, len(descriptors))
 	for _, d := range descriptors {
 		if d.Tool.InputSchema == nil {

@@ -156,7 +156,7 @@ func TestListInProgressTimeEntriesUsesWorkspaceEndpoint(t *testing.T) {
 	defer cleanup()
 	svc := New(client, "ws1")
 	result, err := svc.ListInProgressTimeEntries(context.Background(), map[string]any{})
-	mustOK(t, result, err, "clockify_list_in_progress_time_entries")
+	mustOK(t, result, err, "clockify_entries_running")
 	if got := result.Data.([]EntryView); len(got) != 1 || got[0].ID != "te1" {
 		t.Fatalf("unexpected entries: %#v", result.Data)
 	}

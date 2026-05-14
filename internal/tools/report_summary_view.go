@@ -356,7 +356,7 @@ func reportDrilldownSuggestions(body map[string]any) []ToolSuggestion {
 		return nil
 	}
 	return []ToolSuggestion{{
-		Tool:   "clockify_detailed_report",
+		Tool:   "clockify_reports_detailed",
 		Reason: "Open row-level entries behind these report totals, including approval, lock, invoicing, custom field, and money details.",
 		Arguments: map[string]any{
 			"date_range_start": suggestionArgs["dateRangeStart"],

@@ -63,5 +63,5 @@ func (s *Service) WorkspaceGovernance(ctx context.Context) (ResultEnvelope, erro
 	if settings != nil {
 		view.RawSettings = maps.Clone(settings)
 	}
-	return ok("clockify_workspace_governance", view, map[string]any{"workspaceId": wsID, "source": "workspace_api"}), nil
+	return ok("clockify_workspace_settings", view, map[string]any{"workspaceId": wsID, "source": "workspace_api"}), nil
 }

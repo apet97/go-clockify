@@ -50,7 +50,7 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_tasks", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_tasks_list", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // GetTask fetches a single task by ID or exact name within a project.
@@ -85,7 +85,7 @@ func (s *Service) GetTask(ctx context.Context, args map[string]any) (ResultEnvel
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, out, args)
-	return ok("clockify_get_task", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}, financialMeta)), nil
+	return ok("clockify_tasks_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}, financialMeta)), nil
 }
 
 func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -114,7 +114,7 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
-		return ok("clockify_create_task", dryrun.Preview("clockify_create_task", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+		return ok("clockify_tasks_create", dryrun.Preview("clockify_tasks_create", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "projects", projectID, "tasks")
@@ -128,7 +128,7 @@ func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, task, args)
-	return ok("clockify_create_task", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
+	return ok("clockify_tasks_create", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
 // UpdateTask performs a fetch-then-merge update of a task.
@@ -214,8 +214,8 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_update_task",
-			Data:   dryrun.Preview("clockify_update_task", args),
+			Action: "clockify_tasks_update",
+			Data:   dryrun.Preview("clockify_tasks_update", args),
 			Meta:   meta,
 		}, nil
 	}
@@ -232,7 +232,7 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, updated, args)
-	return ok("clockify_update_task", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_tasks_update", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // taskPutPayload builds the full-replacement body for PUT /projects/{pid}/tasks/{tid}.
@@ -320,8 +320,8 @@ func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEn
 		steps = append(steps, "DELETE task")
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_delete_task",
-			Data:   dryrun.WrapResult(existing, "clockify_delete_task"),
+			Action: "clockify_tasks_delete",
+			Data:   dryrun.WrapResult(existing, "clockify_tasks_delete"),
 			Meta: map[string]any{
 				"workspaceId":               wsID,
 				"projectId":                 projectID,
@@ -344,5 +344,5 @@ func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.Delete(ctx, taskPath); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_delete_task", map[string]any{"deleted": true, "taskId": taskID}, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
+	return ok("clockify_tasks_delete", map[string]any{"deleted": true, "taskId": taskID}, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }

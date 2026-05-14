@@ -2,66 +2,52 @@ package tools
 
 import "testing"
 
-func TestReportToolSchemasExposeOnlyTheirDocumentedFilters(t *testing.T) {
+func TestReportRouteSchemasExposeCurrentOneUserFields(t *testing.T) {
 	svc := &Service{}
-	tier1 := map[string]map[string]any{}
-	for _, desc := range svc.Registry() {
-		tier1[desc.Tool.Name] = desc.Tool.InputSchema
+	descriptors := map[string]map[string]any{}
+	for _, desc := range svc.FullAccessRegistry() {
+		descriptors[desc.Tool.Name] = desc.Tool.InputSchema
 	}
 
-	cases := []struct {
-		tool    string
-		want    string
-		forbid  []string
-		wantKey string
-	}{
-		{"clockify_attendance_report", "attendance_filter", []string{"summary_filter", "detailed_filter", "weekly_filter"}, "attendance_filter"},
-		{"clockify_detailed_report", "detailed_filter", []string{"summary_filter", "attendance_filter", "weekly_filter"}, "detailed_filter"},
-		{"clockify_summary_report", "summary_filter", []string{"detailed_filter", "attendance_filter", "weekly_filter"}, "summary_filter"},
-		{"clockify_weekly_summary", "weekly_filter", []string{"summary_filter", "detailed_filter", "attendance_filter"}, "weekly_filter"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.tool, func(t *testing.T) {
-			schema := tier1[tc.tool]
-			if schema == nil {
-				t.Fatalf("missing schema for %s", tc.tool)
+	for _, tool := range []string{
+		"clockify_reports_attendance",
+		"clockify_reports_money",
+		"clockify_reports_expense",
+		"clockify_reports_export",
+	} {
+		t.Run(tool, func(t *testing.T) {
+			props := schemaProperties(t, descriptors[tool], tool)
+			for _, key := range []string{"date_range_start", "date_range_end", "start", "end", "export_type", "body"} {
+				if _, ok := props[key]; !ok {
+					t.Fatalf("%s missing current report route property %s", tool, key)
+				}
 			}
-			props := schema["properties"].(map[string]any)
-			if _, ok := props[tc.want]; !ok {
-				t.Fatalf("%s missing %s in schema properties", tc.tool, tc.want)
-			}
-			required, _ := toStringSliceAny(schema["required"])
-			if stringSliceContains(required, tc.wantKey) {
-				t.Fatalf("%s required fields = %v, want %s optional", tc.tool, required, tc.wantKey)
-			}
-			for _, key := range tc.forbid {
-				if _, ok := props[key]; ok {
-					t.Fatalf("%s must not expose %s", tc.tool, key)
+			for _, stale := range []string{"summary_filter", "detailed_filter", "attendance_filter", "weekly_filter"} {
+				if _, ok := props[stale]; ok {
+					t.Fatalf("%s must not expose removed legacy report filter %s", tool, stale)
 				}
 			}
 		})
 	}
-}
 
-func TestReportToolSchemasExposeDocumentedEnumsAndAliases(t *testing.T) {
-	svc := &Service{}
-	summary := schemaForTier1Tool(t, svc, "clockify_summary_report")
-	summaryProps := summary["properties"].(map[string]any)
-	assertEnumContains(t, summaryProps["amount_shown"].(map[string]any), "EARNED", "COST", "PROFIT")
-	amountItems := summaryProps["amounts"].(map[string]any)["items"].(map[string]any)
-	assertEnumContains(t, amountItems, "EARNED", "COST", "PROFIT")
-	summaryFilter := summaryProps["summary_filter"].(map[string]any)["properties"].(map[string]any)
-	groupItems := summaryFilter["groups"].(map[string]any)["items"].(map[string]any)
-	assertEnumContains(t, groupItems, "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY")
-	assertEnumMissing(t, groupItems, "USER")
-	assertEnumMissing(t, groupItems, "DAY")
-	assertEnumMissing(t, groupItems, "TAG")
-
-	weekly := schemaForTier1Tool(t, svc, "clockify_weekly_summary")
-	weeklyProps := weekly["properties"].(map[string]any)
-	weeklyFilter := weeklyProps["weekly_filter"].(map[string]any)["properties"].(map[string]any)
-	assertEnumContains(t, weeklyFilter["group"].(map[string]any), "PROJECT", "USER")
-	assertEnumContains(t, weeklyFilter["subgroup"].(map[string]any), "TIME")
+	for _, tool := range []string{
+		"clockify_reports_detailed",
+		"clockify_reports_summary",
+		"clockify_reports_weekly",
+	} {
+		t.Run(tool, func(t *testing.T) {
+			props := schemaProperties(t, descriptors[tool], tool)
+			for _, key := range []string{"start", "end", "project", "timezone"} {
+				if _, ok := props[key]; !ok {
+					t.Fatalf("%s missing current helper property %s", tool, key)
+				}
+			}
+		})
+	}
+	weeklyProps := schemaProperties(t, descriptors["clockify_reports_weekly"], "clockify_reports_weekly")
+	if _, ok := weeklyProps["week_start"]; !ok {
+		t.Fatal("clockify_reports_weekly missing week_start")
+	}
 }
 
 func TestExpenseReportSchemaCoversDetailedExpenseReportBody(t *testing.T) {
@@ -96,15 +82,16 @@ func TestExpenseReportSchemaCoversDetailedExpenseReportBody(t *testing.T) {
 	assertEnumContains(t, props["sort_column"].(map[string]any), "ID", "PROJECT", "USER", "CATEGORY", "DATE", "AMOUNT")
 }
 
-func schemaForTier1Tool(t *testing.T, svc *Service, tool string) map[string]any {
+func schemaProperties(t *testing.T, schema map[string]any, tool string) map[string]any {
 	t.Helper()
-	for _, desc := range svc.Registry() {
-		if desc.Tool.Name == tool {
-			return desc.Tool.InputSchema
-		}
+	if schema == nil {
+		t.Fatalf("missing schema for %s", tool)
 	}
-	t.Fatalf("missing tool %s", tool)
-	return nil
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("%s properties = %T", tool, schema["properties"])
+	}
+	return props
 }
 
 func assertEnumContains(t *testing.T, schema map[string]any, wants ...string) {

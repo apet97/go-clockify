@@ -163,14 +163,14 @@ func TestRegistryFlexibleTimeFieldsHaveNoFormat(t *testing.T) {
 		field    string
 	}
 	flexible := []expect{
-		{"clockify_list_entries", "start"},
-		{"clockify_list_entries", "end"},
-		{legacyToolAddEntry, "start"},
-		{"clockify_weekly_summary", "week_start"},
+		{"clockify_entries_list", "start"},
+		{"clockify_entries_list", "end"},
+		{"clockify_entries_create", "start"},
+		{"clockify_reports_weekly", "week_start"},
 	}
 
 	svc := &Service{}
-	descriptors := svc.Registry()
+	descriptors := svc.FullAccessRegistry()
 	descByName := make(map[string]map[string]any, len(descriptors))
 	for _, d := range descriptors {
 		if d.Tool.InputSchema == nil {
@@ -192,7 +192,7 @@ func TestRegistryFlexibleTimeFieldsHaveNoFormat(t *testing.T) {
 			continue
 		}
 		// The tightener has already run via normalizeDescriptors() that
-		// Registry() invokes; assert the flexible detection took effect.
+		// FullAccessRegistry() invokes; assert the flexible detection took effect.
 		if format, set := field["format"]; set {
 			t.Errorf("%s.%s carries format=%v but description advertises flexible parsing (description=%q)",
 				want.toolName, want.field, format, field["description"])

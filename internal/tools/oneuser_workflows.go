@@ -34,7 +34,7 @@ func (s *Service) workflowDescriptors() []mcp.ToolDescriptor {
 			toolRO("clockify_review_day", "Review one day of work and return totals, issues, and next actions.", reviewDaySchema()), s.ClockifyReviewDay),
 		workflowDescriptor(8, "review", "entry", []string{"Review one week for totals, missing fields, gaps, overlaps, and next actions."}, []string{"clockify_reports_weekly", "clockify_entries_list"},
 			toolRO("clockify_review_week", "Review one week of work and return totals, issues, and next actions.", reviewWeekSchema()), s.ClockifyReviewWeek),
-		workflowDescriptor(9, "work_tracking", "entry", []string{"Find and fix one time entry without hand-chaining get/update calls."}, []string{"clockify_entries_get", "clockify_entries_update", legacyToolFindAndUpdateEntry},
+		workflowDescriptor(9, "work_tracking", "entry", []string{"Find and fix one time entry without hand-chaining get/update calls."}, []string{"clockify_entries_get", "clockify_entries_update", oneUserToolFixEntry},
 			toolRWIdem("clockify_fix_entry", "Find one entry by ID or strict filters, then update selected fields.", fixEntrySchema()), s.ClockifyFixEntry),
 		workflowDescriptor(10, "billing", "invoice", []string{"Create an invoice shell for a client and optionally import time entries."}, []string{"clockify_invoices_create", "clockify_invoices_import_time"},
 			toolRW("clockify_invoice_client_work", "Create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable.", invoiceClientWorkSchema()), s.ClockifyInvoiceClientWork),
@@ -986,11 +986,11 @@ func nextFromReviewData(data any) []NextAction {
 
 func workflowPreferredTool(tool string) string {
 	switch tool {
-	case "clockify_stop_timer", "clockify_entries_timer_stop":
+	case "clockify_entries_timer_stop":
 		return "clockify_stop_work"
-	case legacyToolFindAndUpdateEntry, "clockify_update_entry", "clockify_entries_update":
+	case "clockify_fix_entry", "clockify_entries_update":
 		return "clockify_fix_entry"
-	case legacyToolLogTime, legacyToolTimesheetFillGap, legacyToolAddEntry, "clockify_entries_create":
+	case "clockify_log_work", "clockify_entries_create":
 		return "clockify_log_work"
 	default:
 		return tool

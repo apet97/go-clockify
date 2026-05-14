@@ -56,20 +56,20 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 			meta["userId"] = userID
 		}
 		validation := validationOK("timer_state_check")
-		preview := dryrunPreviewPayloadValidated(legacyToolStartTimer, payload, validation)
+		preview := dryrunPreviewPayloadValidated(oneUserToolEntriesTimerStart, payload, validation)
 		if len(running) > 0 && running[0].IsRunning() {
 			validation = validationFailed("timer_state_check", ValidationProblem{
 				Code:        "running_timer_exists",
 				Message:     "a timer is already running",
 				Remediation: "Stop the current timer before starting another timer.",
 			})
-			preview = dryrunPreviewPayloadValidated(legacyToolStartTimer, payload, validation)
+			preview = dryrunPreviewPayloadValidated(oneUserToolEntriesTimerStart, payload, validation)
 			view, financialMeta := s.enrichEntryView(ctx, wsID, running[0])
 			preview["running_entry"] = view
 			meta = withFinancialMeta(meta, financialMeta)
 		}
 		preview["args"] = maps.Clone(args)
-		return ok(legacyToolStartTimer, preview, meta), nil
+		return ok(oneUserToolEntriesTimerStart, preview, meta), nil
 	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
-	return ok(legacyToolStartTimer, view, withFinancialMeta(meta, financialMeta)), nil
+	return ok(oneUserToolEntriesTimerStart, view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, error) {
@@ -93,20 +93,20 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 		meta := map[string]any{"workspaceId": wsID, "userId": userID}
 		payload := map[string]any{"end": time.Now().UTC().Format(time.RFC3339)}
 		if len(entries) == 0 || !entries[0].IsRunning() {
-			preview := dryrunPreviewPayloadValidated("clockify_stop_timer", payload, validationFailed("timer_state_check", ValidationProblem{
+			preview := dryrunPreviewPayloadValidated("clockify_entries_timer_stop", payload, validationFailed("timer_state_check", ValidationProblem{
 				Code:        "no_running_timer",
 				Message:     "there is no running timer to stop",
 				Remediation: "Use clockify_entries_timer_status to confirm timer state before retrying.",
 			}))
 			preview["args"] = maps.Clone(args)
-			return ok("clockify_stop_timer", preview, meta), nil
+			return ok("clockify_entries_timer_stop", preview, meta), nil
 		}
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entries[0])
 		meta = withFinancialMeta(meta, financialMeta)
-		preview := dryrunPreviewPayloadValidated("clockify_stop_timer", payload, validationOK("timer_state_check"))
+		preview := dryrunPreviewPayloadValidated("clockify_entries_timer_stop", payload, validationOK("timer_state_check"))
 		preview["args"] = maps.Clone(args)
 		preview["running_entry"] = view
-		return ok("clockify_stop_timer", preview, meta), nil
+		return ok("clockify_entries_timer_stop", preview, meta), nil
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
-	return ok("clockify_stop_timer", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": user.ID}, financialMeta)), nil
+	return ok("clockify_entries_timer_stop", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": user.ID}, financialMeta)), nil
 }
 
 func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
@@ -141,7 +141,7 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 	meta := map[string]any{"workspaceId": wsID, "userId": userID}
 
 	if len(entries) == 0 || !entries[0].IsRunning() {
-		return ok(legacyToolTimerStatus, map[string]any{
+		return ok(oneUserToolEntriesTimerStatus, map[string]any{
 			"running": false,
 			"entry":   nil,
 			"elapsed": "",
@@ -163,7 +163,7 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 		elapsedStr = fmt.Sprintf("%dm %ds", int(elapsed.Minutes()), int(elapsed.Seconds())%60)
 	}
 
-	return ok(legacyToolTimerStatus, map[string]any{
+	return ok(oneUserToolEntriesTimerStatus, map[string]any{
 		"running": true,
 		"entry":   view,
 		"elapsed": elapsedStr,

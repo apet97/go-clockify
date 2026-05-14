@@ -632,6 +632,130 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	}
 }
 
+func TestOneUserProductSourceDoesNotMentionRemovedLegacyToolNames(t *testing.T) {
+	repoRoot := filepath.Clean("../..")
+	removed := []string{
+		"clockify_attendance_report",
+		"clockify_audit_entries",
+		"clockify_client_report",
+		"clockify_create_client",
+		"clockify_create_project",
+		"clockify_create_tag",
+		"clockify_create_task",
+		"clockify_current_user",
+		"clockify_delete_client",
+		"clockify_delete_entry",
+		"clockify_delete_project",
+		"clockify_delete_tag",
+		"clockify_delete_task",
+		"clockify_detailed_report",
+		"clockify_get_client",
+		"clockify_get_entry",
+		"clockify_get_project",
+		"clockify_get_tag",
+		"clockify_get_task",
+		"clockify_get_workspace",
+		"clockify_list_clients",
+		"clockify_list_entries",
+		"clockify_list_in_progress_time_entries",
+		"clockify_list_projects",
+		"clockify_list_tags",
+		"clockify_list_tasks",
+		"clockify_list_users",
+		"clockify_list_workspaces",
+		"clockify_log_time",
+		"clockify_money_report",
+		"clockify_monthly_brief",
+		"clockify_policy_info",
+		"clockify_quick_report",
+		"clockify_resolve_debug",
+		"clockify_resolve_name",
+		"clockify_start_timer",
+		"clockify_stop_timer",
+		"clockify_summary_report",
+		"clockify_timesheet_fill_gap",
+		"clockify_timesheet_review",
+		"clockify_today_entries",
+		"clockify_update_client",
+		"clockify_update_entry",
+		"clockify_update_project",
+		"clockify_update_tag",
+		"clockify_update_task",
+		"clockify_weekly_summary",
+		"clockify_whoami",
+		"clockify_workspace_governance",
+		"clockify_activate_group",
+	}
+	roots := []string{
+		"internal/tools",
+		"internal/mcp",
+		"cmd/clockify-mcp",
+	}
+	docs := []string{
+		"README.md",
+		"docs/agent-cookbook.md",
+		"docs/tool-catalog.md",
+	}
+
+	var files []string
+	for _, root := range roots {
+		rootPath := filepath.Join(repoRoot, root)
+		err := filepath.WalkDir(rootPath, func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			if filepath.Ext(path) == ".go" && !strings.HasSuffix(path, "_test.go") {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, doc := range docs {
+		files = append(files, filepath.Join(repoRoot, doc))
+	}
+
+	for _, file := range files {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(raw)
+		for _, name := range removed {
+			if containsExactToolToken(text, name) {
+				rel, _ := filepath.Rel(repoRoot, file)
+				t.Fatalf("%s still mentions removed legacy tool name %s", rel, name)
+			}
+		}
+	}
+}
+
+func containsExactToolToken(text, name string) bool {
+	for start := 0; ; {
+		idx := strings.Index(text[start:], name)
+		if idx < 0 {
+			return false
+		}
+		idx += start
+		beforeOK := idx == 0 || !isToolIdentByte(text[idx-1])
+		after := idx + len(name)
+		afterOK := after == len(text) || !isToolIdentByte(text[after])
+		if beforeOK && afterOK {
+			return true
+		}
+		start = idx + len(name)
+	}
+}
+
+func isToolIdentByte(b byte) bool {
+	return b == '_' || b == '-' || b >= '0' && b <= '9' || b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z'
+}
+
 func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	wantFields := map[string][]string{
@@ -1132,6 +1256,9 @@ func TestOneUserDocsAndDefaultCodeDoNotMentionRemovedProductTools(t *testing.T) 
 			}
 			switch filepath.Ext(path) {
 			case ".go", ".md":
+				if strings.HasSuffix(path, "_test.go") {
+					return nil
+				}
 				assertFileOmitsRemovedTools(t, path, removed)
 			}
 			return nil
@@ -1150,7 +1277,7 @@ func assertFileOmitsRemovedTools(t *testing.T, path string, removed []string) {
 	}
 	text := string(raw)
 	for _, tool := range removed {
-		if strings.Contains(text, tool) {
+		if containsExactToolToken(text, tool) {
 			t.Fatalf("%s mentions removed product-surface tool %s", path, tool)
 		}
 	}

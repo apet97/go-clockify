@@ -205,7 +205,7 @@ func TestDeleteClientDryRunDoesNotMutate(t *testing.T) {
 	if mutated {
 		t.Fatal("dry-run must not issue PUT or DELETE")
 	}
-	if result.Action != "clockify_delete_client" {
+	if result.Action != "clockify_clients_delete" {
 		t.Fatalf("unexpected action: %q", result.Action)
 	}
 }
@@ -369,7 +369,7 @@ func TestUpdateClientDryRunDoesNotMutate(t *testing.T) {
 	if mutated {
 		t.Fatal("dry-run must not issue PUT")
 	}
-	if result.Action != "clockify_update_client" {
+	if result.Action != "clockify_clients_update" {
 		t.Fatalf("unexpected action: %q", result.Action)
 	}
 }

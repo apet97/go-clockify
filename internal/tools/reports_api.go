@@ -18,7 +18,7 @@ type reportEndpoint struct {
 
 func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
-		toolName:  "clockify_attendance_report",
+		toolName:  "clockify_reports_attendance",
 		pathName:  "attendance",
 		filterKey: "attendance_filter",
 	})
@@ -396,7 +396,7 @@ func normalizeSummaryFilter(raw map[string]any) (map[string]any, error) {
 		case "CLIENT", "PROJECT", "TASK", "DATE", "WEEK", "MONTH", "TIMEENTRY":
 			normalized = append(normalized, strings.ToUpper(strings.TrimSpace(group)))
 		case "USER":
-			return nil, fmt.Errorf("summary_filter.groups does not support USER; use clockify_assignment_report for user-grouped scheduled-vs-tracked joins or clockify_detailed_report for user rows")
+			return nil, fmt.Errorf("summary_filter.groups does not support USER; use clockify_assignment_report for user-grouped scheduled-vs-tracked joins or clockify_reports_detailed for user rows")
 		default:
 			return nil, fmt.Errorf("summary_filter.groups contains unsupported value %q", group)
 		}

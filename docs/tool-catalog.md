@@ -199,3 +199,14 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_weekly` | — | yes | no | yes | no | `read` | Run the local weekly report helper. |
 | `clockify_api_get` | — | yes | no | yes | no | `read` | Raw GET fallback within the pinned workspace or Clockify API path. |
 | `clockify_api_request` | — | no | no | no | no | `write` | Raw method fallback within the pinned workspace or Clockify API path. |
+
+## Audit-tracked argument capture
+
+Tools below record action-defining arguments alongside the
+default `*_id` capture in audit events. The per-tool `audit_keys`
+list also surfaces in `docs/tool-catalog.json`.
+
+| Tool | Audit Keys |
+|------|------------|
+| `clockify_users_list` | `workspace_id` |
+| `clockify_users_profile` | `user_id` |

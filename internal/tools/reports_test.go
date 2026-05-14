@@ -762,9 +762,9 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 	var logTime *ToolSuggestion
 	for i := range suggestions {
 		switch suggestions[i].Tool {
-		case "clockify_list_entries":
+		case "clockify_entries_list":
 			listEntries = &suggestions[i]
-		case legacyToolLogTime:
+		case oneUserToolLogWork:
 			logTime = &suggestions[i]
 		}
 	}

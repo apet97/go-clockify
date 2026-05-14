@@ -187,7 +187,7 @@ func TestUpdateTaskDryRunDoesNotMutate(t *testing.T) {
 	if mutated {
 		t.Fatal("dry-run must not issue PUT")
 	}
-	if result.Action != "clockify_update_task" {
+	if result.Action != "clockify_tasks_update" {
 		t.Fatalf("unexpected action: %q", result.Action)
 	}
 }
@@ -337,7 +337,7 @@ func TestDeleteTaskDryRunDoesNotMutate(t *testing.T) {
 	if mutated {
 		t.Fatal("dry-run must not issue DELETE")
 	}
-	if result.Action != "clockify_delete_task" {
+	if result.Action != "clockify_tasks_delete" {
 		t.Fatalf("unexpected action: %q", result.Action)
 	}
 	if result.Meta["wouldMarkDoneBeforeDelete"] != true {

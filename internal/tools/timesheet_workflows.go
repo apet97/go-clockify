@@ -127,7 +127,7 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		data.Entries = views
 		meta := paginationMeta(agg, reportPageSize, limits)
 		meta["financials"] = financialMeta
-		return ok(legacyToolTimesheetReview, data, mergeMeta(map[string]any{
+		return ok(oneUserToolReviewDay, data, mergeMeta(map[string]any{
 			"workspaceId":  wsID,
 			"userId":       userID,
 			"timezone":     loc.String(),
@@ -146,7 +146,7 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		"workdayStart": workdayStart,
 		"workdayEnd":   workdayEnd,
 	}, paginationMeta(agg, reportPageSize, limits))
-	return ok(legacyToolTimesheetReview, data, meta), nil
+	return ok(oneUserToolReviewDay, data, meta), nil
 }
 
 func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -203,7 +203,7 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 				Message:     fmt.Sprintf("requested gap overlaps %d existing entr%s", len(overlaps), pluralY(len(overlaps))),
 				Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
 			})
-			return ok(legacyToolTimesheetFillGap, TimesheetFillGapData{
+			return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
 				DryRun:     true,
 				Proposed:   draft,
 				Overlaps:   overlaps,
@@ -212,7 +212,7 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 			}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
 		}
 		validation := validationOK("overlap_check")
-		return ok(legacyToolTimesheetFillGap, TimesheetFillGapData{
+		return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
 			DryRun:     true,
 			Proposed:   draft,
 			Overlaps:   overlaps,
@@ -246,7 +246,7 @@ func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (Re
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-	return ok(legacyToolTimesheetFillGap, TimesheetFillGapData{
+	return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
 		Proposed:  draft,
 		Entry:     view,
 		Overlaps:  overlaps,
@@ -333,7 +333,7 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 				Start:    startTime.Format(time.RFC3339),
 			})
 			addSuggestion(ToolSuggestion{
-				Tool:   "clockify_stop_timer",
+				Tool:   "clockify_entries_timer_stop",
 				Reason: "Stop the running timer if the work session is finished.",
 			})
 		}
@@ -347,7 +347,7 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 				End:      endTime.Format(time.RFC3339),
 			})
 			addSuggestion(ToolSuggestion{
-				Tool:        legacyToolFindAndUpdateEntry,
+				Tool:        oneUserToolFixEntry,
 				Reason:      "Assign a project to this entry once the correct project is known.",
 				Arguments:   map[string]any{"entry_id": entry.ID},
 				MissingArgs: []string{"project"},
@@ -363,7 +363,7 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 				End:      endTime.Format(time.RFC3339),
 			})
 			addSuggestion(ToolSuggestion{
-				Tool:        legacyToolFindAndUpdateEntry,
+				Tool:        oneUserToolFixEntry,
 				Reason:      "Add a human-readable description to this entry.",
 				Arguments:   map[string]any{"entry_id": entry.ID},
 				MissingArgs: []string{"new_description"},
@@ -373,7 +373,7 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 	for _, issue := range overlapIssues(entries) {
 		issues = append(issues, issue)
 		addSuggestion(ToolSuggestion{
-			Tool:        "clockify_update_entry",
+			Tool:        "clockify_entries_update",
 			Reason:      "Adjust one overlapping entry after confirming the intended boundary.",
 			Arguments:   map[string]any{"entry_id": firstNonEmpty(issue.RelatedEntryIDs)},
 			MissingArgs: []string{"start", "end"},
@@ -383,7 +383,7 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 		for _, issue := range gapIssues(entries, start, end, loc, workdayStart, workdayEnd, time.Duration(minGapMinutes)*time.Minute) {
 			issues = append(issues, issue)
 			addSuggestion(ToolSuggestion{
-				Tool:   legacyToolTimesheetFillGap,
+				Tool:   oneUserToolEntriesCreateFromGap,
 				Reason: "Fill this open workday gap after confirming what work was performed.",
 				Arguments: map[string]any{
 					"start":   issue.Start,

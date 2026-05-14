@@ -14,10 +14,7 @@ import (
 func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descriptors := map[string]map[string]any{}
-	for _, d := range svc.Registry() {
-		descriptors[d.Tool.Name] = d.Tool.InputSchema
-	}
-	for _, d := range projectAdminHandlers(svc) {
+	for _, d := range svc.FullAccessRegistry() {
 		descriptors[d.Tool.Name] = d.Tool.InputSchema
 	}
 	requireProps := func(tool string, props ...string) {
@@ -37,26 +34,20 @@ func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 		}
 	}
 
-	requireProps("clockify_list_clients", "name", "sort_column", "sort_order", "archived", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_get_client", "client", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_client_report", "client", "invoice_page", "invoice_page_size", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_create_client", "name", "address", "email", "note", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_update_client", "cc_emails", "currency_id", "archive_projects", "mark_tasks_as_done", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_list_projects", "strict_name_search", "clients", "contains_client", "client_status", "users", "contains_user", "user_status", "is_template", "hydrated", "access", "expense_limit", "expense_date", "user_groups", "contains_group", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_get_project", "hydrated", "custom_field_entity_type", "expense_limit", "expense_date", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_create_project", "client_id", "cost_rate", "hourly_rate", "estimate", "memberships", "tasks", "budget_estimate", "time_estimate", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_update_project", "client_id", "cost_rate", "hourly_rate", "estimate", "memberships", "tasks", "budget_estimate", "estimate_reset", "time_estimate", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_list_tasks", "name", "strict_name_search", "is_active", "sort_column", "sort_order", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_create_task", "assignee_id", "assignee_ids", "budget_estimate", "contains_assignee", "user_group_ids", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_update_task", "assignee_id", "assignee_ids", "budget_estimate", "contains_assignee", "membership_status", "user_group_ids", "financial_start", "financial_end", "financial_date_range_type", "financial_timezone")
-	requireProps("clockify_create_project_from_template", "template_project_id", "client_id", "is_public")
-	requireProps("clockify_update_project_memberships", "memberships", "user_groups")
-	requireProps("clockify_assign_project_memberships", "remove", "user_ids", "user_groups")
-	requireProps("clockify_update_project_template", "is_template")
-	requireProps("clockify_update_project_user_cost_rate", "project_id", "user_id", "amount", "since")
-	requireProps("clockify_update_project_user_hourly_rate", "project_id", "user_id", "amount", "since")
-	requireProps("clockify_update_task_cost_rate", "project_id", "project", "task_id", "task", "amount", "since")
-	requireProps("clockify_update_task_hourly_rate", "project_id", "project", "task_id", "task", "amount", "since")
+	requireProps("clockify_clients_list", "page", "page_size")
+	requireProps("clockify_clients_get", "client", "client_id")
+	requireProps("clockify_clients_create", "name")
+	requireProps("clockify_clients_update", "client", "client_id", "name")
+	requireProps("clockify_projects_list", "page", "page_size")
+	requireProps("clockify_projects_get", "project", "project_id")
+	requireProps("clockify_projects_create", "name", "client", "client_id", "color", "billable", "is_public")
+	requireProps("clockify_projects_update", "project", "project_id", "name", "client", "client_id", "color", "billable", "is_public", "archived")
+	requireProps("clockify_projects_rates_update", "project_id", "user_id", "rate_kind", "amount")
+	requireProps("clockify_tasks_list", "project", "project_id", "page", "page_size")
+	requireProps("clockify_tasks_get", "project", "project_id", "task", "task_id")
+	requireProps("clockify_tasks_create", "project", "project_id", "name", "billable")
+	requireProps("clockify_tasks_update", "project", "project_id", "task", "task_id", "name", "billable", "assignee_ids", "status")
+	requireProps("clockify_tasks_rates_update", "project_id", "task_id", "rate_kind", "amount")
 }
 
 func TestClientDocListFiltersForwarded(t *testing.T) {

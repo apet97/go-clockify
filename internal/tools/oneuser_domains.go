@@ -721,10 +721,10 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 		}
 	}
 	add([]mcp.ToolDescriptor{
-		{Tool: toolRO("clockify_list_users", "List users in the pinned workspace.", paginationSchema(nil)), Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_users_list", "List users in the pinned workspace.", paginationSchema(nil)), Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListUsers(ctx, args)
 		}},
-		{Tool: toolRO("clockify_current_user", "Get the current Clockify user.", map[string]any{"type": "object"}), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+		{Tool: toolRO("clockify_users_profile", "Get the current Clockify user.", map[string]any{"type": "object"}), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
 			return s.CurrentUser(ctx)
 		}},
 	})
@@ -738,11 +738,6 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 	add(groupsHolidaysHandlers(s))
 	add(projectAdminHandlers(s))
 	add(userAdminHandlers(s))
-	add([]mcp.ToolDescriptor{
-		{Tool: toolRO("clockify_get_workspace", "Read pinned workspace settings.", objectSchema(nil)), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
-			return s.GetWorkspace(ctx)
-		}},
-	})
 	return out
 }
 

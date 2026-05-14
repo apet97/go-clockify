@@ -484,7 +484,7 @@ func detailedReportSuggestions(entries []ReportEntryView) []ToolSuggestion {
 		ref := firstNonEmptyString(client.ID, client.Name)
 		if ref != "" {
 			suggestions = append(suggestions, ToolSuggestion{
-				Tool:      "clockify_client_report",
+				Tool:      "clockify_reports_detailed",
 				Reason:    "Drill into the top client from this detailed report.",
 				Arguments: map[string]any{"client": ref},
 			})
@@ -493,7 +493,7 @@ func detailedReportSuggestions(entries []ReportEntryView) []ToolSuggestion {
 	entrySummary := summarizeReportEntries(entries)
 	if entrySummary.MissingDescriptionCount > 0 || entrySummary.MissingProjectCount > 0 || entrySummary.MissingTaskCount > 0 || entrySummary.LockedCount > 0 {
 		suggestions = append(suggestions, ToolSuggestion{
-			Tool:   legacyToolTimesheetReview,
+			Tool:   oneUserToolReviewDay,
 			Reason: "Review locked or incomplete entries found in this detailed report.",
 		})
 	}

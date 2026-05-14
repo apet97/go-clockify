@@ -17,16 +17,15 @@ import (
 )
 
 const (
-	legacyToolPrefix             = "clockify_"
-	legacyToolResolveName        = legacyToolPrefix + "resolve_name"
-	legacyToolLogTime            = legacyToolPrefix + "log_time"
-	legacyToolTimesheetReview    = legacyToolPrefix + "timesheet_review"
-	legacyToolTimesheetFillGap   = legacyToolPrefix + "timesheet_fill_gap"
-	legacyToolSwitchProject      = legacyToolPrefix + "switch_project"
-	legacyToolTimerStatus        = legacyToolPrefix + "timer_status"
-	legacyToolAddEntry           = legacyToolPrefix + "add_entry"
-	legacyToolStartTimer         = legacyToolPrefix + "start_timer"
-	legacyToolFindAndUpdateEntry = legacyToolPrefix + "find_and_update_entry"
+	oneUserToolGuide                = "clockify_tools_guide"
+	oneUserToolLogWork              = "clockify_log_work"
+	oneUserToolReviewDay            = "clockify_review_day"
+	oneUserToolEntriesCreateFromGap = "clockify_entries_create"
+	oneUserToolSwitchWork           = "clockify_switch_work"
+	oneUserToolEntriesTimerStatus   = "clockify_entries_timer_status"
+	oneUserToolEntriesCreate        = "clockify_entries_create"
+	oneUserToolEntriesTimerStart    = "clockify_entries_timer_start"
+	oneUserToolFixEntry             = "clockify_fix_entry"
 )
 
 func timeEntryPutPayload(entry clockify.TimeEntry) map[string]any {
@@ -166,15 +165,15 @@ type ResultEnvelope struct {
 }
 
 // WorkspaceContext is the lightweight envelope returned by
-// clockify_get_workspace when the caller only needs the resolved
+// clockify_workspace_settings when the caller only needs the resolved
 // workspace identifier (full workspace details live behind
-// clockify_list_workspaces).
+// clockify_workspace_settings).
 type WorkspaceContext struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
 // IdentityData pairs the upstream Clockify user with the resolved
-// workspace so a single clockify_whoami response carries everything
+// workspace so a single clockify_status response carries everything
 // an agent needs to ground subsequent tool calls.
 type IdentityData struct {
 	User        clockify.User `json:"user"`
@@ -197,8 +196,8 @@ type WeeklySummaryData struct {
 	UnassignedKey    string               `json:"unassignedKey,omitempty"`
 }
 
-// SummaryData is the structured payload for clockify_summary_report
-// and clockify_detailed_report: per-project rollups plus optional raw
+// SummaryData is the structured payload for clockify_reports_summary
+// and clockify_reports_detailed: per-project rollups plus optional raw
 // entries. The WeeklySummaryData variant adds a per-day axis on top.
 type SummaryData struct {
 	Range            DateRange            `json:"range"`
@@ -208,7 +207,7 @@ type SummaryData struct {
 	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
 }
 
-// QuickReportData powers clockify_quick_report: a single-glance
+// QuickReportData powers clockify_reports_summary: a single-glance
 // snapshot with totals, the top project, any running entries, and a
 // short entry sample so an agent can answer "what did I just do?"
 // without a full detailed report round-trip.
@@ -364,7 +363,7 @@ func baseAnnotations(name string) map[string]any {
 }
 
 // titleFromName converts a snake_case tool name into a human-readable title.
-// "clockify_list_entries" → "List Entries", "clockify_quick_report" → "Quick
+// "clockify_entries_list" -> "Entries List", "clockify_reports_summary" -> "Quick
 // Report". Custom per-tool titles can be added later by overriding the
 // "title" key after the base annotations are copied.
 func titleFromName(name string) string {
@@ -410,7 +409,7 @@ func toolRW(name, desc string, schema map[string]any) mcp.Tool {
 
 // toolRWIdem marks a write tool as idempotent. Use for PUT/PATCH-style updates
 // and tools whose handlers produce the same end state on repeated calls
-// (e.g. clockify_stop_timer when no timer is running becomes a no-op).
+// (e.g. clockify_entries_timer_stop when no timer is running becomes a no-op).
 func toolRWIdem(name, desc string, schema map[string]any) mcp.Tool {
 	return newTool(name, desc, schema, false, false, true)
 }
@@ -440,24 +439,16 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 }
 
 var agentToolMetadata = map[string]map[string]any{
-	legacyToolLogTime: {
+	oneUserToolLogWork: {
 		"bestToolFor": []string{"log finished past work", "create a complete time entry"},
-		"preferOver":  []string{legacyToolAddEntry},
+		"preferOver":  []string{oneUserToolEntriesCreate},
 	},
-	legacyToolTimesheetReview: {
+	oneUserToolReviewDay: {
 		"bestToolFor": []string{"find gaps and overlaps", "plan timesheet cleanup"},
 	},
-	legacyToolTimesheetFillGap: {
+	oneUserToolEntriesCreateFromGap: {
 		"bestToolFor": []string{"fill a reviewed timesheet gap"},
-		"preferAfter": []string{legacyToolTimesheetReview},
-	},
-	legacyToolResolveName: {
-		"bestToolFor": []string{"resolve human names to Clockify IDs"},
-		"preferOver":  []string{"clockify_resolve_debug"},
-	},
-	"clockify_resolve_debug": {
-		"compatibilityShim": true,
-		"primaryTool":       legacyToolResolveName,
+		"preferAfter": []string{oneUserToolReviewDay},
 	},
 	"clockify_set_project_memberships": {
 		"compatibilityShim": true,
@@ -706,7 +697,7 @@ func descriptionAdvertisesFlexibleTime(desc string) bool {
 		return true
 	}
 	// Match the literal token "YYYY-MM-DD" (case-insensitive); handlers
-	// like clockify_weekly_summary's week_start parse it via
+	// like clockify_reports_weekly's week_start parse it via
 	// parseFlexibleDateTime.
 	if strings.Contains(lower, "yyyy-mm-dd") {
 		return true

@@ -40,7 +40,7 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_clients", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_clients_list", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelope, error) {
@@ -69,7 +69,7 @@ func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, out, args, false)
-	return ok("clockify_get_client", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, financialMeta)), nil
+	return ok("clockify_clients_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, financialMeta)), nil
 }
 
 func (s *Service) CreateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -92,7 +92,7 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 		payload["note"] = v
 	}
 	if dryrun.Enabled(args) {
-		return ok("clockify_create_client", dryrun.Preview("clockify_create_client", payload), map[string]any{"workspaceId": wsID}), nil
+		return ok("clockify_clients_create", dryrun.Preview("clockify_clients_create", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 	path, err := paths.Workspace(wsID, "clients")
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *Service) CreateClient(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, client, args, false)
-	return ok("clockify_create_client", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
+	return ok("clockify_clients_create", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 // UpdateClient performs a fetch-then-merge update of a client.
@@ -178,8 +178,8 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_update_client",
-			Data:   dryrun.Preview("clockify_update_client", args),
+			Action: "clockify_clients_update",
+			Data:   dryrun.Preview("clockify_clients_update", args),
 			Meta:   meta,
 		}, nil
 	}
@@ -193,7 +193,7 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, updated, args, false)
-	return ok("clockify_update_client", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_clients_update", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // clientPutPayload builds the full-replacement body for PUT /clients/{id}.
@@ -257,8 +257,8 @@ func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (Result
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_delete_client",
-			Data:   dryrun.WrapResult(existing, "clockify_delete_client"),
+			Action: "clockify_clients_delete",
+			Data:   dryrun.WrapResult(existing, "clockify_clients_delete"),
 			Meta:   map[string]any{"workspaceId": wsID, "clientId": clientID},
 		}, nil
 	}
@@ -274,5 +274,5 @@ func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Delete(ctx, clientPath); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_delete_client", map[string]any{"deleted": true, "clientId": clientID}, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_clients_delete", map[string]any{"deleted": true, "clientId": clientID}, map[string]any{"workspaceId": wsID}), nil
 }

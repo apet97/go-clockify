@@ -65,7 +65,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 			meta["projectFilterResolvedId"] = resolvedProjectID
 		}
 		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-		return ok("clockify_list_entries", views, withFinancialMeta(meta, financialMeta)), nil
+		return ok("clockify_entries_list", views, withFinancialMeta(meta, financialMeta)), nil
 	}
 
 	query := make(map[string]string, len(baseQuery)+2)
@@ -88,7 +88,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-	return ok("clockify_list_entries", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_entries_list", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // GetEntry retrieves a single time entry by ID.
@@ -110,7 +110,7 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-	return ok("clockify_get_entry", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
+	return ok("clockify_entries_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 // TodayEntries returns time entries for the current day.
@@ -151,7 +151,7 @@ func (s *Service) TodayEntries(ctx context.Context, args map[string]any) (Result
 		"rangeEnd":    timeparse.FormatISO(nowTime),
 	}, args, page, pageSize)
 	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-	return ok("clockify_today_entries", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_entries_list", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // ListInProgressTimeEntries returns workspace-wide running timers.
@@ -180,7 +180,7 @@ func (s *Service) ListInProgressTimeEntries(ctx context.Context, args map[string
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-	return ok("clockify_list_in_progress_time_entries", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_entries_running", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // AddEntry creates a new time entry.
@@ -262,7 +262,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 					Message:     err.Error(),
 					Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
 				})
-				return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: attachValidationToPreview(dryrun.Preview(legacyToolAddEntry, args), validation)}, nil
+				return ResultEnvelope{OK: true, Action: oneUserToolEntriesCreate, Data: attachValidationToPreview(dryrun.Preview(oneUserToolEntriesCreate, args), validation)}, nil
 			}
 			return ResultEnvelope{}, err
 		}
@@ -276,18 +276,18 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 				Message:     err.Error(),
 				Remediation: "Change the time entry details, or adjust dedupe/overlap settings only after manual review.",
 			})
-			return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: attachValidationToPreview(dryrun.Preview(legacyToolAddEntry, args), validation)}, nil
+			return ResultEnvelope{OK: true, Action: oneUserToolEntriesCreate, Data: attachValidationToPreview(dryrun.Preview(oneUserToolEntriesCreate, args), validation)}, nil
 		}
 		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
 		validation := validationOK("overlap_and_dedupe_check")
-		preview := dryrunPreviewPayloadValidated(legacyToolAddEntry, payload, validation)
+		preview := dryrunPreviewPayloadValidated(oneUserToolEntriesCreate, payload, validation)
 		preview["args"] = args
 		if len(dedupeMeta) > 0 {
 			preview["dedupe"] = dedupeMeta
 		}
-		return ResultEnvelope{OK: true, Action: legacyToolAddEntry, Data: preview}, nil
+		return ResultEnvelope{OK: true, Action: oneUserToolEntriesCreate, Data: preview}, nil
 	}
 
 	path, err := paths.Workspace(wsID, "time-entries")
@@ -308,7 +308,7 @@ func (s *Service) AddEntry(ctx context.Context, args map[string]any) (ResultEnve
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-	return ok(legacyToolAddEntry, view, withFinancialMeta(meta, financialMeta)), nil
+	return ok(oneUserToolEntriesCreate, view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) addEntryDedupeMeta(ctx context.Context, description, projectID string, payload map[string]any) (map[string]any, error) {
@@ -384,7 +384,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	// Ownership guard. clockify_update_entry is constrained to the API
+	// Ownership guard. clockify_entries_update is constrained to the API
 	// key owner's own entries; the admin path
 	// /workspaces/{ws}/time-entries/{id} would otherwise let an elevated
 	// key mutate another user's entry. Fail-closed when userId is
@@ -480,11 +480,11 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 
 	if dryrun.Enabled(args) {
 		validation := validationOK("ownership_and_payload_check")
-		preview := dryrunPreviewPayloadValidated("clockify_update_entry", timeEntryPutPayload(existing), validation)
+		preview := dryrunPreviewPayloadValidated("clockify_entries_update", timeEntryPutPayload(existing), validation)
 		preview["args"] = args
 		preview["current"] = timeEntryUpdatePreview(previous)
 		preview["proposed_changes"] = proposedEntryChanges(existing, changedFields)
-		return ResultEnvelope{OK: true, Action: "clockify_update_entry", Data: preview, Meta: meta}, nil
+		return ResultEnvelope{OK: true, Action: "clockify_entries_update", Data: preview, Meta: meta}, nil
 	}
 
 	putPayload := timeEntryPutPayload(existing)
@@ -497,7 +497,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
 	s.emitWeeklyReportsForEntryChange(ctx, wsID, &previous, &updated)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, updated)
-	return ok("clockify_update_entry", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_entries_update", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // DeleteEntry deletes a time entry by ID.
@@ -533,8 +533,8 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_delete_entry",
-			Data:   dryrun.WrapResult(view, "clockify_delete_entry"),
+			Action: "clockify_entries_delete",
+			Data:   dryrun.WrapResult(view, "clockify_entries_delete"),
 			Meta:   withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta),
 		}, nil
 	}
@@ -545,7 +545,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 
 	s.emitResourceDeleted(entryResourceURI(wsID, entryID))
 	s.emitWeeklyReportsForEntryChange(ctx, wsID, &entry, nil)
-	return ok("clockify_delete_entry", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_entries_delete", map[string]any{"deleted": true, "entryId": entryID}, map[string]any{"workspaceId": wsID}), nil
 }
 
 // listEntriesWithQuery is the shared helper for fetching time entries with query parameters.

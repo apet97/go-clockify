@@ -239,7 +239,7 @@ func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
 			wantProjectCount:  2,
 			wantDay:           "2026-04-07",
 			wantDayCount:      2,
-			wantSuggestedTool: "clockify_list_entries",
+			wantSuggestedTool: "clockify_entries_list",
 		},
 		{
 			name:              "update",
@@ -251,7 +251,7 @@ func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
 			wantProjectCount:  1,
 			wantDay:           "2026-04-07",
 			wantDayCount:      1,
-			wantSuggestedTool: "clockify_list_entries",
+			wantSuggestedTool: "clockify_entries_list",
 		},
 		{
 			name:              "delete",
@@ -260,7 +260,7 @@ func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
 			wantSeconds:       0,
 			wantProjectCount:  0,
 			wantDayCount:      0,
-			wantSuggestedTool: legacyToolLogTime,
+			wantSuggestedTool: oneUserToolLogWork,
 		},
 	}
 	for _, tt := range tests {

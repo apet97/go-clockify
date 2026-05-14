@@ -15,13 +15,13 @@ import (
 //   - The output JSON Schema is a pure function of the post-deref type;
 //     given the same reflect.Type the result is byte-identical across
 //     every call.
-//   - All consumers (envelopeSchemaFor[T], applyTier1OutputSchemas,
-//     applyOpaqueOutputSchemas) embed the returned map as a property of
+//   - All consumers (envelopeSchemaFor[T], applyOpaqueOutputSchemas)
+//     embed the returned map as a property of
 //     a fresh outer map and never mutate it afterwards.
 //
-// Together with the tier1OutputSchemas sync.OnceValue gate, this
-// collapses schema generation to a single per-binary cost; subsequent
-// sessions inherit the result with zero allocations.
+// This collapses repeated typed-schema generation to a single
+// per-binary cost; subsequent sessions inherit the result with zero
+// allocations.
 //
 // Returned maps are shared and MUST NOT be mutated; the comment is
 // load-bearing because the only way to violate the invariant is a

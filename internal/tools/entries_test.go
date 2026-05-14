@@ -155,7 +155,7 @@ func TestUpdateEntryPermitsOwnEntryAndIssuesPUT(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateEntry on own entry must succeed, got %v", err)
 	}
-	if result.Action != "clockify_update_entry" {
+	if result.Action != "clockify_entries_update" {
 		t.Fatalf("unexpected action %q", result.Action)
 	}
 	if got := putCalls.Load(); got != 1 {

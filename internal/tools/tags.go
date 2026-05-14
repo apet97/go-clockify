@@ -35,7 +35,7 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_tags", out, meta), nil
+	return ok("clockify_tags_list", out, meta), nil
 }
 
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -52,7 +52,7 @@ func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnv
 	}
 	payload := map[string]any{"name": name}
 	if dryrun.Enabled(args) {
-		return ok("clockify_create_tag", dryrun.Preview("clockify_create_tag", payload), map[string]any{"workspaceId": wsID}), nil
+		return ok("clockify_tags_create", dryrun.Preview("clockify_tags_create", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 	path, err := paths.Workspace(wsID, "tags")
 	if err != nil {
@@ -63,7 +63,7 @@ func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Post(ctx, path, payload, &tag); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_create_tag", tag, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_tags_create", tag, map[string]any{"workspaceId": wsID}), nil
 }
 
 // GetTag fetches a single tag by ID or exact name.
@@ -88,7 +88,7 @@ func (s *Service) GetTag(ctx context.Context, args map[string]any) (ResultEnvelo
 	if err := s.Client.Get(ctx, tagPath, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_tag", out, map[string]any{"workspaceId": wsID, "tagId": tagID}), nil
+	return ok("clockify_tags_get", out, map[string]any{"workspaceId": wsID, "tagId": tagID}), nil
 }
 
 // UpdateTag performs a fetch-then-merge update of a tag.
@@ -137,8 +137,8 @@ func (s *Service) UpdateTag(ctx context.Context, args map[string]any) (ResultEnv
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_update_tag",
-			Data:   dryrun.Preview("clockify_update_tag", args),
+			Action: "clockify_tags_update",
+			Data:   dryrun.Preview("clockify_tags_update", args),
 			Meta:   meta,
 		}, nil
 	}
@@ -148,7 +148,7 @@ func (s *Service) UpdateTag(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Put(ctx, tagPath, payload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_update_tag", updated, meta), nil
+	return ok("clockify_tags_update", updated, meta), nil
 }
 
 // tagPutPayload builds the full-replacement body for PUT /workspaces/{ws}/tags/{id}.
@@ -191,8 +191,8 @@ func (s *Service) DeleteTag(ctx context.Context, args map[string]any) (ResultEnv
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_delete_tag",
-			Data:   dryrun.WrapResult(existing, "clockify_delete_tag"),
+			Action: "clockify_tags_delete",
+			Data:   dryrun.WrapResult(existing, "clockify_tags_delete"),
 			Meta:   map[string]any{"workspaceId": wsID, "tagId": tagID},
 		}, nil
 	}
@@ -200,5 +200,5 @@ func (s *Service) DeleteTag(ctx context.Context, args map[string]any) (ResultEnv
 	if err := s.Client.Delete(ctx, tagPath); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_delete_tag", map[string]any{"deleted": true, "tagId": tagID}, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_tags_delete", map[string]any{"deleted": true, "tagId": tagID}, map[string]any{"workspaceId": wsID}), nil
 }

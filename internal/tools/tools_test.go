@@ -13,11 +13,11 @@ import (
 	"github.com/apet97/go-clockify/internal/dedupe"
 )
 
-func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
+func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	reg := svc.Registry()
-	if len(reg) < 27 {
-		t.Fatalf("expected at least 27 tools, got %d", len(reg))
+	reg := svc.FullAccessRegistry()
+	if len(reg) != 151 {
+		t.Fatalf("registry size=%d, want 151", len(reg))
 	}
 
 	names := map[string]bool{}
@@ -26,34 +26,30 @@ func TestRegistryContainsCoreAndReportWorkflowTools(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"clockify_whoami",
-		"clockify_list_workspaces",
-		"clockify_get_workspace",
-		"clockify_list_users",
-		"clockify_current_user",
-		"clockify_list_projects",
-		"clockify_get_project",
-		"clockify_list_clients",
-		"clockify_list_tags",
-		"clockify_list_tasks",
-		"clockify_list_entries",
-		"clockify_get_entry",
-		"clockify_today_entries",
-		"clockify_attendance_report",
-		"clockify_summary_report",
-		"clockify_weekly_summary",
-		"clockify_quick_report",
-		legacyToolStartTimer,
-		"clockify_stop_timer",
-		legacyToolLogTime,
-		legacyToolAddEntry,
-		"clockify_update_entry",
-		"clockify_delete_entry",
-		legacyToolFindAndUpdateEntry,
-		"clockify_create_project",
-		"clockify_create_client",
-		"clockify_create_tag",
-		"clockify_create_task",
+		"clockify_status",
+		"clockify_tools_guide",
+		"clockify_create_work_package",
+		"clockify_log_work",
+		"clockify_start_work",
+		"clockify_stop_work",
+		"clockify_switch_work",
+		"clockify_review_day",
+		"clockify_fix_entry",
+		"clockify_clients_list",
+		"clockify_clients_create",
+		"clockify_projects_list",
+		"clockify_projects_create",
+		"clockify_tasks_list",
+		"clockify_tasks_create",
+		"clockify_tags_list",
+		"clockify_tags_create",
+		"clockify_entries_list",
+		"clockify_entries_create",
+		"clockify_entries_timer_start",
+		"clockify_entries_timer_stop",
+		"clockify_reports_summary",
+		"clockify_workspace_settings",
+		"clockify_api_request",
 	} {
 		if !names[want] {
 			t.Fatalf("missing tool %s", want)
@@ -584,8 +580,8 @@ func TestGetEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get entry failed: %v", err)
 	}
-	if result.Action != "clockify_get_entry" {
-		t.Fatalf("expected action clockify_get_entry, got %s", result.Action)
+	if result.Action != "clockify_entries_get" {
+		t.Fatalf("expected action clockify_entries_get, got %s", result.Action)
 	}
 	entry, ok := result.Data.(EntryView)
 	if !ok {
@@ -627,8 +623,8 @@ func TestTodayEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("today entries failed: %v", err)
 	}
-	if result.Action != "clockify_today_entries" {
-		t.Fatalf("expected action clockify_today_entries, got %s", result.Action)
+	if result.Action != "clockify_entries_list" {
+		t.Fatalf("expected action clockify_entries_list, got %s", result.Action)
 	}
 	entries, ok := result.Data.([]EntryView)
 	if !ok {
@@ -746,7 +742,7 @@ func TestAddEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add entry failed: %v", err)
 	}
-	if result.Action != legacyToolAddEntry {
+	if result.Action != oneUserToolEntriesCreate {
 		t.Fatalf("expected action clockify_add_entry, got %s", result.Action)
 	}
 	entry, ok := result.Data.(EntryView)
@@ -1007,8 +1003,8 @@ func TestUpdateEntryFetchThenPut(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update entry failed: %v", err)
 	}
-	if result.Action != "clockify_update_entry" {
-		t.Fatalf("expected action clockify_update_entry, got %s", result.Action)
+	if result.Action != "clockify_entries_update" {
+		t.Fatalf("expected action clockify_entries_update, got %s", result.Action)
 	}
 	// Verify the PUT payload includes merged fields from the fetched entry
 	if gotPutBody == nil {
@@ -1118,8 +1114,8 @@ func TestDeleteEntryDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete entry dry run failed: %v", err)
 	}
-	if result.Action != "clockify_delete_entry" {
-		t.Fatalf("expected action clockify_delete_entry, got %s", result.Action)
+	if result.Action != "clockify_entries_delete" {
+		t.Fatalf("expected action clockify_entries_delete, got %s", result.Action)
 	}
 	if deleteCalled {
 		t.Fatal("DELETE should NOT be called during dry run")
@@ -1158,7 +1154,7 @@ func TestWhoAmI(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected ok=true, got ok=false")
 	}
-	if result.Action != "clockify_whoami" {
+	if result.Action != "clockify_status" {
 		t.Fatalf("expected action clockify_whoami, got %s", result.Action)
 	}
 	data, ok := result.Data.(IdentityData)
@@ -1201,8 +1197,8 @@ func TestListProjects(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected ok=true")
 	}
-	if result.Action != "clockify_list_projects" {
-		t.Fatalf("expected action clockify_list_projects, got %s", result.Action)
+	if result.Action != "clockify_projects_list" {
+		t.Fatalf("expected action clockify_projects_list, got %s", result.Action)
 	}
 	projects, ok := result.Data.([]ProjectView)
 	if !ok {
@@ -1254,7 +1250,7 @@ func TestTimerStatus_NoRunning(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected ok=true")
 	}
-	if result.Action != legacyToolTimerStatus {
+	if result.Action != oneUserToolEntriesTimerStatus {
 		t.Fatalf("expected action clockify_"+"timer_status, got %s", result.Action)
 	}
 	dataMap, ok := result.Data.(map[string]any)
@@ -1386,7 +1382,7 @@ func TestAddEntryDryRun(t *testing.T) {
 	if postCalled {
 		t.Fatal("POST must not be called on dry run")
 	}
-	if result.Action != legacyToolAddEntry {
+	if result.Action != oneUserToolEntriesCreate {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
 	dataMap, ok := result.Data.(map[string]any)
@@ -1501,7 +1497,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 		call func() (any, error)
 	}{
 		{
-			name: legacyToolLogTime,
+			name: oneUserToolLogWork,
 			call: func() (any, error) {
 				return svc.LogTime(context.Background(), map[string]any{
 					"start":         "2026-04-01T09:00:00Z",
@@ -1512,13 +1508,13 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_stop_timer",
+			name: "clockify_entries_timer_stop",
 			call: func() (any, error) {
 				return svc.StopTimer(context.Background(), map[string]any{"dry_run": true})
 			},
 		},
 		{
-			name: legacyToolStartTimer,
+			name: oneUserToolEntriesTimerStart,
 			call: func() (any, error) {
 				return svc.StartTimerArgs(context.Background(), map[string]any{
 					"project_id":  "123456789012345678901234",
@@ -1528,7 +1524,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_create_project",
+			name: "clockify_projects_create",
 			call: func() (any, error) {
 				return svc.CreateProject(context.Background(), map[string]any{
 					"name":    "Dry project",
@@ -1537,7 +1533,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_create_client",
+			name: "clockify_clients_create",
 			call: func() (any, error) {
 				return svc.CreateClient(context.Background(), map[string]any{
 					"name":    "Dry client",
@@ -1546,7 +1542,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_create_tag",
+			name: "clockify_tags_create",
 			call: func() (any, error) {
 				return svc.CreateTag(context.Background(), map[string]any{
 					"name":    "Dry tag",
@@ -1555,7 +1551,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_create_task",
+			name: "clockify_tasks_create",
 			call: func() (any, error) {
 				return svc.CreateTask(context.Background(), map[string]any{
 					"project_id": "123456789012345678901234",
@@ -1565,7 +1561,7 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: legacyToolSwitchProject,
+			name: oneUserToolSwitchWork,
 			call: func() (any, error) {
 				return svc.SwitchProject(context.Background(), map[string]any{
 					"project": "123456789012345678901234",
@@ -2076,7 +2072,7 @@ func TestListTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list tasks failed: %v", err)
 	}
-	if result.Action != "clockify_list_tasks" {
+	if result.Action != "clockify_tasks_list" {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
 	tasks, ok := result.Data.([]TaskView)
@@ -2127,7 +2123,7 @@ func TestListEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list entries failed: %v", err)
 	}
-	if result.Action != "clockify_list_entries" {
+	if result.Action != "clockify_entries_list" {
 		t.Fatalf("unexpected action: %s", result.Action)
 	}
 }

@@ -11,8 +11,8 @@ import (
 
 // requireCurrentUserEntry enforces the personal-time-tracking
 // ownership contract documented in
-// docs/policy/production-tool-scope.md: clockify_update_entry,
-// clockify_delete_entry, and the entry_id branch of
+// docs/policy/production-tool-scope.md: clockify_entries_update,
+// clockify_entries_delete, and the entry_id branch of
 // clockify_find_and_update_entry must reject any entry that is
 // not owned by the API key's user. The handlers fetch entries via
 // the admin path /workspaces/{ws}/time-entries/{id}, which an
@@ -53,7 +53,7 @@ func (s *Service) WhoAmI(ctx context.Context) (ResultEnvelope, error) {
 		return ResultEnvelope{}, err
 	}
 	view := userViewFromUser(user)
-	return ok("clockify_whoami", IdentityData{User: user, UserView: &view, WorkspaceID: resolvedWorkspaceID}, nil), nil
+	return ok("clockify_status", IdentityData{User: user, UserView: &view, WorkspaceID: resolvedWorkspaceID}, nil), nil
 }
 
 func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
@@ -61,7 +61,7 @@ func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_current_user", userViewFromUser(user), nil), nil
+	return ok("clockify_users_profile", userViewFromUser(user), nil), nil
 }
 
 func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
@@ -106,5 +106,5 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_users", userViewsFromUsers(users), meta), nil
+	return ok("clockify_users_list", userViewsFromUsers(users), meta), nil
 }

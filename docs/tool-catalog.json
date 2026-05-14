@@ -1538,6 +1538,10 @@
         "bestFor": [
           "Log finished work with project, task, and tag names or IDs."
         ],
+        "bestToolFor": [
+          "log finished past work",
+          "create a complete time entry"
+        ],
         "category": "workflow",
         "destructiveHint": false,
         "domain": "work_tracking",
@@ -4075,6 +4079,10 @@
         "bestFor": [
           "Review one day for totals, missing fields, gaps, overlaps, and next actions."
         ],
+        "bestToolFor": [
+          "find gaps and overlaps",
+          "plan timesheet cleanup"
+        ],
         "category": "workflow",
         "destructiveHint": false,
         "domain": "review",
@@ -6149,7 +6157,7 @@
         "preferOver": [
           "clockify_entries_get",
           "clockify_entries_update",
-          "clockify_find_and_update_entry"
+          "clockify_fix_entry"
         ],
         "preferred": true,
         "priority": 9,
@@ -15293,11 +15301,17 @@
         "type": "object"
       },
       "annotations": {
+        "bestToolFor": [
+          "fill a reviewed timesheet gap"
+        ],
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
+        "preferAfter": [
+          "clockify_review_day"
+        ],
         "priority": 61,
         "readOnlyHint": false,
         "riskClass": [
@@ -26047,6 +26061,9 @@
       "risk_class": [
         "read"
       ],
+      "audit_keys": [
+        "workspace_id"
+      ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -26415,7 +26432,8 @@
         "priority": 1100,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Users List"
       }
@@ -26430,6 +26448,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -26784,7 +26805,8 @@
         "priority": 1101,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Users Profile"
       }

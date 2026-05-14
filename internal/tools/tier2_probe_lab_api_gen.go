@@ -30,7 +30,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/USERDOC.md", "clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/USEROPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_current_user", "clockify_whoami"},
+		PromotedToTyped: []string{"clockify_users_profile", "clockify_status"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -39,7 +39,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/WORKSPACESDOC.md", "clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/WORKSPACEOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_list_workspaces"},
+		PromotedToTyped: []string{"clockify_workspace_settings"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -57,7 +57,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/WORKSPACESDOC.md", "clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/WORKSPACEOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_get_workspace", "clockify_whoami"},
+		PromotedToTyped: []string{"clockify_workspace_settings", "clockify_status"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -156,7 +156,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/CLIENTDOC.md", "clockify-api-probe-lab/CLIENTSDOC.md", "clockify-api-probe-lab/openapi-fragments/clients-a.yaml", "clockify-api-probe-lab/openapi.yaml"},
-		PromotedToTyped: []string{"clockify_list_clients"},
+		PromotedToTyped: []string{"clockify_clients_list"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -165,7 +165,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/CLIENTDOC.md", "clockify-api-probe-lab/CLIENTSDOC.md", "clockify-api-probe-lab/openapi-fragments/clients-b.yaml", "clockify-api-probe-lab/openapi.yaml"},
-		PromotedToTyped: []string{"clockify_create_client"},
+		PromotedToTyped: []string{"clockify_clients_create"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -174,7 +174,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/CLIENTDOC.md", "clockify-api-probe-lab/CLIENTSDOC.md", "clockify-api-probe-lab/openapi-fragments/clients-a.yaml", "clockify-api-probe-lab/openapi.yaml"},
-		PromotedToTyped: []string{"clockify_client_report", "clockify_get_client"},
+		PromotedToTyped: []string{"clockify_reports_detailed", "clockify_clients_get"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -183,7 +183,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/CLIENTDOC.md", "clockify-api-probe-lab/CLIENTSDOC.md", "clockify-api-probe-lab/openapi-fragments/clients-b.yaml", "clockify-api-probe-lab/openapi.yaml"},
-		PromotedToTyped: []string{"clockify_update_client"},
+		PromotedToTyped: []string{"clockify_clients_update"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -192,7 +192,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"destructive"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/CLIENTDOC.md", "clockify-api-probe-lab/CLIENTSDOC.md", "clockify-api-probe-lab/openapi-fragments/clients-b.yaml", "clockify-api-probe-lab/openapi.yaml"},
-		PromotedToTyped: []string{"clockify_delete_client"},
+		PromotedToTyped: []string{"clockify_clients_delete"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -453,7 +453,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/INVOICEDOC.md", "clockify-api-probe-lab/Invoiceopenapi.yaml", "clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/INVOICESOPEAPI.YAML"},
-		PromotedToTyped: []string{"clockify_client_report"},
+		PromotedToTyped: []string{"clockify_reports_detailed"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -696,7 +696,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/PROJECTSDOC.md", "clockify-api-probe-lab/findings/project-memberships.md", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/PROJECTSOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_list_projects"},
+		PromotedToTyped: []string{"clockify_projects_list"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -705,7 +705,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/PROJECTSDOC.md", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/PROJECTSOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_create_project"},
+		PromotedToTyped: []string{"clockify_projects_create"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -723,7 +723,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/PROJECTSDOC.md", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/PROJECTSOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_get_project"},
+		PromotedToTyped: []string{"clockify_projects_get"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -732,7 +732,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/PROJECTSDOC.md", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/PROJECTSOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_update_project"},
+		PromotedToTyped: []string{"clockify_projects_update"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -741,7 +741,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"destructive", "write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/PROJECTSDOC.md", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/PROJECTSOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_archive_projects", "clockify_delete_project"},
+		PromotedToTyped: []string{"clockify_archive_projects", "clockify_projects_delete"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -831,7 +831,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TASKDOC.md", "clockify-api-probe-lab/openapi-fragments/tasks-a.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/TASKOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_list_tasks"},
+		PromotedToTyped: []string{"clockify_tasks_list"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -840,7 +840,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TASKDOC.md", "clockify-api-probe-lab/openapi-fragments/tasks-b.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/TASKOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_create_task"},
+		PromotedToTyped: []string{"clockify_tasks_create"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -849,7 +849,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TASKDOC.md", "clockify-api-probe-lab/openapi-fragments/tasks-a.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/TASKOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_get_task"},
+		PromotedToTyped: []string{"clockify_tasks_get"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -858,7 +858,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/openapi-fragments/tasks-b.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/TASKOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_update_task"},
+		PromotedToTyped: []string{"clockify_tasks_update"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -867,7 +867,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"destructive"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TASKDOC.md", "clockify-api-probe-lab/openapi-fragments/tasks-b.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/TASKOPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_delete_task"},
+		PromotedToTyped: []string{"clockify_tasks_delete"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -921,7 +921,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml"},
-		PromotedToTyped: []string{"clockify_attendance_report"},
+		PromotedToTyped: []string{"clockify_reports_attendance"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -930,7 +930,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml"},
-		PromotedToTyped: []string{"clockify_detailed_report"},
+		PromotedToTyped: []string{"clockify_reports_detailed"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -948,7 +948,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml"},
-		PromotedToTyped: []string{"clockify_summary_report"},
+		PromotedToTyped: []string{"clockify_reports_summary"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -957,7 +957,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml"},
-		PromotedToTyped: []string{"clockify_weekly_summary"},
+		PromotedToTyped: []string{"clockify_reports_weekly"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -1146,7 +1146,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TAGDOC.md", "clockify-api-probe-lab/openapi-fragments/tags-a.yaml", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_usergroups_tags.yaml"},
-		PromotedToTyped: []string{"clockify_list_tags"},
+		PromotedToTyped: []string{"clockify_tags_list"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -1155,7 +1155,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TAGDOC.md", "clockify-api-probe-lab/openapi-fragments/tags-b.yaml", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_usergroups_tags.yaml"},
-		PromotedToTyped: []string{"clockify_create_tag"},
+		PromotedToTyped: []string{"clockify_tags_create"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -1164,7 +1164,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TAGDOC.md", "clockify-api-probe-lab/openapi-fragments/tags-a.yaml", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_usergroups_tags.yaml"},
-		PromotedToTyped: []string{"clockify_get_tag"},
+		PromotedToTyped: []string{"clockify_tags_get"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -1173,7 +1173,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TAGDOC.md", "clockify-api-probe-lab/openapi-fragments/tags-b.yaml", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_usergroups_tags.yaml"},
-		PromotedToTyped: []string{"clockify_update_tag"},
+		PromotedToTyped: []string{"clockify_tags_update"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -1182,7 +1182,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"destructive"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TAGDOC.md", "clockify-api-probe-lab/openapi-fragments/tags-b.yaml", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_usergroups_tags.yaml"},
-		PromotedToTyped: []string{"clockify_delete_tag"},
+		PromotedToTyped: []string{"clockify_tags_delete"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -1191,7 +1191,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{legacyToolAddEntry, legacyToolLogTime, legacyToolStartTimer, legacyToolSwitchProject, legacyToolTimesheetFillGap},
+		PromotedToTyped: []string{oneUserToolEntriesCreate, oneUserToolLogWork, oneUserToolEntriesTimerStart, oneUserToolSwitchWork, oneUserToolEntriesCreateFromGap},
 	},
 	{
 		Method:          http.MethodPatch,
@@ -1227,7 +1227,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_get_entry"},
+		PromotedToTyped: []string{"clockify_entries_get"},
 	},
 	{
 		Method:          http.MethodPut,
@@ -1236,7 +1236,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{legacyToolFindAndUpdateEntry, "clockify_update_entry"},
+		PromotedToTyped: []string{oneUserToolFixEntry, "clockify_entries_update"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -1245,7 +1245,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"destructive"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_delete_entry"},
+		PromotedToTyped: []string{"clockify_entries_delete"},
 	},
 	{
 		Method:          http.MethodGet,
@@ -1497,7 +1497,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi.yaml", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_list_entries", "clockify_quick_report", legacyToolTimesheetReview, "clockify_today_entries"},
+		PromotedToTyped: []string{"clockify_entries_list", "clockify_reports_summary", oneUserToolReviewDay, "clockify_entries_list"},
 	},
 	{
 		Method:          http.MethodPost,
@@ -1524,7 +1524,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "live-success",
 		RiskClass:       []string{"write"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/TIMEENTRYDOC.md", "clockify-api-probe-lab/openapi_timeentry.yaml"},
-		PromotedToTyped: []string{"clockify_stop_timer"},
+		PromotedToTyped: []string{"clockify_entries_timer_stop"},
 	},
 	{
 		Method:          http.MethodDelete,
@@ -1560,7 +1560,7 @@ var documentedAPIOperations = []documentedAPIOperation{
 		LiveStatus:      "unit-only",
 		RiskClass:       []string{"read"},
 		SourceFiles:     []string{"AIII/openapi.yaml", "clockify-api-probe-lab/USERDOC.md", "clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml", "clockify-api-probe-lab/openapi.yaml", "realOPENAPI/USEROPENAPI.YAML"},
-		PromotedToTyped: []string{"clockify_list_users"},
+		PromotedToTyped: []string{"clockify_users_list"},
 	},
 	{
 		Method:          http.MethodPost,

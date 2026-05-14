@@ -70,7 +70,7 @@ func TranslateAPIError(statusCode int, body string) ErrorTranslation {
 	case statusCode == 403 || strings.Contains(lower, "permission") || strings.Contains(lower, "forbidden"):
 		return ErrorTranslation{Message: message, Remediation: "Use an account with the required Clockify role or ask a workspace admin to grant the needed permission.", Refs: []string{"Clockify workspace roles"}}
 	case statusCode == 404:
-		return ErrorTranslation{Message: message, Remediation: "Confirm the workspace/entity ID and whether the entity was archived or deleted.", Refs: []string{"clockify_resolve_name"}}
+		return ErrorTranslation{Message: message, Remediation: "Confirm the workspace/entity ID and whether the entity was archived or deleted.", Refs: []string{"clockify_tools_guide"}}
 	case statusCode == 429 || strings.Contains(lower, "rate"):
 		return ErrorTranslation{Message: message, Remediation: "Retry after the upstream rate limit cools down; narrow broad report/list requests when possible.", Refs: []string{"Clockify API rate limits"}}
 	case strings.Contains(lower, "plan") || strings.Contains(lower, "feature") || strings.Contains(lower, "subscription"):

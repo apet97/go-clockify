@@ -63,7 +63,7 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_list_projects", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_projects_list", views, withFinancialMeta(meta, financialMeta)), nil
 }
 
 func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -92,7 +92,7 @@ func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEn
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichProjectView(ctx, wsID, out, args)
-	return ok("clockify_get_project", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
+	return ok("clockify_projects_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
 func (s *Service) CreateProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -120,7 +120,7 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	if dryrun.Enabled(args) {
-		return ok("clockify_create_project", dryrun.Preview("clockify_create_project", payload), map[string]any{"workspaceId": wsID}), nil
+		return ok("clockify_projects_create", dryrun.Preview("clockify_projects_create", payload), map[string]any{"workspaceId": wsID}), nil
 	}
 
 	path, err := paths.Workspace(wsID, "projects")
@@ -135,7 +135,7 @@ func (s *Service) CreateProject(ctx context.Context, args map[string]any) (Resul
 	s.emitResourceUpdate(ctx, projectResourceURI(wsID, project.ID))
 	meta := map[string]any{"workspaceId": wsID}
 	view, financialMeta := s.enrichProjectView(ctx, wsID, project, args)
-	return ok("clockify_create_project", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_projects_create", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // UpdateProject performs a fetch-then-merge update of a project.
@@ -215,8 +215,8 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_update_project",
-			Data:   dryrun.Preview("clockify_update_project", args),
+			Action: "clockify_projects_update",
+			Data:   dryrun.Preview("clockify_projects_update", args),
 			Meta:   meta,
 		}, nil
 	}
@@ -231,7 +231,7 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 	}
 	s.emitResourceUpdate(ctx, projectResourceURI(wsID, projectID))
 	view, financialMeta := s.enrichProjectView(ctx, wsID, updated, args)
-	return ok("clockify_update_project", view, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_projects_update", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // projectPutPayload builds the full-replacement body for
@@ -346,8 +346,8 @@ func (s *Service) DeleteProject(ctx context.Context, args map[string]any) (Resul
 	if dryrun.Enabled(args) {
 		return ResultEnvelope{
 			OK:     true,
-			Action: "clockify_delete_project",
-			Data:   dryrun.WrapResult(existing, "clockify_delete_project"),
+			Action: "clockify_projects_delete",
+			Data:   dryrun.WrapResult(existing, "clockify_projects_delete"),
 			Meta:   map[string]any{"workspaceId": wsID, "projectId": projectID},
 		}, nil
 	}
@@ -363,5 +363,5 @@ func (s *Service) DeleteProject(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.Delete(ctx, projectPath); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_delete_project", map[string]any{"deleted": true, "projectId": projectID}, map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_projects_delete", map[string]any{"deleted": true, "projectId": projectID}, map[string]any{"workspaceId": wsID}), nil
 }

@@ -578,7 +578,7 @@ func (s *Service) ReadResource(ctx context.Context, uri string) ([]mcp.ResourceC
 
 // readWeeklyReportResource wires the existing tool-layer weekly-report path
 // into a resource read so clients reading `clockify://workspace/{ws}/report/weekly/{weekStart}`
-// get the same aggregated shape as `clockify_weekly_summary`.
+// get the same aggregated shape as `clockify_reports_weekly`.
 func (s *Service) readWeeklyReportResource(ctx context.Context, uri, workspaceID, weekStart string) ([]mcp.ResourceContents, error) {
 	env, err := s.weeklySummary(ctx, map[string]any{
 		"week_start": weekStart,

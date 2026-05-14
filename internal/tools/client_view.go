@@ -143,7 +143,7 @@ func clientViewFromClient(client clockify.ClientEntity) ClientView {
 		},
 		InvoiceSummary: ClientInvoiceSummary{
 			Source: entryFinancialSourceUnavailable,
-			Reason: "invoice enrichment is only loaded by clockify_client_report",
+			Reason: "invoice enrichment is only loaded by clockify_reports_detailed",
 		},
 		ApprovalSummary: ClientApprovalSummary{
 			Source: entryFinancialSourceUnavailable,
@@ -580,7 +580,7 @@ func (s *Service) ClientReport(ctx context.Context, args map[string]any) (Result
 			report.Client.ApprovalSummary = clientApprovalSummaryFromReport(detailed.ApprovalSummary)
 		}
 	}
-	return ok("clockify_client_report", report, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, meta)), nil
+	return ok("clockify_reports_detailed", report, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, meta)), nil
 }
 
 func clientReportSuggestions(client ClientView, finRange FinancialRangeView) []ToolSuggestion {
@@ -597,12 +597,12 @@ func clientReportSuggestions(client ClientView, finRange FinancialRangeView) []T
 	}
 	return []ToolSuggestion{
 		{
-			Tool:      "clockify_detailed_report",
+			Tool:      "clockify_reports_detailed",
 			Reason:    "Inspect the underlying detailed report rows for this client.",
 			Arguments: detailedReportSuggestionArgs(ref, finRange),
 		},
 		{
-			Tool:      "clockify_list_projects",
+			Tool:      "clockify_projects_list",
 			Reason:    "Review the projects attached to this client.",
 			Arguments: args,
 		},

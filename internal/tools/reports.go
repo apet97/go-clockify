@@ -331,7 +331,7 @@ const reportPageSize = 200
 
 func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
-		toolName:  "clockify_summary_report",
+		toolName:  "clockify_reports_summary",
 		pathName:  "summary",
 		filterKey: "summary_filter",
 	})
@@ -351,7 +351,7 @@ func (s *Service) weeklySummary(ctx context.Context, args map[string]any, worksp
 		args = withWorkspace
 	}
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
-		toolName:  "clockify_weekly_summary",
+		toolName:  "clockify_reports_weekly",
 		pathName:  "weekly",
 		filterKey: "weekly_filter",
 	})
@@ -419,12 +419,12 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 		"running_entries": runningFinancialMeta,
 		"entries_sample":  sampleFinancialMeta,
 	}
-	return ok("clockify_quick_report", data, meta), nil
+	return ok("clockify_reports_summary", data, meta), nil
 }
 
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
-		toolName:  "clockify_detailed_report",
+		toolName:  "clockify_reports_detailed",
 		pathName:  "detailed",
 		filterKey: "detailed_filter",
 	})
@@ -446,7 +446,7 @@ func reportSuggestedActions(projects []ProjectSummary, totals SummaryTotals, sta
 			args["project"] = projectRef
 		}
 		actions = append(actions, ToolSuggestion{
-			Tool:      "clockify_list_entries",
+			Tool:      "clockify_entries_list",
 			Reason:    fmt.Sprintf("Drill into %s entries for this report range.", reportProjectSuggestionLabel(top)),
 			Arguments: args,
 		})
@@ -457,7 +457,7 @@ func reportSuggestedActions(projects []ProjectSummary, totals SummaryTotals, sta
 		logReason = "This report found no entries; log confirmed missing work after collecting the exact project, description, start, and end."
 	}
 	actions = append(actions, ToolSuggestion{
-		Tool:        legacyToolLogTime,
+		Tool:        oneUserToolLogWork,
 		Reason:      logReason,
 		Arguments:   map[string]any{"dry_run": true},
 		MissingArgs: []string{"project", "description", "start", "end"},
