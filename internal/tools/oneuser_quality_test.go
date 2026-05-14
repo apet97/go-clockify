@@ -553,6 +553,79 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	}
 }
 
+func TestOneUserCoverageLedgerSummaryCountsMatchRows(t *testing.T) {
+	ledger := parseOneUserCoverageLedger(t)
+	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.FakeSmoke == "yes" }); got != ledger.FakeSmokeYes {
+		t.Fatalf("Fake-smoke summary=%d, table rows=%d", ledger.FakeSmokeYes, got)
+	}
+	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.LiveTested == "yes" }); got != ledger.LiveTestedYes {
+		t.Fatalf("Live-tested summary=%d, table rows=%d", ledger.LiveTestedYes, got)
+	}
+}
+
+func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
+	ledger := parseOneUserCoverageLedger(t)
+	fakeEvidence := setOf(
+		"clockify_status",
+		"clockify_tools_guide",
+		"clockify_create_work_package",
+		"clockify_log_work",
+		"clockify_start_work",
+		"clockify_stop_work",
+		"clockify_switch_work",
+		"clockify_review_day",
+		"clockify_review_week",
+		"clockify_fix_entry",
+		"clockify_invoice_client_work",
+		"clockify_record_expense",
+		"clockify_request_time_off",
+		"clockify_schedule_work",
+		"clockify_setup_webhook",
+		"clockify_demo_seed",
+		"clockify_demo_cleanup",
+		"clockify_clients_list",
+		"clockify_clients_create",
+		"clockify_projects_list",
+		"clockify_projects_create",
+		"clockify_tasks_list",
+		"clockify_tasks_create",
+		"clockify_tags_list",
+		"clockify_tags_create",
+		"clockify_entries_list",
+		"clockify_entries_create",
+		"clockify_users_list",
+		"clockify_users_profile",
+		"clockify_workspace_settings",
+		"clockify_api_get",
+		"clockify_api_request",
+	)
+	liveEvidence := setOf(
+		"clockify_status",
+		"clockify_create_work_package",
+		"clockify_log_work",
+		"clockify_start_work",
+		"clockify_stop_work",
+		"clockify_switch_work",
+		"clockify_review_day",
+		"clockify_review_week",
+		"clockify_fix_entry",
+		"clockify_demo_seed",
+		"clockify_demo_cleanup",
+		"clockify_invoices_list",
+		"clockify_expenses_categories_list",
+		"clockify_time_off_policies_list",
+		"clockify_scheduling_assignments_list",
+		"clockify_webhooks_events",
+		"clockify_groups_list",
+		"clockify_holidays_list",
+		"clockify_groups_create",
+		"clockify_holidays_create",
+		"clockify_webhooks_create",
+	)
+	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Fake smoke", func(row coverageRow) string { return row.FakeSmoke }, fakeEvidence)
+	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live-tested", func(row coverageRow) string { return row.LiveTested }, liveEvidence)
+}
+
 func TestOneUserDocsAndDefaultCodeDoNotMentionRemovedProductTools(t *testing.T) {
 	removed := []string{
 		"clockify_" + "activate_group",
@@ -1113,6 +1186,96 @@ func sortedMapKeys(m map[string]any) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+type coverageLedger struct {
+	FakeSmokeYes  int
+	LiveTestedYes int
+	Rows          []coverageRow
+}
+
+type coverageRow struct {
+	Tool       string
+	FakeSmoke  string
+	LiveTested string
+}
+
+func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
+	t.Helper()
+	raw, err := os.ReadFile("../../docs/goals/oneuser-tool-coverage.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ledger coverageLedger
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "- Fake-smoke yes:"):
+			ledger.FakeSmokeYes = parseCoverageSummaryCount(t, line, "- Fake-smoke yes:")
+		case strings.HasPrefix(line, "- Live-tested yes:"):
+			ledger.LiveTestedYes = parseCoverageSummaryCount(t, line, "- Live-tested yes:")
+		case strings.HasPrefix(line, "| `clockify_"):
+			fields := strings.Split(line, "|")
+			if len(fields) < 9 {
+				t.Fatalf("malformed coverage row: %s", line)
+			}
+			ledger.Rows = append(ledger.Rows, coverageRow{
+				Tool:       strings.Trim(strings.TrimSpace(fields[1]), "`"),
+				FakeSmoke:  strings.ToLower(strings.TrimSpace(fields[5])),
+				LiveTested: strings.ToLower(strings.TrimSpace(fields[6])),
+			})
+		}
+	}
+	if ledger.FakeSmokeYes == 0 || ledger.LiveTestedYes == 0 || len(ledger.Rows) == 0 {
+		t.Fatalf("coverage ledger did not parse summary/table: %+v", ledger)
+	}
+	return ledger
+}
+
+func parseCoverageSummaryCount(t *testing.T, line, prefix string) int {
+	t.Helper()
+	var count int
+	if _, err := fmt.Sscanf(strings.TrimSpace(strings.TrimPrefix(line, prefix)), "%d", &count); err != nil {
+		t.Fatalf("parse coverage count from %q: %v", line, err)
+	}
+	return count
+}
+
+func countCoverageRows(rows []coverageRow, match func(coverageRow) bool) int {
+	var count int
+	for _, row := range rows {
+		if match(row) {
+			count++
+		}
+	}
+	return count
+}
+
+func setOf(names ...string) map[string]bool {
+	out := make(map[string]bool, len(names))
+	for _, name := range names {
+		out[name] = true
+	}
+	return out
+}
+
+func assertCoverageYesRowsMatchEvidence(t *testing.T, rows []coverageRow, label string, value func(coverageRow) string, evidence map[string]bool) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if value(row) != "yes" {
+			continue
+		}
+		if !evidence[row.Tool] {
+			t.Fatalf("%s row %s is marked yes without explicit evidence allowlist entry", label, row.Tool)
+		}
+		seen[row.Tool] = true
+	}
+	for tool := range evidence {
+		if !seen[tool] {
+			t.Fatalf("%s evidence allowlist contains %s, but coverage row is not marked yes", label, tool)
+		}
+	}
 }
 
 func callToolError(t *testing.T, server *mcp.Server, name string, args map[string]any) ToolError {

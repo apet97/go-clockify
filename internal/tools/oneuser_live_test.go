@@ -145,17 +145,111 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	callLiveToolOKOrRecovery(t, server, "clockify_setup_webhook", map[string]any{"name": prefix + " Live webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
 }
 
-func callLiveToolOKOrRecovery(t *testing.T, server *mcp.Server, name string, args map[string]any) {
+func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
+	if os.Getenv("CLOCKIFY_LIVE_TESTS") != "1" || os.Getenv("CLOCKIFY_LIVE_OPTIONAL_DOMAINS") != "1" {
+		t.Skip("set CLOCKIFY_LIVE_TESTS=1 and CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 to probe optional-domain tools")
+	}
+	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
+	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
+	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
+	if apiKey == "" || workspaceID == "" || prefix == "" {
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_LIVE_TESTS=1")
+	}
+
+	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)
+	defer client.Close()
+	svc := New(client, workspaceID)
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	runID := cleanDemoRunID(prefix)
+	if runID == "" {
+		runID = "live-optional"
+	}
+	nameSuffix := liveOptionalName(prefix, runID, "opt", 18)
+	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
+	userID := status.IDs["userId"]
+	if userID == "" {
+		t.Fatalf("clockify_status did not return userId: %+v", status)
+	}
+
+	for _, probe := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"clockify_invoices_list", map[string]any{"page_size": float64(1)}},
+		{"clockify_expenses_categories_list", nil},
+		{"clockify_time_off_policies_list", map[string]any{"page_size": float64(1)}},
+		{"clockify_scheduling_assignments_list", map[string]any{"start": "2026-01-05", "end": "2026-01-09"}},
+		{"clockify_webhooks_events", nil},
+		{"clockify_groups_list", map[string]any{"page_size": float64(1)}},
+		{"clockify_holidays_list", nil},
+	} {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+
+	var cleanups []liveCleanup
+	defer func() {
+		for i := len(cleanups) - 1; i >= 0; i-- {
+			callLiveToolDataOrRecovery(t, server, cleanups[i].Tool, cleanups[i].Args)
+		}
+	}()
+
+	group := callLiveToolOKOrRecovery(t, server, "clockify_groups_create", map[string]any{"name": liveOptionalName(prefix, runID, "group", 80)})
+	if group.OK {
+		cleanups = append(cleanups, liveCleanup{Tool: "clockify_groups_delete", Args: map[string]any{"group_id": requireLiveID(t, group, "groupId")}})
+	}
+
+	holiday := callLiveToolOKOrRecovery(t, server, "clockify_holidays_create", map[string]any{
+		"name":       liveOptionalName(prefix, runID, "holiday", 80),
+		"start_date": "2026-01-12",
+		"end_date":   "2026-01-12",
+		"user_ids":   []any{userID},
+	})
+	if holiday.OK {
+		cleanups = append(cleanups, liveCleanup{Tool: "clockify_holidays_delete", Args: map[string]any{"holiday_id": requireLiveID(t, holiday, "holidayId")}})
+	}
+
+	webhook := callLiveToolOKOrRecovery(t, server, "clockify_webhooks_create", map[string]any{
+		"name":          liveOptionalName("mcp", nameSuffix, "webhook", 30),
+		"url":           "https://example.com/clockify",
+		"webhook_event": "NEW_TIME_ENTRY",
+	})
+	if webhook.OK {
+		cleanups = append(cleanups, liveCleanup{Tool: "clockify_webhooks_delete", Args: map[string]any{"webhook_id": requireLiveID(t, webhook, "webhookId")}})
+	}
+}
+
+type liveCleanup struct {
+	Tool string
+	Args map[string]any
+}
+
+type liveToolEnvelope struct {
+	OK       bool              `json:"ok"`
+	IDs      map[string]string `json:"ids,omitempty"`
+	Data     any               `json:"data,omitempty"`
+	Error    ErrorInfo         `json:"error,omitempty"`
+	Recovery RecoveryHint      `json:"recovery,omitempty"`
+}
+
+func callLiveToolOKOrRecovery(t *testing.T, server *mcp.Server, name string, args map[string]any) liveToolEnvelope {
 	t.Helper()
+	envelope := callLiveToolDataOrRecovery(t, server, name, args)
+	if envelope.OK && len(envelope.IDs) == 0 {
+		t.Fatalf("%s succeeded without returning IDs", name)
+	}
+	return envelope
+}
+
+func callLiveToolDataOrRecovery(t *testing.T, server *mcp.Server, name string, args map[string]any) liveToolEnvelope {
+	t.Helper()
+	assertNoDryRunArgs(t, name, args)
 	raw := callToolRaw(t, server, name, args)
 	var resp struct {
 		Result struct {
-			StructuredContent struct {
-				OK       bool              `json:"ok"`
-				IDs      map[string]string `json:"ids,omitempty"`
-				Error    ErrorInfo         `json:"error,omitempty"`
-				Recovery RecoveryHint      `json:"recovery,omitempty"`
-			} `json:"structuredContent"`
+			StructuredContent liveToolEnvelope `json:"structuredContent"`
 		} `json:"result"`
 		Error any `json:"error,omitempty"`
 	}
@@ -166,14 +260,43 @@ func callLiveToolOKOrRecovery(t *testing.T, server *mcp.Server, name string, arg
 		t.Fatalf("%s returned RPC error: %s", name, raw)
 	}
 	if resp.Result.StructuredContent.OK {
-		if len(resp.Result.StructuredContent.IDs) == 0 {
-			t.Fatalf("%s succeeded without returning IDs: %s", name, raw)
-		}
-		return
+		return resp.Result.StructuredContent
 	}
 	if resp.Result.StructuredContent.Error.Code == "" || resp.Result.StructuredContent.Recovery.Hint == "" {
 		t.Fatalf("%s did not return useful recovery: %s", name, raw)
 	}
+	return resp.Result.StructuredContent
+}
+
+func requireLiveID(t *testing.T, envelope liveToolEnvelope, key string) string {
+	t.Helper()
+	if envelope.IDs[key] == "" {
+		t.Fatalf("live tool result missing %s: %+v", key, envelope.IDs)
+	}
+	return envelope.IDs[key]
+}
+
+func assertNoDryRunArgs(t *testing.T, name string, args map[string]any) {
+	t.Helper()
+	if args == nil {
+		return
+	}
+	if _, ok := args["dry_run"]; ok {
+		t.Fatalf("%s live probe must not pass dry_run", name)
+	}
+}
+
+func liveOptionalName(prefix, runID, suffix string, maxLen int) string {
+	name := strings.TrimSpace(prefix + " " + suffix + " " + runID)
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, "\\", "-")
+	if maxLen > 0 && len(name) > maxLen {
+		name = strings.TrimSpace(name[:maxLen])
+	}
+	if len(name) < 2 {
+		return "MCP " + suffix
+	}
+	return name
 }
 
 func defaultLiveBaseURL() string {

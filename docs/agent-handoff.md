@@ -80,6 +80,16 @@ go test -count=1 ./internal/tools -run TestOneUserLivePaidFeatureWorkflowRecover
 Those probes accept either success with IDs or a recoverable `ok:false`
 response when the workspace does not allow the feature.
 
+Optional-domain contract probing is also opt-in and uses real live calls only;
+it never passes `dry_run`:
+
+```sh
+CLOCKIFY_LIVE_TESTS=1 \
+CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1 \
+CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
+go test -count=1 ./internal/tools -run TestOneUserLiveOptionalDomainContracts
+```
+
 ## Current Follow-Ups
 
 - Convert heavily used alias-wrapper domain tools to native one-user handlers.

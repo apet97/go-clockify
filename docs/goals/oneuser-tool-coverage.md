@@ -7,8 +7,8 @@ Summary:
 - Workflow tools: 17
 - Domain tools: 132
 - Raw fallback tools: 2
-- Fake-smoke yes: 29
-- Live-tested yes: 11
+- Fake-smoke yes: 32
+- Live-tested yes: 21
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
@@ -67,7 +67,7 @@ Remaining honest gaps:
 | `clockify_projects_templates_create` | domain | alias wrapper | wraps clockify_create_project_template | no | no | generic | acceptable gap |
 | `clockify_projects_estimates_update` | domain | alias wrapper | wraps clockify_update_project_estimate | no | no | generic | acceptable gap |
 | `clockify_projects_memberships_update` | domain | alias wrapper | wraps clockify_update_project_memberships | no | no | generic | acceptable gap |
-| `clockify_invoices_list` | domain | alias wrapper | wraps clockify_list_invoices | no | no | typed | acceptable gap |
+| `clockify_invoices_list` | domain | alias wrapper | wraps clockify_list_invoices | no | yes | typed | acceptable gap |
 | `clockify_invoices_get` | domain | alias wrapper | wraps clockify_get_invoice | no | no | generic | acceptable gap |
 | `clockify_invoices_create` | domain | alias wrapper | wraps clockify_create_invoice | no | no | generic | acceptable gap |
 | `clockify_invoices_update` | domain | alias wrapper | wraps clockify_update_invoice | no | no | generic | acceptable gap |
@@ -83,7 +83,7 @@ Remaining honest gaps:
 | `clockify_expenses_create` | domain | alias wrapper | wraps clockify_create_expense | no | no | generic | acceptable gap |
 | `clockify_expenses_update` | domain | alias wrapper | wraps clockify_update_expense | no | no | generic | acceptable gap |
 | `clockify_expenses_delete` | domain | alias wrapper | wraps clockify_delete_expense | no | no | generic | acceptable gap |
-| `clockify_expenses_categories_list` | domain | alias wrapper | wraps clockify_list_expense_categories | no | no | typed | acceptable gap |
+| `clockify_expenses_categories_list` | domain | alias wrapper | wraps clockify_list_expense_categories | no | yes | typed | acceptable gap |
 | `clockify_expenses_categories_create` | domain | alias wrapper | wraps clockify_create_expense_category | no | no | generic | acceptable gap |
 | `clockify_expenses_categories_update` | domain | alias wrapper | wraps clockify_update_expense_category | no | no | generic | acceptable gap |
 | `clockify_expenses_categories_delete` | domain | alias wrapper | wraps clockify_delete_expense_category | no | no | generic | acceptable gap |
@@ -100,12 +100,12 @@ Remaining honest gaps:
 | `clockify_time_off_requests_delete` | domain | alias wrapper | wraps clockify_delete_time_off_request | no | no | generic | acceptable gap |
 | `clockify_time_off_approve` | domain | alias wrapper | wraps clockify_approve_time_off | no | no | generic | acceptable gap |
 | `clockify_time_off_deny` | domain | alias wrapper | wraps clockify_deny_time_off | no | no | generic | acceptable gap |
-| `clockify_time_off_policies_list` | domain | alias wrapper | wraps clockify_list_time_off_policies | no | no | typed | acceptable gap |
+| `clockify_time_off_policies_list` | domain | alias wrapper | wraps clockify_list_time_off_policies | no | yes | typed | acceptable gap |
 | `clockify_time_off_policies_get` | domain | alias wrapper | wraps clockify_get_time_off_policy | no | no | generic | acceptable gap |
 | `clockify_time_off_policies_create` | domain | alias wrapper | wraps clockify_create_time_off_policy | no | no | generic | acceptable gap |
 | `clockify_time_off_policies_update` | domain | alias wrapper | wraps clockify_update_time_off_policy | no | no | generic | acceptable gap |
 | `clockify_time_off_balances` | domain | alias wrapper | wraps clockify_time_off_balance | no | no | generic | acceptable gap |
-| `clockify_scheduling_assignments_list` | domain | alias wrapper | wraps clockify_list_assignments | no | no | typed | acceptable gap |
+| `clockify_scheduling_assignments_list` | domain | alias wrapper | wraps clockify_list_assignments | no | yes | typed | acceptable gap |
 | `clockify_scheduling_assignments_get` | domain | alias wrapper | wraps clockify_get_assignment | no | no | typed | acceptable gap |
 | `clockify_scheduling_assignments_create` | domain | alias wrapper | wraps clockify_create_assignment | no | no | generic | acceptable gap |
 | `clockify_scheduling_assignments_update` | domain | alias wrapper | wraps clockify_update_assignment | no | no | generic | acceptable gap |
@@ -119,21 +119,21 @@ Remaining honest gaps:
 | `clockify_approvals_withdraw` | domain | alias wrapper | wraps clockify_withdraw_approval | no | no | typed | acceptable gap |
 | `clockify_webhooks_list` | domain | alias wrapper | wraps clockify_list_webhooks | no | no | generic | acceptable gap |
 | `clockify_webhooks_get` | domain | alias wrapper | wraps clockify_get_webhook | no | no | generic | acceptable gap |
-| `clockify_webhooks_create` | domain | alias wrapper | wraps clockify_create_webhook | no | no | generic | acceptable gap |
+| `clockify_webhooks_create` | domain | alias wrapper | wraps clockify_create_webhook | no | yes | generic | acceptable gap |
 | `clockify_webhooks_update` | domain | alias wrapper | wraps clockify_update_webhook | no | no | generic | acceptable gap |
 | `clockify_webhooks_delete` | domain | alias wrapper | wraps clockify_delete_webhook | no | no | generic | acceptable gap |
 | `clockify_webhooks_test` | domain | alias wrapper | wraps clockify_test_webhook | no | no | generic | acceptable gap |
-| `clockify_webhooks_events` | domain | alias wrapper | wraps clockify_list_webhook_events | no | no | generic | acceptable gap |
-| `clockify_groups_list` | domain | alias wrapper | wraps clockify_list_user_groups_admin | no | no | generic | acceptable gap |
+| `clockify_webhooks_events` | domain | alias wrapper | wraps clockify_list_webhook_events | no | yes | generic | acceptable gap |
+| `clockify_groups_list` | domain | alias wrapper | wraps clockify_list_user_groups_admin | no | yes | generic | acceptable gap |
 | `clockify_groups_get` | domain | alias wrapper | wraps clockify_get_user_group | no | no | generic | acceptable gap |
-| `clockify_groups_create` | domain | alias wrapper | wraps clockify_create_user_group_admin | no | no | generic | acceptable gap |
+| `clockify_groups_create` | domain | alias wrapper | wraps clockify_create_user_group_admin | no | yes | generic | acceptable gap |
 | `clockify_groups_update` | domain | alias wrapper | wraps clockify_update_user_group_admin | no | no | generic | acceptable gap |
 | `clockify_groups_delete` | domain | alias wrapper | wraps clockify_delete_user_group_admin | no | no | generic | acceptable gap |
 | `clockify_groups_add_user` | domain | alias wrapper | wraps clockify_add_user_to_group | no | no | generic | acceptable gap |
 | `clockify_groups_remove_user` | domain | alias wrapper | wraps clockify_remove_user_from_group | no | no | generic | acceptable gap |
-| `clockify_holidays_list` | domain | alias wrapper | wraps clockify_list_holidays | no | no | generic | acceptable gap |
+| `clockify_holidays_list` | domain | alias wrapper | wraps clockify_list_holidays | no | yes | generic | acceptable gap |
 | `clockify_holidays_list_for_user_period` | domain | alias wrapper | wraps clockify_list_holidays_in_period | no | no | generic | acceptable gap |
-| `clockify_holidays_create` | domain | alias wrapper | wraps clockify_create_holiday | no | no | generic | acceptable gap |
+| `clockify_holidays_create` | domain | alias wrapper | wraps clockify_create_holiday | no | yes | generic | acceptable gap |
 | `clockify_holidays_delete` | domain | alias wrapper | wraps clockify_delete_holiday | no | no | generic | acceptable gap |
 | `clockify_users_list` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | ready |
 | `clockify_users_profile` | domain | native handler | native handler; endpoint selected in code | yes | no | generic | ready |

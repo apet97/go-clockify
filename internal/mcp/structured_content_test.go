@@ -3,6 +3,8 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -120,6 +122,67 @@ func TestToolsCall_StructuredContent_Object(t *testing.T) {
 	}
 }
 
+func TestToolsCall_StructuredContent_SuccessEnvelopeGolden(t *testing.T) {
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "contract_ok",
+			Description: "returns a stable success envelope",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			return map[string]any{
+				"ok":     true,
+				"action": "contract_ok",
+				"data": map[string]any{
+					"count": 2,
+					"id":    "entry-1",
+				},
+			}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+
+	resp := callToolViaRun(t, server, "contract_ok", nil)
+	if resp.Error != nil {
+		t.Fatalf("unexpected rpc error: %+v", resp.Error)
+	}
+	result := requireToolResultMap(t, resp)
+	assertTextContentMatchesStructuredContent(t, result)
+	assertMCPGoldenJSON(t, "tools_call_structured_success.golden.json", result)
+}
+
+func TestToolsCall_StructuredContent_RecoverableEnvelopeGolden(t *testing.T) {
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "contract_recovery",
+			Description: "returns a recoverable tool envelope",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler: func(_ context.Context, _ map[string]any) (any, error) {
+			return map[string]any{
+				"ok":     false,
+				"action": "contract_recovery",
+				"error": map[string]any{
+					"code":    "feature_unavailable",
+					"message": "Optional Clockify feature is unavailable in this workspace.",
+				},
+				"recovery": map[string]any{
+					"hint": "Use a workspace plan that enables this feature or try a core time-entry workflow.",
+				},
+			}, nil
+		},
+		ReadOnlyHint: true,
+	}}, nil, nil)
+
+	resp := callToolViaRun(t, server, "contract_recovery", nil)
+	if resp.Error != nil {
+		t.Fatalf("recoverable tool envelope must not become an RPC error: %+v", resp.Error)
+	}
+	result := requireToolResultMap(t, resp)
+	assertTextContentMatchesStructuredContent(t, result)
+	assertMCPGoldenJSON(t, "tools_call_structured_recovery.golden.json", result)
+}
+
 func TestToolsCall_StructuredContent_ResultMarshaledOnce(t *testing.T) {
 	var marshals atomic.Int32
 	server := NewServer("test", []ToolDescriptor{{
@@ -148,6 +211,64 @@ func TestToolsCall_StructuredContent_ResultMarshaledOnce(t *testing.T) {
 	if got := marshals.Load(); got != 1 {
 		t.Fatalf("tool result marshaled %d times, want 1", got)
 	}
+}
+
+func requireToolResultMap(t *testing.T, resp Response) map[string]any {
+	t.Helper()
+	result, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not a map: %T", resp.Result)
+	}
+	return result
+}
+
+func assertTextContentMatchesStructuredContent(t *testing.T, result map[string]any) {
+	t.Helper()
+	content, ok := result["content"].([]any)
+	if !ok || len(content) == 0 {
+		t.Fatalf("expected non-empty content array, got %v", result["content"])
+	}
+	first, ok := content[0].(map[string]any)
+	if !ok {
+		t.Fatalf("first content item is not an object: %T", content[0])
+	}
+	text, ok := first["text"].(string)
+	if !ok || text == "" {
+		t.Fatalf("expected text content block, got %+v", first)
+	}
+	structured, ok := result["structuredContent"]
+	if !ok {
+		t.Fatalf("structuredContent missing: %+v", result)
+	}
+	var decodedText any
+	if err := json.Unmarshal([]byte(text), &decodedText); err != nil {
+		t.Fatalf("content text is not valid JSON: %v\ntext=%s", err, text)
+	}
+	if canonicalJSON(t, decodedText) != canonicalJSON(t, structured) {
+		t.Fatalf("content text and structuredContent diverged\ntext=%s\nstructured=%s", canonicalJSON(t, decodedText), canonicalJSON(t, structured))
+	}
+}
+
+func assertMCPGoldenJSON(t *testing.T, name string, got any) {
+	t.Helper()
+	raw := canonicalJSON(t, got)
+	path := filepath.Join("testdata", name)
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden %s: %v", path, err)
+	}
+	if raw != string(want) {
+		t.Fatalf("golden mismatch for %s\n--- got ---\n%s--- want ---\n%s", name, raw, want)
+	}
+}
+
+func canonicalJSON(t *testing.T, value any) string {
+	t.Helper()
+	raw, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(append(raw, '\n'))
 }
 
 type countedStructuredResult struct {

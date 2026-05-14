@@ -5,7 +5,7 @@
 A local, single-user, full-access Clockify MCP for one trusted user and one
 pinned Clockify workspace.
 
-This branch runs over stdio, uses one Clockify API key, loads its tools at
+The server runs over stdio, uses one Clockify API key, loads its tools at
 startup, and returns predictable JSON envelopes from every tool call. All tools
 are available immediately.
 
@@ -22,16 +22,26 @@ are available immediately.
 - Every write returns IDs.
 - Recoverable errors include a recovery hint.
 
-## Configuration
+## How to start
 
-Required:
+0. Install Go and clone the repository:
+
+```bash
+git clone https://github.com/apet97/go-clockify.git
+cd go-clockify
+go version
+```
+
+Use the Go version from `go.mod` or newer.
+
+1. Set the required Clockify environment:
 
 ```bash
 export CLOCKIFY_API_KEY="..."
 export CLOCKIFY_WORKSPACE_ID="..."
 ```
 
-Optional:
+2. Optionally set local defaults:
 
 ```bash
 export CLOCKIFY_TIMEZONE="Europe/Belgrade"
@@ -41,6 +51,34 @@ export MCP_LOG_LEVEL="info"
 
 `CLOCKIFY_BASE_URL` defaults to `https://api.clockify.me/api/v1`.
 
+3. Validate configuration before starting the MCP loop:
+
+```bash
+go run ./cmd/clockify-mcp doctor
+```
+
+4. Run the stdio MCP server:
+
+```bash
+go run ./cmd/clockify-mcp
+```
+
+MCP clients should launch the binary as a stdio subprocess and pass the
+environment variables above. For compiled installs, build once and point the
+client at the binary:
+
+```bash
+go build -o ./bin/clockify-mcp ./cmd/clockify-mcp
+./bin/clockify-mcp
+```
+
+5. Smoke-test the repo locally before changing it:
+
+```bash
+go test -count=1 ./...
+git diff --check
+```
+
 ## Compatibility
 
 | Capability | Support |
@@ -48,21 +86,6 @@ export MCP_LOG_LEVEL="info"
 | MCP Protocol | `2025-11-25` |
 | Transport | stdio |
 | Clockify scope | one pinned workspace |
-
-## Run
-
-```bash
-go run ./cmd/clockify-mcp
-```
-
-MCP clients should launch the binary as a stdio subprocess and pass the
-environment variables above.
-
-To validate configuration without starting the MCP loop:
-
-```bash
-go run ./cmd/clockify-mcp doctor
-```
 
 ## Tool Coverage
 
@@ -235,7 +258,7 @@ coverage against a stateful fake Clockify server.
 
 ## Implementation Goal
 
-The branch goal lives at
+The implementation goal lives at
 [`docs/goals/perfect-one-user-full-mcp.md`](docs/goals/perfect-one-user-full-mcp.md).
 
 The implementation follows that spec while keeping the runnable product local,

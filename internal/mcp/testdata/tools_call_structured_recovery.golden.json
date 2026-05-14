@@ -1,0 +1,19 @@
+{
+  "content": [
+    {
+      "text": "{\"action\":\"contract_recovery\",\"error\":{\"code\":\"feature_unavailable\",\"message\":\"Optional Clockify feature is unavailable in this workspace.\"},\"ok\":false,\"recovery\":{\"hint\":\"Use a workspace plan that enables this feature or try a core time-entry workflow.\"}}",
+      "type": "text"
+    }
+  ],
+  "structuredContent": {
+    "action": "contract_recovery",
+    "error": {
+      "code": "feature_unavailable",
+      "message": "Optional Clockify feature is unavailable in this workspace."
+    },
+    "ok": false,
+    "recovery": {
+      "hint": "Use a workspace plan that enables this feature or try a core time-entry workflow."
+    }
+  }
+}

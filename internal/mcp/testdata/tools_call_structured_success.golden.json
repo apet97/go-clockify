@@ -1,0 +1,16 @@
+{
+  "content": [
+    {
+      "text": "{\"action\":\"contract_ok\",\"data\":{\"count\":2,\"id\":\"entry-1\"},\"ok\":true}",
+      "type": "text"
+    }
+  ],
+  "structuredContent": {
+    "action": "contract_ok",
+    "data": {
+      "count": 2,
+      "id": "entry-1"
+    },
+    "ok": true
+  }
+}
