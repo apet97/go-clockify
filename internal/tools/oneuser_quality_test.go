@@ -510,17 +510,23 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	wantNative := map[string]bool{
+		"clockify_invoices_list":                 true,
+		"clockify_invoices_get":                  true,
 		"clockify_invoices_create":               true,
 		"clockify_invoices_update":               true,
 		"clockify_invoices_delete":               true,
 		"clockify_invoices_send":                 true,
 		"clockify_invoices_mark_paid":            true,
+		"clockify_invoices_items_list":           true,
 		"clockify_invoices_items_add":            true,
 		"clockify_invoices_items_update":         true,
 		"clockify_invoices_items_delete":         true,
+		"clockify_expenses_list":                 true,
+		"clockify_expenses_get":                  true,
 		"clockify_expenses_create":               true,
 		"clockify_expenses_update":               true,
 		"clockify_expenses_delete":               true,
+		"clockify_expenses_categories_list":      true,
 		"clockify_expenses_categories_create":    true,
 		"clockify_expenses_categories_update":    true,
 		"clockify_expenses_categories_delete":    true,
@@ -535,6 +541,7 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_custom_fields_update":          true,
 		"clockify_custom_fields_delete":          true,
 		"clockify_custom_fields_set_value":       true,
+		"clockify_time_off_requests_list":        true,
 		"clockify_time_off_requests_get":         true,
 		"clockify_time_off_requests_create":      true,
 		"clockify_time_off_requests_update":      true,
@@ -546,9 +553,12 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_time_off_policies_create":      true,
 		"clockify_time_off_policies_update":      true,
 		"clockify_time_off_balances":             true,
+		"clockify_scheduling_assignments_list":   true,
+		"clockify_scheduling_assignments_get":    true,
 		"clockify_scheduling_assignments_create": true,
 		"clockify_scheduling_assignments_update": true,
 		"clockify_scheduling_assignments_delete": true,
+		"clockify_scheduling_project_totals":     true,
 		"clockify_scheduling_user_totals":        true,
 		"clockify_scheduling_capacity":           true,
 		"clockify_reports_attendance":            true,
@@ -562,17 +572,28 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_invoices_payments_create":      true,
 		"clockify_invoices_payments_delete":      true,
 		"clockify_time_off_archive":              true,
+		"clockify_approvals_list":                true,
+		"clockify_approvals_get":                 true,
+		"clockify_approvals_submit":              true,
+		"clockify_approvals_approve":             true,
+		"clockify_approvals_reject":              true,
+		"clockify_approvals_withdraw":            true,
 		"clockify_approvals_resubmit":            true,
+		"clockify_webhooks_list":                 true,
+		"clockify_webhooks_get":                  true,
 		"clockify_webhooks_create":               true,
 		"clockify_webhooks_update":               true,
 		"clockify_webhooks_delete":               true,
 		"clockify_webhooks_test":                 true,
+		"clockify_webhooks_events":               true,
+		"clockify_groups_list":                   true,
 		"clockify_groups_get":                    true,
 		"clockify_groups_create":                 true,
 		"clockify_groups_update":                 true,
 		"clockify_groups_delete":                 true,
 		"clockify_groups_add_user":               true,
 		"clockify_groups_remove_user":            true,
+		"clockify_holidays_list":                 true,
 		"clockify_holidays_list_for_user_period": true,
 		"clockify_holidays_create":               true,
 		"clockify_holidays_delete":               true,
@@ -602,10 +623,12 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		t.Fatalf("missing native discovery tools: %+v", wantNative)
 	}
 
-	for _, descriptor := range svc.nativeAliasDescriptors() {
-		if nativeHighValueToolNames()[descriptor.Tool.Name] {
-			t.Fatalf("%s is still emitted by nativeAliasDescriptors", descriptor.Tool.Name)
+	if aliases := svc.nativeAliasDescriptors(); len(aliases) != 0 {
+		names := make([]string, 0, len(aliases))
+		for _, descriptor := range aliases {
+			names = append(names, descriptor.Tool.Name)
 		}
+		t.Fatalf("nativeAliasDescriptors still emits wrappers: %v", names)
 	}
 }
 
@@ -615,9 +638,12 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_clients_list":                  {"clients", "count", "page", "pageSize"},
 		"clockify_clients_get":                   {"id", "name"},
 		"clockify_clients_create":                {"id", "name"},
+		"clockify_clients_delete":                {"clientId"},
 		"clockify_projects_list":                 {"projects", "count", "page", "pageSize"},
 		"clockify_projects_get":                  {"id", "name"},
 		"clockify_projects_create":               {"id", "name"},
+		"clockify_projects_delete":               {"projectId"},
+		"clockify_projects_rates_update":         {"projectId", "userId"},
 		"clockify_projects_templates_list":       {"id"},
 		"clockify_projects_templates_create":     {"id"},
 		"clockify_projects_estimates_update":     {"id"},
@@ -626,18 +652,31 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_tasks_list":                    {"tasks", "count", "page", "pageSize"},
 		"clockify_tasks_get":                     {"id", "name"},
 		"clockify_tasks_create":                  {"id", "name"},
+		"clockify_tasks_delete":                  {"taskId"},
+		"clockify_tasks_rates_update":            {"taskId", "projectId"},
 		"clockify_tags_list":                     {"tags", "count", "page", "pageSize"},
 		"clockify_tags_get":                      {"id", "name"},
 		"clockify_tags_create":                   {"id", "name"},
+		"clockify_tags_delete":                   {"tagId"},
 		"clockify_entries_list":                  {"entries", "count", "page", "pageSize"},
 		"clockify_entries_get":                   {"id", "timeInterval"},
 		"clockify_entries_create":                {"id", "timeInterval"},
+		"clockify_entries_delete":                {"entryId"},
+		"clockify_entries_running":               {"running", "entry", "userId"},
+		"clockify_entries_timer_start":           {"id", "timeInterval"},
+		"clockify_entries_timer_stop":            {"id", "timeInterval"},
+		"clockify_entries_timer_status":          {"running", "entry", "elapsed"},
+		"clockify_entries_timer_switch":          {"started", "stopped"},
+		"clockify_reports_detailed":              {"range", "totals"},
+		"clockify_reports_summary":               {"range", "totals"},
+		"clockify_reports_weekly":                {"byDay", "range"},
 		"clockify_invoices_list":                 {"id"},
 		"clockify_invoices_get":                  {"id"},
 		"clockify_invoices_create":               {"id"},
 		"clockify_invoices_update":               {"id"},
 		"clockify_invoices_delete":               {"invoiceId"},
 		"clockify_invoices_mark_paid":            {"id"},
+		"clockify_invoices_items_list":           {"invoiceItemId"},
 		"clockify_invoices_items_add":            {"id"},
 		"clockify_invoices_items_update":         {"id"},
 		"clockify_invoices_items_delete":         {"invoiceId"},
@@ -652,6 +691,7 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_expenses_create":               {"id"},
 		"clockify_expenses_update":               {"id"},
 		"clockify_expenses_delete":               {"expenseId"},
+		"clockify_expenses_categories_list":      {"categoryId", "name"},
 		"clockify_expenses_categories_create":    {"id"},
 		"clockify_expenses_categories_update":    {"id"},
 		"clockify_expenses_categories_delete":    {"categoryId"},
@@ -667,6 +707,8 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_webhooks_update":               {"id"},
 		"clockify_webhooks_delete":               {"webhookId"},
 		"clockify_webhooks_test":                 {"id"},
+		"clockify_webhooks_events":               {"name", "event"},
+		"clockify_time_off_requests_list":        {"requestId", "policyId", "status"},
 		"clockify_time_off_requests_get":         {"id"},
 		"clockify_time_off_requests_create":      {"id"},
 		"clockify_time_off_requests_update":      {"id"},
@@ -679,30 +721,44 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_time_off_policies_update":      {"id"},
 		"clockify_time_off_balances":             {"policyId"},
 		"clockify_time_off_archive":              {"policyId"},
+		"clockify_scheduling_assignments_list":   {"assignmentId", "projectId", "userId"},
+		"clockify_scheduling_assignments_get":    {"assignmentId", "projectId", "userId"},
 		"clockify_scheduling_assignments_create": {"id"},
 		"clockify_scheduling_assignments_update": {"id"},
 		"clockify_scheduling_assignments_delete": {"assignmentId"},
+		"clockify_scheduling_project_totals":     {"projectId", "totals"},
 		"clockify_scheduling_user_totals":        {"id"},
 		"clockify_scheduling_capacity":           {"id"},
 		"clockify_reports_attendance":            {"id"},
 		"clockify_reports_money":                 {"id"},
 		"clockify_reports_expense":               {"id"},
 		"clockify_reports_export":                {"id"},
+		"clockify_approvals_list":                {"approvalId", "status"},
+		"clockify_approvals_get":                 {"approvalId", "status"},
+		"clockify_approvals_submit":              {"approvalId", "status"},
+		"clockify_approvals_approve":             {"approvalId", "status"},
+		"clockify_approvals_reject":              {"approvalId", "status"},
+		"clockify_approvals_withdraw":            {"approvalId", "status"},
 		"clockify_approvals_resubmit":            {"id"},
+		"clockify_groups_list":                   {"groupId", "name"},
 		"clockify_groups_get":                    {"id"},
 		"clockify_groups_create":                 {"id"},
 		"clockify_groups_update":                 {"id"},
 		"clockify_groups_delete":                 {"groupId"},
 		"clockify_groups_add_user":               {"groupId"},
 		"clockify_groups_remove_user":            {"groupId"},
+		"clockify_holidays_list":                 {"holidayId", "name"},
 		"clockify_holidays_list_for_user_period": {"id"},
 		"clockify_holidays_create":               {"id"},
 		"clockify_holidays_delete":               {"holidayId"},
 		"clockify_holidays_get":                  {"id"},
 		"clockify_holidays_update":               {"id"},
 		"clockify_users_invite":                  {"id"},
+		"clockify_users_list":                    {"id", "name", "email"},
+		"clockify_users_profile":                 {"id", "name", "email"},
 		"clockify_users_deactivate":              {"userId"},
 		"clockify_users_role":                    {"userId"},
+		"clockify_workspace_settings":            {"id", "name", "hourlyRate"},
 		"clockify_entries_mark_invoiced":         {"updated"},
 	}
 	descriptors := map[string]mcp.ToolDescriptor{}
@@ -745,9 +801,9 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 		"remaining honest gaps",
 		"| `clockify_status` | workflow | native handler",
 		"| `clockify_api_request` | raw | raw fallback",
+		"live protocol/recovery tested",
+		"live happy-path tested",
 		"next action",
-		"needs_native_handler",
-		"needs_live_probe",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("coverage ledger missing required honesty marker %q", required)
@@ -756,20 +812,23 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	if strings.Contains(text, "acceptable gap") {
 		t.Fatalf("coverage ledger still uses broad acceptable-gap status")
 	}
+	if strings.Contains(text, "| alias wrapper |") || strings.Contains(text, "usable_wrapper") {
+		t.Fatalf("coverage ledger still advertises alias-wrapper debt")
+	}
 }
 
 func TestOneUserCoverageLedgerStatusesAreActionable(t *testing.T) {
 	ledger := parseOneUserCoverageLedger(t)
-	allowed := setOf("ready", "usable_wrapper", "needs_fake_smoke", "needs_native_handler", "needs_live_probe", "raw_fallback_only")
+	allowed := setOf("ready", "raw_fallback_only")
 	for _, row := range ledger.Rows {
 		if !allowed[row.Status] {
-			t.Fatalf("%s status=%q outside actionable status set", row.Tool, row.Status)
+			t.Fatalf("%s status=%q outside final one-user ledger status set", row.Tool, row.Status)
 		}
 		if row.NextAction == "" {
 			t.Fatalf("%s missing next_action", row.Tool)
 		}
-		if row.Handler == "alias wrapper" && row.Status == "ready" {
-			t.Fatalf("%s is an alias wrapper but marked ready", row.Tool)
+		if row.Handler == "alias wrapper" {
+			t.Fatalf("%s is still documented as an alias wrapper", row.Tool)
 		}
 	}
 }
@@ -779,8 +838,11 @@ func TestOneUserCoverageLedgerSummaryCountsMatchRows(t *testing.T) {
 	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.FakeSmoke == "yes" }); got != ledger.FakeSmokeYes {
 		t.Fatalf("Fake-smoke summary=%d, table rows=%d", ledger.FakeSmokeYes, got)
 	}
-	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.LiveTested == "yes" }); got != ledger.LiveTestedYes {
-		t.Fatalf("Live-tested summary=%d, table rows=%d", ledger.LiveTestedYes, got)
+	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.LiveProtocol == "yes" }); got != ledger.LiveProtocolYes {
+		t.Fatalf("Live protocol/recovery summary=%d, table rows=%d", ledger.LiveProtocolYes, got)
+	}
+	if got := countCoverageRows(ledger.Rows, func(row coverageRow) bool { return row.LiveHappyPath == "yes" }); got != ledger.LiveHappyPathYes {
+		t.Fatalf("Live happy-path summary=%d, table rows=%d", ledger.LiveHappyPathYes, got)
 	}
 }
 
@@ -838,17 +900,23 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_entries_timer_stop",
 		"clockify_entries_timer_status",
 		"clockify_entries_timer_switch",
+		"clockify_invoices_list",
+		"clockify_invoices_get",
 		"clockify_invoices_create",
 		"clockify_invoices_update",
 		"clockify_invoices_delete",
 		"clockify_invoices_send",
 		"clockify_invoices_mark_paid",
+		"clockify_invoices_items_list",
 		"clockify_invoices_items_add",
 		"clockify_invoices_items_update",
 		"clockify_invoices_items_delete",
+		"clockify_expenses_list",
+		"clockify_expenses_get",
 		"clockify_expenses_create",
 		"clockify_expenses_update",
 		"clockify_expenses_delete",
+		"clockify_expenses_categories_list",
 		"clockify_expenses_categories_create",
 		"clockify_expenses_categories_update",
 		"clockify_expenses_categories_delete",
@@ -862,6 +930,7 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_custom_fields_update",
 		"clockify_custom_fields_delete",
 		"clockify_custom_fields_set_value",
+		"clockify_time_off_requests_list",
 		"clockify_time_off_requests_get",
 		"clockify_time_off_requests_create",
 		"clockify_time_off_requests_update",
@@ -873,19 +942,33 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_time_off_policies_create",
 		"clockify_time_off_policies_update",
 		"clockify_time_off_balances",
+		"clockify_scheduling_assignments_list",
+		"clockify_scheduling_assignments_get",
 		"clockify_scheduling_assignments_create",
 		"clockify_scheduling_assignments_update",
 		"clockify_scheduling_assignments_delete",
+		"clockify_scheduling_project_totals",
+		"clockify_approvals_list",
+		"clockify_approvals_get",
+		"clockify_approvals_submit",
+		"clockify_approvals_approve",
+		"clockify_approvals_reject",
+		"clockify_approvals_withdraw",
+		"clockify_webhooks_list",
+		"clockify_webhooks_get",
 		"clockify_webhooks_create",
 		"clockify_webhooks_update",
 		"clockify_webhooks_delete",
 		"clockify_webhooks_test",
+		"clockify_webhooks_events",
+		"clockify_groups_list",
 		"clockify_groups_get",
 		"clockify_groups_create",
 		"clockify_groups_update",
 		"clockify_groups_delete",
 		"clockify_groups_add_user",
 		"clockify_groups_remove_user",
+		"clockify_holidays_list",
 		"clockify_holidays_list_for_user_period",
 		"clockify_holidays_create",
 		"clockify_holidays_delete",
@@ -919,8 +1002,15 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_api_request",
 	)
 	liveEvidence := liveEvidenceSet(oneUserNamedLiveEvidence())
+	liveHappyEvidence := liveEvidenceSet(oneUserNamedLiveHappyPathEvidence())
 	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Fake smoke", func(row coverageRow) string { return row.FakeSmoke }, fakeEvidence)
-	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live-tested", func(row coverageRow) string { return row.LiveTested }, liveEvidence)
+	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live protocol/recovery tested", func(row coverageRow) string { return row.LiveProtocol }, liveEvidence)
+	assertCoverageYesRowsMatchEvidence(t, ledger.Rows, "Live happy-path tested", func(row coverageRow) string { return row.LiveHappyPath }, liveHappyEvidence)
+	for _, row := range ledger.Rows {
+		if row.LiveHappyPath == "yes" && row.LiveProtocol != "yes" {
+			t.Fatalf("%s is live happy-path yes without live protocol/recovery yes", row.Tool)
+		}
+	}
 }
 
 func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) {
@@ -953,14 +1043,14 @@ func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) 
 	seen := map[string]bool{}
 	for _, row := range ledger.Rows {
 		item, ok := evidence[row.Tool]
-		if row.LiveTested != "yes" {
+		if row.LiveProtocol != "yes" {
 			if ok {
-				t.Fatalf("%s has named live evidence but ledger live-tested=%s", row.Tool, row.LiveTested)
+				t.Fatalf("%s has named live evidence but ledger live protocol/recovery tested=%s", row.Tool, row.LiveProtocol)
 			}
 			continue
 		}
 		if !ok {
-			t.Fatalf("%s is live-tested yes but lacks named live evidence", row.Tool)
+			t.Fatalf("%s is live protocol/recovery tested yes but lacks named live evidence", row.Tool)
 		}
 		if item.Test == "" {
 			t.Fatalf("%s live evidence is missing a test name", row.Tool)
@@ -989,7 +1079,7 @@ func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) 
 	}
 	for tool := range evidence {
 		if !seen[tool] {
-			t.Fatalf("%s has named live evidence but is not marked live-tested yes", tool)
+			t.Fatalf("%s has named live evidence but is not marked live protocol/recovery tested yes", tool)
 		}
 	}
 }
@@ -1382,14 +1472,20 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_reports_detailed", ""},
 		{"clockify_reports_summary", ""},
 		{"clockify_reports_weekly", ""},
+		{"clockify_invoices_list", ""},
+		{"clockify_invoices_get", ""},
 		{"clockify_invoices_update", "updated"},
 		{"clockify_invoices_delete", "deleted"},
 		{"clockify_invoices_mark_paid", "updated"},
+		{"clockify_invoices_items_list", ""},
 		{"clockify_invoices_items_add", "created"},
 		{"clockify_invoices_items_update", "updated"},
 		{"clockify_invoices_items_delete", "deleted"},
+		{"clockify_expenses_list", ""},
+		{"clockify_expenses_get", ""},
 		{"clockify_expenses_update", "updated"},
 		{"clockify_expenses_delete", "deleted"},
+		{"clockify_expenses_categories_list", ""},
 		{"clockify_expenses_categories_create", "created"},
 		{"clockify_expenses_categories_update", "updated"},
 		{"clockify_expenses_categories_delete", "deleted"},
@@ -1403,6 +1499,7 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_custom_fields_update", "updated"},
 		{"clockify_custom_fields_delete", "deleted"},
 		{"clockify_custom_fields_set_value", "updated"},
+		{"clockify_time_off_requests_list", ""},
 		{"clockify_time_off_requests_get", ""},
 		{"clockify_time_off_requests_update", "updated"},
 		{"clockify_time_off_requests_delete", "deleted"},
@@ -1413,16 +1510,30 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_time_off_policies_create", "created"},
 		{"clockify_time_off_policies_update", "updated"},
 		{"clockify_time_off_balances", ""},
+		{"clockify_scheduling_assignments_list", ""},
+		{"clockify_scheduling_assignments_get", ""},
 		{"clockify_scheduling_assignments_update", "updated"},
 		{"clockify_scheduling_assignments_delete", "deleted"},
+		{"clockify_scheduling_project_totals", ""},
+		{"clockify_approvals_list", ""},
+		{"clockify_approvals_get", ""},
+		{"clockify_approvals_submit", "created"},
+		{"clockify_approvals_approve", "updated"},
+		{"clockify_approvals_reject", "updated"},
+		{"clockify_approvals_withdraw", "updated"},
+		{"clockify_webhooks_list", ""},
+		{"clockify_webhooks_get", ""},
 		{"clockify_webhooks_update", "updated"},
 		{"clockify_webhooks_delete", "deleted"},
 		{"clockify_webhooks_test", "updated"},
+		{"clockify_webhooks_events", ""},
+		{"clockify_groups_list", ""},
 		{"clockify_groups_get", ""},
 		{"clockify_groups_update", "updated"},
 		{"clockify_groups_delete", "deleted"},
 		{"clockify_groups_add_user", "created"},
 		{"clockify_groups_remove_user", "deleted"},
+		{"clockify_holidays_list", ""},
 		{"clockify_holidays_list_for_user_period", ""},
 		{"clockify_holidays_delete", "deleted"},
 		{"clockify_users_deactivate", "updated"},
@@ -1731,19 +1842,21 @@ func sortedMapKeys(m map[string]any) []string {
 }
 
 type coverageLedger struct {
-	FakeSmokeYes  int
-	LiveTestedYes int
-	Rows          []coverageRow
+	FakeSmokeYes     int
+	LiveProtocolYes  int
+	LiveHappyPathYes int
+	Rows             []coverageRow
 }
 
 type coverageRow struct {
-	Tool         string
-	Handler      string
-	FakeSmoke    string
-	LiveTested   string
-	OutputSchema string
-	Status       string
-	NextAction   string
+	Tool          string
+	Handler       string
+	FakeSmoke     string
+	LiveProtocol  string
+	LiveHappyPath string
+	OutputSchema  string
+	Status        string
+	NextAction    string
 }
 
 func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
@@ -1758,25 +1871,28 @@ func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
 		switch {
 		case strings.HasPrefix(line, "- Fake-smoke yes:"):
 			ledger.FakeSmokeYes = parseCoverageSummaryCount(t, line, "- Fake-smoke yes:")
-		case strings.HasPrefix(line, "- Live-tested yes:"):
-			ledger.LiveTestedYes = parseCoverageSummaryCount(t, line, "- Live-tested yes:")
+		case strings.HasPrefix(line, "- Live protocol/recovery tested yes:"):
+			ledger.LiveProtocolYes = parseCoverageSummaryCount(t, line, "- Live protocol/recovery tested yes:")
+		case strings.HasPrefix(line, "- Live happy-path tested yes:"):
+			ledger.LiveHappyPathYes = parseCoverageSummaryCount(t, line, "- Live happy-path tested yes:")
 		case strings.HasPrefix(line, "| `clockify_"):
 			fields := strings.Split(line, "|")
-			if len(fields) < 10 {
+			if len(fields) < 11 {
 				t.Fatalf("malformed coverage row: %s", line)
 			}
 			ledger.Rows = append(ledger.Rows, coverageRow{
-				Tool:         strings.Trim(strings.TrimSpace(fields[1]), "`"),
-				Handler:      strings.ToLower(strings.TrimSpace(fields[3])),
-				FakeSmoke:    strings.ToLower(strings.TrimSpace(fields[5])),
-				LiveTested:   strings.ToLower(strings.TrimSpace(fields[6])),
-				OutputSchema: strings.ToLower(strings.TrimSpace(fields[7])),
-				Status:       strings.ToLower(strings.TrimSpace(fields[8])),
-				NextAction:   strings.ToLower(strings.TrimSpace(fields[9])),
+				Tool:          strings.Trim(strings.TrimSpace(fields[1]), "`"),
+				Handler:       strings.ToLower(strings.TrimSpace(fields[3])),
+				FakeSmoke:     strings.ToLower(strings.TrimSpace(fields[5])),
+				LiveProtocol:  strings.ToLower(strings.TrimSpace(fields[6])),
+				LiveHappyPath: strings.ToLower(strings.TrimSpace(fields[7])),
+				OutputSchema:  strings.ToLower(strings.TrimSpace(fields[8])),
+				Status:        strings.ToLower(strings.TrimSpace(fields[9])),
+				NextAction:    strings.ToLower(strings.TrimSpace(fields[10])),
 			})
 		}
 	}
-	if ledger.FakeSmokeYes == 0 || ledger.LiveTestedYes == 0 || len(ledger.Rows) == 0 {
+	if ledger.FakeSmokeYes == 0 || ledger.LiveProtocolYes == 0 || ledger.LiveHappyPathYes == 0 || len(ledger.Rows) == 0 {
 		t.Fatalf("coverage ledger did not parse summary/table: %+v", ledger)
 	}
 	return ledger
@@ -1957,9 +2073,11 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_entries_get",
 		"clockify_entries_update",
 		"clockify_entries_delete",
+		"clockify_invoices_get",
 		"clockify_invoices_update",
 		"clockify_invoices_delete",
 		"clockify_invoices_mark_paid",
+		"clockify_invoices_items_list",
 		"clockify_invoices_items_add",
 		"clockify_invoices_items_update",
 		"clockify_invoices_items_delete",
@@ -1974,7 +2092,9 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_time_off_policies_update",
 		"clockify_time_off_balances",
 		"clockify_scheduling_assignments_update",
+		"clockify_scheduling_assignments_get",
 		"clockify_scheduling_assignments_delete",
+		"clockify_webhooks_get",
 		"clockify_webhooks_update",
 		"clockify_webhooks_delete",
 		"clockify_webhooks_test",
@@ -1989,6 +2109,11 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_reports_attendance",
 		"clockify_reports_money",
 		"clockify_reports_export",
+		"clockify_approvals_get",
+		"clockify_approvals_submit",
+		"clockify_approvals_approve",
+		"clockify_approvals_reject",
+		"clockify_approvals_withdraw",
 		"clockify_invoices_export",
 		"clockify_invoices_import_time",
 		"clockify_invoices_import_expenses",
@@ -2004,6 +2129,116 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_entries_timer_stop",
 		"clockify_entries_timer_status",
 		"clockify_entries_timer_switch",
+	)
+	return out
+}
+
+func oneUserNamedLiveHappyPathEvidence() map[string]liveCoverageEvidence {
+	out := map[string]liveCoverageEvidence{}
+	add := func(test string, gates []string, tools ...string) {
+		for _, tool := range tools {
+			if _, exists := out[tool]; exists {
+				panic("duplicate live happy-path evidence for " + tool)
+			}
+			out[tool] = liveCoverageEvidence{Test: test, Gates: gates}
+		}
+	}
+	core := []string{"CLOCKIFY_RUN_LIVE_E2E"}
+	optional := []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM"}
+	add("TestLiveOneUserWorkflowMCP", core,
+		"clockify_status",
+		"clockify_tools_guide",
+		"clockify_create_work_package",
+		"clockify_log_work",
+		"clockify_start_work",
+		"clockify_stop_work",
+		"clockify_switch_work",
+		"clockify_review_day",
+		"clockify_review_week",
+		"clockify_fix_entry",
+		"clockify_demo_seed",
+		"clockify_demo_cleanup",
+	)
+	add("TestLiveOneUserReadOnly", optional,
+		"clockify_entries_list",
+		"clockify_users_list",
+		"clockify_users_profile",
+		"clockify_reports_detailed",
+		"clockify_reports_summary",
+		"clockify_reports_weekly",
+	)
+	add("TestLivePaginationOnTags", optional,
+		"clockify_tags_list",
+		"clockify_tags_create",
+	)
+	add("TestLiveOneUserProjectAdminCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED"},
+		"clockify_projects_get",
+		"clockify_projects_archive",
+		"clockify_projects_templates_create",
+		"clockify_projects_estimates_update",
+		"clockify_projects_memberships_update",
+	)
+	add("TestLiveOneUserExpensesCRUD", optional,
+		"clockify_expenses_get",
+		"clockify_expenses_create",
+		"clockify_expenses_update",
+		"clockify_expenses_delete",
+		"clockify_expenses_categories_create",
+		"clockify_expenses_categories_update",
+	)
+	add("TestLiveOneUserCustomFieldsCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
+		"clockify_custom_fields_list",
+		"clockify_custom_fields_get",
+		"clockify_custom_fields_create",
+		"clockify_custom_fields_update",
+		"clockify_custom_fields_delete",
+		"clockify_custom_fields_set_value",
+	)
+	add("TestLiveOneUserOptionalDomainReadOnlySweep", optional,
+		"clockify_invoices_list",
+		"clockify_expenses_list",
+		"clockify_reports_expense",
+		"clockify_expenses_categories_list",
+		"clockify_scheduling_assignments_list",
+		"clockify_scheduling_project_totals",
+		"clockify_scheduling_user_totals",
+		"clockify_scheduling_capacity",
+		"clockify_time_off_requests_list",
+		"clockify_time_off_policies_list",
+		"clockify_approvals_list",
+		"clockify_webhooks_list",
+		"clockify_webhooks_events",
+		"clockify_groups_list",
+		"clockify_holidays_list",
+		"clockify_projects_templates_list",
+	)
+	add("TestLiveOneUserGroupsHolidaysCRUD", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED"},
+		"clockify_groups_get",
+		"clockify_groups_create",
+		"clockify_groups_update",
+		"clockify_groups_delete",
+		"clockify_holidays_create",
+	)
+	add("TestOneUserLiveRemainingCoverageProbes", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
+		"clockify_clients_create",
+		"clockify_clients_get",
+		"clockify_clients_update",
+		"clockify_clients_delete",
+		"clockify_projects_create",
+		"clockify_projects_update",
+		"clockify_projects_delete",
+		"clockify_tasks_create",
+		"clockify_tasks_get",
+		"clockify_tasks_update",
+		"clockify_tasks_delete",
+		"clockify_tags_get",
+		"clockify_tags_update",
+		"clockify_tags_delete",
+		"clockify_entries_create",
+		"clockify_entries_get",
+		"clockify_entries_update",
+		"clockify_entries_delete",
+		"clockify_entries_timer_start",
 	)
 	return out
 }

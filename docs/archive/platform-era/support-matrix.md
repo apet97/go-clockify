@@ -1,0 +1,140 @@
+# Support Matrix
+
+This document outlines the supported configurations and clients for `clockify-mcp-go`.
+
+## Candidate runtime pins
+
+| Surface | Current support statement | Source of truth |
+|---------|---------------------------|-----------------|
+| Go toolchain | Go `1.25.10` for local builds and CI. The module's `go` directive is `1.25.10`; workflows pin the same version unless they deliberately read `go.mod`. | [`go.mod`](../go.mod), `.github/workflows/*.yml` |
+| Default binary platforms | `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`. Windows arm64 is intentionally not shipped. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`scripts/check-release-assets.sh`](../scripts/check-release-assets.sh) |
+| Tagged server artifacts | Postgres, gRPC, and gRPC+Postgres artifacts are Linux-only (`amd64`, `arm64`) because those profiles target hosted or private-network server deployments. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/verification.md`](verification.md) |
+| Container image | Linux `amd64` and `arm64`, distroless runtime, non-root. The builder image is pinned by digest. | [`deploy/Dockerfile`](../deploy/Dockerfile), [`.github/workflows/docker-image.yml`](../.github/workflows/docker-image.yml) |
+| FIPS posture | Separate `clockify-mcp-fips-*` binaries for Linux and Darwin (`amd64`, `arm64`) built with `-tags=fips` and `GOFIPS140=latest`. Windows FIPS binaries are not shipped. Local `make verify-fips` auto-skips when the toolchain lacks GOFIPS140 support; CI is the release gate. | [`.goreleaser.yaml`](../.goreleaser.yaml), [`docs/adr/0007-fips-build-tag.md`](adr/0007-fips-build-tag.md) |
+| Kernel requirements | No project-specific Linux kernel feature is required by the default binary. Container and Kubernetes deployments inherit the baseline of the runtime, CNI, and storage driver; Postgres-backed profiles require normal TCP reachability to Postgres. | [`deploy/k8s/README.md`](../deploy/k8s/README.md), [`docs/deploy/production-profile-shared-service.md`](deploy/production-profile-shared-service.md) |
+| MCP request size | `MCP_MAX_MESSAGE_SIZE` defaults to `4194304` bytes (4 MiB) and caps stdio scanner frames, HTTP request bodies, and gRPC inbound frames. It accepts values from 1 byte through 100 MiB; `MCP_HTTP_MAX_BODY` is only a deprecated compatibility alias. | [`internal/config/spec.go`](../internal/config/spec.go), [`internal/mcp/server.go`](../internal/mcp/server.go), [`internal/transport/grpc/transport.go`](../internal/transport/grpc/transport.go) |
+| Active release line | `v1.2.0` is the current Active line referenced by release-verification docs. A launch-candidate tag must update this row if it changes the supported Go version, artifact matrix, or FIPS posture. | [`SUPPORT.md`](../SUPPORT.md), [`docs/verification.md`](verification.md) |
+
+## Transports and Auth Modes
+
+The following matrix shows supported authentication modes for each transport.
+
+| Transport | `static_bearer` | `oidc` | `forward_auth` | `mtls` | Use Case |
+|-----------|:---------------:|:------:|:--------------:|:------:|----------|
+| `stdio`   | N/A | N/A | N/A | N/A | Local CLI clients (Claude Code, Cursor) |
+| `http` (Legacy) | ✅ | ✅ | ✅ | ❌ | Single-tenant HTTP service |
+| `streamable_http` | ✅ | ✅ | ✅ | ✅ | Multi-tenant shared service (Recommended) |
+| `grpc` | ✅ | ✅ | ✅ | ✅ | Low-latency private network (Requires build tags) |
+
+*   **`mtls` for `http` (legacy):** Not supported. The legacy
+    HTTP transport does not terminate TLS in-process; setting
+    `MCP_HTTP_TLS_CERT` with `MCP_TRANSPORT=http` is rejected at
+    `config.Load`. Terminate TLS upstream and use `forward_auth`
+    to pass user context.
+*   **`mtls` for `streamable_http`:** Supported natively via
+    `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` + `MCP_MTLS_CA_CERT_PATH`.
+    All three are required when `MCP_AUTH_MODE=mtls` is selected
+    on the streamable transport; `config.Load` rejects partial
+    configurations at startup.
+*   **`mtls` for `grpc`:** Same cert / key / CA requirement as
+    streamable HTTP. Plus the `grpc` build tag (see below).
+*   **mTLS tenant identity** (`MCP_MTLS_TENANT_SOURCE`): direct
+    native mTLS uses `cert` (the default), which derives tenant
+    from the verified client certificate — URI SAN
+    `clockify-mcp://tenant/<id>` or `spiffe://*/tenant/<id>` are
+    honoured first, then Subject Organization is the fallback. A
+    client-controlled `X-Tenant-ID` header is silently ignored in
+    this mode; trusting it would let any authenticated client
+    claim any tenant. Only use `MCP_MTLS_TENANT_SOURCE=header` when
+    a trusted upstream proxy terminates mTLS, validates it, and
+    stamps the tenant header from a server-side source after
+    stripping any client copy. `header_or_cert` is a migration-only
+    hybrid. Pair with `MCP_REQUIRE_MTLS_TENANT=1` in hosted
+    deployments to fail closed when no tenant can be derived.
+*   **`grpc`:** Lives behind the `grpc` build tag. Operators have
+    two supported paths: download a published
+    `clockify-mcp-grpc-linux-{x64,arm64}` /
+    `clockify-mcp-grpc-postgres-linux-{x64,arm64}` artifact (same
+    SBOM + cosign chain as the default and Postgres binaries, plus
+    SLSA provenance when GitHub artifact attestations are available),
+    or build their own with `go build -tags=grpc[,postgres]` /
+    `docker build --build-arg GO_TAGS=grpc[,postgres]`. The default
+    `clockify-mcp` binary and default Docker image do not include
+    gRPC.
+
+## Production-readiness classification
+
+"✅" above means a combination is functionally supported. This
+table classifies combinations by production suitability — a
+combination can be supported in principle but still be the wrong
+choice for a given shape of deployment.
+
+| Deployment shape | Transport | Auth | Control-plane | Classification |
+|------------------|-----------|------|---------------|----------------|
+| Single user, laptop subprocess | `stdio` | n/a | `memory` | ✅ Recommended |
+| Small team, shared HTTP endpoint | `streamable_http` | `static_bearer` | `file://` | ✅ Recommended |
+| Small team, shared HTTP endpoint | `http` (legacy) | `static_bearer` | `file://` | ⚠️ Tolerated (no server-initiated notifications) |
+| Multi-tenant shared service | `streamable_http` | `oidc` | `postgres://` | ✅ Recommended |
+| Multi-tenant shared service | `streamable_http` | `forward_auth` | `postgres://` | ⚠️ Tolerated (proxy owns identity; require trusted proxies and tenant header) |
+| Multi-tenant shared service | `http` (legacy) | any | any | ❌ Unsupported (no per-session notifications) |
+| Multi-tenant shared service | any | `static_bearer` | any | ❌ Unsupported (no per-user identity) |
+| Private mesh, low-latency RPC | `grpc` | `oidc` or `mtls` | `postgres://` | ✅ Recommended |
+| Any | any | any | `memory` (ENVIRONMENT=prod) | ❌ Fails closed at startup |
+
+Legend:
+
+- **✅ Recommended** — The documented deployment profile uses
+  this combination; CI smoke tests cover it; runbooks reference
+  it by name. Pick one of these unless you have a specific
+  reason to deviate.
+- **⚠️ Tolerated** — Functionally works; release tests cover
+  it; but the combination has a known sharp edge (missing
+  notifications, external trust boundary, etc.). Safe to run if
+  you understand the tradeoff.
+- **❌ Unsupported** — Either blocked at startup (e.g. `memory`
+  backend with `ENVIRONMENT=prod`) or actively discouraged
+  because the security/operational posture of the combination
+  fails at least one of: fail-closed audit, authenticated
+  transport, multi-process-safe control plane, or deny-default
+  legacy HTTP.
+
+Every "Recommended" row has a corresponding file under
+`docs/deploy/`:
+
+- `docs/deploy/profile-local-stdio.md`
+- `docs/deploy/profile-single-tenant-http.md`
+- `docs/deploy/production-profile-shared-service.md`
+- `docs/deploy/profile-private-network-grpc.md`
+
+## Supported MCP Clients
+
+Client-level support is documented in
+[`docs/clients.md`](clients.md), which separates release-tested
+clients from compatible-but-not-release-blocking shapes. The short
+version:
+
+| Client shape | Transport | Support level |
+|--------------|-----------|---------------|
+| Claude Code, Claude Desktop, Cursor, Codex | `stdio` | Tier 1; exact config examples live in README and `docs/clients.md` |
+| VS Code MCP | `stdio` | Compatible shape; not release-blocking until a repeatable VS Code smoke exists |
+| Custom Streamable HTTP client | `streamable_http` | Server transport supported; client implementation is operator-owned |
+| Custom gRPC client | `grpc` | Server transport supported behind `-tags=grpc`; private-network profile only |
+
+## Runtime Environments
+
+| Platform | Artifact | Support Level | Notes |
+|----------|----------|---------------|-------|
+| Linux amd64 | default, FIPS, Postgres, gRPC, gRPC+Postgres, container | Tier 1 | Full CI and release-smoke coverage; canonical hosted deployment platform |
+| Linux arm64 | default, FIPS, Postgres, gRPC, gRPC+Postgres, container | Tier 1 | Same release artifact set as linux amd64; container image is multi-arch |
+| macOS arm64 | default, FIPS | Tier 1 | Primary development platform; `make release-check` must stay green here before candidate tagging |
+| macOS amd64 | default, FIPS | Tier 2 | Binary release and FIPS artifact; limited local developer coverage |
+| Windows amd64 | default | Tier 2 | Binary release; no FIPS, Postgres, or gRPC release artifact |
+| Kubernetes | container, Helm, Kustomize | Tier 1 | Reference manifests render in CI; operators still own cluster-specific ingress, storage, and NetworkPolicy integration |
+
+## Control-Plane Backends
+
+| Backend | Stability | Use Case |
+|---------|-----------|----------|
+| `memory` | Stable | Tests, single-user `stdio` |
+| `file://` | Stable | Small-team `stdio`, local development |
+| `postgres://` | Stable | Production shared-service (Recommended) |

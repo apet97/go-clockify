@@ -380,6 +380,8 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		name string
 		args map[string]any
 	}{
+		{"clockify_invoices_get", map[string]any{"invoice_id": invoiceID}},
+		{"clockify_invoices_items_list", map[string]any{"invoice_id": invoiceID}},
 		{"clockify_invoices_update", map[string]any{"invoice_id": invoiceID, "note": "live coverage probe"}},
 		{"clockify_invoices_mark_paid", map[string]any{"invoice_id": invoiceID}},
 		{"clockify_invoices_items_add", invoiceItemArgs},
@@ -436,6 +438,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if assignment.OK && assignment.IDs["assignmentId"] != "" {
 		assignmentID = assignment.IDs["assignmentId"]
 	}
+	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_assignments_get", map[string]any{"assignment_id": assignmentID})
 	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_assignments_update", map[string]any{
 		"assignment_id": assignmentID,
 		"start":         "2026-02-10T09:00:00Z",
@@ -457,6 +460,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		name string
 		args map[string]any
 	}{
+		{"clockify_webhooks_get", map[string]any{"webhook_id": webhookID}},
 		{"clockify_webhooks_update", map[string]any{"webhook_id": webhookID, "name": unique("webhook-updated")}},
 		{"clockify_webhooks_test", map[string]any{"webhook_id": webhookID}},
 		{"clockify_webhooks_delete", map[string]any{"webhook_id": webhookID}},
@@ -512,6 +516,11 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		{"clockify_reports_attendance", reportProbeArgs()},
 		{"clockify_reports_money", reportProbeArgs()},
 		{"clockify_reports_export", map[string]any{"start": "2026-02-03T00:00:00.000", "end": "2026-02-04T00:00:00.000", "export_type": "JSON"}},
+		{"clockify_approvals_get", map[string]any{"approval_id": bogusID}},
+		{"clockify_approvals_submit", map[string]any{"period": "WEEKLY", "period_start": "2026-02-02T00:00:00.000Z"}},
+		{"clockify_approvals_approve", map[string]any{"approval_id": bogusID, "note": "live coverage"}},
+		{"clockify_approvals_reject", map[string]any{"approval_id": bogusID, "reason": "live coverage"}},
+		{"clockify_approvals_withdraw", map[string]any{"approval_id": bogusID, "note": "live coverage"}},
 		{"clockify_approvals_resubmit", map[string]any{"approval_id": bogusID, "entry_ids": []any{entryID}, "note": "live coverage"}},
 	} {
 		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)

@@ -462,7 +462,7 @@ func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	sources := s.nativeDomainDescriptorMap()
-	out := make([]mcp.ToolDescriptor, 0, 28)
+	out := make([]mcp.ToolDescriptor, 0, 96)
 	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
 		old, ok := sources[oldName]
 		if !ok {
@@ -470,11 +470,14 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		}
 		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
 	}
+	add(200, "clockify_invoices_list", "clockify_list_invoices", "invoice", "", s.listInvoices)
+	add(201, "clockify_invoices_get", "clockify_get_invoice", "invoice", "", s.getInvoice)
 	add(202, "clockify_invoices_create", "clockify_create_invoice", "invoice", "created", s.createInvoice)
 	add(203, "clockify_invoices_update", "clockify_update_invoice", "invoice", "updated", s.updateInvoice)
 	add(204, "clockify_invoices_delete", "clockify_delete_invoice", "invoice", "deleted", s.deleteInvoice)
 	add(205, "clockify_invoices_send", "clockify_send_invoice", "invoice", "updated", s.sendInvoice)
 	add(206, "clockify_invoices_mark_paid", "clockify_mark_invoice_paid", "invoice", "updated", s.markInvoicePaid)
+	add(207, "clockify_invoices_items_list", "clockify_list_invoice_items", "invoice_item", "", s.listInvoiceItems)
 	add(208, "clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created", s.addInvoiceItem)
 	add(209, "clockify_invoices_items_update", "clockify_update_invoice_item", "invoice_item", "updated", s.updateInvoiceItem)
 	add(216, "clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted", s.deleteInvoiceItem)
@@ -482,9 +485,12 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(37, "clockify_projects_templates_create", "clockify_create_project_template", "project_template", "created", s.CreateProjectTemplate)
 	add(38, "clockify_projects_estimates_update", "clockify_update_project_estimate", "project", "updated", s.UpdateProjectEstimate)
 	add(40, "clockify_projects_memberships_update", "clockify_update_project_memberships", "membership", "updated", s.updateProjectMembershipsOneUser)
+	add(300, "clockify_expenses_list", "clockify_list_expenses", "expense", "", s.listExpenses)
+	add(301, "clockify_expenses_get", "clockify_get_expense", "expense", "", s.getExpense)
 	add(302, "clockify_expenses_create", "clockify_create_expense", "expense", "created", s.createExpense)
 	add(303, "clockify_expenses_update", "clockify_update_expense", "expense", "updated", s.updateExpense)
 	add(304, "clockify_expenses_delete", "clockify_delete_expense", "expense", "deleted", s.deleteExpense)
+	add(305, "clockify_expenses_categories_list", "clockify_list_expense_categories", "expense_category", "", s.listExpenseCategories)
 	add(306, "clockify_expenses_categories_create", "clockify_create_expense_category", "expense_category", "created", s.createExpenseCategory)
 	add(307, "clockify_expenses_categories_update", "clockify_update_expense_category", "expense_category", "updated", s.updateExpenseCategory)
 	add(308, "clockify_expenses_categories_delete", "clockify_delete_expense_category", "expense_category", "deleted", s.deleteExpenseCategory)
@@ -494,6 +500,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(403, "clockify_custom_fields_update", "clockify_update_custom_field", "custom_field", "updated", s.UpdateCustomField)
 	add(404, "clockify_custom_fields_delete", "clockify_delete_custom_field", "custom_field", "deleted", s.DeleteCustomField)
 	add(405, "clockify_custom_fields_set_value", "clockify_set_custom_field_value", "custom_field_value", "updated", s.SetCustomFieldValue)
+	add(500, "clockify_time_off_requests_list", "clockify_list_time_off_requests", "time_off_request", "", s.listTimeOffRequests)
 	add(501, "clockify_time_off_requests_get", "clockify_get_time_off_request", "time_off_request", "", s.getTimeOffRequest)
 	add(502, "clockify_time_off_requests_create", "clockify_create_time_off_request", "time_off_request", "created", s.createTimeOffRequest)
 	add(503, "clockify_time_off_requests_update", "clockify_update_time_off_request", "time_off_request", "updated", s.updateTimeOffRequest)
@@ -505,19 +512,35 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(509, "clockify_time_off_policies_create", "clockify_create_time_off_policy", "time_off_policy", "created", s.createTimeOffPolicy)
 	add(510, "clockify_time_off_policies_update", "clockify_update_time_off_policy", "time_off_policy", "updated", s.updateTimeOffPolicy)
 	add(511, "clockify_time_off_balances", "clockify_time_off_balance", "time_off_balance", "", s.timeOffBalance)
+	add(600, "clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", "", s.listAssignments)
+	add(601, "clockify_scheduling_assignments_get", "clockify_get_assignment", "assignment", "", s.getAssignment)
 	add(602, "clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created", s.createAssignment)
 	add(603, "clockify_scheduling_assignments_update", "clockify_update_assignment", "assignment", "updated", s.updateAssignment)
 	add(604, "clockify_scheduling_assignments_delete", "clockify_delete_assignment", "assignment", "deleted", s.deleteAssignment)
+	add(605, "clockify_scheduling_project_totals", "clockify_get_project_schedule_totals", "scheduling", "", s.getProjectScheduleTotals)
+	add(700, "clockify_approvals_list", "clockify_list_approval_requests", "approval", "", s.listApprovalRequests)
+	add(701, "clockify_approvals_get", "clockify_get_approval_request", "approval", "", s.getApprovalRequest)
+	add(702, "clockify_approvals_submit", "clockify_submit_for_approval", "approval", "created", s.submitForApproval)
+	add(703, "clockify_approvals_approve", "clockify_approve_timesheet", "approval", "updated", s.approveTimesheet)
+	add(704, "clockify_approvals_reject", "clockify_reject_timesheet", "approval", "updated", s.rejectTimesheet)
+	add(705, "clockify_approvals_withdraw", "clockify_withdraw_approval", "approval", "updated", s.withdrawApproval)
+	add(800, "clockify_webhooks_list", "clockify_list_webhooks", "webhook", "", s.ListWebhooks)
+	add(801, "clockify_webhooks_get", "clockify_get_webhook", "webhook", "", s.GetWebhook)
 	add(802, "clockify_webhooks_create", "clockify_create_webhook", "webhook", "created", s.CreateWebhook)
 	add(803, "clockify_webhooks_update", "clockify_update_webhook", "webhook", "updated", s.UpdateWebhook)
 	add(804, "clockify_webhooks_delete", "clockify_delete_webhook", "webhook", "deleted", s.DeleteWebhook)
 	add(805, "clockify_webhooks_test", "clockify_test_webhook", "webhook", "updated", s.TestWebhook)
+	add(806, "clockify_webhooks_events", "clockify_list_webhook_events", "webhook_event", "", s.ListWebhookEvents)
+	add(900, "clockify_groups_list", "clockify_list_user_groups_admin", "group", "", s.ListUserGroupsAdmin)
 	add(901, "clockify_groups_get", "clockify_get_user_group", "group", "", s.GetUserGroup)
 	add(902, "clockify_groups_create", "clockify_create_user_group_admin", "group", "created", s.CreateUserGroupAdmin)
 	add(903, "clockify_groups_update", "clockify_update_user_group_admin", "group", "updated", s.UpdateUserGroupAdmin)
 	add(904, "clockify_groups_delete", "clockify_delete_user_group_admin", "group", "deleted", s.DeleteUserGroupAdmin)
 	add(905, "clockify_groups_add_user", "clockify_add_user_to_group", "group_member", "created", s.AddUserToGroup)
 	add(906, "clockify_groups_remove_user", "clockify_remove_user_from_group", "group_member", "deleted", s.RemoveUserFromGroup)
+	add(1000, "clockify_holidays_list", "clockify_list_holidays", "holiday", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+		return s.ListHolidays(ctx)
+	})
 	add(1003, "clockify_holidays_list_for_user_period", "clockify_list_holidays_in_period", "holiday", "", s.ListHolidaysInPeriod)
 	add(1004, "clockify_holidays_create", "clockify_create_holiday", "holiday", "created", s.CreateHoliday)
 	add(1005, "clockify_holidays_delete", "clockify_delete_holiday", "holiday", "deleted", s.DeleteHoliday)
@@ -541,11 +564,14 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 
 func nativeHighValueToolNames() map[string]bool {
 	return map[string]bool{
+		"clockify_invoices_list":                 true,
+		"clockify_invoices_get":                  true,
 		"clockify_invoices_create":               true,
 		"clockify_invoices_update":               true,
 		"clockify_invoices_delete":               true,
 		"clockify_invoices_send":                 true,
 		"clockify_invoices_mark_paid":            true,
+		"clockify_invoices_items_list":           true,
 		"clockify_invoices_items_add":            true,
 		"clockify_invoices_items_update":         true,
 		"clockify_invoices_items_delete":         true,
@@ -553,9 +579,12 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_projects_templates_create":     true,
 		"clockify_projects_estimates_update":     true,
 		"clockify_projects_memberships_update":   true,
+		"clockify_expenses_list":                 true,
+		"clockify_expenses_get":                  true,
 		"clockify_expenses_create":               true,
 		"clockify_expenses_update":               true,
 		"clockify_expenses_delete":               true,
+		"clockify_expenses_categories_list":      true,
 		"clockify_expenses_categories_create":    true,
 		"clockify_expenses_categories_update":    true,
 		"clockify_expenses_categories_delete":    true,
@@ -565,6 +594,7 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_custom_fields_update":          true,
 		"clockify_custom_fields_delete":          true,
 		"clockify_custom_fields_set_value":       true,
+		"clockify_time_off_requests_list":        true,
 		"clockify_time_off_requests_get":         true,
 		"clockify_time_off_requests_create":      true,
 		"clockify_time_off_requests_update":      true,
@@ -576,9 +606,18 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_time_off_policies_create":      true,
 		"clockify_time_off_policies_update":      true,
 		"clockify_time_off_balances":             true,
+		"clockify_scheduling_assignments_list":   true,
+		"clockify_scheduling_assignments_get":    true,
 		"clockify_scheduling_assignments_create": true,
 		"clockify_scheduling_assignments_update": true,
 		"clockify_scheduling_assignments_delete": true,
+		"clockify_scheduling_project_totals":     true,
+		"clockify_approvals_list":                true,
+		"clockify_approvals_get":                 true,
+		"clockify_approvals_submit":              true,
+		"clockify_approvals_approve":             true,
+		"clockify_approvals_reject":              true,
+		"clockify_approvals_withdraw":            true,
 		"clockify_projects_memberships_list":     true,
 		"clockify_reports_attendance":            true,
 		"clockify_reports_money":                 true,
@@ -594,16 +633,21 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_scheduling_user_totals":        true,
 		"clockify_scheduling_capacity":           true,
 		"clockify_approvals_resubmit":            true,
+		"clockify_webhooks_list":                 true,
+		"clockify_webhooks_get":                  true,
 		"clockify_webhooks_create":               true,
 		"clockify_webhooks_update":               true,
 		"clockify_webhooks_delete":               true,
 		"clockify_webhooks_test":                 true,
+		"clockify_webhooks_events":               true,
+		"clockify_groups_list":                   true,
 		"clockify_groups_get":                    true,
 		"clockify_groups_create":                 true,
 		"clockify_groups_update":                 true,
 		"clockify_groups_delete":                 true,
 		"clockify_groups_add_user":               true,
 		"clockify_groups_remove_user":            true,
+		"clockify_holidays_list":                 true,
 		"clockify_holidays_list_for_user_period": true,
 		"clockify_holidays_create":               true,
 		"clockify_holidays_delete":               true,
