@@ -5175,8 +5175,9 @@
     "total": 193
   },
   "tool_catalog": {
-    "tier1": 0,
-    "tier2": 0,
-    "tools": 151
+    "domain": 132,
+    "raw": 2,
+    "total": 151,
+    "workflow": 17
   }
 }

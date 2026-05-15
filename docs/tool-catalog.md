@@ -174,8 +174,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_attendance` | `domain` | yes | no | yes | no | `read` | Run the attendance report. |
 | `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run the money summary report. |
 | `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. |
-| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Run a report export request. |
-| `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice. |
+| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
+| `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
 | `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import time entries into an invoice. |
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |

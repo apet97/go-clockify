@@ -242,6 +242,22 @@ def catalog_tools(catalog: dict) -> list[dict]:
     return catalog.get("tier1", []) + catalog.get("tier2", [])
 
 
+def catalog_metadata(catalog: dict) -> dict[str, int]:
+    """Return product-current tool counts without legacy tier vocabulary."""
+    tools = catalog_tools(catalog)
+    meta = {
+        "total": len(tools),
+        "workflow": 0,
+        "domain": 0,
+        "raw": 0,
+    }
+    for tool in tools:
+        category = tool.get("category")
+        if isinstance(category, str) and category:
+            meta[category] = meta.get(category, 0) + 1
+    return meta
+
+
 def load_openapi() -> list[dict]:
     spec = yaml.safe_load(OPENAPI.read_text())
     ops = []
@@ -471,12 +487,7 @@ def main() -> int:
     rows = build_rows(ops, coverage_map, allowlist, test_tools)
     summary = summarize(rows)
     catalog = json.loads(CATALOG.read_text())
-    tools = catalog_tools(catalog)
-    catalog_meta = {
-        "tier1": len(catalog.get("tier1", [])),
-        "tier2": len(catalog.get("tier2", [])),
-        "tools": len(tools),
-    }
+    catalog_meta = catalog_metadata(catalog)
     payload = {
         "generated_by": "scripts/gen-coverage-matrix",
         "openapi_version": yaml.safe_load(OPENAPI.read_text())["info"]["version"],

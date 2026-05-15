@@ -295,6 +295,27 @@ func TestOneUserToolDescriptionsCallOutOperationalSideEffects(t *testing.T) {
 	}
 }
 
+func TestOneUserBinaryExportToolDescriptionsNameSafeEnvelope(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	tools := map[string]mcp.Tool{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		tools[descriptor.Tool.Name] = descriptor.Tool
+	}
+
+	for _, name := range []string{"clockify_reports_export", "clockify_invoices_export"} {
+		tool, ok := tools[name]
+		if !ok {
+			t.Fatalf("missing tool %s", name)
+		}
+		desc := strings.ToLower(tool.Description)
+		for _, term := range []string{"contenttype", "filename", "bytes", "bodyencoding", "base64bytes", "truncated:false", "body", "base64 payload"} {
+			if !strings.Contains(desc, term) {
+				t.Fatalf("%s description %q missing safe envelope term %q", name, tool.Description, term)
+			}
+		}
+	}
+}
+
 func TestOneUserWorkflowAnnotationsGiveActionableRoutingHints(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	for _, descriptor := range svc.FullAccessRegistry() {

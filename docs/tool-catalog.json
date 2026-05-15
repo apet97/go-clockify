@@ -45168,7 +45168,7 @@
     },
     {
       "name": "clockify_reports_export",
-      "description": "Run a report export request.",
+      "description": "Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.",
       "category": "domain",
       "handler_kind": "native handler",
       "method": "POST",
@@ -45444,7 +45444,7 @@
     },
     {
       "name": "clockify_invoices_export",
-      "description": "Export an invoice.",
+      "description": "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,

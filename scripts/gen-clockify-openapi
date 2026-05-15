@@ -562,10 +562,19 @@ def discover_mcp_mapping(options)
   [mapping.transform_values { |set| set.to_a.sort }, risks, normalized_meta]
 end
 
-def catalog_tools(catalog)
-  return Array(catalog["tools"]) if catalog["tools"].is_a?(Array)
+def catalog_contract_errors(catalog)
+  errors = []
+  errors << "catalog must use top-level tools array" unless catalog["tools"].is_a?(Array)
+  errors << "catalog must not use legacy tier1/tier2 top-level shape" if catalog.key?("tier1") || catalog.key?("tier2")
+  errors << "catalog tools array must not be empty" if Array(catalog["tools"]).empty?
+  errors
+end
 
-  Array(catalog["tier1"]).concat(Array(catalog["tier2"]))
+def catalog_tools(catalog)
+  errors = catalog_contract_errors(catalog)
+  abort(errors.join("\n")) unless errors.empty?
+
+  catalog["tools"]
 end
 
 def coverage_bucket_for_text(text)
@@ -1136,6 +1145,11 @@ def validate_document(doc, repo_root = nil)
     end
   end
   if repo_root
+    catalog_path = File.join(repo_root, "docs/tool-catalog.json")
+    if File.exist?(catalog_path)
+      errors.concat(catalog_contract_errors(JSON.parse(File.read(catalog_path))))
+    end
+
     allowlist = mcp_probe_allowlist_keys(repo_root)
     if allowlist
       missing = document_operation_keys(doc, raw_allowlist_required_only: true) - allowlist

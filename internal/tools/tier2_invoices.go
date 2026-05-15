@@ -36,7 +36,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Export invoice
-		{Tool: toolRO("clockify_export_invoice", "Export an invoice as raw bytes. Defaults user_locale to en-US and returns base64 body plus response headers.", map[string]any{
+		{Tool: toolRO("clockify_export_invoice", "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload. Defaults user_locale to en-US.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{

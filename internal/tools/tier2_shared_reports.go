@@ -140,10 +140,11 @@ func sharedReportHandlers(s *Service) []mcp.ToolDescriptor {
 		// bare /shared-reports/{id} (no workspace) plus
 		// ?exportType=PDF|CSV|XLSX|JSON_V1; the previously assumed
 		// /export segment returns 404. Non-JSON formats return binary
-		// (PDF/XLSX) or text (CSV) — the handler returns a binary-aware
-		// envelope {contentType, filename, bytes, body(base64)} for
-		// those, and a decoded JSON object for JSON_V1.
-		{Tool: toolRO("clockify_export_shared_report", "Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return a binary-aware envelope with base64-encoded body.", map[string]any{
+		// (PDF/XLSX) or text (CSV) — the handler returns the safe
+		// envelope {contentType, filename, bytes, bodyEncoding:"base64",
+		// base64Bytes, truncated:false, body} for those, and a decoded
+		// JSON object for JSON_V1.
+		{Tool: toolRO("clockify_export_shared_report", "Export a shared report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", map[string]any{
 			"type":     "object",
 			"required": []string{"report_id"},
 			"properties": map[string]any{

@@ -4,8 +4,9 @@
 #   - closes stdin so Run() flushes and exits,
 #   - asserts:
 #       initialize  -> serverInfo.name == clockify-go-mcp,
-#       tools/list  -> >=100 tools, first=clockify_status, last=clockify_api_request,
-#       no forbidden activation/policy tools in any response,
+#       tools/list  -> exactly 151 startup tools,
+#                      first=clockify_status, last=clockify_api_request,
+#       no old activation/policy helper tools in any response,
 #       prompts/list  -> >=1,
 #       resources/list -> >=1.
 #
@@ -14,6 +15,7 @@
 
 set -euo pipefail
 
+EXPECTED_TOOL_COUNT=151
 BIN="${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke"
 OUT="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.out.XXXXXX")"
 ERR="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.err.XXXXXX")"
@@ -71,8 +73,8 @@ echo "OK: initialize -> serverInfo.name=$init_name"
 tool_count=$(jq -r 'select(.id == 2) | .result.tools | length' "$OUT")
 first_tool=$(jq -r 'select(.id == 2) | .result.tools[0].name' "$OUT")
 last_tool=$(jq -r 'select(.id == 2) | .result.tools[-1].name' "$OUT")
-if [ -z "$tool_count" ] || [ "$tool_count" -lt 100 ]; then
-    echo "FAIL: tools/list returned ${tool_count:-?} tools (expected >=100)" >&2
+if [ -z "$tool_count" ] || [ "$tool_count" -ne "$EXPECTED_TOOL_COUNT" ]; then
+    echo "FAIL: tools/list returned ${tool_count:-?} tools (expected exactly $EXPECTED_TOOL_COUNT startup tools)" >&2
     exit 1
 fi
 if [ "$first_tool" != "clockify_status" ]; then
@@ -83,7 +85,7 @@ if [ "$last_tool" != "clockify_api_request" ]; then
     echo "FAIL: tools/list[-1] = $last_tool (expected clockify_api_request)" >&2
     exit 1
 fi
-echo "OK: tools/list -> $tool_count tools (first=$first_tool, last=$last_tool)"
+echo "OK: tools/list -> exactly $tool_count startup tools (first=$first_tool, last=$last_tool)"
 
 for forbidden in clockify_activate_group clockify_activate_tool clockify_deactivate_group clockify_search_tools clockify_list_tools clockify_policy_info; do
     if grep -q "\"$forbidden\"" "$OUT"; then
@@ -91,7 +93,7 @@ for forbidden in clockify_activate_group clockify_activate_tool clockify_deactiv
         exit 1
     fi
 done
-echo "OK: no forbidden activation/policy tools surfaced"
+echo "OK: no old activation/policy helper tools surfaced"
 
 prompt_count=$(jq -r 'select(.id == 3) | .result.prompts | length // 0' "$OUT")
 if [ -z "$prompt_count" ] || [ "$prompt_count" -lt 1 ]; then

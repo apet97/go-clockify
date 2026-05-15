@@ -703,7 +703,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 		reportRT(100, "clockify_reports_attendance", "Run the attendance report.", "reports/attendance"),
 		reportRT(101, "clockify_reports_money", "Run the money summary report.", "reports/summary"),
 		reportRT(102, "clockify_reports_expense", "Run the detailed expense report.", "reports/expenses/detailed"),
-		reportRT(103, "clockify_reports_export", "Run a report export request.", "reports/detailed"),
+		reportRT(103, "clockify_reports_export", "Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", "reports/detailed"),
 	}
 	out := make([]mcp.ToolDescriptor, 0, len(specs))
 	for _, spec := range specs {
@@ -720,7 +720,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice.", objectSchema(map[string]any{
+		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id"},
 			"properties": fields("invoice_id", "format", "user_locale"),
 		})), "invoice_export", "", s.exportInvoiceOneUser),

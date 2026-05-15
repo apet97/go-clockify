@@ -2,7 +2,9 @@
 set -euo pipefail
 
 ruby <<'RUBY'
+require "fileutils"
 require "json"
+require "tmpdir"
 require "yaml"
 
 def assert(condition, message)
@@ -78,6 +80,20 @@ assert(makefile.include?("coverage-matrix-drift:"), "Makefile must expose covera
 matrix = JSON.parse(File.read("docs/openapi/coverage-matrix.json"))
 assert(matrix.dig("summary", "no_mcp_tool_count") == 0, "coverage matrix must have zero uncovered OpenAPI operations")
 assert(matrix.dig("summary", "no_evidence_count") == 0, "coverage matrix must have zero no-evidence operations")
+assert(matrix["tool_catalog"] == {"domain" => 132, "raw" => 2, "total" => 151, "workflow" => 17}, "coverage matrix must use workflow/domain/raw tool catalog counts")
+
+Dir.mktmpdir("openapi-catalog-contract") do |repo|
+  FileUtils.mkdir_p(File.join(repo, "docs"))
+  File.write(File.join(repo, "docs/tool-catalog.json"), JSON.pretty_generate({"tier1" => [], "tier2" => []}))
+
+  output = IO.popen(
+    ["scripts/gen-clockify-openapi", "--validate-only", "--repo-root", repo, "--out", "docs/openapi/clockify-openapi.yaml"],
+    err: [:child, :out],
+    &:read
+  )
+  assert(!$?.success?, "legacy tier1/tier2 catalog shape must fail validation")
+  assert(output.include?("catalog must not use legacy tier1/tier2 top-level shape"), "legacy catalog failure must name tier1/tier2 shape")
+end
 RUBY
 
 echo "[test-openapi-live-overrides] OK"
