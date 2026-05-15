@@ -125,31 +125,9 @@ func (e encoderNotifier) Notify(method string, params any) error {
 	return (*e.encoder).Encode(msg)
 }
 
-// sanitizable is implemented by errors that carry both a verbose form
-// (Error()) and a sanitised form (Sanitized()). clockify.APIError is the
-// in-tree implementer; the interface is duck-typed so this package stays
-// free of a clockify import.
-type sanitizable interface {
-	error
-	Sanitized() string
-}
-
 type errorTranslator interface {
 	error
 	ErrorTranslation() any
-}
-
-// sanitizeClientError walks the error chain looking for any wrapped
-// error that exposes a Sanitized() form, returning that form as the
-// MCP client-facing message. Errors with no sanitised form fall back
-// to err.Error() unchanged: those are typically schema/validation /
-// transport-level errors with no embedded upstream payload.
-func sanitizeClientError(err error) string {
-	var s sanitizable
-	if errors.As(err, &s) {
-		return s.Sanitized()
-	}
-	return err.Error()
 }
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
@@ -207,12 +185,6 @@ type Server struct {
 	// SupportedProtocolVersions[0]; explicit supported client requests still win.
 	DefaultProtocolVersion string
 
-	// SanitizeUpstreamErrors controls whether tool-error responses to MCP
-	// clients omit upstream Clockify response bodies. The one-user stdio
-	// product keeps this false for useful local diagnostics. Remote
-	// deployments can set it true to return compact upstream errors.
-	SanitizeUpstreamErrors bool
-
 	// ResourceProvider backs resources/* method handlers. nil disables the
 	// resources capability (server omits it from initialize.result.capabilities).
 	ResourceProvider ResourceProvider
@@ -263,10 +235,6 @@ type Server struct {
 	clientVersion     string
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
-
-	// readiness cache
-	readyMu     sync.Mutex
-	readyCached bool
 
 	// inflight tracks cancellable contexts for in-flight tools/call
 	// requests, keyed by JSON-RPC request ID. notifications/cancelled
@@ -856,17 +824,10 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				return resp
 			}
 			// MCP spec: tool errors return content with isError: true.
-			// Sanitisation only affects the client-facing message; the
-			// full err.Error() is preserved in the slog tool_call
-			// records emitted from callTool.
-			text := err.Error()
-			if s.SanitizeUpstreamErrors {
-				text = sanitizeClientError(err)
-			}
 			result := map[string]any{
 				"content": []map[string]any{{
 					"type": "text",
-					"text": text,
+					"text": err.Error(),
 				}},
 				"isError": true,
 			}
@@ -975,25 +936,6 @@ func (s *Server) toolCapabilities() map[string]any {
 		tools["listChanged"] = true
 	}
 	return tools
-}
-
-// IsReadyCached reports whether the last cached readiness probe
-// resulted in success. Scrapers should prefer /ready for fresh
-// probes; this method only reads the cached value so /metrics
-// does not trigger upstream calls on every scrape.
-func (s *Server) IsReadyCached() bool {
-	s.readyMu.Lock()
-	defer s.readyMu.Unlock()
-	return s.readyCached
-}
-
-// SetReadyCached updates the cached readiness state. Embedders that
-// lack an HTTP readiness endpoint call this after verifying upstream
-// connectivity so IsReadyCached reflects their state.
-func (s *Server) SetReadyCached(ready bool) {
-	s.readyMu.Lock()
-	s.readyCached = ready
-	s.readyMu.Unlock()
 }
 
 func decodeParams(raw any, out any) error {
