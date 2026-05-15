@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestProbeLabAPIListsDocOnlyAndOpenAPIOperations(t *testing.T) {
@@ -64,11 +66,24 @@ func TestProbeLabAPINormalizesDocumentedPathAliases(t *testing.T) {
 		"/workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate": "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate",
 		"/workspaces/{workspaceId}/expenses/{expenseId}/files/{id}":           "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}",
 		"/workspaces/{workspaceId}/webhooks/{id}/logs":                        "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+		"/v1/workspaces/{ws}/approval-requests/{approvalRequestId}":           "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}",
+		"/v1/workspaces/{ws}/approval-requests/{approvalId}":                  "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}",
 	}
 	for input, want := range cases {
 		if got := normalizeDocumentedAPIPath(input); got != want {
 			t.Fatalf("normalizeDocumentedAPIPath(%q)=%q, want %q", input, got, want)
 		}
+	}
+
+	svc := New(nil, "ws1")
+	got, _, err := svc.resolveDocumentedAPIPath(context.Background(), "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}", "", map[string]string{
+		"approvalRequestId": "ar1",
+	})
+	if err != nil {
+		t.Fatalf("resolve approvalRequestId path: %v", err)
+	}
+	if got != "/workspaces/ws1/approval-requests/ar1" {
+		t.Fatalf("resolved approvalRequestId path = %q", got)
 	}
 }
 
@@ -83,6 +98,7 @@ func TestProbeLabAPIAllowlistCoversOpenAPIDriftPatch(t *testing.T) {
 		"GET /workspaces/{workspaceId}/users/{userId}/time-off/balances",
 		"GET /workspaces/{workspaceId}/webhooks/{webhookId}/logs",
 		"PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/token",
+		"POST /workspaces/{workspaceId}/audit-log",
 		"POST /workspaces/{workspaceId}/policies/{policyId}/requests",
 		"DELETE /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
 		"PATCH /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
@@ -91,6 +107,39 @@ func TestProbeLabAPIAllowlistCoversOpenAPIDriftPatch(t *testing.T) {
 		if _, ok := documentedOperationByKey(operation); !ok {
 			t.Fatalf("documented allowlist missing %s", operation)
 		}
+	}
+}
+
+func TestProbeLabAPIAuditLogUsesDedicatedHostMetadata(t *testing.T) {
+	svc := New(nil, "ws1")
+	result, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
+		"operation": "POST /workspaces/{workspaceId}/audit-log",
+		"dry_run":   true,
+		"json_body": map[string]any{
+			"actions": []any{"CREATE_PROJECT"},
+			"authors": map[string]any{
+				"authorIds": []any{"SYSTEM"},
+			},
+			"start": "2026-05-14T00:00:00Z",
+			"end":   "2026-05-15T23:59:59Z",
+		},
+	})
+	if err != nil {
+		t.Fatalf("audit-log dry-run failed: %v", err)
+	}
+	if result.Meta["host"] != clockify.DocumentedHostAuditLog {
+		t.Fatalf("audit-log meta host = %+v, want %s", result.Meta, clockify.DocumentedHostAuditLog)
+	}
+	preview, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("audit-log preview type = %T", result.Data)
+	}
+	args, ok := preview["args"].(map[string]any)
+	if !ok {
+		t.Fatalf("audit-log preview args type = %T", preview["args"])
+	}
+	if args["host"] != clockify.DocumentedHostAuditLog {
+		t.Fatalf("audit-log preview host = %+v, want %s", args, clockify.DocumentedHostAuditLog)
 	}
 }
 

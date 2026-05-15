@@ -20,6 +20,7 @@ METHOD_CONST = {
     "delete": "http.MethodDelete",
 }
 METHOD_ORDER = {"get": 0, "post": 1, "put": 2, "patch": 3, "delete": 4}
+MAIN_HOST = "https://api.clockify.me/api/v1"
 
 
 def quote(value: str) -> str:
@@ -50,6 +51,7 @@ def main() -> None:
                 {
                     "method": method,
                     "path": path,
+                    "host": op.get("x-clockify-host") or MAIN_HOST,
                     "operation_id": op.get("operationId", ""),
                     "live_status": op.get("x-clockify-live-status", ""),
                     "risk": op.get("x-clockify-risk", []) or [],
@@ -71,6 +73,7 @@ def main() -> None:
         lines.append("\t{")
         lines.append(f"\t\tMethod:          {METHOD_CONST[row['method']]},")
         lines.append(f"\t\tPath:            {quote(row['path'])},")
+        lines.append(f"\t\tHost:            {quote(row['host'])},")
         lines.append(f"\t\tOperationID:     {quote(row['operation_id'])},")
         lines.append(f"\t\tLiveStatus:      {quote(row['live_status'])},")
         lines.append(f"\t\tRiskClass:       {go_strings(row['risk'])},")

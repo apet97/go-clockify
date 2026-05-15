@@ -1,36 +1,24 @@
 {
   "generated_by": "scripts/gen-coverage-matrix",
-  "openapi_op_count": 192,
+  "openapi_op_count": 193,
   "openapi_version": "2026-05-12",
-  "raw_allowlist_count": 192,
+  "raw_allowlist_count": 193,
   "rows": [
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_call_documented_delete_api",
-        "clockify_call_documented_read_api",
-        "clockify_call_documented_write_api",
-        "clockify_filter_schedule_capacity",
-        "clockify_list_documented_api_operations",
-        "clockify_upload_image"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "probe-supplement",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "permission-gated",
-      "live_test_names": [
-        "TestLiveFullSurfaceDocCoverage",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "uploadImage",
       "path": "/file/image",
       "raw_allowlisted": true,
@@ -39,22 +27,8 @@
       ],
       "summary": "Add a photo",
       "tag": "Files",
-      "typed_tools": [
-        "clockify_call_documented_delete_api",
-        "clockify_call_documented_read_api",
-        "clockify_call_documented_write_api",
-        "clockify_filter_schedule_capacity",
-        "clockify_list_documented_api_operations",
-        "clockify_upload_image"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_call_documented_delete_api",
-        "clockify_call_documented_read_api",
-        "clockify_call_documented_write_api",
-        "clockify_filter_schedule_capacity",
-        "clockify_list_documented_api_operations",
-        "clockify_upload_image"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -83,28 +57,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_current_user",
-        "clockify_whoami"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
         "probe-supplement",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EReadOnly",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "getCurrentUser",
       "path": "/user",
       "raw_allowlisted": true,
@@ -113,37 +79,25 @@
       ],
       "summary": "Get currently logged-in user's info",
       "tag": "Users",
-      "typed_tools": [
-        "clockify_current_user",
-        "clockify_whoami"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_current_user",
-        "clockify_whoami"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_workspaces"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "getAllMyWorkspaces",
       "path": "/workspaces",
       "raw_allowlisted": true,
@@ -152,12 +106,8 @@
       ],
       "summary": "Get all my workspaces",
       "tag": "Workspaces",
-      "typed_tools": [
-        "clockify_list_workspaces"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_workspaces"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -187,28 +137,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_workspace",
-        "clockify_whoami"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EReadOnly",
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "getWorkspaceInfo",
       "path": "/workspaces/{workspaceId}",
       "raw_allowlisted": true,
@@ -217,14 +159,8 @@
       ],
       "summary": "Get workspace info",
       "tag": "Workspaces",
-      "typed_tools": [
-        "clockify_get_workspace",
-        "clockify_whoami"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_workspace",
-        "clockify_whoami"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -277,28 +213,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_approval_request",
-        "clockify_list_approval_requests"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveT2ApprovalsRemainingTools",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "getApprovalRequests",
       "path": "/workspaces/{workspaceId}/approval-requests",
       "raw_allowlisted": true,
@@ -307,35 +235,23 @@
       ],
       "summary": "Get approval requests",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_get_approval_request",
-        "clockify_list_approval_requests"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_approval_request",
-        "clockify_list_approval_requests"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_submit_for_approval"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveT2ApprovalsRemainingTools"
-      ],
+      "live_status": "documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "submitApprovalRequest",
       "path": "/workspaces/{workspaceId}/approval-requests",
       "raw_allowlisted": true,
@@ -344,31 +260,23 @@
       ],
       "summary": "Submit approval request",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_submit_for_approval"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_submit_for_approval"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-mapped",
-      "coverage_md_tools": [
-        "clockify_resubmit_for_approval"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
+      "live_status": "documented",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "resubmitEntriesForApproval",
       "path": "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval",
       "raw_allowlisted": true,
@@ -377,33 +285,25 @@
       ],
       "summary": "Submit non pending/approved entries/expenses for approval to an existing approval request",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_resubmit_for_approval"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_resubmit_for_approval"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-mapped",
-      "coverage_md_tools": [
-        "clockify_submit_for_user_approval"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
+      "live_status": "probe-documented",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "submitApprovalRequestForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}",
       "raw_allowlisted": true,
@@ -412,33 +312,25 @@
       ],
       "summary": "Submit an approval request for a user",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_submit_for_user_approval"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_submit_for_user_approval"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-mapped",
-      "coverage_md_tools": [
-        "clockify_resubmit_for_user_approval"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
+      "live_status": "probe-documented",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "resubmitEntriesForApprovalForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
       "raw_allowlisted": true,
@@ -447,54 +339,60 @@
       ],
       "summary": "Re-submit rejected/withdrawn entries/expenses for an approval of a user",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_resubmit_for_user_approval"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_resubmit_for_user_approval"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_approve_timesheet",
-        "clockify_reject_timesheet",
-        "clockify_withdraw_approval"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveT2ApprovalsRemainingTools"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PATCH",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "updateApprovalRequest",
-      "path": "/workspaces/{workspaceId}/approval-requests/{approvalId}",
+      "path": "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}",
       "raw_allowlisted": true,
       "risk": [
         "write"
       ],
       "summary": "Update an approval request",
       "tag": "Approval",
-      "typed_tools": [
-        "clockify_approve_timesheet",
-        "clockify_reject_timesheet",
-        "clockify_withdraw_approval"
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
+      "typed_tools_orphan": []
+    },
+    {
+      "coverage_class": "raw-tool-live-success",
+      "coverage_md_tools": [],
+      "evidence": [
+        "har-capture",
+        "live-success",
+        "official-json",
+        "probe-fragment"
       ],
-      "typed_tools_in_catalog": [
-        "clockify_approve_timesheet",
-        "clockify_reject_timesheet",
-        "clockify_withdraw_approval"
+      "host": "https://auditlog-api.api.clockify.me/v1",
+      "live_status": "live-success",
+      "live_test_names": [],
+      "method": "POST",
+      "notes_count": 3,
+      "operationId": "searchAuditLogs",
+      "path": "/workspaces/{workspaceId}/audit-log",
+      "raw_allowlisted": true,
+      "risk": [
+        "read"
       ],
+      "summary": "Generate an audit log report using the audit-log /v1 API",
+      "tag": "Audit Log Report",
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -544,27 +442,19 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_clients"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
-        "probe-openapi",
-        "unit-only"
+        "probe-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdClients",
       "path": "/workspaces/{workspaceId}/clients",
       "raw_allowlisted": true,
@@ -573,37 +463,24 @@
       ],
       "summary": "List clients",
       "tag": "Client",
-      "typed_tools": [
-        "clockify_list_clients"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_clients"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_create_client"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EMutating",
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLivePolicyModes",
-        "TestLiveT2InvoicesCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 4,
+      "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdClients",
       "path": "/workspaces/{workspaceId}/clients",
       "raw_allowlisted": true,
@@ -612,36 +489,24 @@
       ],
       "summary": "Create client",
       "tag": "Client",
-      "typed_tools": [
-        "clockify_create_client"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_create_client"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_client_report",
-        "clockify_get_client"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
-        "probe-openapi",
-        "unit-only"
+        "probe-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
       "raw_allowlisted": true,
@@ -650,37 +515,24 @@
       ],
       "summary": "Get client",
       "tag": "Client",
-      "typed_tools": [
-        "clockify_client_report",
-        "clockify_get_client"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_client_report",
-        "clockify_get_client"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_client"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
-        "probe-openapi",
-        "unit-only"
+        "probe-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
       "raw_allowlisted": true,
@@ -689,35 +541,24 @@
       ],
       "summary": "Update client",
       "tag": "Client",
-      "typed_tools": [
-        "clockify_update_client"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_client"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_delete_client"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
-        "probe-openapi",
-        "unit-only"
+        "probe-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "DELETE",
-      "notes_count": 3,
+      "notes_count": 1,
       "operationId": "deleteWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
       "raw_allowlisted": true,
@@ -726,12 +567,8 @@
       ],
       "summary": "Delete client",
       "tag": "Client",
-      "typed_tools": [
-        "clockify_delete_client"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_delete_client"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -1494,38 +1331,30 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-mapped",
-      "coverage_md_tools": [
-        "clockify_client_report"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-openapi",
         "probe-supplement",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
+      "live_status": "probe-documented",
       "live_test_names": [],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "filterInvoices",
       "path": "/workspaces/{workspaceId}/invoices/info",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Filter out invoices",
       "tag": "Invoices",
-      "typed_tools": [
-        "clockify_client_report"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_client_report"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -2190,27 +2019,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_projects"
-      ],
+      "coverage_class": "raw-tool-live-success",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
         "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "real-openapi",
-        "workspace-state-limited"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EReadOnly",
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 5,
+      "notes_count": 1,
       "operationId": "getWorkspaceProjects",
       "path": "/workspaces/{workspaceId}/projects",
       "raw_allowlisted": true,
@@ -2219,43 +2041,24 @@
       ],
       "summary": "Get all projects on a workspace",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_list_projects"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_projects"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_create_project"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EErrors",
-        "TestE2EMutating",
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLivePolicyTimeTrackingSafeBlocksProjectCreate",
-        "TestLiveProjectAdminDocCoverage",
-        "TestLiveReportsDocCoverage",
-        "TestLiveT2CustomFieldsCRUD",
-        "TestLiveT2ProjectAdminCRUD",
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 5,
+      "notes_count": 0,
       "operationId": "createProject",
       "path": "/workspaces/{workspaceId}/projects",
       "raw_allowlisted": true,
@@ -2264,34 +2067,23 @@
       ],
       "summary": "Add a new project",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_create_project"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_create_project"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_create_project_from_template"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "createProjectFromTemplate",
       "path": "/workspaces/{workspaceId}/projects/from-template",
       "raw_allowlisted": true,
@@ -2300,36 +2092,24 @@
       ],
       "summary": "Create project from a template",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_create_project_from_template"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_create_project_from_template"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_project"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "getProjectById",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
       "raw_allowlisted": true,
@@ -2338,35 +2118,24 @@
       ],
       "summary": "Find a project by ID",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_get_project"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_project"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_project"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
       "raw_allowlisted": true,
@@ -2375,55 +2144,34 @@
       ],
       "summary": "Update a project on a workspace",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_update_project"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_project"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_archive_projects",
-        "clockify_delete_project"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLiveProjectAdminDocCoverage",
-        "TestLiveT2ProjectAdminCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "DELETE",
-      "notes_count": 4,
+      "notes_count": 1,
       "operationId": "deleteProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
       "raw_allowlisted": true,
       "risk": [
-        "destructive",
-        "write"
+        "destructive"
       ],
       "summary": "Delete a project from a workspace",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_archive_projects",
-        "clockify_delete_project"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_archive_projects",
-        "clockify_delete_project"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -2554,27 +2302,19 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_project_estimate"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage",
-        "TestLiveT2ProjectAdminCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PATCH",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateProjectEstimate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/estimate",
       "raw_allowlisted": true,
@@ -2583,12 +2323,8 @@
       ],
       "summary": "Update project estimate",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_update_project_estimate"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_project_estimate"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -2615,110 +2351,71 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assign_project_memberships"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "assignOrRemoveProjectUsers",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
       "raw_allowlisted": true,
       "risk": [
-        "admin",
-        "permission_change",
         "write"
       ],
       "summary": "Assign/remove users to/from the project",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_assign_project_memberships"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assign_project_memberships"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_set_project_memberships",
-        "clockify_update_project_memberships"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage",
-        "TestLiveT2ProjectAdminCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PATCH",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "updateProjectMemberships",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
       "raw_allowlisted": true,
       "risk": [
-        "admin",
-        "permission_change",
         "write"
       ],
       "summary": "Update project memberships",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_set_project_memberships",
-        "clockify_update_project_memberships"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_set_project_memberships",
-        "clockify_update_project_memberships"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_tasks"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "findTasksOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
       "raw_allowlisted": true,
@@ -2727,38 +2424,25 @@
       ],
       "summary": "Find tasks on a project",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_list_tasks"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_tasks"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_create_task"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage",
-        "TestLiveProjectAdminDocCoverage",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "addTaskOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
       "raw_allowlisted": true,
@@ -2767,36 +2451,25 @@
       ],
       "summary": "Add a new task on a project",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_create_task"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_create_task"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_task"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "getTaskById",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
       "raw_allowlisted": true,
@@ -2805,35 +2478,24 @@
       ],
       "summary": "Get a task by id",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_get_task"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_task"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_task"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateTaskOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
       "raw_allowlisted": true,
@@ -2842,36 +2504,25 @@
       ],
       "summary": "Update a task on a project",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_update_task"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_task"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_delete_task"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveClientProjectTaskDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "DELETE",
-      "notes_count": 4,
+      "notes_count": 2,
       "operationId": "deleteTaskFromProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
       "raw_allowlisted": true,
@@ -2880,112 +2531,78 @@
       ],
       "summary": "Delete a task from a project",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_delete_task"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_delete_task"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_task_cost_rate"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-fragment",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateTaskCostRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate",
       "raw_allowlisted": true,
       "risk": [
-        "billing",
         "write"
       ],
       "summary": "Update a task's cost rate",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_update_task_cost_rate"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_task_cost_rate"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_task_hourly_rate"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-fragment",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateTaskBillableRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate",
       "raw_allowlisted": true,
       "risk": [
-        "billing",
         "write"
       ],
       "summary": "Update a task's billable rate",
       "tag": "Tasks",
-      "typed_tools": [
-        "clockify_update_task_hourly_rate"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_task_hourly_rate"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_project_template"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PATCH",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateProjectTemplate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/template",
       "raw_allowlisted": true,
@@ -2994,272 +2611,183 @@
       ],
       "summary": "Update a project template",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_update_project_template"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_project_template"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_project_user_cost_rate"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateProjectUserCostRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate",
       "raw_allowlisted": true,
       "risk": [
-        "admin",
-        "billing",
         "write"
       ],
       "summary": "Update project user's cost rate",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_update_project_user_cost_rate"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_project_user_cost_rate"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_project_user_hourly_rate"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveProjectAdminDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "updateProjectUserHourlyRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate",
       "raw_allowlisted": true,
       "risk": [
-        "admin",
-        "billing",
         "write"
       ],
       "summary": "Update a project user's billable rate",
       "tag": "Projects",
-      "typed_tools": [
-        "clockify_update_project_user_hourly_rate"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_project_user_hourly_rate"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_attendance_report"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 3,
+      "notes_count": 1,
       "operationId": "generateAttendanceReport",
       "path": "/workspaces/{workspaceId}/reports/attendance",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Generate an attendance report",
       "tag": "Reports",
-      "typed_tools": [
-        "clockify_attendance_report"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_attendance_report"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_detailed_report"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 3,
+      "notes_count": 1,
       "operationId": "generateDetailedReport",
       "path": "/workspaces/{workspaceId}/reports/detailed",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Generate a detailed report",
       "tag": "Reports",
-      "typed_tools": [
-        "clockify_detailed_report"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_detailed_report"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_expense_report"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
-        "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated"
+        "aiii-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_status": "documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 4,
+      "notes_count": 2,
       "operationId": "generateDetailedReportV1",
       "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Generate an expense report",
       "tag": "Expense Report",
-      "typed_tools": [
-        "clockify_expense_report"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_expense_report"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_summary_report"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 3,
+      "notes_count": 1,
       "operationId": "generateSummaryReport",
       "path": "/workspaces/{workspaceId}/reports/summary",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Generate a summary report",
       "tag": "Reports",
-      "typed_tools": [
-        "clockify_summary_report"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_summary_report"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_weekly_summary"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
-        "live-success",
-        "mcp-catalog",
-        "permission-gated",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 3,
+      "notes_count": 1,
       "operationId": "generateWeeklyReport",
       "path": "/workspaces/{workspaceId}/reports/weekly",
       "raw_allowlisted": true,
       "risk": [
-        "read"
+        "write"
       ],
       "summary": "Generate a weekly report",
       "tag": "Reports",
-      "typed_tools": [
-        "clockify_weekly_summary"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_weekly_summary"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -3286,19 +2814,8 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3308,10 +2825,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "GET",
       "notes_count": 0,
       "operationId": "getAllSchedulingAssignments",
@@ -3322,46 +2836,13 @@
       ],
       "summary": "Get all assignments",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "coverage_class": "raw-tool-live-success",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3372,10 +2853,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "POST",
       "notes_count": 1,
       "operationId": "getScheduledAssignmentsPerProject",
@@ -3386,46 +2864,13 @@
       ],
       "summary": "Get all scheduled assignments per project",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3435,10 +2880,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "GET",
       "notes_count": 0,
       "operationId": "getScheduledAssignmentsOnProject",
@@ -3449,30 +2891,8 @@
       ],
       "summary": "Get all scheduled assignments on project",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -3501,12 +2921,8 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_filter_schedule_capacity"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3516,10 +2932,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "POST",
       "notes_count": 0,
       "operationId": "createRecurringAssignment",
@@ -3530,16 +2943,8 @@
       ],
       "summary": "Create a recurring assignment",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_filter_schedule_capacity"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_filter_schedule_capacity"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -3644,19 +3049,8 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3666,10 +3060,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "POST",
       "notes_count": 0,
       "operationId": "getUsersCapacityTotals",
@@ -3680,30 +3071,8 @@
       ],
       "summary": "Get total of users' capacity on workspace",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -3730,19 +3099,8 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
@@ -3752,10 +3110,7 @@
       ],
       "host": "https://api.clockify.me/api/v1",
       "live_status": "probe-documented",
-      "live_test_names": [
-        "TestLiveT2SchedulingRecurringCRUD",
-        "TestLiveTier2ReadOnlySweep"
-      ],
+      "live_test_names": [],
       "method": "GET",
       "notes_count": 0,
       "operationId": "getUserCapacityTotal",
@@ -3766,30 +3121,8 @@
       ],
       "summary": "Get total capacity of a user",
       "tag": "Scheduling",
-      "typed_tools": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_assignment_report",
-        "clockify_create_assignment",
-        "clockify_delete_assignment",
-        "clockify_filter_schedule_capacity",
-        "clockify_get_assignment",
-        "clockify_get_project_schedule_totals",
-        "clockify_get_single_project_schedule_totals",
-        "clockify_get_workspace_schedule_user_totals",
-        "clockify_list_assignments",
-        "clockify_update_assignment"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -3963,28 +3296,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_tags"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
-        "probe-supplement",
-        "unit-only"
+        "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLivePaginationOnTags",
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTags",
       "path": "/workspaces/{workspaceId}/tags",
       "raw_allowlisted": true,
@@ -3993,36 +3318,25 @@
       ],
       "summary": "List tags",
       "tag": "Tag",
-      "typed_tools": [
-        "clockify_list_tags"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_tags"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_create_tag"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLivePaginationOnTags",
-        "TestLiveTagCRUDDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 3,
+      "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdTags",
       "path": "/workspaces/{workspaceId}/tags",
       "raw_allowlisted": true,
@@ -4031,35 +3345,25 @@
       ],
       "summary": "Create tag",
       "tag": "Tag",
-      "typed_tools": [
-        "clockify_create_tag"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_create_tag"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_tag"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveTagCRUDDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
       "raw_allowlisted": true,
@@ -4068,35 +3372,25 @@
       ],
       "summary": "Get tag",
       "tag": "Tag",
-      "typed_tools": [
-        "clockify_get_tag"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_tag"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_update_tag"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveTagCRUDDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
       "raw_allowlisted": true,
@@ -4105,35 +3399,25 @@
       ],
       "summary": "Update tag",
       "tag": "Tag",
-      "typed_tools": [
-        "clockify_update_tag"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_update_tag"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_delete_tag"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-fragment",
         "probe-openapi",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveTagCRUDDocCoverage"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "DELETE",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
       "raw_allowlisted": true,
@@ -4142,41 +3426,23 @@
       ],
       "summary": "Delete tag",
       "tag": "Tag",
-      "typed_tools": [
-        "clockify_delete_tag"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_delete_tag"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_add_entry",
-        "clockify_log_time",
-        "clockify_start_timer",
-        "clockify_switch_project",
-        "clockify_timesheet_fill_gap"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
-        "probe-supplement",
-        "unit-only"
+        "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EMutating",
-        "TestLiveDryRunDoesNotMutate",
-        "TestLiveReportsDocCoverage",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "POST",
-      "notes_count": 6,
+      "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdTimeEntries",
       "path": "/workspaces/{workspaceId}/time-entries",
       "raw_allowlisted": true,
@@ -4185,20 +3451,8 @@
       ],
       "summary": "Add a new time entry",
       "tag": "Time Entries",
-      "typed_tools": [
-        "clockify_add_entry",
-        "clockify_log_time",
-        "clockify_start_timer",
-        "clockify_switch_project",
-        "clockify_timesheet_fill_gap"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_add_entry",
-        "clockify_log_time",
-        "clockify_start_timer",
-        "clockify_switch_project",
-        "clockify_timesheet_fill_gap"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -4275,25 +3529,19 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_get_entry"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-openapi",
-        "probe-supplement",
-        "unit-only"
+        "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestE2EErrors"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
       "raw_allowlisted": true,
@@ -4302,35 +3550,24 @@
       ],
       "summary": "Get time entry",
       "tag": "TimeEntry",
-      "typed_tools": [
-        "clockify_get_entry"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_get_entry"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_find_and_update_entry",
-        "clockify_update_entry"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-openapi",
-        "probe-supplement",
-        "unit-only"
+        "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PUT",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
       "raw_allowlisted": true,
@@ -4339,37 +3576,24 @@
       ],
       "summary": "Update time entry",
       "tag": "TimeEntry",
-      "typed_tools": [
-        "clockify_find_and_update_entry",
-        "clockify_update_entry"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_find_and_update_entry",
-        "clockify_update_entry"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_delete_entry"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EMutating",
-        "TestLiveDryRunDoesNotMutate"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "DELETE",
-      "notes_count": 5,
+      "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
       "raw_allowlisted": true,
@@ -4378,12 +3602,8 @@
       ],
       "summary": "Delete time entry",
       "tag": "TimeEntry",
-      "typed_tools": [
-        "clockify_delete_entry"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_delete_entry"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -5081,30 +4301,19 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_entries",
-        "clockify_quick_report",
-        "clockify_timesheet_review",
-        "clockify_today_entries"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-openapi",
-        "probe-supplement",
-        "unit-only"
+        "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestLiveTier1ReadOnly",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 5,
+      "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
       "raw_allowlisted": true,
@@ -5113,18 +4322,8 @@
       ],
       "summary": "List time entries for a user",
       "tag": "TimeEntry",
-      "typed_tools": [
-        "clockify_list_entries",
-        "clockify_quick_report",
-        "clockify_timesheet_review",
-        "clockify_today_entries"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_entries",
-        "clockify_quick_report",
-        "clockify_timesheet_review",
-        "clockify_today_entries"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -5179,25 +4378,18 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_stop_timer"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "live-success",
-        "mcp-catalog",
         "probe-supplement"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "live-success",
-      "live_test_names": [
-        "TestE2EMutating",
-        "TestLiveTier1RemainingCRUD"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "PATCH",
-      "notes_count": 2,
+      "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
       "raw_allowlisted": true,
@@ -5206,12 +4398,8 @@
       ],
       "summary": "Stop running timer",
       "tag": "Time Entries",
-      "typed_tools": [
-        "clockify_stop_timer"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_stop_timer"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -5287,26 +4475,20 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "typed-tool-live-success",
-      "coverage_md_tools": [
-        "clockify_list_users"
-      ],
+      "coverage_class": "raw-tool-only",
+      "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
         "doc-md",
-        "mcp-catalog",
         "probe-openapi",
         "probe-supplement",
-        "real-openapi",
-        "unit-only"
+        "real-openapi"
       ],
       "host": "https://api.clockify.me/api/v1",
-      "live_status": "unit-only",
-      "live_test_names": [
-        "TestLiveTier1ReadOnly"
-      ],
+      "live_status": "probe-documented",
+      "live_test_names": [],
       "method": "GET",
-      "notes_count": 1,
+      "notes_count": 0,
       "operationId": "findWorkspaceUsers",
       "path": "/workspaces/{workspaceId}/users",
       "raw_allowlisted": true,
@@ -5315,12 +4497,8 @@
       ],
       "summary": "Find all users on a workspace",
       "tag": "Users",
-      "typed_tools": [
-        "clockify_list_users"
-      ],
-      "typed_tools_in_catalog": [
-        "clockify_list_users"
-      ],
+      "typed_tools": [],
+      "typed_tools_in_catalog": [],
       "typed_tools_orphan": []
     },
     {
@@ -5817,25 +4995,40 @@
   ],
   "summary": {
     "by_class": {
-      "raw-tool-live-success": 15,
-      "raw-tool-only": 118,
-      "typed-tool-live-success": 54,
-      "typed-tool-mapped": 4,
+      "raw-tool-live-success": 18,
+      "raw-tool-only": 174,
+      "typed-tool-live-success": 0,
+      "typed-tool-mapped": 0,
       "uncovered": 0,
       "unsupported": 1
     },
+    "by_host": {
+      "https://api.clockify.me/api/v1": {
+        "raw-tool-live-success": 15,
+        "raw-tool-only": 166,
+        "unsupported": 1
+      },
+      "https://auditlog-api.api.clockify.me/v1": {
+        "raw-tool-live-success": 1
+      },
+      "https://reports.api.clockify.me/v1": {
+        "raw-tool-live-success": 2,
+        "raw-tool-only": 8
+      }
+    },
     "by_tag": {
       "Approval": {
-        "typed-tool-live-success": 3,
-        "typed-tool-mapped": 3
+        "raw-tool-only": 6
+      },
+      "Audit Log Report": {
+        "raw-tool-live-success": 1
       },
       "Balance": {
         "raw-tool-only": 6,
         "unsupported": 1
       },
       "Client": {
-        "raw-tool-only": 1,
-        "typed-tool-live-success": 5
+        "raw-tool-only": 6
       },
       "Custom Fields": {
         "raw-tool-live-success": 1,
@@ -5845,7 +5038,7 @@
         "raw-tool-only": 3
       },
       "Expense Report": {
-        "typed-tool-live-success": 1
+        "raw-tool-only": 1
       },
       "Expense categories": {
         "raw-tool-live-success": 3,
@@ -5855,7 +5048,7 @@
         "raw-tool-only": 6
       },
       "Files": {
-        "typed-tool-live-success": 1
+        "raw-tool-only": 1
       },
       "Holidays": {
         "raw-tool-live-success": 4,
@@ -5872,8 +5065,7 @@
       },
       "Invoices": {
         "raw-tool-live-success": 1,
-        "raw-tool-only": 7,
-        "typed-tool-mapped": 1
+        "raw-tool-only": 8
       },
       "Member profiles": {
         "raw-tool-only": 2
@@ -5885,31 +5077,31 @@
         "raw-tool-only": 3
       },
       "Projects": {
-        "typed-tool-live-success": 12
+        "raw-tool-live-success": 1,
+        "raw-tool-only": 11
       },
       "Reports": {
-        "typed-tool-live-success": 4
+        "raw-tool-only": 4
       },
       "Roles": {
         "raw-tool-only": 2
       },
       "Scheduling": {
-        "raw-tool-only": 10,
-        "typed-tool-live-success": 6
+        "raw-tool-live-success": 1,
+        "raw-tool-only": 15
       },
       "SharedReport": {
         "raw-tool-live-success": 2,
         "raw-tool-only": 3
       },
       "Tag": {
-        "typed-tool-live-success": 5
+        "raw-tool-only": 5
       },
       "Tasks": {
-        "typed-tool-live-success": 7
+        "raw-tool-only": 7
       },
       "Time Entries": {
-        "raw-tool-only": 4,
-        "typed-tool-live-success": 2
+        "raw-tool-only": 6
       },
       "Time Off": {
         "raw-tool-live-success": 1,
@@ -5923,8 +5115,7 @@
         "raw-tool-only": 1
       },
       "TimeEntry": {
-        "raw-tool-only": 3,
-        "typed-tool-live-success": 4
+        "raw-tool-only": 7
       },
       "TimeOff": {
         "raw-tool-only": 4
@@ -5936,8 +5127,7 @@
         "raw-tool-only": 8
       },
       "Users": {
-        "raw-tool-only": 3,
-        "typed-tool-live-success": 2
+        "raw-tool-only": 5
       },
       "Webhook": {
         "raw-tool-only": 1
@@ -5947,16 +5137,16 @@
         "raw-tool-only": 7
       },
       "Workspaces": {
-        "raw-tool-only": 8,
-        "typed-tool-live-success": 2
+        "raw-tool-only": 10
       }
     },
     "no_evidence_count": 0,
     "no_mcp_tool_count": 0,
-    "total": 192
+    "total": 193
   },
   "tool_catalog": {
-    "tier1": 58,
-    "tier2": 119
+    "tier1": 0,
+    "tier2": 0,
+    "tools": 151
   }
 }

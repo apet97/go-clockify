@@ -235,6 +235,13 @@ def parse_test_tools() -> dict[str, set[str]]:
     return out
 
 
+def catalog_tools(catalog: dict) -> list[dict]:
+    """Return tool descriptors across old and current catalog JSON shapes."""
+    if isinstance(catalog.get("tools"), list):
+        return catalog["tools"]
+    return catalog.get("tier1", []) + catalog.get("tier2", [])
+
+
 def load_openapi() -> list[dict]:
     spec = yaml.safe_load(OPENAPI.read_text())
     ops = []
@@ -292,9 +299,7 @@ def build_rows(
     ops, coverage_map, allowlist, test_tools
 ) -> list[dict]:
     catalog = json.loads(CATALOG.read_text())
-    tool_names = {
-        t["name"]: t for t in catalog.get("tier1", []) + catalog.get("tier2", [])
-    }
+    tool_names = {t["name"]: t for t in catalog_tools(catalog)}
     rows = []
     for op in ops:
         key = (op["method"], canon_path(op["path"]))
@@ -341,12 +346,15 @@ def build_rows(
 def summarize(rows: list[dict]) -> dict:
     by_class: dict[str, int] = {}
     by_tag: dict[str, dict[str, int]] = {}
+    by_host: dict[str, dict[str, int]] = {}
     no_mcp_tool: list[dict] = []
     no_evidence: list[dict] = []
     for r in rows:
         by_class[r["coverage_class"]] = by_class.get(r["coverage_class"], 0) + 1
         bt = by_tag.setdefault(r["tag"] or "", {})
         bt[r["coverage_class"]] = bt.get(r["coverage_class"], 0) + 1
+        bh = by_host.setdefault(r["host"] or "", {})
+        bh[r["coverage_class"]] = bh.get(r["coverage_class"], 0) + 1
         if r["coverage_class"] == "uncovered":
             no_mcp_tool.append(r)
         if not r["evidence"]:
@@ -357,6 +365,7 @@ def summarize(rows: list[dict]) -> dict:
         "total": len(rows),
         "by_class": by_class,
         "by_tag": by_tag,
+        "by_host": by_host,
         "no_mcp_tool_count": len(no_mcp_tool),
         "no_evidence_count": len(no_evidence),
     }
@@ -399,6 +408,42 @@ def render_markdown(rows: list[dict], summary: dict, catalog_meta: dict) -> str:
             f"{classes.get('uncovered', 0)} |"
         )
     lines.append("")
+    lines.append("## Per-host rollup")
+    lines.append("")
+    lines.append("| Host | total | typed-live | typed-mapped | raw-live | raw-only | unsupported | uncovered |")
+    lines.append("|------|------:|-----------:|-------------:|---------:|---------:|------------:|----------:|")
+    for host, classes in sorted(summary["by_host"].items()):
+        total = sum(classes.values())
+        lines.append(
+            f"| {host or '(unspecified)'} | {total} | "
+            f"{classes.get('typed-tool-live-success', 0)} | "
+            f"{classes.get('typed-tool-mapped', 0)} | "
+            f"{classes.get('raw-tool-live-success', 0)} | "
+            f"{classes.get('raw-tool-only', 0)} | "
+            f"{classes.get('unsupported', 0)} | "
+            f"{classes.get('uncovered', 0)} |"
+        )
+    lines.append("")
+    lines.append("## Host-specific rows without typed MCP tools")
+    lines.append("")
+    host_specific = [
+        r for r in rows
+        if r["host"]
+        and r["host"] != "https://api.clockify.me/api/v1"
+        and not r["typed_tools"]
+        and not r["coverage_md_tools"]
+    ]
+    if not host_specific:
+        lines.append("_None._")
+    else:
+        lines.append("| Host | Class | Method | Path | operationId | tag |")
+        lines.append("|------|-------|--------|------|-------------|-----|")
+        for r in sorted(host_specific, key=lambda r: (r["host"], r["coverage_class"], r["path"], r["method"])):
+            lines.append(
+                f"| {r['host']} | `{r['coverage_class']}` | {r['method']} | "
+                f"`{r['path']}` | {r['operationId']} | {r['tag']} |"
+            )
+    lines.append("")
     lines.append("## Operations not covered by any MCP tool")
     lines.append("")
     flagged = [r for r in rows if r["coverage_class"] == "uncovered"]
@@ -426,9 +471,11 @@ def main() -> int:
     rows = build_rows(ops, coverage_map, allowlist, test_tools)
     summary = summarize(rows)
     catalog = json.loads(CATALOG.read_text())
+    tools = catalog_tools(catalog)
     catalog_meta = {
         "tier1": len(catalog.get("tier1", [])),
         "tier2": len(catalog.get("tier2", [])),
+        "tools": len(tools),
     }
     payload = {
         "generated_by": "scripts/gen-coverage-matrix",

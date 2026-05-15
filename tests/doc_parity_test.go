@@ -1,6 +1,7 @@
 package e2e_test
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -138,6 +139,41 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 	}
 }
 
+func TestGeneratedOpenAPIContractKeepsOwnerModeCoverage(t *testing.T) {
+	contract := readOpenAPIContract(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+
+	if got, want := len(contract.paths), 125; got < want {
+		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
+	}
+	if got, want := contract.operationCount(), 192; got < want {
+		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
+	}
+
+	requiredOperations := []openAPIOperation{
+		{method: "get", path: "/workspaces/{workspaceId}/balance"},
+		{method: "patch", path: "/workspaces/{workspaceId}/balance"},
+		{method: "get", path: "/workspaces/{workspaceId}/time-off/policies"},
+		{method: "post", path: "/workspaces/{workspaceId}/time-off/policies"},
+		{method: "post", path: "/workspaces/{workspaceId}/time-off/requests"},
+		{method: "patch", path: "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"},
+		{method: "get", path: "/workspaces/{workspaceId}/time-off/balance/user/{userId}"},
+		{method: "patch", path: "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"},
+		{method: "get", path: "/workspaces/{workspaceId}/users/{userId}/time-off/balances"},
+		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments"},
+		{method: "get", path: "/workspaces/{workspaceId}/scheduling/assignments/all"},
+		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/projects/totals"},
+		{method: "put", path: "/workspaces/{workspaceId}/scheduling/assignments/publish"},
+		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/recurring"},
+		{method: "put", path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"},
+		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"},
+	}
+	for _, op := range requiredOperations {
+		if !contract.hasOperation(op) {
+			t.Fatalf("OpenAPI missing %s %s", strings.ToUpper(op.method), op.path)
+		}
+	}
+}
+
 func currentProductDocPaths() []string {
 	return []string{
 		filepath.Join("..", "README.md"),
@@ -145,6 +181,68 @@ func currentProductDocPaths() []string {
 		filepath.Join("..", "docs", "tool-catalog.md"),
 		filepath.Join("..", "docs", "live-tests.md"),
 		filepath.Join("..", "docs", "goals", "oneuser-tool-coverage.md"),
+	}
+}
+
+type openAPIOperation struct {
+	method string
+	path   string
+}
+
+type openAPIContract struct {
+	paths map[string]map[string]bool
+}
+
+func readOpenAPIContract(t *testing.T, path string) openAPIContract {
+	t.Helper()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("read OpenAPI contract: %v", err)
+	}
+	defer f.Close()
+
+	contract := openAPIContract{paths: map[string]map[string]bool{}}
+	var currentPath string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, `  "`) && strings.HasSuffix(strings.TrimSpace(line), `":`) {
+			currentPath = strings.TrimSuffix(strings.Trim(strings.TrimSpace(line), `"`), `":`)
+			contract.paths[currentPath] = map[string]bool{}
+			continue
+		}
+		if currentPath == "" || !strings.HasPrefix(line, "    ") {
+			continue
+		}
+		method := strings.TrimSuffix(strings.TrimSpace(line), ":")
+		if isOpenAPIHTTPMethod(method) {
+			contract.paths[currentPath][method] = true
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("scan OpenAPI contract: %v", err)
+	}
+	return contract
+}
+
+func (c openAPIContract) operationCount() int {
+	total := 0
+	for _, methods := range c.paths {
+		total += len(methods)
+	}
+	return total
+}
+
+func (c openAPIContract) hasOperation(op openAPIOperation) bool {
+	return c.paths[op.path][op.method]
+}
+
+func isOpenAPIHTTPMethod(method string) bool {
+	switch method {
+	case "get", "post", "put", "patch", "delete", "head", "options", "trace":
+		return true
+	default:
+		return false
 	}
 }
 

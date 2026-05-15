@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift live-contract-local
+.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -52,6 +52,20 @@ openapi-drift:
 	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
 	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale; run make gen-openapi"; \
 	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
+
+gen-coverage-matrix:
+	python3 scripts/gen-coverage-matrix
+
+coverage-matrix-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before"; \
+	 cp docs/openapi/coverage-matrix.md "$$tmpdir/coverage-matrix.md.before"; \
+	 $(MAKE) --no-print-directory gen-coverage-matrix >/dev/null; \
+	 diff -q docs/openapi/coverage-matrix.json "$$tmpdir/coverage-matrix.json.before" >/dev/null \
+	  && diff -q docs/openapi/coverage-matrix.md "$$tmpdir/coverage-matrix.md.before" >/dev/null \
+	  || { echo "[coverage-matrix-drift] docs/openapi/coverage-matrix.{json,md} are stale; run make gen-coverage-matrix"; \
+	       diff -u "$$tmpdir/coverage-matrix.md.before" docs/openapi/coverage-matrix.md | head -120; exit 1; }
 
 # live-contract-local intentionally performs real calls against the sacrificial
 # Clockify workspace. Do not point it at a production or personal workspace.

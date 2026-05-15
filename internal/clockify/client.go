@@ -93,6 +93,12 @@ type Client struct {
 	breaker    *CircuitBreaker
 }
 
+const (
+	DocumentedHostMain     = "https://api.clockify.me/api/v1"
+	DocumentedHostReports  = "https://reports.api.clockify.me/v1"
+	DocumentedHostAuditLog = "https://auditlog-api.api.clockify.me/v1"
+)
+
 func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *Client {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -190,21 +196,33 @@ func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[str
 // documented-API MCP surface. It deliberately stays below the domain helpers:
 // callers must supply a validated method/path and already-normalized query.
 func (c *Client) RequestJSONValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any, out any) error {
-	baseURL := c.baseURL
+	host := DocumentedHostMain
 	if reportsHost {
-		baseURL = c.ReportsBaseURL()
+		host = DocumentedHostReports
 	}
-	return c.doJSONValues(ctx, baseURL, method, path, query, body, out)
+	return c.RequestJSONValuesForHost(ctx, host, method, path, query, body, out)
 }
 
 // RequestRawValues is the binary-aware sibling of RequestJSONValues.
 func (c *Client) RequestRawValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any) (*RawResponse, error) {
-	baseURL := c.baseURL
+	host := DocumentedHostMain
 	if reportsHost {
-		baseURL = c.ReportsBaseURL()
+		host = DocumentedHostReports
 	}
+	return c.RequestRawValuesForHost(ctx, host, method, path, query, body)
+}
+
+// RequestJSONValuesForHost is the host-aware variant used by the generated
+// documented-API allowlist. Non-canonical test/custom base URLs stay pinned to
+// the configured base so fake servers and proxies do not need per-host wiring.
+func (c *Client) RequestJSONValuesForHost(ctx context.Context, host, method, path string, query url.Values, body any, out any) error {
+	return c.doJSONValues(ctx, c.DocumentedBaseURL(host), method, path, query, body, out)
+}
+
+// RequestRawValuesForHost is the binary-aware sibling of RequestJSONValuesForHost.
+func (c *Client) RequestRawValuesForHost(ctx context.Context, host, method, path string, query url.Values, body any) (*RawResponse, error) {
 	raw := &RawResponse{}
-	if err := c.doJSONValues(ctx, baseURL, method, path, query, body, raw); err != nil {
+	if err := c.doJSONValues(ctx, c.DocumentedBaseURL(host), method, path, query, body, raw); err != nil {
 		return nil, err
 	}
 	return raw, nil
@@ -220,15 +238,21 @@ func (c *Client) RequestMultipartValues(ctx context.Context, reportsHost bool, m
 // RequestMultipartValuesWithFiles sends multipart form fields plus file parts
 // to a validated documented endpoint.
 func (c *Client) RequestMultipartValuesWithFiles(ctx context.Context, reportsHost bool, method, path string, query url.Values, form url.Values, files []MultipartFile, out any) error {
-	baseURL := c.baseURL
+	host := DocumentedHostMain
 	if reportsHost {
-		baseURL = c.ReportsBaseURL()
+		host = DocumentedHostReports
 	}
+	return c.RequestMultipartValuesWithFilesForHost(ctx, host, method, path, query, form, files, out)
+}
+
+// RequestMultipartValuesWithFilesForHost sends multipart fields and file parts
+// to a validated documented endpoint on its generated host.
+func (c *Client) RequestMultipartValuesWithFilesForHost(ctx context.Context, host, method, path string, query url.Values, form url.Values, files []MultipartFile, out any) error {
 	payload, contentType, err := encodeMultipartWithFiles(form, files)
 	if err != nil {
 		return err
 	}
-	return c.doRequestValues(ctx, baseURL, method, path, query, contentType, payload, out)
+	return c.doRequestValues(ctx, c.DocumentedBaseURL(host), method, path, query, contentType, payload, out)
 }
 
 // ReportsBaseURL returns the base URL for endpoints that live on
@@ -244,12 +268,32 @@ func (c *Client) RequestMultipartValuesWithFiles(ctx context.Context, reportsHos
 // return the primary base URL unchanged so existing fixtures continue
 // to work without per-test wiring.
 func (c *Client) ReportsBaseURL() string {
-	const canonical = "https://api.clockify.me/api/v1"
-	const reports = "https://reports.api.clockify.me/v1"
-	if c.baseURL == canonical {
-		return reports
+	if c.baseURL == DocumentedHostMain {
+		return DocumentedHostReports
 	}
 	return c.baseURL
+}
+
+// AuditLogBaseURL returns the dedicated Clockify audit-log API base URL.
+// Like ReportsBaseURL, custom/test base URLs remain unchanged.
+func (c *Client) AuditLogBaseURL() string {
+	if c.baseURL == DocumentedHostMain {
+		return DocumentedHostAuditLog
+	}
+	return c.baseURL
+}
+
+// DocumentedBaseURL resolves a generated OpenAPI host to the concrete base URL
+// this client should use.
+func (c *Client) DocumentedBaseURL(host string) string {
+	switch strings.TrimRight(host, "/") {
+	case DocumentedHostReports:
+		return c.ReportsBaseURL()
+	case DocumentedHostAuditLog:
+		return c.AuditLogBaseURL()
+	default:
+		return c.baseURL
+	}
 }
 
 // GetReports performs a GET against the reports host. Use this for

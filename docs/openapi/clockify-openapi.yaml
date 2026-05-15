@@ -11,10 +11,13 @@ servers:
   description: Main Clockify API
 - url: https://reports.api.clockify.me/v1
   description: Clockify reports and shared-reports API
+- url: https://auditlog-api.api.clockify.me/v1
+  description: Clockify audit-log API
 security:
 - ApiKeyAuth: []
 tags:
 - name: Approval
+- name: Audit Log Report
 - name: Balance
 - name: Client
 - name: Custom Fields
@@ -87,22 +90,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: permission-gated
-      x-clockify-mcp-tools:
-      - clockify_upload_image
-      x-clockify-notes:
-      - 'This group is an allowlisted escape hatch for documented routes that do not
-        yet deserve a bespoke typed tool. It is not an unrestricted HTTP proxy: callers
-        must choose an exact allowlisted `operation` or `method`+`path`; `{workspaceId}`
-        res'
-      - "| `clockify_upload_image` | mutating | `TestUploadImageSendsMultipartFile`;
-        `TestEncodeMultipartWithFiles` |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -236,23 +229,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_current_user
-      - clockify_whoami
-      x-clockify-notes:
-      - "| `TestE2EReadOnly` | `clockify_whoami`, `clockify_current_user`, `clockify_get_workspace`,
-        `clockify_list_projects` | scheduled workflow |"
-      - "| `clockify_current_user` | `GET /user` | unit, live-read-only (TestE2EReadOnly)
-        |"
-      - "| `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only
-        (TestE2EReadOnly) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -350,17 +332,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_list_workspaces
-      x-clockify-notes:
-      - "| `clockify_list_workspaces` | `GET /workspaces` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -538,23 +515,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_get_workspace
-      - clockify_whoami
-      x-clockify-notes:
-      - "| `TestE2EReadOnly` | `clockify_whoami`, `clockify_current_user`, `clockify_get_workspace`,
-        `clockify_list_projects` | scheduled workflow |"
-      - "| `clockify_get_workspace` | `GET /workspaces/{ws}` | unit, live-read-only
-        (TestE2EReadOnly) |"
-      - "| `clockify_whoami` | `GET /user` + `GET /workspaces/{ws}` | unit, live-read-only
-        (TestE2EReadOnly) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -792,24 +758,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_get_approval_request
-      - clockify_list_approval_requests
-      x-clockify-notes:
-      - Clockify approval-request endpoints include list, submit, resubmit, user-scoped
-        submit/resubmit, and documented PATCH status updates. `clockify_get_approval_request`
-        scans the documented list endpoint; it does not call an undocumented per-i
-      - "| `clockify_get_approval_request` | read-only | `GET /workspaces/{workspaceId}/approval-requests`;
-        unit; scans documented list pages |"
-      - "| `clockify_list_approval_requests` | read-only | `GET /workspaces/{workspaceId}/approval-requests`;
-        unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -883,16 +837,10 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_submit_for_approval
-      x-clockify-notes:
-      - "| `clockify_submit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests`;
-        unit |"
+      x-clockify-live-status: documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -951,16 +899,10 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_resubmit_for_approval
-      x-clockify-notes:
-      - "| `clockify_resubmit_for_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval`;
-        unit |"
+      x-clockify-live-status: documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1019,18 +961,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_submit_for_user_approval
-      x-clockify-notes:
-      - "| `clockify_submit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}`;
-        unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1092,18 +1028,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_resubmit_for_user_approval
-      x-clockify-notes:
-      - "| `clockify_resubmit_for_user_approval` | mutating | `POST /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval`;
-        unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1112,7 +1042,7 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
-  "/workspaces/{workspaceId}/approval-requests/{approvalId}":
+  "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}":
     patch:
       tags:
       - Approval
@@ -1123,11 +1053,7 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - in: path
-        name: approvalId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/approvalRequestId"
       requestBody:
         content:
           application/json:
@@ -1167,24 +1093,12 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_approve_timesheet
-      - clockify_reject_timesheet
-      - clockify_withdraw_approval
-      x-clockify-notes:
-      - "| `clockify_approve_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
-        unit |"
-      - "| `clockify_reject_timesheet` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
-        unit |"
-      - "| `clockify_withdraw_approval` | mutating | `PATCH /workspaces/{workspaceId}/approval-requests/{approvalId}`;
-        unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1192,6 +1106,64 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
+  "/workspaces/{workspaceId}/audit-log":
+    post:
+      tags:
+      - Audit Log Report
+      summary: Generate an audit log report using the audit-log /v1 API
+      description: |
+        Searches audit log entries on Clockify's dedicated audit-log host.
+        Prior evidence showed GET returns 405; use POST with a JSON body.
+        MCP has no typed tool mapping yet, and this host should not be exposed
+        through the generic raw fallback without an explicit host-routing design.
+      operationId: searchAuditLogs
+      servers:
+      - url: https://auditlog-api.api.clockify.me/v1
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/AuditLogRequest"
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AuditLogResponse"
+          description: OK. Bare JSON array of audit log entries.
+      x-clockify-evidence:
+      - har-capture
+      - live-success
+      - official-json
+      - probe-fragment
+      x-clockify-host: https://auditlog-api.api.clockify.me/v1
+      x-clockify-live-status: live-success
+      x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - Dedicated audit-log host; do not use the main api.clockify.me/api/v1 host
+        for this route.
+      - GET returned 405 in prior evidence; POST accepts actions/authors/start/end/page/page-size.
+      - No typed MCP tool mapping exists yet.
+      x-clockify-risk:
+      - read
+      x-clockify-security-aliases:
+        ApiKeyAuth:
+          headers:
+          - X-Api-Key
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/audit-log.yaml
   "/workspaces/{workspaceId}/balance":
     get:
       tags:
@@ -1340,21 +1312,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_list_clients
-      x-clockify-notes:
-      - "| Find clients | `GET /workspaces/{workspaceId}/clients` | `workspaceId`
-        example `64a687e29ae1f428e7ebe303`; query `name=Client X`, `sort-column=NAME`,
-        `sort-order=ASCENDING`, `page=1`, `page-size=50`, `archived` string filter
-        | `clockify_l"
-      - "| `clockify_list_clients` | `GET /workspaces/{ws}/clients` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -1424,27 +1386,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_create_client
-      x-clockify-notes:
-      - "| Add client | `POST /workspaces/{workspaceId}/clients` | Body `address`,
-        `email`, `name`, `note`; examples use Palo Alto address, `clientx@example.com`,
-        `Client X`, sample note | `clockify_create_client`: `address`, `email`, `name`,
-        `note`"
-      - "| `TestE2EMutating` | `clockify_create_client`, `clockify_create_project`,
-        `clockify_start_timer`, `clockify_stop_timer`, `clockify_delete_entry` | scheduled
-        workflow (requires `CLOCKIFY_LIVE_WRITE_ENABLED=true`) |"
-      - "| `TestLivePolicyModes` | `clockify_create_client` parametrised over all
-        5 policy modes (`read_only`, `time_tracking_safe`, `safe_core`, `standard`,
-        `full`) | gate behaviour pinned |"
-      - "| `clockify_create_client` | `POST /workspaces/{ws}/clients` | unit, sacrificial-mutating
-        (TestE2EMutating) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1483,25 +1429,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_client_report
-      - clockify_get_client
-      x-clockify-notes:
-      - "| Get client | `GET /workspaces/{workspaceId}/clients/{id}` | Path `id`;
-        response fields `address`, `archived`, `ccEmails`, `currencyCode`, `currencyId`,
-        `email`, `id`, `name`, `note`, `workspaceId` | `clockify_get_client`: `client`
-        | `Test"
-      - "| `clockify_client_report` | `GET /workspaces/{ws}/clients/{id}` + `POST
-        https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`/`detailed`,
-        `POST /workspaces/{ws}/invoices/info` | unit |"
-      - "| `clockify_get_client` | `GET /workspaces/{ws}/clients/{id}` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -1545,21 +1477,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_client
-      x-clockify-notes:
-      - "| Update client | `PUT /workspaces/{workspaceId}/clients/{id}` | Query `archive-projects`,
-        `mark-tasks-as-done`; body `address`, `archived`, `ccEmails`, `currencyId`,
-        `email`, `name`, `note`; examples include `user@example.com` and `53a687e"
-      - "| `clockify_update_client` | `GET` + `PUT /workspaces/{ws}/clients/{id}`
-        (fetch-then-merge) | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -1593,23 +1515,13 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_delete_client
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
-      - "| Delete client | `DELETE /workspaces/{workspaceId}/clients/{id}` | Path
-        `id` example `44a687e29ae1f428e7ebe305`; response fields `address`, `archived`,
-        `ccEmails`, `email`, `id`, `name`, `note`, `workspaceId` | `clockify_delete_client`:
-        `c"
-      - "| `clockify_delete_client` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/clients/{id}`
-        | unit, dry-run |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -3625,24 +3537,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_client_report
-      x-clockify-notes:
-      - "| `clockify_client_report` | `GET /workspaces/{ws}/clients/{id}` + `POST
-        https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`/`detailed`,
-        `POST /workspaces/{ws}/invoices/info` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
       x-clockify-risk:
-      - read
+      - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
@@ -5304,25 +5209,14 @@ paths:
       - aiii-openapi
       - doc-md
       - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
-      - workspace-state-limited
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_list_projects
+      x-clockify-mcp-tools: []
       x-clockify-notes:
-      - 6. **Pagination consistency:** `clockify_list_entries`, `clockify_list_projects`,
-      - "| Find projects | `GET /workspaces/{workspaceId}/projects` | Query `name`,
-        `strict-name-search`, `archived`, `billable`, repeated `clients`, `contains-client`,
-        `client-status` enum `ACTIVE`/`ARCHIVED`/`ALL`, repeated `users`, `contains-user"
       - "| GET | api.clockify.me | /api/v1/workspaces/{ws}/projects | 200 | fixtures/project-memberships/projects-page1.json
         |"
-      - "| `TestE2EReadOnly` | `clockify_whoami`, `clockify_current_user`, `clockify_get_workspace`,
-        `clockify_list_projects` | scheduled workflow |"
-      - "| `clockify_list_projects` | `GET /workspaces/{ws}/projects` | unit, live-read-only
-        (TestE2EReadOnly) |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -5675,27 +5569,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_create_project
-      x-clockify-notes:
-      - "| Add project | `POST /workspaces/{workspaceId}/projects` | Body `name`,
-        `clientId`, `color`, `billable`, `isPublic`, `note`, `costRate.amount/since`,
-        `hourlyRate.amount/since`, `estimate.estimate/type` (`AUTO`, `MANUAL`), `budgetEstimate.a"
-      - "| `TestE2EMutating` | `clockify_create_client`, `clockify_create_project`,
-        `clockify_start_timer`, `clockify_stop_timer`, `clockify_delete_entry` | scheduled
-        workflow (requires `CLOCKIFY_LIVE_WRITE_ENABLED=true`) |"
-      - "| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | Active — confirms
-        `time_tracking_safe` policy blocks `clockify_create_project` |"
-      - "| `TestLivePolicyTimeTrackingSafeBlocksProjectCreate` | `clockify_create_project`
-        (policy block) | scheduled workflow (requires write) |"
-      - "| `clockify_create_project` | `POST /workspaces/{ws}/projects` | unit, sacrificial-mutating
-        (TestE2EMutating) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -5804,21 +5682,10 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_create_project_from_template
-      x-clockify-notes:
-      - "| Create project from template | `POST /workspaces/{workspaceId}/projects/from-template`
-        | Body `name`, `templateProjectId`, optional `clientId`, `color`, `isPublic`
-        | `clockify_create_project_from_template`: `name`, `template_project_id`, "
-      - "| `clockify_create_project_from_template` | mutating | unit, live-probed
-        (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 403)
-        |"
+      x-clockify-live-status: documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -5955,20 +5822,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_get_project
-      x-clockify-notes:
-      - "| Get project | `GET /workspaces/{workspaceId}/projects/{projectId}` | Path
-        `projectId`; response fields include `archived`, `billable`, `budgetEstimate`,
-        `clientId`, `clientName`, `color`, `costRate`, `duration`, `estimate`, `estimateReset"
-      - "| `clockify_get_project` | `GET /workspaces/{ws}/projects/{id}` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -6125,22 +5983,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_project
-      x-clockify-notes:
-      - "| Update project | `PUT /workspaces/{workspaceId}/projects/{projectId}` |
-        Full body merge supports `name`, `clientId`, `color`, `archived`, `billable`,
-        `isPublic`, `note`, rates, estimates, memberships, tasks, `estimateReset`
-        | `clockify_up"
-      - "| `clockify_update_project` | `GET` + `PUT /workspaces/{ws}/projects/{id}`
-        (fetch-then-merge) | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6277,27 +6124,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_archive_projects
-      - clockify_delete_project
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
-      - "| Delete project | `DELETE /workspaces/{workspaceId}/projects/{projectId}`
-        | Path `projectId`; active projects must be archived first in this MCP | `clockify_delete_project`:
-        `project`; `clockify_archive_projects` remains bulk archive helpe"
-      - "| `clockify_archive_projects` | mutating | unit |"
-      - "| `clockify_delete_project` | `GET` + `PUT {archived:true}` + `DELETE /workspaces/{ws}/projects/{id}`
-        | unit, dry-run |"
       x-clockify-risk:
       - destructive
-      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -6737,20 +6572,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_project_estimate
-      x-clockify-notes:
-      - "| Update project estimate | `PATCH /workspaces/{workspaceId}/projects/{projectId}/estimate`
-        | Body `budgetEstimate`, `estimateReset`, `timeEstimate`; enums `AUTO`/`MANUAL`,
-        `WEEKLY`/`MONTHLY`/`YEARLY`, weekdays/months; legacy `estimate_type"
-      - "| `clockify_update_project_estimate` | mutating | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6921,23 +6747,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_assign_project_memberships
-      x-clockify-notes:
-      - "| Assign/remove project memberships | `POST /workspaces/{workspaceId}/projects/{projectId}/memberships`
-        | Body `remove`, `userIds`, `userGroups` with same `contains` and `status`
-        enums | `clockify_assign_project_memberships`: `remove`, `use"
-      - "| `clockify_assign_project_memberships` | mutating, admin, permission_change
-        | unit, live-probed (`TestLiveProjectAdminDocCoverage`) |"
+      x-clockify-live-status: documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
-      - admin
-      - permission_change
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -7058,27 +6872,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_set_project_memberships
-      - clockify_update_project_memberships
-      x-clockify-notes:
-      - "| Update project memberships | `PATCH /workspaces/{workspaceId}/projects/{projectId}/memberships`
-        | Body `memberships[]` with `userId`, `hourlyRate`, `costRate`, `membershipStatus`,
-        `membershipType`; `userGroups.ids/status/contains` with `C"
-      - "| `clockify_set_project_memberships` | mutating | unit |"
-      - "| `clockify_update_project_memberships` | mutating, admin, permission_change
-        | unit, live-probed (`TestLiveProjectAdminDocCoverage`) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
-      - admin
-      - permission_change
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -7148,22 +6947,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_list_tasks
-      x-clockify-notes:
-      - "| Find tasks | `GET /workspaces/{workspaceId}/projects/{projectId}/tasks`
-        | Query `name`, `strict-name-search`, `is-active`, `sort-column` enum `ID`/`NAME`,
-        `sort-order` enum `ASCENDING`/`DESCENDING`, `page`, `page-size` | `clockify_list_ta"
-      - "| `clockify_list_tasks` | `GET /workspaces/{ws}/projects/{id}/tasks` | unit
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -7253,22 +7042,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_create_task
-      x-clockify-notes:
-      - "| Add task | `POST /workspaces/{workspaceId}/projects/{projectId}/tasks`
-        | Query `contains-assignee`; body `assigneeId`, `assigneeIds`, `billable`,
-        `budgetEstimate`, `estimate` example `PT1H30M`, `name`, `status` enum `ACTIVE`/`DONE`/`ALL`,"
-      - "| `clockify_create_task` | `POST /workspaces/{ws}/projects/{id}/tasks` |
-        unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7319,23 +7098,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_get_task
-      x-clockify-notes:
-      - "| Get task | `GET /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}`
-        | Path `projectId`, `taskId`; response fields `assigneeId`, `assigneeIds`,
-        `billable`, `budgetEstimate`, `costRate`, `duration`, `estimate`, `hourlyRate`,
-        `id`"
-      - "| `clockify_get_task` | `GET /workspaces/{ws}/projects/{id}/tasks/{tid}`
-        | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -7405,23 +7173,12 @@ paths:
           "$ref": "#/components/responses/TaskResponse"
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_task
-      x-clockify-notes:
-      - "| Update task | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}`
-        | TASKDOC truncates the method/path line; MCP uses the established Clockify
-        `PUT` route. Query `contains-assignee`, `membership-status`; body same task
-        fiel"
-      - "| `clockify_update_task` | `GET` + `PUT /workspaces/{ws}/projects/{id}/tasks/{tid}`
-        (fetch-then-merge) | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7470,24 +7227,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_delete_task
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
-      - "| Delete task | `DELETE /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}`
-        | Path `projectId`, `taskId`; active tasks are first fetched and updated to
-        `status=DONE` because Clockify requires completed tasks before deletion |
-        `cl"
-      - "| `clockify_delete_task` | `GET` + optional `PUT status=DONE` + `DELETE /workspaces/{ws}/projects/{id}/tasks/{tid}`
-        | unit, dry-run |"
       - Live Clockify requires marking some tasks DONE before deletion.
       x-clockify-risk:
       - destructive
@@ -7548,27 +7295,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_task_cost_rate
-      x-clockify-notes:
-      - "| Update task cost rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/cost-rate`
-        | Body `amount` raw integer and optional `since`; response returns task with
-        `costRate` | `clockify_update_task_cost_rate`: `project_id`/`pr"
-      - "| `clockify_update_task_cost_rate` | mutating, billing | unit, live-probed
-        (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx)
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
-      - billing
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -7627,27 +7362,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_task_hourly_rate
-      x-clockify-notes:
-      - "| Update task billable rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/hourly-rate`
-        | Body `amount` raw integer and optional `since`; response returns task with
-        `hourlyRate` | `clockify_update_task_hourly_rate`: `proje"
-      - "| `clockify_update_task_hourly_rate` | mutating, billing | unit, live-probed
-        (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan 4xx)
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
-      - billing
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -7759,20 +7482,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_project_template
-      x-clockify-notes:
-      - "| Update project template | `PATCH /workspaces/{workspaceId}/projects/{projectId}/template`
-        | Body `isTemplate` | `clockify_update_project_template`: `is_template` |
-        `TestTier2Dispatch_ProjectAdmin_DocumentedMembershipAndTemplateTools`; liv"
-      - "| `clockify_update_project_template` | mutating | unit, live-probed (`TestLiveProjectAdminDocCoverage`)
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7892,27 +7606,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_project_user_cost_rate
-      x-clockify-notes:
-      - "| Update project user cost rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate`
-        | Body `amount` raw integer and optional `since` timestamp | `clockify_update_project_user_cost_rate`:
-        `project_id`, `user_id`, "
-      - "| `clockify_update_project_user_cost_rate` | mutating, billing, admin | unit,
-        live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return permission/plan
-        4xx) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
-      - admin
-      - billing
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -8031,27 +7732,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_project_user_hourly_rate
-      x-clockify-notes:
-      - "| Update project user billable rate | `PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate`
-        | Body `amount` raw integer and optional `since` timestamp | `clockify_update_project_user_hourly_rate`:
-        `project_id`, `us"
-      - "| `clockify_update_project_user_hourly_rate` | mutating, billing, admin |
-        unit, live-probed (`TestLiveProjectAdminDocCoverage`; upstream may return
-        permission/plan 4xx) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
-      - admin
-      - billing
       - write
       x-clockify-security-aliases:
         AddonTokenAuth:
@@ -8177,25 +7865,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_attendance_report
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - "| Attendance report | `POST /workspaces/{workspaceId}/reports/attendance`
-        | `clockify_attendance_report`; requires `attendance_filter` only | Common
-        report fields; `attendance_filter.page`, `page_size`, `sort_column`, `break_filters`,
-        `capa"
-      - "| `clockify_attendance_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/attendance`
-        | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |"
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8326,23 +8004,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_detailed_report
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - "| Detailed report | `POST /workspaces/{workspaceId}/reports/detailed` | `clockify_detailed_report`;
-        requires `detailed_filter` only | Common report fields; `detailed_filter.page`,
-        `page_size`, `sort_column`, `audit_filter`, `options`; sort "
-      - "| `clockify_detailed_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/detailed`
-        | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |"
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8393,27 +8063,18 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
-      - permission-gated
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_expense_report
+      x-clockify-live-status: documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Expense create/update uses multipart form-data in live Clockify.
       - Reports and shared-reports use the reports API host, not the main API host.
-      - "| Expense detailed report | `POST /workspaces/{workspaceId}/reports/expenses/detailed`
-        | `clockify_expense_report`; no time-report filter object | `approval_state`,
-        `billable`, `categories`, `clients`, `currency`, `date_range_start`, `date_"
-      - "| `clockify_expense_report` | read-only | unit, live-doc-coverage (`TestLiveReportsDocCoverage`)
-        |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
         probes.
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8528,24 +8189,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_summary_report
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - "| Summary report | `POST /workspaces/{workspaceId}/reports/summary` | `clockify_summary_report`;
-        requires `summary_filter` only | Common report fields; `summary_filter.groups`
-        1-3 levels, sort/chart; groups exposed as `CLIENT`, `PROJECT`, `"
-      - "| `clockify_summary_report` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/summary`
-        | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |"
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8657,24 +8309,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - live-success
-      - mcp-catalog
-      - permission-gated
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_weekly_summary
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - "| Weekly report | `POST /workspaces/{workspaceId}/reports/weekly` | `clockify_weekly_summary`;
-        requires `weekly_filter` only | Common report fields; exact 7-day range required
-        or derived from `week_start`; `weekly_filter.group=PROJECT|USER`"
-      - "| `clockify_weekly_summary` | `POST https://reports.api.clockify.me/v1/workspaces/{ws}/reports/weekly`
-        | unit, live-doc-coverage (`TestLiveReportsDocCoverage`) |"
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -9879,20 +9522,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - probe-supplement
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_list_tags
-      x-clockify-notes:
-      - "| `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope;
-        `clockify_create_tag` (Tier 1) seeded × 11 | success path |"
-      - "| `clockify_list_tags` | `GET /workspaces/{ws}/tags` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -9952,24 +9587,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_create_tag
-      x-clockify-notes:
-      - "| `TestLivePaginationOnTags` | `clockify_list_tags` pagination meta envelope;
-        `clockify_create_tag` (Tier 1) seeded × 11 | success path |"
-      - "| `TestLiveTagCRUDDocCoverage` | `clockify_create_tag`, `clockify_get_tag`,
-        `clockify_update_tag`, `clockify_delete_tag` against a prefixed sacrificial
-        tag | success path |"
-      - "| `clockify_create_tag` | `POST /workspaces/{ws}/tags` | unit, live-pagination
-        (`TestLivePaginationOnTags`), live-doc-coverage (`TestLiveTagCRUDDocCoverage`)
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -10008,21 +9631,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_get_tag
-      x-clockify-notes:
-      - "| `TestLiveTagCRUDDocCoverage` | `clockify_create_tag`, `clockify_get_tag`,
-        `clockify_update_tag`, `clockify_delete_tag` against a prefixed sacrificial
-        tag | success path |"
-      - "| `clockify_get_tag` | `GET /workspaces/{ws}/tags/{id}` | unit, live-doc-coverage
-        (`TestLiveTagCRUDDocCoverage`) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -10071,21 +9685,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_update_tag
-      x-clockify-notes:
-      - "| `TestLiveTagCRUDDocCoverage` | `clockify_create_tag`, `clockify_get_tag`,
-        `clockify_update_tag`, `clockify_delete_tag` against a prefixed sacrificial
-        tag | success path |"
-      - "| `clockify_update_tag` | `GET` + `PUT /workspaces/{ws}/tags/{id}` (fetch-then-merge)
-        | unit, live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -10119,21 +9724,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_delete_tag
-      x-clockify-notes:
-      - "| `TestLiveTagCRUDDocCoverage` | `clockify_create_tag`, `clockify_get_tag`,
-        `clockify_update_tag`, `clockify_delete_tag` against a prefixed sacrificial
-        tag | success path |"
-      - "| `clockify_delete_tag` | `GET` + `DELETE /workspaces/{ws}/tags/{id}` | unit,
-        dry-run, live-doc-coverage (`TestLiveTagCRUDDocCoverage`) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -10173,31 +9769,10 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-supplement
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_add_entry
-      - clockify_log_time
-      - clockify_start_timer
-      - clockify_switch_project
-      - clockify_timesheet_fill_gap
-      x-clockify-notes:
-      - "| `TestE2EMutating` | `clockify_create_client`, `clockify_create_project`,
-        `clockify_start_timer`, `clockify_stop_timer`, `clockify_delete_entry` | scheduled
-        workflow (requires `CLOCKIFY_LIVE_WRITE_ENABLED=true`) |"
-      - "| `clockify_add_entry` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating
-        (TestE2EMutating) |"
-      - "| `clockify_log_time` | `POST /workspaces/{ws}/time-entries` | unit |"
-      - "| `clockify_start_timer` | `POST /workspaces/{ws}/time-entries` | unit, sacrificial-mutating
-        (TestE2EMutating) |"
-      - "| `clockify_switch_project` | `PATCH` + `POST /workspaces/{ws}/time-entries`
-        | unit |"
-      - "| `clockify_timesheet_fill_gap` | `GET` overlap validation + `POST /workspaces/{ws}/time-entries`
-        | unit, sacrificial-mutating (TestLiveTier1RemainingCRUD) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -10376,17 +9951,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_get_entry
-      x-clockify-notes:
-      - "| `clockify_get_entry` | `GET /workspaces/{ws}/time-entries/{id}` | unit
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -10437,20 +10006,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_find_and_update_entry
-      - clockify_update_entry
-      x-clockify-notes:
-      - "| `clockify_find_and_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}`
-        | unit |"
-      - "| `clockify_update_entry` | `GET` + `PUT /workspaces/{ws}/time-entries/{id}`
-        | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -10491,27 +10051,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_delete_entry
-      x-clockify-notes:
-      - "| `TestE2EMutating` | `clockify_create_client`, `clockify_create_project`,
-        `clockify_start_timer`, `clockify_stop_timer`, `clockify_delete_entry` | scheduled
-        workflow (requires `CLOCKIFY_LIVE_WRITE_ENABLED=true`) |"
-      - "| `TestLiveDryRunDoesNotMutate` | Active — confirms `dry_run:true` on `clockify_delete_entry`
-        previews instead of deleting |"
-      - "| `TestLiveDryRunDoesNotMutate` | `clockify_delete_entry` (dry-run) | scheduled
-        workflow (requires write) |"
-      - "| `clockify_delete_entry` | 1 | via enforcement pipeline | yes (`TestLiveDryRunDoesNotMutate`)
-        | Only Tier 1 destructive tool |"
-      - "| `clockify_delete_entry` | `DELETE /workspaces/{ws}/time-entries/{id}` |
-        unit, dry-run (TestLiveDryRunDoesNotMutate), sacrificial-mutating (TestE2EMutating)
-        |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -12591,28 +12135,11 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_list_entries
-      - clockify_quick_report
-      - clockify_timesheet_review
-      - clockify_today_entries
-      x-clockify-notes:
-      - 6. **Pagination consistency:** `clockify_list_entries`, `clockify_list_projects`,
-      - "| `clockify_list_entries` | `GET /workspaces/{ws}/user/{uid}/time-entries`
-        | unit |"
-      - "| `clockify_quick_report` | wrapper (aggregates `GET /workspaces/{ws}/user/{uid}/time-entries`)
-        | unit |"
-      - "| `clockify_timesheet_review` | workflow wrapper over `GET /workspaces/{ws}/user/{uid}/time-entries`
-        | unit, live-read-only (TestLiveTier1ReadOnly) |"
-      - "| `clockify_today_entries` | `GET /workspaces/{ws}/user/{uid}/time-entries`
-        (filtered) | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -12826,19 +12353,10 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - live-success
-      - mcp-catalog
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: live-success
-      x-clockify-mcp-tools:
-      - clockify_stop_timer
-      x-clockify-notes:
-      - "| `TestE2EMutating` | `clockify_create_client`, `clockify_create_project`,
-        `clockify_start_timer`, `clockify_stop_timer`, `clockify_delete_entry` | scheduled
-        workflow (requires `CLOCKIFY_LIVE_WRITE_ENABLED=true`) |"
-      - "| `clockify_stop_timer` | `PATCH /workspaces/{ws}/user/{uid}/time-entries`
-        | unit, sacrificial-mutating (TestE2EMutating) |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -13309,17 +12827,12 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
-      - mcp-catalog
       - probe-openapi
       - probe-supplement
       - real-openapi
-      - unit-only
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unit-only
-      x-clockify-mcp-tools:
-      - clockify_list_users
-      x-clockify-notes:
-      - "| `clockify_list_users` | `GET /workspaces/{ws}/users` | unit |"
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -14678,6 +14191,14 @@ components:
       in: header
       name: X-Addon-Token
   parameters:
+    approvalRequestId:
+      description: Represents an approval request identifier across the system.
+      example: 940ab5acb07987125438b65y
+      in: path
+      name: approvalRequestId
+      required: true
+      schema:
+        type: string
     assignmentId:
       description: Represents an assignment identifier across the system.
       example: 5b641568b07987035750505e
@@ -15759,6 +15280,93 @@ components:
           description: Whether to filter entries without a task.
           type: boolean
       type: object
+    AuditLogEntry:
+      additionalProperties: true
+      description: Minimal audit log entry shape observed from the audit-log service.
+      properties:
+        action:
+          type: string
+        content:
+          nullable: true
+          type: string
+        previousContent:
+          nullable: true
+          type: string
+        timestamp:
+          format: date-time
+          type: string
+        userEmail:
+          format: email
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        workspaceId:
+          type: string
+      type: object
+    AuditLogRequest:
+      additionalProperties: false
+      description: Request body accepted by the dedicated audit-log service.
+      properties:
+        actions:
+          example:
+          - CREATE_PROJECT
+          - UPDATE_PROJECT
+          items:
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: true
+        authors:
+          additionalProperties: false
+          description: Author filter. Include SYSTEM to retrieve system audit logs.
+          properties:
+            authorIds:
+              example:
+              - SYSTEM
+              items:
+                type: string
+              type: array
+              uniqueItems: true
+            contains:
+              enum:
+              - CONTAINS
+              - DOES_NOT_CONTAIN
+              example: DOES_NOT_CONTAIN
+              type: string
+          type: object
+        end:
+          description: Audit window end.
+          example: '2026-05-15T23:59:59Z'
+          format: date-time
+          type: string
+        page:
+          default: 1
+          example: 1
+          minimum: 0
+          type: integer
+        page-size:
+          default: 20
+          example: 20
+          maximum: 50
+          minimum: 1
+          type: integer
+        start:
+          description: Audit window start.
+          example: '2026-05-14T00:00:00Z'
+          format: date-time
+          type: string
+      required:
+      - actions
+      - authors
+      - start
+      - end
+      type: object
+    AuditLogResponse:
+      items:
+        "$ref": "#/components/schemas/AuditLogEntry"
+      type: array
     AutomaticAccrualDto:
       description: Represents automatic accrual settings.
       properties:

@@ -1,0 +1,181 @@
+# Clockify Audit Log — source evidence only
+# Dedicated host: https://auditlog-api.api.clockify.me
+# Evidence: official-json, live-success, har-capture. MCP typed tools: none.
+openapi: 3.0.3
+info:
+  title: Clockify Audit Log
+  version: probe-2026-05-15
+servers:
+  - url: https://auditlog-api.api.clockify.me
+security:
+  - ApiKeyAuth: []
+paths:
+  /workspaces/{workspaceId}/audit-log:
+    post:
+      tags: [Audit Log Report]
+      summary: Search audit log entries using the Clockify web app audit-log API
+      description: |
+        Searches audit log entries on Clockify's dedicated audit-log host.
+        Prior evidence showed GET returns 405; use POST with a JSON body.
+        MCP has no typed tool mapping yet, and this host should not be exposed
+        through the generic raw fallback without an explicit host-routing design.
+      operationId: searchAuditLogs
+      security:
+        - ApiKeyAuth: []
+      servers:
+        - url: https://auditlog-api.api.clockify.me
+      x-clockify-host: https://auditlog-api.api.clockify.me
+      x-clockify-evidence: [official-json, live-success, har-capture]
+      x-clockify-live-status: live-success
+      x-clockify-mcp-tools: []
+      x-clockify-risk: [read]
+      x-clockify-notes:
+        - Dedicated audit-log host; do not use the main api.clockify.me/api/v1 host for this route.
+        - GET returned 405 in prior evidence; POST accepts actions/authors/start/end/page/page-size.
+        - No typed MCP tool mapping exists yet.
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditLogRequest'
+      responses:
+        "200":
+          description: OK. Bare JSON array of audit log entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+  /v1/workspaces/{workspaceId}/audit-log:
+    post:
+      tags: [Audit Log Report]
+      summary: Generate an audit log report using the audit-log /v1 API
+      description: |
+        Searches audit log entries on Clockify's dedicated audit-log host.
+        Prior evidence showed GET returns 405; use POST with a JSON body.
+        MCP has no typed tool mapping yet, and this host should not be exposed
+        through the generic raw fallback without an explicit host-routing design.
+      operationId: searchAuditLogs
+      security:
+        - ApiKeyAuth: []
+      servers:
+        - url: https://auditlog-api.api.clockify.me
+      x-clockify-host: https://auditlog-api.api.clockify.me
+      x-clockify-evidence: [official-json, live-success, har-capture]
+      x-clockify-live-status: live-success
+      x-clockify-mcp-tools: []
+      x-clockify-risk: [read]
+      x-clockify-notes:
+        - Dedicated audit-log host; do not use the main api.clockify.me/api/v1 host for this route.
+        - GET returned 405 in prior evidence; POST accepts actions/authors/start/end/page/page-size.
+        - No typed MCP tool mapping exists yet.
+      parameters:
+        - $ref: '#/components/parameters/workspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditLogRequest'
+      responses:
+        "200":
+          description: OK. Bare JSON array of audit log entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  parameters:
+    workspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      description: Clockify workspace identifier.
+      schema:
+        type: string
+  schemas:
+    AuditLogRequest:
+      type: object
+      description: Request body accepted by the dedicated audit-log service.
+      additionalProperties: false
+      required: [actions, authors, start, end]
+      properties:
+        actions:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+          example: [CREATE_PROJECT, UPDATE_PROJECT]
+        authors:
+          type: object
+          description: Author filter. Include SYSTEM to retrieve system audit logs.
+          additionalProperties: false
+          properties:
+            authorIds:
+              type: array
+              uniqueItems: true
+              items:
+                type: string
+              example: [SYSTEM]
+            contains:
+              type: string
+              enum: [CONTAINS, DOES_NOT_CONTAIN]
+              example: DOES_NOT_CONTAIN
+        start:
+          type: string
+          format: date-time
+          description: Audit window start.
+          example: "2026-05-14T00:00:00Z"
+        end:
+          type: string
+          format: date-time
+          description: Audit window end.
+          example: "2026-05-15T23:59:59Z"
+        page:
+          type: integer
+          minimum: 0
+          default: 1
+          example: 1
+        page-size:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+          example: 20
+    AuditLogEntry:
+      type: object
+      description: Minimal audit log entry shape observed from the audit-log service.
+      additionalProperties: true
+      properties:
+        action:
+          type: string
+        content:
+          type: string
+          nullable: true
+        previousContent:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        userEmail:
+          type: string
+          format: email
+        userId:
+          type: string
+        userName:
+          type: string
+        workspaceId:
+          type: string
+    AuditLogResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AuditLogEntry'

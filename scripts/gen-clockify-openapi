@@ -35,6 +35,7 @@ DEFAULT_OUT = File.join(DEFAULT_REPO_ROOT, "docs/openapi/clockify-openapi.yaml")
 
 MAIN_SERVER = "https://api.clockify.me/api/v1"
 REPORTS_SERVER = "https://reports.api.clockify.me/v1"
+AUDIT_LOG_SERVER = "https://auditlog-api.api.clockify.me/v1"
 
 SOURCE_PRIORITIES = {
   "real-openapi" => 40,
@@ -196,6 +197,8 @@ end
 
 def normalize_path(path)
   normalized = path.to_s.strip
+  normalized = normalized.sub(%r{\Ahttps://auditlog-api\.api\.clockify\.me/api/v1}, "")
+  normalized = normalized.sub(%r{\Ahttps://auditlog-api\.api\.clockify\.me/v1}, "")
   normalized = normalized.sub(%r{\Ahttps://api\.clockify\.me/api/v1}, "")
   normalized = normalized.sub(%r{\Ahttps://reports\.api\.clockify\.me/v1}, "")
   normalized = normalized.sub(%r{\Ahttps://api\.clockify\.me/api}, "")
@@ -230,7 +233,7 @@ end
 def canonical_param_for_segment(segment, fallback)
   {
     "addons" => "addonId",
-    "approval-requests" => "approvalId",
+    "approval-requests" => "approvalRequestId",
     "assignments" => "assignmentId",
     "categories" => "categoryId",
     "clients" => "clientId",
@@ -257,10 +260,13 @@ end
 def host_for(path, op = nil, source_servers = [])
   text = [path, op&.fetch("description", nil), op&.fetch("summary", nil)].compact.join(" ").downcase
   operation_servers = Array(op && op["servers"]).map { |server| server["url"].to_s }
+  return AUDIT_LOG_SERVER if operation_servers.any? { |url| url.include?("auditlog-api.api.clockify.me") }
   return REPORTS_SERVER if operation_servers.any? { |url| url.include?("reports.api.clockify.me") } &&
                            operation_servers.none? { |url| url.include?("api.clockify.me/api") }
+  return AUDIT_LOG_SERVER if source_servers.any? { |url| url.include?("auditlog-api.api.clockify.me") }
   return REPORTS_SERVER if source_servers.any? { |url| url.include?("reports.api.clockify.me") } &&
                            source_servers.none? { |url| url.include?("api.clockify.me/api") }
+  return AUDIT_LOG_SERVER if text.include?("auditlog-api.api.clockify.me") || text.include?("/audit-log")
   return REPORTS_SERVER if text.include?("/reports/") || text.include?("shared-reports")
 
   MAIN_SERVER
@@ -426,6 +432,7 @@ end
 
 def host_from_source(value)
   text = value.to_s.downcase
+  return AUDIT_LOG_SERVER if text.include?("auditlog-api.api.clockify.me")
   return REPORTS_SERVER if text.include?("reports.api.clockify.me")
   return MAIN_SERVER if text.include?("api.clockify.me")
 
@@ -436,6 +443,8 @@ def server_from_finding(host_value, path_value)
   host_text = host_value.to_s.downcase
   path_text = path_value.to_s.downcase
   text = "#{host_text} #{path_text}"
+  return "https://auditlog-api.api.clockify.me/api/v1" if text.include?("auditlog-api.api.clockify.me") && path_text.match?(%r{(^|/)api/v1/})
+  return AUDIT_LOG_SERVER if text.include?("auditlog-api.api.clockify.me")
   reports = text.include?("reports.api.clockify.me")
   main = text.include?("api.clockify.me") && !reports
   return "https://reports.api.clockify.me/api/v1" if reports && path_text.match?(%r{(^|/)api/v1/})
@@ -738,16 +747,18 @@ class Merger
       end
       evidence = Array(op["x-clockify-evidence"])
       source_files = Array(op["x-clockify-source-files"])
+      source_live_status = op["x-clockify-live-status"].to_s
       findings_for_op.each do |finding|
         evidence << finding["bucket"]
         source_files << finding["source"]
       end
-      live_status = choose_live_status(evidence, findings_for_op)
+      live_status = choose_live_status(evidence, findings_for_op, [source_live_status])
       tools = Array(mcp_mapping[[method, path]]).sort
       evidence.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "evidence")) })
       tool_statuses = tools.flat_map { |tool| Array(tool_meta.dig(tool, "statuses")) }
-      live_status = choose_live_status(evidence, findings_for_op, tool_statuses)
+      live_status = choose_live_status(evidence, findings_for_op, [source_live_status] + tool_statuses)
       risk = tools.flat_map { |tool| tool_risks[tool] }.compact
+      risk = Array(op["x-clockify-risk"]) if risk.empty? && Array(op["x-clockify-risk"]).any?
       risk = default_risk_for(method) if risk.empty?
 
       op["x-clockify-source-files"] = source_files.uniq.sort
@@ -759,14 +770,14 @@ class Merger
 
       raw_notes = raw_unit_notes(path)
       op["x-clockify-raw-unit-notes"] = raw_notes unless raw_notes.empty?
-      notes = quirk_notes(path, method)
+      notes = Array(op["x-clockify-notes"]) + quirk_notes(path, method)
       notes.concat(findings_for_op.map { |finding| finding["note"] }) if findings_for_op.any?
       notes.concat(other_host_findings.map { |finding| "Wrong-host finding not applied to live status: #{finding["note"]}" }) if other_host_findings.any?
       notes.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "notes")) }) if tools.any?
       op["x-clockify-notes"] = notes.uniq.sort unless notes.empty?
       ensure_path_parameters!(op, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
-      op["servers"] = [{"url" => REPORTS_SERVER}] if record[:host] == REPORTS_SERVER
+      op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER
     end
   end
 
@@ -790,7 +801,8 @@ class Merger
       },
       "servers" => [
         {"url" => MAIN_SERVER, "description" => "Main Clockify API"},
-        {"url" => REPORTS_SERVER, "description" => "Clockify reports and shared-reports API"}
+        {"url" => REPORTS_SERVER, "description" => "Clockify reports and shared-reports API"},
+        {"url" => AUDIT_LOG_SERVER, "description" => "Clockify audit-log API"}
       ],
       "security" => [{"ApiKeyAuth" => []}],
       "tags" => tags(paths),
@@ -909,12 +921,14 @@ class Merger
       return
     end
     op = deep_copy(op)
+    source_evidence = Array(op["x-clockify-evidence"])
+    source_live_status = op["x-clockify-live-status"].to_s
     op["operationId"] = operation_id(method, path, @used_operation_ids) if op["operationId"].to_s.empty?
     op["tags"] = [tag_for_domain(domain)] if Array(op["tags"]).empty?
     op["x-clockify-source-files"] = [source]
     op["x-clockify-host"] = host
-    op["x-clockify-evidence"] = [evidence]
-    op["x-clockify-live-status"] = evidence == "real-openapi" ? "documented" : evidence
+    op["x-clockify-evidence"] = ([evidence] + source_evidence).uniq.sort
+    op["x-clockify-live-status"] = source_live_status.empty? ? (evidence == "real-openapi" ? "documented" : evidence) : source_live_status
 
     key = [method, path]
     existing = @operations[key]
@@ -1019,11 +1033,19 @@ class Merger
   end
 end
 
-def document_operation_keys(doc)
+def raw_allowlist_required?(op)
+  host = op["x-clockify-host"].to_s
+  host.empty? || host == MAIN_SERVER || host == REPORTS_SERVER
+end
+
+def document_operation_keys(doc, raw_allowlist_required_only: false)
   keys = []
   (doc["paths"] || {}).each do |path, item|
-    item.each do |method, _op|
-      keys << "#{method.upcase} #{normalize_path(path)}" if METHODS.include?(method)
+    item.each do |method, op|
+      next unless METHODS.include?(method)
+      next if raw_allowlist_required_only && !raw_allowlist_required?(op)
+
+      keys << "#{method.upcase} #{normalize_path(path)}"
     end
   end
   keys.uniq.sort
@@ -1092,12 +1114,16 @@ def validate_document(doc, repo_root = nil)
         servers = Array(op["servers"]).map { |server| server["url"] }
         errors << "#{method.upcase} #{path} missing reports server" unless servers.include?(REPORTS_SERVER)
       end
+      if op["x-clockify-host"] == AUDIT_LOG_SERVER
+        servers = Array(op["servers"]).map { |server| server["url"] }
+        errors << "#{method.upcase} #{path} missing audit-log server" unless servers.include?(AUDIT_LOG_SERVER)
+      end
     end
   end
   if repo_root
     allowlist = mcp_probe_allowlist_keys(repo_root)
     if allowlist
-      missing = document_operation_keys(doc) - allowlist
+      missing = document_operation_keys(doc, raw_allowlist_required_only: true) - allowlist
       missing.each do |operation|
         errors << "probe_lab_api allowlist missing OpenAPI operation #{operation}"
       end

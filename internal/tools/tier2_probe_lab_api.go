@@ -18,6 +18,7 @@ import (
 type documentedAPIOperation struct {
 	Method          string
 	Path            string
+	Host            string
 	OperationID     string
 	LiveStatus      string
 	RiskClass       []string
@@ -140,6 +141,7 @@ func (s *Service) ListDocumentedAPIOperations(_ context.Context, args map[string
 			"operation_id":      op.OperationID,
 			"method":            op.Method,
 			"path":              op.Path,
+			"host":              op.host(),
 			"reports_host":      op.reportsHost(),
 			"live_status":       op.LiveStatus,
 			"risk_class":        op.RiskClass,
@@ -231,6 +233,7 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 		"operation":   op.key(),
 		"method":      op.Method,
 		"path":        resolvedPath,
+		"host":        op.host(),
 		"reportsHost": op.reportsHost(),
 	}
 	if wsID != "" {
@@ -241,6 +244,7 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 			"method":       op.Method,
 			"path":         resolvedPath,
 			"query":        query,
+			"host":         op.host(),
 			"reports_host": op.reportsHost(),
 		}
 		if hasJSON {
@@ -256,7 +260,7 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	}
 
 	if boolArg(args, "raw_response") {
-		raw, err := s.Client.RequestRawValues(ctx, op.reportsHost(), op.Method, resolvedPath, query, documentedRequestBody(hasJSON, jsonBody))
+		raw, err := s.Client.RequestRawValuesForHost(ctx, op.host(), op.Method, resolvedPath, query, documentedRequestBody(hasJSON, jsonBody))
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
@@ -265,10 +269,10 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 
 	var out any
 	if hasForm || hasFiles {
-		if err := s.Client.RequestMultipartValuesWithFiles(ctx, op.reportsHost(), op.Method, resolvedPath, query, formBody, files, &out); err != nil {
+		if err := s.Client.RequestMultipartValuesWithFilesForHost(ctx, op.host(), op.Method, resolvedPath, query, formBody, files, &out); err != nil {
 			return ResultEnvelope{}, err
 		}
-	} else if err := s.Client.RequestJSONValues(ctx, op.reportsHost(), op.Method, resolvedPath, query, documentedRequestBody(hasJSON, jsonBody), &out); err != nil {
+	} else if err := s.Client.RequestJSONValuesForHost(ctx, op.host(), op.Method, resolvedPath, query, documentedRequestBody(hasJSON, jsonBody), &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok(toolName, out, meta), nil
@@ -396,7 +400,7 @@ func canonicalDocumentedParam(segment, fallback string) string {
 	case "addons":
 		return "addonId"
 	case "approval-requests":
-		return "approvalId"
+		return "approvalRequestId"
 	case "assignments":
 		return "assignmentId"
 	case "categories":
@@ -447,7 +451,8 @@ func canonicalDocumentedParam(segment, fallback string) string {
 func documentedOperationByKey(key string) (documentedAPIOperation, bool) {
 	for _, op := range documentedAPIOperations {
 		if op.key() == key {
-			return documentedAPIOperation{Method: op.Method, Path: normalizeDocumentedAPIPath(op.Path)}, true
+			op.Path = normalizeDocumentedAPIPath(op.Path)
+			return op, true
 		}
 	}
 	return documentedAPIOperation{}, false
@@ -458,7 +463,18 @@ func (op documentedAPIOperation) key() string {
 }
 
 func (op documentedAPIOperation) reportsHost() bool {
-	return strings.Contains(op.Path, "/reports/") || strings.Contains(op.Path, "/shared-reports")
+	return op.host() == clockify.DocumentedHostReports
+}
+
+func (op documentedAPIOperation) host() string {
+	host := strings.TrimRight(strings.TrimSpace(op.Host), "/")
+	if host != "" {
+		return host
+	}
+	if strings.Contains(op.Path, "/reports/") || strings.Contains(op.Path, "/shared-reports") {
+		return clockify.DocumentedHostReports
+	}
+	return clockify.DocumentedHostMain
 }
 
 func validateDocumentedAPIPathShape(path string) error {
