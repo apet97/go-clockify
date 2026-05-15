@@ -110,14 +110,11 @@ type Service struct {
 	// opt in explicitly so unrelated fake handlers do not receive surprise
 	// reports-api requests.
 	EntryFinancialReports bool
-	// DeltaFormat selects the diff algorithm for resource notifications.
-	// "merge" (default) uses RFC 7396 merge patch; "jsonpatch" uses RFC 6902.
-	DeltaFormat  string
-	mu           sync.RWMutex
-	cachedUser   *clockify.User
-	cachedWSID   string
-	resolveMu    sync.RWMutex
-	resolveCache map[resolveKey]resolveEntry
+	mu                    sync.RWMutex
+	cachedUser            *clockify.User
+	cachedWSID            string
+	resolveMu             sync.RWMutex
+	resolveCache          map[resolveKey]resolveEntry
 	// resourceCache stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
 	resourceCache      *resourceStateCache
