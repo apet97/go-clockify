@@ -955,3 +955,66 @@ func TestWebhookNameSchemaBoundsMatchClockifySpec(t *testing.T) {
 		}
 	}
 }
+
+// TestValidateWebhookUserEventTriggerSource pins the rule that user-scoped
+// webhook events (USER_UPDATED, USER_EMAIL_CHANGED) require
+// trigger_source_type=USER_ID with a non-empty user id. Workspace-scoped
+// events (NEW_TIME_ENTRY etc.) do not need any trigger source. The rule
+// is enforced before any upstream call so callers see a clear local
+// error instead of a Clockify 400.
+func TestValidateWebhookUserEventTriggerSource(t *testing.T) {
+	cases := []struct {
+		name       string
+		event      string
+		sourceType string
+		source     []string
+		wantErr    string
+	}{
+		{name: "workspace event no trigger source", event: "NEW_TIME_ENTRY"},
+		{name: "workspace event with stray trigger source", event: "NEW_TIME_ENTRY", sourceType: "USER_ID", source: []string{"u-1"}},
+		{name: "user event with valid user id", event: "USER_UPDATED", sourceType: "USER_ID", source: []string{"u-1"}},
+		{name: "user event mixed-case sourceType", event: "user_email_changed", sourceType: "user_id", source: []string{"u-1"}},
+		{name: "user event missing trigger_source_type", event: "USER_UPDATED", sourceType: "", source: []string{"u-1"}, wantErr: "USER_UPDATED webhooks require"},
+		{name: "user event wrong trigger_source_type", event: "USER_UPDATED", sourceType: "WORKSPACE_ID", source: []string{"u-1"}, wantErr: "USER_UPDATED webhooks require"},
+		{name: "user event empty source list", event: "USER_EMAIL_CHANGED", sourceType: "USER_ID", source: nil, wantErr: "USER_EMAIL_CHANGED webhooks require"},
+		{name: "user event whitespace-only source", event: "USER_EMAIL_CHANGED", sourceType: "USER_ID", source: []string{"   "}, wantErr: "USER_EMAIL_CHANGED webhooks require"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateWebhookUserEventTriggerSource(tc.event, tc.sourceType, tc.source)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected err: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("err = %v, want substring %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// TestCreateWebhookRejectsUserEventWithoutTriggerSource pins the rule
+// end-to-end through CreateWebhook so a regression in the validator
+// wiring surfaces before any upstream POST.
+func TestCreateWebhookRejectsUserEventWithoutTriggerSource(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("validation must fail before upstream POST; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	svc.WebhookHostResolver = func(ctx context.Context, host string) ([]netip.Addr, error) {
+		return []netip.Addr{netip.MustParseAddr("93.184.216.34")}, nil
+	}
+
+	_, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":          "user changed",
+		"url":           "https://webhook.example.com/hook",
+		"webhook_event": "USER_UPDATED",
+		"dry_run":       true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "USER_UPDATED webhooks require") {
+		t.Fatalf("expected user-event trigger-source error, got %v", err)
+	}
+}
