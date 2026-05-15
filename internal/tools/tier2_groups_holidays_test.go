@@ -4,10 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
 )
+
+func assertQueryValue(t *testing.T, query url.Values, key, want string) {
+	t.Helper()
+	if got := query.Get(key); got != want {
+		t.Fatalf("query %s = %q, want %q (full query: %s)", key, got, want, query.Encode())
+	}
+}
 
 // TestTier2_GroupsHolidays_FullSweep covers user-group + holiday admin
 // handlers via a mocked Clockify API.
@@ -130,6 +138,39 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_delete_holiday")
 	if _, err := svc.DeleteHoliday(ctx, map[string]any{"holiday_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty holiday_id")
+	}
+}
+
+func TestListUserGroupsAdminForwardsDocumentedFilters(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/user-groups" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		query := r.URL.Query()
+		assertQueryValue(t, query, "page", "2")
+		assertQueryValue(t, query, "page-size", "25")
+		assertQueryValue(t, query, "project-id", "p1")
+		assertQueryValue(t, query, "name", "Engineering")
+		assertQueryValue(t, query, "sort-column", "NAME")
+		assertQueryValue(t, query, "sort-order", "DESCENDING")
+		assertQueryValue(t, query, "includeTeamManagers", "true")
+		respondJSON(t, w, []map[string]any{{"id": "g1", "name": "Engineering"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.ListUserGroupsAdmin(context.Background(), map[string]any{
+		"page":                  2,
+		"page_size":             25,
+		"project_id":            "p1",
+		"name":                  "Engineering",
+		"sort_column":           "name",
+		"sort_order":            "descending",
+		"include_team_managers": true,
+	})
+	mustOK(t, res, err, "clockify_list_user_groups_admin")
+	if res.Meta["count"] != 1 {
+		t.Fatalf("expected count=1 metadata, got %#v", res.Meta)
 	}
 }
 

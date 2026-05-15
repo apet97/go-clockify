@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"strconv"
+	"net/url"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -21,10 +21,26 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
+	values, err := projectListQueryValues(args, page, pageSize)
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
+	var projects []clockify.Project
+	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
+		return ResultEnvelope{}, err
+	}
+	views, financialMeta := s.enrichProjectViews(ctx, wsID, projects, args)
+	meta := addPaginationMeta(map[string]any{
+		"workspaceId": wsID,
+		"count":       len(projects),
+		"page":        page,
+		"pageSize":    pageSize,
+	}, args, page, pageSize)
+	return ok("clockify_projects_list", views, withFinancialMeta(meta, financialMeta)), nil
+}
+
+func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values, error) {
+	query := pageQuery(page, pageSize)
 	addStringQuery(query, args, "name", "name")
 	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
 	addBoolQuery(query, args, "archived", "archived")
@@ -42,28 +58,17 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 	addIntQuery(query, args, "expense_limit", "expense-limit")
 	addStringQuery(query, args, "expense_date", "expense-date")
 	addBoolQuery(query, args, "contains_group", "contains-group")
-	var projects []clockify.Project
 	values := valuesFromQueryMap(query)
 	if err := addRepeatedStringQuery(values, args, "clients", "clients"); err != nil {
-		return ResultEnvelope{}, err
+		return nil, err
 	}
 	if err := addRepeatedStringQuery(values, args, "users", "users"); err != nil {
-		return ResultEnvelope{}, err
+		return nil, err
 	}
 	if err := addRepeatedStringQuery(values, args, "user_groups", "userGroups"); err != nil {
-		return ResultEnvelope{}, err
+		return nil, err
 	}
-	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
-		return ResultEnvelope{}, err
-	}
-	views, financialMeta := s.enrichProjectViews(ctx, wsID, projects, args)
-	meta := addPaginationMeta(map[string]any{
-		"workspaceId": wsID,
-		"count":       len(projects),
-		"page":        page,
-		"pageSize":    pageSize,
-	}, args, page, pageSize)
-	return ok("clockify_projects_list", views, withFinancialMeta(meta, financialMeta)), nil
+	return values, nil
 }
 
 func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

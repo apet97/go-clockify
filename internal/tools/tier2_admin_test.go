@@ -39,6 +39,14 @@ func TestListUserGroups(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/workspaces/ws1/user-groups" && r.Method == http.MethodGet:
+			query := r.URL.Query()
+			assertQueryValue(t, query, "page", "3")
+			assertQueryValue(t, query, "page-size", "10")
+			assertQueryValue(t, query, "project-id", "p1")
+			assertQueryValue(t, query, "name", "Engineering")
+			assertQueryValue(t, query, "sort-column", "ID")
+			assertQueryValue(t, query, "sort-order", "ASCENDING")
+			assertQueryValue(t, query, "includeTeamManagers", "true")
 			respondJSON(t, w, []map[string]any{
 				{"id": "g1", "name": "Engineering"},
 				{"id": "g2", "name": "Design"},
@@ -50,7 +58,15 @@ func TestListUserGroups(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.ListUserGroups(context.Background(), map[string]any{})
+	result, err := svc.ListUserGroups(context.Background(), map[string]any{
+		"page":                  3,
+		"page_size":             10,
+		"project_id":            "p1",
+		"name":                  "Engineering",
+		"sort_column":           "id",
+		"sort_order":            "ascending",
+		"include_team_managers": true,
+	})
 	if err != nil {
 		t.Fatalf("list user groups failed: %v", err)
 	}

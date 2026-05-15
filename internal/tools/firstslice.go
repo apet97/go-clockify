@@ -123,7 +123,29 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"name": map[string]any{"type": "string"},
 			},
 		})), s.ClientsCreate),
-		firstSliceDescriptor(30, toolRO("clockify_projects_list", "List projects in the pinned workspace.", paginationSchema(nil)), s.ProjectsList),
+		firstSliceDescriptor(30, toolRO("clockify_projects_list", "List projects in the pinned workspace.", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"name":               map[string]any{"type": "string"},
+				"strict_name_search": map[string]any{"type": "boolean"},
+				"archived":           map[string]any{"type": "boolean"},
+				"billable":           map[string]any{"type": "boolean"},
+				"clients":            map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"contains_client":    map[string]any{"type": "boolean"},
+				"client_status":      map[string]any{"type": "string", "enum": []string{"ACTIVE", "ARCHIVED", "ALL"}},
+				"users":              map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"contains_user":      map[string]any{"type": "boolean"},
+				"user_status":        map[string]any{"type": "string", "enum": []string{"PENDING", "ACTIVE", "DECLINED", "INACTIVE", "ALL"}},
+				"is_template":        map[string]any{"type": "boolean"},
+				"sort_column":        map[string]any{"type": "string", "enum": []string{"ID", "NAME", "CLIENT_NAME", "DURATION", "BUDGET", "PROGRESS"}},
+				"sort_order":         map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
+				"hydrated":           map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; current handler sends hydrated=true."},
+				"access":             map[string]any{"type": "string", "enum": []string{"PUBLIC", "PRIVATE"}},
+				"expense_limit":      map[string]any{"type": "integer"},
+				"expense_date":       map[string]any{"type": "string", "description": "Expense date query value, typically YYYY-MM-DD."},
+				"user_groups":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User group IDs for the Clockify userGroups[] query."},
+				"contains_group":     map[string]any{"type": "boolean"},
+			},
+		})), s.ProjectsList),
 		firstSliceDescriptor(31, toolRW("clockify_projects_create", "Create a project in the pinned workspace.", objectSchema(map[string]any{
 			"required": []string{"name"},
 			"properties": map[string]any{
@@ -137,8 +159,13 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 		})), s.ProjectsCreate),
 		firstSliceDescriptor(40, toolRO("clockify_tasks_list", "List tasks for a project.", paginationSchema(map[string]any{
 			"properties": map[string]any{
-				"project_id": map[string]any{"type": "string"},
-				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+				"project_id":         map[string]any{"type": "string"},
+				"project":            map[string]any{"type": "string", "description": "Project name or ID."},
+				"name":               map[string]any{"type": "string"},
+				"strict_name_search": map[string]any{"type": "boolean"},
+				"is_active":          map[string]any{"type": "boolean"},
+				"sort_column":        map[string]any{"type": "string", "enum": []string{"ID", "NAME"}},
+				"sort_order":         map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
 			},
 		})), s.TasksList),
 		firstSliceDescriptor(41, toolRW("clockify_tasks_create", "Create a task under a project.", objectSchema(map[string]any{
@@ -1204,7 +1231,11 @@ func (s *Service) listProjects(ctx context.Context, args map[string]any) ([]cloc
 		return nil, 0, 0, err
 	}
 	var out []clockify.Project
-	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	values, err := projectListQueryValues(args, page, pageSize)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	err = s.Client.GetValues(ctx, path, values, &out)
 	return out, page, pageSize, err
 }
 
@@ -1255,7 +1286,7 @@ func (s *Service) listTasks(ctx context.Context, projectID string, args map[stri
 		return nil, 0, 0, err
 	}
 	var out []clockify.Task
-	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	err = s.Client.Get(ctx, path, taskListQuery(args, page, pageSize), &out)
 	return out, page, pageSize, err
 }
 

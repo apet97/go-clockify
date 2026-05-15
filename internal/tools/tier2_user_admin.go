@@ -16,13 +16,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List user groups (RO)
 		{
-			Tool: toolRO("clockify_list_user_groups", "List user groups in the workspace", map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
-					"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
-				},
-			}),
+			Tool:         toolRO("clockify_list_user_groups", "List user groups in the workspace", userGroupListSchema()),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListUserGroups(ctx, args)
@@ -269,13 +263,7 @@ func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
-	}
+	query, page, pageSize := userGroupListQuery(args)
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {

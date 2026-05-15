@@ -18,7 +18,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		{
 			Tool: toolRO("clockify_list_user_groups_admin",
 				"List user groups in the workspace (admin view) with pagination",
-				paginationSchema(nil)),
+				userGroupListSchema()),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.ListUserGroupsAdmin(ctx, args)
@@ -166,16 +166,48 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 // User Group Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
+func userGroupListSchema() map[string]any {
+	return paginationSchema(map[string]any{
+		"properties": map[string]any{
+			"project_id":            map[string]any{"type": "string", "description": "Filter groups assigned to this project ID"},
+			"name":                  map[string]any{"type": "string", "description": "Filter groups by name"},
+			"sort_column":           map[string]any{"type": "string", "enum": []string{"ID", "NAME"}},
+			"sort_order":            map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
+			"include_team_managers": map[string]any{"type": "boolean", "description": "Include team-manager data in the returned groups"},
+		},
+	})
+}
+
+func userGroupListQuery(args map[string]any) (map[string]string, int, int) {
 	page, pageSize := paginationFromArgs(args)
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
+	if v := strings.TrimSpace(stringArg(args, "project_id")); v != "" {
+		query["project-id"] = v
+	}
+	if v := strings.TrimSpace(stringArg(args, "name")); v != "" {
+		query["name"] = v
+	}
+	if v := strings.ToUpper(strings.TrimSpace(stringArg(args, "sort_column"))); v != "" {
+		query["sort-column"] = v
+	}
+	if v := strings.ToUpper(strings.TrimSpace(stringArg(args, "sort_order"))); v != "" {
+		query["sort-order"] = v
+	}
+	if v, ok := args["include_team_managers"].(bool); ok {
+		query["includeTeamManagers"] = strconv.FormatBool(v)
+	}
+	return query, page, pageSize
+}
+
+func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	query, page, pageSize := userGroupListQuery(args)
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {

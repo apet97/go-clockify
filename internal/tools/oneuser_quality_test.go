@@ -2984,6 +2984,9 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 	case "time_estimate":
 		return map[string]any{"active": true, "estimate": "PT1H", "include_non_billable": false, "type": "MANUAL"}
 	case "user_groups":
+		if typ, _ := schema["type"].(string); typ == "array" {
+			return []any{oneUserCoverageID("group_id")}
+		}
 		return map[string]any{"contains": "CONTAINS", "ids": []any{oneUserCoverageID("group_id")}, "status": "ACTIVE"}
 	case "client", "project", "task", "tag", "user", "entry", "invoice", "expense", "policy", "request", "assignment", "webhook", "group", "holiday":
 		return oneUserCoverageID(name + "_id")

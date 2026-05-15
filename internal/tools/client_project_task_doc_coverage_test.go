@@ -38,12 +38,12 @@ func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 	requireProps("clockify_clients_get", "client", "client_id")
 	requireProps("clockify_clients_create", "name")
 	requireProps("clockify_clients_update", "client", "client_id", "name")
-	requireProps("clockify_projects_list", "page", "page_size")
+	requireProps("clockify_projects_list", "page", "page_size", "name", "strict_name_search", "archived", "billable", "clients", "contains_client", "client_status", "users", "contains_user", "user_status", "is_template", "sort_column", "sort_order", "hydrated", "access", "expense_limit", "expense_date", "user_groups", "contains_group")
 	requireProps("clockify_projects_get", "project", "project_id")
 	requireProps("clockify_projects_create", "name", "client", "client_id", "color", "billable", "is_public")
 	requireProps("clockify_projects_update", "project", "project_id", "name", "client", "client_id", "color", "billable", "is_public", "archived")
 	requireProps("clockify_projects_rates_update", "project_id", "user_id", "rate_kind", "amount")
-	requireProps("clockify_tasks_list", "project", "project_id", "page", "page_size")
+	requireProps("clockify_tasks_list", "project", "project_id", "page", "page_size", "name", "strict_name_search", "is_active", "sort_column", "sort_order")
 	requireProps("clockify_tasks_get", "project", "project_id", "task", "task_id")
 	requireProps("clockify_tasks_create", "project", "project_id", "name", "billable")
 	requireProps("clockify_tasks_update", "project", "project_id", "task", "task_id", "name", "billable", "assignee_ids", "status")
@@ -246,6 +246,78 @@ func TestProjectDocListFiltersForwarded(t *testing.T) {
 	}
 }
 
+func TestProjectsListWrapperFiltersForwarded(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/projects" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		q := r.URL.Query()
+		want := map[string]string{
+			"name":               "Project X",
+			"strict-name-search": "true",
+			"archived":           "false",
+			"billable":           "true",
+			"contains-client":    "true",
+			"client-status":      "ACTIVE",
+			"contains-user":      "false",
+			"user-status":        "ALL",
+			"is-template":        "false",
+			"sort-column":        "NAME",
+			"sort-order":         "ASCENDING",
+			"hydrated":           "true",
+			"access":             "PUBLIC",
+			"expense-limit":      "5000",
+			"expense-date":       "2026-05-12",
+			"contains-group":     "true",
+			"page":               "2",
+			"page-size":          "10",
+		}
+		for key, value := range want {
+			if got := q.Get(key); got != value {
+				t.Fatalf("query %s = %q, want %q (raw=%s)", key, got, value, r.URL.RawQuery)
+			}
+		}
+		if got := q["clients"]; !reflect.DeepEqual(got, []string{"c-1", "c-2"}) {
+			t.Fatalf("clients query = %#v", got)
+		}
+		if got := q["users"]; !reflect.DeepEqual(got, []string{"u-1", "u-2"}) {
+			t.Fatalf("users query = %#v", got)
+		}
+		if got := q["userGroups"]; !reflect.DeepEqual(got, []string{"g-1"}) {
+			t.Fatalf("userGroups query = %#v", got)
+		}
+		respondJSON(t, w, []clockify.Project{{ID: testProjectID, Name: "Project X"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.ProjectsList(context.Background(), map[string]any{
+		"name":               "Project X",
+		"strict_name_search": true,
+		"archived":           false,
+		"billable":           true,
+		"clients":            []any{"c-1", "c-2"},
+		"contains_client":    true,
+		"client_status":      "ACTIVE",
+		"users":              []any{"u-1", "u-2"},
+		"contains_user":      false,
+		"user_status":        "ALL",
+		"is_template":        false,
+		"sort_column":        "NAME",
+		"sort_order":         "ASCENDING",
+		"hydrated":           true,
+		"access":             "PUBLIC",
+		"expense_limit":      5000,
+		"expense_date":       "2026-05-12",
+		"user_groups":        []any{"g-1"},
+		"contains_group":     true,
+		"page":               2,
+		"page_size":          10,
+	}); err != nil {
+		t.Fatalf("ProjectsList: %v", err)
+	}
+}
+
 func TestProjectDocCreateRichBodyForwarded(t *testing.T) {
 	var body map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -403,6 +475,45 @@ func TestTaskDocListFiltersForwarded(t *testing.T) {
 		"page_size":          20,
 	}); err != nil {
 		t.Fatalf("ListTasks: %v", err)
+	}
+}
+
+func TestTasksListWrapperFiltersForwarded(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/projects/"+testProjectID+"/tasks" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		q := r.URL.Query()
+		want := map[string]string{
+			"name":               "Task X",
+			"strict-name-search": "true",
+			"is-active":          "false",
+			"sort-column":        "ID",
+			"sort-order":         "ASCENDING",
+			"page":               "4",
+			"page-size":          "20",
+		}
+		for key, value := range want {
+			if got := q.Get(key); got != value {
+				t.Fatalf("query %s = %q, want %q (raw=%s)", key, got, value, r.URL.RawQuery)
+			}
+		}
+		respondJSON(t, w, []clockify.Task{{ID: testTaskID, Name: "Task X", ProjectID: testProjectID}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.TasksList(context.Background(), map[string]any{
+		"project":            testProjectID,
+		"name":               "Task X",
+		"strict_name_search": true,
+		"is_active":          false,
+		"sort_column":        "ID",
+		"sort_order":         "ASCENDING",
+		"page":               4,
+		"page_size":          20,
+	}); err != nil {
+		t.Fatalf("TasksList: %v", err)
 	}
 }
 

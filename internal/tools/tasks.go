@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -29,17 +28,8 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		return ResultEnvelope{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
-	}
-	addStringQuery(query, args, "name", "name")
-	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
-	addBoolQuery(query, args, "is_active", "is-active")
-	addStringQuery(query, args, "sort_column", "sort-column")
-	addStringQuery(query, args, "sort_order", "sort-order")
 	var out []clockify.Task
-	if err := s.Client.Get(ctx, path, query, &out); err != nil {
+	if err := s.Client.Get(ctx, path, taskListQuery(args, page, pageSize), &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	views, financialMeta := s.enrichTaskViews(ctx, wsID, projectID, out, args)
@@ -51,6 +41,16 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	return ok("clockify_tasks_list", views, withFinancialMeta(meta, financialMeta)), nil
+}
+
+func taskListQuery(args map[string]any, page, pageSize int) map[string]string {
+	query := pageQuery(page, pageSize)
+	addStringQuery(query, args, "name", "name")
+	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
+	addBoolQuery(query, args, "is_active", "is-active")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	return query
 }
 
 // GetTask fetches a single task by ID or exact name within a project.

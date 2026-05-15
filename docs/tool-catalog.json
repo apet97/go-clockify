@@ -8870,6 +8870,60 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "access": {
+            "enum": [
+              "PUBLIC",
+              "PRIVATE"
+            ],
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "client_status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "clients": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "contains_client": {
+            "type": "boolean"
+          },
+          "contains_group": {
+            "type": "boolean"
+          },
+          "contains_user": {
+            "type": "boolean"
+          },
+          "expense_date": {
+            "description": "Expense date query value, typically YYYY-MM-DD.",
+            "type": "string"
+          },
+          "expense_limit": {
+            "type": "integer"
+          },
+          "hydrated": {
+            "description": "Clockify hydrated query flag; current handler sends hydrated=true.",
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -8880,6 +8934,50 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "NAME",
+              "CLIENT_NAME",
+              "DURATION",
+              "BUDGET",
+              "PROGRESS"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "strict_name_search": {
+            "type": "boolean"
+          },
+          "user_groups": {
+            "description": "User group IDs for the Clockify userGroups[] query.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_status": {
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "DECLINED",
+              "INACTIVE",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "users": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -9876,6 +9974,13 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -9893,6 +9998,23 @@
           },
           "project_id": {
             "type": "string"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "NAME"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "strict_name_search": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -40754,6 +40876,15 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "include_team_managers": {
+            "description": "Include team-manager data in the returned groups",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Filter groups by name",
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -40764,6 +40895,24 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "project_id": {
+            "description": "Filter groups assigned to this project ID",
+            "type": "string"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "NAME"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
