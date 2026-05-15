@@ -109,6 +109,13 @@ identifiers are intentionally omitted — we record only the visible plan from
 | Date (UTC) | Workspace plan | Gates | Tests | Result | Leftovers |
 |---|---|---|---|---|---|
 | 2026-05-15 | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1`, `CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `TestOneUserLiveWorkflow`, `TestOneUserLivePaidFeatureWorkflowRecovery`, `TestOneUserLiveOptionalDomainContracts`, `TestLiveOneUserWorkflowMCP` | PASS (42.7s `internal/tools`, 29.0s `tests`) | 0 (`clockify_demo_cleanup` returned ok) |
+| 2026-05-15 | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign | PASS per sub-suite (21.3s core, 19.0s internal/tools, 39.1s optional) | 0 after prefix-scoped sweep (48 tags + 67 clients from this session's runs archived+deleted; `clockify_demo_cleanup` plus a manual `mcp-live*`/`mcp-remaining*`/`mcp-optional*` audit confirmed 0 remaining) |
+
+`make live-contract-local` runs all three sub-suites back-to-back; on a
+shared workspace that can trip Clockify's rate budget and surface a
+transient `http2: timeout` mid-suite (the MCP returns a clean `ok:false`
+recovery envelope in that case). Run the three sub-suites individually
+for clean rate budgets when the combined target flakes.
 
 When recording a new run, include the date, the visible workspace plan (from
 `doctor --live`), the env-var set that was active, the named test functions,
