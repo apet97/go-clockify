@@ -3,7 +3,7 @@
 # Focused regression harness for scripts/check-doc-parity.sh.
 #
 # The checker is intentionally scoped to the current one-user product path:
-# a flat generated catalog with 151 tools, minimal env surface, current
+# a flat generated catalog with 152 tools, minimal env surface, current
 # operator docs, and historical hosted-era material excluded from the public
 # one-user gate.
 
@@ -17,7 +17,7 @@ tests_failed=0
 
 write_catalog() {
   local dir="$1"
-  local count="${2:-151}"
+  local count="${2:-152}"
   python3 - "$dir/docs/tool-catalog.json" "$count" <<'PY'
 import json
 import sys
@@ -78,12 +78,12 @@ package tests
 const liveEnv = "CLOCKIFY_RUN_LIVE_E2E"
 EOF
 
-  write_catalog "$dir" 151
+  write_catalog "$dir" 152
 
   cat > "$dir/README.md" <<'EOF'
 # go-clockify
 
-One-user local Clockify MCP with 151 tools.
+One-user local Clockify MCP with 152 tools.
 
 | Runtime | Requirement |
 | --- | --- |
@@ -100,7 +100,7 @@ One local trusted user.
 One `CLOCKIFY_API_KEY`.
 One required `CLOCKIFY_WORKSPACE_ID`.
 Stdio transport only.
-Exactly 151 tools loaded at startup.
+Exactly 152 tools loaded at startup.
 EOF
 
   cat > "$dir/docs/agent-cookbook.md" <<'EOF'
@@ -112,13 +112,13 @@ EOF
   cat > "$dir/docs/clients.md" <<'EOF'
 # Clients
 
-The local stdio package exposes 151 tools.
+The local stdio package exposes 152 tools.
 EOF
 
   cat > "$dir/docs/api-coverage.md" <<'EOF'
 # API Coverage
 
-The generated catalog currently exposes 151 tools.
+The generated catalog currently exposes 152 tools.
 EOF
 
   cat > "$dir/docs/live-tests.md" <<'EOF'
@@ -231,7 +231,7 @@ remove_catalog() {
 }
 
 count_drift() {
-  perl -0pi -e 's/151 tools/150 tools/' "$1/README.md"
+  perl -0pi -e 's/152 tools/150 tools/' "$1/README.md"
 }
 
 stale_public_language() {
@@ -243,7 +243,7 @@ historical_stale_language() {
 }
 
 missing_agents_contract() {
-  grep -v 'Exactly 151 tools loaded at startup' "$1/AGENTS.md" > "$1/AGENTS.tmp"
+  grep -v 'Exactly 152 tools loaded at startup' "$1/AGENTS.md" > "$1/AGENTS.tmp"
   mv "$1/AGENTS.tmp" "$1/AGENTS.md"
 }
 
@@ -261,7 +261,7 @@ adr_status_drift() {
 
 run_case "clean flat one-user baseline passes" 0 "doc-parity: OK"
 run_case "flat catalog shape is required" 1 "unable to parse flat tool catalog" bad_catalog_shape
-run_case "flat catalog must stay at 151 tools" 1 "tool count drift: found 150 tools, expected 151" bad_catalog_count
+run_case "flat catalog must stay at 152 tools" 1 "tool count drift: found 150 tools, expected 152" bad_catalog_count
 run_case "undefined current-doc env var fails" 1 "env var referenced in current docs but not defined" undefined_env
 run_case "opt-out permits otherwise undefined env var" 0 "doc-parity: OK" undefined_env_opted_out
 run_case "unknown current-doc tool fails" 1 "tool referenced in current docs but not in" unknown_tool

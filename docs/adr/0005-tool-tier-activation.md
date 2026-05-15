@@ -14,7 +14,7 @@ startup, then choose workflow tools first.
 
 The runtime registry is `Service.FullAccessRegistry()`:
 
-- all 151 tools are registered at startup,
+- all 152 tools are registered at startup,
 - workflow tools appear first,
 - domain tools appear second,
 - raw API fallback tools appear last,

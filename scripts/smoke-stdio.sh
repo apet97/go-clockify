@@ -4,7 +4,7 @@
 #   - closes stdin so Run() flushes and exits,
 #   - asserts:
 #       initialize  -> serverInfo.name == clockify-go-mcp,
-#       tools/list  -> exactly 151 startup tools,
+#       tools/list  -> exactly 152 startup tools,
 #                      first=clockify_status, last=clockify_api_request,
 #       no old activation/policy helper tools in any response,
 #       prompts/list  -> >=1,
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-EXPECTED_TOOL_COUNT=151
+EXPECTED_TOOL_COUNT=152
 BIN="${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke"
 OUT="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.out.XXXXXX")"
 ERR="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.err.XXXXXX")"
