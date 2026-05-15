@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -42,10 +43,11 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		}
 		baseQuery["end"] = timeparse.FormatISO(t)
 	}
+	addEntryListQueryParams(baseQuery, args)
 
 	projectFilter := strings.TrimSpace(stringArg(args, "project"))
 	if projectFilter != "" {
-		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, resolvedProjectID, err := s.listEntriesWithProjectFilter(ctx, baseQuery, projectFilter, page, pageSize)
+		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, resolvedProjectID, err := s.listEntriesWithProjectFilter(ctx, baseQuery, args, projectFilter, page, pageSize)
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
@@ -75,7 +77,11 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 	query["page"] = strconv.Itoa(page)
 	query["page-size"] = strconv.Itoa(pageSize)
 
-	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, query)
+	values, err := valuesFromEntryListQuery(query, args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	entries, wsID, userID, err := s.listEntriesWithQueryValues(ctx, values)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -105,8 +111,9 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	query := entryDetailQuery(args)
 	var entry clockify.TimeEntry
-	if err := s.Client.Get(ctx, path, nil, &entry); err != nil {
+	if err := s.Client.Get(ctx, path, query, &entry); err != nil {
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
@@ -378,9 +385,11 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	query := entryDetailQuery(args)
+
 	// Fetch existing entry
 	var existing clockify.TimeEntry
-	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
+	if err := s.Client.Get(ctx, entryPath, query, &existing); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -490,7 +499,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	putPayload := timeEntryPutPayload(existing)
 
 	var updated clockify.TimeEntry
-	if err := s.Client.Put(ctx, entryPath, putPayload, &updated); err != nil {
+	if err := s.Client.PutWithQuery(ctx, entryPath, query, putPayload, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -550,24 +559,56 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 
 // listEntriesWithQuery is the shared helper for fetching time entries with query parameters.
 func (s *Service) listEntriesWithQuery(ctx context.Context, query map[string]string) ([]clockify.TimeEntry, string, string, error) {
+	return s.listEntriesWithQueryValues(ctx, valuesFromQueryMap(query))
+}
+
+func (s *Service) listEntriesWithQueryValues(ctx context.Context, query url.Values) ([]clockify.TimeEntry, string, string, error) {
 	wsID, userID, path, err := s.currentUserEntriesPath(ctx)
 	if err != nil {
 		return nil, "", "", err
 	}
 	if query == nil {
-		query = map[string]string{}
+		query = url.Values{}
 	}
 	if _, ok := query["page-size"]; !ok {
-		query["page-size"] = "100"
+		query.Set("page-size", "100")
 	}
 	var entries []clockify.TimeEntry
-	if err := s.Client.Get(ctx, path, query, &entries); err != nil {
+	if err := s.Client.GetValues(ctx, path, query, &entries); err != nil {
 		return nil, "", "", err
 	}
 	return entries, wsID, userID, nil
 }
 
-func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery map[string]string, projectFilter string, page, pageSize int) ([]clockify.TimeEntry, string, string, int, int, int, string, error) {
+func addEntryListQueryParams(query map[string]string, args map[string]any) {
+	addStringQuery(query, args, "description", "description")
+	addStringQuery(query, args, "task", "task")
+	addBoolQuery(query, args, "project_required", "project-required")
+	addBoolQuery(query, args, "task_required", "task-required")
+	addBoolQuery(query, args, "hydrated", "hydrated")
+	addStringQuery(query, args, "in_progress", "in-progress")
+	addStringQuery(query, args, "get_week_before", "get-week-before")
+}
+
+func valuesFromEntryListQuery(query map[string]string, args map[string]any) (url.Values, error) {
+	values := valuesFromQueryMap(query)
+	if err := addRepeatedStringQuery(values, args, "tags", "tags"); err != nil {
+		return nil, err
+	}
+	return values, nil
+}
+
+func entryDetailQuery(args map[string]any) map[string]string {
+	query := map[string]string{}
+	addBoolQuery(query, args, "hydrated", "hydrated")
+	addBoolQuery(query, args, "consider_duration_format", "consider-duration-format")
+	if len(query) == 0 {
+		return nil
+	}
+	return query
+}
+
+func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery map[string]string, args map[string]any, projectFilter string, page, pageSize int) ([]clockify.TimeEntry, string, string, int, int, int, string, error) {
 	const upstreamPageSize = 200
 
 	wsID, userID, path, err := s.currentUserEntriesPath(ctx)
@@ -587,19 +628,19 @@ func (s *Service) listEntriesWithProjectFilter(ctx context.Context, baseQuery ma
 	startOffset := (page - 1) * pageSize
 	endOffset := startOffset + pageSize
 
-	query := make(map[string]string, len(baseQuery)+3)
-	for k, v := range baseQuery {
-		query[k] = v
+	query, err := valuesFromEntryListQuery(baseQuery, args)
+	if err != nil {
+		return nil, "", "", 0, 0, 0, "", err
 	}
-	query["page-size"] = strconv.Itoa(upstreamPageSize)
+	query.Set("page-size", strconv.Itoa(upstreamPageSize))
 	if resolvedProjectID != "" {
-		query["project"] = resolvedProjectID
+		query.Set("project", resolvedProjectID)
 	}
 	for upstreamPage := 1; upstreamPage <= aggregatePageSafetyStop; upstreamPage++ {
-		query["page"] = strconv.Itoa(upstreamPage)
+		query.Set("page", strconv.Itoa(upstreamPage))
 
 		var batch []clockify.TimeEntry
-		if err := s.Client.Get(ctx, path, query, &batch); err != nil {
+		if err := s.Client.GetValues(ctx, path, query, &batch); err != nil {
 			return nil, "", "", 0, 0, 0, "", err
 		}
 		pagesFetched++

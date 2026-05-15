@@ -226,16 +226,17 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			return s.GetClientWithArgs(ctx, aliasArg(args, "client_id", "client"))
 		}),
 		nativeDomainTool(23, toolRWIdem("clockify_clients_update", "Update a client by name or ID.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
-			"client":           map[string]any{"type": "string", "description": "Client name or ID."},
-			"client_id":        map[string]any{"type": "string", "description": "Client ID."},
-			"name":             map[string]any{"type": "string"},
-			"email":            map[string]any{"type": "string"},
-			"address":          map[string]any{"type": "string"},
-			"note":             map[string]any{"type": "string"},
-			"currency_id":      map[string]any{"type": "string"},
-			"cc_emails":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-			"archived":         map[string]any{"type": "boolean"},
-			"archive_projects": map[string]any{"type": "boolean"},
+			"client":             map[string]any{"type": "string", "description": "Client name or ID."},
+			"client_id":          map[string]any{"type": "string", "description": "Client ID."},
+			"name":               map[string]any{"type": "string"},
+			"email":              map[string]any{"type": "string"},
+			"address":            map[string]any{"type": "string"},
+			"note":               map[string]any{"type": "string"},
+			"currency_id":        map[string]any{"type": "string"},
+			"cc_emails":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"archived":           map[string]any{"type": "boolean"},
+			"archive_projects":   map[string]any{"type": "boolean"},
+			"mark_tasks_as_done": map[string]any{"type": "boolean"},
 		}})), "client", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateClient(ctx, aliasArg(args, "client_id", "client"))
 		}),
@@ -248,8 +249,12 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}),
 
 		nativeDomainTool(32, toolRO("clockify_projects_get", "Get one project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
-			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
-			"project_id": map[string]any{"type": "string", "description": "Project ID."},
+			"project":                  map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id":               map[string]any{"type": "string", "description": "Project ID."},
+			"hydrated":                 map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; current handler sends hydrated=true."},
+			"custom_field_entity_type": map[string]any{"type": "string"},
+			"expense_limit":            map[string]any{"type": "integer"},
+			"expense_date":             map[string]any{"type": "string", "description": "Expense date query value, typically YYYY-MM-DD."},
 		}})), "project", "", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.GetProject(ctx, aliasArg(args, "project_id", "project"))
 		}),
@@ -306,14 +311,16 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			return s.GetTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
 		nativeDomainTool(43, toolRWIdem("clockify_tasks_update", "Update a task by name or ID within a project.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
-			"project":      map[string]any{"type": "string", "description": "Project name or ID."},
-			"project_id":   map[string]any{"type": "string", "description": "Project ID."},
-			"task":         map[string]any{"type": "string", "description": "Task name or ID."},
-			"task_id":      map[string]any{"type": "string", "description": "Task ID."},
-			"name":         map[string]any{"type": "string"},
-			"billable":     map[string]any{"type": "boolean"},
-			"assignee_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-			"status":       map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}},
+			"project":           map[string]any{"type": "string", "description": "Project name or ID."},
+			"project_id":        map[string]any{"type": "string", "description": "Project ID."},
+			"task":              map[string]any{"type": "string", "description": "Task name or ID."},
+			"task_id":           map[string]any{"type": "string", "description": "Task ID."},
+			"name":              map[string]any{"type": "string"},
+			"billable":          map[string]any{"type": "boolean"},
+			"assignee_ids":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"status":            map[string]any{"type": "string", "enum": []string{"ACTIVE", "DONE"}},
+			"contains_assignee": map[string]any{"type": "boolean"},
+			"membership_status": map[string]any{"type": "string", "enum": []string{"PENDING", "ACTIVE", "DECLINED", "INACTIVE", "ALL"}},
 		}})), "task", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),

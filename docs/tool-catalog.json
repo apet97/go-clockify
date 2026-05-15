@@ -10356,6 +10356,9 @@
           "billable": {
             "type": "boolean"
           },
+          "contains_assignee": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 150,
             "type": "string"
@@ -11259,8 +11262,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "get_week_before": {
+            "type": "string"
+          },
+          "hydrated": {
+            "type": "boolean"
+          },
+          "in_progress": {
             "type": "string"
           },
           "page": {
@@ -11281,9 +11297,24 @@
           "project_id": {
             "type": "string"
           },
+          "project_required": {
+            "type": "boolean"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "task": {
+            "type": "string"
+          },
+          "task_required": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -12692,6 +12723,9 @@
             "maxLength": 254,
             "type": "string"
           },
+          "mark_tasks_as_done": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 150,
             "type": "string"
@@ -13581,6 +13615,20 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "custom_field_entity_type": {
+            "type": "string"
+          },
+          "expense_date": {
+            "description": "Expense date query value, typically YYYY-MM-DD.",
+            "type": "string"
+          },
+          "expense_limit": {
+            "type": "integer"
+          },
+          "hydrated": {
+            "description": "Clockify hydrated query flag; current handler sends hydrated=true.",
+            "type": "boolean"
+          },
           "project": {
             "description": "Project name or ID.",
             "type": "string"
@@ -18910,6 +18958,19 @@
           },
           "billable": {
             "type": "boolean"
+          },
+          "contains_assignee": {
+            "type": "boolean"
+          },
+          "membership_status": {
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "DECLINED",
+              "INACTIVE",
+              "ALL"
+            ],
+            "type": "string"
           },
           "name": {
             "maxLength": 150,

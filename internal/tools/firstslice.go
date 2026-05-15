@@ -171,10 +171,11 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 		firstSliceDescriptor(41, toolRW("clockify_tasks_create", "Create a task under a project.", objectSchema(map[string]any{
 			"required": []string{"name"},
 			"properties": map[string]any{
-				"project_id": map[string]any{"type": "string"},
-				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
-				"name":       map[string]any{"type": "string"},
-				"billable":   map[string]any{"type": "boolean"},
+				"project_id":        map[string]any{"type": "string"},
+				"project":           map[string]any{"type": "string", "description": "Project name or ID."},
+				"name":              map[string]any{"type": "string"},
+				"billable":          map[string]any{"type": "boolean"},
+				"contains_assignee": map[string]any{"type": "boolean"},
 			},
 		})), s.TasksCreate),
 		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(map[string]any{
@@ -195,10 +196,18 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 		})), s.TagsCreate),
 		firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace.", paginationSchema(map[string]any{
 			"properties": map[string]any{
-				"start":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"end":        map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"project_id": map[string]any{"type": "string"},
-				"project":    map[string]any{"type": "string", "description": "Project name or ID."},
+				"start":            map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":              map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"project_id":       map[string]any{"type": "string"},
+				"project":          map[string]any{"type": "string", "description": "Project name or ID."},
+				"description":      map[string]any{"type": "string"},
+				"task":             map[string]any{"type": "string"},
+				"tags":             map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"project_required": map[string]any{"type": "boolean"},
+				"task_required":    map[string]any{"type": "boolean"},
+				"hydrated":         map[string]any{"type": "boolean"},
+				"in_progress":      map[string]any{"type": "string"},
+				"get_week_before":  map[string]any{"type": "string"},
 			},
 		})), s.EntriesList),
 		firstSliceDescriptor(61, toolRW("clockify_entries_create", "Create a current-user time entry in the pinned workspace.", objectSchema(map[string]any{
@@ -1372,6 +1381,11 @@ func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]an
 		}
 		query["project"] = projectID
 	}
+	addEntryListQueryParams(query, args)
+	values, err := valuesFromEntryListQuery(query, args)
+	if err != nil {
+		return nil, "", 0, 0, err
+	}
 	if err := resolve.ValidateID(user.ID, "user_id"); err != nil {
 		return nil, "", 0, 0, err
 	}
@@ -1380,7 +1394,7 @@ func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]an
 		return nil, "", 0, 0, err
 	}
 	var entries []clockify.TimeEntry
-	err = s.Client.Get(ctx, path, query, &entries)
+	err = s.Client.GetValues(ctx, path, values, &entries)
 	return entries, user.ID, page, pageSize, err
 }
 

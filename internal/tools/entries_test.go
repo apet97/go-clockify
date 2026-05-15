@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -14,6 +15,151 @@ import (
 // valid Clockify ObjectID so the handler reaches the ownership guard
 // rather than short-circuiting on resolve.ValidateID.
 const otherUserEntryID = "6a00f6bc2568d3d293061e2a"
+
+func TestListEntriesForwardsOpenAPIQueryParams(t *testing.T) {
+	var gotQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/user/user-SELF/time-entries" && r.Method == http.MethodGet:
+			gotQuery = r.URL.Query()
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ListEntries(context.Background(), map[string]any{
+		"description":      "standup",
+		"task":             "task-1",
+		"tags":             []any{"tag-1", "tag-2"},
+		"project_required": true,
+		"task_required":    false,
+		"hydrated":         true,
+		"in_progress":      "false",
+		"get_week_before":  "2026-W19",
+		"page":             float64(2),
+		"page_size":        float64(25),
+	})
+	if err != nil {
+		t.Fatalf("ListEntries: %v", err)
+	}
+
+	assertEntryQueryValue(t, gotQuery, "description", "standup")
+	assertEntryQueryValue(t, gotQuery, "task", "task-1")
+	assertEntryQueryValues(t, gotQuery, "tags", []string{"tag-1", "tag-2"})
+	assertEntryQueryValue(t, gotQuery, "project-required", "true")
+	assertEntryQueryValue(t, gotQuery, "task-required", "false")
+	assertEntryQueryValue(t, gotQuery, "hydrated", "true")
+	assertEntryQueryValue(t, gotQuery, "in-progress", "false")
+	assertEntryQueryValue(t, gotQuery, "get-week-before", "2026-W19")
+	assertEntryQueryValue(t, gotQuery, "page", "2")
+	assertEntryQueryValue(t, gotQuery, "page-size", "25")
+}
+
+func TestGetEntryForwardsOpenAPIQueryParams(t *testing.T) {
+	var gotQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			gotQuery = r.URL.Query()
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z"},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.GetEntry(context.Background(), map[string]any{
+		"entry_id":                 otherUserEntryID,
+		"hydrated":                 true,
+		"consider_duration_format": false,
+	})
+	if err != nil {
+		t.Fatalf("GetEntry: %v", err)
+	}
+
+	assertEntryQueryValue(t, gotQuery, "hydrated", "true")
+	assertEntryQueryValue(t, gotQuery, "consider-duration-format", "false")
+}
+
+func TestUpdateEntryForwardsOpenAPIQueryParams(t *testing.T) {
+	var getQuery url.Values
+	var putQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodGet:
+			getQuery = r.URL.Query()
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				Description:  "mine",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z", End: "2026-05-01T10:00:00Z"},
+			})
+		case r.URL.Path == "/workspaces/ws1/time-entries/"+otherUserEntryID && r.Method == http.MethodPut:
+			putQuery = r.URL.Query()
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           otherUserEntryID,
+				UserID:       "user-SELF",
+				Description:  "renamed",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-01T09:00:00Z", End: "2026-05-01T10:00:00Z"},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.UpdateEntry(context.Background(), map[string]any{
+		"entry_id":                 otherUserEntryID,
+		"description":              "renamed",
+		"hydrated":                 false,
+		"consider_duration_format": true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateEntry: %v", err)
+	}
+
+	for name, query := range map[string]url.Values{"GET": getQuery, "PUT": putQuery} {
+		assertEntryQueryValue(t, query, "hydrated", "false")
+		assertEntryQueryValue(t, query, "consider-duration-format", "true")
+		if len(query) != 2 {
+			t.Fatalf("%s query had unexpected extras: %v", name, query)
+		}
+	}
+}
+
+func assertEntryQueryValue(t *testing.T, query url.Values, key, want string) {
+	t.Helper()
+	got := query.Get(key)
+	if got != want {
+		t.Fatalf("query %q = %q, want %q; full query=%v", key, got, want, query)
+	}
+}
+
+func assertEntryQueryValues(t *testing.T, query url.Values, key string, want []string) {
+	t.Helper()
+	got := query[key]
+	if len(got) != len(want) {
+		t.Fatalf("query %q = %v, want %v; full query=%v", key, got, want, query)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("query %q = %v, want %v; full query=%v", key, got, want, query)
+		}
+	}
+}
 
 // TestUpdateEntryRejectsOtherUserEntry pins the documented contract
 // for personal time-entry mutations: docs/policy/production-tool-scope.md
