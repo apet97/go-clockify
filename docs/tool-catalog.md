@@ -113,7 +113,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_memberships_update` | `domain` | no | no | yes | yes | `write`, `admin`, `permission_change` | Replace project memberships and optional user-group filter/rate metadata |
 | `clockify_expenses_list` | `domain` | yes | no | yes | no | `read` | List expenses in the workspace with pagination and optional date range |
 | `clockify_expenses_get` | `domain` | yes | no | yes | no | `read` | Get a single expense by ID |
-| `clockify_expenses_create` | `domain` | no | no | no | no | `write`, `billing` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. |
+| `clockify_expenses_create` | `domain` | no | no | no | no | `write`, `billing` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt. |
 | `clockify_expenses_update` | `domain` | no | no | no | no | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
 | `clockify_expenses_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an expense by ID |
 | `clockify_expenses_categories_list` | `domain` | yes | no | yes | no | `read` | List expense categories in the workspace |

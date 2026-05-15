@@ -2,11 +2,13 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
@@ -38,19 +40,22 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Create expense
-		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents.", map[string]any{
+		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt.", map[string]any{
 			"type":     "object",
 			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{
-				"amount":      map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units, e.g. 125.00 for $125.00; use amount_unit:\"minor\" for cents/minor units."},
-				"amount_unit": map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount. major (default) sends the value as entered; minor divides by 100 before sending to Clockify."},
-				"date":        map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
-				"category_id": map[string]any{"type": "string", "description": "Expense category ID (required)"},
-				"user_id":     map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
-				"project_id":  map[string]any{"type": "string", "description": "Project ID (optional)"},
-				"task_id":     map[string]any{"type": "string", "description": "Task ID (optional)"},
-				"notes":       map[string]any{"type": "string", "description": "Free-form notes"},
-				"billable":    map[string]any{"type": "boolean", "description": "Whether the expense is billable"},
+				"amount":              map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units, e.g. 125.00 for $125.00; use amount_unit:\"minor\" for cents/minor units."},
+				"amount_unit":         map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount. major (default) sends the value as entered; minor divides by 100 before sending to Clockify."},
+				"date":                map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"category_id":         map[string]any{"type": "string", "description": "Expense category ID (required)"},
+				"user_id":             map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
+				"project_id":          map[string]any{"type": "string", "description": "Project ID (optional)"},
+				"task_id":             map[string]any{"type": "string", "description": "Task ID (optional)"},
+				"notes":               map[string]any{"type": "string", "description": "Free-form notes"},
+				"billable":            map[string]any{"type": "boolean", "description": "Whether the expense is billable"},
+				"file_name":           map[string]any{"type": "string", "description": "Optional receipt file name. Send file_name, file_content_base64, and file_content_type together to attach a receipt."},
+				"file_content_base64": map[string]any{"type": "string", "description": "Optional base64-encoded receipt body. Decoded payload is capped at the multipart file limit (10 MiB)."},
+				"file_content_type":   map[string]any{"type": "string", "description": "Optional MIME type for the receipt, e.g. application/pdf or image/png."},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createExpense(ctx, args)
@@ -62,7 +67,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"required": []string{"expense_id", "change_fields"},
 			"properties": map[string]any{
 				"expense_id":    map[string]any{"type": "string"},
-				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE", "FILE"}}, "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. FILE is not supported."},
+				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE"}}, "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. Receipt-file replacement is not supported on update; delete and recreate the expense with file_* fields instead."},
 				"amount":        map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units; use amount_unit:\"minor\" for cents/minor units."},
 				"amount_unit":   map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount when AMOUNT is included in change_fields."},
 				"date":          map[string]any{"type": "string", "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ"},
@@ -284,16 +289,59 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var created map[string]any
-	if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
+
+	files, err := expenseReceiptFiles(args)
+	if err != nil {
 		return ResultEnvelope{}, err
+	}
+
+	var created map[string]any
+	if len(files) > 0 {
+		if err := s.Client.PostMultipartWithFiles(ctx, path, form, files, &created); err != nil {
+			return ResultEnvelope{}, err
+		}
+	} else {
+		if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 	return ok("clockify_create_expense", expenseViewFromRaw(created), map[string]any{"workspaceId": wsID}), nil
 }
 
+// expenseReceiptFiles reads the optional receipt-file trio. All three
+// fields must be supplied together: a partial trio fails closed so a
+// caller never uploads an unnamed or untyped receipt by accident.
+// Returns nil (no error) when no file field is present at all.
+func expenseReceiptFiles(args map[string]any) ([]clockify.MultipartFile, error) {
+	name := strings.TrimSpace(stringArg(args, "file_name"))
+	body := strings.TrimSpace(stringArg(args, "file_content_base64"))
+	contentType := strings.TrimSpace(stringArg(args, "file_content_type"))
+	if name == "" && body == "" && contentType == "" {
+		return nil, nil
+	}
+	if name == "" || body == "" || contentType == "" {
+		return nil, fmt.Errorf("file_name, file_content_base64, and file_content_type must be provided together")
+	}
+	data, err := base64.StdEncoding.DecodeString(body)
+	if err != nil {
+		return nil, fmt.Errorf("file_content_base64 is not valid base64: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("file_content_base64 decoded to zero bytes")
+	}
+	return []clockify.MultipartFile{{
+		FieldName:   "file",
+		Filename:    name,
+		ContentType: contentType,
+		Data:        data,
+	}}, nil
+}
+
 // validUpdateExpenseChangeFields lists the upstream-accepted tokens for
-// the multipart `changeFields` field on PUT /expenses/{id}. Anything
-// outside this set is rejected by the upstream with code 3000.
+// the multipart `changeFields` field on PUT /expenses/{id}. FILE is
+// intentionally absent: this tool does not replace receipts on update.
+// clockify_create_expense accepts file_* fields, so the supported path
+// for changing a receipt is delete + recreate.
 var validUpdateExpenseChangeFields = map[string]bool{
 	"USER":     true,
 	"DATE":     true,
@@ -303,13 +351,12 @@ var validUpdateExpenseChangeFields = map[string]bool{
 	"NOTES":    true,
 	"AMOUNT":   true,
 	"BILLABLE": true,
-	"FILE":     true,
 }
 
 func parseUpdateExpenseChangeFields(args map[string]any) ([]string, error) {
 	raw, hasChange := args["change_fields"]
 	if !hasChange {
-		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
+		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE")
 	}
 	var values []any
 	switch v := raw.(type) {
@@ -324,7 +371,7 @@ func parseUpdateExpenseChangeFields(args map[string]any) ([]string, error) {
 		return nil, fmt.Errorf("change_fields must be an array of strings; got %T", raw)
 	}
 	if len(values) == 0 {
-		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE, FILE")
+		return nil, fmt.Errorf("change_fields is required and must list at least one of USER, DATE, PROJECT, TASK, CATEGORY, NOTES, AMOUNT, BILLABLE")
 	}
 
 	changeFields := make([]string, 0, len(values))
@@ -377,8 +424,6 @@ func validateUpdateExpenseChangedValues(changeFields []string, args map[string]a
 			if _, ok := args["billable"].(bool); !ok {
 				return fmt.Errorf("change_fields includes BILLABLE but billable is required")
 			}
-		case "FILE":
-			return fmt.Errorf("change_fields includes FILE, but file updates are not supported")
 		}
 	}
 	return nil

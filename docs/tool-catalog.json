@@ -29054,7 +29054,7 @@
     },
     {
       "name": "clockify_expenses_create",
-      "description": "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents.",
+      "description": "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -29096,6 +29096,18 @@
           },
           "date": {
             "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)",
+            "type": "string"
+          },
+          "file_content_base64": {
+            "description": "Optional base64-encoded receipt body. Decoded payload is capped at the multipart file limit (10 MiB).",
+            "type": "string"
+          },
+          "file_content_type": {
+            "description": "Optional MIME type for the receipt, e.g. application/pdf or image/png.",
+            "type": "string"
+          },
+          "file_name": {
+            "description": "Optional receipt file name. Send file_name, file_content_base64, and file_content_type together to attach a receipt.",
             "type": "string"
           },
           "notes": {
@@ -29391,7 +29403,7 @@
             "type": "string"
           },
           "change_fields": {
-            "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. FILE is not supported.",
+            "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. Receipt-file replacement is not supported on update; delete and recreate the expense with file_* fields instead.",
             "items": {
               "enum": [
                 "USER",
@@ -29401,8 +29413,7 @@
                 "CATEGORY",
                 "NOTES",
                 "AMOUNT",
-                "BILLABLE",
-                "FILE"
+                "BILLABLE"
               ],
               "type": "string"
             },

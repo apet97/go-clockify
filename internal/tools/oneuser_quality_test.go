@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -3003,6 +3004,12 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return false
 	case "change_fields":
 		return []any{"DATE", "PROJECT", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE"}
+	case "file_name":
+		return "receipt.pdf"
+	case "file_content_base64":
+		return base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 coverage receipt"))
+	case "file_content_type":
+		return "application/pdf"
 	}
 	if strings.HasSuffix(name, "_ids") || strings.HasSuffix(name, "Ids") {
 		return []any{oneUserCoverageID(name)}

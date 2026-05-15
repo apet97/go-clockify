@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -453,9 +454,9 @@ func TestUpdateExpenseRequiresValuesForChangeFieldsBeforeUpstream(t *testing.T) 
 			want: "user_id is required",
 		},
 		{
-			name: "file unsupported",
+			name: "file token rejected at validation",
 			args: map[string]any{"expense_id": "exp1", "change_fields": []any{"FILE"}},
-			want: "file updates are not supported",
+			want: `change_fields contains unsupported token "FILE"`,
 		},
 	}
 
@@ -552,4 +553,202 @@ func TestCreateExpenseSchemaKeepsLiveProbeNarrowing(t *testing.T) {
 			t.Fatalf("create_expense should not require live-optional/resolved field %s: %#v", narrowed, required)
 		}
 	}
+}
+
+// TestCreateExpenseUploadsReceiptWhenFileFieldsSupplied pins the
+// with-file multipart shape: when all three file_* fields are present
+// the handler must send a real file part named "file" alongside the
+// form fields, and the bytes on the wire must round-trip the decoded
+// base64.
+func TestCreateExpenseUploadsReceiptWhenFileFieldsSupplied(t *testing.T) {
+	const (
+		filename    = "receipt.png"
+		contentType = "image/png"
+	)
+	receiptBytes := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+
+	var (
+		userHit  bool
+		gotForm  map[string][]string
+		gotFiles map[string][]*multipart.FileHeader
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			userHit = true
+			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester"})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
+			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+				t.Fatalf("expected multipart upload, got %q", r.Header.Get("Content-Type"))
+			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotForm = r.MultipartForm.Value
+			gotFiles = r.MultipartForm.File
+			respondJSON(t, w, map[string]any{"id": "exp-uploaded", "amount": 9.99, "fileId": "file-1"})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":              9.99,
+		"date":                "2026-04-11T00:00:00Z",
+		"category_id":         "cat1",
+		"file_name":           filename,
+		"file_content_base64": base64.StdEncoding.EncodeToString(receiptBytes),
+		"file_content_type":   contentType,
+	})
+	mustOK(t, res, err, "clockify_create_expense")
+	if !userHit {
+		t.Fatalf("expected /user lookup before upload")
+	}
+	if got := gotForm["categoryId"]; len(got) != 1 || got[0] != "cat1" {
+		t.Fatalf("form categoryId = %v", gotForm)
+	}
+	files, ok := gotFiles["file"]
+	if !ok || len(files) != 1 {
+		t.Fatalf("expected one file part under field 'file', got %v", gotFiles)
+	}
+	header := files[0]
+	if header.Filename != filename {
+		t.Fatalf("filename = %q, want %q", header.Filename, filename)
+	}
+	if got := header.Header.Get("Content-Type"); got != contentType {
+		t.Fatalf("file part Content-Type = %q, want %q", got, contentType)
+	}
+	f, err := header.Open()
+	if err != nil {
+		t.Fatalf("open file part: %v", err)
+	}
+	defer f.Close()
+	got, err := io.ReadAll(f)
+	if err != nil {
+		t.Fatalf("read file part: %v", err)
+	}
+	if string(got) != string(receiptBytes) {
+		t.Fatalf("uploaded bytes = %x, want %x", got, receiptBytes)
+	}
+}
+
+// TestCreateExpenseNoFileSendsPlainMultipart confirms the no-file path
+// is preserved: a create without file_* fields must still POST plain
+// multipart/form-data with zero file parts.
+func TestCreateExpenseNoFileSendsPlainMultipart(t *testing.T) {
+	var gotFiles map[string][]*multipart.FileHeader
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": "u-current"})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotFiles = r.MultipartForm.File
+			respondJSON(t, w, map[string]any{"id": "exp-nofile", "amount": 5})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":      5.0,
+		"date":        "2026-04-11T00:00:00Z",
+		"category_id": "cat1",
+	})
+	mustOK(t, res, err, "clockify_create_expense")
+	if len(gotFiles) != 0 {
+		t.Fatalf("no-file create must not send file parts, got %v", gotFiles)
+	}
+}
+
+// TestCreateExpenseRejectsPartialFileTrio fails closed: a caller that
+// supplies only some of the file_* fields must get a clear error
+// before any upstream call.
+func TestCreateExpenseRejectsPartialFileTrio(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" {
+			respondJSON(t, w, map[string]any{"id": "u-current"})
+			return
+		}
+		t.Fatalf("partial file trio must fail before the expenses POST: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	partials := []map[string]any{
+		{"file_name": "r.pdf"},
+		{"file_content_base64": base64.StdEncoding.EncodeToString([]byte("hi"))},
+		{"file_content_type": "application/pdf"},
+		{"file_name": "r.pdf", "file_content_type": "application/pdf"},
+	}
+	for i, partial := range partials {
+		args := map[string]any{"amount": 1.0, "date": "2026-04-11T00:00:00Z", "category_id": "cat1"}
+		for k, v := range partial {
+			args[k] = v
+		}
+		_, err := svc.createExpense(context.Background(), args)
+		if err == nil || !strings.Contains(err.Error(), "file_name, file_content_base64, and file_content_type") {
+			t.Fatalf("case %d: expected partial-trio error, got %v", i, err)
+		}
+	}
+}
+
+// TestCreateExpenseRejectsInvalidBase64 keeps the decode failure local
+// with an actionable message instead of shipping garbage upstream.
+func TestCreateExpenseRejectsInvalidBase64(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" {
+			respondJSON(t, w, map[string]any{"id": "u-current"})
+			return
+		}
+		t.Fatalf("invalid base64 must fail before the expenses POST: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":              1.0,
+		"date":                "2026-04-11T00:00:00Z",
+		"category_id":         "cat1",
+		"file_name":           "r.pdf",
+		"file_content_base64": "not valid base64!!!",
+		"file_content_type":   "application/pdf",
+	})
+	if err == nil || !strings.Contains(err.Error(), "not valid base64") {
+		t.Fatalf("expected base64 decode error, got %v", err)
+	}
+}
+
+// TestUpdateExpenseSchemaOmitsFileToken pins that the change_fields
+// enum no longer advertises FILE — receipt replacement on update is
+// deliberately unsupported.
+func TestUpdateExpenseSchemaOmitsFileToken(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("schema-only test must not make HTTP calls: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	for _, d := range expenseHandlers(svc) {
+		if d.Tool.Name != "clockify_update_expense" {
+			continue
+		}
+		props, _ := d.Tool.InputSchema["properties"].(map[string]any)
+		cf, _ := props["change_fields"].(map[string]any)
+		items, _ := cf["items"].(map[string]any)
+		enum, ok := items["enum"].([]string)
+		if !ok {
+			t.Fatalf("change_fields enum = %T", items["enum"])
+		}
+		if containsString(enum, "FILE") {
+			t.Fatalf("change_fields enum must not advertise FILE: %v", enum)
+		}
+		return
+	}
+	t.Fatal("clockify_update_expense descriptor not found")
 }
