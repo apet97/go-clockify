@@ -1132,8 +1132,6 @@ func idsFromData(data any, entity string) map[string]string {
 		addEntityIDFromMap(out, entity, map[string]any(m))
 	case AssignmentView:
 		addEntityIDFromMap(out, entity, map[string]any(m))
-	case EntityChangeView:
-		addEntityIDFromMap(out, entity, map[string]any(m))
 	case WebhookLogView:
 		addEntityIDFromMap(out, entity, map[string]any(m))
 	case []map[string]any:

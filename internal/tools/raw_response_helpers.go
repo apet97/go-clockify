@@ -3,8 +3,31 @@ package tools
 import (
 	"encoding/base64"
 	"net/http"
+	"net/url"
 	"strings"
 )
+
+// parseExportFilename extracts the filename from a Content-Disposition
+// header like "filename=Clockify_Time_Report_Summary_11%2F15%2F2023-12%2F07%2F2023.pdf".
+// Returns empty string if absent. Slashes arrive percent-encoded; we
+// URL-decode them so callers see a sensible filename.
+func parseExportFilename(cd string) string {
+	if cd == "" {
+		return ""
+	}
+	_, fn, found := strings.Cut(cd, "filename=")
+	if !found {
+		return ""
+	}
+	if before, _, hasSemi := strings.Cut(fn, ";"); hasSemi {
+		fn = before
+	}
+	fn = strings.Trim(fn, `"`)
+	if decoded, err := url.QueryUnescape(fn); err == nil {
+		return decoded
+	}
+	return fn
+}
 
 // stringFromAny returns the string view of v when v is already a string.
 // Used when reading optional string fields out of map[string]any envelopes
