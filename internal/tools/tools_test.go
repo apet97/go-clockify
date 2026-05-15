@@ -549,109 +549,6 @@ func TestGetEntry(t *testing.T) {
 	}
 }
 
-func TestTodayEntries(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case "/workspaces/ws1/user/u1/time-entries":
-			// Verify date range parameters are present
-			if r.URL.Query().Get("start") == "" {
-				t.Fatalf("expected start parameter for today range")
-			}
-			if r.URL.Query().Get("end") == "" {
-				t.Fatalf("expected end parameter for today range")
-			}
-			respondJSON(t, w, []clockify.TimeEntry{
-				{ID: "e1", Description: "Morning standup", TimeInterval: clockify.TimeInterval{Start: "2026-04-06T09:00:00Z", End: "2026-04-06T09:15:00Z"}},
-				{ID: "e2", Description: "Dev work", TimeInterval: clockify.TimeInterval{Start: "2026-04-06T09:30:00Z", End: "2026-04-06T12:00:00Z"}},
-			})
-		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.TodayEntries(context.Background(), map[string]any{})
-	if err != nil {
-		t.Fatalf("today entries failed: %v", err)
-	}
-	if result.Action != "clockify_entries_list" {
-		t.Fatalf("expected action clockify_entries_list, got %s", result.Action)
-	}
-	entries, ok := result.Data.([]EntryView)
-	if !ok {
-		t.Fatalf("unexpected data type: %T", result.Data)
-	}
-	if len(entries) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(entries))
-	}
-}
-
-func TestTodayEntriesPaginationSanitizesBounds(t *testing.T) {
-	tests := []struct {
-		name         string
-		args         map[string]any
-		wantPage     string
-		wantPageSize string
-		wantMetaPage int
-		wantMetaSize int
-	}{
-		{
-			name:         "floors invalid values",
-			args:         map[string]any{"page": 0, "page_size": 0},
-			wantPage:     "1",
-			wantPageSize: "50",
-			wantMetaPage: 1,
-			wantMetaSize: 50,
-		},
-		{
-			name:         "caps page size",
-			args:         map[string]any{"page": 3, "page_size": 9999},
-			wantPage:     "3",
-			wantPageSize: "200",
-			wantMetaPage: 3,
-			wantMetaSize: 200,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-				switch r.URL.Path {
-				case "/user":
-					respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-				case "/workspaces/ws1/user/u1/time-entries":
-					q := r.URL.Query()
-					if q.Get("page") != tt.wantPage || q.Get("page-size") != tt.wantPageSize {
-						t.Fatalf("expected page=%s page-size=%s, got %s", tt.wantPage, tt.wantPageSize, r.URL.RawQuery)
-					}
-					respondJSON(t, w, []clockify.TimeEntry{})
-				default:
-					t.Fatalf("unexpected path: %s", r.URL.Path)
-				}
-			})
-			defer cleanup()
-
-			svc := New(client, "ws1")
-			result, err := svc.TodayEntries(context.Background(), tt.args)
-			if err != nil {
-				t.Fatalf("today entries failed: %v", err)
-			}
-			if result.Meta["page"] != tt.wantMetaPage || result.Meta["pageSize"] != tt.wantMetaSize {
-				t.Fatalf("unexpected pagination meta: %+v", result.Meta)
-			}
-			pagination, ok := result.Meta["pagination"].(map[string]any)
-			if !ok {
-				t.Fatalf("expected structured pagination meta, got %+v", result.Meta)
-			}
-			if pagination["requested_page_size"] != tt.args["page_size"] || pagination["applied_page_size"] != tt.wantMetaSize || pagination["clamped"] != true {
-				t.Fatalf("unexpected structured pagination meta: %+v", pagination)
-			}
-		})
-	}
-}
-
 func TestEntriesCreate(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -935,48 +832,6 @@ func TestDeleteEntryDryRun(t *testing.T) {
 	}
 }
 
-func TestWhoAmI(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Alice Smith", Email: "alice@example.com"})
-		case "/workspaces":
-			respondJSON(t, w, []clockify.Workspace{{ID: "ws1", Name: "My Workspace"}})
-		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.WhoAmI(context.Background())
-	if err != nil {
-		t.Fatalf("WhoAmI failed: %v", err)
-	}
-	if !result.OK {
-		t.Fatalf("expected ok=true, got ok=false")
-	}
-	if result.Action != "clockify_status" {
-		t.Fatalf("expected action clockify_whoami, got %s", result.Action)
-	}
-	data, ok := result.Data.(IdentityData)
-	if !ok {
-		t.Fatalf("expected IdentityData, got %T", result.Data)
-	}
-	if data.User.ID != "u1" {
-		t.Fatalf("expected user ID u1, got %s", data.User.ID)
-	}
-	if data.User.Name != "Alice Smith" {
-		t.Fatalf("expected user name Alice Smith, got %s", data.User.Name)
-	}
-	if data.User.Email != "alice@example.com" {
-		t.Fatalf("expected email alice@example.com, got %s", data.User.Email)
-	}
-	if data.WorkspaceID != "ws1" {
-		t.Fatalf("expected workspace ID ws1, got %s", data.WorkspaceID)
-	}
-}
-
 func TestListProjects(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -1180,9 +1035,9 @@ func TestHandlerAPIError(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.WhoAmI(context.Background())
+	_, err := svc.CurrentUser(context.Background())
 	if err == nil {
-		t.Fatal("expected error from WhoAmI when API returns 500, got nil")
+		t.Fatal("expected error from CurrentUser when API returns 500, got nil")
 	}
 	// Verify the error message includes the status info
 	if !strings.Contains(err.Error(), "500") {

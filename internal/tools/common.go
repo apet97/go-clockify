@@ -176,15 +176,6 @@ type WorkspaceContext struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
-// IdentityData pairs the upstream Clockify user with the resolved
-// workspace so a single clockify_status response carries everything
-// an agent needs to ground subsequent tool calls.
-type IdentityData struct {
-	User        clockify.User `json:"user"`
-	UserView    *UserView     `json:"user_view,omitempty"`
-	WorkspaceID string        `json:"workspaceId"`
-}
-
 // WeeklySummaryData is the structured payload for clockify_weekly_
 // summary: a date range, total counts, per-day and per-project rollups,
 // suggested follow-up actions for the agent, and (optionally) the raw

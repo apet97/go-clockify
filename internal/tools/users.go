@@ -43,19 +43,6 @@ func (s *Service) requireCurrentUserEntry(ctx context.Context, entry clockify.Ti
 	return nil
 }
 
-func (s *Service) WhoAmI(ctx context.Context) (ResultEnvelope, error) {
-	user, err := s.getCurrentUser(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	resolvedWorkspaceID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	view := userViewFromUser(user)
-	return ok("clockify_status", IdentityData{User: user, UserView: &view, WorkspaceID: resolvedWorkspaceID}, nil), nil
-}
-
 func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
 	user, err := s.getCurrentUser(ctx)
 	if err != nil {

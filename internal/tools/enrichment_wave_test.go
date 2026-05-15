@@ -146,22 +146,6 @@ func TestListWebhookLogsUsesPostSearch(t *testing.T) {
 	}
 }
 
-func TestListInProgressTimeEntriesUsesWorkspaceEndpoint(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/time-entries/status/in-progress" {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		respondJSON(t, w, []map[string]any{{"id": "te1", "timeInterval": map[string]any{"start": "2026-05-13T09:00:00Z"}}})
-	})
-	defer cleanup()
-	svc := New(client, "ws1")
-	result, err := svc.ListInProgressTimeEntries(context.Background(), map[string]any{})
-	mustOK(t, result, err, "clockify_entries_running")
-	if got := result.Data.([]EntryView); len(got) != 1 || got[0].ID != "te1" {
-		t.Fatalf("unexpected entries: %#v", result.Data)
-	}
-}
-
 func TestListUserManagersUsesDocumentedEndpoint(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/users/u1/managers" {

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -63,14 +62,6 @@ type ClientApprovalSummary struct {
 	DurationsByState       map[string]EntryDurationView `json:"durations_by_state,omitempty"`
 }
 
-type ClientEntryHealth struct {
-	EntriesCount            int `json:"entries_count"`
-	LockedCount             int `json:"locked_count,omitempty"`
-	MissingDescriptionCount int `json:"missing_description_count,omitempty"`
-	MissingProjectCount     int `json:"missing_project_count,omitempty"`
-	MissingTaskCount        int `json:"missing_task_count,omitempty"`
-}
-
 type ClientView struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
@@ -92,16 +83,6 @@ type ClientView struct {
 	ApprovalSummary ClientApprovalSummary `json:"approval_summary"`
 	Warnings        []string              `json:"warnings,omitempty"`
 	Raw             map[string]any        `json:"raw,omitempty"`
-}
-
-type ClientReportView struct {
-	Client           ClientView         `json:"client"`
-	Range            FinancialRangeView `json:"range"`
-	Projects         []ProjectView      `json:"projects,omitempty"`
-	Entries          []ReportEntryView  `json:"entries,omitempty"`
-	EntryHealth      ClientEntryHealth  `json:"entry_health"`
-	SuggestedActions []ToolSuggestion   `json:"suggestedActions,omitempty"`
-	Warnings         []string           `json:"warnings,omitempty"`
 }
 
 type clientReportTotals struct {
@@ -511,122 +492,4 @@ func clientApprovalSummaryFromReport(summary ReportApprovalSummary) ClientApprov
 		States:                 summary.States,
 		DurationsByState:       summary.DurationsByState,
 	}
-}
-
-func clientEntryHealth(entries []ReportEntryView) ClientEntryHealth {
-	summary := summarizeReportEntries(entries)
-	return ClientEntryHealth{
-		EntriesCount:            summary.Count,
-		LockedCount:             summary.LockedCount,
-		MissingDescriptionCount: summary.MissingDescriptionCount,
-		MissingProjectCount:     summary.MissingProjectCount,
-		MissingTaskCount:        summary.MissingTaskCount,
-	}
-}
-
-func (s *Service) ClientReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	clientRef := strings.TrimSpace(stringArg(args, "client"))
-	if clientRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("client is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	path, err := paths.Workspace(wsID, "clients", clientID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var client clockify.ClientEntity
-	if err := s.Client.Get(ctx, path, nil, &client); err != nil {
-		return ResultEnvelope{}, err
-	}
-	view, meta := s.enrichClientView(ctx, wsID, client, args, false)
-	finRange := financialRangeFromArgs(args)
-	report := ClientReportView{
-		Client:           view,
-		Range:            finRange,
-		SuggestedActions: clientReportSuggestions(view, finRange),
-		Warnings:         append([]string{}, view.Warnings...),
-	}
-	if s.projectDeepEnrichmentEnabled() {
-		projects, truncated, err := s.listProjectsForClientEnrichment(ctx, wsID, []string{clientID})
-		if err != nil {
-			report.Warnings = append(report.Warnings, "project detail enrichment failed: "+err.Error())
-		} else {
-			if truncated {
-				report.Warnings = append(report.Warnings, "project detail enrichment was truncated at the page cap")
-			}
-			projectViews, projectMeta := s.enrichProjectViews(ctx, wsID, projects, args)
-			report.Projects = projectViews
-			meta["project_details"] = projectMeta
-		}
-		invoices, err := s.invoiceSummaryForClient(ctx, wsID, clientID, args)
-		if err != nil {
-			report.Warnings = append(report.Warnings, "invoice enrichment failed: "+err.Error())
-		} else {
-			report.Client.InvoiceSummary = invoices
-		}
-		detailed, err := s.detailedReportViewsForClient(ctx, wsID, clientID, finRange)
-		if err != nil {
-			report.Warnings = append(report.Warnings, "detailed report enrichment failed: "+err.Error())
-		} else {
-			report.Entries = detailed.Entries
-			report.EntryHealth = clientEntryHealth(detailed.Entries)
-			report.Client.ApprovalSummary = clientApprovalSummaryFromReport(detailed.ApprovalSummary)
-		}
-	}
-	return ok("clockify_reports_detailed", report, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, meta)), nil
-}
-
-func clientReportSuggestions(client ClientView, finRange FinancialRangeView) []ToolSuggestion {
-	ref := firstNonEmptyString(client.ID, client.Name)
-	if ref == "" {
-		return nil
-	}
-	args := map[string]any{"client": ref}
-	if finRange.Start != "" {
-		args["financial_start"] = finRange.Start
-	}
-	if finRange.End != "" {
-		args["financial_end"] = finRange.End
-	}
-	return []ToolSuggestion{
-		{
-			Tool:      "clockify_reports_detailed",
-			Reason:    "Inspect the underlying detailed report rows for this client.",
-			Arguments: detailedReportSuggestionArgs(ref, finRange),
-		},
-		{
-			Tool:      "clockify_projects_list",
-			Reason:    "Review the projects attached to this client.",
-			Arguments: args,
-		},
-	}
-}
-
-func detailedReportSuggestionArgs(clientRef string, finRange FinancialRangeView) map[string]any {
-	args := map[string]any{
-		"date_range_type": firstNonEmptyString(finRange.DateRangeType, "ABSOLUTE"),
-		"clients":         map[string]any{"contains": "CONTAINS", "ids": []string{clientRef}, "status": "ALL"},
-		"detailed_filter": map[string]any{
-			"page":      1,
-			"page_size": 50,
-			"options":   map[string]any{"totals": "CALCULATE"},
-		},
-	}
-	if finRange.Start != "" {
-		args["date_range_start"] = finRange.Start
-	}
-	if finRange.End != "" {
-		args["date_range_end"] = finRange.End
-	}
-	if finRange.Timezone != "" {
-		args["time_zone"] = finRange.Timezone
-	}
-	return args
 }

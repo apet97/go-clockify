@@ -9,14 +9,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) ListWorkspaces(ctx context.Context) (ResultEnvelope, error) {
-	var workspaces []clockify.Workspace
-	if err := s.Client.Get(ctx, "/workspaces", nil, &workspaces); err != nil {
-		return ResultEnvelope{}, err
-	}
-	return ok("clockify_workspace_settings", workspaceViewsFromWorkspaces(workspaces), map[string]any{"count": len(workspaces)}), nil
-}
-
 func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	if s.WorkspaceID != "" {
 		if err := resolve.ValidateID(s.WorkspaceID, "workspace_id"); err != nil {

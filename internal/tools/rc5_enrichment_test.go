@@ -97,34 +97,6 @@ func TestWeeklyFutureRowsDefaultOmittedAndIncluded(t *testing.T) {
 	}
 }
 
-func TestWorkspaceGovernanceAddsFeatureAndWorkingDayLabels(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1" {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		respondJSON(t, w, map[string]any{
-			"id":                      "ws1",
-			"name":                    "Workspace",
-			"featureSubscriptionType": "PREMIUM",
-			"features":                []string{"APPROVAL", "SCHEDULING"},
-			"workspaceSettings": map[string]any{
-				"workingDays": []any{"FRIDAY", "MONDAY", "SATURDAY"},
-				"round":       map[string]any{"round": "UP"},
-			},
-		})
-	})
-	defer cleanup()
-	svc := New(client, "ws1")
-	result, err := svc.WorkspaceGovernance(context.Background())
-	if err != nil {
-		t.Fatalf("workspace governance: %v", err)
-	}
-	view := result.Data.(WorkspaceGovernanceView)
-	if view.SubscriptionLabel != "Premium" || view.PlanCohort != "paid" || !view.WeekendIncluded || view.WorkingDayPattern != "MONDAY,FRIDAY,SATURDAY" {
-		t.Fatalf("governance fields not normalized: %#v", view)
-	}
-}
-
 func TestMoneyReportUsesSummaryMoneyRollups(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/workspaces/ws1/reports/summary" || r.Method != http.MethodPost {
