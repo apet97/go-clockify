@@ -49,15 +49,13 @@ func TestSubscriptionGate_SkipsReadResourceWhenUnsubscribed(t *testing.T) {
 	// Gate reports "nobody is subscribed" for every URI.
 	svc.SubscriptionGate = func(_ string) bool { return false }
 
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-11T10:00:00Z",
-		"end":           "2026-04-11T11:00:00Z",
-		"description":   "first",
-		"dry_run":       false,
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-11T10:00:00Z",
+		"end":         "2026-04-11T11:00:00Z",
+		"description": "first",
 	})
 	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
 	if n := getCount.Load(); n != 0 {
@@ -104,15 +102,13 @@ func TestSubscriptionGate_FiresWhenSubscribed(t *testing.T) {
 		return strings.Contains(uri, "/entry/")
 	}
 
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-11T10:00:00Z",
-		"end":           "2026-04-11T11:00:00Z",
-		"description":   "first",
-		"dry_run":       false,
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-11T10:00:00Z",
+		"end":         "2026-04-11T11:00:00Z",
+		"description": "first",
 	})
 	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
 	calls := emit.snapshot()

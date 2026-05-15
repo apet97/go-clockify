@@ -105,10 +105,10 @@ func TestWeeklyReportURIsForEntry_BadInputsDegrade(t *testing.T) {
 	}
 }
 
-// TestAddEntry_CrossWeekSpanEmitsBothWeeklyReports is the end-to-end
+// TestEntriesCreate_CrossWeekSpanEmitsBothWeeklyReports is the end-to-end
 // assertion that a mutation producing a two-week-spanning entry fires
 // three notifications: the entry URI and both weekly-report URIs.
-func TestAddEntry_CrossWeekSpanEmitsBothWeeklyReports(t *testing.T) {
+func TestEntriesCreate_CrossWeekSpanEmitsBothWeeklyReports(t *testing.T) {
 	const entryID = "xw1"
 	const wsID = "w1"
 
@@ -136,15 +136,13 @@ func TestAddEntry_CrossWeekSpanEmitsBothWeeklyReports(t *testing.T) {
 	emit := &recordingEmit{}
 	svc.EmitResourceUpdate = emit.hook()
 
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-12T23:00:00Z",
-		"end":           "2026-04-13T01:00:00Z",
-		"description":   "boundary",
-		"dry_run":       false,
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-12T23:00:00Z",
+		"end":         "2026-04-13T01:00:00Z",
+		"description": "boundary",
 	})
 	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
 	calls := emit.snapshot()

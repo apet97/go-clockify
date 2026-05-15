@@ -14,17 +14,18 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
-// TestCacheWriteThrough_AddEntry_SkipsReadResource is the W4-04d
-// load-bearing assertion: when a subscribed client triggers AddEntry,
-// the write-through path feeds the POST response directly into the
-// subscription gate without a follow-up GET /time-entries/{id}. In
-// Wave 3 (and Wave 4 pre-T-4d), that GET happened on every mutation.
+// TestCacheWriteThrough_EntriesCreate_SkipsReadResource is the W4-04d
+// load-bearing assertion: when a subscribed client triggers
+// clockify_entries_create, the write-through path feeds the POST
+// response directly into the subscription gate without a follow-up
+// GET /time-entries/{id}. In Wave 3 (and Wave 4 pre-T-4d), that GET
+// happened on every mutation.
 //
 // The test counts GETs against the entry endpoint during a single
-// subscribed AddEntry. Expected count: zero. Any non-zero count
-// would mean emitEntryAndWeeklyWithState silently fell through to
-// the ReadResource-based path.
-func TestCacheWriteThrough_AddEntry_SkipsReadResource(t *testing.T) {
+// subscribed create. Expected count: zero. Any non-zero count would
+// mean emitEntryAndWeeklyWithState silently fell through to the
+// ReadResource-based path.
+func TestCacheWriteThrough_EntriesCreate_SkipsReadResource(t *testing.T) {
 	const entryID = "e-wt1"
 	const wsID = "w1"
 
@@ -58,15 +59,13 @@ func TestCacheWriteThrough_AddEntry_SkipsReadResource(t *testing.T) {
 	// Subscribe every URI so the gate fires but doesn't short-circuit.
 	svc.SubscriptionGate = func(_ string) bool { return true }
 
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-11T10:00:00Z",
-		"end":           "2026-04-11T11:00:00Z",
-		"description":   "fresh",
-		"dry_run":       false,
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-11T10:00:00Z",
+		"end":         "2026-04-11T11:00:00Z",
+		"description": "fresh",
 	})
 	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
 	if n := getCount.Load(); n != 0 {
@@ -167,15 +166,13 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	// guard does not HTTP-fetch /user. The test focuses on the
 	// merge-patch cache-priming behaviour, not auth resolution.
 	svc.cachedUser = &clockify.User{ID: "u-self"}
-	if _, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-11T10:00:00Z",
-		"end":           "2026-04-11T11:00:00Z",
-		"description":   "initial",
-		"billable":      false,
-		"dry_run":       false,
-		"allow_overlap": true,
+	if _, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-11T10:00:00Z",
+		"end":         "2026-04-11T11:00:00Z",
+		"description": "initial",
+		"billable":    false,
 	}); err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
 	// Step 2: flip billable to true. This time the cache holds the
@@ -190,7 +187,7 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	}
 
 	calls := emit.snapshot()
-	// Expect: AddEntry → entry format=none + weekly format=none;
+	// Expect: EntriesCreate → entry format=none + weekly format=none;
 	//        UpdateEntry → entry format=merge + weekly format=? (none
 	//        on first emit for that URI).
 	var entryMergeCall *recordingEmitCall

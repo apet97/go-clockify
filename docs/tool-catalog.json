@@ -11677,7 +11677,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -11690,6 +11690,10 @@
           "description": {
             "maxLength": 2000,
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
           },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -11721,6 +11725,10 @@
             "type": "string"
           },
           "task_id": {
+            "type": "string"
+          },
+          "type": {
+            "description": "Entry type: REGULAR (default) or BREAK.",
             "type": "string"
           }
         },
@@ -12040,7 +12048,7 @@
         ],
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/dedupe"
 )
 
 func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
@@ -699,7 +698,7 @@ func TestTodayEntriesPaginationSanitizesBounds(t *testing.T) {
 	}
 }
 
-func TestAddEntry(t *testing.T) {
+func TestEntriesCreate(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/workspaces/ws1/time-entries":
@@ -732,36 +731,41 @@ func TestAddEntry(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-06T09:00:00Z",
-		"end":           "2026-04-06T10:00:00Z",
-		"description":   "New task",
-		"project_id":    "p1",
-		"billable":      true,
-		"allow_overlap": true,
+	res, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-06T09:00:00Z",
+		"end":         "2026-04-06T10:00:00Z",
+		"description": "New task",
+		"project_id":  "p1",
+		"billable":    true,
 	})
 	if err != nil {
-		t.Fatalf("add entry failed: %v", err)
+		t.Fatalf("EntriesCreate failed: %v", err)
 	}
-	if result.Action != oneUserToolEntriesCreate {
-		t.Fatalf("expected action clockify_add_entry, got %s", result.Action)
-	}
-	entry, ok := result.Data.(EntryView)
+	tr, ok := res.(ToolResult)
 	if !ok {
-		t.Fatalf("unexpected data type: %T", result.Data)
+		t.Fatalf("unexpected result type: %T", res)
+	}
+	if !tr.OK || tr.Action != oneUserToolEntriesCreate {
+		t.Fatalf("unexpected envelope: ok=%v action=%s", tr.OK, tr.Action)
+	}
+	if tr.IDs["entryId"] != "new1" {
+		t.Fatalf("unexpected entryId: %q", tr.IDs["entryId"])
+	}
+	entry, ok := tr.Data.(clockify.TimeEntry)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", tr.Data)
 	}
 	if entry.ID != "new1" {
 		t.Fatalf("unexpected entry ID: %s", entry.ID)
 	}
 }
 
-// TestAddEntryPassesType pins the QA-agent-18 fix: when `type` is
-// supplied (REGULAR or BREAK) the upstream POST body must carry it.
-// Without the wiring the parameter was silently ignored and the API
-// defaulted every entry to REGULAR, leaving callers unable to record
-// breaks. The fake upstream fails if the field is missing or if a
-// caller passes a value but the handler drops it on the floor.
-func TestAddEntryPassesType(t *testing.T) {
+// TestEntriesCreatePassesType pins the QA-agent-18 fix on the live tool:
+// when `type` is supplied (REGULAR or BREAK) the upstream POST body must
+// carry it. Without the wiring the parameter is silently ignored and the
+// API defaults every entry to REGULAR, leaving callers unable to record
+// breaks. The fake upstream fails if the field is missing.
+func TestEntriesCreatePassesType(t *testing.T) {
 	var gotType any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/workspaces/ws1/time-entries" || r.Method != http.MethodPost {
@@ -777,175 +781,18 @@ func TestAddEntryPassesType(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-06T09:00:00Z",
-		"end":           "2026-04-06T09:15:00Z",
-		"description":   "Coffee",
-		"project_id":    "p1",
-		"type":          "BREAK",
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-06T09:00:00Z",
+		"end":         "2026-04-06T09:15:00Z",
+		"description": "Coffee",
+		"project_id":  "p1",
+		"type":        "BREAK",
 	})
 	if err != nil {
-		t.Fatalf("add entry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 	if gotType != "BREAK" {
 		t.Fatalf("upstream POST body.type = %#v, want \"BREAK\"", gotType)
-	}
-}
-
-func TestAddEntryRejectsOverlapWhenFinishedEntry(t *testing.T) {
-	var postCount int
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/user" && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
-			respondJSON(t, w, []clockify.TimeEntry{{
-				ID:          "existing1",
-				Description: "Existing",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-06T09:30:00Z",
-					End:   "2026-04-06T10:30:00Z",
-				},
-			}})
-		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
-			postCount++
-			respondJSON(t, w, clockify.TimeEntry{
-				ID:          "new1",
-				Description: "New task",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-06T09:00:00Z",
-					End:   "2026-04-06T10:00:00Z",
-				},
-			})
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	args := map[string]any{
-		"start":       "2026-04-06T09:00:00Z",
-		"end":         "2026-04-06T10:00:00Z",
-		"description": "New task",
-	}
-	_, err := svc.AddEntry(context.Background(), args)
-	if err == nil || !strings.Contains(err.Error(), "overlaps 1 existing entry") {
-		t.Fatalf("expected overlap rejection, got %v", err)
-	}
-	if postCount != 0 {
-		t.Fatalf("POST must not run after overlap rejection, got %d calls", postCount)
-	}
-
-	args["allow_overlap"] = true
-	if _, err := svc.AddEntry(context.Background(), args); err != nil {
-		t.Fatalf("add entry with allow_overlap failed: %v", err)
-	}
-	if postCount != 1 {
-		t.Fatalf("expected one POST after allow_overlap, got %d", postCount)
-	}
-}
-
-func TestAddEntryDedupeBlockRejectsExactDuplicate(t *testing.T) {
-	var postCalled bool
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/user" && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
-			if got := r.URL.Query().Get("page-size"); got != "5" {
-				t.Fatalf("dedupe lookback page-size = %q, want 5", got)
-			}
-			respondJSON(t, w, []clockify.TimeEntry{{
-				ID:          "existing1",
-				Description: "New task",
-				ProjectID:   "p1",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-06T09:00:30Z",
-					End:   "2026-04-06T10:00:00Z",
-				},
-			}})
-		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
-			postCalled = true
-			t.Fatal("POST must not be called when dedupe block rejects")
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	cfg := dedupe.Config{Mode: dedupe.Block, LookbackCount: 5, OverlapCheck: false}
-	svc.DedupeConfig = &cfg
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-06T09:00:00Z",
-		"end":           "2026-04-06T10:00:00Z",
-		"description":   "New task",
-		"project_id":    "p1",
-		"allow_overlap": true,
-	})
-	if err == nil {
-		t.Fatal("expected duplicate rejection")
-	}
-	if !strings.Contains(err.Error(), "duplicate time entry blocked") || !strings.Contains(err.Error(), "existing1") {
-		t.Fatalf("unexpected duplicate error: %v", err)
-	}
-	if postCalled {
-		t.Fatal("POST should not be called after duplicate rejection")
-	}
-}
-
-func TestAddEntryDedupeWarnAddsMetaAndPosts(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/user" && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
-			respondJSON(t, w, []clockify.TimeEntry{{
-				ID:          "existing1",
-				Description: "New task",
-				ProjectID:   "p1",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-06T09:00:30Z",
-					End:   "2026-04-06T10:00:00Z",
-				},
-			}})
-		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
-			respondJSON(t, w, clockify.TimeEntry{
-				ID:          "new1",
-				Description: "New task",
-				ProjectID:   "p1",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-06T09:00:00Z",
-					End:   "2026-04-06T10:00:00Z",
-				},
-			})
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	cfg := dedupe.Config{Mode: dedupe.Warn, LookbackCount: 5, OverlapCheck: false}
-	svc.DedupeConfig = &cfg
-	result, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-06T09:00:00Z",
-		"end":           "2026-04-06T10:00:00Z",
-		"description":   "New task",
-		"project_id":    "p1",
-		"allow_overlap": true,
-	})
-	if err != nil {
-		t.Fatalf("add entry with warning failed: %v", err)
-	}
-	dedupeMeta, ok := result.Meta["dedupe"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected dedupe meta, got %+v", result.Meta)
-	}
-	if dedupeMeta["duplicateOf"] != "existing1" {
-		t.Fatalf("unexpected dedupe meta: %+v", dedupeMeta)
 	}
 }
 
@@ -1351,54 +1198,47 @@ func TestHandlerAPIError(t *testing.T) {
 	}
 }
 
-// TestAddEntryDryRun verifies that dry_run:true returns a validated preview
-// envelope without issuing a POST to the Clockify API.
-func TestAddEntryDryRun(t *testing.T) {
-	var postCalled bool
+// TestEntriesCreateDryRun verifies that dry_run:true returns a validated
+// preview envelope without issuing any request to the Clockify API.
+func TestEntriesCreateDryRun(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			postCalled = true
-		}
-		switch {
-		case r.URL.Path == "/user" && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.User{ID: "u1"})
-		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
-			respondJSON(t, w, []clockify.TimeEntry{})
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
+		t.Fatalf("dry_run must not issue any request; got %s %s", r.Method, r.URL.Path)
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.AddEntry(context.Background(), map[string]any{
+	res, err := svc.EntriesCreate(context.Background(), map[string]any{
 		"start":       "2026-04-06T09:00:00Z",
 		"end":         "2026-04-06T10:00:00Z",
 		"description": "Planned work",
 		"dry_run":     true,
 	})
 	if err != nil {
-		t.Fatalf("add entry dry run failed: %v", err)
+		t.Fatalf("EntriesCreate dry run failed: %v", err)
 	}
-	if postCalled {
-		t.Fatal("POST must not be called on dry run")
-	}
-	if result.Action != oneUserToolEntriesCreate {
-		t.Fatalf("unexpected action: %s", result.Action)
-	}
-	dataMap, ok := result.Data.(map[string]any)
+	tr, ok := res.(ToolResult)
 	if !ok {
-		t.Fatalf("expected map data for dry run, got %T", result.Data)
+		t.Fatalf("unexpected result type: %T", res)
+	}
+	if !tr.OK || tr.Action != oneUserToolEntriesCreate {
+		t.Fatalf("unexpected envelope: ok=%v action=%s", tr.OK, tr.Action)
+	}
+	if _, created := tr.IDs["entryId"]; created {
+		t.Fatalf("dry run must not report a created entryId: %v", tr.IDs)
+	}
+	dataMap, ok := tr.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map data for dry run, got %T", tr.Data)
 	}
 	if dataMap["dry_run"] != true {
 		t.Fatalf("expected dry_run=true marker, got %+v", dataMap)
 	}
-	validation := dataMap["validation"].(ValidationView)
-	if validation.Status != validationStatusOK {
-		t.Fatalf("expected validation ok, got %#v", validation)
-	}
 	if dataMap["note"] == nil {
 		t.Fatal("expected note in dry run preview")
+	}
+	validation, ok := dataMap["validation"].(ValidationView)
+	if !ok || validation.Status != validationStatusOK {
+		t.Fatalf("expected validation ok, got %#v", dataMap["validation"])
 	}
 }
 

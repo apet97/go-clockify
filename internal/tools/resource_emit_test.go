@@ -41,13 +41,12 @@ func (r *recordingEmit) snapshot() []recordingEmitCall {
 	return out
 }
 
-// TestAddEntryEmitsFirstNotificationAsFormatNone covers the W3-03d
-// wiring on AddEntry: the first notification for a previously-unseen
-// URI arrives as format=none because there is no cached state to diff
-// against. The handler fetches the new entry's resource view and
-// populates the cache so the *next* mutation emits a proper merge
-// patch.
-func TestAddEntryEmitsFirstNotificationAsFormatNone(t *testing.T) {
+// TestEntriesCreateEmitsFirstNotificationAsFormatNone covers the W3-03d
+// wiring on clockify_entries_create: the first notification for a
+// previously-unseen URI arrives as format=none because there is no
+// cached state to diff against. The handler populates the cache so the
+// *next* mutation emits a proper merge patch.
+func TestEntriesCreateEmitsFirstNotificationAsFormatNone(t *testing.T) {
 	const entryID = "e1"
 	const wsID = "w1"
 
@@ -81,18 +80,16 @@ func TestAddEntryEmitsFirstNotificationAsFormatNone(t *testing.T) {
 	emit := &recordingEmit{}
 	svc.EmitResourceUpdate = emit.hook()
 
-	_, err := svc.AddEntry(context.Background(), map[string]any{
-		"start":         "2026-04-11T10:00:00Z",
-		"end":           "2026-04-11T11:00:00Z",
-		"description":   "first",
-		"dry_run":       false,
-		"allow_overlap": true,
+	_, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2026-04-11T10:00:00Z",
+		"end":         "2026-04-11T11:00:00Z",
+		"description": "first",
 	})
 	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
+		t.Fatalf("EntriesCreate: %v", err)
 	}
 
-	// W4-04b: AddEntry now emits the concrete entry URI AND the weekly-
+	// W4-04b: clockify_entries_create emits the concrete entry URI AND the weekly-
 	// report URI for the ISO week containing the entry's start. The
 	// entry on 2026-04-11 (Saturday) falls in the week starting
 	// 2026-04-06 (Monday).

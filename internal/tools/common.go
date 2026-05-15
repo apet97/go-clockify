@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/dedupe"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
@@ -62,7 +61,6 @@ type Service struct {
 	Client          *clockify.Client
 	WorkspaceID     string
 	DefaultTimezone *time.Location // from CLOCKIFY_TIMEZONE; nil falls back to time.Now().Location() for flexible date/time inputs.
-	DedupeConfig    *dedupe.Config // optional, set during wiring
 	// WebhookValidateDNS, when true, makes CreateWebhook/UpdateWebhook
 	// resolve the webhook host via the system resolver and reject any
 	// reply that contains a private/reserved IP. Config defaults this

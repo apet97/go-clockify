@@ -35,7 +35,7 @@ func TestUserResourceURI(t *testing.T) {
 // UpdateUserRole: after the PUT succeeds, the handler emits a
 // notifications/resources/updated for the user URI. Cache is cold so
 // the first notification carries format=none — matching the existing
-// AddEntry semantics.
+// clockify_entries_create semantics.
 func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 	const userID = "u1"
 	const wsID = "w1"

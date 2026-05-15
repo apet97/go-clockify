@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
@@ -223,6 +224,8 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 				"tag":         map[string]any{"type": "string", "description": "Tag name or ID."},
 				"billable":    map[string]any{"type": "boolean"},
+				"type":        map[string]any{"type": "string", "description": "Entry type: REGULAR (default) or BREAK."},
+				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the create payload without POSTing to Clockify."},
 			},
 		})), s.EntriesCreate),
 	}
@@ -1019,10 +1022,19 @@ func (s *Service) EntriesList(ctx context.Context, args map[string]any) (any, er
 }
 
 func (s *Service) EntriesCreate(ctx context.Context, args map[string]any) (any, error) {
+	if dryrun.Enabled(args) {
+		payload, ids, err := s.buildEntryPayload(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		preview := dryrunPreviewPayloadValidated("clockify_entries_create", payload, validationOK("payload_check"))
+		return result("clockify_entries_create", "entry", ids, preview, ChangeSet{}, nil, nil), nil
+	}
 	entry, ids, err := s.createEntry(ctx, args)
 	if err != nil {
 		return nil, err
 	}
+	s.emitEntryAndWeeklyWithState(ctx, s.WorkspaceID, entry)
 	return result("clockify_entries_create", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, nil, nil), nil
 }
 
@@ -1398,29 +1410,35 @@ func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]an
 	return entries, user.ID, page, pageSize, err
 }
 
-func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockify.TimeEntry, map[string]string, error) {
+// buildEntryPayload assembles the time-entry POST body and the pre-create
+// id map from caller args. It is shared by createEntry (the real POST) and
+// the EntriesCreate dry-run preview so both derive the payload identically.
+func (s *Service) buildEntryPayload(ctx context.Context, args map[string]any) (map[string]any, map[string]string, error) {
 	startRaw := strings.TrimSpace(stringArg(args, "start"))
 	if startRaw == "" {
-		return clockify.TimeEntry{}, nil, fmt.Errorf("start is required")
+		return nil, nil, fmt.Errorf("start is required")
 	}
 	loc := s.location()
 	startTime, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
-		return clockify.TimeEntry{}, nil, fmt.Errorf("invalid start: %w", err)
+		return nil, nil, fmt.Errorf("invalid start: %w", err)
 	}
 	payload := map[string]any{"start": timeparse.FormatISO(startTime)}
 	if endRaw := strings.TrimSpace(stringArg(args, "end")); endRaw != "" {
 		endTime, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
-			return clockify.TimeEntry{}, nil, fmt.Errorf("invalid end: %w", err)
+			return nil, nil, fmt.Errorf("invalid end: %w", err)
 		}
 		if !endTime.After(startTime) {
-			return clockify.TimeEntry{}, nil, fmt.Errorf("end must be after start")
+			return nil, nil, fmt.Errorf("end must be after start")
 		}
 		payload["end"] = timeparse.FormatISO(endTime)
 	}
 	if desc := strings.TrimSpace(stringArg(args, "description")); desc != "" {
 		payload["description"] = desc
+	}
+	if entryType := strings.TrimSpace(stringArg(args, "type")); entryType != "" {
+		payload["type"] = entryType
 	}
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	if projectID == "" {
@@ -1428,13 +1446,13 @@ func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockif
 		if projectRef != "" {
 			projectID, err = s.resolveProjectID(ctx, s.WorkspaceID, projectRef)
 			if err != nil {
-				return clockify.TimeEntry{}, nil, err
+				return nil, nil, err
 			}
 		}
 	}
 	if projectID != "" {
 		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-			return clockify.TimeEntry{}, nil, err
+			return nil, nil, err
 		}
 		payload["projectId"] = projectID
 	}
@@ -1443,29 +1461,45 @@ func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockif
 		taskRef := strings.TrimSpace(stringArg(args, "task"))
 		if taskRef != "" {
 			if projectID == "" {
-				return clockify.TimeEntry{}, nil, fmt.Errorf("project_id or project is required when resolving task by name")
+				return nil, nil, fmt.Errorf("project_id or project is required when resolving task by name")
 			}
 			taskID, err = s.resolveTaskID(ctx, s.WorkspaceID, projectID, taskRef)
 			if err != nil {
-				return clockify.TimeEntry{}, nil, err
+				return nil, nil, err
 			}
 		}
 	}
 	if taskID != "" {
 		if err := resolve.ValidateID(taskID, "task_id"); err != nil {
-			return clockify.TimeEntry{}, nil, err
+			return nil, nil, err
 		}
 		payload["taskId"] = taskID
 	}
 	tagIDs, err := s.tagIDsFromArgs(ctx, args)
 	if err != nil {
-		return clockify.TimeEntry{}, nil, err
+		return nil, nil, err
 	}
 	if len(tagIDs) > 0 {
 		payload["tagIds"] = tagIDs
 	}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
+	}
+	ids := map[string]string{
+		"workspaceId": s.WorkspaceID,
+		"projectId":   projectID,
+		"taskId":      taskID,
+	}
+	if len(tagIDs) == 1 {
+		ids["tagId"] = tagIDs[0]
+	}
+	return payload, ids, nil
+}
+
+func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockify.TimeEntry, map[string]string, error) {
+	payload, ids, err := s.buildEntryPayload(ctx, args)
+	if err != nil {
+		return clockify.TimeEntry{}, nil, err
 	}
 	path, err := paths.Workspace(s.WorkspaceID, "time-entries")
 	if err != nil {
@@ -1475,15 +1509,7 @@ func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockif
 	if err := s.Client.Post(ctx, path, payload, &entry); err != nil {
 		return clockify.TimeEntry{}, nil, err
 	}
-	ids := map[string]string{
-		"workspaceId": s.WorkspaceID,
-		"entryId":     entry.ID,
-		"projectId":   projectID,
-		"taskId":      taskID,
-	}
-	if len(tagIDs) == 1 {
-		ids["tagId"] = tagIDs[0]
-	}
+	ids["entryId"] = entry.ID
 	return entry, ids, nil
 }
 

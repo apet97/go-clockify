@@ -129,20 +129,6 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 	return ok(oneUserToolReviewDay, data, meta), nil
 }
 
-func (s *Service) rejectEntryOverlap(ctx context.Context, start, end time.Time, args map[string]any) error {
-	if boolArg(args, "allow_overlap") {
-		return nil
-	}
-	overlaps, _, err := s.findEntryOverlaps(ctx, start, end)
-	if err != nil {
-		return err
-	}
-	if len(overlaps) == 0 {
-		return nil
-	}
-	return fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
-}
-
 func timesheetReviewRange(args map[string]any, loc *time.Location) (time.Time, time.Time, string, error) {
 	startRaw := strings.TrimSpace(stringArg(args, "start"))
 	endRaw := strings.TrimSpace(stringArg(args, "end"))
