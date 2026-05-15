@@ -126,8 +126,8 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 
 	callLiveToolOKOrRecovery(t, server, "clockify_invoice_client_work", map[string]any{"client_id": seed.IDs["clientId"], "number": "MCP-LIVE-" + runID})
 	callLiveToolOKOrRecovery(t, server, "clockify_record_expense", map[string]any{"amount": float64(10), "category": prefix, "project_id": seed.IDs["projectId"], "date": "2026-01-02T00:00:00Z"})
-	callLiveToolOKOrRecovery(t, server, "clockify_request_time_off", map[string]any{"policy": prefix, "start": "2026-01-05", "end": "2026-01-06"})
-	callLiveToolOKOrRecovery(t, server, "clockify_schedule_work", map[string]any{"user_id": userID, "project_id": seed.IDs["projectId"], "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z"})
+	callLiveToolOKOrRecovery(t, server, "clockify_request_time_off", map[string]any{"policy": prefix, "start": "2026-01-05", "end": "2026-01-06", "note": "live coverage probe"})
+	callLiveToolOKOrRecovery(t, server, "clockify_schedule_work", map[string]any{"user_id": userID, "project_id": seed.IDs["projectId"], "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(1)})
 	callLiveToolOKOrRecovery(t, server, "clockify_setup_webhook", map[string]any{"name": prefix + " Live webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
 }
 
@@ -417,6 +417,13 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		{"clockify_time_off_policies_get", map[string]any{"policy_id": policyID}},
 		{"clockify_time_off_policies_update", map[string]any{"policy_id": policyID, "name": unique("policy-updated")}},
 		{"clockify_time_off_balances", map[string]any{"policy_id": policyID, "user_id": userID}},
+		{"clockify_time_off_balances_update", map[string]any{
+			"policy_id": policyID,
+			"user_ids":  []any{userID},
+			"value":     0,
+			"note":      "live coverage probe (no-op: ledger keeps recovery-only because balance writes have permanent audit trails)",
+			"dry_run":   true,
+		}},
 		{"clockify_time_off_requests_get", map[string]any{"request_id": bogusID}},
 		{"clockify_time_off_requests_update", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
 		{"clockify_time_off_requests_delete", map[string]any{"policy_id": policyID, "request_id": bogusID}},
